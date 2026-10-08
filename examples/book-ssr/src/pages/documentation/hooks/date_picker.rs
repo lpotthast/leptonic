@@ -95,9 +95,12 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="placeholder_value" ty="Signal<Option<V>>" default="None">"The type, time and zone of a value picked without one. Default: today, midnight."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">"The earliest and latest valid value."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen."</ApiRow>
-                        <ApiRow name="granularity, hour_cycle, hide_time_zone, should_force_leading_zeros" ty="see use_date_field_state" default="None, None, false, false">
-                            "As for "<Link href=field_section("use-date-field-state-input")>"use_date_field_state"</Link>"."
+                        <ApiRow name="granularity" ty="Signal<Option<Granularity>>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
+                        <ApiRow name="hour_cycle" ty="Signal<Option<HourCycle>>" default="None">
+                            <Code inline=true>"H12"</Code>" or "<Code inline=true>"H24"</Code>". Default: the locale\u{2019}s."
                         </ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of zoned values."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads months, days and hours to two digits."</ApiRow>
                         <ApiRow name="should_close_on_select" ty="Signal<bool>" default="true">"Whether selecting a date closes the popover."</ApiRow>
                         <ApiRow name="default_open" ty="bool" default="false">"Whether the popover starts open."</ApiRow>
                         <ApiRow name="is_open" ty="Option<ValueBinding<bool>>" default="None">"The open state as app state."</ApiRow>
@@ -206,9 +209,16 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="placeholder_value" ty="Signal<Option<V>>" default="None">"The type, time and zone of dates picked without a value."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">"The earliest and latest valid date of either end."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen."</ApiRow>
-                        <ApiRow name="granularity, hour_cycle, hide_time_zone, should_force_leading_zeros" ty="see use_date_field_state" default="None, None, false, false">"For the fields."</ApiRow>
+                        <ApiRow name="granularity" ty="Signal<Option<Granularity>>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
+                        <ApiRow name="hour_cycle" ty="Signal<Option<HourCycle>>" default="None">
+                            <Code inline=true>"H12"</Code>" or "<Code inline=true>"H24"</Code>". Default: the locale\u{2019}s."
+                        </ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of zoned values."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads months, days and hours to two digits."</ApiRow>
                         <ApiRow name="should_close_on_select" ty="Signal<bool>" default="true">"Whether selecting a range closes the popover."</ApiRow>
-                        <ApiRow name="default_open, is_open, on_open_change" ty="see use_date_picker_state" default="false, None, None">"The popover\u{2019}s open state."</ApiRow>
+                        <ApiRow name="default_open" ty="bool" default="false">"Whether the popover starts open."</ApiRow>
+                        <ApiRow name="is_open" ty="Option<ValueBinding<bool>>" default="None">"The open state as app state."</ApiRow>
+                        <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">"Called when the popover opens or closes."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the range invalid."</ApiRow>
                         <ApiRow name="validate" ty="Option<ValidateFn<Option<RangeValue<V>>>>" default="None">"Custom validation of the range."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Aria">"When errors show."</ApiRow>

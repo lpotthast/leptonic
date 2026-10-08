@@ -3,12 +3,16 @@ use leptonic::{
         ColorArea, ColorField, ColorPicker, ColorSlider, ColorSliderTrack, ColorSwatch, ColorThumb,
         Input, Label,
     },
-    utils::color::{Color, ColorValue, HSL, HSV, HsvChannel},
+    utils::{
+        color::{Color, ColorValue, HSL, HSV, HsvChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorPickerConceptDemo() -> impl IntoView {
+    let locale = use_locale();
     let color = RwSignal::new(Color::from(HSV {
         hue: 210.0,
         saturation: 0.6,
@@ -52,7 +56,7 @@ pub fn ColorPickerConceptDemo() -> impl IntoView {
                     hsl.hue,
                     hsl.saturation * 100.0,
                     hsl.lightness * 100.0,
-                    hsl.color_name(),
+                    hsl.color_name(&locale.get()),
                 )
             }}
         </p>

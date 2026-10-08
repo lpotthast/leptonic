@@ -91,21 +91,15 @@ async fn row_texts(page: &DndPage<'_>) -> Result<Vec<String>, Report> {
 
 /// Waits until the focused element is the drop indicator labelled `label`.
 async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(), Report> {
-    page.wait_for_value(
-        "the focused drop indicator",
-        Some(label.to_owned()),
-        || async {
-            let active = page.driver.active_element().await?;
-            Ok(
-                if active.attr("aria-roledescription").await?.as_deref() == Some("drop indicator") {
-                    active.attr("aria-label").await?
-                } else {
-                    None
-                },
-            )
-        },
-    )
-    .await
+    wait_for!("the focused drop indicator", Some(label.to_owned()), {
+        let active = page.driver.active_element().await?;
+        if active.attr("aria-roledescription").await?.as_deref() == Some("drop indicator") {
+            active.attr("aria-label").await?
+        } else {
+            None
+        }
+    });
+    Ok(())
 }
 
 /// Opens the fixture with `query`, focuses the draggable and starts a keyboard drag.
@@ -142,17 +136,11 @@ async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     page.send_keys_to_active(Key::Down).await?;
     expect_focused_indicator(page, "Insert between One and Two").await?;
     page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_value(
+    wait_for!(
         "the rows",
-        vec![
-            "One".to_owned(),
-            "hello world".to_owned(),
-            "Two".to_owned(),
-            "Three".to_owned(),
-        ],
-        || row_texts(page),
-    )
-    .await?;
+        ["One", "hello world", "Two", "Three"],
+        row_texts(page).await?
+    );
     let inserted = row(page, "hello world").await?;
     page.wait_for_focus_on(&inserted, "the inserted row")
         .await?;
@@ -416,17 +404,11 @@ async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     page.fire_drag_event_at(&three, "drop", &[], Some((2.0, 2.0)))
         .await?;
     page.fire_drag_event(&draggable, "dragend", &[]).await?;
-    page.wait_for_value(
+    wait_for!(
         "the rows",
-        vec![
-            "One".to_owned(),
-            "Two".to_owned(),
-            "hello world".to_owned(),
-            "Three".to_owned(),
-        ],
-        || row_texts(page),
-    )
-    .await?;
+        ["One", "Two", "hello world", "Three"],
+        row_texts(page).await?
+    );
     let inserted = row(page, "hello world").await?;
     page.wait_for_focus_on(&inserted, "the inserted row")
         .await?;

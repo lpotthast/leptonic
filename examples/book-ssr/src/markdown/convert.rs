@@ -16,7 +16,8 @@ pub struct ConvertedPage {
     pub title: String,
     /// The page's first paragraph, shortened to [`DESCRIPTION_MAX_LEN`] bytes.
     pub description: String,
-    /// The page's `<h2>` sections.
+    /// The page's `<h2>` sections, and the `<h3>` sections naming an item no `<h2>` names (see [`names_item`]), in
+    /// page order.
     pub sections: Vec<Heading>,
     /// Links of the "See Also" section.
     pub related: Vec<Link>,
@@ -30,6 +31,8 @@ pub struct ConvertedPage {
 pub struct Heading {
     pub text: String,
     pub id: String,
+    /// 2 for an `<h2>`, 3 for an `<h3>`.
+    pub level: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +48,7 @@ pub fn convert_page(html: &str) -> Option<ConvertedPage> {
     static ARTICLE: LazyLock<Selector> = LazyLock::new(|| selector("article"));
     static TITLE: LazyLock<Selector> = LazyLock::new(|| selector("h1"));
     static SECTIONS: LazyLock<Selector> = LazyLock::new(|| selector("h2[id]"));
+    static SUBSECTIONS: LazyLock<Selector> = LazyLock::new(|| selector("h2[id], h3[id]"));
     static PARAGRAPHS: LazyLock<Selector> = LazyLock::new(|| selector("p"));
     static LINKS: LazyLock<Selector> = LazyLock::new(|| selector("a[href]"));
 
@@ -57,22 +61,33 @@ pub fn convert_page(html: &str) -> Option<ConvertedPage> {
         .map(heading_text)
         .unwrap_or_default();
 
-    let sections: Vec<Heading> = article
-        .select(&SECTIONS)
-        .map(|h2| Heading {
-            text: heading_text(h2),
-            id: h2.attr("id").unwrap_or_default().to_owned(),
+    let headings: Vec<Heading> = article
+        .select(&SUBSECTIONS)
+        .map(|heading| Heading {
+            text: heading_text(heading),
+            id: heading.attr("id").unwrap_or_default().to_owned(),
+            level: if heading.value().name() == "h2" { 2 } else { 3 },
         })
+        .collect();
+    let sections = headings
+        .iter()
+        .filter(|heading| {
+            heading.level == 2
+                || (names_item(&heading.text)
+                    && !headings
+                        .iter()
+                        .any(|h2| h2.level == 2 && h2.text == heading.text))
+        })
+        .cloned()
         .collect();
 
     let description = article
         .select(&PARAGRAPHS)
         .next()
         .map(|p| {
-            shorten(
-                &normalize_whitespace(&p.text().collect::<String>()),
-                DESCRIPTION_MAX_LEN,
-            )
+            let mut text = String::new();
+            plain_text(p, &mut text);
+            shorten(&normalize_whitespace(&text), DESCRIPTION_MAX_LEN)
         })
         .unwrap_or_default();
 
@@ -144,12 +159,27 @@ const BLOCK_ELEMENTS: &[&str] = &[
     "hr",
 ];
 
-/// Appends the text a reader sees in `element`: without demos (`Demo`), buttons and the `#` anchors of headings.
+/// Whether a heading names a Rust item (`use_drag_session`, `ListState`): one word with an underscore or an inner
+/// uppercase letter. Such `<h3>` sections are listed with the `<h2>` ones, so that the index and the search find the
+/// hooks, atoms and types documented in subsections, and generic subsections (`Props`, `Example`) are not.
+fn names_item(text: &str) -> bool {
+    !text.contains(char::is_whitespace)
+        && (text.contains('_')
+            || text
+                .chars()
+                .zip(text.chars().skip(1))
+                .any(|(a, b)| a.is_lowercase() && b.is_uppercase()))
+}
+
+/// Appends the text of `element` as a screen reader reads it: without demos (`Demo`), buttons, the `#` anchors of
+/// headings and `aria-hidden` parts, so that a key shown as a glyph reads as its name ("Escape", not "Esc" followed
+/// by "Escape"). The `+` between the keys of a combination stays.
 fn plain_text(element: ElementRef<'_>, out: &mut String) {
     let value = element.value();
     if matches!(value.name(), "button" | "script" | "style" | "svg")
         || value.has_class("doc-demo", scraper::CaseSensitivity::CaseSensitive)
         || is_anchor_link(element)
+        || (value.attr("aria-hidden") == Some("true") && value.attr("data-separator").is_none())
     {
         return;
     }
@@ -220,7 +250,13 @@ fn shorten(text: &str, max_len: usize) -> String {
 
 /// Links to documentation pages point to their Markdown export: `/doc/button#props` becomes `/doc/button.md#props`.
 fn markdown_href(href: &str) -> String {
-    if !href.starts_with("/doc/") {
+    // Other sites, and links that already point to Markdown (the index, `/doc/llm-index.md`).
+    let path = href.split('#').next().unwrap_or_default();
+    if !href.starts_with("/doc/")
+        || std::path::Path::new(path)
+            .extension()
+            .is_some_and(|ext| ext == "md")
+    {
         return href.to_owned();
     }
     let (path, fragment) = href
@@ -320,12 +356,22 @@ fn handle_code(handlers: &dyn Handlers, element: Element<'_>) -> Option<HandlerR
     if !has_class(&element, "doc-code") {
         return handlers.fallback(element);
     }
-    let content = handlers.walk_children(element.node).content;
     if attr(&element, "data-inline") == Some("true") {
+        let content = handlers.walk_children(element.node).content;
         return Some(format!("`{}`", content.trim()).into());
     }
+    // A block's code is its raw text (the copy button next to it has none): converting the highlighter's spans as
+    // Markdown would drop the line breaks at their ends.
+    let code = find_element(element.node, &|node| {
+        element_attr(node, "class").is_some_and(|classes| {
+            classes
+                .split_whitespace()
+                .any(|class| class == "doc-code-text")
+        })
+    })
+    .map_or_else(|| text_content(element.node), |text| text_content(&text));
     let language = attr(&element, "data-language").unwrap_or_default();
-    Some(format!("\n\n```{language}\n{}\n```\n\n", content.trim_matches('\n')).into())
+    Some(format!("\n\n```{language}\n{}\n```\n\n", code.trim_matches('\n')).into())
 }
 
 /// Drops the `#` anchors next to headings (`doc-heading-anchor`); links to documentation pages point to their Markdown export.
@@ -387,9 +433,36 @@ mod tests {
         assert_that!(page.sections).is_equal_to(vec![Heading {
             text: "Input".to_owned(),
             id: "input".to_owned(),
+            level: 2,
         }]);
         assert_that!(page.markdown.as_str()).does_not_contain("#](");
         assert_that!(page.markdown.as_str()).contains("## Input");
+    }
+
+    #[test]
+    fn sections_include_subsections_naming_items() {
+        let page = page(
+            r#"<h1>T</h1>
+            <section><h2 id="collections">Collections</h2>
+                <section><h3 id="use-drag-session">use_drag_session</h3></section>
+                <section><h3 id="props">Props</h3></section>
+                <section><h3 id="list-state">ListState</h3></section></section>
+            <section><h2 id="text-field">TextField</h2></section>
+            <section><h2 id="data-attributes">Data Attributes</h2>
+                <section><h3 id="data-text-field">TextField</h3></section></section>"#,
+        );
+        let sections: Vec<_> = page
+            .sections
+            .iter()
+            .map(|section| (section.text.as_str(), section.level))
+            .collect();
+        assert_that!(sections).is_equal_to(vec![
+            ("Collections", 2),
+            ("use_drag_session", 3),
+            ("ListState", 3),
+            ("TextField", 2),
+            ("Data Attributes", 2),
+        ]);
     }
 
     #[test]
@@ -411,6 +484,7 @@ mod tests {
             },
         ]);
         assert_that!(page.markdown.as_str()).contains("[Button overview](/doc/button.md)");
+        assert_that!(markdown_href("/doc/llm-index.md")).is_equal_to("/doc/llm-index.md");
     }
 
     #[test]
@@ -432,6 +506,18 @@ mod tests {
     }
 
     #[test]
+    fn code_blocks_keep_line_breaks_at_the_end_of_highlighted_spans() {
+        let page = page(
+            r#"<h1>T</h1><code class="doc-code" data-language="rust"><span class="doc-code-text">fn app() {
+    <span class="syn-comment">// The theme.
+</span>    <span class="syn-storage">let</span> theme = 1;
+    <span class="syn-punctuation">}</span></span></code>"#,
+        );
+        assert_that!(page.markdown.as_str())
+            .contains("```rust\nfn app() {\n    // The theme.\n    let theme = 1;\n    }\n```");
+    }
+
+    #[test]
     fn plain_text_separates_blocks_and_leaves_out_demos_and_anchors() {
         let page = page(
             r##"<div class="doc-article-header"><h1 id="t">Title<a class="doc-link doc-heading-anchor" href="#t">#</a></h1>
@@ -440,6 +526,16 @@ mod tests {
             <section><h2 id="input">Input</h2><ul><li>One</li><li>Two</li></ul></section>"##,
         );
         assert_that!(page.text).is_equal_to("Title The use_presses hook. Input One Two");
+    }
+
+    #[test]
+    fn plain_text_and_description_name_keys_shown_as_glyphs() {
+        let page = page(
+            r#"<h1>T</h1><p><kbd class="leptonic-Keys doc-keys"><kbd><span aria-hidden="true">Esc</span><span style="position:absolute">Escape</span></kbd></kbd>
+            clears it, <kbd class="leptonic-Keys doc-keys"><kbd><span aria-hidden="true">⇧</span><span style="position:absolute">Shift</span></kbd><span data-separator="" aria-hidden="true">+</span><kbd>Enter</kbd></kbd> submits.</p>"#,
+        );
+        assert_that!(page.description).is_equal_to("Escape clears it, Shift+Enter submits.");
+        assert_that!(page.text).is_equal_to("T Escape clears it, Shift+Enter submits.");
     }
 
     #[test]

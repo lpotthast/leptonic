@@ -11,6 +11,7 @@ pub mod clipboard;
 pub mod clipboard_write_text;
 pub mod close_on_scroll;
 pub mod color_area;
+pub mod color_picker_state;
 pub mod color_channel_field;
 pub mod color_field;
 pub mod color_slider;

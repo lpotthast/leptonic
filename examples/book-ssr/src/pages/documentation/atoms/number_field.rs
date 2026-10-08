@@ -212,6 +212,8 @@ pub fn PageAtomNumberField() -> impl IntoView {
                     <ApiTable kind=ApiKind::DataAttributes>
                         <ApiRow name="data-pressed" ty="true">"The button is pressed."</ApiRow>
                         <ApiRow name="data-hovered" ty="true">"A mouse or pen is over the button."</ApiRow>
+                        <ApiRow name="data-focused" ty="true">"The button has focus. It is no tab stop, and pressing it keeps the focus in the input, so this is rare."</ApiRow>
+                        <ApiRow name="data-focus-visible" ty="true">"The button has keyboard focus: show a focus ring."</ApiRow>
                         <ApiRow name="data-disabled" ty="true">"The button is disabled (at a limit, or with the field)."</ApiRow>
                     </ApiTable>
                 </Section>

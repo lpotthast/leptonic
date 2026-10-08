@@ -67,8 +67,12 @@ async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), Repor
     page.wait_for_text(VALUE, "1").await?;
     page.css(INCREMENT).await?.click().await?;
     page.wait_for_text(VALUE, "2").await?;
-    tokio::time::sleep(Duration::from_millis(600)).await;
-    assert_that!(page.read_text_of(VALUE).await?).is_equal_to("2".to_owned());
+    stays_for!(
+        "the value",
+        Duration::from_millis(600),
+        "2".to_owned(),
+        page.read_text_of(VALUE).await?
+    );
 
     let active = page.driver.active_element().await?;
     assert_that!(active.attr("data-testid").await?).is_equal_to(Some("input".to_owned()));

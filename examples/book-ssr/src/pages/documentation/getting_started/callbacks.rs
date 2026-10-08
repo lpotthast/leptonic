@@ -77,7 +77,7 @@ pub fn PageCallbacks() -> impl IntoView {
                     <Code inline=true>"Out<O, S = SyncStorage>"</Code>" (from "<Code inline=true>"leptonic::prelude"</Code>
                     ") is anything an atom can write a value to. Setters of state props such as "
                     <Code inline=true>"set_value"</Code>" ("<Code inline=true>"TextField"</Code>") or "
-                    <Code inline=true>"set_selected"</Code>" ("<Code inline=true>"Checkbox"</Code>") use it, so you can pass "
+                    <Code inline=true>"set_selected"</Code>" ("<Code inline=true>"CheckboxField"</Code>") use it, so you can pass "
                     "a signal directly instead of wrapping it in a closure:"
                 </p>
 
@@ -106,17 +106,19 @@ pub fn PageCallbacks() -> impl IntoView {
 
                         view! {
                             // The signal receives every new state.
-                            <Switch is_selected=notifications set_selected=notifications>"Notifications"</Switch>
+                            <SwitchField is_selected=notifications set_selected=notifications><SwitchButton>"Notifications"</SwitchButton></SwitchField>
                             // A closure can do more with it.
-                            <Switch
+                            <SwitchField
                                 is_selected=notifications
                                 set_selected=move |on: bool| {
                                     tracing::info!("notifications: {on}");
                                     notifications.set(on);
                                 }
                             >
-                                "Notifications (logged)"
-                            </Switch>
+                                <SwitchButton>
+                                    "Notifications (logged)"
+                                </SwitchButton>
+                            </SwitchField>
                         }
                     "#)}
                 </Code>

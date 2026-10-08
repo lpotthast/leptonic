@@ -51,6 +51,8 @@ impl BrowserTest<str> for SubmenuTests {
         context_menu(&page).await?;
         subdialog(&page).await?;
         subdialog_with_dialog(&page).await?;
+        right_to_left(&page).await?;
+        safe_triangle(&page).await?;
 
         page.expect_no_page_errors().await
     }
@@ -331,4 +333,104 @@ async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_active_text("Properties…").await?;
     page.send_keys_to_active(Key::Escape).await?;
     page.wait_for_no_selector("[role=menu]").await
+}
+
+/// Right-to-left ("should open/close submenu with ArrowLeft/ArrowRight in RTL", useSubmenuTrigger):
+/// the trigger opens the menu by click and by ArrowDown; ArrowLeft opens a submenu, ArrowRight
+/// returns to its trigger.
+async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("test-submenu-rtl-trigger").await?;
+    trigger.click().await?;
+    page.wait_for_selector("[role=menu]").await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("[role=menu]").await?;
+    page.wait_for_focus_on(&trigger, "RTL menu trigger").await?;
+
+    page.send_keys_to_active(Key::Down).await?;
+    page.wait_for_active_text("Open (RTL)").await?;
+    page.send_keys_to_active(Key::Down).await?;
+    page.wait_for_active_text("Share (RTL)").await?;
+    // ArrowRight is "back" in right-to-left text: it doesn't open the submenu.
+    page.send_keys_to_active(Key::Right).await?;
+    let share = item(page, "Share (RTL)").await?;
+    stays!(
+        "aria-expanded of the RTL submenu trigger",
+        Some("false".to_owned()),
+        share.attr("aria-expanded").await?
+    );
+    page.send_keys_to_active(Key::Left).await?;
+    page.wait_for_active_text("Email (RTL)").await?;
+    page.send_keys_to_active(Key::Right).await?;
+    page.wait_for_active_text("Share (RTL)").await?;
+    page.wait_for_attr(&share, "aria-expanded", Some("false"))
+        .await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("[role=menu]").await?;
+    page.wait_for_focus_on(&trigger, "RTL menu trigger").await
+}
+
+/// The pointer's way to an open submenu (`useSafelyMouseToSubmenu`): moving diagonally towards
+/// it across other items, the root menu ignores pointer events, so the submenu stays open; at rest,
+/// the menu takes them again.
+async fn safe_triangle(page: &Page<'_>) -> Result<(), Report> {
+    // Opened by a click: the hook only works for pointer modality.
+    open_root(page).await?;
+    let share = item(page, "Share…").await?;
+    hover(page, &share).await?;
+    page.wait_for_attr(&share, "aria-expanded", Some("true"))
+        .await?;
+    page.wait_for_count("[role=menu]", 2).await?;
+    // From the trigger's center towards the submenu, below it (across "Sign up…"), in moves the
+    // hook doesn't throttle (one per 50 ms) and small enough that the first two stay on the
+    // trigger (the hook judges the direction from the second processed move on), inside the
+    // root menu.
+    let [share_x, menu_right, submenu_left]: [f64; 3] = page
+        .driver
+        .execute(
+            "const share = arguments[0].getBoundingClientRect();
+             const menus = document.querySelectorAll('[role=menu]');
+             return [share.left + share.width / 2, menus[0].getBoundingClientRect().right,
+                     menus[1].getBoundingClientRect().left];",
+            vec![share.to_json()?],
+        )
+        .await?
+        .convert()?;
+    let reach = (menu_right.min(submenu_left) - share_x - 4.0).max(12.0);
+    #[allow(clippy::cast_possible_truncation)]
+    let step_x = (reach / 8.0) as i64;
+    let mut seen_none = false;
+    for _ in 0..8 {
+        page.driver
+            .action_chain()
+            .move_by_offset(step_x.max(1), 4)
+            .perform()
+            .await?;
+        tokio::time::sleep(std::time::Duration::from_millis(60)).await;
+        seen_none |= root_pointer_events(page).await? == "none";
+    }
+    assert_that!(seen_none)
+        .with_detail_message("the root menu ignored pointer events on the way")
+        .is_true();
+    assert_that!(share.attr("aria-expanded").await?).is_equal_to(Some("true".to_owned()));
+    // At rest, the menu takes pointer events again.
+    wait_for!(
+        "the root menu's pointer-events at rest",
+        String::new(),
+        root_pointer_events(page).await?
+    );
+    page.send_keys_to_active(Key::Escape).await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("[role=menu]").await
+}
+
+/// The root menu's inline `pointer-events`.
+async fn root_pointer_events(page: &Page<'_>) -> Result<String, Report> {
+    Ok(page
+        .driver
+        .execute(
+            "return document.querySelectorAll('[role=menu]')[0].style.pointerEvents;",
+            vec![],
+        )
+        .await?
+        .convert()?)
 }

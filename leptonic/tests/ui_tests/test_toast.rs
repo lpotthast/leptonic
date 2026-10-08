@@ -92,8 +92,12 @@ async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
     page.click_element_with_id("test-toast-add-timed").await?;
     page.wait_for_selector("[role=alertdialog]").await?;
     hover(page, &page.css("[role=alertdialog]").await?).await?;
-    tokio::time::sleep(Duration::from_millis(2500)).await;
-    assert_that!(page.count_matching("[role=alertdialog]").await?).is_equal_to(1);
+    stays_for!(
+        "open toasts (hovered)",
+        Duration::from_millis(2500),
+        1,
+        page.count_matching("[role=alertdialog]").await?
+    );
     hover(page, &page.element("test-toast-closed").await?).await?;
     page.wait_for_no_selector("[role=alertdialog]").await?;
 
@@ -106,8 +110,12 @@ async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
             vec![],
         )
         .await?;
-    tokio::time::sleep(Duration::from_millis(2500)).await;
-    assert_that!(page.count_matching("[role=alertdialog]").await?).is_equal_to(1);
+    stays_for!(
+        "open toasts (focused)",
+        Duration::from_millis(2500),
+        1,
+        page.count_matching("[role=alertdialog]").await?
+    );
     page.driver
         .execute("document.getElementById('test-toast-add').focus()", vec![])
         .await?;
@@ -203,13 +211,12 @@ async fn referenced_text(
 
 /// The attribute once set (references to slots appear after mounting).
 async fn wait_for_some_attr(element: &WebElement, attr: &str) -> Result<String, Report> {
-    for _ in 0..50 {
-        if let Some(value) = element.attr(attr).await? {
-            return Ok(value);
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-    rootcause::bail!("{attr} never set")
+    wait_for!(
+        format!("whether {attr} is set"),
+        true,
+        element.attr(attr).await?.is_some()
+    );
+    Ok(element.attr(attr).await?.unwrap_or_default())
 }
 
 async fn hover(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
@@ -229,12 +236,20 @@ async fn remaining_time_after_pause(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_selector("[role=alertdialog]").await?;
     tokio::time::sleep(Duration::from_millis(1000)).await;
     hover(page, &page.css("[role=alertdialog]").await?).await?;
-    tokio::time::sleep(Duration::from_millis(2500)).await;
-    assert_that!(page.count_matching("[role=alertdialog]").await?).is_equal_to(1);
+    stays_for!(
+        "open toasts (hovered)",
+        Duration::from_millis(2500),
+        1,
+        page.count_matching("[role=alertdialog]").await?
+    );
     hover(page, &page.element("test-toast-closed").await?).await?;
     let left = std::time::Instant::now();
-    tokio::time::sleep(Duration::from_millis(1200)).await;
-    assert_that!(page.count_matching("[role=alertdialog]").await?).is_equal_to(1);
+    stays_for!(
+        "open toasts (left, time remaining)",
+        Duration::from_millis(1200),
+        1,
+        page.count_matching("[role=alertdialog]").await?
+    );
     page.wait_for_no_selector("[role=alertdialog]").await?;
     // About 2 seconds were left; a restarted timeout would take 3.
     assert_that!(left.elapsed() < Duration::from_millis(2700)).is_true();

@@ -13,6 +13,7 @@ use crate::{
         slot_id::{SlotProps, use_slot},
     },
 };
+use crate::utils::intl_strings::{ToastStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -21,9 +22,6 @@ use crate::{
 // ## API DIFFERENCES
 // - The queue goes into the input (C8; react-aria: `state`).
 // - Returns the close button's `UseButtonInput` and the title's id (react-aria: props objects).
-//
-// ## OMITTED FEATURES
-// - Localized strings: the close button is named "Close".
 //
 // =============================================================================
 
@@ -153,7 +151,10 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> U
         title_id,
         description_props: description.props,
         close_button: UseButtonInput {
-            aria_label: MaybeProp::from("Close".to_owned()),
+            aria_label: {
+                let strings = use_localized_strings::<ToastStrings>();
+                Signal::derive(move || Some(strings.read().close())).into()
+            },
             on_press: Some(Callback::new(move |_| queue.close(&key))),
             ..UseButtonInput::default()
         },

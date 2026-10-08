@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::button::ButtonDemo;
+use super::demos::{button::ButtonDemo, button_pending::ButtonPendingDemo};
 use crate::{kit::*, routes};
 
 #[component]
@@ -175,6 +175,22 @@ pub fn PageAtomButton() -> impl IntoView {
                 </Demo>
             </Section>
 
+            <Section title="Pending">
+                <p>
+                    "While an action the button started runs, such as saving, set "<Code inline=true>"is_pending"</Code>
+                    ". The button stays focusable, so keyboard users don\u{2019}t lose their place, but ignores presses and "
+                    "doesn\u{2019}t submit its form. Render an indeterminate "
+                    <Link href=routes::doc::progress_bar::Atom.materialize()>"ProgressBar"</Link>" inside it while pending. "
+                    "When the button is named by an "<Code inline=true>"aria_label"</Code>" (or "
+                    <Code inline=true>"aria_labelledby"</Code>"), the progress bar\u{2019}s label (\u{201c}Saving\u{201d}) "
+                    "joins its name while pending, and a screen reader user who has the focus on the button hears when the "
+                    "action starts and ends."
+                </p>
+                <Demo description="A Save button that is pending for two seconds, with a spinner in an indeterminate progress bar" source=include_str!("demos/button_pending.rs")>
+                    <ButtonPendingDemo/>
+                </Demo>
+            </Section>
+
             <Section title="Data Attributes">
                 <p>"Set to "<Code inline=true>"true"</Code>" on the "<Code inline=true>"<button>"</Code>" while the state applies, absent otherwise:"</p>
                 <ApiTable kind=ApiKind::DataAttributes>
@@ -189,7 +205,7 @@ pub fn PageAtomButton() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="data-pending" ty="true">
                         "An action the button started is in progress ("<Code inline=true>"is_pending"</Code>"). Render a "
-                        <Code inline=true>"ProgressBar"</Code>" inside the button for it: it names the button while pending."
+                        <Code inline=true>"ProgressBar"</Code>" inside the button for it (see "<AnchorLink href="#pending">"Pending"</AnchorLink>")."
                     </ApiRow>
                 </ApiTable>
             </Section>

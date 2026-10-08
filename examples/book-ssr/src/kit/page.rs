@@ -130,6 +130,42 @@ fn lowercase_first(text: &str) -> String {
     }
 }
 
+/// `text` with a line break opportunity (`<wbr>`) between the words of identifiers (see [`identifier_words`]), so
+/// that headings on phones and the narrow table of contents wrap `use_draggable_collection_state` or
+/// `CalendarMonthPicker` between words, not inside one.
+pub(super) fn with_word_breaks(text: &str) -> impl IntoView + use<> {
+    identifier_words(text)
+        .into_iter()
+        .enumerate()
+        .map(|(i, word)| {
+            let word = word.to_owned();
+            view! {
+                {(i > 0).then(|| view! { <wbr/> })}
+                {word}
+            }
+        })
+        .collect_view()
+}
+
+/// `text` split after each underscore and before an uppercase letter that follows a lowercase one:
+/// `use_drag_State` becomes `use_`, `drag_`, `State`; `ComboBoxPopover` becomes `Combo`, `Box`, `Popover`.
+fn identifier_words(text: &str) -> Vec<&str> {
+    let mut words = Vec::new();
+    let mut start = 0;
+    let mut previous: Option<char> = None;
+    for (at, c) in text.char_indices() {
+        let after_underscore = previous == Some('_');
+        let camel = c.is_uppercase() && previous.is_some_and(char::is_lowercase);
+        if (after_underscore || camel) && at > start {
+            words.push(&text[start..at]);
+            start = at;
+        }
+        previous = Some(c);
+    }
+    words.push(&text[start..]);
+    words
+}
+
 #[component]
 fn TableOfContents(entries: Vec<TocEntry>) -> impl IntoView {
     view! {
@@ -141,7 +177,7 @@ fn TableOfContents(entries: Vec<TocEntry>) -> impl IntoView {
                     .map(|TocEntry { level, id, title }| {
                         view! {
                             <li data-level=level>
-                                <AnchorLink href=format!("#{id}") classes="doc-toc-link">{title}</AnchorLink>
+                                <AnchorLink href=format!("#{id}") classes="doc-toc-link">{with_word_breaks(title)}</AnchorLink>
                             </li>
                         }
                     })
@@ -237,23 +273,40 @@ fn cache_markdown(url: &str, text: String) {
 
 /// Downloads `path` (a path of this site) as text. `None` if the request fails.
 async fn fetch_text(path: &str) -> Option<String> {
-    use wasm_bindgen::JsCast;
-    use wasm_bindgen_futures::JsFuture;
-
-    let promise = leptos_use::use_window().as_ref()?.fetch_with_str(path);
-    let response: web_sys::Response = JsFuture::from(promise).await.ok()?.dyn_into().ok()?;
-    if !response.ok() {
-        return None;
-    }
-    JsFuture::from(response.text().ok()?).await.ok()?.as_string()
+    // `reqwest` needs an absolute URL; in the browser, this page's origin.
+    let origin = leptos_use::use_window()
+        .as_ref()?
+        .location()
+        .origin()
+        .ok()?;
+    let response = reqwest::get(format!("{origin}{path}"))
+        .await
+        .ok()?
+        .error_for_status()
+        .ok()?;
+    response.text().await.ok()
 }
 
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
 
-    use super::{list, lowercase_first, page_description};
+    use super::{identifier_words, list, lowercase_first, page_description};
     use crate::{app::SITE_DESCRIPTION, nav::nav};
+
+    #[test]
+    fn splits_identifiers_into_words() {
+        assert_that!(identifier_words("use_draggable_collection_state")).is_equal_to(vec![
+            "use_",
+            "draggable_",
+            "collection_",
+            "state",
+        ]);
+        assert_that!(identifier_words("ComboBoxPopover"))
+            .is_equal_to(vec!["Combo", "Box", "Popover"]);
+        assert_that!(identifier_words("Data Attributes")).is_equal_to(vec!["Data Attributes"]);
+        assert_that!(identifier_words("ARIA Props")).is_equal_to(vec!["ARIA Props"]);
+    }
 
     #[test]
     fn lists_items_in_prose() {

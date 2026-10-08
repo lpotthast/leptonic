@@ -157,9 +157,11 @@ impl BrowserTest<str> for ColorSliderDragTests {
             .perform()
             .await?;
         expect_active(&page, &drag).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        assert_that!(page.element("test-cs-hue-log").await?.text().await?)
-            .is_equal_to(String::new());
+        stays!(
+            "the text of #test-cs-hue-log",
+            String::new(),
+            page.element("test-cs-hue-log").await?.text().await?
+        );
         driver
             .action_chain()
             .move_by_offset(80, 0)

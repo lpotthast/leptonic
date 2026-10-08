@@ -2,7 +2,7 @@ use leptonic::{
     atoms::{
         field::Label,
         input::Input,
-        radio::{Radio, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
         text_field::TextField,
     },
     hooks::{Orientation, collections::Key},
@@ -46,22 +46,30 @@ pub fn ListFormatterDemo() -> impl IntoView {
         <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change=on_locale_change classes="demo-choice-group">
             <Label classes="demo-choice-group-label">"Locale"</Label>
             <div class="demo-choice-group-items">
-                <Radio value="en-US" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "English (US)"
-                </Radio>
-                <Radio value="es-ES" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "Spanish"
-                </Radio>
-                <Radio value="de-DE" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "German"
-                </Radio>
-                <Radio value="ja-JP" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "Japanese"
-                </Radio>
+                <RadioField value="en-US">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "English (US)"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="es-ES">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "Spanish"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="de-DE">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "German"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="ja-JP">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "Japanese"
+                    </RadioButton>
+                </RadioField>
             </div>
         </RadioGroup>
         <TextField value=text set_value=text classes=["demo-field", "demo-mt-1"]>

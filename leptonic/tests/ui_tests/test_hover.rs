@@ -1,7 +1,6 @@
 // Upstream: react-aria/test/interactions/useHover.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
-use assertr::prelude::*;
 use browser_test::{
     BrowserTest, async_trait,
     thirtyfour::{WebDriver, WebElement},
@@ -52,9 +51,11 @@ impl BrowserTest<str> for HoverTests {
                 vec![],
             )
             .await?;
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert_that!(page.element("test-hover-log").await?.text().await?)
-            .is_equal_to(String::new());
+        stays!(
+            "the text of #test-hover-log",
+            String::new(),
+            page.element("test-hover-log").await?.text().await?
+        );
 
         // "should end hover when disabled": disabled by a script, the pointer stays.
         hover(driver, &page.element("test-hover-inner").await?).await?;
@@ -66,9 +67,11 @@ impl BrowserTest<str> for HoverTests {
         // "does not handle hover events if disabled".
         hover(driver, &away).await?;
         hover(driver, &page.element("test-hover-inner").await?).await?;
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert_that!(page.element("test-hover-log").await?.text().await?)
-            .is_equal_to(format!("{START},{END}"));
+        stays!(
+            "the text of #test-hover-log",
+            format!("{START},{END}"),
+            page.element("test-hover-log").await?.text().await?
+        );
         js_click(driver, "test-hover-disable").await?;
         hover(driver, &away).await?;
         reset(&page).await?;

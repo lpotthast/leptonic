@@ -5,6 +5,7 @@ async fn main() {
     use book_ssr::{app::*, markdown};
     use leptos::prelude::*;
     use leptos_axum::{LeptosRoutes, generate_route_list};
+    use tower_http::compression::predicate::{DefaultPredicate, NotForContentType, Predicate};
     use tracing_subscriber::{
         Layer, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
     };
@@ -74,7 +75,15 @@ async fn main() {
                     .gzip(true)
                     .br(true)
                     .deflate(true)
-                    .quality(tower_http::CompressionLevel::Default),
+                    .quality(tower_http::CompressionLevel::Default)
+                    // Not the WebAssembly bundle: compressing the 43 MB development bundle takes 3.4 s of CPU per
+                    // request (seconds before the page hydrates, on every reload, and longer when browser tests load
+                    // pages in parallel). A release build serves it precompressed (`precompress.sh`), which this layer
+                    // leaves alone.
+                    .compress_when(
+                        DefaultPredicate::new()
+                            .and(NotForContentType::const_new("application/wasm")),
+                    ),
             );
 
         let warmup_app = app.clone();
@@ -82,6 +91,9 @@ async fn main() {
             markdown::warm_markdown_cache(warmup_app, warmup_cache, &doc_paths).await;
         });
 
+        rustls::crypto::ring::default_provider()
+            .install_default()
+            .expect("no other crypto provider is installed yet");
         tracing::info!("Loading certs...");
 
         let working_dir = std::env::current_dir().expect("Could not determine working directory.");

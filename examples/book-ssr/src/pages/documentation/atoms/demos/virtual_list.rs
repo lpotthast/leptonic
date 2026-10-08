@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox, virtualizer::VirtualList},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}, virtualizer::VirtualList},
     hooks::{collections::Key, virtualizer::ListLayoutOptions},
 };
 use leptos::prelude::*;
@@ -60,10 +60,12 @@ pub fn VirtualListDemo() -> impl IntoView {
 
         <div class="demo-controls">
             <Button on_press=add_lines classes="demo-btn">"Add 20 lines"</Button>
-            <Checkbox is_selected=follow set_selected=follow classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Follow the end"
-            </Checkbox>
+            <CheckboxField is_selected=follow set_selected=follow>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Follow the end"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
         <p class="demo-status">
             {move || {

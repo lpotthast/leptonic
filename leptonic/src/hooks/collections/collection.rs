@@ -20,12 +20,13 @@ use super::{ItemLink, Key, Node, NodeKind};
 /// nodes.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Collection {
+    /// Std's randomly seeded hasher on purpose: keys are often user-controlled (record ids and
+    /// names, file names), and collections are built on the server too, so a fixed-seed hasher
+    /// would let crafted keys collide.
     nodes: HashMap<Key, Node>,
     first_key: Option<Key>,
     last_key: Option<Key>,
     item_count: usize,
-    /// Position of every node in document order, for O(1) order comparisons.
-    order: HashMap<Key, usize>,
     /// A tree's visible items (see [`Collection::with_expanded`]): navigation also visits items'
     /// children.
     is_tree_view: bool,
@@ -81,10 +82,14 @@ impl Collection {
         self.first_key.as_ref()
     }
 
-    /// The last node in document order (descending into the last top-level node's children).
+    /// The last node in document order: as [`key_before`](Self::key_before), this descends into
+    /// sections (and other non-item nodes), but not into items' children (a grid row's cells,
+    /// child rows), except in a tree view.
     pub fn last_key(&self) -> Option<&Key> {
         let mut node = self.get(self.last_key.as_ref()?)?;
-        while let Some(last_child) = &node.last_child_key {
+        while (node.kind != NodeKind::Item || self.is_tree_view)
+            && let Some(last_child) = &node.last_child_key
+        {
             node = self.get(last_child)?;
         }
         Some(&node.key)
@@ -135,6 +140,11 @@ impl Collection {
         self.siblings_from(self.get(parent).and_then(|p| p.first_child_key.as_ref()))
     }
 
+    /// The cells of a grid row (a tree table's row also has child rows: not these).
+    pub fn cells(&self, row: &Key) -> impl Iterator<Item = &Node> {
+        self.children(row).filter(|node| node.kind == NodeKind::Cell)
+    }
+
     /// All nodes in document order, as visited by [`key_after`](Self::key_after).
     pub fn nodes_in_order(&self) -> impl Iterator<Item = &Node> {
         let mut next = self.first_key.as_ref();
@@ -153,14 +163,15 @@ impl Collection {
     /// Compares the document order of two nodes (including nested tree items). `None` if either
     /// key is not part of the collection.
     pub fn compare_order(&self, a: &Key, b: &Key) -> Option<Ordering> {
-        Some(self.order.get(a)?.cmp(self.order.get(b)?))
+        Some(self.nodes.get(a)?.position.cmp(&self.nodes.get(b)?.position))
     }
 
     /// `keys` in collection order; keys missing from the collection come last (sorted by key).
     pub fn sorted_keys(&self, keys: impl IntoIterator<Item = Key>) -> Vec<Key> {
         let mut keys: Vec<Key> = keys.into_iter().collect();
-        keys.sort_by(|a, b| match (self.order.get(a), self.order.get(b)) {
-            (Some(a), Some(b)) => a.cmp(b),
+        let position = |key: &Key| self.nodes.get(key).map(|node| node.position);
+        keys.sort_by(|a, b| match (position(a), position(b)) {
+            (Some(a), Some(b)) => a.cmp(&b),
             (Some(_), None) => Ordering::Less,
             (None, Some(_)) => Ordering::Greater,
             (None, None) => a.cmp(b),
@@ -169,8 +180,8 @@ impl Collection {
     }
 
     /// The keys of all items between `from` and `to` (inclusive, in document order, either
-    /// direction), e.g. for range selection. Only items at the same tree level as `from` that are
-    /// reachable by [`key_after`](Self::key_after)/[`key_before`](Self::key_before) are included.
+    /// direction), e.g. for range selection: the items reachable by
+    /// [`key_after`](Self::key_after) (in a tree view, the shown child items too).
     pub fn item_keys_between(&self, from: &Key, to: &Key) -> Vec<Key> {
         let Some(ordering) = self.compare_order(from, to) else {
             return Vec::new();
@@ -200,6 +211,7 @@ impl Collection {
     pub fn with_expanded(&self, expanded: &std::collections::HashSet<Key>) -> Self {
         let mut collection = CollectionBuilder {
             entries: self.expanded_entries(self.first_key.as_ref(), expanded),
+            leading_empty_cells: 0,
         }
         .finish();
         collection.is_tree_view = true;
@@ -216,6 +228,13 @@ impl Collection {
                 let mut entry = Entry::from_node(node);
                 if node.kind != NodeKind::Item || expanded.contains(&node.key) {
                     entry.children = self.expanded_entries(node.first_child_key.as_ref(), expanded);
+                } else {
+                    // A collapsed item hides its child items, not its cells (a tree table's row).
+                    entry.children = self
+                        .siblings_from(node.first_child_key.as_ref())
+                        .filter(|child| child.kind == NodeKind::Cell)
+                        .map(Entry::from_node)
+                        .collect();
                 }
                 entry
             })
@@ -230,6 +249,7 @@ impl Collection {
     pub fn filter(&self, keep: impl Fn(&str, &Node) -> bool) -> Self {
         CollectionBuilder {
             entries: self.filtered_entries(self.first_key.as_ref(), &keep),
+            leading_empty_cells: 0,
         }
         .finish()
     }
@@ -311,6 +331,8 @@ impl Collection {
 #[derive(Debug, Default)]
 pub struct CollectionBuilder {
     entries: Vec<Entry>,
+    /// Empty cells every row starts with (a table's selection checkbox cell), also in child rows.
+    pub(crate) leading_empty_cells: usize,
 }
 
 #[derive(Debug)]
@@ -371,6 +393,7 @@ impl CollectionBuilder {
             .push(Entry::new(key.into(), NodeKind::Item, text_value.into()));
         ItemBuilder {
             entry: self.entries.last_mut().expect("just pushed"),
+            leading_empty_cells: self.leading_empty_cells,
         }
     }
 
@@ -402,12 +425,16 @@ impl CollectionBuilder {
             row: key.clone(),
             cells: Vec::new(),
         };
+        for _ in 0..self.leading_empty_cells {
+            row.cell("");
+        }
         cells(&mut row);
         let mut entry = Entry::new(key, NodeKind::Item, text_value.into());
         entry.children = row.cells;
         self.entries.push(entry);
         ItemBuilder {
             entry: self.entries.last_mut().expect("just pushed"),
+            leading_empty_cells: self.leading_empty_cells,
         }
     }
 
@@ -458,34 +485,7 @@ impl CollectionBuilder {
         let (first, last) = link(&mut collection, entries, None, 0);
         collection.first_key = first;
         collection.last_key = last;
-        let order: HashMap<Key, usize> = collection
-            .nodes_in_order_all()
-            .enumerate()
-            .map(|(position, key)| (key, position))
-            .collect();
-        collection.order = order;
         collection
-    }
-}
-
-impl Collection {
-    /// All keys in document order, including items' children (trees).
-    fn nodes_in_order_all(&self) -> impl Iterator<Item = Key> + '_ {
-        let mut stack: Vec<&Key> = Vec::new();
-        let mut next = self.first_key.as_ref();
-        std::iter::from_fn(move || {
-            loop {
-                if let Some(key) = next {
-                    let node = self.get(key)?;
-                    next = node.first_child_key.as_ref();
-                    if let Some(sibling) = &node.next_key {
-                        stack.push(sibling);
-                    }
-                    return Some(node.key.clone());
-                }
-                next = Some(stack.pop()?);
-            }
-        })
     }
 }
 
@@ -537,6 +537,7 @@ fn link(
             link: entry.link,
             col_index: None,
             col_span: entry.col_span,
+            position: 0,
         };
         nodes.push((node, entry.children));
     }
@@ -573,6 +574,9 @@ fn link(
         } else {
             level
         };
+        // Nodes are inserted in document order (a node before its children, they before its next
+        // sibling): the count so far is the node's position.
+        node.position = collection.nodes.len();
         let key = node.key.clone();
         collection.nodes.insert(key.clone(), node);
         let (first_child, last_child) = link(collection, children, Some(&key), child_level);
@@ -635,6 +639,7 @@ impl CellBuilder<'_> {
 /// Configures an item added with [`CollectionBuilder::item`].
 pub struct ItemBuilder<'a> {
     entry: &'a mut Entry,
+    leading_empty_cells: usize,
 }
 
 // The builder writes through `&mut`; using the returned value for chaining is optional, so
@@ -667,11 +672,14 @@ impl ItemBuilder<'_> {
         self
     }
 
-    /// Add child items (for trees).
+    /// Add child items (for trees), after the item's cells (a tree table's child rows).
     pub fn children(self, children: impl FnOnce(&mut CollectionBuilder)) -> Self {
-        let mut inner = CollectionBuilder::default();
+        let mut inner = CollectionBuilder {
+            entries: Vec::new(),
+            leading_empty_cells: self.leading_empty_cells,
+        };
         children(&mut inner);
-        self.entry.children = inner.entries;
+        self.entry.children.extend(inner.entries);
         self
     }
 }

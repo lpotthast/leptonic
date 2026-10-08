@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::checkbox::Checkbox,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxState, IntoAttrs, ListBoxData, SelectMode, UseComboBoxInput,
         UseComboBoxReturn, UseComboBoxStateInput, UseListBoxInput, UseListBoxReturn,
@@ -115,10 +115,12 @@ pub fn ComboboxDemo() -> impl IntoView {
 
         <DemoState state/>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

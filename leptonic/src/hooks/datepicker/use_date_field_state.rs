@@ -23,6 +23,7 @@ use crate::{
         i18n::{Locale, use_locale},
     },
 };
+use crate::utils::intl_strings::{DateValidationStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -46,7 +47,6 @@ use crate::{
 //
 // ## OMITTED FEATURES
 // - Calendar systems other than the Gregorian (`createCalendar`).
-// - Localized validation messages: they are English.
 // - A `maxGranularity` of minute or second with a time: the hour always shows.
 //
 // =============================================================================
@@ -396,6 +396,7 @@ pub(crate) fn validation_result<V: DateValue>(
     max_value: Option<&V>,
     is_date_unavailable: Option<Callback<V, bool>>,
     formatter: &DateFormatter,
+    strings: &DateValidationStrings,
 ) -> ValidationResult {
     let Some(value) = value else {
         return valid();
@@ -407,16 +408,13 @@ pub(crate) fn validation_result<V: DateValue>(
     let is_invalid = range_overflow || range_underflow || is_unavailable;
     let mut errors = Vec::new();
     if let Some(min) = min_value.filter(|_| range_underflow) {
-        errors.push(format!("Value must be {} or later.", formatter.format(min)));
+        errors.push(strings.range_underflow(&formatter.format(min)));
     }
     if let Some(max) = max_value.filter(|_| range_overflow) {
-        errors.push(format!(
-            "Value must be {} or earlier.",
-            formatter.format(max)
-        ));
+        errors.push(strings.range_overflow(&formatter.format(max)));
     }
     if is_unavailable {
-        errors.push("Selected date unavailable.".to_owned());
+        errors.push(strings.unavailable_date());
     }
     ValidationResult {
         is_invalid,
@@ -615,6 +613,7 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
     });
 
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
+    let strings = use_localized_strings::<DateValidationStrings>();
     let builtin_validation = Signal::derive(move || {
         let value = binding.value.get();
         let (min, max) = (min_value.get(), max_value.get());
@@ -625,6 +624,7 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
                 max.as_ref(),
                 is_date_unavailable.get_value(),
                 &formatter.formatter,
+                &strings.read(),
             )
         }))
     });

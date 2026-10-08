@@ -25,18 +25,15 @@ pub fn PageAtomSelect() -> impl IntoView {
     let page_size = RwSignal::new(10_u32);
     let bound_changes = RwSignal::new(0_u32);
     let options = Memo::new(|_| vec![10_u32, 25, 50]);
+    // Typed: the options' keys are the sizes' (`SelectionValue for u32`).
     let sizes = use_collection(move |b| {
         for option in options.get() {
-            b.item(Key::from(option.to_string()), option.to_string());
+            b.item(option, option.to_string());
         }
     });
-    let selected_size = Signal::derive(move || vec![Key::from(page_size.get().to_string())]);
-    let set_page_size = Callback::new(move |keys: Vec<Key>| {
-        if let Some(size) = keys
-            .first()
-            .and_then(|k| k.as_str())
-            .and_then(|k| k.parse().ok())
-        {
+    let selected_size = Signal::derive(move || Some(page_size.get()));
+    let set_page_size = Callback::new(move |size: Option<u32>| {
+        if let Some(size) = size {
             page_size.set(size);
         }
     });
@@ -48,12 +45,11 @@ pub fn PageAtomSelect() -> impl IntoView {
             <form id="test-sel-form">
                 <Select
                     collection=fruits
-                    default_value=vec![Key::from("Banana")]
+                    default_value=Some(Key::from("Banana"))
                     disabled_keys=Signal::stored(HashSet::from([Key::from("Cherry")]))
                     name="fruit"
-                    on_change=Callback::new(move |keys: Vec<Key>| {
-                        let keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
-                        changes.update(|c| c.push(keys.join(",")));
+                    on_change=Callback::new(move |key: Option<Key>| {
+                        changes.update(|c| c.push(key.map(|k| k.to_string()).unwrap_or_default()));
                     })
                 >
                     <Label>"Fruit"</Label>
@@ -89,7 +85,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                                 each=move || options.get()
                                 key=|option| *option
                                 children=|option| {
-                                    view! { <ListBoxItem key=Key::from(option.to_string())>{option}</ListBoxItem> }
+                                    view! { <ListBoxItem key=option>{option}</ListBoxItem> }
                                 }
                             />
                         </ListBox>

@@ -1,13 +1,14 @@
 // Upstream: react-stately/src/table/useTableState.ts @ 99e6102368
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use leptos::prelude::*;
 
 use super::TableCollection;
 use crate::{
     hooks::{
-        GridFocusMode, GridState, UseGridStateInput,
+        GridFocusMode, GridState, TreeExpansion, UseGridStateInput,
         collections::{CollectionMemo, Key, SelectionOptions},
+        tree::use_tree_state::use_tree_expansion,
         use_grid_state,
     },
     utils::ValueBinding,
@@ -27,8 +28,7 @@ use crate::{
 //   `selection.disabled_behavior` (the table atoms use `DisabledBehavior::Selection`).
 //
 // ## OMITTED FEATURES
-// - Tree tables (`treeColumn`, `expandedKeys`): not built yet (planned; trees are grid lists
-//   meanwhile, `hooks::tree`).
+// - `expandedKeys: 'all'`.
 // - `UNSTABLE_useFilteredTableState`.
 //
 // =============================================================================
@@ -72,14 +72,53 @@ pub struct UseTableStateInput {
     pub sort_descriptor: Option<ValueBinding<Option<SortDescriptor>>>,
     /// Called when the user sorts the table (pressing a sortable column header).
     pub on_sort_change: Option<Callback<SortDescriptor>>,
+    /// Makes the table a tree table: rows with child rows (`ItemBuilder::children`) expand and
+    /// collapse (react-aria-components' `treeColumn`, `expandedKeys`).
+    pub tree: Option<TableTreeInput>,
+}
+
+/// The settings of a tree table.
+#[derive(Debug, Clone)]
+pub struct TableTreeInput {
+    /// The column showing the hierarchy: its cells hold the expand buttons.
+    pub column: Key,
+    /// The initially expanded rows. Ignored when `expanded_keys` is bound.
+    pub default_expanded_keys: HashSet<Key>,
+    /// The expanded rows as app state, replacing `default_expanded_keys`.
+    pub expanded_keys: Option<ValueBinding<HashSet<Key>>>,
+    /// Called when rows are expanded or collapsed.
+    pub on_expanded_change: Option<Callback<HashSet<Key>>>,
+}
+
+/// The tree of a tree table.
+#[derive(Debug, Clone, Copy)]
+pub struct TableTree {
+    column: StoredValue<Key>,
+    /// Which rows are expanded.
+    pub expansion: TreeExpansion,
+}
+
+impl TableTree {
+    /// The column showing the hierarchy.
+    pub fn column(&self) -> Key {
+        self.column.get_value()
+    }
+
+    /// Whether `column` shows the hierarchy.
+    pub fn is_tree_column(&self, column: &Key) -> bool {
+        self.column.with_value(|tree_column| tree_column == column)
+    }
 }
 
 /// The state of a table: its grid state (rows, cells, selection, focus) and its sorting.
 #[derive(Debug, Clone, Copy)]
 pub struct TableState {
     pub grid: GridState,
-    /// The columns and rows.
+    /// The columns and rows. In a tree table also the child rows of collapsed rows (the grid's
+    /// collection, `grid.list.collection`, holds the visible rows).
     pub table: Memo<Arc<TableCollection>>,
+    /// Set in a tree table.
+    pub tree: Option<TableTree>,
     /// The current sorting, if any.
     pub sort_descriptor: Signal<Option<SortDescriptor>>,
     binding: ValueBinding<Option<SortDescriptor>>,
@@ -115,8 +154,27 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
         default_sort_descriptor,
         sort_descriptor,
         on_sort_change,
+        tree,
     } = input;
-    let collection: CollectionMemo = Memo::new(move |_| table.with(|t| t.collection().clone()));
+    let tree = tree.map(|tree| {
+        let (expansion, _) = use_tree_expansion(
+            tree.default_expanded_keys,
+            tree.expanded_keys,
+            tree.on_expanded_change,
+        );
+        TableTree {
+            column: StoredValue::new(tree.column),
+            expansion,
+        }
+    });
+    // A tree table's visible rows: child rows of expanded rows only.
+    let collection: CollectionMemo = Memo::new(move |_| match tree {
+        Some(tree) => tree
+            .expansion
+            .expanded_keys
+            .with(|expanded| table.with(|t| Arc::new(t.collection().with_expanded(expanded)))),
+        None => table.with(|t| t.collection().clone()),
+    });
     let grid = use_grid_state(UseGridStateInput {
         collection,
         selection,
@@ -128,6 +186,7 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
     TableState {
         grid,
         table,
+        tree,
         sort_descriptor: binding.value,
         binding,
         on_sort_change,
@@ -152,6 +211,7 @@ mod tests {
             });
             let changes = RwSignal::new(Vec::new());
             let state = use_table_state(UseTableStateInput {
+                tree: None,
                 on_sort_change: Some(Callback::new(move |d: SortDescriptor| {
                     changes.update(|c| c.push(d));
                 })),
@@ -195,6 +255,7 @@ mod tests {
             });
             let sort = RwSignal::new(None);
             let state = use_table_state(UseTableStateInput {
+                tree: None,
                 sort_descriptor: Some(sort.into()),
                 table,
                 selection: SelectionOptions {

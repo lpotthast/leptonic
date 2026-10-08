@@ -6,11 +6,11 @@ use leptos::{
 
 use super::{
     drag_manager::use_drag_session,
-    messages,
     types::{DropPosition, DropTarget},
     use_droppable_collection::DroppableCollectionData,
     use_droppable_item::{UseDroppableItemInput, UseDroppableItemReturn, use_droppable_item},
 };
+use crate::utils::intl_strings::{DndStrings, InsertBetweenArgs, use_localized_strings};
 use crate::{
     hooks::{
         IntoAttrs,
@@ -54,7 +54,7 @@ pub struct UseDropIndicatorReturn {
 #[derive(Debug)]
 pub struct UseDropIndicatorProps {
     pub id: String,
-    pub aria_roledescription: &'static str,
+    pub aria_roledescription: Signal<String>,
     pub aria_label: Signal<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
@@ -65,7 +65,7 @@ pub struct UseDropIndicatorProps {
 
 pub type UseDropIndicatorAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::AriaRoledescription, &'static str>,
+    Attr<attr::AriaRoledescription, Signal<String>>,
     Attr<attr::AriaLabel, Signal<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
@@ -99,12 +99,12 @@ fn text(collection: &Collection, key: &Key) -> String {
 }
 
 /// The label of a drop position: "Insert between A and B", "Drop on A", ...
-fn label(collection: &Collection, target: &DropTarget) -> String {
+fn label(strings: &DndStrings, collection: &Collection, target: &DropTarget) -> String {
     let DropTarget::Item(target) = target else {
-        return messages::DROP_ON_ROOT.to_owned();
+        return strings.drop_on_root();
     };
     if target.drop_position == DropPosition::On {
-        return messages::drop_on_item(&text(collection, &target.key));
+        return strings.drop_on_item(&text(collection, &target.key));
     }
     let item_key = |key: Option<&Key>| {
         key.and_then(|k| collection.get(k))
@@ -123,11 +123,12 @@ fn label(collection: &Collection, target: &DropTarget) -> String {
         Some(target.key.clone())
     };
     match (before, after) {
-        (Some(before), Some(after)) => {
-            messages::insert_between(&text(collection, &before), &text(collection, &after))
-        }
-        (Some(before), None) => messages::insert_after(&text(collection, &before)),
-        (None, Some(after)) => messages::insert_before(&text(collection, &after)),
+        (Some(before), Some(after)) => strings.insert_between(InsertBetweenArgs {
+            before_item_text: &text(collection, &before),
+            after_item_text: &text(collection, &after),
+        }),
+        (Some(before), None) => strings.insert_after(&text(collection, &before)),
+        (None, Some(after)) => strings.insert_before(&text(collection, &after)),
         (None, None) => String::new(),
     }
 }
@@ -141,6 +142,7 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
         activate_button,
     } = input;
     let id = use_id("drop-indicator");
+    let strings = use_localized_strings::<DndStrings>();
     let element = CapturedElement::new();
     let session = use_drag_session();
     let collection_id = collection.id.clone();
@@ -172,8 +174,11 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
     UseDropIndicatorReturn {
         drop_indicator_props: UseDropIndicatorProps {
             id,
-            aria_roledescription: messages::DROP_INDICATOR,
-            aria_label: Signal::derive(move || items.with(|c| target.with(|t| label(c, t)))),
+            aria_roledescription: Signal::derive(move || strings.read().drop_indicator()),
+            aria_label: Signal::derive(move || {
+                let strings = strings.read();
+                items.with(|c| target.with(|t| label(&strings, c, t)))
+            }),
             aria_labelledby,
             aria_describedby: drop_props.aria_describedby,
             aria_hidden,

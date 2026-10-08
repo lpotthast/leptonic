@@ -14,7 +14,6 @@
 //   per hook): cells share them.
 //
 // ## OMITTED FEATURES
-// - Localized strings ("Selected Date: ...", "... to ..."): English.
 // - Range formatting with shared fields ("June 1 – 15, 2024", `formatRange`): ICU4X has none
 //   yet; a range is "start to end".
 //
@@ -30,37 +29,8 @@ use crate::utils::{
         DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
     },
     i18n::{Locale, use_locale},
+    intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings},
 };
-
-/// The English strings of the calendar hooks (react-aria: `@react-aria/calendar`'s messages),
-/// until leptonic has localized strings.
-pub(crate) mod strings {
-    pub(crate) const NEXT: &str = "Next";
-    pub(crate) const PREVIOUS: &str = "Previous";
-
-    pub(crate) fn selected_date(date: &str) -> String {
-        format!("Selected Date: {date}")
-    }
-    pub(crate) fn selected_range(range: &str) -> String {
-        format!("Selected Range: {range}")
-    }
-    pub(crate) fn date_range(start: &str, end: &str) -> String {
-        format!("{start} to {end}")
-    }
-    pub(crate) fn today(date: &str) -> String {
-        format!("Today, {date}")
-    }
-    pub(crate) fn today_selected(date: &str) -> String {
-        format!("Today, {date} selected")
-    }
-    pub(crate) fn selected(date: &str) -> String {
-        format!("{date} selected")
-    }
-    pub(crate) const MINIMUM_DATE: &str = "First available date";
-    pub(crate) const MAXIMUM_DATE: &str = "Last available date";
-    pub(crate) const START_RANGE_SELECTION: &str = "Click to start selecting date range";
-    pub(crate) const FINISH_RANGE_SELECTION: &str = "Click to finish selecting date range";
-}
 
 /// A calendar's state: a single date or a range (react-aria: `CalendarState | RangeCalendarState`).
 #[derive(Clone, Copy)]
@@ -238,13 +208,14 @@ pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale)
         locale,
         full_date_options(era_format(start).or_else(|| era_format(end))),
     );
+    let strings = CalendarStrings::for_locale(locale.clone());
     if start == end {
-        strings::selected_date(&formatter.format_date(start))
+        strings.selected_date_description(&formatter.format_date(start))
     } else {
-        strings::selected_range(&strings::date_range(
-            &formatter.format_date(start),
-            &formatter.format_date(end),
-        ))
+        strings.selected_range_description(&strings.date_range(DateRangeArgs {
+            start_date: &formatter.format_date(start),
+            end_date: &formatter.format_date(end),
+        }))
     }
 }
 
@@ -252,6 +223,7 @@ pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale)
 /// for a month, "May 2024 to July 2024" for months, else the dates.
 pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> String {
     let era = era_format(range.start).or_else(|| era_format(range.end));
+    let strings = CalendarStrings::for_locale(locale.clone());
     let months = DateTimeFormatter::new(
         locale,
         DateTimeFormatOptions {
@@ -266,10 +238,10 @@ pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> St
             return months.format_date(range.start);
         }
         if range.end == range.end.last_of_month() {
-            return strings::date_range(
-                &months.format_date(range.start),
-                &months.format_date(range.end),
-            );
+            return strings.date_range(DateRangeArgs {
+                start_date: &months.format_date(range.start),
+                end_date: &months.format_date(range.end),
+            });
         }
     }
     let dates = DateTimeFormatter::new(
@@ -282,10 +254,10 @@ pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> St
             ..DateTimeFormatOptions::default()
         },
     );
-    strings::date_range(
-        &dates.format_date(range.start),
-        &dates.format_date(range.end),
-    )
+    strings.date_range(DateRangeArgs {
+        start_date: &dates.format_date(range.start),
+        end_date: &dates.format_date(range.end),
+    })
 }
 
 #[cfg(test)]

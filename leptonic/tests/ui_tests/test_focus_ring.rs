@@ -176,8 +176,11 @@ async fn test_disabled_focus_ring(page: &FocusRingPage<'_>) -> Result<(), Report
     // Click the disabled target: is_focused and is_focus_visible stay false
     page.click_disabled_target().await?;
     // Negative checks: give a wrong update time to happen.
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_disabled_is_focused().await?).is_equal_to(false);
+    stays!(
+        "whether the disabled element is focused",
+        false,
+        page.read_disabled_is_focused().await?
+    );
     assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
 
     // Tab to disabled target: still false
@@ -185,8 +188,11 @@ async fn test_disabled_focus_ring(page: &FocusRingPage<'_>) -> Result<(), Report
     page.click_before().await?;
     let active = page.driver.active_element().await?;
     active.send_keys(Key::Tab).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_disabled_is_focused().await?).is_equal_to(false);
+    stays!(
+        "whether the disabled element is focused",
+        false,
+        page.read_disabled_is_focused().await?
+    );
     assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
 
     Ok(())
@@ -207,8 +213,11 @@ async fn test_atom_text_input(page: &FocusRingPage<'_>) -> Result<(), Report> {
         page.send_keys_to_active("a").await?;
         if is_text_input {
             // Give a wrong `data-focus-visible` the chance to appear.
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-            assert_that!(el.attr("data-focus-visible").await?).is_none();
+            stays!(
+                "data-focus-visible of the element",
+                None,
+                el.attr("data-focus-visible").await?
+            );
             page.send_keys_to_active(Key::Escape).await?;
         }
         page.wait_for_attr(&el, "data-focus-visible", Some("true"))

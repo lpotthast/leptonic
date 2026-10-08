@@ -256,8 +256,11 @@ async fn clicking_an_item(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(trigger_attr(page, "aria-expanded").await?).is_equal_to(Some("true".to_owned()));
 
     item(page, "Paste").await?.click().await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-menu-actions").await?).is_equal_to("Cut,Copy".to_owned());
+    stays!(
+        "the text of #test-menu-actions",
+        "Cut,Copy".to_owned(),
+        page.read_text_of("test-menu-actions").await?
+    );
     assert_that!(page.count_matching(MENU).await?)
         .with_detail_message("the menu stays open after clicking a disabled item")
         .is_equal_to(1);

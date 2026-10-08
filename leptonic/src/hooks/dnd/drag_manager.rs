@@ -29,6 +29,7 @@ use crate::utils::{
     node_contains,
     virtual_click::{is_virtual_click, is_virtual_pointer_event},
 };
+use crate::utils::intl_strings::DndStrings;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -50,6 +51,9 @@ pub(crate) type GetDropOperation = Rc<dyn Fn(&DragTypes, &[DropOperation]) -> Dr
 /// The source of a keyboard drag.
 #[derive(Clone)]
 pub(crate) struct DragTarget {
+    /// The messages to announce, in the dragged element's locale (react-aria passes the string
+    /// formatter to `beginDragging`).
+    pub strings: DndStrings,
     pub element: web_sys::Element,
     pub items: Vec<DragItem>,
     pub allowed_drop_operations: Vec<DropOperation>,
@@ -350,7 +354,7 @@ impl DragSession {
         self.update_valid_drop_targets();
 
         announce(
-            messages::drag_started(get_drag_modality()),
+            messages::drag_started(&self.drag_target.strings, get_drag_modality()),
             Assertiveness::Assertive,
         );
     }
@@ -819,7 +823,10 @@ impl DragSession {
             focus(&self.drag_target.element);
         }
         dispatch_focusin_on_active_element();
-        announce(messages::DROP_CANCELED, Assertiveness::Assertive);
+        announce(
+            self.drag_target.strings.drop_canceled(),
+            Assertiveness::Assertive,
+        );
     }
 
     fn drop(self: &Rc<Self>, item: Option<Item>) {
@@ -864,7 +871,10 @@ impl DragSession {
             );
         }
         self.end();
-        announce(messages::DROP_COMPLETE, Assertiveness::Assertive);
+        announce(
+            self.drag_target.strings.drop_complete(),
+            Assertiveness::Assertive,
+        );
     }
 
     fn activate(drop_target: Option<Target>, item: Option<Item>) {

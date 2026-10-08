@@ -224,7 +224,7 @@ fn ReorderableList() -> impl IntoView {
         collection_id: props.id.clone(),
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
-            element: element,
+            element,
             orientation: Orientation::Vertical,
             layout: ListLayout::Stack,
             layout_delegate: None,

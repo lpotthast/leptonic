@@ -43,7 +43,7 @@ pub struct CachedDoc {
     pub title: String,
     pub description: String,
     pub kind: PageKind,
-    /// The page's `##` sections, linked from the index.
+    /// The page's sections (`##`, and `###` naming an item), linked from the index.
     pub sections: Vec<Heading>,
     search: SearchText,
 }

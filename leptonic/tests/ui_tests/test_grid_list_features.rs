@@ -39,10 +39,25 @@ impl BrowserTest<str> for GridListChildNavigationTests {
         expect_focus_on_button(&page, "Item 1 last").await?;
         page.send_keys_to_active(Key::Left).await?;
         expect_focus_on_button(&page, "Item 1 first").await?;
+        page.send_keys_to_active(Key::Left).await?;
+        page.wait_for_focus("row", None).await?;
+        page.send_keys_to_active(Key::Right).await?;
+        expect_focus_on_button(&page, "Item 1 first").await?;
         page.send_keys_to_active(Key::Down).await?;
         expect_focus_on_button(&page, "Item 2 first").await?;
         page.send_keys_to_active(Key::Up).await?;
         expect_focus_on_button(&page, "Item 1 first").await?;
+
+        // Right to left ("ArrowLeft/Right RTL cycle"): ArrowLeft moves forward, ArrowRight back.
+        focus_before(&page, "#glf-children-rtl").await?;
+        page.press_tab().await?;
+        expect_focus_on_button(&page, "RTL first").await?;
+        page.send_keys_to_active(Key::Left).await?;
+        expect_focus_on_button(&page, "RTL last").await?;
+        page.send_keys_to_active(Key::Left).await?;
+        page.wait_for_focus("row", None).await?;
+        page.send_keys_to_active(Key::Right).await?;
+        expect_focus_on_button(&page, "RTL last").await?;
 
         // Tab navigation: Tab enters and walks the row's children, Shift+Tab goes back.
         focus_before(&page, "#glf-tab").await?;

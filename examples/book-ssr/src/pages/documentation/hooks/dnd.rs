@@ -976,7 +976,7 @@ fn KeyboardAndScreenReaders() -> impl IntoView {
                 "The messages follow the "<AnchorLink href="#use-drag-modality">"drag modality"</AnchorLink>": after a "
                 "keyboard interaction they mention "<Keys keys="Enter"/>", on touch screens double taps or long presses "
                 "(\u{201c}Double tap to start dragging.\u{201d}, \u{201c}Long press to drag 2 selected items.\u{201d}), "
-                "otherwise clicks (\u{201c}Click to start dragging.\u{201d}). They are English for now."
+                "otherwise clicks (\u{201c}Click to start dragging.\u{201d}). They follow the locale."
             </p>
 
             <DragSessionSection/>

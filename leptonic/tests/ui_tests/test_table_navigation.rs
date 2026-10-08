@@ -40,6 +40,7 @@ impl BrowserTest<str> for TableNavigationTests {
         page_up_reaches_the_column_headers(&page).await?;
         column_spans(&page).await?;
         an_empty_table(&page).await?;
+        enter_on_a_button_that_is_not_the_first_child(&page).await?;
 
         page.expect_no_page_errors().await
     }
@@ -212,8 +213,11 @@ async fn clicking_a_child_or_a_row(page: &Page<'_>) -> Result<(), Report> {
     let input = labelled(page, TAB, "Program Files notes").await?;
     input.click().await?;
     expect_focus(page, &input, "the clicked input").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-tn-tab-selection").await?).is_equal_to(String::new());
+    stays!(
+        "the text of #test-tn-tab-selection",
+        String::new(),
+        page.read_text_of("test-tn-tab-selection").await?
+    );
 
     cell(page, TAB, "System file").await?.click().await?;
     page.wait_for_text("test-tn-tab-selection", "3").await
@@ -484,4 +488,43 @@ async fn an_empty_table(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(select_all.is_enabled().await?).is_false();
     page.press_tab().await?;
     page.wait_for_active_id("test-tn-after-empty").await
+}
+
+/// Enter and clicks on a `Button` atom that isn't its cell's first child (`CellFocusMode::Child`)
+/// press that button, and focus stays on it (crudkit: Enter first moved focus to the first child).
+async fn enter_on_a_button_that_is_not_the_first_child(page: &Page<'_>) -> Result<(), Report> {
+    const ACTIONS: &str = "Actions table";
+    enter(page, "test-tn-before-actions", ACTIONS, "Alice").await?;
+    press(page, Key::Right).await?;
+    press(page, Key::Right).await?;
+    let edit = labelled(page, ACTIONS, "Edit Alice").await?;
+    expect_focus(page, &edit, "Edit Alice").await?;
+    press(page, Key::Right).await?;
+    let delete = labelled(page, ACTIONS, "Delete Alice").await?;
+    expect_focus(page, &delete, "Delete Alice").await?;
+
+    press(page, Key::Enter).await?;
+    page.wait_for_text("test-tn-actions-log", "delete Alice")
+        .await?;
+    expect_focus(page, &delete, "Delete Alice after Enter").await?;
+    press(page, Key::Space).await?;
+    page.wait_for_text("test-tn-actions-log", "delete Alice, delete Alice")
+        .await?;
+    expect_focus(page, &delete, "Delete Alice after Space").await?;
+
+    let delete_bob = labelled(page, ACTIONS, "Delete Bob").await?;
+    delete_bob.click().await?;
+    page.wait_for_text(
+        "test-tn-actions-log",
+        "delete Alice, delete Alice, delete Bob",
+    )
+    .await?;
+    expect_focus(page, &delete_bob, "Delete Bob after a click").await?;
+    press(page, Key::Enter).await?;
+    page.wait_for_text(
+        "test-tn-actions-log",
+        "delete Alice, delete Alice, delete Bob, delete Bob",
+    )
+    .await?;
+    expect_focus(page, &delete_bob, "Delete Bob after a click and Enter").await
 }

@@ -151,7 +151,8 @@ pub fn PageAccessibility() -> impl IntoView {
                     " (\u{201c}en-US\u{201d}, left-to-right, without one). The direction swaps arrow keys and mirrors sliders "
                     "and overlay placements at the start or end; the locale formats numbers and compares text. The texts "
                     "leptonic adds itself (such as the \u{201c}Dismiss\u{201d} label of "<Code inline=true>"DismissButton"</Code>
-                    ") are English for now: where a concept takes an "<Code inline=true>"aria_label"</Code>", pass your own."
+                    ") follow the locale too, in 34 languages, with leptonic\u{2019}s default "<Code inline=true>"intl-strings"</Code>
+                    " feature; where a concept takes an "<Code inline=true>"aria_label"</Code>", you can pass your own."
                 </p>
             </Section>
 

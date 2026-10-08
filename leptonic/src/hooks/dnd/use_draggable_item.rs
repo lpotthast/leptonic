@@ -15,6 +15,7 @@ use crate::{
     hooks::{SelectionMode, UseButtonInput, collections::Key},
     utils::{EventHandler, use_description::use_description},
 };
+use crate::utils::intl_strings::{DndStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -95,6 +96,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
         keys_for_drag.get() > 1 && item_key.with_value(|k| selection.is_selected(k))
     });
     let modality = use_drag_modality();
+    let strings = use_localized_strings::<DndStrings>();
     // The item itself starts drags (no drag button) in a selectable collection: describe how; it
     // has no click to start them (touch: long press; NVDA/JAWS are in forms mode in collections).
     let describes = move || !has_drag_button && selection.selection_mode() != SelectionMode::None;
@@ -103,7 +105,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
             let modality = modality.get();
             let alt = has_action && modality == DragModality::Keyboard;
             let count = is_selected.get().then(|| keys_for_drag.get());
-            messages::drag_item_description(modality, count, alt)
+            messages::drag_item_description(&strings.read(), modality, count, alt)
         })
     }));
     let drag_description = drag_props.aria_describedby;
@@ -142,7 +144,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     let collection = state.list.collection;
     let label = Signal::derive(move || {
         if is_selected.get() {
-            messages::drag_selected_items(keys_for_drag.get())
+            strings.read().drag_selected_items(keys_for_drag.get())
         } else {
             let text = item_key.with_value(|k| {
                 collection.with(|c| {
@@ -151,7 +153,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
                         .unwrap_or_default()
                 })
             });
-            messages::drag_item(&text)
+            strings.read().drag_item(&text)
         }
     });
 

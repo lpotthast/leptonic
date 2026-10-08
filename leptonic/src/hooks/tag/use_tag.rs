@@ -28,6 +28,7 @@ use crate::{
         use_description::use_description,
     },
 };
+use crate::utils::intl_strings::{TagStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -36,13 +37,8 @@ use crate::{
 // ## API DIFFERENCES
 // - The remove button is configured, not rendered: `remove_button` is the `UseButtonInput` for
 //   `use_button`.
-// - The remove description ("Press Delete or Backspace to remove.") and the button label
-//   ("Remove") are English only.
 //
 // =============================================================================
-
-/// The description of removable tags for keyboard and screen reader users.
-const REMOVE_DESCRIPTION: &str = "Press Delete or Backspace to remove.";
 
 /// Input of [`use_tag`].
 #[derive(Debug, Clone)]
@@ -172,14 +168,15 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     let focus_visible = use_focus_visible(UseFocusVisibleInput::default());
     let modality = focus_visible.modality;
     let has_remove = on_remove.is_some();
+    let strings = use_localized_strings::<TagStrings>();
     let aria_describedby = use_description(Signal::derive(move || {
         (has_remove && matches!(modality.get(), Modality::Keyboard | Modality::Virtual))
-            .then(|| REMOVE_DESCRIPTION.to_owned())
+            .then(|| strings.read().remove_description())
     }));
 
     let remove_button = on_remove.map(|on_remove| UseButtonInput {
         id: Some(button_id.clone()),
-        aria_label: "Remove".into(),
+        aria_label: Signal::derive(move || Some(strings.read().remove_button_label())).into(),
         aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         is_disabled,
         on_press: Some(Callback::new(move |_: PressEvent| {

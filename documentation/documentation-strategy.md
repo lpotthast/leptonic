@@ -90,7 +90,8 @@ Not here: full API reference, styling, hook internals.
 - Example — minimal setup and attribute spreading
 - Demo
 - Further sections for options and behavior worth explaining
-- Keyboard — `KeyboardTable`
+- Keyboard — `KeyboardTable`, on building-block pages only. A concept's hook page leaves keyboard interaction to the
+  concept overview (its introduction says so), so that each table exists once.
 - See Also
 
 A page documenting several hooks (e.g. the slider hooks) gives each hook its own section titled with the exact hook
@@ -175,7 +176,7 @@ pub fn PageUseButton() -> impl IntoView {
 | `DocPage title`                 | The page: `<h1>`, the `<article>` exported as Markdown, the generated table of contents.     |
 | `Section title [id]`            | A titled section. Nesting gives `<h2>`, `<h3>`, ... All headings land in the TOC.            |
 | `ApiTable kind` + `ApiRow`      | Input, Return, Fields, Props and Data Attributes tables. `name` may list several.            |
-| `ApiTable of`                   | The documented struct (Input/Return/Fields) or atom (Props). A test checks the rows.         |
+| `ApiTable of`                   | The documented struct (Input/Return/Fields) or atom (Props). A test checks rows and types.   |
 | `KeyboardTable` + `KeyRow keys` | Keyboard interaction. `keys="Shift + Tab"`, alternatives as `"Enter / Space"`.               |
 | `DocTable headers`              | Any other table; rows are plain `<tr><td>`.                                                  |
 | `Demo description source`       | Frame for an interactive demo with collapsible source. `source_open` expands it.             |
@@ -215,7 +216,9 @@ pub fn PageUseButton() -> impl IntoView {
   started pages.
 - Tag every Input, Return, Fields and Props table with `of="<Item>"` (qualified, e.g. `atoms::button::Button`, where
   the name is ambiguous). The unit test `kit::api_check` fails for untagged tables and when a table's rows differ from
-  the item's public fields or props, so the book can't silently drift from the library. Document function arguments
+  the item's public fields or props, or a row's `ty` from the field's type, so the book can't silently drift from the
+  library. Give each row one type: rows of several names share it (`name="on_focus, on_blur"`), or list one per name
+  only for short pairs (`ty="Classes, Styles"`). Document function arguments
   and methods in prose or a `DocTable`, not in an `ApiTable`.
 - Don't document react-aria legacy or deprecated API (e.g. `onClick` on press hooks).
 
@@ -253,7 +256,7 @@ behavior?". The sidebar answers each in its own part, framed by the guides:
 
 1. **Getting started**: what leptonic is, installing it, the changelog.
 2. **Guides**: topics every page builds on (the layers and styling atoms, event propagation, classes and styles,
-   themes and the atom theme, forms and validation, SSR, accessibility).
+   themes and the atom theme, forms and validation, SSR, accessibility, build times and bundle size).
 3. **Concepts**: every concept, in groups by purpose: Buttons, Fields, Pickers, Collections, Date & Time, Color,
    Overlays, Navigation, Status, Content & Layout. The groups follow react-aria-components' catalog, so readers
    who know it find things where they expect them.
@@ -347,5 +350,7 @@ and the building blocks by area. Content is defined once, in the Leptos page; th
 - Demos become `*[Interactive Demo: <description>]*` followed by their Rust source.
 - Links to other pages point to their Markdown export.
 - Every hook or atom documented on a page must appear by name in a section title, or it is invisible to
-  the index.
+  the index and the search. The index lists a page's `##` sections and, nested under them, the `###` sections whose
+  title names an item (one word with an underscore or an inner capital, `use_drag_session`, `ListState`) that no
+  `##` section names.
 - Responses carry an `ETag` and `Cache-Control: public, max-age=3600, must-revalidate`.

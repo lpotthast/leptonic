@@ -80,7 +80,7 @@ pub fn PageDateFieldOverview() -> impl IntoView {
                     <Code inline=true>"spinbutton"</Code>" named by its unit and the label (\u{201c}month, Birthday\u{201d}), with "
                     "its value as text (\u{201c}6 \u{2013} June\u{201d}); the separators between them are hidden from assistive "
                     "technology. Once the field has a value, it is described by it (\u{201c}Selected Date: June 15, 2024\u{201d}). "
-                    "Every editable segment is a tab stop. The segments\u{2019} names and the description are English for now."
+                    "Every editable segment is a tab stop. The segments\u{2019} names and the description follow the locale."
                 </p>
                 <p>
                     "A hidden input carries the value (ISO 8601) in forms. While segments are empty, the field has no "

@@ -64,6 +64,7 @@ fn write_page(md: &mut String, docs: &HashMap<String, CachedDoc>, path: &str) {
         );
     }
     for section in &doc.sections {
-        let _ = writeln!(md, "  - [{}]({md_path}#{})", section.text, section.id);
+        let indent = "  ".repeat(usize::from(section.level - 1));
+        let _ = writeln!(md, "{indent}- [{}]({md_path}#{})", section.text, section.id);
     }
 }

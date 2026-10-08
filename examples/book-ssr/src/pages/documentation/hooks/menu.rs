@@ -304,7 +304,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             state,
                             element: CapturedElement::new(),
                             // From `use_menu_trigger`, when the menu opens from a button.
-                            id: Some(menu_props.id.get_untracked()),
+                            id: Some(menu_props.id),
                             aria_label: MaybeProp::default(),
                             aria_labelledby: menu_props.aria_labelledby.into(),
                             options: CollectionOptions {

@@ -1,4 +1,4 @@
-use leptonic::{atoms::checkbox::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -39,18 +39,24 @@ pub fn HasTabbableChildDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=show_button set_selected=show_button classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Show button"
-            </Checkbox>
-            <Checkbox is_selected=show_input set_selected=show_input classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Show field"
-            </Checkbox>
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=show_button set_selected=show_button>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Show button"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=show_input set_selected=show_input>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Show field"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

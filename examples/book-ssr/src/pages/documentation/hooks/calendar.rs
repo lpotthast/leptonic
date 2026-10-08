@@ -644,7 +644,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                     "the surrounding "<Link href=routes::doc::utilities::I18nProvider.materialize()>"I18nProvider"</Link>
                     ", and the arrow keys follow the writing direction. The labels and announcements (\u{201c}Previous\u{201d}, "
                     "\u{201c}Today\u{201d}, \u{201c}selected\u{201d}, \u{201c}Selected Range\u{201d}, the range selection "
-                    "prompts) are English, and only the Gregorian calendar is supported."
+                    "prompts) follow the locale too; only the Gregorian calendar is supported."
                 </p>
             </Section>
 

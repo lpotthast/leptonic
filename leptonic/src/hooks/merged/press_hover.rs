@@ -63,6 +63,7 @@ pub type MergedPressHoverAttrs = (
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
+    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
     Attr<attr::AriaDescribedby, Signal<Option<AriaDescribedby>>>,
     // From hover.
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
@@ -80,6 +81,7 @@ impl IntoAttrs for MergedPressHoverProps {
             self.on_dragstart.into_on(ev::dragstart),
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
+            self.on_dblclick.into_on(ev::dblclick),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),

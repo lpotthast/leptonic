@@ -1,5 +1,11 @@
-//! Color names (react-aria's `getColorName`/`getHueName`, in English).
+//! Color names (react-aria's `getColorName`/`getHueName`): the lightness, chroma and hue are
+//! picked by message key and localized (`ColorNameStrings`).
 use super::RGB8;
+use crate::utils::{
+    i18n::Locale,
+    intl_strings::{ColorNameArgs, ColorNameStrings, LocalizedStrings, TransparentColorNameArgs},
+    number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle},
+};
 
 /// Lightness between orange and brown.
 const ORANGE_LIGHTNESS_THRESHOLD: f64 = 0.68;
@@ -9,7 +15,7 @@ const YELLOW_GREEN_LIGHTNESS_THRESHOLD: f64 = 0.85;
 const MAX_DARK_LIGHTNESS: f64 = 0.55;
 /// Chroma between gray and a color.
 const GRAY_THRESHOLD: f64 = 0.001;
-/// Where the hues start, in OKLCH degrees.
+/// Where the hues start, in OKLCH degrees (with their message keys).
 const OKLCH_HUES: [(f64, &str); 10] = [
     (0.0, "pink"),
     (15.0, "red"),
@@ -23,16 +29,28 @@ const OKLCH_HUES: [(f64, &str); 10] = [
     (349.0, "pink"),
 ];
 
-/// The color's name, e.g. "very dark grayish blue".
-pub(super) fn color_name(color: RGB8) -> String {
+/// The message `key` (an upstream key of the color names bundle) in `strings`.
+fn message(strings: &ColorNameStrings, key: &str) -> String {
+    strings.strings().by_key(key).unwrap_or_default()
+}
+
+/// The name of a color channel in `locale`, by its upstream key ("hue", "red", "alpha", ...).
+pub(super) fn channel_name(key: &str, locale: &Locale) -> String {
+    message(&ColorNameStrings::for_locale(locale.clone()), key)
+}
+
+/// The color's name in `locale`, e.g. "very dark grayish blue", with its transparency while
+/// `alpha` is below 1 ("vibrant red, 20% transparent").
+pub(super) fn color_name(color: RGB8, alpha: f64, locale: &Locale) -> String {
+    let strings = ColorNameStrings::for_locale(locale.clone());
     let (l, c, h) = to_oklch(color);
     if l > 0.999 {
-        return "white".to_owned();
+        return strings.white();
     }
     if l < 0.001 {
-        return "black".to_owned();
+        return strings.black();
     }
-    let (hue, l) = oklch_hue(l, c, h);
+    let (hue, l) = oklch_hue(&strings, l, c, h);
     let chroma = if (GRAY_THRESHOLD..=0.1).contains(&c) {
         if l >= 0.7 { "pale" } else { "grayish" }
     } else if c >= 0.15 {
@@ -51,25 +69,53 @@ pub(super) fn color_name(color: RGB8) -> String {
     } else {
         "very light"
     };
-    [lightness, chroma, &hue]
-        .into_iter()
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>()
-        .join(" ")
+    let part = |key: &str| {
+        if key.is_empty() {
+            String::new()
+        } else {
+            message(&strings, key)
+        }
+    };
+    let (lightness, chroma) = (part(lightness), part(chroma));
+    let name = if alpha < 1.0 {
+        let percent = NumberFormatter::new(
+            locale,
+            NumberFormatOptions {
+                style: NumberStyle::Percent,
+                ..NumberFormatOptions::default()
+            },
+        )
+        .format(1.0 - alpha);
+        strings.transparent_color_name(TransparentColorNameArgs {
+            lightness: &lightness,
+            chroma: &chroma,
+            hue: &hue,
+            percent_transparent: &percent,
+        })
+    } else {
+        strings.color_name(ColorNameArgs {
+            lightness: &lightness,
+            chroma: &chroma,
+            hue: &hue,
+        })
+    };
+    name.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// The name of the color's hue, e.g. "red orange".
-pub(super) fn hue_name(color: RGB8) -> String {
+/// The name of the color's hue in `locale`, e.g. "red orange".
+pub(super) fn hue_name(color: RGB8, locale: &Locale) -> String {
+    let strings = ColorNameStrings::for_locale(locale.clone());
     let (l, c, h) = to_oklch(color);
-    oklch_hue(l, c, h).0
+    oklch_hue(&strings, l, c, h).0
 }
 
-/// The hue's name, and the lightness adjusted for it.
-fn oklch_hue(l: f64, c: f64, h: f64) -> (String, f64) {
+/// The hue's name (lower case), and the lightness adjusted for it.
+fn oklch_hue(strings: &ColorNameStrings, l: f64, c: f64, h: f64) -> (String, f64) {
     if c < GRAY_THRESHOLD {
-        return ("gray".to_owned(), l);
+        return (strings.gray(), l);
     }
     let mut l = l;
+    let mut key = "pink".to_owned();
     for (i, &(hue, name)) in OKLCH_HUES.iter().enumerate() {
         let (next_hue, next_name) = OKLCH_HUES.get(i + 1).copied().unwrap_or((360.0, "pink"));
         if h >= hue && h < next_hue {
@@ -89,10 +135,11 @@ fn oklch_hue(l: f64, c: f64, h: f64) -> (String, f64) {
                 // Yellow shifts toward green at lower lightnesses.
                 "yellow green".clone_into(&mut name);
             }
-            return (name, l);
+            key = name;
+            break;
         }
     }
-    ("pink".to_owned(), l)
+    (message(strings, &key).to_lowercase(), l)
 }
 
 /// The color in OKLCH: lightness, chroma, hue in degrees (CSS Color 4's conversion code,
@@ -195,11 +242,35 @@ mod tests {
             ("#808080", "gray"),
         ] {
             let color = hex.parse::<RGB8>().expect("a hex color");
-            assert_that!(color_name(color))
+            assert_that!(color_name(color, 1.0, &en()))
                 .with_detail_message(hex)
                 .is_equal_to(name.to_owned());
         }
-        assert_that!(hue_name("#d2691e".parse::<RGB8>().expect("a hex color")))
-            .is_equal_to("brown".to_owned());
+        assert_that!(hue_name(
+            "#d2691e".parse::<RGB8>().expect("a hex color"),
+            &en()
+        ))
+        .is_equal_to("brown".to_owned());
+        assert_that!(color_name(
+            "#FF0000".parse::<RGB8>().expect("a hex color"),
+            0.2,
+            &en()
+        ))
+        .is_equal_to("vibrant red, 80% transparent".to_owned());
+    }
+
+    fn en() -> Locale {
+        "en-US".parse().expect("a locale")
+    }
+
+    /// The parts are localized and the hue lower case (react-aria's `toLocaleLowerCase`).
+    #[cfg(feature = "intl-strings")]
+    #[test]
+    fn names_colors_in_the_locale() {
+        let german: Locale = "de-DE".parse().expect("a locale");
+        let maroon = "#800000".parse::<RGB8>().expect("a hex color");
+        assert_that!(color_name(maroon, 1.0, &german))
+            .is_equal_to("dunkles lebhaftes rot".to_owned());
+        assert_that!(channel_name("hue", &german)).is_equal_to("Farbton".to_owned());
     }
 }

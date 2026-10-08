@@ -174,9 +174,9 @@ fn hsv_format_channel_value() {
 
 #[test]
 fn hsv_channel_name() {
-    assert_that!(HSV::channel_name(HsvChannel::Hue)).is_equal_to("Hue");
-    assert_that!(HSV::channel_name(HsvChannel::Saturation)).is_equal_to("Saturation");
-    assert_that!(HSV::channel_name(HsvChannel::Brightness)).is_equal_to("Brightness");
+    assert_that!(HSV::channel_name(HsvChannel::Hue, &en())).is_equal_to("Hue");
+    assert_that!(HSV::channel_name(HsvChannel::Saturation, &en())).is_equal_to("Saturation");
+    assert_that!(HSV::channel_name(HsvChannel::Brightness, &en())).is_equal_to("Brightness");
 }
 
 // --- RGB8 ColorValue trait tests ---
@@ -229,9 +229,9 @@ fn rgb8_to_css_string() {
 
 #[test]
 fn rgb8_channel_name() {
-    assert_that!(RGB8::channel_name(RgbChannel::Red)).is_equal_to("Red");
-    assert_that!(RGB8::channel_name(RgbChannel::Green)).is_equal_to("Green");
-    assert_that!(RGB8::channel_name(RgbChannel::Blue)).is_equal_to("Blue");
+    assert_that!(RGB8::channel_name(RgbChannel::Red, &en())).is_equal_to("Red");
+    assert_that!(RGB8::channel_name(RgbChannel::Green, &en())).is_equal_to("Green");
+    assert_that!(RGB8::channel_name(RgbChannel::Blue, &en())).is_equal_to("Blue");
 }
 
 // --- HSL ColorValue trait tests ---
@@ -291,9 +291,9 @@ fn hsl_format_channel_value() {
 
 #[test]
 fn hsl_channel_name() {
-    assert_that!(HSL::channel_name(HslChannel::Hue)).is_equal_to("Hue");
-    assert_that!(HSL::channel_name(HslChannel::Saturation)).is_equal_to("Saturation");
-    assert_that!(HSL::channel_name(HslChannel::Lightness)).is_equal_to("Lightness");
+    assert_that!(HSL::channel_name(HslChannel::Hue, &en())).is_equal_to("Hue");
+    assert_that!(HSL::channel_name(HslChannel::Saturation, &en())).is_equal_to("Saturation");
+    assert_that!(HSL::channel_name(HslChannel::Lightness, &en())).is_equal_to("Lightness");
 }
 
 #[test]
@@ -523,7 +523,7 @@ fn parses_and_formats_alpha_as_react_aria() {
     assert_that!("#aa\u{e9}".parse::<Color>()).is_err();
     assert_that!("#abcdef+f".parse::<Color>()).is_err();
     assert_that!(parse("hsla(0, 100%, 50%, 0.25)").alpha).is_equal_to(0.25);
-    assert_that!(parse("hsba(0, 100%, 100%, 0.2)").color_name())
+    assert_that!(parse("hsba(0, 100%, 100%, 0.2)").color_name(&en()))
         .is_equal_to("vibrant red, 80% transparent".to_owned());
 }
 

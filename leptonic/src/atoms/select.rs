@@ -1,3 +1,4 @@
+// Upstream: react-aria-components/src/Select.tsx @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, ev, prelude::*};
@@ -6,12 +7,13 @@ use super::{
     field::{FieldContext, LabelContext},
     form::use_validation_behavior,
     popover::{PopoverDialogLabel, PopoverParts, render_popover},
+    typed_values::{KeyedStateProps, selected_state_props},
 };
 use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        IntoAttrs, Placement, PopoverModality, SelectMode, SelectState, UseFocusRingInput,
+        IntoAttrs, Placement, PopoverModality, SelectState, UseFocusRingInput,
         UseHiddenSelectReturn, UseLabelProps, UseListBoxInput, UsePopoverInput, UsePopoverReturn,
         UseSelectInput, UseSelectReturn, UseSelectStateInput, UseSelectTriggerProps, ValidateFn,
         ValidationBehavior,
@@ -23,6 +25,24 @@ use crate::{
         default_class::with_default_class, styles::Styles,
     },
 };
+use crate::utils::intl_strings::{AtomStrings, use_localized_strings};
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The value is typed and its type is the selection mode (`S: SelectedValues`: `Option<V>`
+//   selects one value, `Vec<V>` several; react-aria: `selectionMode` with `Key | null` or
+//   `Key[]`); the collection's keys are the values'.
+// - State (C4): `default_value` + `on_change`, or `value` + `set_value`; the popover's
+//   `default_open`, or `is_open` + `set_open`.
+// - The parts are atoms reading `SelectCtx` (`SelectTrigger`, `SelectValue`, `SelectPopover`,
+//   `HiddenSelect`; react-aria-components: contexts consumed by `Button`, `Popover`, ...).
+//
+// =============================================================================
+
+pub use super::typed_values::SelectedValues;
 
 /// Context from [`Select`] to its parts.
 #[derive(Clone)]
@@ -74,23 +94,23 @@ impl SelectCtx {
     clippy::fn_params_excessive_bools,
     clippy::implicit_hasher
 )]
-pub fn Select(
-    /// The options.
+pub fn Select<S: SelectedValues>(
+    /// The options; their keys are the values' (`SelectionValue::to_key`).
     #[prop(into)]
     collection: CollectionMemo,
-    #[prop(optional)] selection_mode: SelectMode,
-    /// The initially selected keys (at most one in `Single` mode). Ignored when `value` is bound.
+    /// The initially selected value(s). Ignored when `value` is bound.
+    #[prop(optional)]
+    default_value: S,
+    /// The selected value(s) (controlled): a value or any signal. `Option<V>` selects one value,
+    /// `Vec<V>` several.
     #[prop(into, optional)]
-    default_value: Vec<Key>,
-    /// The selected keys (controlled): a value or any signal.
-    #[prop(into, optional)]
-    value: Option<Signal<Vec<Key>>>,
+    value: Option<Signal<S>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
-    set_value: Option<Out<Vec<Key>>>,
-    /// Called when the selected keys change.
+    set_value: Option<Out<S>>,
+    /// Called when the selected value(s) change.
     #[prop(into, optional)]
-    on_change: Option<Callback<Vec<Key>>>,
+    on_change: Option<Callback<S>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_required: Signal<bool>,
@@ -105,7 +125,7 @@ pub fn Select(
     set_open: Option<Out<bool>>,
     #[prop(into, optional)] on_open_change: Option<Callback<bool>>,
     #[prop(optional)] allows_empty_collection: bool,
-    /// Close the popover when an option is selected. Default: in `Single` mode.
+    /// Close the popover when an option is selected. Default: when selecting one value.
     #[prop(into, optional)]
     should_close_on_select: CloseOnSelect,
     /// Labels the select when there is no `Label` inside.
@@ -113,7 +133,7 @@ pub fn Select(
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
     #[prop(into, optional)] is_invalid: Signal<bool>,
-    #[prop(optional)] validate: Option<ValidateFn<Vec<Key>>>,
+    #[prop(optional)] validate: Option<ValidateFn<S>>,
     /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
     #[prop(optional)]
     validation_behavior: Option<ValidationBehavior>,
@@ -127,12 +147,20 @@ pub fn Select(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Select", classes);
+    let KeyedStateProps {
+        default_value,
+        value,
+        set_value,
+        on_change,
+        validate,
+    } = selected_state_props(Some(default_value), value, set_value, on_change, validate);
+    let default_value = default_value.unwrap_or_default();
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (is_open, on_open_change) =
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let state = use_select_state(UseSelectStateInput {
-        selection_mode,
+        selection_mode: S::MODE,
         default_value,
         value,
         on_change,
@@ -287,8 +315,7 @@ pub fn SelectTrigger(
 /// Default class: `leptonic-SelectValue`.
 #[component]
 pub fn SelectValue(
-    /// Shown while nothing is selected. Default: "Select an item" (react-aria-components; not
-    /// localized yet).
+    /// Shown while nothing is selected. Default: "Select an item" (localized).
     #[prop(into, optional)]
     placeholder: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
@@ -300,12 +327,13 @@ pub fn SelectValue(
     let id = ctx.parts.with_value(|p| p.value_id.clone());
     let is_empty = move || state.value().is_empty();
     let locale = crate::utils::i18n::use_locale();
+    let strings = use_localized_strings::<AtomStrings>();
     let text = move || {
         let items = state.selected_items();
         if items.is_empty() {
             placeholder
                 .get()
-                .unwrap_or_else(|| "Select an item".to_owned())
+                .unwrap_or_else(|| strings.read().select_placeholder())
         } else {
             let texts: Vec<&str> = items.iter().map(|n| &*n.text_value).collect();
             locale.with(|locale| {

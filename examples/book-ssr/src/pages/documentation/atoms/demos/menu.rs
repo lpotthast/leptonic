@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::prelude::{
-        Button, Checkbox, Menu, MenuItem, MenuItemLabel, MenuItemShortcut, MenuItems, MenuSection,
+        Button, CheckboxButton, CheckboxField, Menu, MenuItem, MenuItemLabel, MenuItemShortcut, MenuItems, MenuSection,
         MenuTrigger, Popover,
     },
     hooks::{
@@ -90,10 +90,12 @@ pub fn MenuDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

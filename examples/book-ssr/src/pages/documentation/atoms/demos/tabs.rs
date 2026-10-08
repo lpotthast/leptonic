@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use leptonic::{
     atoms::{
         button::Button,
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         tabs::{Tab, TabList, TabPanel, Tabs},
     },
     hooks::{Key, use_collection},
@@ -71,14 +71,18 @@ pub fn TabsAtomDemo() -> impl IntoView {
         </Tabs>
 
         <div class="demo-controls">
-            <Checkbox is_selected=all_disabled set_selected=all_disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
-            <Checkbox is_selected=reviews_disabled set_selected=reviews_disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "\u{201c}Reviews\u{201d} disabled"
-            </Checkbox>
+            <CheckboxField is_selected=all_disabled set_selected=all_disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=reviews_disabled set_selected=reviews_disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "\u{201c}Reviews\u{201d} disabled"
+                </CheckboxButton>
+            </CheckboxField>
             // The app changes the selected tab by writing its state.
             <Button on_press=move |_| selected.set(Key::from("shipping")) classes="demo-btn">
                 "Show shipping"

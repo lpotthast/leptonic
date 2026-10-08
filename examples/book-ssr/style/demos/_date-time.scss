@@ -166,3 +166,11 @@
 }
 
 .demo-date-picker-calendar { display: flex; flex-direction: column; gap: var(--book-space-s); }
+
+// A month or year picker in the calendar's header: a compact select (its trigger and list use the select demo's
+// classes, `_pickers.scss`).
+.demo-calendar-picker {
+    display: inline-flex;
+
+    .demo-sel-trigger { padding: var(--book-space-xs) var(--book-space-s); }
+}

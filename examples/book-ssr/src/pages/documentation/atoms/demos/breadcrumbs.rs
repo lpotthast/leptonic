@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::{Breadcrumb, Breadcrumbs, Checkbox, Link};
+use leptonic::atoms::prelude::{Breadcrumb, Breadcrumbs, CheckboxButton, CheckboxField, Link};
 use leptos::prelude::*;
 
 /// The trail of this page. The last item is the current page: it can't be followed.
@@ -26,10 +26,12 @@ pub fn BreadcrumbsAtomDemo() -> impl IntoView {
         </nav>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -82,4 +82,16 @@ Nested Dispatch of the Same Event Type", "Props are Single-Use", "Global State a
   check reads only those.
 - `StoredValue::new_local` in code that runs during SSR panics on the server (a request moves between threads):
   keep it behind `cfg(not(feature = "ssr"))`, also in atoms.
-
+- Blurs right after a press are swallowed (2026-10-07): a press that keeps focus where it is (an option of a combo
+  box popover, a button with `prevent_focus_on_press`) installs `prevent_focus`'s window capture listeners, which stop
+  the focused element's `blur`/`focusout` until the next animation frame (react-aria's `preventFocus`). A test that
+  blurs from JavaScript within that frame sees no blur, so nothing commits (`combobox_multiple_tests` failed 2 of 3
+  runs for this). Blur in the next frame in tests; users can't be that fast.
+- Don't compress the dev wasm on the fly (2026-10-08, book): tower-http's `CompressionLayer` brotli-compressed the
+  43 MB debug wasm on every request (3.4 s of server CPU each), so parallel browser tests queued behind it and one
+  missed its 10 s hydration wait. Exclude `application/wasm` from on-the-fly compression
+  (`NotForContentType::const_new("application/wasm")`); release builds serve the precompressed `.br`.
+- Collection keys can be attacker-chosen (2026-10-08, the user): record ids and names, file names and log content
+  come from users, and collections are built on the server during SSR. Keep std's randomly seeded hasher for
+  key-indexed maps; a fixed-seed hasher (Fx) let crafted colliding keys make every build O(n²), on the server too.
+  (Fx made a 20,000-row rebuild 30% faster; not worth that.)

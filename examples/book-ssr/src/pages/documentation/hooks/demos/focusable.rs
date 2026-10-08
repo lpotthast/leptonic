@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
     hooks::*,
 };
 use leptos::prelude::*;
@@ -42,14 +42,18 @@ pub fn FocusableDemo() -> impl IntoView {
 
         <div class="demo-controls">
             <Button on_press=move |_| focus_handle.focus() classes="demo-btn">"Focus the notes"</Button>
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
-            <Checkbox is_selected=exclude_from_tab_order set_selected=exclude_from_tab_order classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Exclude from tab order"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=exclude_from_tab_order set_selected=exclude_from_tab_order>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Exclude from tab order"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
 
         <p class="demo-status">

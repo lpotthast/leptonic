@@ -1,6 +1,6 @@
 use leptonic::atoms::{
     button::Button,
-    checkbox::Checkbox,
+    checkbox::{CheckboxButton, CheckboxField},
     dialog::{Dialog, DialogTitle, DialogTrigger},
     popover::Popover,
 };
@@ -21,14 +21,18 @@ pub fn DialogPopoverDemo() -> impl IntoView {
                 <Dialog classes="demo-popover-dialog">
                     <DialogTitle classes="demo-overlay-title">"Notify me by"</DialogTitle>
                     <div class="demo-control-stack">
-                        <Checkbox is_selected=by_email set_selected=by_email classes="demo-check">
-                            <span class="demo-check-box" aria-hidden="true"></span>
-                            "Email"
-                        </Checkbox>
-                        <Checkbox is_selected=by_push set_selected=by_push classes="demo-check">
-                            <span class="demo-check-box" aria-hidden="true"></span>
-                            "Push message"
-                        </Checkbox>
+                        <CheckboxField is_selected=by_email set_selected=by_email>
+                            <CheckboxButton classes="demo-check">
+                                <span class="demo-check-box" aria-hidden="true"></span>
+                                "Email"
+                            </CheckboxButton>
+                        </CheckboxField>
+                        <CheckboxField is_selected=by_push set_selected=by_push>
+                            <CheckboxButton classes="demo-check">
+                                <span class="demo-check-box" aria-hidden="true"></span>
+                                "Push message"
+                            </CheckboxButton>
+                        </CheckboxField>
                     </div>
                 </Dialog>
             </Popover>

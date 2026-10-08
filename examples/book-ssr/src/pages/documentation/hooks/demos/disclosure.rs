@@ -1,4 +1,4 @@
-use leptonic::{atoms::checkbox::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 
@@ -38,10 +38,12 @@ pub fn DisclosureDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
         <p class="demo-status">{move || if state.is_expanded.get() { "Expanded" } else { "Collapsed" }}</p>
     }

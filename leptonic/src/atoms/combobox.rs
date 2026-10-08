@@ -1,3 +1,4 @@
+// Upstream: react-aria-components/src/ComboBox.tsx @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
@@ -8,13 +9,14 @@ use super::{
     input::{InputContext, InputState},
     listbox::ListBoxParent,
     popover::{PopoverDialogLabel, PopoverParts, render_popover},
+    typed_values::{KeyedStateProps, SelectedValues, selected_state_props},
 };
 use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
         ComboBoxFilter, ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxOpenChange, ComboBoxState,
-        ComboBoxValue, IntoAttrs, Placement, PopoverModality, SelectMode, UseButtonInput,
+        ComboBoxValue, IntoAttrs, Placement, PopoverModality, UseButtonInput,
         UseComboBoxInput, UseComboBoxReturn, UseComboBoxStateInput, UseHoverInput, UsePopoverInput,
         UsePopoverReturn, UseTextFieldReturn, ValidateFn, ValidationBehavior,
         collections::{CollectionMemo, Key},
@@ -25,6 +27,22 @@ use crate::{
         default_class::with_default_class, styles::Styles,
     },
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The value is typed and its type is the selection mode (`S: SelectedValues`: `Option<V>`
+//   selects one value, `Vec<V>` several; react-aria: `selectionMode` with `Key | null` or
+//   `Key[]`); the collection's keys are the values'. `validate` gets both the input text and the
+//   typed value (`ComboBoxValue<S>`).
+// - State (C4): `default_value` + `on_change`, or `value` + `set_value`; the input text's
+//   `default_input_value` + `on_input_change`, or `input_value` + `set_input_value`.
+// - The parts are atoms reading the combo box's context (`ComboBoxButton`, `ComboBoxPopover`, the
+//   `Input`; react-aria-components: contexts consumed by `Button`, `Popover`, `Input`).
+//
+// =============================================================================
 
 /// Context from [`ComboBox`] to its parts.
 #[derive(Clone)]
@@ -66,25 +84,25 @@ struct Parts {
     clippy::fn_params_excessive_bools,
     clippy::implicit_hasher
 )]
-pub fn ComboBox(
-    /// All options.
+pub fn ComboBox<S: SelectedValues>(
+    /// All options; their keys are the values' (`SelectionValue::to_key`).
     #[prop(into)]
     collection: CollectionMemo,
     /// Shows the options matching the input (e.g. [`use_contains_filter`](crate::hooks::use_contains_filter)).
     /// Without a filter, all options are shown.
     #[prop(optional)]
     filter: Option<ComboBoxFilter>,
-    #[prop(optional)] selection_mode: SelectMode,
-    /// The initially selected keys (at most one in `Single` mode). Ignored when `value` is bound.
+    /// The initially selected value(s). Ignored when `value` is bound.
+    #[prop(optional)]
+    default_value: S,
+    /// The selected value(s) (controlled): a value or any signal. `Option<V>` selects one value,
+    /// `Vec<V>` several.
     #[prop(into, optional)]
-    default_value: Vec<Key>,
-    /// The selected keys (controlled): a value or any signal.
-    #[prop(into, optional)]
-    value: Option<Signal<Vec<Key>>>,
+    value: Option<Signal<S>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
-    set_value: Option<Out<Vec<Key>>>,
-    #[prop(into, optional)] on_change: Option<Callback<Vec<Key>>>,
+    set_value: Option<Out<S>>,
+    #[prop(into, optional)] on_change: Option<Callback<S>>,
     /// The initial input text. Default: the selected option's text. Ignored when `input_value` is
     /// bound.
     #[prop(into, optional)]
@@ -121,7 +139,7 @@ pub fn ComboBox(
     #[prop(into, optional)]
     form: Option<String>,
     #[prop(into, optional)] is_invalid: Signal<bool>,
-    #[prop(optional)] validate: Option<ValidateFn<ComboBoxValue>>,
+    #[prop(optional)] validate: Option<ValidateFn<ComboBoxValue<S>>>,
     /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
     #[prop(optional)]
     validation_behavior: Option<ValidationBehavior>,
@@ -132,12 +150,27 @@ pub fn ComboBox(
     let classes = with_default_class("leptonic-ComboBox", classes);
     let (input_value, on_input_change) =
         ValueBinding::from_state_props(input_value, set_input_value, on_input_change);
+    let KeyedStateProps {
+        default_value,
+        value,
+        set_value,
+        on_change,
+        ..
+    } = selected_state_props(Some(default_value), value, set_value, on_change, None);
+    let validate = validate.map(|validate| -> ValidateFn<ComboBoxValue> {
+        std::sync::Arc::new(move |keyed: &ComboBoxValue| {
+            validate(&ComboBoxValue {
+                input_value: keyed.input_value.clone(),
+                value: S::from_key_list(&keyed.value),
+            })
+        })
+    });
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let state = use_combobox_state(UseComboBoxStateInput {
         filter,
-        selection_mode,
-        default_value,
+        selection_mode: S::MODE,
+        default_value: default_value.unwrap_or_default(),
         value,
         on_change,
         default_input_value,

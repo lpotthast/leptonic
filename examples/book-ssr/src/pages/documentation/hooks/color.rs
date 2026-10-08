@@ -1,6 +1,6 @@
-use indoc::indoc;
 use leptos::prelude::*;
 
+use super::demos::color_picker_state::ColorPickerStateDemo;
 use crate::{kit::*, routes};
 
 #[component]
@@ -10,7 +10,7 @@ pub fn PageUseColorHooks() -> impl IntoView {
         <DocPage title="use_color_picker_state">
             <p>
                 "The "<Code inline=true>"use_color_picker_state"</Code>" hook holds the one color that the parts of a color "
-                "picker share. The "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker atom"</Link>" uses "
+                "picker share. The "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker"</Link>" atom uses "
                 "it for the atoms inside it; call it yourself for parts built from hooks. See the "
                 <Link href=routes::doc::ColorPicker.materialize()>"Color Picker overview"</Link>" for the concept."
             </p>
@@ -48,56 +48,12 @@ pub fn PageUseColorHooks() -> impl IntoView {
                     <Link href=routes::doc::color_swatch::Hook.materialize()>"swatch"</Link>", read it directly."
                 </p>
 
-                <Code language=Language::Rust>
-                    {indoc!(r"
-                        use leptonic::{
-                            hooks::*,
-                            utils::{
-                                ValueBinding,
-                                color::{Color, HSV, HsvChannel},
-                            },
-                        };
-                        use leptos::prelude::*;
-
-                        let picker = use_color_picker_state(UseColorPickerStateInput::default());
-                        // The shared color as HSV, for parts that edit HSV channels.
-                        let hsv = ValueBinding::new(
-                            Signal::derive(move || picker.color.get().to::<HSV>()),
-                            Callback::new(move |color: HSV| picker.set_color(Color::from(color))),
-                        );
-
-                        // Interactive parts edit the picker's color ...
-                        let area_state = use_color_area_state(UseColorAreaStateInput {
-                            default_value: HSV::new(),
-                            value: Some(hsv),
-                            x_channel: Some(HsvChannel::Saturation),
-                            y_channel: Some(HsvChannel::Brightness),
-                            x_channel_step: None,
-                            y_channel_step: None,
-                            on_change: None,
-                            on_change_end: None,
-                        });
-                        let hue_state = use_color_slider_state(UseColorSliderStateInput {
-                            default_value: HSV::new(),
-                            value: Some(hsv),
-                            channel: HsvChannel::Hue,
-                            is_disabled: false.into(),
-                            orientation: Signal::stored(Orientation::Horizontal),
-                            on_change: None,
-                            on_change_end: None,
-                        });
-
-                        // ... and a display-only part reads it.
-                        let swatch = use_color_swatch(UseColorSwatchInput {
-                            color: picker.color,
-                            color_name: MaybeProp::default(),
-                            aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            id: None,
-                        });
-
-                    ")}
-                </Code>
+                <Demo
+                    description="A color area and a hue slider edit one picker color, a swatch shows it, and a button sets it from code"
+                    source=include_str!("demos/color_picker_state.rs")
+                >
+                    <ColorPickerStateDemo/>
+                </Demo>
             </Section>
 
             <Section title="Hooks of the Parts">

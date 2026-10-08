@@ -27,10 +27,12 @@ pub fn ProgressBarAtomDemo() -> impl IntoView {
             <atoms::Button on_press=move |_| uploaded.set(0) classes="demo-btn">"Restart"</atoms::Button>
         </div>
         <div class="demo-controls">
-            <atoms::Checkbox is_selected=size_unknown set_selected=size_unknown classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Size unknown"
-            </atoms::Checkbox>
+            <atoms::CheckboxField is_selected=size_unknown set_selected=size_unknown>
+                <atoms::CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Size unknown"
+                </atoms::CheckboxButton>
+            </atoms::CheckboxField>
         </div>
     }
 }

@@ -76,6 +76,7 @@ Rules for every agent:
   `<repo>/testing/test-app/target/agents` (absolute paths; inside the app, so leptonic's build script finds it). Builds
   of a whole dependency tree cost gigabytes per directory. Prefer `cargo check` where you don't need a build. All
   builds use the same rustflags (repository `.cargo/config.toml`), so artifacts are shared; don't set `RUSTFLAGS`.
+  Their incremental caches grow by tens of GB a day: when the disk runs low, `just clean-agent-incremental`.
 
 ## Build Commands
 
@@ -206,7 +207,11 @@ manual testing during development. It is named "book" following Rust ecosystem c
   `examples/book-ssr/STYLE_GUIDE.md`.
 - **Quality bar**: Must always compile and have zero clippy lints (checked with `clippy::all` and `clippy::pedantic` via
   `[lints.clippy]` in its `Cargo.toml`).
-- **Dependency**: Uses `leptonic` via path dependency with `features = ["full"]`.
+- **Dependency**: Uses `leptonic` via path dependency with features `atoms` and `clipboard`; `syntax-highlight` only
+  in its `ssr` feature (code blocks are highlighted on the server, `documentation/build-performance.md`).
+- **ICU4X data**: the book bakes its own ICU4X data (`examples/book-ssr/icu4x-data`, set up in its
+  `.cargo/config.toml`). After updating the `icu_*` crates, regenerate it with `just book-icu-data`: data of another
+  ICU4X minor version breaks every book build.
 - **Not a workspace member**: Excluded from the root workspace; managed via the root Justfile.
 - **Page structure**: The sidebar (`src/nav.rs`) has three parts: guides; **concepts** (every UI element, e.g.
   Button or Slider, as one entry whose layers are tabs, grouped by purpose); and **building blocks** (hooks, atoms and
@@ -255,7 +260,7 @@ is required to build it, not only for leptos-use functions.
 
 ```toml
 [package.metadata.leptonic]
-style-dir = "style/leptonic"   # Where to copy the optional atom theme's SCSS
+style-dir = "style"   # The build script copies the optional atom theme's SCSS to `<style-dir>/leptonic`
 ```
 
 The build script finds that `Cargo.toml` by walking up from `OUT_DIR`. A `CARGO_TARGET_DIR` inside the app (e.g.
@@ -298,9 +303,10 @@ Tests must not depend on each other or on shared server state; checks of the who
 - **Failures fail `cargo test`**: the runner uses `FailurePolicy::RunAll` and reports every failing test.
   Assertions use `assertr` (panics are reported as test failures); helpers return `Result<_, rootcause::Report>`.
 - **Prefer waiting over sleeping**: use the polling helpers (`wait_for_selector`, `wait_for_text`,
-  `wait_for_active_text`, `wait_for_attr`, `wait_for_prop`, generic `wait_for_value`/`wait_until`) instead of fixed
-  sleeps or hand-rolled loops; focus and state often change in effects after the event. Negative checks ("nothing
-  changed") use `assert_stays` (settle, re-checked over 300 ms), not a single read.
+  `wait_for_active_text`, `wait_for_attr`, `wait_for_prop`, and for anything else the `wait_for!`/`wait_until!`
+  macros of `tests/polling/mod.rs`) instead of fixed sleeps or hand-rolled loops; focus and state often change in
+  effects after the event. Negative checks ("nothing changed") use `stays!` (re-checked over 300 ms; `stays_for!`
+  over a longer window), not a single read.
 - **Find elements as users do**: by role and text (`by_role_and_text`, `css("[role=listbox]")`). Atoms generate
   their own ids.
 - **Derive tests from react-aria**: react-aria's own tests (`../react-spectrum/packages/react-aria/test/`,
@@ -314,7 +320,9 @@ Tests must not depend on each other or on shared server state; checks of the who
 - **Running**: `just browser-test`. `BROWSER_TEST_VISIBLE=1` shows the browser, `BROWSER_TEST_PAUSE=1` pauses before
   each test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output (or `just browser-test-visible`).
   `BROWSER_TEST_FILTER=<text>` runs only the tests whose name contains `<text>` (e.g. `grid_tests`).
-  `BROWSER_TEST_PARALLELISM=<n>` sets how many tests run at once (`1`: sequential). The run summary lists the
+  `BROWSER_TEST_PARALLELISM=<n>` sets how many tests run at once (`1`: sequential). `TEST_APP_TARGET_DIR=<dir>`
+  builds the test-app there instead of in the inherited `CARGO_TARGET_DIR` (agents:
+  `CARGO_TARGET_DIR=<repo>/target/agents TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`). The run summary lists the
   slowest tests and steps; `BROWSER_TEST_LOG_STEPS=1` logs every step. Never run two suites of one app at the same
   time: they share the app's build directory.
 - **Toolchain**: the installed `wasm-bindgen` CLI version must match the `wasm-bindgen` version in the test-app's

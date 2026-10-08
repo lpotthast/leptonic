@@ -23,7 +23,7 @@ fn TestGroup(
             selection_mode
             orientation
             is_disabled
-            on_selection_change={move |keys: HashSet<Key>| {
+            on_change={move |keys: HashSet<Key>| {
                 let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
                 keys.sort();
                 value.set(keys.join(","));

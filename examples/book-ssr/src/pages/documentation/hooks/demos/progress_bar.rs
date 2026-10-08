@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
     hooks::*,
     utils::{
         css::{computed_pct, computed_size},
@@ -49,10 +49,12 @@ pub fn ProgressBarHookDemo() -> impl IntoView {
             <Button on_press=move |_| loaded.update(|v| *v = (*v + 10.0).min(100.0)) classes="demo-btn">"Ahead 10%"</Button>
         </div>
         <div class="demo-controls">
-            <Checkbox is_selected=duration_unknown set_selected=duration_unknown classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Duration unknown"
-            </Checkbox>
+            <CheckboxField is_selected=duration_unknown set_selected=duration_unknown>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Duration unknown"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -47,14 +47,16 @@ pub fn Section(
 
 /// A heading with a "direct link" anchor, as rendered by pages and sections.
 pub(super) fn heading(level: u8, id: Oco<'static, str>, title: &'static str) -> AnyView {
+    // Long identifiers ("use_highlight_selection_description") wrap between their words on narrow screens.
+    let text = super::page::with_word_breaks(title);
     let link = view! {
         <AnchorLink href=format!("#{id}") aria_label=format!("Direct link to section: {title}") classes="doc-heading-anchor"/>
     };
     match level {
-        1 => view! { <h1 id=id>{title}{link}</h1> }.into_any(),
-        2 => view! { <h2 id=id>{title}{link}</h2> }.into_any(),
-        3 => view! { <h3 id=id>{title}{link}</h3> }.into_any(),
-        _ => view! { <h4 id=id>{title}{link}</h4> }.into_any(),
+        1 => view! { <h1 id=id>{text}{link}</h1> }.into_any(),
+        2 => view! { <h2 id=id>{text}{link}</h2> }.into_any(),
+        3 => view! { <h3 id=id>{text}{link}</h3> }.into_any(),
+        _ => view! { <h4 id=id>{text}{link}</h4> }.into_any(),
     }
 }
 

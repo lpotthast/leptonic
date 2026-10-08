@@ -1,6 +1,6 @@
 // Upstream: react-aria/test/interactions/useFocusVisible.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Form.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -60,8 +60,11 @@ async fn expect_state_stays(
     modality: &str,
     visible: bool,
 ) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_modality().await?).is_equal_to(modality.to_owned());
+    stays!(
+        "the modality",
+        modality.to_owned(),
+        page.read_modality().await?
+    );
     assert_that!(page.read_visible().await?).is_equal_to(visible);
     Ok(())
 }

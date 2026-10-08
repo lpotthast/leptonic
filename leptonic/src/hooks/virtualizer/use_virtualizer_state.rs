@@ -158,12 +158,14 @@ impl<L: Layout> LayoutDelegate for VirtualizerLayoutDelegate<L> {
     }
 }
 
+/// The time for the overscan's scroll velocity. The JS clock exists only in WebAssembly; natively
+/// (server-side rendering, native tests) nothing scrolls: a constant.
 fn now() -> f64 {
-    #[cfg(not(feature = "ssr"))]
+    #[cfg(target_arch = "wasm32")]
     {
         js_sys::Date::now()
     }
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     {
         0.0
     }
@@ -245,4 +247,264 @@ pub fn use_virtualizer_state<L: Layout>(input: UseVirtualizerStateInput<L>) -> V
     });
 
     state
+}
+
+#[cfg(test)]
+mod tests {
+    // Upstream has no tests of `useVirtualizerState` itself (react-aria-components'
+    // VirtualizedMenu.test.tsx renders through it in a DOM); these follow its implementation:
+    // render on every change of the inputs, invalidate on new layout options and measured sizes,
+    // report the virtualizer's viewport moves. `Virtualizer`'s own tests cover the layout.
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{
+        hooks::virtualizer::{ListLayout, ListLayoutOptions, ScrollAnchorEdge},
+        testing::{flush_effects, with_owner},
+        utils::point::Point,
+    };
+
+    fn rows(count: usize) -> Arc<Collection> {
+        Arc::new(Collection::build(|b| {
+            for i in 0..count {
+                b.item(format!("row-{i}"), format!("Row {i}"));
+            }
+        }))
+    }
+
+    fn rows_of(size: f64) -> ListLayoutOptions {
+        ListLayoutOptions {
+            row_size: Some(size),
+            ..ListLayoutOptions::default()
+        }
+    }
+
+    struct Fixture {
+        state: VirtualizerState<ListLayout>,
+        collection: RwSignal<Arc<Collection>>,
+        persisted_keys: RwSignal<HashSet<Key>>,
+        layout_options: RwSignal<Option<ListLayoutOptions>>,
+        /// The rectangles `on_visible_rect_change` was called with.
+        moves: RwSignal<Vec<Rect>>,
+    }
+
+    /// A list of `count` rows laid out with `options`, in a 400x480 viewport scrolled to `y`.
+    fn list(count: usize, options: ListLayoutOptions, y: f64) -> Fixture {
+        list_with(count, options, None, y)
+    }
+
+    /// [`list`], with `layout_options` replacing `options` from the first render on.
+    fn list_with(
+        count: usize,
+        options: ListLayoutOptions,
+        layout_options: Option<ListLayoutOptions>,
+        y: f64,
+    ) -> Fixture {
+        let collection = RwSignal::new(rows(count));
+        let persisted_keys = RwSignal::new(HashSet::new());
+        let layout_options = RwSignal::new(layout_options);
+        let moves = RwSignal::new(Vec::new());
+        let state = use_virtualizer_state(UseVirtualizerStateInput {
+            layout: ListLayout::new(options),
+            collection: collection.into(),
+            persisted_keys: persisted_keys.into(),
+            layout_options: layout_options.into(),
+            on_visible_rect_change: Callback::new(move |rect| moves.update(|m| m.push(rect))),
+        });
+        state.set_size(Size::new(400.0, 480.0));
+        state.set_visible_rect(Rect::new(0.0, y, 400.0, 480.0));
+        flush_effects();
+        Fixture {
+            state,
+            collection,
+            persisted_keys,
+            layout_options,
+            moves,
+        }
+    }
+
+    fn keys(state: &VirtualizerState<ListLayout>) -> Vec<String> {
+        state
+            .visible()
+            .get_untracked()
+            .iter()
+            .map(|info| info.key.to_string())
+            .collect()
+    }
+
+    fn scroll_to(state: &VirtualizerState<ListLayout>, y: f64) {
+        state.set_visible_rect(Rect::new(0.0, y, 400.0, 480.0));
+        flush_effects();
+    }
+
+    #[test]
+    fn renders_nothing_before_the_effect_runs() {
+        with_owner(|| {
+            let state = use_virtualizer_state(UseVirtualizerStateInput {
+                layout: ListLayout::new(rows_of(48.0)),
+                collection: Signal::stored(rows(10)),
+                persisted_keys: Signal::default(),
+                layout_options: Signal::default(),
+                on_visible_rect_change: Callback::new(|_| {}),
+            });
+            // As during server-side rendering.
+            assert_that!(state.visible().get_untracked()).is_empty();
+            assert_that!(state.content_size().get_untracked()).is_equal_to(Size::default());
+        });
+    }
+
+    #[test]
+    fn renders_the_rows_in_the_visible_rect() {
+        with_owner(|| {
+            let Fixture { state, moves, .. } = list(1000, rows_of(48.0), 0.0);
+            assert_that!(state.content_size().get_untracked())
+                .is_equal_to(Size::new(400.0, 48_000.0));
+            // The viewport plus the overscan (see `Virtualizer`'s tests).
+            assert_that!(keys(&state).len()).is_equal_to(15);
+            assert_that!(keys(&state).first().cloned()).is_equal_to(Some("row-0".to_owned()));
+
+            scroll_to(&state, 4800.0);
+            assert_that!(keys(&state).get(1).cloned()).is_equal_to(Some("row-100".to_owned()));
+            // Nothing moved the viewport.
+            assert_that!(moves.get_untracked()).is_empty();
+        });
+    }
+
+    #[test]
+    fn renders_again_when_the_collection_changes() {
+        with_owner(|| {
+            let Fixture {
+                state, collection, ..
+            } = list(1000, rows_of(48.0), 0.0);
+            collection.set(rows(3));
+            flush_effects();
+            assert_that!(keys(&state)).is_equal_to(vec![
+                "row-0".to_owned(),
+                "row-1".to_owned(),
+                "row-2".to_owned(),
+            ]);
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(144.0);
+        });
+    }
+
+    #[test]
+    fn keeps_persisted_keys_rendered() {
+        with_owner(|| {
+            let Fixture {
+                state,
+                persisted_keys,
+                ..
+            } = list(1000, rows_of(48.0), 0.0);
+            persisted_keys.set(HashSet::from([Key::from("row-900")]));
+            flush_effects();
+            assert_that!(keys(&state).contains(&"row-900".to_owned())).is_true();
+        });
+    }
+
+    #[test]
+    fn new_layout_options_invalidate_the_layout() {
+        with_owner(|| {
+            let Fixture {
+                state,
+                layout_options,
+                ..
+            } = list_with(100, rows_of(32.0), Some(rows_of(48.0)), 0.0);
+            // The first render takes its options.
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(4800.0);
+
+            // Options replacing options (as upstream: not the first ones replacing none).
+            layout_options.set(Some(rows_of(20.0)));
+            flush_effects();
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(2000.0);
+            assert_that!(
+                state
+                    .layout_info(&Key::from("row-1"))
+                    .map(|info| info.rect.y)
+            )
+            .is_equal_to(Some(20.0));
+        });
+    }
+
+    #[test]
+    fn measured_item_sizes_move_the_rows_after_them() {
+        with_owner(|| {
+            let Fixture { state, .. } = list(
+                100,
+                ListLayoutOptions {
+                    estimated_row_size: Some(20.0),
+                    ..ListLayoutOptions::default()
+                },
+                0.0,
+            );
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(2000.0);
+            assert_that!(state.visible().get_untracked()[0].estimated_size).is_true();
+
+            state.update_item_size(&Key::from("row-0"), Size::new(400.0, 50.0));
+            flush_effects();
+            let visible = state.visible().get_untracked();
+            assert_that!(visible[0].estimated_size).is_false();
+            assert_that!(visible[1].rect.y).is_equal_to(50.0);
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(2030.0);
+
+            // The same size again: no invalidation, nothing changes.
+            state.update_item_size(&Key::from("row-0"), Size::new(400.0, 50.0));
+            flush_effects();
+            assert_that!(state.visible().get_untracked()).is_equal_to(visible);
+        });
+    }
+
+    #[test]
+    fn reports_where_the_virtualizer_moves_the_viewport() {
+        with_owner(|| {
+            // Anchored at the end: the first layout snaps there.
+            let Fixture { state, moves, .. } = list(
+                100,
+                ListLayoutOptions {
+                    anchor_to: Some(ScrollAnchorEdge::End),
+                    ..rows_of(48.0)
+                },
+                0.0,
+            );
+            let end = Rect::new(0.0, 100.0 * 48.0 - 480.0, 400.0, 480.0);
+            assert_that!(moves.get_untracked()).is_equal_to(vec![end]);
+            assert_that!(state.visible_rect().get_untracked()).is_equal_to(end);
+            // Rendered there.
+            assert_that!(keys(&state).last().cloned()).is_equal_to(Some("row-99".to_owned()));
+        });
+    }
+
+    #[test]
+    fn finds_items_for_keyboard_navigation_and_pointers() {
+        with_owner(|| {
+            let Fixture { state, .. } = list(1000, rows_of(48.0), 480.0);
+            // Far beyond the rendered rows (e.g. End): laid out on demand.
+            let delegate = state.layout_delegate();
+            assert_that!(delegate.item_rect(&Key::from("row-999"))).is_equal_to(Some(Rect::new(
+                0.0,
+                999.0 * 48.0,
+                400.0,
+                48.0,
+            )));
+            assert_that!(delegate.visible_rect()).is_equal_to(Rect::new(0.0, 480.0, 400.0, 480.0));
+            assert_that!(delegate.content_size()).is_equal_to(Size::new(400.0, 48_000.0));
+            assert_that!(delegate.is_scrollable()).is_true();
+
+            assert_that!(state.key_at_point(Point::new(10.0, 500.0)))
+                .is_equal_to(Some(Key::from("row-10")));
+        });
+    }
+
+    #[test]
+    fn tracks_scrolling() {
+        with_owner(|| {
+            let Fixture { state, .. } = list(10, rows_of(48.0), 0.0);
+            assert_that!(state.is_scrolling().get_untracked()).is_false();
+            state.start_scrolling();
+            flush_effects();
+            assert_that!(state.is_scrolling().get_untracked()).is_true();
+            state.end_scrolling();
+            flush_effects();
+            assert_that!(state.is_scrolling().get_untracked()).is_false();
+        });
+    }
 }

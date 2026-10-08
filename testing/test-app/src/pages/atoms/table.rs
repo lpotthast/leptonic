@@ -6,6 +6,7 @@ use leptonic::{
         SelectionMode, SortDescriptor, SortDirection, TableCollection, TableOptions,
         collections::{Key, Selection},
     },
+    utils::i18n::{I18nProvider, Locale, use_i18n},
 };
 use leptos::prelude::*;
 
@@ -90,6 +91,7 @@ pub fn PageAtomTable() -> impl IntoView {
         ))
     });
     let selection = RwSignal::new(String::new());
+    let german: Locale = "de-DE".parse().expect("a locale");
     let sort_text = move || {
         sort.with(|s| {
             s.as_ref().map_or_else(String::new, |s| {
@@ -147,6 +149,9 @@ pub fn PageAtomTable() -> impl IntoView {
             </button>
             <button id="test-table-before-contacts">"Before"</button>
             <ContactsTable />
+            <I18nProvider locale=german>
+                <LocalizedTable />
+            </I18nProvider>
         </div>
     }
 }
@@ -194,6 +199,50 @@ fn ContactsTable() -> impl IntoView {
                         }
                     })
                     .collect_view()}
+            </TableBody>
+        </Table>
+    }
+}
+
+/// A selectable, sorted table in the locale of its `I18nProvider` (de-DE);
+/// `#test-table-to-french` switches the locale to fr-FR.
+#[component]
+fn LocalizedTable() -> impl IntoView {
+    let i18n = use_i18n().expect("inside an I18nProvider");
+    let table = Memo::new(|_| {
+        Arc::new(TableCollection::build_with(
+            TableOptions {
+                show_selection_checkboxes: true,
+            },
+            |t| {
+                t.column("name", "Name").row_header().allows_sorting();
+                t.row("games", "Games", |r| {
+                    r.cell("Games");
+                });
+            },
+        ))
+    });
+    view! {
+        <button
+            id="test-table-to-french"
+            on:click=move |_| i18n.set_locale.run("fr-FR".parse().expect("a locale"))
+        >
+            "Français"
+        </button>
+        <Table
+            table=table
+            selection_mode=SelectionMode::Multiple
+            default_sort_descriptor=SortDescriptor {
+                column: Key::from("name"),
+                direction: SortDirection::Ascending,
+            }
+            aria_label="Localized"
+        >
+            <TableHeader />
+            <TableBody>
+                <TableRow key="games">
+                    <TableCell column="name">"Games"</TableCell>
+                </TableRow>
             </TableBody>
         </Table>
     }

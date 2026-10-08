@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         field::Label,
         listbox::{ListBox, ListBoxItems},
         select::{Select, SelectPopover, SelectTrigger, SelectValue},
@@ -17,7 +17,7 @@ pub fn SelectConceptDemo() -> impl IntoView {
         b.item("medium", "Medium");
         b.item("large", "Large");
     });
-    let size = RwSignal::new(vec![Key::from("medium")]);
+    let size = RwSignal::new(Some(Key::from("medium")));
     let disabled = RwSignal::new(false);
 
     view! {
@@ -34,13 +34,15 @@ pub fn SelectConceptDemo() -> impl IntoView {
             </SelectPopover>
         </Select>
         <p class="demo-status">
-            "Selected: "{move || size.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}"."
+            "Selected: "{move || size.with(|key| key.as_ref().map_or_else(|| "none".to_owned(), ToString::to_string))}"."
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -260,6 +260,17 @@ pub fn ListBoxItem(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxItem", classes);
     let list = expect_context::<ListBoxData>();
+    // Without a node, the item can't be focused or selected (e.g. a key of another type than the
+    // collection's: `"10"` for the item, `10` in the collection).
+    if !list
+        .state
+        .collection
+        .with_untracked(|c| c.contains_key(&key))
+    {
+        crate::utils::dev_warn!(
+            "<ListBoxItem key={key:?}>: the listbox's collection has no item with this key"
+        );
+    }
     let UseOptionReturn {
         props,
         label_props,

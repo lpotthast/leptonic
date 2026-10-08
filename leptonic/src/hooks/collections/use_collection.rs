@@ -8,6 +8,17 @@ use super::{Collection, CollectionBuilder, Key};
 /// actually changes (structural equality).
 pub type CollectionMemo = Memo<Arc<Collection>>;
 
+/// The `aria_label` of the node `key` in `collection`, following changes of the collection (an item
+/// keeps its rendered element when its label changes).
+pub(crate) fn use_node_aria_label(collection: CollectionMemo, key: Key) -> Memo<Option<String>> {
+    Memo::new(move |_| {
+        collection.with(|c| {
+            c.get(&key)
+                .and_then(|n| n.aria_label.as_deref().map(str::to_owned))
+        })
+    })
+}
+
 /// Build a collection from reactive data.
 ///
 /// `build` runs whenever a signal it reads changes. A rebuild that produces the same collection

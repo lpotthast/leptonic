@@ -27,6 +27,10 @@ use crate::{
         id::use_id,
     },
 };
+use crate::hooks::grid::{
+    UseGridSelectionAnnouncementInput, UseHighlightSelectionDescriptionInput,
+    use_grid_selection_announcement, use_highlight_selection_description,
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -37,8 +41,6 @@ use crate::{
 //   `WeakMap` keyed by the state), which the caller hands to `use_grid_list_item`.
 //
 // ## OMITTED FEATURES
-// - Selection announcements (`useGridSelectionAnnouncement`) and the "highlight selection"
-//   description (`useHighlightSelectionDescription`): they need localized messages.
 // - Virtualization (`aria-rowcount`/`aria-colcount`).
 //
 // =============================================================================
@@ -165,6 +167,8 @@ pub struct UseGridListProps {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
+    /// How touch users select rows that have actions ("highlight selection").
+    pub aria_describedby: Signal<Option<String>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_list`).
     pub collection: UseSelectableCollectionProps,
     /// Detects tabbable children of an empty grid (e.g. an "add item" button), which then take
@@ -178,6 +182,7 @@ pub type UseGridListAttrs = (
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     UseSelectableCollectionAttrs,
     UseHasTabbableChildAttrs,
 );
@@ -192,6 +197,7 @@ impl IntoAttrs for UseGridListProps {
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
             self.collection.into_attrs(),
             self.tabbable_child.into_attrs(),
         )
@@ -237,6 +243,17 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
     })
     .props;
 
+    // Touch users learn how to select rows that have actions; selection changes are announced.
+    let description = use_highlight_selection_description(UseHighlightSelectionDescriptionInput {
+        selection: state.selection,
+        has_item_actions: on_action.is_some(),
+    });
+    use_grid_selection_announcement(UseGridSelectionAnnouncementInput {
+        selection: state.selection,
+        collection: state.collection,
+        get_row_text: None,
+    });
+
     // An empty grid is a tab stop itself, unless it has tabbable content.
     let is_empty = Signal::derive(move || state.collection.with(|c| c.is_empty()));
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
@@ -279,6 +296,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
                 (state.selection.selection_mode() == SelectionMode::Multiple)
                     .then_some(AriaMultiselectable::True)
             }),
+            aria_describedby: description,
             collection,
             tabbable_child: tabbable_child.props,
         },

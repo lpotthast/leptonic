@@ -115,10 +115,10 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
         is_disabled: Signal::derive(move || rows.with(|c| c.size() == 0)),
         should_select_on_press_up,
         allows_different_press_origin: false,
-        on_action: on_row_action.map(|on_row_action| {
+        on_action: Signal::stored(on_row_action.map(|on_row_action| {
             let key = key.clone();
             Callback::new(move |()| on_row_action.run(key.clone()))
-        }),
+        })),
         link_behavior: crate::hooks::collections::LinkBehavior::Action,
         focus: None,
         should_use_virtual_focus: false,

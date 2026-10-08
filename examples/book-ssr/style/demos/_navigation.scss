@@ -261,6 +261,19 @@
 
 // The panel. Without tabbable content it is a tab stop itself, so it shows keyboard focus: the atom's
 // `data-focus-visible`, the hook demos' plain `<div>` through `:focus-visible`.
+// `TabPanels` animates its height between the panels' heights (`auto` when it doesn't change). The clip margin keeps
+// the focus ring of a focusable panel visible.
+.demo-tab-panels {
+    height: var(--tab-panel-height);
+    overflow: clip;
+    overflow-clip-margin: 4px;
+    transition: height var(--book-transition);
+
+    @media (prefers-reduced-motion: reduce) { transition: none; }
+
+    ul, ol { margin: 0; padding-inline-start: var(--book-space-l); color: var(--book-muted-color); }
+}
+
 .demo-tab-panel {
     padding: var(--book-space-m) var(--book-space-xs) var(--book-space-xs);
 

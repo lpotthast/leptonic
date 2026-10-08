@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox, focus_scope::FocusScope},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
     hooks::*,
 };
 use leptos::prelude::*;
@@ -52,18 +52,24 @@ pub fn BasicOverlayDemo() -> impl IntoView {
         // Settings take effect for the next opening; they can't be pressed while the panel is open, as that would
         // be a press outside.
         <div class="demo-controls">
-            <Checkbox is_selected=is_dismissable set_selected=is_dismissable is_disabled=is_open classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Close on press outside"
-            </Checkbox>
-            <Checkbox is_selected=close_on_blur set_selected=close_on_blur is_disabled=is_open classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Close on blur"
-            </Checkbox>
-            <Checkbox is_selected=escape_disabled set_selected=escape_disabled is_disabled=is_open classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Ignore Escape"
-            </Checkbox>
+            <CheckboxField is_selected=is_dismissable set_selected=is_dismissable is_disabled=is_open>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Close on press outside"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=close_on_blur set_selected=close_on_blur is_disabled=is_open>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Close on blur"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=escape_disabled set_selected=escape_disabled is_disabled=is_open>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Ignore Escape"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

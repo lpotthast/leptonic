@@ -108,7 +108,7 @@ pub fn PageToastOverview() -> impl IntoView {
                     <li>
                         "While the pointer is over the region or the focus is in it, the timeouts of the toasts pause."
                     </li>
-                    <li>"The region\u{2019}s name and the close button\u{2019}s name are English for now."</li>
+                    <li>"The region\u{2019}s name and the close button\u{2019}s name follow the locale."</li>
                 </ul>
                 <KeyboardTable>
                     <KeyRow keys="F6 / Shift + F6">"Moves the focus into the toast region, and on to the next or previous landmark."</KeyRow>

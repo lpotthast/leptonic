@@ -1,7 +1,9 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{tabs::TabsAtomDemo, tabs_vertical::TabsVerticalAtomDemo};
+use super::demos::{
+    tabs::TabsAtomDemo, tabs_animated::TabsAnimatedAtomDemo, tabs_vertical::TabsVerticalAtomDemo,
+};
 use crate::{kit::*, routes};
 
 /// A link to a section of the tabs hook page.
@@ -200,8 +202,8 @@ pub fn PageAtomTabs() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="atoms::tabs::Tab">
                         <ApiRow name="key" ty="Key">"The tab\u{2019}s key in the collection. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                            "Whether the tab is disabled: it joins the disabled keys, so that it can\u{2019}t be selected and "
-                            "the arrow keys skip it."
+                            "Whether the tab is disabled: it joins the disabled keys, so that it can\u{2019}t be selected "
+                            "(nor is it the default selection, also in server-rendered HTML) and the arrow keys skip it."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the tab."</ApiRow>
                         <ApiRow name="children" ty="Children">"The tab\u{2019}s label."</ApiRow>
@@ -249,6 +251,9 @@ pub fn PageAtomTabs() -> impl IntoView {
                         @media (prefers-reduced-motion: reduce) { .my-tab-panels { transition: none; } }
                     ")}
                 </Code>
+                <Demo description="Panels of different heights in TabPanels, which animates the height" source=include_str!("demos/tabs_animated.rs")>
+                    <TabsAnimatedAtomDemo/>
+                </Demo>
                 <Section title="Props" id="tabpanels-props">
                     <ApiTable kind=ApiKind::Props of="TabPanels">
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the element."</ApiRow>

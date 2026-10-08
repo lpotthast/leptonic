@@ -34,6 +34,7 @@ impl BrowserTest<str> for TableTests {
         disabled_rows(&page).await?;
         type_ahead(&page).await?;
         removing_the_focused_row(&page).await?;
+        localized(&page).await?;
 
         Ok(())
     }
@@ -100,17 +101,8 @@ async fn row_names(page: &Page<'_>) -> Result<Vec<String>, Report> {
 }
 
 async fn expect_rows(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
-        let names = row_names(page).await?;
-        if names == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected rows {expected:?}, got {names:?}");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!("the rows", expected, row_names(page).await?);
+    Ok(())
 }
 
 async fn expect_focus_on_row(page: &Page<'_>, name: &str) -> Result<(), Report> {
@@ -357,4 +349,46 @@ async fn removing_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     expect_rows(page, &["bootmgr", "log.txt", "Program Files"]).await?;
     expect_focus_on_row_header(page, "log.txt").await
+}
+
+/// The table's labels and descriptions follow the locale ("Alles auswählen" in de-DE), also when
+/// it changes (fr-FR).
+async fn localized(page: &Page<'_>) -> Result<(), Report> {
+    let table = grid(page, "Localized").await?;
+    let select_all = table.find(By::Css("[role=columnheader] input")).await?;
+    let select_row = table
+        .find(By::Css("[role=row] [role=gridcell] input"))
+        .await?;
+    page.wait_for_attr(&select_all, "aria-label", Some("Alles auswählen"))
+        .await?;
+    page.wait_for_attr(&select_row, "aria-label", Some("Auswählen"))
+        .await?;
+    wait_for!(
+        "the German sort description",
+        "sortiert nach Spalte Name in aufsteigender Reihenfolge",
+        description(page, &table).await?
+    );
+
+    page.click_element_with_id("test-table-to-french").await?;
+    page.wait_for_attr(&select_all, "aria-label", Some("Sélectionner tout"))
+        .await?;
+    page.wait_for_attr(&select_row, "aria-label", Some("Sélectionner"))
+        .await?;
+    wait_for!(
+        "the French sort description",
+        "trié en fonction de la colonne\u{a0}Name par ordre croissant",
+        description(page, &table).await?
+    );
+    Ok(())
+}
+
+/// The text of the element describing `element` (`aria-describedby`).
+async fn description(page: &Page<'_>, element: &WebElement) -> Result<String, Report> {
+    let describedby = attr(element, "aria-describedby").await?.unwrap_or_default();
+    Ok(page
+        .element(&describedby)
+        .await?
+        .prop("textContent")
+        .await?
+        .unwrap_or_default())
 }

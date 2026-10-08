@@ -13,7 +13,7 @@ pub fn PageUseTag() -> impl IntoView {
                 "users navigate with the arrow keys and can select and remove. "<Code inline=true>"use_tag_group"</Code>
                 " and "<Code inline=true>"use_tag"</Code>" build one from a list state; you render the tags and their "
                 "remove buttons. A tag group is a horizontal "<Link href=routes::doc::GridList.materialize()>"grid list"</Link>
-". See the "<Link href=routes::doc::TagGroup.materialize()>"Tag Group overview"</Link>" for concept guidance."
+". See the "<Link href=routes::doc::TagGroup.materialize()>"Tag Group overview"</Link>" for concept guidance and keyboard interaction."
             </p>
 
             <ReactAria hook="useTagGroup"/>
@@ -128,27 +128,6 @@ pub fn PageUseTag() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="Keyboard">
-                <p>
-                    "A tag group follows the WAI-ARIA "
-                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/grid/" target=LinkTarget::Blank>"grid pattern"</Link>
-                    ": the group is a "<Code inline=true>"grid"</Code>", each tag a "<Code inline=true>"row"</Code>" with a "
-                    <Code inline=true>"gridcell"</Code>", selectable tags carry "<Code inline=true>"aria-selected"</Code>
-                    ", and removable tags are described as removable. The group is a single tab stop."
-                </p>
-
-                <KeyboardTable>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Focus the previous or next tag, wrapping around."</KeyRow>
-                    <KeyRow keys="Home / End">"Focus the first or last tag."</KeyRow>
-                    <KeyRow keys="Space">"Select or deselect the focused tag (when selection is enabled)."</KeyRow>
-                    <KeyRow keys="Control + A">"Select all tags (multiple selection; "<Keys keys="Meta + A"/>" on macOS)."</KeyRow>
-                    <KeyRow keys="Escape">"Clear the selection."</KeyRow>
-                    <KeyRow keys="Delete / Backspace">
-                        "Remove the focused tag, or all selected tags if it is selected. Focus moves to a neighbor, or stays in the "
-                        "empty group."
-                    </KeyRow>
-                </KeyboardTable>
-            </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>

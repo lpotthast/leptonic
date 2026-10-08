@@ -14,7 +14,7 @@ pub struct SearchText {
     text: String,
     text_lower: String,
     title_lower: String,
-    /// The `##` sections: lowercased title, title and anchor id.
+    /// The sections (`##`, and `###` naming an item): lowercased title, title and anchor id.
     sections: Vec<(String, String, String)>,
 }
 

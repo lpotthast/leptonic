@@ -5,10 +5,7 @@ use leptonic::{
         listbox::{ListBox, ListBoxItems},
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
-    hooks::{
-        SelectMode,
-        collections::{CollectionMemo, Key, use_list_collection},
-    },
+    hooks::collections::{CollectionMemo, Key, use_list_collection},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -75,7 +72,7 @@ fn Parts(#[prop(optional)] with_empty_state: bool) -> impl IntoView {
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomSelectForms() -> impl IntoView {
     let multiple_changes = RwSignal::new(Vec::<String>::new());
-    let submitted = RwSignal::new(Vec::<Key>::new());
+    let submitted = RwSignal::new(None::<Key>);
     let submits = RwSignal::new(0_u32);
     let many_submits = RwSignal::new(0_u32);
     let empty = use_list_collection(
@@ -95,9 +92,8 @@ pub fn PageAtomSelectForms() -> impl IntoView {
         <h1>"Select forms"</h1>
 
         <Form attr:id="sf-multiple">
-            <Select
+            <Select<Vec<Key>>
                 collection=animals()
-                selection_mode=SelectMode::Multiple
                 name="select"
                 on_change={move |keys: Vec<Key>| {
                     multiple_changes.update(|c| c.push(format!("[{}]", join(&keys))));
@@ -106,17 +102,17 @@ pub fn PageAtomSelectForms() -> impl IntoView {
                 <Label>"Animals"</Label>
                 <Parts />
                 <HiddenSelect />
-            </Select>
+            </Select<Vec<Key>>>
         </Form>
         <div>"Changes: " <span id="sf-multiple-changes">{move || multiple_changes.get().join("|")}</span></div>
 
         <form id="sf-required">
-            <Select collection=animals() name="required-select" is_required=true>
+            <Select<Option<Key>> collection=animals() name="required-select" is_required=true>
                 <Label>"Required animal"</Label>
                 <Parts />
                 <FieldError />
                 <HiddenSelect />
-            </Select>
+            </Select<Option<Key>>>
         </form>
 
         <Form
@@ -138,31 +134,31 @@ pub fn PageAtomSelectForms() -> impl IntoView {
                 <HiddenSelect />
             </Select>
             <button type="submit" id="sf-submit-button">"Submit"</button>
-            <button type="button" id="sf-submit-clear" on:click=move |_| submitted.set(Vec::new())>
+            <button type="button" id="sf-submit-clear" on:click=move |_| submitted.set(None)>
                 "Clear"
             </button>
         </Form>
         <div>"Submits: " <span id="sf-submits">{submits}</span></div>
 
         <form id="sf-disabled">
-            <Select collection=animals() name="disabled-select" is_disabled=true>
+            <Select<Option<Key>> collection=animals() name="disabled-select" is_disabled=true>
                 <Label>"Disabled animal"</Label>
                 <Parts />
                 <HiddenSelect />
-            </Select>
+            </Select<Option<Key>>>
         </form>
 
         <div id="sf-empty">
-            <Select collection=empty default_value=vec![Key::from("cat")]>
+            <Select collection=empty default_value=Some(Key::from("cat"))>
                 <Label>"Empty"</Label>
                 <Parts />
             </Select>
         </div>
         <div id="sf-empty-allowed">
-            <Select collection=empty allows_empty_collection=true>
+            <Select<Option<Key>> collection=empty allows_empty_collection=true>
                 <Label>"Empty allowed"</Label>
                 <Parts with_empty_state=true />
-            </Select>
+            </Select<Option<Key>>>
         </div>
 
         <Form
@@ -172,12 +168,12 @@ pub fn PageAtomSelectForms() -> impl IntoView {
                 many_submits.update(|n| *n += 1);
             }
         >
-            <Select collection=many selection_mode=SelectMode::Multiple is_required=true name="many">
+            <Select<Vec<Key>> collection=many is_required=true name="many">
                 <Label>"Many"</Label>
                 <Parts />
                 <FieldError />
                 <HiddenSelect />
-            </Select>
+            </Select<Vec<Key>>>
             <button type="submit" id="sf-many-submit">"Submit"</button>
             <input type="reset" id="sf-many-reset" />
         </Form>
@@ -187,10 +183,10 @@ pub fn PageAtomSelectForms() -> impl IntoView {
             <button id="sf-open-toggle" on:click=move |_| is_open.update(|open| *open = !*open)>
                 "Toggle"
             </button>
-            <Select collection=animals() is_open=is_open set_open=is_open>
+            <Select<Option<Key>> collection=animals() is_open=is_open set_open=is_open>
                 <Label>"Controlled open"</Label>
                 <Parts />
-            </Select>
+            </Select<Option<Key>>>
             <div>"Open: " <span id="sf-open-state">{move || is_open.get().to_string()}</span></div>
         </div>
     }

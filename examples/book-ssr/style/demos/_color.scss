@@ -370,6 +370,30 @@
     &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }
 
+// -- Color picker state hook --
+
+// The area with the hue slider below it, and the result next to them.
+.demo-color-picker-hooks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--book-space-l);
+}
+
+.demo-color-picker-hooks-parts {
+    display: grid;
+    gap: var(--book-space-m);
+    width: 200px;
+}
+
+.demo-color-picker-hooks-result {
+    display: grid;
+    justify-items: start;
+    gap: var(--book-space-s);
+
+    .demo-status { margin: 0; }
+}
+
 // -- Color swatch hooks --
 
 // The background color is set from Rust.

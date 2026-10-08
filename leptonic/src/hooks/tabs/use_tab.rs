@@ -120,7 +120,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         is_disabled,
         should_select_on_press_up: should_select_on_press_up.resolve(|| is_link),
         allows_different_press_origin: false,
-        on_action: None,
+        on_action: Signal::stored(None),
         link_behavior: LinkBehavior::Selection,
         focus: None,
         should_use_virtual_focus: false,

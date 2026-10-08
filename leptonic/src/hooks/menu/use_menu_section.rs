@@ -8,7 +8,7 @@ use super::MenuData;
 use crate::{
     hooks::{
         IntoAttrs,
-        collections::{Key, NodeKind},
+        collections::{Key, NodeKind, use_node_aria_label},
     },
     utils::{aria::AriaRole, id::use_id},
 };
@@ -78,13 +78,13 @@ impl IntoAttrs for UseMenuSectionHeadingProps {
 #[derive(Debug)]
 pub struct UseMenuSectionGroupProps {
     pub role: AriaRole,
-    pub aria_label: Option<String>,
+    pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Option<String>,
 }
 
 pub type UseMenuSectionGroupAttrs = (
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Option<String>>,
 );
 
@@ -105,18 +105,16 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
     let UseMenuSectionInput { menu, key } = input;
     let heading_id = use_id("menu-section-heading");
 
-    let (aria_label, heading) = untrack(|| {
+    // Whether the section has a heading is read once (it decides what renders); its label
+    // follows the collection.
+    let heading = untrack(|| {
         menu.state.collection.with(|c| {
-            let aria_label = c
-                .get(&key)
-                .and_then(|n| n.aria_label.as_deref().map(str::to_owned));
-            let heading = c
-                .children(&key)
+            c.children(&key)
                 .find(|n| n.kind == NodeKind::Header)
-                .map(|n| n.text_value.to_string());
-            (aria_label, heading)
+                .map(|n| n.text_value.to_string())
         })
     });
+    let aria_label = use_node_aria_label(menu.state.collection, key);
 
     UseMenuSectionReturn {
         item_props: UseMenuSectionItemProps {
@@ -128,7 +126,7 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
         }),
         group_props: UseMenuSectionGroupProps {
             role: AriaRole::Group,
-            aria_label,
+            aria_label: aria_label.into(),
             aria_labelledby: heading.as_ref().map(|_| heading_id),
         },
         heading,

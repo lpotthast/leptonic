@@ -88,8 +88,8 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
                 <ToggleButtonGroup
                     selection_mode=ToggleGroupSelectionMode::Single
                     disallow_empty_selection=true
-                    default_selected_keys=HashSet::from([Key::from("Bottom")])
-                    on_selection_change={move |keys: HashSet<Key>| {
+                    default_value=HashSet::from([Key::from("Bottom")])
+                    on_change={move |keys: HashSet<Key>| {
                         if let Some(new_side) = option_for(&SIDES, &keys) {
                             side.set(new_side);
                         }
@@ -108,8 +108,8 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
                 <ToggleButtonGroup
                     selection_mode=ToggleGroupSelectionMode::Single
                     disallow_empty_selection=true
-                    default_selected_keys=HashSet::from([Key::from("Center")])
-                    on_selection_change={move |keys: HashSet<Key>| {
+                    default_value=HashSet::from([Key::from("Center")])
+                    on_change={move |keys: HashSet<Key>| {
                         if let Some(new_align) = option_for(&ALIGNMENTS, &keys) {
                             align.set(new_align);
                         }

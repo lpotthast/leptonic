@@ -23,14 +23,12 @@ pub fn PageCollator() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::{
-                            filter::{Collator, CollatorOptions},
-                            i18n::use_locale,
-                        };
+                        use leptonic::utils::filter::{CollatorOptions, use_collator};
 
-                        let locale = use_locale();
+                        // A collator for the locale of the `I18nProvider`, created again only when the locale changes.
+                        let collator = use_collator(CollatorOptions::default());
                         let sorted_names = move || {
-                            let collator = Collator::new(&locale.get(), &CollatorOptions::default());
+                            let collator = collator.get();
                             let mut names = names.get();
                             names.sort_by(|a, b| collator.compare(a, b));
                             names
@@ -48,6 +46,18 @@ pub fn PageCollator() -> impl IntoView {
                 <Demo description="Words sorted and filtered in a selectable locale" source=include_str!("demos/collator.rs")>
                     <CollatorDemo/>
                 </Demo>
+            </Section>
+
+            <Section title="use_collator and use_filter">
+                <p>
+                    <Code inline=true>"use_collator(options)"</Code>" and "<Code inline=true>"use_filter(options)"</Code>
+                    " return a "<Code inline=true>"Signal<Arc<Collator>>"</Code>" and a "
+                    <Code inline=true>"Signal<Arc<Filter>>"</Code>" for the locale of the surrounding "
+                    <Link href=routes::doc::utilities::I18nProvider.materialize()>"I18nProvider"</Link>". Creating a "
+                    "collator is costly, so use these in components rather than creating one per comparison: they create "
+                    "one when the locale changes and share it with every read. Create one yourself with "
+                    <Code inline=true>"new"</Code>" for a locale of your own, as the demo does."
+                </p>
             </Section>
 
             <Section title="Collator" id="collator-type">
@@ -78,13 +88,9 @@ pub fn PageCollator() -> impl IntoView {
                         " also case (a \u{2260} A), "<Code inline=true>"Variant"</Code>" all of them."
                     </ApiRow>
                     <ApiRow name="ignore_punctuation" ty="bool" default="false">
-                        "Whether to ignore punctuation when comparing."
+                        "Whether to ignore punctuation and spaces when comparing (\u{201c}e-mail\u{201d} = \u{201c}email\u{201d})."
                     </ApiRow>
                 </ApiTable>
-                <p>
-                    <Code inline=true>"ignore_punctuation"</Code>" has no effect yet, and "<Code inline=true>"Case"</Code>
-                    " currently tells accents apart as well."
-                </p>
             </Section>
 
             <Section title="Filter">

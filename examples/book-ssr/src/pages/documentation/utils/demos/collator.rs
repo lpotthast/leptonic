@@ -2,7 +2,7 @@ use leptonic::{
     atoms::{
         field::Label,
         input::Input,
-        radio::{Radio, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
         search_field::SearchField,
     },
     hooks::{Orientation, collections::Key},
@@ -58,18 +58,24 @@ pub fn CollatorDemo() -> impl IntoView {
         <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change=on_locale_change classes="demo-choice-group">
             <Label classes="demo-choice-group-label">"Locale"</Label>
             <div class="demo-choice-group-items">
-                <Radio value="en-US" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "English (US)"
-                </Radio>
-                <Radio value="de-DE" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "German"
-                </Radio>
-                <Radio value="sv-SE" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "Swedish"
-                </Radio>
+                <RadioField value="en-US">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "English (US)"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="de-DE">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "German"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="sv-SE">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "Swedish"
+                    </RadioButton>
+                </RadioField>
             </div>
         </RadioGroup>
         <SearchField value=query set_value=query classes=["demo-field", "demo-mt-1"]>

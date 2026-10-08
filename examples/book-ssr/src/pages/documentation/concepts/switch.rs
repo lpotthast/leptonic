@@ -52,18 +52,19 @@ pub fn PageSwitchOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></TableCell>
-                        <TableCell>"An unstyled "<Code inline=true>"Switch"</Code>" you draw with your children, styled through data attributes."</TableCell>
+                        <TableCell><Link href=routes::doc::switch::Atom.materialize()>"Switch Atoms"</Link></TableCell>
+                        <TableCell>"An unstyled "<Code inline=true>"SwitchField"</Code>" and "<Code inline=true>"SwitchButton"</Code>" you draw with your children, styled through data attributes."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
                 <p>
-                    "Pass the "<Code inline=true>"Switch"</Code>" atom an "<Code inline=true>"RwSignal"</Code>" as "
-                    <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>", and the label as "
-                    "children. The track and thumb are your own markup, styled through the atom\u{2019}s data attributes "
-                    "(the CSS is on the "<Link href=format!("{}#styling", routes::doc::switch::Atom.materialize())>"Switch Atom"</Link>
+                    "Pass the "<Code inline=true>"SwitchField"</Code>" atom an "<Code inline=true>"RwSignal"</Code>" as "
+                    <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>", and give its "
+                    <Code inline=true>"SwitchButton"</Code>" the label as children. The track and thumb are your own markup, "
+                    "styled through the button\u{2019}s data attributes "
+                    "(the CSS is on the "<Link href=format!("{}#styling", routes::doc::switch::Atom.materialize())>"Switch Atoms"</Link>
                     " page):"
                 </p>
                 <Demo description="Wi-Fi switch kept in a signal, showing its state, with a disabled toggle" source=include_str!("demos/switch.rs") source_open=true>
@@ -99,7 +100,7 @@ pub fn PageSwitchOverview() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
-                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
+                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atoms"</Link></li>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link></li>
                 <li><Link href=routes::doc::ToggleButton.materialize()>"Toggle Button"</Link></li>
             </SeeAlso>

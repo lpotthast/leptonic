@@ -1,11 +1,15 @@
 use leptonic::{
     atoms::prelude::{ColorSwatch, Description, Input, Label, TextField},
-    utils::color::{Color, ColorValue, HSV},
+    utils::{
+        color::{Color, ColorValue, HSV},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorNamesDemo() -> impl IntoView {
+    let locale = use_locale();
     let text = RwSignal::new("hsb(212, 84%, 90%)".to_owned());
     // `None` while the text is no color.
     let color = Signal::derive(move || text.with(|text| text.parse::<Color>().ok()));
@@ -37,8 +41,8 @@ pub fn ColorNamesDemo() -> impl IntoView {
                     format!(
                         "{}: {} (hue: {}, {:.0}\u{00b0}).",
                         color.to_css_string(),
-                        color.color_name(),
-                        hsv.hue_name(),
+                        color.color_name(&locale.get()),
+                        hsv.hue_name(&locale.get()),
                         hsv.hue,
                     )
                 }

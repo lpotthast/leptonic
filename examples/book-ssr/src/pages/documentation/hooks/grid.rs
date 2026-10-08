@@ -248,6 +248,44 @@ pub fn PageUseGrid() -> impl IntoView {
                 </Section>
             </Section>
 
+            <Section title="use_grid_selection_announcement">
+                <p>
+                    "Announces selection changes through the "
+                    <Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live announcer"</Link>
+                    ", as many screen readers don\u{2019}t: \u{201c}Inbox selected.\u{201d}, \u{201c}Inbox not selected.\u{201d}, "
+                    "\u{201c}Drafts selected. 2 items selected.\u{201d}, \u{201c}All items selected.\u{201d}, in the locale\u{2019}s "
+                    "language. "<Code inline=true>"use_grid"</Code>" and "
+                    <Link href=routes::doc::grid_list::Hook.materialize()>"use_grid_list"</Link>" call it; call it yourself "
+                    "only for a collection you build from lower-level hooks. It returns nothing."
+                </p>
+                <Section title="Input" id="use-grid-selection-announcement-input">
+                    <ApiTable kind=ApiKind::Input of="UseGridSelectionAnnouncementInput">
+                        <ApiRow name="selection" ty="SelectionManager">"The collection\u{2019}s selection. Required."</ApiRow>
+                        <ApiRow name="collection" ty="CollectionMemo">"The rows, for their texts. Required."</ApiRow>
+                        <ApiRow name="get_row_text" ty="Option<GetRowText>" default="None">
+                            "The text announced for a row ("<Code inline=true>"None"</Code>" from the function: nothing). "
+                            "Default: the row\u{2019}s text value."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="use_highlight_selection_description">
+                <p>
+                    "Describes how to select in a collection whose rows perform an action when pressed and select with the "
+                    <Code inline=true>"Replace"</Code>" behavior: on touch devices, \u{201c}Long press to enter selection "
+                    "mode.\u{201d} It returns the id of the description while there is one, for the collection\u{2019}s "
+                    <Code inline=true>"aria-describedby"</Code>" ("<Code inline=true>"Signal<Option<String>>"</Code>"). "
+                    <Code inline=true>"use_grid"</Code>" and "<Code inline=true>"use_grid_list"</Code>" call it."
+                </p>
+                <Section title="Input" id="use-highlight-selection-description-input">
+                    <ApiTable kind=ApiKind::Input of="UseHighlightSelectionDescriptionInput">
+                        <ApiRow name="selection" ty="SelectionManager">"The collection\u{2019}s selection. Required."</ApiRow>
+                        <ApiRow name="has_item_actions" ty="bool">"Whether the rows (or cells) have actions. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
             <Section title="Focus Modes">
                 <DocTable headers=&["Mode", "Behavior"]>
                     <TableRow>

@@ -176,6 +176,19 @@
 
 .demo-grid-list-name { flex: 1; }
 
+// A section's header row (`GridListHeader`) and a row's secondary text (`GridListItemDescription`), in the sections
+// demo.
+.demo-grid-list-header {
+    padding: var(--book-space-xs) var(--book-space-m);
+    border-bottom: 1px solid var(--book-border-color);
+    background: var(--book-surface-color);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+    font-weight: 600;
+}
+
+.demo-grid-list-description { color: var(--book-muted-color); font-size: var(--book-font-size-s); }
+
 // A button in a row (atom and hook demos): the `Button` atom, styled through its data attributes.
 .demo-grid-list-action {
     padding: var(--book-space-xs) var(--book-space-s);

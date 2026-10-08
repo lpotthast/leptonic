@@ -111,7 +111,7 @@ browser-test:
 
 # Run browser tests with visible browser (for debugging)
 browser-test-visible:
-  BROWSER_TEST_VISIBLE=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+  BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
 # Run the book's browser tests (every documentation page: errors, dark theme, links, phone width, Markdown export).
 book-browser-test:
@@ -215,9 +215,20 @@ upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
 # Run `cargo clippy --tests` for every crate. Lint levels are configured in each crate's [lints.clippy] section.
+# Free disk space: delete the incremental caches of the agents' shared target dirs (they pile up old sessions;
+# the next build is slower, nothing else changes).
+clean-agent-incremental:
+  rm -rf ./target/agents/*/incremental ./testing/test-app/target/agents/*/incremental ./examples/book-ssr/target/agents/*/incremental
+
+# The library's API docs; rustdoc warnings (broken or ambiguous links) fail.
+doc:
+  RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path ./leptonic/Cargo.toml --features full --no-deps
+
 clippy: # "-" prefixes allow for non-zero status codes!
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --features full
+  # Release too: some lints depend on type sizes that differ there (`trivially_copy_pass_by_ref`).
+  -cargo clippy --tests --release --manifest-path ./leptonic/Cargo.toml --features full
   # The atoms without the components layer: what consumers like agnite dev-ui build (consumers.md).
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --no-default-features --features atoms,clipboard
   -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml

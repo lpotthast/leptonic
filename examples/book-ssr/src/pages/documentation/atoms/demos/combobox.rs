@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::{
         button::Button,
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         combobox::{ComboBox, ComboBoxButton, ComboBoxPopover},
         field::Label,
         input::Input,
@@ -35,7 +35,7 @@ pub fn ComboBoxAtomDemo() -> impl IntoView {
     });
     // App state: the selected country and the text in the input. The combo box shows both, and the user's typing
     // and choosing writes them.
-    let value = RwSignal::new(vec![Key::from("de")]);
+    let value = RwSignal::new(Some(Key::from("de")));
     let input_value = RwSignal::new(String::from("Germany"));
     let disabled = RwSignal::new(false);
 
@@ -68,16 +68,18 @@ pub fn ComboBoxAtomDemo() -> impl IntoView {
         </ComboBox>
 
         <p class="demo-status">
-            "Selected: "{move || value.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}
+            "Selected: "{move || value.with(|key| key.as_ref().map_or_else(|| "none".to_owned(), ToString::to_string))}
             ". Typed: \u{201c}"{move || input_value.get()}"\u{201d}."
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
             // The app changes the selection by writing its state; the input then shows the country's name.
-            <Button on_press=move |_| value.set(vec![Key::from("se")]) classes="demo-btn">
+            <Button on_press=move |_| value.set(Some(Key::from("se"))) classes="demo-btn">
                 "Ship to Sweden"
             </Button>
         </div>

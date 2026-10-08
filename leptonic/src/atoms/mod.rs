@@ -51,6 +51,7 @@ pub mod toast;
 pub mod toggle_button;
 pub mod toolbar;
 pub mod tooltip;
+pub(crate) mod typed_values;
 pub mod virtualizer;
 pub mod visually_hidden;
 
@@ -64,7 +65,7 @@ pub mod prelude {
             CalendarHeading, CalendarMonthPicker, CalendarNextButton, CalendarPreviousButton,
             CalendarWeek, CalendarYearPicker, RangeCalendar,
         },
-        checkbox::{Checkbox, CheckboxButton, CheckboxField, CheckboxGroup},
+        checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         color_area::ColorArea,
         color_field::{ColorChannelField, ColorField},
         color_picker::{ColorPicker, ColorPickerContext},
@@ -117,15 +118,18 @@ pub mod prelude {
         popover::Popover,
         press::{ClearPressResponder, PressResponder, Pressable},
         progress_bar::{ProgressBar, ProgressBarFill, ProgressBarValueText},
-        radio::{Radio, RadioButton, RadioField, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
         search_field::{SearchField, SearchFieldClearButton},
-        select::{HiddenSelect, Select, SelectCtx, SelectPopover, SelectTrigger, SelectValue},
+        select::{
+            HiddenSelect, Select, SelectCtx, SelectPopover, SelectTrigger, SelectValue,
+            SelectedValues,
+        },
         separator::Separator,
         slider::{
             Slider, SliderFill, SliderMark, SliderMarks, SliderOutput, SliderPopover, SliderThumb,
             SliderThumbTooltip, SliderTrack,
         },
-        switch::{Switch, SwitchButton, SwitchField},
+        switch::{SwitchButton, SwitchField},
         tabs::{Tab, TabList, TabPanel, TabPanels, Tabs},
         text_field::TextField,
         theme::{LeptonicTheme, Theme, ThemeContext, ThemeProvider, use_theme},

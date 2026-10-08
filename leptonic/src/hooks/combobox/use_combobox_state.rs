@@ -84,11 +84,12 @@ pub fn use_contains_filter() -> ComboBoxFilter {
 }
 
 /// The value validated by a combo box (react-aria validates the input text and the selection
-/// together).
+/// together): the selected keys here, the typed value (`Option<V>` or `Vec<V>`) in the
+/// `ComboBox` atom.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ComboBoxValue {
+pub struct ComboBoxValue<T = Vec<Key>> {
     pub input_value: String,
-    pub value: Vec<Key>,
+    pub value: T,
 }
 
 /// Input of [`use_combobox_state`].

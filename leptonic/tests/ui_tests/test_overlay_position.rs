@@ -81,7 +81,10 @@ impl BrowserTest<str> for OverlayPositionTests {
             .execute("window.scrollTo(0, 0);", vec![])
             .await?;
         page.click_element_with_id("test-op-flip-trigger").await?;
-        page.wait_for_selector(".test-op-flip-popover[data-placement=bottom]")
+        // In two steps, so that a failure tells whether it opened and where it was placed.
+        page.wait_for_selector(".test-op-flip-popover").await?;
+        let flipped = page.css(".test-op-flip-popover").await?;
+        page.wait_for_attr(&flipped, "data-placement", Some("bottom"))
             .await?;
         page.wait_for_no_selector(".test-op-flip-popover[data-entering]")
             .await?;

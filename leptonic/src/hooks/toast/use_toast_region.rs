@@ -18,6 +18,7 @@ use crate::{
     },
     utils::{CapturedElement, EventHandler},
 };
+use crate::utils::intl_strings::{ToastStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -36,9 +37,6 @@ use crate::{
 //   react-aria never sees that blur): a blur without a related target is checked a microtask
 //   later, and a blur of a removed element keeps the state the focus is moved with. Where the
 //   focus then goes, the state follows (react-aria: its global focus listener).
-//
-// ## OMITTED FEATURES
-// - Localized strings: the region is named "1 notification." / "2 notifications.".
 //
 // =============================================================================
 
@@ -112,14 +110,11 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         aria_label,
         aria_labelledby,
     } = input;
+    let strings = use_localized_strings::<ToastStrings>();
     let label = Signal::derive(move || {
         aria_label.get().or_else(|| {
             let count = queue.visible_toasts.with(Vec::len);
-            Some(if count == 1 {
-                "1 notification.".to_owned()
-            } else {
-                format!("{count} notifications.")
-            })
+            Some(strings.read().notifications(count))
         })
     });
     let landmark = use_landmark(UseLandmarkInput {

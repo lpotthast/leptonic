@@ -61,6 +61,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "localized",
+        title: "Localized atom texts (de-DE)",
+        view: || view! { <atoms::localized::PageAtomLocalized /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "progress-bar",
         title: "Progress bar and meter atoms",
         view: || view! { <atoms::progress_bar::PageAtomProgressBar /> }.into_any(),
@@ -514,6 +520,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "table-navigation",
         title: "Table navigation",
         view: || view! { <atoms::table_navigation::PageAtomTableNavigation /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "table-tree",
+        title: "Tree table atoms",
+        view: || view! { <atoms::table_tree::PageAtomTableTree /> }.into_any(),
     },
     Fixture {
         group: "atoms",

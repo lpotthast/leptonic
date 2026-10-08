@@ -396,7 +396,7 @@ impl From<bool> for ShortcutOutcome {
 type ShortcutAction = Arc<dyn Fn(&KeyboardEvent) -> ShortcutOutcome + Send + Sync>;
 
 /// A set of keyboard shortcuts and their handlers, consumed by
-/// [`use_keyboard`](crate::hooks::use_keyboard).
+/// [`use_keyboard`](fn@crate::hooks::use_keyboard).
 ///
 /// ```ignore
 /// let shortcuts = KeyboardShortcuts::new()

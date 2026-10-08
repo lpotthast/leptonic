@@ -22,6 +22,92 @@ lib-default-features = false
 lib-profile-dev = "wasm-dev"
 lib-profile-release = "wasm-release"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+hydrate = ["leptos/hydrate", "leptonic/hydrate", "leptos-element-capture/hydrate"]
+ssr = [
+    "dep:axum",
+    "dep:axum-server",
+    "dep:htmd",
+    "dep:markup5ever_rcdom",
+    "dep:rustls",
+    "dep:scraper",
+    "dep:tokio",
+    "dep:tower",
+    "dep:tower-http",
+    "dep:leptos_axum",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
+    "leptonic/ssr",
+    "leptonic/syntax-highlight",
+    "leptos-element-capture/ssr",
+    "leptos-use/ssr",
+    # `use_cookie` reads the request's cookies on the server.
+    "leptos-use/axum",
+]
+
+[dependencies]
+axum = { version = "0.8.9", default-features = false, optional = true }
+axum-server = { version = "0.8.0", default-features = false, features = ["tls-rustls-no-provider"], optional = true }
+codee = { version = "0.3.5", default-features = false }
+console_error_panic_hook = { version = "0.1.7", default-features = false }
+htmd = { version = "0.5.5", default-features = false, optional = true }
+icondata = { version = "0.7.0", default-features = false, features = ["bootstrap-icons", "vs-code-icons"] }
+indoc = { version = "2.0.7", default-features = false }
+leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard", "intl-strings"] }
+leptos = { version = "0.8.22", default-features = false }
+leptos-classes = { version = "0.1.4", default-features = false }
+leptos-element-capture = { version = "0.1.0", default-features = false }
+leptos-routes = { version = "0.4.2", default-features = false }
+leptos-use = { version = "0.19.2", default-features = false, features = [
+    "signal_debounced",
+    "use_document",
+    "use_element_bounding",
+    "use_element_size",
+    "use_media_query",
+    "use_resize_observer",
+    "use_window",
+    # The theme cookie: read by the server, so a page arrives in the reader's theme.
+    "use_cookie",
+] }
+# leptos_axum gates its whole server integration (file serving, server functions) behind its `default` feature.
+leptos_axum = { version = "0.8.10", default-features = false, features = ["default"], optional = true }
+leptos_icons = { version = "0.7.1", default-features = false }
+leptos_meta = { version = "0.8.7", default-features = false }
+leptos_router = { version = "0.8.17", default-features = false }
+markup5ever_rcdom = { version = "0.38", default-features = false, optional = true }
+reqwest = { version = "0.13.5", default-features = false }
+# TLS through ring (`main.rs` installs it): builds much faster than rustls' default provider, aws-lc-rs.
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"], optional = true }
+scraper = { version = "0.27.0", default-features = false, optional = true }
+send_wrapper = { version = "0.6.0", default-features = false }
+serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
+tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt-multi-thread", "signal", "sync"], optional = true }
+tower = { version = "0.5.3", default-features = false, features = ["util"], optional = true }
+tower-http = { version = "0.7.1", default-features = false, features = ["compression-br", "compression-deflate", "compression-gzip"], optional = true }
+tracing = { version = "0.1.44", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["ansi", "fmt", "std"] }
+tracing-wasm = { version = "0.2.1", default-features = false }
+wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std"] }
+web-sys = { version = "0.3.106", default-features = false, features = [
+    "std",
+    "Element",
+    "FormData",
+    "HtmlElement",
+    "HtmlFormElement",
+] }
+
+[dev-dependencies]
+assertr = { version = "0.7.1", default-features = false, features = ["std"] }
+browser-test = { version = "0.5.0", default-features = false }
+leptos-browser-test = { version = "0.3.0", default-features = false }
+serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
+syn = { version = "3.0.6", default-features = false, features = ["clone-impls", "full", "parsing"] }
+tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt-multi-thread", "time"] }
+
 [lints.clippy]
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
@@ -38,90 +124,6 @@ unused_async_trait_impl = "allow"
 too_many_lines = "allow"
 # Demo variables like range_a_step / range_b_step are intentionally similar
 similar_names = "allow"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-hydrate = [
-    "leptos/hydrate",
-    "leptonic/hydrate",
-    "leptos-element-capture/hydrate",
-]
-ssr = [
-    "dep:axum",
-    "dep:axum-server",
-    "dep:htmd",
-    "dep:markup5ever_rcdom",
-    "dep:scraper",
-    "dep:tokio",
-    "dep:tower",
-    "dep:tower-http",
-    "dep:leptos_axum",
-    "leptos/ssr",
-    "leptos_meta/ssr",
-    "leptos_router/ssr",
-    "leptonic/ssr",
-    "leptonic/syntax-highlight",
-    "leptos-element-capture/ssr",
-    "leptos-use/ssr",
-]
-
-[dependencies]
-axum = { version = "0.8.9", default-features = false, optional = true }
-axum-server = { version = "0.8.0", default-features = false, features = ["tls-rustls"], optional = true }
-console_error_panic_hook = { version = "0.1.7", default-features = false }
-htmd = { version = "0.5.5", default-features = false, optional = true }
-icondata = { version = "0.7.0", default-features = false, features = ["bootstrap-icons", "vs-code-icons"] }
-indoc = { version = "2.0.7", default-features = false }
-leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard"] }
-leptos = { version = "0.8.22", default-features = false }
-leptos-classes = { version = "0.1.4", default-features = false }
-leptos-element-capture = { version = "0.1.0", default-features = false }
-leptos-routes = { version = "0.4.2", default-features = false }
-leptos-use = { version = "0.19.2", default-features = false, features = [
-    "signal_debounced",
-    "use_document",
-    "use_element_bounding",
-    "use_element_size",
-    "use_media_query",
-    "use_resize_observer",
-    "use_window",
-] }
-# leptos_axum gates its whole server integration (file serving, server functions) behind its `default` feature.
-leptos_axum = { version = "0.8.10", default-features = false, features = ["default"], optional = true }
-leptos_icons = { version = "0.7.1", default-features = false }
-leptos_meta = { version = "0.8.7", default-features = false }
-leptos_router = { version = "0.8.17", default-features = false }
-markup5ever_rcdom = { version = "0.38", default-features = false, optional = true }
-scraper = { version = "0.27.0", default-features = false, optional = true }
-send_wrapper = { version = "0.6.0", default-features = false }
-serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
-tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt-multi-thread", "signal", "sync"], optional = true }
-tower = { version = "0.5.3", default-features = false, features = ["util"], optional = true }
-tower-http = { version = "0.6.11", default-features = false, features = ["compression-br", "compression-deflate", "compression-gzip"], optional = true }
-tracing = { version = "0.1.44", default-features = false, features = ["std"] }
-tracing-subscriber = { version = "0.3.23", default-features = false, features = ["ansi", "fmt", "std"] }
-tracing-wasm = { version = "0.2.1", default-features = false }
-wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std"] }
-wasm-bindgen-futures = { version = "0.4.79", default-features = false, features = ["std"] }
-web-sys = { version = "0.3.106", default-features = false, features = [
-    "std",
-    "Element",
-    "FormData",
-    "HtmlElement",
-    "HtmlFormElement",
-    "Response",
-    "Window",
-] }
-
-[dev-dependencies]
-assertr = { version = "0.7.1", default-features = false, features = ["std"] }
-browser-test = { version = "0.5.0", default-features = false }
-leptos-browser-test = { version = "0.3.0", default-features = false }
-serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
-syn = { version = "2.0.119", default-features = false, features = ["clone-impls", "full", "parsing"] }
-tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt-multi-thread", "time"] }
 
 [profile.dev.package.book-ssr]
 # Line tables only (backtraces keep file:line): the book's full debug info is huge, exceeded the 4 GiB that 32-bit DWARF

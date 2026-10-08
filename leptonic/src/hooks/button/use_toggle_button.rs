@@ -26,7 +26,7 @@ pub struct UseToggleButtonInput {
 }
 
 /// A button that toggles `state` when pressed (`aria-pressed`). Returns the input of
-/// [`use_button`](super::use_button):
+/// [`use_button`](fn@super::use_button):
 ///
 /// ```ignore
 /// let state = use_toggle_state(UseToggleStateInput::default());

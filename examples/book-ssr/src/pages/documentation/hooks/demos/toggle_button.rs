@@ -1,4 +1,4 @@
-use leptonic::{atoms::checkbox::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -21,10 +21,12 @@ pub fn ToggleButtonDemo() -> impl IntoView {
         <button {..attrs} style=styles class="demo-toggle-button">"Pin"</button>
         <p class="demo-status">{move || if state.is_selected.get() { "Pinned." } else { "Not pinned." }}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

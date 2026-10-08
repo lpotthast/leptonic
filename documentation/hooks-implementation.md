@@ -135,6 +135,7 @@ in `leptonic/src/hooks/mod.rs`; a hook's own deviation block only lists what goe
 | C13 | Units: `Fraction` (0..=1) for percentages, `Point { x, y }` for coordinates, `Duration` for time.                                                                                                                                                                                          | Units in the type, not in naming conventions.                                                                                                                            |
 | C14 | One generic `Label`, `Description` and `FieldError` atom reading the `LabelContext`/`FieldContext` every field atom provides.                                                                                                                                                             | react-aria-components' `LabelContext`/`TextContext`/`FieldErrorContext`; no per-family parts.                                                                           |
 | C15 | Number values are generic over `NumberValue` (all primitive integers and floats), with ICU4X decimals for parsing and formatting.                                                                                                                                                         | Exact integer stepping and clamping, min/max from the type (react-aria: JS numbers).                                                                                    |
+| C16 | Selection atoms are generic over their value: `SelectionValue` (`Key`, `String`, integers, `selection_value!` enums); `Select`/`ComboBox` over `SelectedValues` (`Option<V>` / `Vec<V>`).                                                                                                 | Items take `Key`s; hooks stay key-based (react-aria: `Key` = `string | number`).                                                                                        |
 
 ## Input Destructuring
 
@@ -250,9 +251,9 @@ unconditionally where upstream calls `stopPropagation()`) and add no `Propagatio
 `Propagation` (`utils/propagation_control.rs`) provides:
 
 - `continue_propagation()` — opt in to letting the native DOM event bubble.
-- `stop_propagation()` — explicit no-op (propagation is already stopped by default). Emits a compile-time
-  deprecation warning to educate callers.
 - `is_propagation_stopped() -> bool` — check current state.
+
+There is no `stop_propagation()`: propagation is already stopped by default.
 
 ### How It Works
 
@@ -904,6 +905,29 @@ is_open.get() | | exit.exit_state.get() == ExitState::Exiting
 **Reference**: `hooks/animation/use_enter_animation.rs`, `hooks/animation/use_exit_animation.rs`
 
 ---
+
+## Localized Strings
+
+Hooks get their texts (labels, descriptions, live announcements) from react-aria's message bundles, in its 34
+locales (`utils::intl_strings`). This replaces `@internationalized/string` and `useLocalizedStringFormatter`.
+
+- **Generated tables:** `scripts/port-intl-strings.py` converts upstream's `intl/<locale>.json` files into
+  `utils/intl_strings/bundles/<family>.rs`. Each file holds the messages (en-US always, the other locales behind
+  the `intl-strings` feature, on by default) and a typed struct with one method per message (`TableStrings`,
+  `DndStrings`, ...). Never edit the generated files; rerun the script after upstream changes the bundles. Its
+  `FIXES` table repairs upstream translation errors. A new family is a line in `FAMILIES`.
+- **Typed methods:** a message's arguments become parameters: `&str` for `{name}`, `usize` for a plural, `bool` for
+  a `select` on `true`/`other`. A message with two arguments of one type takes a generated args struct
+  (`strings.insert_between(InsertBetweenArgs { before_item_text, after_item_text })`). Positional parameters of one
+  type would swap silently if upstream reordered the message.
+- **Use in a hook:** `let strings = use_localized_strings::<TableStrings>();` is a `Memo` that follows the locale
+  (`I18nProvider`). Read it where the text is built (`strings.read().ascending_sort(&column)`), so the text follows
+  locale changes. A hook input that overrides a text (`aria_label`, ...) wins over the bundle.
+- **Formatting:** at runtime, by a small ICU MessageFormat formatter (`{arg}`, `plural` with `=N` and CLDR categories
+  from `icu_plurals`, `#` as the locale-formatted count, `select`, apostrophe quoting). Upstream compiles the
+  messages to JavaScript at build time; the results are the same. A locale missing from a bundle falls back to its
+  language (`fr-CA` → `fr-FR`), then to en-US. A test parses every message of every locale and checks that it uses
+  the en-US message's arguments.
 
 ## Form Validation Hooks
 

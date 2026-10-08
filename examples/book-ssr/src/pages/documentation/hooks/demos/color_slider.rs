@@ -1,9 +1,10 @@
 use leptonic::{
-    atoms::checkbox::Checkbox,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
         css::CssColor,
+        i18n::use_locale,
         style::BackgroundColorProperty,
     },
 };
@@ -11,6 +12,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorSliderDemo() -> impl IntoView {
+    let locale = use_locale();
     let disabled = RwSignal::new(false);
 
     // Disabled and orientation live on the state; the slider changes the hue of a blue.
@@ -76,12 +78,14 @@ pub fn ColorSliderDemo() -> impl IntoView {
             </div>
         </div>
 
-        <p class="demo-status">{move || format!("Color: {}, hue: {}", state.value.get().to_rgb8(), state.value.get().hue_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, hue: {}", state.value.get().to_rgb8(), state.value.get().hue_name(&locale.get()))}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

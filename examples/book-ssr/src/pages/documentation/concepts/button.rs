@@ -93,9 +93,20 @@ pub fn PageButtonOverview() -> impl IntoView {
                 </ul>
 
                 <KeyboardTable>
-                    <KeyRow keys="Tab">"Moves focus to the button."</KeyRow>
+                    <KeyRow keys="Tab">
+                        "Moves focus to the button, unless "<Code inline=true>"exclude_from_tab_order"</Code>" is set."
+                    </KeyRow>
                     <KeyRow keys="Enter / Space">"Presses the button."</KeyRow>
+                    <KeyRow keys="Shift + F10 / ContextMenu">
+                        "Requests a context menu, when "<Code inline=true>"use_button"</Code>"\u{2019}s "
+                        <Code inline=true>"on_context_menu"</Code>" is set. On macOS, "<Keys keys="Control + Enter"/>" does too."
+                    </KeyRow>
                 </KeyboardTable>
+                <p>
+                    "The "<Code inline=true>"shortcuts"</Code>" you pass to "<Code inline=true>"use_button"</Code>" are handled "
+                    "first. Holding a key down doesn\u{2019}t trigger them again; see "
+                    <Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link>" for how shortcuts work."
+                </p>
             </Section>
 
             <SeeAlso>

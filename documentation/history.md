@@ -3,6 +3,255 @@
 Finished work, moved out of `PLAN.md` (which holds open work only). Most recent first within each part; git
 history has the details.
 
+## Book: tree tables, typed selects, snippet review (2026-10-08)
+
+- Table atoms: "Tree Tables" section (collection with child rows, `tree_column`, flat rendering with `hidden`, expanded
+  state, keys; collapsing moves focus from a child row to its row, type-ahead searches shown rows, leaf rows are never
+  expanded), `TableExpandButton` section, file-browser demo (`table_tree.rs`), and the styling pitfall: collapsed rows
+  are `<tr hidden>`, so positional selectors need `:nth-child(2n of :not([hidden]))`, and row `display` or an
+  `all: unset` button must not undo `[hidden]`. The book's own table CSS uses no positional row selectors; demo tables
+  align with `start`/`end` instead of `left`/`right`.
+- Select/ComboBox take their value's shape as their type (`Option<V>`/`Vec<V>`, no `selection_mode`): prop tables,
+  intros, `ComboBoxValue<S>`, changelog, Collection State; new multiple-select demo (`select_multiple.rs`, an enum
+  via `selection_value!`). Collection State: duplicate `selection_value!` keys are a compile error, keys of no value
+  and `ListBoxItem` keys missing from the collection warn in debug builds.
+- `use_color_picker_state` page: the untested sample became a live demo (`color_picker_state.rs`: area and hue slider
+  bound to one picker color, a swatch reading it, Reset setting it from code).
+- Static snippet review of 30 pages against the library (all guides included): fixed `use_menu`'s
+  `id: Some(menu_props.id)` (a `String`, not a signal) and the number parser (integers saturate, `None` only for
+  invalid text, fractions in integer types, or beyond a float's range).
+
+## Book dependencies (2026-10-07, evening)
+
+- Every dependency of the book declared with `default-features = false` and only the features its code uses
+  (`leptos-use`: 7 functions instead of ~80; `tower-http`: the compression features instead of `full`, no zstd;
+  `syn`: `full`, `parsing`, `clone-impls`; `leptos-use/ssr` in the book's `ssr` feature). Breaking upgrades one at a
+  time: `scraper` 0.27, `tower-http` 0.7 (`leptos_axum` still pulls 0.6), `syn` 3 (`Type::FnPtr`, `NamedArg` in
+  `api_check`). `markup5ever_rcdom` stays at `htmd`'s 0.38 (its handlers get rcdom nodes; `htmd` re-exports `Node`
+  but not `NodeData`, which the demo and key handlers match on).
+- Removed: `itertools`, `leptos-styles`, `strum`, `rootcause` (unused); `ringbuf` (the event logs are a `VecDeque`,
+  newest first, so readers can copy the demos with std only); `ordered-float` (the slider marks demo keys by
+  `f64::to_bits`). `reqwest` stays for the client's downloads ("Copy as Markdown"; the user: Rust only, no `fetch`
+  through web-sys).
+- TLS through `ring` instead of `aws-lc-rs` (`axum-server`'s `tls-rustls-no-provider`, `rustls` with `ring`,
+  installed in `main`): about 23 s less CPU per fresh build of the server.
+- ICU4X data regenerated for 2.3 (the 2.2 data broke every book build: "cannot find `provider` in `locale`").
+  `scripts/icu-datagen.sh` is a version check plus one `icu4x-datagen --markers all --segmenter-models none` call
+  instead of collecting markers from the data crates (6.2 MB of data instead of 5.8 MB, no `unstable` retry loop).
+- `copy_as_markdown_downloads_only_on_press_and_once` grants clipboard access and checks the copied export (it
+  accepted "Copy failed" before), and waits for the navigation's smooth scroll to the top before pressing (a press
+  during it hit the button above the viewport).
+
+## Book: fidelity follow-up (2026-10-07, evening)
+
+- `kit::api_check` also compares each row's `ty` with the field's or prop's type (`api_types_match_the_library`;
+  last path segments, a type parameter of the item may be described freely). It found 23 "see DateField"-style
+  placeholder types on the date picker pages (now real types, one row per prop) and `UseSelectableItemInput::
+  on_action` becoming `Signal<Option<Callback<()>>>`. The page texts, samples, tables and defaults of the fidelity
+  wave's API list were otherwise already current.
+- `TabPanels` got a demo (panels of different heights, height transition on `--tab-panel-height`); a tab disabled
+  through `Tab::is_disabled` is documented as never the default selection.
+- Collator page: the example uses `use_collator` (a collator per locale, not per read); `use_collator` and
+  `use_filter` documented.
+- The kit's `Keys` renders key group descriptions in combinations as text ("Shift + Arrow keys": a Shift key cap,
+  then "+ Arrow keys").
+- Browser tests: the Ctrl+K tests use the platform's primary modifier (Meta+K on Apple devices, as leptonic's
+  `is_apple_device`); new `code_block_copy_button_copies_the_code` and `keys_are_key_caps_and_descriptions_are_text`.
+  The full suite passes (31 tests), incl. both search tests.
+- Visual pass (light, dark, 390px; one page per concept group and building-block area, headless screenshots through
+  chromedriver): prose in articles gets `line-height: 1.6` (inline code chips covered the descenders of the line
+  above: "sort_descriptor" lost its underscore); code has no ligatures and no automatic hyphenation; default values
+  wrap only between words; a code block's text ends left of its copy button (it covered code on phones); the table of
+  contents breaks identifiers between words (`<wbr>` after `_` and inside camel case); the event logs and the
+  virtualized log used `--typography-code-*` tokens left over from the removed library theme (no background):
+  now book tokens. Page descriptions and search text read keys by name ("Escape", not "EscEscape").
+- Not a bug after all: `TabPanels` seemed to paint one frame at the new panel's full height, but the sampling `rAF`
+  ran before TabPanels' own; read after frame 0's rendering, the box has the old height and then animates.
+- `ContextMenuTrigger` and `use_context_menu_target` documented (Menu Atoms: section, props, a demo with a context
+  menu per row of a file list, checked in a browser: labelled by the row, the action names the file, focus returns),
+  linked from the Menu overview and the Grid List Atoms.
+- The Markdown index and the search also list `###` sections naming an item that no `##` names (the DnD collection
+  hooks and the keyboard delegates were missing from `llm-index.md`).
+- Link texts of layer pages: "Button Atom" (not "Atoms") in See Also lists; prose about an atom links its
+  identifier ("the `ColorPicker` atom").
+- Markdown export: code blocks are converted from their raw text; converting the highlighter's spans dropped the
+  line breaks at their ends (comments and `}` lines were joined with the next line in every exported sample).
+- Markdown export: links that already point to Markdown keep their path (the overview's link to the index was
+  `/doc/llm-index.md.md`).
+- Event Propagation guide: the table names every kind of event, as the library decided them: `use_move`'s events
+  and drag and drop stop always, hover and focus events never.
+- Book Dockerfile: `apt-get upgrade -y` (without `-y` it aborts in a non-interactive build), `set -eu` in its `RUN`
+  scripts.
+- Changelog ("Changed during development"): the fidelity wave's input structs, renames and removals, for apps that
+  followed the development branch.
+- Welcome page: the install command wraps on phones instead of hiding its end behind the copy button.
+- SSR guide: the `ssr` feature no longer mentions the removed rich text editor.
+- The single `Checkbox`, `Radio` and `Switch` atoms are gone from the book (the user's decision): 125 files use the
+  `*Field` + `*Button` pairs (state props on the field, `classes` and children on the button), the atom pages document
+  only the pairs (the Switch tab is now "Switch Atoms"), the changelog says so. Demos spell the pair out instead of a
+  kit helper, as demo sources must compile standalone.
+- Keyboard tables live on concept overviews only: the six concept hook pages that repeated them (button, search field,
+  tag group, popover, tooltip, toolbar) link the overview instead; their extra facts moved there (Button: excluded from
+  the tab order, context menu keys, shortcuts; Popover: when focus stays inside). Rule in documentation-strategy.md.
+- New guide "Build Times & Bundle Size" (from build-performance.md's advice for users).
+- `kit::demo_styles` test `every_custom_property_used_is_defined`: a `var(--x)` without fallback must be declared in
+  the book's stylesheets or set by the book's or leptonic's code.
+- The page checks visit each page once: the dark-theme checks at desktop width, then the phone-width check after
+  resizing (`pages_fit_a_phone_screen` merged into `pages_load_cleanly_in_the_dark_theme_and_fit_a_phone`).
+- The book enables leptonic's `intl-strings` feature (localized messages). New utility page `use_localized_strings`
+  (the feature, fallback, a demo switching four families' messages with the locale, `for_locale`, the families); the
+  pages no longer call the hooks' texts English-only; the color demos pass the locale to `color_name`/`hue_name`/
+  `channel_name`, and the Color group says names follow the locale.
+- Grid Hooks: `use_grid_selection_announcement` and `use_highlight_selection_description`.
+- New demos for features without one: Button `is_pending` (a Save button with a spinner in an indeterminate
+  `ProgressBar`), `CalendarMonthPicker`/`CalendarYearPicker` (as `Select` atoms in a birthday calendar's header),
+  `GridListSection`/`GridListHeader`/`GridListItemDescription`.
+- Headings break long identifiers between their words, like the table of contents (the merged page check caught
+  `use_highlight_selection_description` overflowing a phone screen).
+- The book's server no longer compresses the WebAssembly bundle on the fly: brotli on the 43 MB development bundle
+  took 3.4 s of CPU per request, which delayed every reload and, with all test shards loading pages at once, made a
+  shard time out waiting for hydration. Release builds serve it precompressed (`precompress.sh`). The browser suite
+  went from 2m31s to 31 s (slowest hydration 0.7 s).
+- Pages no longer describe fixed library gaps: merged press + hover props fire `on_double_press`, the Collator's
+  `ignore_punctuation` works and `Case` ignores accents, shortcuts ignore Shift for characters without case.
+- Tree tables (2026-10-08): Table Atoms has a "Tree Tables" section (collection with child rows, `tree_column`,
+  flat rendering with hidden rows, expanded state, `--table-row-level` indentation) with a file-browser demo checked in
+  a browser (light, dark, 390px; the button expands and relabels), `TableExpandButton` with its props and data
+  attributes, and the rows' and cells' tree data attributes; the Table overview lists the treegrid semantics and the
+  ArrowRight/ArrowLeft keys; Table Hooks explains rendering a tree table with the hooks.
+- Typed selection values (the user's design, 2026-10-08): the tables of `RadioGroup`, `CheckboxGroup`, `Select`,
+  `ComboBox` and `ToggleButtonGroup` (renamed props) show `V`; Collection State documents `SelectionValue` and
+  `selection_value!` (replacing `ToKey`); the Radio and Select atom demos use enums (`Plan`, `Size`, whose keys the
+  form submits); the other group atoms point to `SelectionValue`; `TableBody`'s optional children; changelog entry.
+- No theme flash: the book keeps the reader's theme in a cookie (leptos-use `use_cookie_with_options`, its `axum`
+  feature on the server) instead of local storage, and renders it on `<html>` with leptos_meta's `Html`, so pages
+  arrive in the reader's theme. The Themes guide shows the pattern ("Remembering the Theme on the Server"), the SSR
+  guide links it.
+- Accuracy sweeps against the source: all 36 `#[prop(default = ..)]` and all hand-written `Default` field values match
+  the Default columns; every `leptonic-<Atom>` class the book names exists; every data attribute the atoms' docs
+  list is documented (added `data-focused`/`data-focus-visible` of the search field's clear button and the number
+  field's stepper buttons, which aren't tab stops and keep the focus in the input when pressed).
+
+## Continuous improvement (2026-10-07, evening)
+
+- `use_table` merges the sort description into the grid's `aria-describedby` instead of replacing it (upstream
+  `mergeProps`).
+- RTL menus: a `MenuTrigger` inside an RTL `I18nProvider` opens by click and ArrowDown, ArrowLeft opens submenus and
+  ArrowRight closes them (`submenu_tests`, `right_to_left`; the earlier report no longer reproduces).
+- Nested modals restore focus to their opener inside the outer modal, for sibling modals (`overlay_tests`) and a
+  modal nested in the outer one's markup (`dialog_tests`); the earlier report no longer reproduces.
+- crudkit's report (Enter on a `Button` atom that isn't its `CellFocusMode::Child` cell's first child moving focus
+  to the first child) doesn't reproduce: `table_navigation_tests` (`enter_on_a_button_that_is_not_the_first_child`:
+  arrows, Enter, Space, click, click + Enter in a selectable table) guards it.
+- Tree rows follow an item getting children (`aria-expanded`, toggling on press): `use_grid_list_item` reads
+  `has_child_nodes` reactively, and `UseSelectableItemInput::on_action` is a `Signal<Option<Callback<()>>>` (an item
+  can gain or lose its action, as upstream's per-render `onAction`).
+- Item labels follow the collection (an item relabelled in place): the `aria-label` of options, menu items, grid
+  list rows and list box/menu sections, and a menu item's role (follows the selection mode), were read once at
+  creation (`use_node_aria_label`; `listbox_disabled_and_empty_tests`).
+- `just clippy` also checks the library in release (the user, 2026-10-07); clean.
+- Tests: fixed sleeps and hand-rolled poll loops in the date picker, calendar, button and toast tests replaced by
+  `wait_for!`/`stays!`/the new `stays_for!` (a negative check over a window, e.g. a toast's timeout).
+- The single `Checkbox`, `Radio` and `Switch` atoms are removed (the user, 2026-10-07; react-aria-components
+  deprecates them): a checkbox is a `CheckboxField` with its `CheckboxButton` (same for radios and switches). The
+  test-app and the book (book agent) migrated; the `*Button` parts warn and render nothing outside their field
+  instead of panicking; the atom theme styles `.leptonic-CheckboxButton`/`SwitchButton`/`RadioButton` and the
+  fields (upstream's starter styles had moved there).
+- Localized strings (`utils::intl_strings`, feature `intl-strings`, default on): react-aria's 21 message bundles in
+  34 locales, converted by `scripts/port-intl-strings.py` into typed per-family structs (`TableStrings::
+  ascending_sort(&column)`), formatted at runtime (ICU plural/select, apostrophes; a test parses every message of
+  every locale and checks its arguments, which found upstream's sr-SP `{veza}`). Every family with hooks uses
+  them: table, grid, tree, DnD (the drag manager gets the strings when a drag starts, as upstream), calendar, date
+  field/picker (segment names too: upstream's `useDisplayNames` fallback), date validation, color (channel and
+  color names: `ColorValue::color_name`/`hue_name`/`channel_name` take a `&Locale`, as upstream's
+  `getColorName(locale)`), combobox (labels, announcements), menu, number field, search field, spin button, tag,
+  toast, breadcrumbs, dismiss button, select placeholder, color swatch picker. Browser checks: `table_tests`
+  (de-DE → fr-FR), `localized_atom_tests` (de-DE), `date_picker_tests` (German segment names).
+- Grid and grid list: selection announcements (`use_grid_selection_announcement`: "Drafts selected. 2 items
+  selected.", "All items selected.") and the touch "highlight selection" description
+  (`use_highlight_selection_description`), ported now that messages are localized (`grid_list_tests`, from
+  `ListView.test.js`).
+- Tree tables (agnite dev-ui's request, 2026-10-08; react-aria-components' `Treeble`): child rows via
+  `ItemBuilder::children` (after the row's cells; `TableBuilder::rows` for recursive builders; the selection cell
+  in every row), `UseTableStateInput.tree` (`TableTreeInput`: tree column + C4 expansion state, shared with trees
+  via `use_tree_expansion`), the grid on the visible rows (`Collection::with_expanded` keeps collapsed rows'
+  cells), `role="treegrid"`, rows with `aria-level`/`aria-posinset`/`aria-setsize`/`aria-expanded`, ←/→ expand,
+  collapse, to the parent (mirrored in RTL), the `expand_button` input. Atoms: `Table`'s `tree_column`,
+  `default_expanded_keys`, `expanded_keys` + `set_expanded_keys`, `on_expanded_change`; `TableExpandButton`; rows
+  and cells with `data-expanded`/`data-has-child-items`/`data-level`, rows `--table-row-level`, tree column cells
+  `data-tree-column`; rows under a collapsed row stay rendered but `hidden`. `Collection::cells` (a row's cells
+  without its child rows) for the grid delegates. `table_tree_tests` mirror `Treeble.test.js` (structure, mouse,
+  keyboard LTR/RTL, default and controlled expanded keys, flattened rows, cells, selection).
+- The selection's shape as the type (the user's decision, 2026-10-08): `Select<S>`/`ComboBox<S>` with
+  `S: SelectedValues` (sealed; `Option<V>` selects one value, `Vec<V>` several, in the order selected), replacing
+  `selection_mode` + `Vec<V>` (where `vec![a, b]` with single selection compiled). `ComboBoxValue<T = Vec<Key>>`
+  holds the typed value. Items keep taking a `Key` (the user's decision: no generic items; a key of no value of the
+  group's type warns in debug builds), and a `ListBoxItem` whose key isn't in its collection warns too (the
+  test-app's bound page size select had string item keys over integer collection keys after porting).
+- Review of the 2026-10-08 work (one review agent), fixed the same day:
+  - Tree tables: type-ahead walks the rows shown (it only searched top-level rows); a focused row collapsed out of
+    view from outside (bound expanded keys) moves focus to its closest shown ancestor row (the grid's index-based
+    refocus picked an unrelated row); leaf rows are never expanded (`data-expanded`, "Collapse"); the theme counts
+    shown rows only (`:nth-child(2n of :not([hidden]))`, last-row rounding), hides `[hidden]` rows and expand
+    buttons, and has upstream's tree indentation and chevron styles. Tests: type-ahead, ArrowLeft to the parent,
+    outside collapse, leaf rows (browser), refocus to the ancestor (native).
+  - `Collection::last_key` enters items' children only in a tree view, as `key_after`/`key_before`.
+  - Localized strings: `#` inside a `select` nested in a `plural` is text (ICU, @formatjs); a plain `{count}` is
+    formatted for the locale (ICU), documented as a deviation from upstream's compiled templates.
+  - `scripts/port-intl-strings.py` finds a message's arguments with a parse mirroring the Rust one (the regex took a
+    one-word option body for an argument), and a message with two arguments of one type takes a generated args
+    struct with named fields (`InsertBetweenArgs { before_item_text, after_item_text }`, `DateRangeArgs`,
+    `FocusAnnouncementArgs`, the color names: eight messages), so that an upstream reordering can't swap arguments
+    at call sites that still compile.
+  - Long collections (dev-ui's log): a node carries its document position (`compare_order`/`sorted_keys` read it),
+    replacing a second key map and a full traversal per build. An append to a 20,000-row `VirtualList` (rebuild
+    plus layout pass, native release) went from 14.3 ms to 11.6 ms (`timing_appends_to_a_long_list`, ignored test
+    in `list_layout.rs`). The stale PLAN note that every layout pass clones the collection was wrong (it holds an
+    `Arc`).
+  - The grid and table keyboard delegates built an ICU `Collator` on every read (every key press): they use the
+    per-locale `use_collator` now; the date segment uses `use_filter`.
+  - Typed values: a key of no value of the group's type warns in debug builds; `selection_value!` rejects duplicate
+    keys at compile time (`compile_fail` doctest).
+  - Tests: one polling API (`wait_for!`, `wait_until!`, `stays!`, `stays_for!` in `tests/polling/mod.rs`, timed as
+    steps); the closure helpers `wait_for_value`/`wait_until`/`assert_stays(_for)` are gone; ~25 fixed sleeps and
+    eight hand-rolled poll loops replaced.
+- Typed selection values (the user's choice, 2026-10-08): `RadioGroup`, `CheckboxGroup`, `Select`, `ComboBox` and
+  `ToggleButtonGroup` are generic over `V: SelectionValue` (`to_key`/`from_key`; for `Key`, `String`, integers, and
+  enums via `selection_value!`, which also implements `From<T> for Key` so items take the enum). The hooks stay
+  key-based; `atoms/typed_values.rs` converts at the boundary. `ToKey` (unused) is replaced. `ToggleButtonGroup`'s
+  state props are `value`/`set_value`/`default_value`/`on_change` like every value-like selection. A group without
+  any typed prop names its type (`<RadioGroup<Key>>`; Leptos components can't default type parameters).
+  `radio_group_tests` checks an enum group and its submitted key. Also: `TableBody` children optional; `Select`
+  and `ComboBox` atoms got their `// Upstream:` headers and deviation blocks.
+- `MergedPressHoverProps` spread no `dblclick` handler, so `on_double_press` never fired through merged press and
+  hover props (the only merged type with a field missing from its attributes; `press_tests`). `CollatorSensitivity`
+  maps as ECMA-402 does: `Case` is primary strength with the case level (was tertiary, telling accents apart too),
+  `Variant` tertiary (was quaternary); unit test over a/á/A. Both found by the book agent.
+- Safe triangle (`use_safely_mouse_to_submenu`): no hook bug. The earlier test's moves were too coarse (its second
+  move already hovered the next item, which closes the submenu before the hook has two processed moves to judge the
+  direction). `submenu_tests` (`safe_triangle`) moves in small steps 60 ms apart, opens by click (pointer modality)
+  and fails with the hook disabled.
+- Grid list child navigation mirrors all of upstream's "ArrowLeft/Right cycles through children and row element"
+  (from the first child to the row and back in) and its RTL variant (`grid_list_child_navigation_tests`).
+- RTL date picker arrow keys: not a library bug. The he-IL fixture had no `dir="rtl"` (`I18nProvider`, like
+  react-aria's, renders none), so the button sat below the segments at the same `left`. Fixture laid out right to
+  left; `date_picker_tests` now walks ArrowLeft by position to the button and back (upstream
+  `DatePickerBase.test.js`).
+- `combobox_multiple_tests` flaked (2 of 3 runs): the test blurred from JavaScript in the frame of the option press,
+  while `prevent_focus` swallows blurs (as upstream); its `blur` waits a frame now (10/10; `lessons.md`).
+- `virtual_list_tests` flaked (2 of 4 runs): the test scrolled before `selectionchange` was dispatched; it now waits
+  for the event (5/5).
+- Rustdoc is warning-free (`just doc`, `-D warnings`).
+- Browser tests: `TEST_APP_TARGET_DIR` builds the test-app in its own target dir; CLAUDE.md's
+  `[package.metadata.leptonic]` example corrected (`style-dir = "style"`).
+- Native `*_state` tests (2026-10-08, 42 tests): `use_color_channel_field_state` (7, from `ColorField.test.js`'s
+  "channel" cases), `use_color_picker_state` (5, `ColorPicker.test.js`), `use_color_slider_state` (7,
+  `ColorSlider.test.tsx`: keyboard steps with `on_change_end`, disabled, drag, form reset, `getDisplayColor`),
+  `use_form_validation_state` (10, upstream's implementation: source priority, native commit, reset, server
+  errors, `merge_validation`), `use_text_field_state` (4, `useControlledState.test.tsx`), `use_virtualizer_state`
+  (9: renders on every input, invalidations, viewport moves, layout delegate). Fix: the virtualizer's clock called
+  `js_sys::Date::now()` in every non-`ssr` build, which panics natively; it is WebAssembly-only now.
+
 ## Fidelity review 2026-10-07
 
 A read-only review of the whole library against react-spectrum @ 99e6102368 (nine passes: one per family plus

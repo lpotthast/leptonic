@@ -11,7 +11,7 @@ use super::ListBoxData;
 use crate::{
     hooks::{
         IntoAttrs,
-        collections::{Key, NodeKind},
+        collections::{Key, NodeKind, use_node_aria_label},
     },
     utils::{EventHandler, aria::AriaRole, id::use_id},
 };
@@ -91,13 +91,13 @@ impl IntoAttrs for UseListBoxSectionHeadingProps {
 #[derive(Debug)]
 pub struct UseListBoxSectionGroupProps {
     pub role: AriaRole,
-    pub aria_label: Option<String>,
+    pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Option<String>,
 }
 
 pub type UseListBoxSectionGroupAttrs = (
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Option<String>>,
 );
 
@@ -118,18 +118,16 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
     let UseListBoxSectionInput { list, key } = input;
     let heading_id = use_id("listbox-section-heading");
 
-    let (aria_label, heading) = untrack(|| {
+    // Whether the section has a heading is read once (it decides what renders); its label
+    // follows the collection.
+    let heading = untrack(|| {
         list.state.collection.with(|c| {
-            let aria_label = c
-                .get(&key)
-                .and_then(|n| n.aria_label.as_deref().map(str::to_owned));
-            let heading = c
-                .children(&key)
+            c.children(&key)
                 .find(|n| n.kind == NodeKind::Header)
-                .map(|n| n.text_value.to_string());
-            (aria_label, heading)
+                .map(|n| n.text_value.to_string())
         })
     });
+    let aria_label = use_node_aria_label(list.state.collection, key);
 
     UseListBoxSectionReturn {
         item_props: UseListBoxSectionItemProps {
@@ -142,7 +140,7 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
         }),
         group_props: UseListBoxSectionGroupProps {
             role: AriaRole::Group,
-            aria_label,
+            aria_label: aria_label.into(),
             aria_labelledby: heading.as_ref().map(|_| heading_id),
         },
         heading,

@@ -96,7 +96,7 @@ fn FruitItem(state: ListState, collection_id: String, node: Node) -> impl IntoVi
         is_disabled: Signal::stored(false),
         should_select_on_press_up: false,
         allows_different_press_origin: false,
-        on_action: None,
+        on_action: Signal::stored(None),
         on_context_menu: None,
         link_behavior: LinkBehavior::default(),
         focus: None,

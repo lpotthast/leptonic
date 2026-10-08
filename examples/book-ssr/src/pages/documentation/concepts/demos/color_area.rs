@@ -1,11 +1,15 @@
 use leptonic::{
     atoms::prelude::{ColorArea, ColorSwatch, ColorThumb},
-    utils::color::{ColorValue, HSV, HsvChannel},
+    utils::{
+        color::{ColorValue, HSV, HsvChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorAreaConceptDemo() -> impl IntoView {
+    let locale = use_locale();
     let color = RwSignal::new(HSV {
         hue: 210.0,
         saturation: 0.6,
@@ -26,6 +30,6 @@ pub fn ColorAreaConceptDemo() -> impl IntoView {
             </ColorArea>
             <ColorSwatch color=color classes="demo-color-atoms-swatch"/>
         </div>
-        <p class="demo-status">{move || format!("Color: {}, {}", color.get().to_rgb8(), color.get().color_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, {}", color.get().to_rgb8(), color.get().color_name(&locale.get()))}</p>
     }
 }

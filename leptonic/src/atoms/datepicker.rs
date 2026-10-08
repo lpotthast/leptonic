@@ -36,6 +36,7 @@ use crate::{
         default_class::with_default_class, scoped_context::scoped_view, styles::Styles,
     },
 };
+use crate::utils::intl_strings::{DatePickerStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -1076,13 +1077,17 @@ pub fn DateRangePicker<V: DateValue>(
             element: CapturedElement::new(),
             input_element,
             options: DateFieldOptions {
-                aria_label: MaybeProp::from(
-                    match part {
-                        RangePart::Start => "Start Date",
-                        RangePart::End => "End Date",
-                    }
-                    .to_owned(),
-                ),
+                aria_label: {
+                    let strings = use_localized_strings::<DatePickerStrings>();
+                    Signal::derive(move || {
+                        let strings = strings.read();
+                        Some(match part {
+                            RangePart::Start => strings.start_date(),
+                            RangePart::End => strings.end_date(),
+                        })
+                    })
+                    .into()
+                },
                 auto_focus,
                 form: form.clone(),
                 picker: Some(DateFieldPicker {

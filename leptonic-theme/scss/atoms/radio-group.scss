@@ -1,13 +1,11 @@
 // Upstream: ../starters/docs/src/RadioGroup.css @ 99e6102368
 // Upstream: ../starters/docs/src/RadioGroup.tsx @ 99e6102368
 //
-// `RadioGroup`, `Radio` (upstream's `RadioButton`). Markup: the group holds a `Label`, the radios
-// in a `<div class="radio-items">`, then a `Description` and a `FieldError`; each radio starts
-// with its dot, `<div class="indicator"></div>` (the utility class), before the label text.
+// `RadioGroup`, `RadioField` and `RadioButton`. Markup: the group holds a `Label`, the radios
+// (`RadioField`s) in a `<div class="radio-items">`, then a `Description` and a `FieldError`; each
+// `RadioButton` starts with its dot, `<div class="indicator"></div>` (the utility class), before
+// the label text.
 // The group's `orientation` sets `data-orientation`.
-//
-// Leptonic has no `RadioField` (upstream's wrapper of a radio and its description), so its rules
-// are left out.
 
 .leptonic-RadioGroup {
   display: flex;
@@ -31,7 +29,20 @@
   }
 }
 
-.leptonic-Radio {
+.leptonic-RadioField {
+  display: flex;
+  flex-direction: column;
+
+  .leptonic-Description {
+    margin-left: calc(var(--spacing) * 6.5);
+  }
+
+  &[data-disabled] .leptonic-Description {
+    color: var(--text-color-disabled);
+  }
+}
+
+.leptonic-RadioButton {
   display: flex;
   /* This is needed so the HiddenInput is positioned correctly */
   position: relative;

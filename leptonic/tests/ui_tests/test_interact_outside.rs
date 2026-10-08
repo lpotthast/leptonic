@@ -1,7 +1,6 @@
 // Upstream: react-aria/test/interactions/useInteractOutside.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
-use assertr::prelude::*;
 use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
 use rootcause::Report;
 
@@ -79,13 +78,13 @@ async fn js_click(driver: &WebDriver, id: &str) -> Result<(), Report> {
 }
 
 async fn expect_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    assert_that!(
+    stays!(
+        "the text of #test-interact-outside-log",
+        expected.to_owned(),
         page.element("test-interact-outside-log")
             .await?
             .text()
             .await?
-    )
-    .is_equal_to(expected.to_owned());
+    );
     Ok(())
 }

@@ -19,9 +19,9 @@ use crate::pages::BookPage;
 pub const IS_DARK: &str = "const c = getComputedStyle(document.body).backgroundColor.match(/\\d+/g); \
                        return !!c && (+c[0] + +c[1] + +c[2]) / 3 < 80;";
 
-/// Whether all CSS transitions finished. The server renders the light theme (the theme choice lives in the browser's
-/// local storage), and hydration switches to the dark one: until their transitions finish, elements that transition
-/// their colors (buttons, demo targets) still show light-theme colors.
+/// Whether all CSS transitions finished: elements that transition their colors (buttons, demo targets) show their
+/// final theme colors only then. The server renders the reader's theme (it is kept in a cookie), so a page normally
+/// starts in the dark theme; this guards against anything that still switches after hydration.
 pub const TRANSITIONS_FINISHED: &str = "return document.getAnimations().every(a => !(a instanceof CSSTransition) || a.playState !== 'running');";
 
 /// Demo elements that don't fit the dark theme: bright panels (at least 48 x 32 px, so that small shapes like a
@@ -44,6 +44,13 @@ const INTERNAL_LINKS: &str = "return [...document.querySelectorAll('main a[href]
 
 /// The ids of all elements of the page.
 const IDS: &str = "return [...document.querySelectorAll('[id]')].map(e => e.id);";
+
+/// Whether the book shows its small-screen layout: the app bar's menu button replaces the desktop links.
+const SMALL_SCREEN_LAYOUT: &str =
+    "return !!document.querySelector('#book-app-bar [aria-label=\"Menu\"]');";
+
+/// The width of a phone screen, in CSS pixels.
+const PHONE_WIDTH: u32 = 390;
 
 /// Elements of the page content wider than the viewport, outside of scroll containers.
 const OVERFLOWING: &str = r"
@@ -92,8 +99,12 @@ struct SiteLinks {
 
 static SITE_LINKS: LazyLock<Mutex<SiteLinks>> = LazyLock::new(Mutex::default);
 
-/// Visits a shard of the pages in the dark theme: no page errors, readable demos. Records the pages' internal links
-/// and ids for [`LinkTests`].
+/// Visits a shard of the pages in the dark theme: no page errors, readable demos, and nothing makes the page wider than
+/// a phone screen. Records the pages' internal links and ids for [`LinkTests`].
+///
+/// One visit per page serves both checks (loading and hydrating a page is most of the time): the page loads at
+/// desktop width, then the viewport shrinks to a phone's for the width check. So the phone check sees a resized page,
+/// not one loaded at phone width (the shell tests load pages at phone width).
 pub struct PageContentTests {
     pub shard: Shard,
 }
@@ -102,7 +113,7 @@ pub struct PageContentTests {
 impl BrowserTest<str> for PageContentTests {
     fn name(&self) -> Cow<'_, str> {
         format!(
-            "pages_load_cleanly_in_the_dark_theme ({})",
+            "pages_load_cleanly_in_the_dark_theme_and_fit_a_phone ({})",
             self.shard.label()
         )
         .into()
@@ -145,10 +156,29 @@ impl BrowserTest<str> for PageContentTests {
             }
             let links = page.strings(INTERNAL_LINKS).await?;
             let ids = page.strings(IDS).await?;
-            let mut site = SITE_LINKS.lock().unwrap_or_else(PoisonError::into_inner);
-            site.links
-                .extend(links.into_iter().map(|link| (path.clone(), link)));
-            site.ids.insert(path.clone(), ids.into_iter().collect());
+            {
+                let mut site = SITE_LINKS.lock().unwrap_or_else(PoisonError::into_inner);
+                site.links
+                    .extend(links.into_iter().map(|link| (path.clone(), link)));
+                site.ids.insert(path.clone(), ids.into_iter().collect());
+            }
+
+            page.set_viewport(PHONE_WIDTH, 844).await?;
+            page.wait_until(
+                &format!("{path} shows the small-screen layout"),
+                SMALL_SCREEN_LAYOUT,
+            )
+            .await?;
+            let width = page
+                .number("return document.documentElement.scrollWidth;")
+                .await?;
+            if width > f64::from(PHONE_WIDTH) + 1.0 {
+                let culprits = page.strings(OVERFLOWING).await?;
+                problems.push(format!(
+                    "{path}: {width}px wide at {PHONE_WIDTH}px: {culprits:?}"
+                ));
+            }
+            page.set_viewport(1600, 1000).await?;
         }
 
         assert_that!(problems)
@@ -205,44 +235,6 @@ impl BrowserTest<str> for LinkTests {
                 site.links.len(),
                 site.ids.len()
             ))
-            .is_empty();
-        Ok(())
-    }
-}
-
-/// Visits a shard of the pages on a phone-sized viewport: nothing makes the page wider than the screen.
-pub struct NarrowScreenTests {
-    pub shard: Shard,
-}
-
-const PHONE_WIDTH: u32 = 390;
-
-#[async_trait]
-impl BrowserTest<str> for NarrowScreenTests {
-    fn name(&self) -> Cow<'_, str> {
-        format!("pages_fit_a_phone_screen ({})", self.shard.label()).into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = BookPage { driver, base_url };
-        let paths = self.shard.paths();
-
-        page.set_viewport(PHONE_WIDTH, 844).await?;
-
-        let mut problems = Vec::new();
-        for path in &paths {
-            page.goto(path).await?;
-            let width = page
-                .number("return document.documentElement.scrollWidth;")
-                .await?;
-            if width > f64::from(PHONE_WIDTH) + 1.0 {
-                let culprits = page.strings(OVERFLOWING).await?;
-                problems.push(format!("{path}: {width}px wide: {culprits:?}"));
-            }
-        }
-
-        assert_that!(problems)
-            .with_detail_message(format!("checked {} pages at {PHONE_WIDTH}px", paths.len()))
             .is_empty();
         Ok(())
     }

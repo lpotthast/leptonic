@@ -270,7 +270,7 @@ pub fn PageArchitecture() -> impl IntoView {
                         let accepted = RwSignal::new(false);
 
                         view! {
-                            <Checkbox is_selected=accepted set_selected=accepted>"I accept the terms"</Checkbox>
+                            <CheckboxField is_selected=accepted set_selected=accepted><CheckboxButton>"I accept the terms"</CheckboxButton></CheckboxField>
                             <Button is_disabled=Signal::derive(move || !accepted.get())>"Continue"</Button>
                         }
                     "#)}

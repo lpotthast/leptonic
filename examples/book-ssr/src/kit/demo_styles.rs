@@ -210,7 +210,10 @@ fn primary_classes(rule: &str) -> Vec<&str> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{
+        collections::{BTreeSet, HashSet},
+        path::Path,
+    };
 
     use assertr::prelude::*;
 
@@ -355,21 +358,24 @@ mod tests {
     }
 
     /// Every demo style rule belongs to a class that a page or demo uses: rules of removed classes are removed too.
-    #[test]
-    fn every_rule_belongs_to_a_used_class() {
-        fn sources(dir: &Path, into: &mut String) {
-            for entry in std::fs::read_dir(dir).expect("readable source directory") {
-                let path = entry.expect("readable directory entry").path();
-                if path.is_dir() {
-                    sources(&path, into);
-                } else if path.extension().is_some_and(|extension| extension == "rs") {
-                    into.push_str(&std::fs::read_to_string(&path).expect("readable source file"));
-                }
+    /// Appends the files below `dir` with the extension `extension` to `into`.
+    fn read_files(dir: &Path, extension: &str, into: &mut String) {
+        for entry in std::fs::read_dir(dir).expect("readable source directory") {
+            let path = entry.expect("readable directory entry").path();
+            if path.is_dir() {
+                read_files(&path, extension, into);
+            } else if path.extension().is_some_and(|ext| ext == extension) {
+                into.push_str(&std::fs::read_to_string(&path).expect("readable source file"));
             }
         }
+    }
+
+    #[test]
+    fn every_rule_belongs_to_a_used_class() {
         let mut source = String::new();
-        sources(
+        read_files(
             &Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pages"),
+            "rs",
             &mut source,
         );
         let used = kebab_case_words(&source);
@@ -386,6 +392,46 @@ mod tests {
             .collect();
         assert_that!(unused)
             .with_detail_message("unused demo style rules")
+            .is_empty();
+    }
+
+    /// Every `var(--x)` without a fallback in the book's stylesheets names a custom property that a stylesheet
+    /// declares or that code sets at runtime (the book's or leptonic's, e.g. `--tab-panel-height`): a removed or
+    /// misspelled token silently drops the declaration using it.
+    #[test]
+    fn every_custom_property_used_is_defined() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let (mut scss, mut code) = (String::new(), String::new());
+        read_files(&root.join("style/book"), "scss", &mut scss);
+        read_files(&root.join("style/demos"), "scss", &mut scss);
+        read_files(&root.join("src"), "rs", &mut code);
+        read_files(&root.join("../../leptonic/src"), "rs", &mut code);
+        // Each `--name` with the text before and after it.
+        let properties: Vec<(&str, &str, &str)> = scss
+            .match_indices("--")
+            .map(|(at, _)| {
+                let len = scss[at + 2..]
+                    .find(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+                    .map_or(scss.len(), |len| at + 2 + len);
+                (&scss[..at], &scss[at..len], &scss[len..])
+            })
+            .filter(|(_, name, _)| name.len() > 2)
+            .collect();
+        let declared: HashSet<&str> = properties
+            .iter()
+            .filter(|(_, _, after)| after.trim_start().starts_with(':'))
+            .map(|(_, name, _)| *name)
+            .collect();
+        let undefined: BTreeSet<&str> = properties
+            .iter()
+            .filter(|(before, _, after)| {
+                before.trim_end().ends_with("var(") && after.trim_start().starts_with(')')
+            })
+            .map(|(_, name, _)| *name)
+            .filter(|name| !declared.contains(name) && !contains_word(&code, name))
+            .collect();
+        assert_that!(undefined)
+            .with_detail_message("custom properties used but defined nowhere")
             .is_empty();
     }
 

@@ -64,12 +64,15 @@
   gap: var(--book-space-m);
 }
 
-// The install command below the buttons: a quiet, copyable line.
+// The install command below the buttons: a quiet, copyable line, which wraps instead of scrolling on phones.
 .book-welcome-install {
   margin: var(--book-space-xl) 0 0;
   max-width: 100%;
-  // Room for the copy button at the end of the line.
-  padding-inline-end: 3em;
+
+  .doc-code-text {
+    white-space: pre-wrap;
+    text-align: start;
+  }
 }
 
 // The live atoms below the hero: one quiet panel, two columns of fields (one on small screens). Every rule styles an

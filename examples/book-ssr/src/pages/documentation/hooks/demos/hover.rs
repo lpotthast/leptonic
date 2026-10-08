@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::data_attributes::flag};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
 
 #[component]
@@ -32,10 +32,12 @@ pub fn HoverDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
 
         <p class="demo-status">

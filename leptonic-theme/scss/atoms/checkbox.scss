@@ -1,7 +1,7 @@
 // Upstream: ../starters/docs/src/Checkbox.css @ 99e6102368
 // Upstream: ../starters/docs/src/Checkbox.tsx @ 99e6102368
 //
-// `Checkbox` (upstream's `CheckboxButton`). Markup: the box as the checkbox's first child, an
+// `CheckboxField` and `CheckboxButton`. Markup: the box as the button's first child, an
 // `indicator` (the utility class) holding the check mark, then the label text:
 //
 //   <div class="indicator">
@@ -11,10 +11,22 @@
 //     </svg>
 //   </div>
 //   "Label"
-//
-// Leptonic has no `CheckboxField` (upstream's wrapper of the checkbox, its description and its
-// error), so its rules are left out.
-.leptonic-Checkbox {
+.leptonic-CheckboxField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+
+  .leptonic-Description,
+  .leptonic-FieldError {
+    margin-left: calc(var(--spacing) * 6.5);
+  }
+
+  &[data-disabled] .leptonic-Description {
+    color: var(--text-color-disabled);
+  }
+}
+
+.leptonic-CheckboxButton {
   --checkmark-color: var(--highlight-foreground);
 
   display: flex;

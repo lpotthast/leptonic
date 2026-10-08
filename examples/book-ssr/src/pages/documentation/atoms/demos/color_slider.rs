@@ -1,14 +1,18 @@
 use leptonic::{
     atoms::prelude::{
-        Checkbox, ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch, ColorThumb,
-        Label,
+        CheckboxButton, CheckboxField, ColorSlider, ColorSliderOutput, ColorSliderTrack,
+        ColorSwatch, ColorThumb, Label,
     },
-    utils::color::{ColorValue, HSL, HslChannel},
+    utils::{
+        color::{ColorValue, HSL, HslChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorSliderAtomDemo() -> impl IntoView {
+    let locale = use_locale();
     // All three sliders edit the same color: each changes one of its channels.
     let color = RwSignal::new(HSL {
         hue: 210.0,
@@ -34,7 +38,7 @@ pub fn ColorSliderAtomDemo() -> impl IntoView {
                 is_disabled=disabled
                 classes="demo-color-atoms-slider"
             >
-                <Label>{HSL::channel_name(channel)}</Label>
+                <Label>{move || HSL::channel_name(channel, &locale.get())}</Label>
                 <ColorSliderOutput classes="demo-color-atoms-slider-output"/>
                 <ColorSliderTrack classes="demo-color-atoms-slider-track">
                     <ColorThumb classes="demo-color-atoms-thumb"/>
@@ -52,10 +56,12 @@ pub fn ColorSliderAtomDemo() -> impl IntoView {
 
         <p class="demo-status">{move || format!("Committed: {}", committed.get().to_css_string())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

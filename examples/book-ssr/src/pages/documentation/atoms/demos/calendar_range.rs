@@ -5,7 +5,7 @@ use leptonic::{
             CalendarHeaderCell, CalendarHeaderRow, CalendarHeading, CalendarNextButton,
             CalendarPreviousButton, CalendarWeek, RangeCalendar,
         },
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
     },
     jiff::civil::date,
     utils::date::{DateDuration, DateRange},
@@ -63,10 +63,12 @@ pub fn AtomRangeCalendarDemo() -> impl IntoView {
         <p class="demo-status">{status}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -1,7 +1,6 @@
 // Upstream: react-aria/test/interactions/focusSafely.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
-use assertr::prelude::*;
 use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
 use rootcause::Report;
 
@@ -35,9 +34,11 @@ impl BrowserTest<str> for FocusSafelyTests {
         js_click(driver, "test-focus-safely-remove").await?;
         page.wait_for_no_selector("#test-focus-safely-target")
             .await?;
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert_that!(page.active_element_id().await?)
-            .is_equal_to(Some("test-focus-safely-remove".to_owned()));
+        stays!(
+            "the focused element's id",
+            Some("test-focus-safely-remove".to_owned()),
+            page.active_element_id().await?
+        );
 
         page.click_element_with_id("test-focus-safely-focus-svg")
             .await?;

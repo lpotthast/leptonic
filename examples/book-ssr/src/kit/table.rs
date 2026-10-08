@@ -116,7 +116,7 @@ pub fn ApiRow(
         <TableRow>
             <TableCell classes="doc-table-name">{names}</TableCell>
             <TableCell attr:data-label=label(1)><TypeOrDash ty/></TableCell>
-            {kind.has_default().then(|| view! { <TableCell attr:data-label=label(2)><CodeOrDash code=default/></TableCell> })}
+            {kind.has_default().then(|| view! { <TableCell classes="doc-table-default" attr:data-label=label(2)><CodeOrDash code=default/></TableCell> })}
             <TableCell attr:data-label=label(description_column)>{children.map(|children| children())}</TableCell>
         </TableRow>
     }
@@ -195,7 +195,7 @@ pub fn KeyRow(keys: &'static str, children: Children) -> impl IntoView {
 ///
 /// `keys` is written as displayed: alternatives separated by `" / "`, key combinations joined with `" + "`. Keys are
 /// [`KeyboardKey`] names (`"ArrowDown"`, `"PageUp"`, `"Control"`, `"Command"`); a few descriptions of key groups
-/// (`KEY_DESCRIPTIONS`) are allowed too, as text when alone. A unit test checks the names of all pages.
+/// (`KEY_DESCRIPTIONS`) are allowed too, rendered as text. A unit test checks the names of all pages.
 ///
 /// The keys are shown as written, on every platform: leptonic's `ShortcutKeys` atom shows a shortcut in the keys of
 /// the reader's platform (Command on Apple devices for the primary modifier), while these tables document specific
@@ -224,21 +224,33 @@ const KEY_DESCRIPTIONS: &[&str] = &[
 ];
 
 /// A key combination like `"Shift + Tab"`: its keys as key caps in one `<kbd class="doc-keys">`, joined by `+`
-/// (leptonic's `Keys` atom). A description of a key group (`"Arrow keys"`) alone is text; in a combination
-/// (`"Shift + Arrow keys"`) it is a key cap too.
+/// (leptonic's `Keys` atom). A description of a key group (`"Arrow keys"`, a [`KeyboardKey::Other`]) is text, also in
+/// a combination: `"Shift + Arrow keys"` is a Shift key cap, then "+ Arrow keys".
 #[component]
 fn KeyCombination(combination: &'static str) -> impl IntoView {
-    let keys: Vec<KeyboardKey> = combination
-        .split(" + ")
-        .map(|name| {
-            let Ok(key) = KeyboardKey::from_str(name);
-            key
-        })
-        .collect();
-    if let [KeyboardKey::Other(_)] = keys.as_slice() {
-        return combination.into_any();
+    let mut groups: Vec<Result<Vec<KeyboardKey>, &'static str>> = Vec::new();
+    for name in combination.split(" + ") {
+        let Ok(key) = KeyboardKey::from_str(name);
+        match (key, groups.last_mut()) {
+            (KeyboardKey::Other(_), _) => groups.push(Err(name)),
+            (key, Some(Ok(keys))) => keys.push(key),
+            (key, _) => groups.push(Ok(vec![key])),
+        }
     }
-    view! { <KeyCaps keys classes="doc-keys"/> }.into_any()
+    groups
+        .into_iter()
+        .enumerate()
+        .map(|(i, group)| {
+            let group = match group {
+                Ok(keys) => view! { <KeyCaps keys classes="doc-keys"/> }.into_any(),
+                Err(description) => description.into_any(),
+            };
+            view! {
+                {(i > 0).then_some(" + ")}
+                {group}
+            }
+        })
+        .collect_view()
 }
 
 #[cfg(test)]

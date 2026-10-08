@@ -62,18 +62,27 @@ pub fn PageEventPropagation() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>
-                            "Wheel events of "<Code inline=true>"use_scroll_wheel"</Code>" (except while "<Keys keys="Control"/>
-                            " is held, for zooming), "<Code inline=true>"contextmenu"</Code>" events of "
-                            <Code inline=true>"use_context_menu"</Code>", and the outside presses that close an overlay"
+                            "The pointer and arrow key events "<Link href=routes::doc::interactions::UseMove.materialize()>"use_move"</Link>
+                            " turns into moves, wheel events of "
+                            <Link href=routes::doc::interactions::UseScrollWheel.materialize()>"use_scroll_wheel"</Link>" (except while "
+                            <Keys keys="Control"/>" is held, for zooming), "<Code inline=true>"contextmenu"</Code>" events of "
+                            <Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>", the native "
+                            "events of "<Link href=routes::doc::DragAndDrop.materialize()>"drag and drop"</Link>", and the outside "
+                            "presses that close an overlay"
                         </TableCell>
-                        <TableCell>"Always."</TableCell>
+                        <TableCell>"Always: their events have no "<Code inline=true>"continue_propagation()"</Code>"."</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>
-                            "Events you handle yourself ("<Code inline=true>"on:click"</Code>" on a plain element) and the "
-                            <Code inline=true>"FocusEvent"</Code>"s of focus callbacks"
+                            "Hover events of "<Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>
+                            ", the "<Code inline=true>"FocusEvent"</Code>"s of focus callbacks, and events you handle yourself ("
+                            <Code inline=true>"on:click"</Code>" on a plain element)"
                         </TableCell>
-                        <TableCell>"Never: they keep the web\u{2019}s default."</TableCell>
+                        <TableCell>
+                            "Never: they keep the web\u{2019}s default. Stopping focus events would break the "
+                            <Link href=routes::doc::focus::UseFocusWithin.materialize()>"focus within"</Link>" tracking of the "
+                            "elements around."
+                        </TableCell>
                     </TableRow>
                 </DocTable>
                 <p>

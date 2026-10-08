@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         toggle_button::{ToggleButton, ToggleButtonGroup},
     },
     hooks::Key,
@@ -19,8 +19,8 @@ pub fn ToggleButtonGroupAtomDemo() -> impl IntoView {
     view! {
         <ToggleButtonGroup
             disallow_empty_selection=true
-            selected_keys=view_mode
-            set_selected_keys=view_mode
+            value=view_mode
+            set_value=view_mode
             is_disabled=disabled
             aria_label="View"
             classes="demo-toggle-group"
@@ -36,10 +36,12 @@ pub fn ToggleButtonGroupAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

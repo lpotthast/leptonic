@@ -123,11 +123,9 @@ async fn open(page: &Page<'_>, query: &str, focus: bool) -> Result<(), Report> {
 
 async fn expect_log(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
     let expected: Vec<String> = expected.iter().map(|e| (*e).to_owned()).collect();
-    page.wait_for_value("the log", expected.clone(), || log(page))
-        .await?;
+    wait_for!("the log", expected.clone(), log(page).await?);
     // Nothing more is logged.
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(log(page).await?).is_equal_to(expected);
+    stays!("the log", expected, log(page).await?);
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 use leptonic::atoms::{
-    checkbox::Checkbox,
+    checkbox::{CheckboxButton, CheckboxField},
     field::Label,
     slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
 };
@@ -23,10 +23,12 @@ pub fn SliderBasicDemo() -> impl IntoView {
         <p class="demo-status">{move || format!("Volume: {}.", volume.with(|v| v[0]))}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

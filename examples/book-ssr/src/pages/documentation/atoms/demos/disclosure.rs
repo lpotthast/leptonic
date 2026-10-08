@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::prelude::{Button, Checkbox, Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
+    atoms::prelude::{Button, CheckboxButton, CheckboxField, Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
     hooks::Key,
 };
 use leptos::prelude::*;
@@ -45,10 +45,12 @@ pub fn DisclosureAtomDemo() -> impl IntoView {
         </DisclosureGroup>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
         <p class="demo-status">
             "Expanded: "

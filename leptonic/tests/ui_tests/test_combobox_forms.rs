@@ -475,8 +475,15 @@ async fn check_validity(page: &Page<'_>, form_id: &str) -> Result<(), Report> {
 
 /// Takes focus away from the active element.
 async fn blur(page: &Page<'_>) -> Result<(), Report> {
+    // In the next animation frame: until then, a press that keeps focus where it is (an option
+    // of the popover) swallows blurs of the focused element (react-aria's `preventFocus`), and a
+    // user can't blur within the frame of a click.
     page.driver
-        .execute("document.activeElement.blur();", vec![])
+        .execute_async(
+            "const done = arguments[0];
+             requestAnimationFrame(() => { document.activeElement.blur(); done(); });",
+            vec![],
+        )
         .await?;
     Ok(())
 }

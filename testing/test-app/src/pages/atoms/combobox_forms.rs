@@ -9,7 +9,7 @@ use leptonic::{
         listbox::{ListBox, ListBoxItem, ListBoxItems, ListBoxSection, ListBoxSectionHeading},
     },
     hooks::{
-        ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxValue, SelectMode, ValidationBehavior,
+        ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxValue, ValidationBehavior,
         collections::{CollectionMemo, Key, use_collection, use_list_collection},
         use_contains_filter,
     },
@@ -81,8 +81,9 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
             s.item("parrot", "Parrot");
         });
     });
-    let no_dogs: leptonic::hooks::ValidateFn<ComboBoxValue> = Arc::new(|value: &ComboBoxValue| {
-        if value.value.contains(&Key::from("2")) {
+    let no_dogs: leptonic::hooks::ValidateFn<ComboBoxValue<Option<Key>>> =
+        Arc::new(|value: &ComboBoxValue<Option<Key>>| {
+        if value.value == Some(Key::from("2")) {
             Err(vec!["Dogs are not allowed".to_owned()])
         } else {
             Ok(())
@@ -100,30 +101,30 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
         <h1>"ComboBox forms"</h1>
 
         <form id="cbf-custom" on:submit=|e: SubmitEvent| e.prevent_default()>
-            <ComboBox
+            <ComboBox<Option<Key>>
                 collection=animals()
                 filter=use_contains_filter()
                 allows_custom_value=true
                 name="animal"
-                on_change={move |keys: Vec<Key>| {
-                    custom_changes.update(|c| c.push(format!("[{}]", join(&keys))));
+                on_change={move |key: Option<Key>| {
+                    custom_changes.update(|c| c.push(format!("[{}]", join(key.as_slice()))));
                 }}
             >
                 <Label>"Custom animal"</Label>
                 <Input />
                 <Options />
-            </ComboBox>
+            </ComboBox<Option<Key>>>
             <button type="button" id="cbf-custom-after">"After"</button>
         </form>
         <div>"Changes: " <span id="cbf-custom-changes">{move || custom_changes.get().join("|")}</span></div>
 
         <form id="cbf-required">
-            <ComboBox collection=animals() filter=use_contains_filter() is_required=true>
+            <ComboBox<Option<Key>> collection=animals() filter=use_contains_filter() is_required=true>
                 <Label>"Required animal"</Label>
                 <Input />
                 <Options />
                 <FieldError />
-            </ComboBox>
+            </ComboBox<Option<Key>>>
         </form>
 
         <Form attr:id="cbf-validate" validation_behavior=ValidationBehavior::Aria>
@@ -136,10 +137,9 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
         </Form>
 
         <Form attr:id="cbf-multiple">
-            <ComboBox
+            <ComboBox<Vec<Key>>
                 collection=animals()
                 filter=use_contains_filter()
-                selection_mode=SelectMode::Multiple
                 name="animals"
                 default_input_value=""
                 on_change={move |keys: Vec<Key>| {
@@ -149,16 +149,15 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 <Label>"Animals"</Label>
                 <Input />
                 <Options />
-            </ComboBox>
+            </ComboBox<Vec<Key>>>
             <input type="reset" id="cbf-multiple-reset" />
         </Form>
         <div>"Changes: " <span id="cbf-multiple-changes">{move || multiple_changes.get().join("|")}</span></div>
 
         <Form attr:id="cbf-multiple-required">
-            <ComboBox
+            <ComboBox<Vec<Key>>
                 collection=animals()
                 filter=use_contains_filter()
-                selection_mode=SelectMode::Multiple
                 is_required=true
                 name="required-animals"
             >
@@ -166,11 +165,11 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 <Input />
                 <Options />
                 <FieldError />
-            </ComboBox>
+            </ComboBox<Vec<Key>>>
         </Form>
 
         <form id="cbf-key">
-            <ComboBox collection=animals() name="key-animal" default_value=vec![Key::from("2")]>
+            <ComboBox collection=animals() name="key-animal" default_value=Some(Key::from("2"))>
                 <Label>"Key animal"</Label>
                 <Input />
                 <Options />
@@ -180,7 +179,7 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
             <ComboBox
                 collection=animals()
                 name="text-animal"
-                default_value=vec![Key::from("2")]
+                default_value=Some(Key::from("2"))
                 form_value=ComboBoxFormValue::Text
             >
                 <Label>"Text animal"</Label>
@@ -190,7 +189,7 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
         </form>
 
         <div id="cbf-focus">
-            <ComboBox
+            <ComboBox<Option<Key>>
                 collection=animals()
                 filter=use_contains_filter()
                 menu_trigger=ComboBoxMenuTrigger::Focus
@@ -200,11 +199,11 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 <Label>"Focus animal"</Label>
                 <Input />
                 <Options />
-            </ComboBox>
+            </ComboBox<Option<Key>>>
         </div>
         <div>"Open changes: " <span id="cbf-focus-open">{move || focus_open.get().join("|")}</span></div>
         <div id="cbf-manual">
-            <ComboBox
+            <ComboBox<Option<Key>>
                 collection=animals()
                 filter=use_contains_filter()
                 menu_trigger=ComboBoxMenuTrigger::Manual
@@ -213,12 +212,12 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 <Label>"Manual animal"</Label>
                 <Input />
                 <Options />
-            </ComboBox>
+            </ComboBox<Option<Key>>>
         </div>
         <div>"Open changes: " <span id="cbf-manual-open">{move || manual_open.get().join("|")}</span></div>
 
         <div id="cbf-sections">
-            <ComboBox
+            <ComboBox<Option<Key>>
                 collection=sections
                 filter=use_contains_filter()
                 disabled_keys=Signal::stored(HashSet::from([Key::from("dog")]))
@@ -231,7 +230,7 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                         <SectionedOptions />
                     </ListBox>
                 </ComboBoxPopover>
-            </ComboBox>
+            </ComboBox<Option<Key>>>
         </div>
 
         <form
@@ -241,11 +240,11 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 submits.update(|n| *n += 1);
             }
         >
-            <ComboBox collection=animals() filter=use_contains_filter()>
+            <ComboBox<Option<Key>> collection=animals() filter=use_contains_filter()>
                 <Label>"Submitted animal"</Label>
                 <Input />
                 <Options />
-            </ComboBox>
+            </ComboBox<Option<Key>>>
         </form>
         <div>"Submits: " <span id="cbf-submits">{submits}</span></div>
     }

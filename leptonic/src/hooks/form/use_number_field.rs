@@ -45,6 +45,7 @@ use crate::{
         pointer_type::PointerType,
     },
 };
+use crate::utils::intl_strings::{NumberFieldStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -65,8 +66,6 @@ use crate::{
 //   their labelling follows the field's label, which may appear later, and ids are static.
 //
 // ## OMITTED FEATURES
-// - Localized strings: "Increase"/"Decrease"/"Number field" are English until leptonic has a
-//   localized string formatter.
 // - The `beforeinput` fallback for browsers without it (all supported browsers have it).
 //
 // =============================================================================
@@ -87,9 +86,9 @@ pub struct UseNumberFieldInput<T: NumberValue> {
     pub auto_focus: bool,
     /// Whether the scroll wheel leaves the value alone (it steps while the field has focus).
     pub is_wheel_disabled: bool,
-    /// Replaces "Increase <field label>".
+    /// Replaces "Increase `<field label>`".
     pub increment_aria_label: MaybeProp<String>,
-    /// Replaces "Decrease <field label>".
+    /// Replaces "Decrease `<field label>`".
     pub decrement_aria_label: MaybeProp<String>,
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
@@ -156,7 +155,7 @@ impl IntoAttrs for UseNumberFieldGroupProps {
 #[derive(Debug, Clone)]
 pub struct UseNumberFieldInputProps {
     pub text_field: UseTextFieldInputProps,
-    pub aria_roledescription: Option<&'static str>,
+    pub aria_roledescription: Signal<Option<String>>,
     pub on_beforeinput: EventHandler<InputEvent>,
     pub on_compositionstart: EventHandler<CompositionEvent>,
     pub on_compositionend: EventHandler<CompositionEvent>,
@@ -167,7 +166,7 @@ pub struct UseNumberFieldInputProps {
 pub type UseNumberFieldInputAttrs = (
     UseTextFieldInputAttrs,
     (
-        Attr<attr::AriaRoledescription, Option<&'static str>>,
+        Attr<attr::AriaRoledescription, Signal<Option<String>>>,
         On<ev::beforeinput, SharedEventCallback<InputEvent>>,
         On<ev::compositionstart, SharedEventCallback<CompositionEvent>>,
         On<ev::compositionend, SharedEventCallback<CompositionEvent>>,
@@ -503,8 +502,9 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             focus_event_target(&e.target, false);
         }
     });
+    let strings = use_localized_strings::<NumberFieldStrings>();
     let stepper = |spin_button: UseButtonInput,
-                   verb: &'static str,
+                   verb: fn(&NumberFieldStrings, &str) -> String,
                    custom_label: MaybeProp<String>,
                    can_step: Signal<bool>| {
         let button_id = use_id("number-field-stepper");
@@ -514,10 +514,8 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             id: Some(own_id),
             aria_label: MaybeProp::derive(move || {
                 custom_label.get().or_else(|| {
-                    Some(match field_label.get() {
-                        Some(label) => format!("{verb} {label}"),
-                        None => verb.to_owned(),
-                    })
+                    let label = field_label.get().unwrap_or_default();
+                    Some(verb(&strings.read(), &label).trim().to_owned())
                 })
             }),
             aria_labelledby: Signal::derive(move || {
@@ -542,13 +540,13 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     };
     let increment_button = stepper(
         spin_increment_button,
-        "Increase",
+        NumberFieldStrings::increase,
         increment_aria_label,
         state.can_increment,
     );
     let decrement_button = stepper(
         spin_decrement_button,
-        "Decrease",
+        NumberFieldStrings::decrease,
         decrement_aria_label,
         state.can_decrement,
     );
@@ -564,7 +562,9 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         input_props: UseNumberFieldInputProps {
             text_field: text_field_props,
             // Not on iOS, so that VoiceOver announces the required state.
-            aria_roledescription: (!device::is_ios()).then_some("Number field"),
+            aria_roledescription: Signal::derive(move || {
+                (!device::is_ios()).then(|| strings.read().number_field())
+            }),
             on_beforeinput,
             on_compositionstart,
             on_compositionend,

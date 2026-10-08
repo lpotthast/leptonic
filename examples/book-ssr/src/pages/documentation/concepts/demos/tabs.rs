@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         tabs::{Tab, TabList, TabPanel, Tabs},
     },
     hooks::{collections::Key, use_collection},
@@ -37,10 +37,12 @@ pub fn TabsConceptDemo() -> impl IntoView {
         </Tabs>
         <p class="demo-status">{move || format!("Selected tab: {}.", selected.get())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

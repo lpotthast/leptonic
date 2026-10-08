@@ -20,7 +20,7 @@ pub fn ComboBoxConceptDemo() -> impl IntoView {
         b.item("nl", "Netherlands");
         b.item("se", "Sweden");
     });
-    let value = RwSignal::new(Vec::<Key>::new());
+    let value = RwSignal::new(None::<Key>);
 
     view! {
         <ComboBox collection=countries filter=use_contains_filter() value=value set_value=value classes="demo-combo">
@@ -42,7 +42,7 @@ pub fn ComboBoxConceptDemo() -> impl IntoView {
             {move || {
                 // The status names the country; the keys are its ISO codes.
                 let name = |key: &Key| countries.with(|c| c.get(key).map(|node| node.text_value.to_string()));
-                value.with(|keys| keys.first().and_then(name)).unwrap_or_else(|| "none".to_owned())
+                value.with(|key| key.as_ref().and_then(name)).unwrap_or_else(|| "none".to_owned())
             }}
             "."
         </p>

@@ -1,4 +1,4 @@
-use leptonic::{atoms::checkbox::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
 use leptos::prelude::*;
 
 const SIZES: [(&str, &str); 3] = [("s", "Small"), ("m", "Medium"), ("l", "Large")];
@@ -55,14 +55,18 @@ pub fn RadioDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Read-only"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=read_only set_selected=read_only>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Read-only"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

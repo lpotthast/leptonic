@@ -97,3 +97,10 @@ per-hook deviation blocks only list what goes beyond them.
 - **C15 Number values (decided 2026-10-05 by the user):** the number field is generic over its value type
   (`NumberValue`, implemented for all primitive integers and floats): exact integer stepping and clamping, min/max
   defaulting to the type's bounds, ICU4X decimals for parsing and formatting (react-aria: JS numbers).
+- **C16 Selection values (decided 2026-10-08 by the user):** atoms whose value is a selection of items are generic
+  over the value type (`SelectionValue`: `to_key`/`from_key`; implemented for `Key`, `String`, the integers, and
+  enums through `selection_value!`): `RadioGroup<V>` (`Option<V>`), `CheckboxGroup<V>` and `ToggleButtonGroup<V>`
+  (`HashSet<V>`), `Select<S>`/`ComboBox<S>` whose type is the selection mode (`S: SelectedValues`: `Option<V>`
+  one value, `Vec<V>` several; no `selection_mode` prop). Hooks keep working with `Key`s; `atoms/typed_values.rs`
+  converts at the boundary. Items take a `Key` (`value=Size::Small` through `From<Size> for Key`), not a generic
+  `V`; a key of no value of the group's type warns in debug builds (react-aria: `Key` = `string | number`).

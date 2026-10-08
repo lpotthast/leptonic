@@ -5,7 +5,10 @@
 
 use std::{cmp::Ordering, sync::Arc};
 
-use icu_collator::{CollatorBorrowed, options::Strength};
+use icu_collator::{
+    CollatorBorrowed,
+    options::{CaseLevel, Strength},
+};
 use icu_normalizer::ComposingNormalizer;
 use leptos::prelude::*;
 
@@ -28,12 +31,14 @@ pub enum CollatorSensitivity {
 }
 
 impl CollatorSensitivity {
-    fn to_icu_strength(self) -> Strength {
+    /// ICU's strength and case level for the sensitivity (ECMA-402's mapping: "case" is primary
+    /// strength with the case level, "variant" tertiary strength).
+    fn to_icu(self) -> (Strength, CaseLevel) {
         match self {
-            Self::Base => Strength::Primary,
-            Self::Accent => Strength::Secondary,
-            Self::Case => Strength::Tertiary,
-            Self::Variant => Strength::Quaternary,
+            Self::Base => (Strength::Primary, CaseLevel::Off),
+            Self::Accent => (Strength::Secondary, CaseLevel::Off),
+            Self::Case => (Strength::Primary, CaseLevel::On),
+            Self::Variant => (Strength::Tertiary, CaseLevel::Off),
         }
     }
 }
@@ -77,7 +82,9 @@ impl Collator {
     #[must_use]
     pub fn new(locale: &Locale, options: &CollatorOptions) -> Self {
         let mut icu_options = icu_collator::options::CollatorOptions::default();
-        icu_options.strength = Some(options.sensitivity.to_icu_strength());
+        let (strength, case_level) = options.sensitivity.to_icu();
+        icu_options.strength = Some(strength);
+        icu_options.case_level = Some(case_level);
         if options.ignore_punctuation {
             // `Intl.Collator`'s `ignorePunctuation`: punctuation and whitespace are ignored on
             // every level.
@@ -242,6 +249,37 @@ mod tests {
 
     use super::*;
     use crate::utils::i18n::locale;
+
+    /// Each sensitivity tells apart what its documentation says (ECMA-402's `sensitivity`).
+    #[test]
+    fn sensitivities_distinguish_what_intl_does() {
+        let en: Locale = "en-US".parse().expect("a locale");
+        let equal = |sensitivity, a: &str, b: &str| {
+            Collator::new(
+                &en,
+                &CollatorOptions {
+                    sensitivity,
+                    ..CollatorOptions::default()
+                },
+            )
+            .compare(a, b)
+                == Ordering::Equal
+        };
+        for (sensitivity, accent_equal, case_equal) in [
+            (CollatorSensitivity::Base, true, true),
+            (CollatorSensitivity::Accent, false, true),
+            (CollatorSensitivity::Case, true, false),
+            (CollatorSensitivity::Variant, false, false),
+        ] {
+            assert_that!(equal(sensitivity, "a", "á"))
+                .with_detail_message(format!("{sensitivity:?}: a = á"))
+                .is_equal_to(accent_equal);
+            assert_that!(equal(sensitivity, "a", "A"))
+                .with_detail_message(format!("{sensitivity:?}: a = A"))
+                .is_equal_to(case_equal);
+            assert_that!(equal(sensitivity, "a", "b")).is_false();
+        }
+    }
 
     fn default_filter(locale_str: &str) -> Filter {
         let locale: Locale = locale_str.parse().expect("test locales are valid");

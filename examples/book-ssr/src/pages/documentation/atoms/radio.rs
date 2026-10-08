@@ -11,7 +11,8 @@ pub fn PageAtomRadio() -> impl IntoView {
         <DocPage title="Radio Atoms">
             <p>
                 "The radio atoms render an unstyled radio group: "<Code inline=true>"RadioGroup"</Code>" holds the selected value, "
-                "each "<Code inline=true>"Radio"</Code>" is a "<Code inline=true>"<label>"</Code>" around a visually hidden "
+                "each "<Code inline=true>"RadioField"</Code>" holds a radio, and its "<Code inline=true>"RadioButton"</Code>" is the "
+                "clickable "<Code inline=true>"<label>"</Code>" around a visually hidden "
                 <Code inline=true>"<input type=\"radio\">"</Code>" and your children. The "
                 <Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>" "<Code inline=true>"Label"</Code>", "
                 <Code inline=true>"Description"</Code>" and "<Code inline=true>"FieldError"</Code>" complete the group. You "
@@ -24,7 +25,7 @@ pub fn PageAtomRadio() -> impl IntoView {
                     <Code inline=true>"RadioGroup"</Code>" calls "
                     <Link href=format!("{}#use-radio-group-state", routes::doc::radio::Hook.materialize())>"use_radio_group_state"</Link>
                     " and "<Link href=format!("{}#use-radio-group", routes::doc::radio::Hook.materialize())>"use_radio_group"</Link>
-                    ", "<Code inline=true>"Radio"</Code>" calls "
+                    ", "<Code inline=true>"RadioField"</Code>" calls "
                     <Link href=format!("{}#use-radio", routes::doc::radio::Hook.materialize())>"use_radio"</Link>" and "
                     <Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>"."
                 </p>
@@ -36,7 +37,7 @@ pub fn PageAtomRadio() -> impl IntoView {
                         use leptonic::{
                             atoms::{
                                 field::Label,
-                                radio::{Radio, RadioGroup},
+                                radio::{RadioButton, RadioField, RadioGroup},
                             },
                             hooks::Key,
                         };
@@ -47,14 +48,18 @@ pub fn PageAtomRadio() -> impl IntoView {
                         view! {
                             <RadioGroup value=plan set_value=plan>
                                 <Label>"Plan"</Label>
-                                <Radio value="free" classes="my-radio">
-                                    <span class="my-radio-circle" aria-hidden="true"></span>
-                                    "Free"
-                                </Radio>
-                                <Radio value="pro" classes="my-radio">
-                                    <span class="my-radio-circle" aria-hidden="true"></span>
-                                    "Pro"
-                                </Radio>
+                                <RadioField value="free">
+                                    <RadioButton classes="my-radio">
+                                        <span class="my-radio-circle" aria-hidden="true"></span>
+                                        "Free"
+                                    </RadioButton>
+                                </RadioField>
+                                <RadioField value="pro">
+                                    <RadioButton classes="my-radio">
+                                        <span class="my-radio-circle" aria-hidden="true"></span>
+                                        "Pro"
+                                    </RadioButton>
+                                </RadioField>
                             </RadioGroup>
                         }
                     "#)}
@@ -64,7 +69,9 @@ pub fn PageAtomRadio() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A horizontal group: the radios sit in a "<Code inline=true>"<div>"</Code>" laid out as a row. Tab into the "
-                    "group and use the arrow keys; they skip the Team plan while it is disabled."
+                    "group and use the arrow keys; they skip the Team plan while it is disabled. The group\u{2019}s value is "
+                    "an enum, "<Code inline=true>"Option<Plan>"</Code>", made a selection value with "
+                    <Code inline=true>"selection_value!"</Code>"."
                 </p>
                 <Demo
                     description="Horizontal plan radio group drawn with CSS, with a disabled radio and disabled and read-only toggles"
@@ -82,16 +89,21 @@ pub fn PageAtomRadio() -> impl IntoView {
                     <Code inline=true>"FieldError"</Code>" as needed (see "
                     <Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>")."
                 </p>
+                <p>
+                    "The group is generic over its value type "<Code inline=true>"V"</Code>": a "<Code inline=true>"Key"</Code>
+                    ", a "<Code inline=true>"String"</Code>", an integer or your enum (see "<Link href=format!("{}#selectionvalue", routes::doc::CollectionState.materialize())>"SelectionValue"</Link>"). The radios\u{2019} "
+                    <Code inline=true>"value"</Code>"s convert into keys, so an enum value works there too."
+                </p>
                 <Section title="Props" id="radio-group-props">
                     <ApiTable kind=ApiKind::Props of="atoms::radio::RadioGroup">
-                        <ApiRow name="default_value" ty="Option<Key>" default="None">"The initially selected value."</ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Option<Key>>>" default="None">
+                        <ApiRow name="default_value" ty="Option<V>" default="None">"The initially selected value."</ApiRow>
+                        <ApiRow name="value" ty="Option<Signal<Option<V>>>" default="None">
                             "The selected value (controlled): a value or any signal."
                         </ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Option<Key>>>" default="None">
+                        <ApiRow name="set_value" ty="Option<Out<Option<V>>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Option<Key>>>" default="None">"Called with the selected value when it changes."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<Option<V>>>" default="None">"Called with the selected value when it changes."</ApiRow>
                         <ApiRow name="orientation" ty="Orientation" default="Vertical">
                             "Sets "<Code inline=true>"aria-orientation"</Code>" and "<Code inline=true>"data-orientation"</Code>
                             ". Lay the radios out to match."
@@ -100,7 +112,7 @@ pub fn PageAtomRadio() -> impl IntoView {
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"The radios can be focused, but the selection can\u{2019}t change."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the group as required."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the group invalid."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<Option<Key>>>" default="None">"Validates the selected value."</ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<Option<V>>>" default="None">"Validates the selected value."</ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
                             <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
@@ -123,33 +135,12 @@ pub fn PageAtomRadio() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="Radio">
-                <p>
-                    "A radio of the enclosing "<Code inline=true>"RadioGroup"</Code>": a "<Code inline=true>"<label>"</Code>
-                    " around the visually hidden input and the children."
-                </p>
-                <Section title="Props" id="radio-props">
-                    <ApiTable kind=ApiKind::Props of="atoms::radio::Radio">
-                        <ApiRow name="value" ty="Key">"The value the radio selects, e.g. "<Code inline=true>"value=\"pro\""</Code>". Required."</ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio. It is also disabled while the group is."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
-                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without label text."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling or describing elements."</ApiRow>
-                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the radio when it mounts."</ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the radio gains or loses focus."</ApiRow>
-                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Option<Children>" default="None">"The circle and the label text."</ApiRow>
-                    </ApiTable>
-                </Section>
-            </Section>
-
             <Section title="RadioField">
                 <p>
-                    "For a radio with a description or an error message of its own, use a "<Code inline=true>"RadioField"</Code>
-                    ": a "<Code inline=true>"<div>"</Code>" around a "<Code inline=true>"RadioButton"</Code>" (the clickable "
-                    <Code inline=true>"<label>"</Code>" around a visually hidden "<Code inline=true>"<input type=\"radio\">"</Code>
-                    " and your children), a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>
-                    ". It takes the props of "<Code inline=true>"Radio"</Code>" (its "<Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>" go to the "<Code inline=true>"<div>"</Code>"); a "<Code inline=true>"FieldError"</Code>" in it shows the group\u{2019}s errors. Both render the data attributes below."
+                    "A radio of the enclosing "<Code inline=true>"RadioGroup"</Code>": a "<Code inline=true>"<div>"</Code>" around a "
+                    <AnchorLink href="#radiobutton">"RadioButton"</AnchorLink>" and, as needed, a "<Code inline=true>"Description"</Code>
+                    " of its own; a "<Code inline=true>"FieldError"</Code>" in it shows the group\u{2019}s errors. There is no single "
+                    <Code inline=true>"Radio"</Code>" atom: a radio is always a field and its button."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -206,7 +197,12 @@ pub fn PageAtomRadio() -> impl IntoView {
                     <ApiRow name="data-required" ty="true">"The group is required."</ApiRow>
                     <ApiRow name="data-invalid" ty="true">"The group is invalid."</ApiRow>
                 </ApiTable>
-                <p><Code inline=true>"Radio"</Code>" sets them on its "<Code inline=true>"<label>"</Code>":"</p>
+                <p>
+                    <Code inline=true>"RadioButton"</Code>" sets them on its "<Code inline=true>"<label>"</Code>"; "
+                    <Code inline=true>"RadioField"</Code>" sets those of the radio\u{2019}s state (all but "
+                    <Code inline=true>"data-pressed"</Code>", "<Code inline=true>"data-hovered"</Code>" and the focus attributes) "
+                    "on its "<Code inline=true>"<div>"</Code>":"
+                </p>
                 <ApiTable kind=ApiKind::DataAttributes>
                     <ApiRow name="data-selected" ty="true">"The radio is selected."</ApiRow>
                     <ApiRow name="data-pressed" ty="true">"The radio or its label is pressed."</ApiRow>
@@ -226,21 +222,24 @@ pub fn PageAtomRadio() -> impl IntoView {
                     " (default class "<Code inline=true>"leptonic-RadioGroup"</Code>") around its children: a "
                     <Code inline=true>"Label"</Code>", the radios, a "<Code inline=true>"Description"</Code>" and a "
                     <Code inline=true>"FieldError"</Code>" ("<Link href=format!("{}#styling", routes::doc::field::Atom.materialize())>"Field Atoms"</Link>
-                    "). Each "<Code inline=true>"Radio"</Code>" renders a "<Code inline=true>"<label>"</Code>" (default class "
-                    <Code inline=true>"leptonic-Radio"</Code>") around a visually hidden "<Code inline=true>"<input>"</Code>
-                    ", followed by your children: draw the circle as the first child, hidden from assistive technology, "
-                    "and put the label text after it:"
+                    "). Each "<Code inline=true>"RadioField"</Code>" renders a "<Code inline=true>"<div>"</Code>" (default class "
+                    <Code inline=true>"leptonic-RadioField"</Code>"), its "<Code inline=true>"RadioButton"</Code>" a "
+                    <Code inline=true>"<label>"</Code>" (default class "<Code inline=true>"leptonic-RadioButton"</Code>") around a "
+                    "visually hidden "<Code inline=true>"<input>"</Code>", followed by your children: draw the circle as the "
+                    "button\u{2019}s first child, hidden from assistive technology, and put the label text after it:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        <Radio value="standard" classes="demo-radio">
-                            <span class="demo-radio-circle" aria-hidden="true"></span>
-                            "Standard shipping"
-                        </Radio>
+                        <RadioField value="standard">
+                            <RadioButton classes="demo-radio">
+                                <span class="demo-radio-circle" aria-hidden="true"></span>
+                                "Standard shipping"
+                            </RadioButton>
+                        </RadioField>
                     "#)}
                 </Code>
                 <p>
-                    "Style the circle through the data attributes of the label, and draw the focus ring around it with "
+                    "Style the circle through the data attributes of the button, and draw the focus ring around it with "
                     <Code inline=true>"data-focus-visible"</Code>", as the input itself is invisible. The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>

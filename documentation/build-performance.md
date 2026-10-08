@@ -246,11 +246,14 @@ To be turned into a guide in the book ("Build times and bundle size"):
   (`lib-profile-release`), wasm-opt via cargo-leptos. Serve it compressed (brotli: 4.3 MB instead of 18.2 MB).
 - Dev wasm: a `wasm-dev` profile without symbols (`lib-profile-dev`, see the experiments): 73% smaller.
 - Bake only the ICU4X locales the app supports: −20% wasm. `scripts/icu-datagen.sh` works for any app.
-- Enable only the leptonic features you use: `syntax-highlight` (syntect, regex: 68 s CPU, 1.35 MB wasm) and
-  `sanitize` (ammonia, html5ever: 17 s CPU, 0.5 MB wasm) are heavy. Features can differ per side: enable
-  `syntax-highlight` in the app's `ssr` feature only and highlight on the server.
+- Enable only the leptonic features you use: `syntax-highlight` (syntect, regex: 68 s CPU, 1.35 MB wasm) is heavy.
+  Features can differ per side: enable `syntax-highlight` in the app's `ssr` feature only and highlight on the
+  server.
 - Server dependencies: `axum-server` with `tls-rustls` builds `aws-lc-sys` (27 s CPU); `tower-http` with `full`
-  builds zstd (11 s). Enable only what's needed.
+  builds zstd (11 s). Enable only what's needed. The book uses `tls-rustls-no-provider` plus `rustls` with only `ring`,
+  installed in `main` (`rustls::crypto::ring::default_provider().install_default()`): rustls alone builds in 6.2 s
+  CPU with `ring` against 29.5 s with `aws-lc-rs` (2026-10-07, Linux, debug), and the book's server no longer
+  builds `aws-lc-sys`.
 - Large apps: split the views into several crates. Every edit re-expands all `view!` macros of the edited crate
   (3.4 s for the book's 62k lines) and type-checks its view types (16 s for a full rebuild).
 
@@ -266,8 +269,6 @@ In leptonic:
 - typed-builder's `PropsBuilder::build` is instantiated per combination of props a call site sets (5.5% of a user
   crate's IR, 2.4% of the wasm code). Atoms with dozens of props cost the most; fewer, grouped props (structs with
   `Default`) reduce it.
-- The components layer (being removed) and its heavy optional features (`syntax-highlight`, `sanitize`, `tiptap`).
-  `components::typography::Code` links syntect into every wasm built with `syntax-highlight` that uses it.
 - Measured and rejected for the release wasm: `opt-level = "s"` (+11%), a newer wasm-opt (−12 KB). Debug-only
   content of the release wasm is small: panic locations are 81 KB of file paths (67 KB of them absolute paths of the
   build machine, `--remap-path-prefix` would shorten them), tracing calls a few KB.

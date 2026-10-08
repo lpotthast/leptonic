@@ -32,7 +32,7 @@ behavior. Leptonic is hooks and unstyled atoms (its components layer is gone), s
 | Dialog                                 | `ModalBackdrop` + `ModalContent` + `Dialog` (with `DialogTitle`) atoms                                                                             |
 | Panel covering the page (mobile menu)  | the shell's `MenuDrawer`: the modal atoms laid out at one edge, with a close button inside                                                         |
 | Show/hide section                      | `use_disclosure` + `use_disclosure_state` (kit `Disclosure`)                                                                                       |
-| Checkbox, switch, radio, toggle button | `Checkbox`, `Switch` (`is_selected` + `set_selected`), `RadioGroup` + `Radio` (`value` + `set_value`), `ToggleButton(Group)` atoms                 |
+| Checkbox, switch, radio, toggle button | `CheckboxField`/`SwitchField` (`is_selected`, `set_selected`) + `*Button`; `RadioGroup` + `RadioField` + `RadioButton`; `ToggleButton(Group)`      |
 | Text, search and number fields         | `TextField`, `SearchField`, `NumberField` atoms (`value` + `set_value`) with `Label`, `Input`, `FieldError`                                        |
 | Keyboard shortcut                      | `utils::keyboard_shortcut::Shortcut` (`Shortcut::key("k").primary()`)                                                                              |
 | Key caps                               | `ShortcutKeys` atom (a `Shortcut`, per platform), `Keys` atom (keys as given); in pages kit `Keys keys="Shift + Tab"`, in tables `KeyRow`          |
@@ -41,7 +41,7 @@ behavior. Leptonic is hooks and unstyled atoms (its components layer is gone), s
 | Icons                                  | kit `Icon` with `icondata` Bootstrap icons (`Bs*`)                                                                                                 |
 | Toasts                                 | `BookToasts::show` (the shell's `ToastRegion` and toast atoms on a `ToastQueue`)                                                                   |
 | Screen reader announcements            | `utils::live_announcer::announce_polite`                                                                                                           |
-| Theme switching                        | the shell's `ThemeToggle` (a `Switch` atom on `use_theme`) inside the app's `ThemeProvider`                                                        |
+| Theme switching                        | the shell's `ThemeToggle` (a switch atom on `use_theme`) inside the app's `ThemeProvider`                                                        |
 | Layout                                 | CSS (flex/grid) with the tokens below                                                                                                              |
 
 ## 2. Design tokens
@@ -163,7 +163,7 @@ A demo is code readers copy. It shows one thing well, and everything around the 
   action: copy."), with correct grammar ("1 time", "2 times"). Event logs keep a `VecDeque` (newest entry
   first: `push_front` + `truncate(50)`; std only, so readers can copy the demo) in a `demo-event-log`. No other
   status classes.
-- **Disabling:** where the concept supports disabling, the standard demo control (a `Checkbox` atom, see "Demo
+- **Disabling:** where the concept supports disabling, the standard demo control (a checkbox atom, see "Demo
   controls" below) labelled "Disabled" in a `demo-controls` row below the demo toggles it. Further switches of a demo
   (read-only, orientation, ...) go into the same row.
 - **The book styles every demo itself:** every demo is styled by the book's demo stylesheets (`style/demos/`), with
@@ -192,13 +192,15 @@ classes in its group's stylesheet (move a rule to `_shared.scss` once another gr
 The standard control, a checkbox (`_shared.scss`; `atoms/demos/{button,checkbox,link,switch}.rs` use it):
 
 ```rust
-use leptonic::atoms::checkbox::Checkbox;
+use leptonic::atoms::checkbox::{CheckboxButton, CheckboxField};
 
 <div class="demo-controls">
-    <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-        <span class="demo-check-box" aria-hidden="true"></span>
-        "Disabled"
-    </Checkbox>
+    <CheckboxField is_selected=disabled set_selected=disabled>
+        <CheckboxButton classes="demo-check">
+            <span class="demo-check-box" aria-hidden="true"></span>
+            "Disabled"
+        </CheckboxButton>
+    </CheckboxField>
 </div>
 ```
 
@@ -212,17 +214,23 @@ The markup of the other atoms demos use most (their classes: `_shared.scss` unle
 <ToggleButton is_selected=bold set_selected=bold classes="demo-toggle-button">"Bold"</ToggleButton>
 
 // Switch (`_fields.scss`): the track and thumb are the demo's own markup.
-<Switch is_selected=wifi set_selected=wifi classes="demo-switch">
-    <span class="demo-switch-track" aria-hidden="true"><span class="demo-switch-thumb"></span></span>
-    "Wi-Fi"
-</Switch>
+<SwitchField is_selected=wifi set_selected=wifi>
+    <SwitchButton classes="demo-switch">
+        <span class="demo-switch-track" aria-hidden="true"><span class="demo-switch-thumb"></span></span>
+        "Wi-Fi"
+    </SwitchButton>
+</SwitchField>
 
 // Radio group (`demo-radio`, `demo-radio-circle` in `_fields.scss`; the group classes in `_fields.scss`).
 <RadioGroup value=plan set_value=plan classes="demo-choice-group">
     <Label classes="demo-choice-group-label">"Plan"</Label>
     <div class="demo-choice-group-items">
-        <Radio value="free" classes="demo-radio"><span class="demo-radio-circle" aria-hidden="true"></span>"Free"</Radio>
-        <Radio value="pro" classes="demo-radio"><span class="demo-radio-circle" aria-hidden="true"></span>"Pro"</Radio>
+        <RadioField value="free">
+            <RadioButton classes="demo-radio"><span class="demo-radio-circle" aria-hidden="true"></span>"Free"</RadioButton>
+        </RadioField>
+        <RadioField value="pro">
+            <RadioButton classes="demo-radio"><span class="demo-radio-circle" aria-hidden="true"></span>"Pro"</RadioButton>
+        </RadioField>
     </div>
 </RadioGroup>
 

@@ -51,6 +51,8 @@ fn Items() -> impl IntoView {
 ///   Kangaroo disabled.
 /// - `#lbf-empty`: no options, the empty state "No results".
 /// - `#lbf-removal`: Cat, Dog, Kangaroo; `#lbf-remove-dog` removes Dog.
+/// - `#lbf-relabel`: Cat labelled "Cat" (a section "Pets" labelled "Pets"); `#lbf-relabel-cat`
+///   relabels them "Kitten" and "Animals".
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomListBoxFeatures() -> impl IntoView {
@@ -102,6 +104,18 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
         |animal| Key::from(*animal),
         |animal| (*animal).to_owned(),
     );
+    let relabeled = RwSignal::new(false);
+    let relabel = use_collection(move |b| {
+        let relabeled = relabeled.get();
+        let _ = b
+            .section("pets", |s| {
+                let _ = s
+                    .item("cat", "Cat")
+                    .aria_label(if relabeled { "Kitten" } else { "Cat" });
+                s.item("dog", "Dog");
+            })
+            .aria_label(if relabeled { "Animals" } else { "Pets" });
+    });
     let rtl = "ar-AE".parse::<Locale>().expect("a locale");
 
     view! {
@@ -238,6 +252,16 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
             </button>
             <ListBox collection=removal aria_label="Removal">
                 <Items />
+            </ListBox>
+        </div>
+
+        <div id="lbf-relabel">
+            <button id="lbf-relabel-cat" on:click=move |_| relabeled.set(true)>"Relabel"</button>
+            <ListBox collection=relabel aria_label="Relabel">
+                <ListBoxSection key="pets">
+                    <ListBoxItem key="cat">"Cat"</ListBoxItem>
+                    <ListBoxItem key="dog">"Dog"</ListBoxItem>
+                </ListBoxSection>
             </ListBox>
         </div>
     }

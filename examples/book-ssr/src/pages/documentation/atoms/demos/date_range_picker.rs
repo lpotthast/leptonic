@@ -5,7 +5,7 @@ use leptonic::{
             CalendarHeaderCell, CalendarHeaderRow, CalendarHeading, CalendarNextButton,
             CalendarPreviousButton, CalendarWeek, RangeCalendar,
         },
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         datepicker::{DateInput, DatePickerButton, DatePickerGroup, DateRangePicker, DateSegment},
         dialog::Dialog,
         field::{FieldError, Label},
@@ -96,10 +96,12 @@ pub fn DateRangePickerAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -14,6 +14,7 @@ use crate::{
     },
     utils::focusability::{PreventFocusAttr, prevent_focus_attr},
 };
+use crate::utils::intl_strings::{TreeStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -23,9 +24,6 @@ use crate::{
 // - The expand button is configured, not rendered: `expand_button` is the `UseButtonInput` for
 //   `use_button` (with its label). Its `data-leptonic-prevent-focus` attribute comes separately
 //   (`expand_button_attrs`), as `UseButtonInput` takes no extra attributes.
-//
-// ## OMITTED FEATURES
-// - A localized label: "Expand"/"Collapse" are English (no message bundles yet).
 //
 // =============================================================================
 
@@ -78,18 +76,17 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     let is_expanded = Signal::derive(move || {
         expansion.is_some_and(|expansion| key.with_value(|k| expansion.is_expanded(k)))
     });
+    let strings = use_localized_strings::<TreeStrings>();
     let expand_button = UseButtonInput {
         // Labelled by its own label ("Expand"/"Collapse") and the item.
         id: Some(button_id.clone()),
         aria_label: MaybeProp::derive(move || {
-            Some(
-                if is_expanded.get() {
-                    "Collapse"
-                } else {
-                    "Expand"
-                }
-                .to_owned(),
-            )
+            let strings = strings.read();
+            Some(if is_expanded.get() {
+                strings.collapse()
+            } else {
+                strings.expand()
+            })
         }),
         aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         exclude_from_tab_order: Signal::stored(true),

@@ -85,24 +85,9 @@ pub fn use_tree_state(input: UseTreeStateInput) -> TreeState {
         on_expanded_change,
     } = input;
 
-    let binding =
-        binding.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_expanded_keys)));
-    let expanded_keys = binding.value;
-    let set_expanded = Callback::new(move |keys: HashSet<Key>| {
-        if expanded_keys.with_untracked(|current| *current != keys) {
-            binding.set(keys.clone());
-            if let Some(on_expanded_change) = on_expanded_change {
-                on_expanded_change.run(keys);
-            }
-        }
-    });
-    let toggle = Callback::new(move |key: Key| {
-        let mut keys = expanded_keys.get_untracked();
-        if !keys.remove(&key) {
-            keys.insert(key);
-        }
-        set_expanded.run(keys);
-    });
+    let (expansion, set_expanded) =
+        use_tree_expansion(default_expanded_keys, binding, on_expanded_change);
+    let expanded_keys = expansion.expanded_keys;
 
     let visible: CollectionMemo = Memo::new(move |_| {
         expanded_keys.with(|expanded| Arc::new(collection.with(|c| c.with_expanded(expanded))))
@@ -125,12 +110,43 @@ pub fn use_tree_state(input: UseTreeStateInput) -> TreeState {
             selection,
             item_elements: ItemElements::new(),
         },
-        expansion: TreeExpansion {
+        expansion,
+        set_expanded,
+    }
+}
+
+/// The expansion state of a tree (C4: `default_expanded_keys` + `on_expanded_change`, or a binding
+/// to app state), and the setter of all expanded keys. Shared by trees and tree tables.
+pub(crate) fn use_tree_expansion(
+    default_expanded_keys: HashSet<Key>,
+    binding: Option<ValueBinding<HashSet<Key>>>,
+    on_expanded_change: Option<Callback<HashSet<Key>>>,
+) -> (TreeExpansion, Callback<HashSet<Key>>) {
+    let binding =
+        binding.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_expanded_keys)));
+    let expanded_keys = binding.value;
+    let set_expanded = Callback::new(move |keys: HashSet<Key>| {
+        if expanded_keys.with_untracked(|current| *current != keys) {
+            binding.set(keys.clone());
+            if let Some(on_expanded_change) = on_expanded_change {
+                on_expanded_change.run(keys);
+            }
+        }
+    });
+    let toggle = Callback::new(move |key: Key| {
+        let mut keys = expanded_keys.get_untracked();
+        if !keys.remove(&key) {
+            keys.insert(key);
+        }
+        set_expanded.run(keys);
+    });
+    (
+        TreeExpansion {
             expanded_keys,
             toggle,
         },
         set_expanded,
-    }
+    )
 }
 
 #[cfg(test)]

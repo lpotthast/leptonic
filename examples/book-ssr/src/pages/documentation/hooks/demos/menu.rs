@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use leptonic::hooks::PopoverModality;
 use leptonic::{
-    atoms::{checkbox::Checkbox, focus_scope::FocusScope},
+    atoms::{checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
     hooks::{
         IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, SelectionMode,
         UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn, UseMenuSectionInput,
@@ -80,10 +80,12 @@ pub fn MenuDemo() -> impl IntoView {
         </div>
         <p class="demo-status">{status}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -11,18 +11,18 @@ use crate::{
     hooks::{
         CellFocusMode, ColumnKind, ColumnSize, DisabledBehavior, GridFocusMode, IntoAttrs,
         KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, SortDescriptor,
-        SortDirection, TableCollection, TableColumnResizeState, TableData, UseFocusRingInput,
-        UseFocusRingReturn, UseFocusVisibleInput, UseHoverInput, UseTableCellInput,
-        UseTableCellReturn, UseTableColumnHeaderInput, UseTableColumnHeaderReturn,
-        UseTableColumnResizeInput, UseTableColumnResizeReturn, UseTableColumnResizeStateInput,
-        UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn, UseTableRowInput,
-        UseTableRowReturn, UseTableSelectAllCheckboxInput, UseTableSelectionCheckboxInput,
-        UseTableStateInput,
+        SortDirection, TableCollection, TableColumnResizeState, TableData, TableTreeInput,
+        UseButtonInput, UseFocusRingInput, UseFocusRingReturn, UseFocusVisibleInput, UseHoverInput,
+        UseTableCellInput, UseTableCellReturn, UseTableColumnHeaderInput,
+        UseTableColumnHeaderReturn, UseTableColumnResizeInput, UseTableColumnResizeReturn,
+        UseTableColumnResizeStateInput, UseTableHeaderPlaceholderInput, UseTableInput,
+        UseTableReturn, UseTableRowInput, UseTableRowReturn, UseTableSelectAllCheckboxInput,
+        UseTableSelectionCheckboxInput, UseTableStateInput,
         collections::{
             CollectionOptions, EscapeKeyBehavior, Key, NodeKind, Selection, SelectionOptions,
         },
-        use_checkbox, use_focus_ring, use_focus_visible, use_grid_row_group, use_hover, use_table,
-        use_table_cell, use_table_column_header, use_table_column_resize,
+        use_button, use_checkbox, use_focus_ring, use_focus_visible, use_grid_row_group, use_hover,
+        use_table, use_table_cell, use_table_column_header, use_table_column_resize,
         use_table_column_resize_state, use_table_header_placeholder, use_table_header_row,
         use_table_row, use_table_select_all_checkbox, use_table_selection_checkbox,
         use_table_state,
@@ -34,6 +34,7 @@ use crate::{
         data_attributes::flag,
         default_class::with_default_class,
         i18n::use_direction,
+        intl_strings::{AtomStrings, use_localized_strings},
         locale::WritingDirection,
         scoped_context::scoped_view,
         style::WidthProperty,
@@ -129,6 +130,12 @@ pub fn ResizableTableContainer(
 /// [`TableHeader`] (it renders the column headers itself) and a [`TableBody`] with one
 /// [`TableRow`] per row, holding one [`TableCell`] per data column.
 ///
+/// A tree table (`tree_column`): rows with child rows (`ItemBuilder::children`) expand and
+/// collapse. Render every row, child rows after their parent (in collection order); rows under a
+/// collapsed row are `hidden`. Put a [`TableExpandButton`] into the tree column's cells. Rows
+/// and cells carry `data-expanded`, `data-has-child-items` and `data-level`, rows the
+/// `--table-row-level` style (for indenting), tree column cells `data-tree-column`.
+///
 /// Default class: `leptonic-Table`.
 #[component]
 #[allow(clippy::too_many_lines, clippy::implicit_hasher)]
@@ -179,6 +186,20 @@ pub fn Table(
     /// Called with the key of an activated cell.
     #[prop(into, optional)]
     on_cell_action: Option<Callback<Key>>,
+    /// Makes the table a tree table: the column showing the hierarchy (react-aria-components'
+    /// `treeColumn`).
+    #[prop(into, optional)]
+    tree_column: Option<Key>,
+    /// The initially expanded rows of a tree table. Ignored with `expanded_keys`.
+    #[prop(optional)]
+    default_expanded_keys: HashSet<Key>,
+    /// The expanded rows (controlled): a value or any signal.
+    #[prop(into, optional)]
+    expanded_keys: Option<Signal<HashSet<Key>>>,
+    /// Receives the expanded rows: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_expanded_keys: Option<Out<HashSet<Key>>>,
+    #[prop(into, optional)] on_expanded_change: Option<Callback<HashSet<Key>>>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
     #[prop(into, optional)] classes: Classes,
@@ -186,6 +207,16 @@ pub fn Table(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Table", classes);
+    let tree = tree_column.map(|column| {
+        let (expanded_keys, on_expanded_change) =
+            ValueBinding::from_state_props(expanded_keys, set_expanded_keys, on_expanded_change);
+        TableTreeInput {
+            column,
+            default_expanded_keys,
+            expanded_keys,
+            on_expanded_change,
+        }
+    });
     // Without `sort_descriptor`, the table owns the sorting and `set_sort_descriptor` receives
     // each change, like `on_sort_change`.
     let on_sort_change = match (sort_descriptor, set_sort_descriptor) {
@@ -200,6 +231,7 @@ pub fn Table(
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let state = use_table_state(UseTableStateInput {
+        tree,
         selection: SelectionOptions {
             selection_mode,
             selection_behavior: Signal::stored(selection_behavior),
@@ -480,6 +512,7 @@ fn ColumnResizer(
 ) -> impl IntoView {
     let data = expect_context::<TableData>();
     let state = resize.state;
+    let strings = use_localized_strings::<AtomStrings>();
     let UseTableColumnResizeReturn {
         resizer_props,
         input_props,
@@ -493,7 +526,7 @@ fn ColumnResizer(
         state,
         table: data,
         column: column.clone(),
-        aria_label: crate::hooks::RESIZER_LABEL.into(),
+        aria_label: Signal::derive(move || Some(strings.read().table_resizer())).into(),
         element: CapturedElement::new(),
         is_disabled: Signal::stored(false),
     });
@@ -529,20 +562,20 @@ fn ColumnResizer(
     }
 }
 
-/// The body of a [`Table`]: its rows.
+/// The body of a [`Table`]: its rows (none for an empty table).
 ///
 /// Default class: `leptonic-TableBody`.
 #[component]
 pub fn TableBody(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    children: Children,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableBody", classes);
     let row_group = use_grid_row_group();
     view! {
         <tbody {..row_group.row_group_props.into_attrs()} class=classes style=styles>
-            {children()}
+            {children.map(|children| children())}
         </tbody>
     }
 }
@@ -551,6 +584,12 @@ pub fn TableBody(
 #[derive(Debug, Clone)]
 struct RowContext {
     key: Key,
+    /// A tree table's expand button (for [`TableExpandButton`]), whether the row has child rows
+    /// and whether they are shown.
+    expand_button: StoredValue<Option<UseButtonInput>>,
+    has_child_rows: Signal<bool>,
+    is_expanded: Signal<bool>,
+    level: Signal<Option<usize>>,
 }
 
 /// A row of a [`Table`], for the collection row `key`. With a selection checkbox column, it
@@ -572,6 +611,7 @@ pub fn TableRow(
     let classes = with_default_class("leptonic-TableRow", classes);
     let data = expect_context::<TableData>();
     let table = data.state.table;
+    let data_rows = data.state.grid.list.collection;
     // Follows the table (the selection column can come and go).
     let selection_column = Memo::new(move |_| {
         table.with(|t| {
@@ -588,6 +628,11 @@ pub fn TableRow(
         is_pressed,
         allows_selection,
         has_action,
+        expand_button,
+        is_expanded,
+        has_child_rows,
+        level,
+        ..
     } = use_table_row(UseTableRowInput {
         // Inside a `ContextMenuTrigger`: its menu opens on this row.
         on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
@@ -595,7 +640,12 @@ pub fn TableRow(
         key: key.clone(),
     });
     let (attrs, row_styles) = row_props.into_parts();
-    let styles = row_styles.merge(styles);
+    // A tree table's row level, for indenting (react-aria-components' `--table-row-level`).
+    let styles = row_styles
+        .add_optional_unchecked("--table-row-level", move || {
+            level.get().map(|level| level.to_string())
+        })
+        .merge(styles);
     let focus_visible = expect_context::<TableFocusVisible>().0;
     let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
     // Interactive rows show hover (react-aria-components' `Row`).
@@ -604,19 +654,37 @@ pub fn TableRow(
         ..UseHoverInput::default()
     });
 
+    // In a tree table, rows under a collapsed row aren't part of the grid: hidden.
+    let visible_rows = data_rows;
+    let row_key = StoredValue::new(key.clone());
+    let is_hidden = Signal::derive(move || {
+        !row_key.with_value(|key| visible_rows.with(|rows| rows.contains_key(key)))
+    });
+    let context = RowContext {
+        key,
+        expand_button: StoredValue::new(expand_button),
+        has_child_rows,
+        is_expanded,
+        level,
+    };
+
     view! {
-        <Provider value=RowContext { key }>
+        <Provider value=context>
             <tr
                 {..attrs}
                 {..hover.props.into_attrs()}
                 class=classes
                 style=styles
+                hidden=is_hidden
                 data-selected=flag(is_selected)
                 data-focused=flag(is_focused)
                 data-focus-visible=flag(is_focus_visible)
                 data-hovered=flag(hover.is_hovered)
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
+                data-expanded=flag(is_expanded)
+                data-has-child-items=flag(has_child_rows)
+                data-level=move || level.get().map(|level| level.to_string())
             >
                 {move || selection_column.get().map(|column| view! { <TableCell column /> })}
                 {children()}
@@ -653,9 +721,19 @@ pub fn TableCell(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableCell", classes);
     let data = expect_context::<TableData>();
-    let row = expect_context::<RowContext>().key;
+    let row_context = expect_context::<RowContext>();
+    let row = row_context.key.clone();
+    let (row_expanded, row_has_child_rows, row_level) = (
+        row_context.is_expanded,
+        row_context.has_child_rows,
+        row_context.level,
+    );
     let table = data.state.table;
     let row_key = row.clone();
+    let is_tree_column = data
+        .state
+        .tree
+        .is_some_and(|tree| tree.is_tree_column(&column));
     // The row's cell in the column (cells spanning columns shift the cells after them), and
     // the column's kind.
     let cell = Memo::new(move |_| {
@@ -665,7 +743,7 @@ pub fn TableCell(
                 .map_or((0, ColumnKind::Data), |c| (c.index, c.kind));
             let key = t
                 .collection()
-                .children(&row)
+                .cells(&row)
                 .find(|n| n.col_index.unwrap_or(n.index) == index)
                 .map_or_else(|| Key::cell(&row, index), |n| n.key.clone());
             (key, kind)
@@ -715,9 +793,58 @@ pub fn TableCell(
                 data-pressed=flag(is_pressed)
                 data-focus-visible=flag(is_focus_visible)
                 data-hovered=flag(hover.is_hovered)
+                data-tree-column=is_tree_column.then_some("")
+                data-expanded=flag(row_expanded)
+                data-has-child-items=flag(row_has_child_rows)
+                data-level=move || row_level.get().map(|level| level.to_string())
             >
                 {content}
             </td>
         }
     }
+}
+
+/// The expand button of a tree table's row (react-aria-components' `Button slot="chevron"`):
+/// put it into the row's cell in the tree column. Labelled "Expand"/"Collapse" plus the row; it
+/// is `hidden` while the row has no child rows.
+///
+/// Data attributes: `data-expanded`, `data-pressed`, `data-hovered`, `data-focus-visible`,
+/// `data-disabled`.
+///
+/// Default class: `leptonic-TableExpandButton`.
+#[component]
+pub fn TableExpandButton(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-TableExpandButton", classes);
+    let Some(row) = use_context::<RowContext>() else {
+        crate::utils::dev_warn!("a <TableExpandButton> belongs in a <TableRow>");
+        return ().into_any();
+    };
+    let Some(input) = row.expand_button.get_value() else {
+        crate::utils::dev_warn!("a <TableExpandButton> belongs in a tree table (`tree_column`)");
+        return ().into_any();
+    };
+    let button = use_button(input);
+    let (attrs, button_styles) = button.props.into_parts();
+    let has_child_rows = row.has_child_rows;
+    view! {
+        <button
+            {..attrs}
+            {..crate::utils::focusability::prevent_focus_attr()}
+            class=classes
+            style=button_styles.merge(styles)
+            hidden=move || !has_child_rows.get()
+            data-expanded=flag(row.is_expanded)
+            data-pressed=flag(button.is_pressed)
+            data-hovered=flag(button.is_hovered)
+            data-focus-visible=flag(button.is_focus_visible)
+            data-disabled=flag(button.is_disabled)
+        >
+            {children.map(|children| children())}
+        </button>
+    }
+    .into_any()
 }

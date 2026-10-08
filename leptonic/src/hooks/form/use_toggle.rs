@@ -146,8 +146,8 @@ pub struct UseToggleInput {
     pub options: ToggleOptions,
 }
 
-/// Output of [`use_toggle`] (and [`use_checkbox`](super::use_checkbox),
-/// [`use_switch`](super::use_switch)).
+/// Output of [`use_toggle`] (and [`use_checkbox`](fn@super::use_checkbox),
+/// [`use_switch`](fn@super::use_switch)).
 #[derive(Debug)]
 pub struct UseToggleReturn {
     /// Props for the `<label>` wrapping the input: pressing it toggles the input.
@@ -341,7 +341,7 @@ impl IntoAttrs for UseToggleInputProps {
 }
 
 /// Provides the behavior and accessibility of a toggle on an `<input type="checkbox">` (the
-/// base of [`use_checkbox`](super::use_checkbox) and [`use_switch`](super::use_switch)).
+/// base of [`use_checkbox`](fn@super::use_checkbox) and [`use_switch`](fn@super::use_switch)).
 pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
     use_toggle_with(input, None, None)
 }

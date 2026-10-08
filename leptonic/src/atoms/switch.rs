@@ -10,6 +10,7 @@ use crate::{
         use_toggle_state,
     },
     utils::{
+        dev_warn,
         ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
         styles::Styles, visually_hidden::visually_hidden_styles,
     },
@@ -23,82 +24,10 @@ use crate::{
 // - Selection (C4): `default_selected` + `on_change`, or `is_selected` + `set_selected`
 //   (react-aria: `isSelected` + `onChange`).
 // - Render props become `data-*` attributes plus plain children.
-// - `Switch` is kept beside `SwitchField` + `SwitchButton` (react-aria-components deprecates it):
-//   the one-element switch without a description of its own.
+// - No single `Switch` (react-aria-components deprecates it): a switch is a `SwitchField` with
+//   its `SwitchButton`.
 //
 // =============================================================================
-
-/// A headless switch: a `<label>` around a visually hidden `<input type="checkbox"
-/// role="switch">` and the children (draw the track with them, styled through the label's
-/// data attributes). For a description or an error message of its own, use a [`SwitchField`]
-/// with a [`SwitchButton`].
-///
-/// Data attributes: `data-selected`, `data-pressed`, `data-hovered`, `data-focused`,
-/// `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`, `data-required`.
-///
-/// Default class: `leptonic-Switch`.
-#[allow(clippy::too_many_arguments)]
-#[component]
-pub fn Switch(
-    #[prop(optional)] default_selected: bool,
-    /// Called when the switch is turned on or off.
-    #[prop(into, optional)]
-    on_change: Option<Callback<bool>>,
-    /// Whether the toggle is selected (controlled): a value or any signal.
-    #[prop(into, optional)]
-    is_selected: Option<Signal<bool>>,
-    /// Receives the selection: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
-    #[prop(into, optional)]
-    set_selected: Option<Out<bool>>,
-    #[prop(into, optional)] is_disabled: Signal<bool>,
-    #[prop(into, optional)] is_read_only: Signal<bool>,
-    #[prop(into, optional)] is_required: Signal<bool>,
-    #[prop(into, optional)] is_invalid: Signal<bool>,
-    #[prop(optional)] validate: Option<ValidateFn<bool>>,
-    /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
-    #[prop(optional)]
-    validation_behavior: Option<ValidationBehavior>,
-    #[prop(into, optional)] name: Option<String>,
-    /// The input's `value` (submitted while on).
-    #[prop(into, optional)]
-    form_value: Option<String>,
-    #[prop(into, optional)] form: Option<String>,
-    /// The input's id.
-    #[prop(into, optional)]
-    id: Option<String>,
-    #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
-    #[prop(optional)] auto_focus: bool,
-    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
-    #[prop(into, optional)] classes: Classes,
-    #[prop(into, optional)] styles: Styles,
-    #[prop(optional)] children: Option<Children>,
-) -> impl IntoView {
-    let classes = with_default_class("leptonic-Switch", classes);
-    let switch = use_switch_atom(SwitchSetup {
-        default_selected,
-        on_change,
-        is_selected,
-        set_selected,
-        is_disabled,
-        is_read_only,
-        is_required,
-        is_invalid,
-        validate,
-        validation_behavior,
-        name,
-        form_value,
-        form,
-        id,
-        aria_label,
-        aria_labelledby,
-        aria_describedby,
-        auto_focus,
-        on_focus_change,
-    });
-    switch_button(switch, is_required, classes, styles, children)
-}
 
 /// A headless switch with a description and an error message of its own: a `<div>` around a
 /// [`SwitchButton`] (the clickable `<label>` with the track), a
@@ -219,14 +148,15 @@ pub fn SwitchButton(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SwitchButton", classes);
-    let ctx =
-        use_context::<SwitchButtonCtx>().expect("a <SwitchButton> belongs in a <SwitchField>");
-    let switch = ctx
-        .switch
-        .try_update_value(Option::take)
-        .flatten()
-        .expect("a <SwitchField> has one <SwitchButton>");
-    switch_button(switch, ctx.is_required, classes, styles, children)
+    let Some(ctx) = use_context::<SwitchButtonCtx>() else {
+        dev_warn!("a <SwitchButton> belongs in a <SwitchField>");
+        return ().into_any();
+    };
+    let Some(switch) = ctx.switch.try_update_value(Option::take).flatten() else {
+        dev_warn!("a <SwitchField> has one <SwitchButton>");
+        return ().into_any();
+    };
+    switch_button(switch, ctx.is_required, classes, styles, children).into_any()
 }
 
 /// What a [`SwitchField`] hands its [`SwitchButton`].
@@ -237,7 +167,7 @@ struct SwitchButtonCtx {
     is_required: Signal<bool>,
 }
 
-/// The settings of a [`Switch`] or [`SwitchField`].
+/// The settings of a [`SwitchField`].
 struct SwitchSetup {
     default_selected: bool,
     on_change: Option<Callback<bool>>,
@@ -260,7 +190,7 @@ struct SwitchSetup {
     on_focus_change: Option<Callback<bool>>,
 }
 
-/// The switch of a [`Switch`] or [`SwitchField`].
+/// The switch of a [`SwitchField`].
 fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
     let SwitchSetup {
         default_selected,
@@ -313,7 +243,7 @@ fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
     })
 }
 
-/// The `<label>` of a [`Switch`] or [`SwitchButton`].
+/// The `<label>` of a [`SwitchButton`].
 fn switch_button(
     switch: UseSwitchReturn,
     is_required: Signal<bool>,

@@ -4,7 +4,6 @@
 //! [`use_table_column_header`], body rows with [`use_table_row`] and cells with
 //! [`use_table_cell`]. Group rows (`<thead>`, `<tbody>`) with `use_grid_row_group`.
 
-mod messages;
 
 /// The rows and columns of a table.
 pub mod table_collection;
@@ -45,8 +44,6 @@ pub mod use_table_selection_checkbox;
 /// Table state: rows, columns, selection, focus and sorting.
 pub mod use_table_state;
 
-#[cfg(feature = "atoms")]
-pub(crate) use messages::RESIZER as RESIZER_LABEL;
 pub use table_collection::*;
 pub use table_column_layout::{ColumnWidths, DEFAULT_MIN_WIDTH, DefaultMinWidth, DefaultWidth};
 pub use table_keyboard_delegate::*;

@@ -356,8 +356,11 @@ async fn scroll_wheel(page: &Page<'_>) -> Result<(), Report> {
         .execute("document.activeElement?.blur();", Vec::new())
         .await?;
     wheel(page, &input, -10.0, false).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("nf-wheel-changes").await?).is_equal_to(String::new());
+    stays!(
+        "the text of #nf-wheel-changes",
+        String::new(),
+        page.read_text_of("nf-wheel-changes").await?
+    );
 
     tab_into(page, &input).await?;
     wheel(page, &input, -10.0, false).await?;
@@ -368,8 +371,11 @@ async fn scroll_wheel(page: &Page<'_>) -> Result<(), Report> {
     // Mostly horizontal (a trackpad) or a zoom: no step.
     wheel(page, &input, 10.0, true).await?;
     wheel(page, &input, -10.0, true).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("nf-wheel-changes").await?).is_equal_to("-1 0".to_owned());
+    stays!(
+        "the text of #nf-wheel-changes",
+        "-1 0".to_owned(),
+        page.read_text_of("nf-wheel-changes").await?
+    );
     // The wheel doesn't blur the input.
     page.wait_for_focus_on(&input, "the wheel input").await
 }

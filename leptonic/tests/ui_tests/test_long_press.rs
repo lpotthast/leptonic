@@ -177,9 +177,11 @@ async fn fire(driver: &WebDriver, name: &str, kind: &str) -> Result<(), Report> 
 }
 
 async fn expect_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    assert_that!(page.element("test-long-press-log").await?.text().await?)
-        .is_equal_to(expected.to_owned());
+    stays!(
+        "the text of #test-long-press-log",
+        expected.to_owned(),
+        page.element("test-long-press-log").await?.text().await?
+    );
     Ok(())
 }
 

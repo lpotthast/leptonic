@@ -11,7 +11,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
             <p>
                 "Three hooks build a tooltip for elements you render yourself: its state with the delays shared by all "
                 "tooltips, the trigger\u{2019}s behavior and the ARIA link between trigger and tooltip. See the "
-                <Link href=routes::doc::Tooltip.materialize()>"Tooltip overview"</Link>" for when to use a tooltip."
+                <Link href=routes::doc::Tooltip.materialize()>"Tooltip overview"</Link>" for when to use a tooltip and for its keyboard interaction."
             </p>
 
             <ReactAria hook="useTooltipTrigger"/>
@@ -189,14 +189,6 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Focusing the trigger opens its tooltip; moving focus away closes it."</KeyRow>
-                    <KeyRow keys="Escape">
-                        "Closes the tooltip, wherever focus is. Only the tooltip closes: an enclosing dialog or popover stays open."
-                    </KeyRow>
-                </KeyboardTable>
-            </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Tooltip.materialize()>"Tooltip overview"</Link></li>

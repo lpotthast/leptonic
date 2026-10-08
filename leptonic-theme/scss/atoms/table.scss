@@ -60,7 +60,12 @@
   transition-duration: 200ms;
   -webkit-tap-highlight-color: transparent;
 
-  &:last-child {
+  // Tree tables keep collapsed rows `hidden` in the DOM: positions count the shown rows only.
+  &[hidden] {
+    display: none;
+  }
+
+  &:nth-last-child(1 of :not([hidden])) {
     border-radius: 0 0 var(--radius) var(--radius);
   }
 
@@ -73,7 +78,7 @@
     background: var(--gray-100);
   }
 
-  &:nth-child(2n) {
+  &:nth-child(2n of :not([hidden])) {
     background: var(--gray-100);
     &[data-pressed] {
       background: var(--gray-200);
@@ -108,11 +113,11 @@
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 
-  &:is(.leptonic-TableRow:last-child > :first-child) {
+  &:is(.leptonic-TableRow:nth-last-child(1 of :not([hidden])) > :first-child) {
     border-end-start-radius: var(--radius);
   }
 
-  &:is(.leptonic-TableRow:last-child > :last-child) {
+  &:is(.leptonic-TableRow:nth-last-child(1 of :not([hidden])) > :last-child) {
     border-end-end-radius: var(--radius);
   }
 
@@ -190,7 +195,7 @@
 .leptonic-TableCell {
   transform: translateZ(0);
   --border-color: var(--gray-300);
-  tr:not(:last-child) & {
+  tr:not(:nth-last-child(1 of :not([hidden]))) & {
     border-bottom: 0.5px solid var(--border-color);
   }
 
@@ -200,6 +205,49 @@
 
   @media (forced-colors: active) {
     --border-color: ButtonBorder;
+  }
+
+  // Tree tables: the tree column indents by the row's level, leaving room for the expand
+  // button where a row has none.
+  &[data-tree-column] {
+    --chevron-placeholder: var(--spacing-5);
+    padding-inline-start: calc(
+      var(--spacing-2) + (var(--table-row-level) - 1) * var(--spacing-4) +
+        var(--chevron-placeholder)
+    );
+
+    &[data-has-child-items] {
+      --chevron-placeholder: 0px;
+    }
+  }
+
+  .leptonic-TableExpandButton {
+    all: unset;
+    vertical-align: middle;
+    margin-inline-end: var(--spacing-1);
+
+    // `all: unset` undoes the browser's `[hidden]` rule (rows without child rows).
+    &[hidden] {
+      display: none;
+    }
+
+    &[data-focus-visible] {
+      outline: 2px solid var(--focus-ring-color);
+    }
+
+    svg {
+      rotate: 0deg;
+      transition: rotate 200ms;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 3px;
+      width: var(--spacing-4);
+      height: var(--spacing-4);
+    }
+  }
+
+  &[data-expanded] .leptonic-TableExpandButton svg {
+    rotate: 90deg;
   }
 }
 

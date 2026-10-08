@@ -31,8 +31,8 @@ pub fn PageColor() -> impl IntoView {
                     </li>
                     <li>
                         <Link href=routes::doc::ColorPicker.materialize()>"Color Picker"</Link>" puts several of them "
-                        "together: the "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker atom"</Link>
-                        " shares its color with the atoms inside it, and "
+                        "together: the "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker"</Link>
+                        " atom shares its color with the atoms inside it, and "
                         <Link href=routes::doc::color_picker::Hook.materialize()>"use_color_picker_state"</Link>
                         " holds the color for parts built from hooks."
                     </li>
@@ -219,14 +219,15 @@ pub fn PageColor() -> impl IntoView {
 
                 <Section title="Color Names">
                     <p>
-                        <Code inline=true>"color_name()"</Code>" describes a color in words, such as \u{201c}dark vibrant "
+                        <Code inline=true>"color_name(&locale)"</Code>" describes a color in words, such as \u{201c}dark vibrant "
                         "blue\u{201d} or \u{201c}very light grayish green\u{201d}, from its lightness, chroma and hue in the "
-                        "perceptual OKLCH space; "<Code inline=true>"hue_name()"</Code>" names only its hue (\u{201c}blue\u{201d}). "
+                        "perceptual OKLCH space; "<Code inline=true>"hue_name(&locale)"</Code>" names only its hue (\u{201c}blue\u{201d}). "
                         "The color controls use them so that colors aren\u{2019}t conveyed by sight alone: a swatch is named "
                         "after its color, and the value texts of areas, sliders and wheels end with the color\u{2019}s name (the "
                         "hue\u{2019}s, on a hue). A transparent color\u{2019}s name ends with its transparency (\u{201c}vibrant "
-                        "red, 80% transparent\u{201d}); a fully transparent swatch is named \u{201c}transparent\u{201d}. The names are "
-                        "English for every locale."
+                        "red, 80% transparent\u{201d}); a fully transparent swatch is named \u{201c}transparent\u{201d}. The names "
+                        "follow the locale (pass "<Code inline=true>"use_locale()"</Code>"\u{2019}s, as the controls do), "
+                        "and so do the channel names of "<Code inline=true>"channel_name(channel, &locale)"</Code>"."
                     </p>
                     <p>"Type a color to see how it parses and what it is called:"</p>
                     <Demo description="A text field parsing a CSS-like color, with its swatch, color name and hue name" source=include_str!("demos/color_names.rs")>

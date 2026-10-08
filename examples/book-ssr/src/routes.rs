@@ -84,6 +84,11 @@ pub mod routes {
             page!(crate::pages::documentation::getting_started::accessibility::PageAccessibility);
         }
 
+        #[route("/build-times")]
+        mod build_times {
+            page!(crate::pages::documentation::getting_started::build_times::PageBuildTimes);
+        }
+
         // ── Concepts: buttons ───────────────────────────────────────────
 
         #[route("/buttons")]
@@ -1621,6 +1626,11 @@ pub mod routes {
             #[route("/list-formatter")]
             mod list_formatter {
                 page!(crate::pages::documentation::utils::list_formatter::PageListFormatter);
+            }
+
+            #[route("/use-localized-strings")]
+            mod use_localized_strings {
+                page!(crate::pages::documentation::utils::localized_strings::PageLocalizedStrings);
             }
 
             #[route("/collator")]

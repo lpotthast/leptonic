@@ -110,7 +110,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Switch.materialize()>"Switch overview"</Link></li>
-                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
+                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atoms"</Link></li>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
                 <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
             </SeeAlso>

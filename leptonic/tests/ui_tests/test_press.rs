@@ -1,5 +1,5 @@
 // Upstream: react-aria/test/interactions/usePress.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -121,8 +121,11 @@ impl BrowserTest<str> for PressMacTests {
 
 /// A negative check: give a wrong update time to happen, then check the text again.
 async fn expect_stays(page: &Page<'_>, id: &str, expected: &str) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of(id).await?).is_equal_to(expected.to_owned());
+    stays!(
+        format!("the text of #{id}"),
+        expected.to_owned(),
+        page.read_text_of(id).await?
+    );
     Ok(())
 }
 
@@ -207,8 +210,7 @@ async fn disabled_element_ignores_presses(page: &Page<'_>) -> Result<(), Report>
     clear_log(page).await?;
     page.click_element_with_id("test-press-target").await?;
     // Give a (wrongly) handled press the chance to show up before asserting its absence.
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of(LOG).await?).is_equal_to(String::new());
+    stays!("the log", String::new(), page.read_text_of(LOG).await?);
     page.click_element_with_id("test-press-toggle-disabled")
         .await?;
     Ok(())
@@ -235,9 +237,11 @@ async fn becoming_disabled_cancels_active_press(page: &Page<'_>) -> Result<(), R
     .is_false();
 
     page.driver.action_chain().release().perform().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-press-self-disabling-log").await?)
-        .is_equal_to("start:mouse,end:mouse".to_owned());
+    stays!(
+        "the text of #test-press-self-disabling-log",
+        "start:mouse,end:mouse".to_owned(),
+        page.read_text_of("test-press-self-disabling-log").await?
+    );
     Ok(())
 }
 
@@ -498,7 +502,8 @@ async fn space_on_a_link_with_button_role(page: &Page<'_>) -> Result<(), Report>
     Ok(())
 }
 
-/// `on_double_press` fires on a double click, after both presses.
+/// `on_double_press` fires on a double click, after both presses; also through press props merged
+/// with hover props.
 async fn double_press(page: &Page<'_>) -> Result<(), Report> {
     let target = page.element("test-press-double").await?;
     page.driver
@@ -507,6 +512,15 @@ async fn double_press(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     page.wait_for_text("test-press-double-log", "press,press,double:mouse")
+        .await?;
+    // With press and hover props merged too.
+    let merged = page.element("test-press-double-hover").await?;
+    page.driver
+        .action_chain()
+        .double_click_element(&merged)
+        .perform()
+        .await?;
+    page.wait_for_text("test-press-double-hover-log", "double")
         .await
 }
 

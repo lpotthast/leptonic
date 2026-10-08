@@ -109,8 +109,9 @@ pub struct UseSelectableItemInput {
     /// ends on it.
     pub allows_different_press_origin: bool,
     /// The item's action, e.g. opening a detail view. Without a selection mode, pressing performs
-    /// it; with one, double-click / Enter does (in `Replace` behavior).
-    pub on_action: Option<Callback<()>>,
+    /// it; with one, double-click / Enter does (in `Replace` behavior). Reactive: an item can gain
+    /// or lose its action (a tree row toggling once it has children).
+    pub on_action: Signal<Option<Callback<()>>>,
     pub link_behavior: LinkBehavior,
     /// Focuses the item when it becomes the focused key. `None`: focusing the element.
     pub focus: Option<FocusItem>,
@@ -226,7 +227,8 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     });
     let has_link_action =
         move || is_link() && !matches!(link_behavior, LinkBehavior::Selection | LinkBehavior::None);
-    let allows_actions = move || (on_action.is_some() || has_link_action()) && !is_disabled.get();
+    let allows_actions =
+        move || (on_action.with(Option::is_some) || has_link_action()) && !is_disabled.get();
     // An action performed by a plain press (instead of selecting).
     let has_primary_action = Signal::derive(move || {
         allows_actions()
@@ -316,7 +318,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     };
 
     let perform_action = move |modifiers: Modifiers| {
-        if let Some(on_action) = on_action {
+        if let Some(on_action) = on_action.get_untracked() {
             on_action.run(());
             if let Some(el) = element.get_untracked() {
                 let init = web_sys::CustomEventInit::new();

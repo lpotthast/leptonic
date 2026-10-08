@@ -1,6 +1,9 @@
 use leptonic::{
     atoms::prelude::{ColorSwatch, ColorSwatchPicker, ColorSwatchPickerItems},
-    utils::color::{ColorValue, RGB8},
+    utils::{
+        color::{ColorValue, RGB8},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
@@ -28,6 +31,7 @@ const PALETTE: [RGB8; 6] = [
 
 #[component]
 pub fn ColorSwatchPickerDemo() -> impl IntoView {
+    let locale = use_locale();
     let color = RwSignal::new(PALETTE[3]);
 
     view! {
@@ -42,6 +46,6 @@ pub fn ColorSwatchPickerDemo() -> impl IntoView {
                 <ColorSwatch classes="demo-color-swatch-picker-swatch"/>
             </ColorSwatchPickerItems>
         </ColorSwatchPicker>
-        <p class="demo-status">{move || format!("Background color: {}, {}.", color.get(), color.get().color_name())}</p>
+        <p class="demo-status">{move || format!("Background color: {}, {}.", color.get(), color.get().color_name(&locale.get()))}</p>
     }
 }

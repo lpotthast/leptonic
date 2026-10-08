@@ -1,11 +1,15 @@
 use leptonic::{
     atoms::prelude::{ColorField, Input, Label},
-    utils::color::{ColorValue, RGB8},
+    utils::{
+        color::{ColorValue, RGB8},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorFieldConceptDemo() -> impl IntoView {
+    let locale = use_locale();
     let color = RwSignal::new(Some(RGB8 {
         r: 30,
         g: 110,
@@ -18,7 +22,7 @@ pub fn ColorFieldConceptDemo() -> impl IntoView {
             <Input classes="demo-color-atoms-input"/>
         </ColorField>
         <p class="demo-status">
-            {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {c}, {}", c.color_name()))}
+            {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {c}, {}", c.color_name(&locale.get())))}
         </p>
     }
 }

@@ -100,8 +100,11 @@ async fn selection(page: &Page<'_>) -> Result<(), Report> {
 
     // Disabled options can't be selected.
     option(page, "Cherry").await?.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-lb-selection").await?).is_equal_to("Apple".to_owned());
+    stays!(
+        "the text of #test-lb-selection",
+        "Apple".to_owned(),
+        page.read_text_of("test-lb-selection").await?
+    );
     Ok(())
 }
 
@@ -122,8 +125,11 @@ async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
     // Wait for the search to expire, then search again: "Cherry" is disabled.
     tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
     page.send_keys_to_active("c").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.active_element_text().await?).is_equal_to("Durian".to_owned());
+    stays!(
+        "the focused element's text",
+        "Durian".to_owned(),
+        page.active_element_text().await?
+    );
     // Typing continues the search within a second: "e" then "l" finds "Elderberry".
     tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
     page.send_keys_to_active("el").await?;

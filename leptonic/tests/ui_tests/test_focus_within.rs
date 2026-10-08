@@ -1,5 +1,5 @@
 // Upstream: react-aria/test/interactions/useFocusWithin.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
@@ -40,8 +40,11 @@ async fn expect(page: &FocusWithinPage<'_>, id: &str, expected: &str) -> Result<
 
 /// A negative check: give a wrong update time to happen, then check the value again.
 async fn expect_stays(page: &FocusWithinPage<'_>, id: &str, expected: &str) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of(id).await?.trim().to_owned()).is_equal_to(expected.to_owned());
+    stays!(
+        format!("the text of #{id}"),
+        expected.to_owned(),
+        page.read_text_of(id).await?.trim().to_owned()
+    );
     Ok(())
 }
 

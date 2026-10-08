@@ -19,10 +19,6 @@ fn checks(group: BrowserTests<str>) -> BrowserTests<str> {
         .with_all(
             test_pages::Shard::all(PAGE_SHARDS).map(|shard| test_pages::PageContentTests { shard }),
         )
-        .with_all(
-            test_pages::Shard::all(PAGE_SHARDS)
-                .map(|shard| test_pages::NarrowScreenTests { shard }),
-        )
         .with(test_pages::MarkdownExportTests {})
         .with(test_shell::SearchTests {})
         .with(test_shell::SearchShortcutTests {})
@@ -30,6 +26,8 @@ fn checks(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_shell::DemoSourceTests {})
         .with(test_shell::CopyMarkdownTests {})
         .with(test_shell::FontTests {})
+        .with(test_shell::CodeCopyTests {})
+        .with(test_shell::KeyCapTests {})
         .with(test_shell::CodeHighlightTests {})
         .with(test_shell::ShellStructureTests {})
         .with(test_shell::NarrowShellTests {})

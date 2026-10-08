@@ -159,9 +159,11 @@ async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys_to_active(Key::Enter).await?;
     page.wait_for_text("test-link-presses", &(presses + 1).to_string())
         .await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-link-presses").await?)
-        .is_equal_to((presses + 1).to_string());
+    stays!(
+        "the text of #test-link-presses",
+        (presses + 1).to_string(),
+        page.read_text_of("test-link-presses").await?
+    );
     page.press_tab().await?;
     page.wait_for_attr(&link, "data-focus-visible", None).await
 }

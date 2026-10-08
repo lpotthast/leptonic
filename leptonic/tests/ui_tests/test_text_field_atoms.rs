@@ -300,8 +300,11 @@ async fn bound_values_keep_the_dom_in_sync(page: &Page<'_>) -> Result<(), Report
     let fixed = page.css("#tf-rejecting input").await?;
     fixed.focus().await?;
     page.send_keys_to_active("x").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(fixed.prop("value").await?).is_equal_to(Some("fixed".to_owned()));
+    stays!(
+        "the fixed field's value",
+        Some("fixed".to_owned()),
+        fixed.prop("value").await?
+    );
 
     let upper = page.css("#tf-uppercase input").await?;
     upper.focus().await?;

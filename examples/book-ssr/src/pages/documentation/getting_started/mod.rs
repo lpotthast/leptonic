@@ -1,4 +1,5 @@
 pub mod accessibility;
+pub mod build_times;
 pub mod architecture;
 pub mod callbacks;
 pub mod changelog;

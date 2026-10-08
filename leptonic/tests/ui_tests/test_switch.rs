@@ -86,8 +86,11 @@ async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&label, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(attr(&input(&label).await?, "disabled").await?).is_some();
     label.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(attr(&label, "data-selected").await?).is_none();
+    stays!(
+        "data-selected of the label",
+        None,
+        attr(&label, "data-selected").await?
+    );
     Ok(())
 }
 
@@ -97,8 +100,11 @@ async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&label, "data-readonly").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(attr(&input, "aria-readonly").await?).is_equal_to(Some("true".to_owned()));
     label.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(attr(&label, "data-selected").await?).is_equal_to(Some("true".to_owned()));
+    stays!(
+        "data-selected of the label",
+        Some("true".to_owned()),
+        attr(&label, "data-selected").await?
+    );
     assert_that!(input.prop("checked").await?).is_equal_to(Some("true".to_owned()));
     Ok(())
 }
@@ -120,9 +126,11 @@ async fn bound_read_only(page: &Page<'_>) -> Result<(), Report> {
     label.click().await?;
     input.focus().await?;
     page.send_keys_to_active(Key::Space).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-sw-bound-read-only-value").await?)
-        .is_equal_to("false".to_owned());
+    stays!(
+        "the text of #test-sw-bound-read-only-value",
+        "false".to_owned(),
+        page.read_text_of("test-sw-bound-read-only-value").await?
+    );
     assert_that!(input.prop("checked").await?).is_equal_to(Some("false".to_owned()));
     Ok(())
 }

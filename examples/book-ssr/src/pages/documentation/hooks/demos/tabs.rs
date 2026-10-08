@@ -2,7 +2,7 @@ use leptonic::hooks::KeyboardActivation;
 use leptonic::hooks::Orientation;
 use leptonic::hooks::collections::SelectOnPressUp;
 use leptonic::{
-    atoms::checkbox::Checkbox,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         IntoAttrs, Key, TabListData, TabListItemData, UseTabInput, UseTabListInput,
         UseTabListReturn, UseTabListStateInput, UseTabPanelInput, UseTabReturn, use_collection,
@@ -75,10 +75,12 @@ pub fn TabsDemo() -> impl IntoView {
         Some("shipping") => view! {
             <h4>"Shipping"</h4>
             <p>"This panel contains a checkbox, so Tab moves to the checkbox instead of the panel."</p>
-            <Checkbox classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Express delivery"
-            </Checkbox>
+            <CheckboxField>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Express delivery"
+                </CheckboxButton>
+            </CheckboxField>
         }
         .into_any(),
         _ => view! {
@@ -98,10 +100,12 @@ pub fn TabsDemo() -> impl IntoView {
         <div {..panel.props.into_attrs()} class="demo-tab-panel">{content}</div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
         <p class="demo-status">
             "Selected: " {move || state.selected_key().map(|key| key.to_string()).unwrap_or_default()}

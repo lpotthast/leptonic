@@ -83,7 +83,7 @@ pub struct UseRadioGroupReturn {
     pub label_props: UseLabelProps,
     pub description_props: SlotProps,
     pub error_message_props: SlotProps,
-    /// For [`use_radio`](super::use_radio).
+    /// For [`use_radio`](fn@super::use_radio).
     pub data: RadioGroupData,
     pub is_invalid: Signal<bool>,
     pub validation_errors: Signal<Vec<String>>,
@@ -153,7 +153,7 @@ impl IntoAttrs for UseRadioGroupProps {
 
 /// Provides the behavior and accessibility of a radio group (`role="radiogroup"`): the arrow
 /// keys move the selection between its radios. Render the radios with
-/// [`use_radio`](super::use_radio).
+/// [`use_radio`](fn@super::use_radio).
 #[allow(clippy::too_many_lines)]
 pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     let UseRadioGroupInput {

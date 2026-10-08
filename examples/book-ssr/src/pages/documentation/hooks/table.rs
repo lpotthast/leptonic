@@ -282,6 +282,12 @@ fn TableStateSections() -> impl IntoView {
                     <ApiRow name="on_sort_change" ty="Option<Callback<SortDescriptor>>" default="None">
                         "Called when the user sorts the table by pressing a column header."
                     </ApiRow>
+                    <ApiRow name="tree" ty="Option<TableTreeInput>" default="None">
+                        "Makes the table a tree table: rows with child rows ("<Code inline=true>"ItemBuilder::children"</Code>
+                        ") expand and collapse. "<Code inline=true>"TableTreeInput"</Code>" names the column showing the "
+                        "hierarchy and holds the expanded rows ("<Code inline=true>"default_expanded_keys"</Code>", "
+                        <Code inline=true>"expanded_keys"</Code>", "<Code inline=true>"on_expanded_change"</Code>")."
+                    </ApiRow>
                 </ApiTable>
                 <p>
                     <Code inline=true>"SelectionOptions::default()"</Code>" uses "<Code inline=true>"DisabledBehavior::All"</Code>
@@ -298,7 +304,13 @@ fn TableStateSections() -> impl IntoView {
                         <Code inline=true>"selected_keys()"</Code>", "<Code inline=true>"is_selected(&key)"</Code>", "
                         <Code inline=true>"select_all()"</Code>", \u{2026}"
                     </ApiRow>
-                    <ApiRow name="table" ty="Memo<Arc<TableCollection>>">"The columns and rows."</ApiRow>
+                    <ApiRow name="table" ty="Memo<Arc<TableCollection>>">
+                        "The columns and rows (in a tree table also the child rows of collapsed rows; "
+                        <Code inline=true>"grid.list.collection"</Code>" holds the visible rows)."
+                    </ApiRow>
+                    <ApiRow name="tree" ty="Option<TableTree>">
+                        "Set in a tree table: "<Code inline=true>"column()"</Code>" and the "<Code inline=true>"expansion"</Code>"."
+                    </ApiRow>
                     <ApiRow name="sort_descriptor" ty="Signal<Option<SortDescriptor>>">"The current sorting."</ApiRow>
                 </ApiTable>
                 <p>
@@ -330,6 +342,7 @@ fn TableStateSections() -> impl IntoView {
                             });
                         })));
                         let state = use_table_state(UseTableStateInput {
+                            tree: None,
                             table,
                             selection: SelectionOptions {
                                 disabled_behavior: DisabledBehavior::Selection,
@@ -545,6 +558,14 @@ fn TableBodySections() -> impl IntoView {
                         <Code inline=true>"allows_selection"</Code>"."
                     </ApiRow>
                     <ApiRow name="allows_selection, has_action" ty="Signal<bool>">"Whether the row can be selected, and whether it has an action."</ApiRow>
+                    <ApiRow name="expand_button" ty="Option<UseButtonInput>">
+                        "In a tree table: the expand button\u{2019}s configuration for "<Code inline=true>"use_button"</Code>
+                        ", for the tree column\u{2019}s cell of rows with child rows (labelled \u{201c}Expand\u{201d} or "
+                        "\u{201c}Collapse\u{201d} and the row)."
+                    </ApiRow>
+                    <ApiRow name="expand_button_attrs" ty="PreventFocusAttr">"Spread onto the expand button too: focus walks skip it."</ApiRow>
+                    <ApiRow name="is_expanded, has_child_rows" ty="Signal<bool>">"Tree tables: whether the row\u{2019}s child rows are shown, and whether it has any."</ApiRow>
+                    <ApiRow name="level" ty="Signal<Option<usize>>">"The row\u{2019}s level in a tree table, from 1 for top-level rows; "<Code inline=true>"None"</Code>" otherwise."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -561,6 +582,24 @@ fn TableBodySections() -> impl IntoView {
                         }
                     ")}
                 </Code>
+            </Section>
+
+            <Section title="Tree Tables" id="use-table-row-tree-tables">
+                <p>
+                    "With "<Code inline=true>"UseTableStateInput.tree"</Code>" set, the state\u{2019}s "
+                    <Code inline=true>"table"</Code>" holds every row and "<Code inline=true>"grid.list.collection"</Code>
+                    " the visible ones: render the visible rows, or all of them with the others "<Code inline=true>"hidden"</Code>
+                    ". The row props then carry "<Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-level"</Code>
+                    ", "<Code inline=true>"aria-posinset"</Code>" and "<Code inline=true>"aria-setsize"</Code>", and handle "
+                    <Keys keys="ArrowRight"/>" and "<Keys keys="ArrowLeft"/>" on a focused row (expand, collapse, to the parent). "
+                    "In the tree column\u{2019}s cell ("<Code inline=true>"state.tree"</Code>"\u{2019}s "
+                    <Code inline=true>"is_tree_column(&column)"</Code>"), render "<Code inline=true>"expand_button"</Code>
+                    " with "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" and spread "
+                    <Code inline=true>"expand_button_attrs"</Code>" too; indent by "<Code inline=true>"level"</Code>". "
+                    <Code inline=true>"Collection::cells(row)"</Code>" lists a row\u{2019}s cells. The "
+                    <Link href=format!("{}#tree-tables", routes::doc::table::Atom.materialize())>"Table atoms"</Link>
+                    " do all of this."
+                </p>
             </Section>
         </Section>
 
@@ -837,8 +876,8 @@ fn TableResizingSections() -> impl IntoView {
                 "press "<Keys keys="Enter"/>" and resize with the arrow keys. Render the resizer element inside the column "
                 "header and the input inside the resizer. The input is the header\u{2019}s first focusable child, so "
                 "moving onto the header with the arrow keys focuses it. While a column is resized, the table ignores "
-                "the arrow keys. You give the resizer its label; its other texts are English: the value "
-                "\u{201c}120 pixels\u{201d} and the description \u{201c}Press Enter to start resizing\u{201d}."
+                "the arrow keys. You give the resizer its label; its other texts follow the locale: the value "
+                "\u{201c}120 pixels\u{201d} and the description \u{201c}Press Enter to start resizing\u{201d} in English."
             </p>
 
             <Section title="Input" id="use-table-column-resize-input">

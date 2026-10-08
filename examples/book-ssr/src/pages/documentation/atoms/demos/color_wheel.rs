@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::prelude::{Checkbox, ColorSwatch, ColorThumb, ColorWheel, ColorWheelTrack},
+    atoms::prelude::{CheckboxButton, CheckboxField, ColorSwatch, ColorThumb, ColorWheel, ColorWheelTrack},
     utils::color::{ColorValue, HSV, HsvChannel},
 };
 use leptos::prelude::*;
@@ -41,10 +41,12 @@ pub fn ColorWheelAtomDemo() -> impl IntoView {
             {move || format!("Committed hue: {}", committed.get().format_channel_value(HsvChannel::Hue, &locale.get()))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

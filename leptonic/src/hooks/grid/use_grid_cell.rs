@@ -243,10 +243,10 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         is_disabled: Signal::derive(move || rows.with(|c| c.size() == 0)),
         should_select_on_press_up,
         allows_different_press_origin: false,
-        on_action: on_cell_action.map(|on_cell_action| {
+        on_action: Signal::stored(on_cell_action.map(|on_cell_action| {
             let key = key.clone();
             Callback::new(move |()| on_cell_action.run(key.clone()))
-        }),
+        })),
         link_behavior: LinkBehavior::Action,
         focus: Some(FocusItem::new(focus_cell)),
         should_use_virtual_focus: false,

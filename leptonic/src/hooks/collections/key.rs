@@ -124,35 +124,102 @@ impl From<usize> for Key {
     }
 }
 
-/// Conversion between a typed value (an enum, an id, ...) and a [`Key`], used by atoms and
-/// components that offer typed APIs on top of the key-based collection hooks.
-pub trait ToKey: Clone + Send + Sync + 'static {
+/// A typed value that atoms select (a radio group's or a select's value, ...): the [`Key`] that
+/// identifies it in the collection and the key-based hooks, and back. Implemented for `Key`,
+/// `String` and the integers; implement it for an enum with [`selection_value!`](crate::selection_value).
+pub trait SelectionValue: Clone + Eq + std::hash::Hash + Send + Sync + 'static {
     /// The key identifying this value.
     fn to_key(&self) -> Key;
+    /// The value `key` identifies; `None` for keys of other values.
+    fn from_key(key: &Key) -> Option<Self>;
 }
 
-impl ToKey for String {
+impl SelectionValue for Key {
+    fn to_key(&self) -> Key {
+        self.clone()
+    }
+
+    fn from_key(key: &Key) -> Option<Self> {
+        Some(key.clone())
+    }
+}
+
+impl SelectionValue for String {
     fn to_key(&self) -> Key {
         Key::from(self.as_str())
     }
-}
 
-impl ToKey for &'static str {
-    fn to_key(&self) -> Key {
-        Key::from(*self)
+    fn from_key(key: &Key) -> Option<Self> {
+        key.as_str().map(str::to_owned)
     }
 }
 
-macro_rules! to_key_int {
+macro_rules! selection_value_int {
     ($($t:ty),*) => {$(
-        impl ToKey for $t {
+        impl SelectionValue for $t {
             fn to_key(&self) -> Key {
                 Key::from(*self)
+            }
+
+            fn from_key(key: &Key) -> Option<Self> {
+                key.as_i64().and_then(|i| <$t>::try_from(i).ok())
             }
         }
     )*};
 }
-to_key_int!(i8, i16, i32, i64, u8, u16, u32, usize);
+selection_value_int!(i8, i16, i32, i64, u8, u16, u32, usize);
+
+/// Implements [`SelectionValue`] (and `From<T> for Key`, so that items take the values as their
+/// `value`/`key`) for a fieldless enum, each variant identified by a string key. The keys are
+/// what forms submit; they must be distinct (a compile error otherwise).
+///
+/// ```ignore
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// enum Size { Small, Large }
+///
+/// leptonic::selection_value!(Size { Small = "s", Large = "l" });
+///
+/// view! {
+///     <RadioGroup value=size set_value=size>
+///         <RadioField value=Size::Small><RadioButton>"Small"</RadioButton></RadioField>
+///         <RadioField value=Size::Large><RadioButton>"Large"</RadioButton></RadioField>
+///     </RadioGroup>
+/// }
+/// ```
+///
+/// ```compile_fail
+/// #[derive(Clone, PartialEq, Eq, Hash)]
+/// enum Size { Small, Large }
+///
+/// leptonic::selection_value!(Size { Small = "s", Large = "s" });
+/// ```
+#[macro_export]
+macro_rules! selection_value {
+    ($ty:ty { $($variant:ident = $key:literal),+ $(,)? }) => {
+        impl $crate::hooks::collections::SelectionValue for $ty {
+            fn to_key(&self) -> $crate::hooks::collections::Key {
+                $crate::hooks::collections::Key::from(match self {
+                    $(Self::$variant => $key,)+
+                })
+            }
+
+            // Two variants with one key: an error, as the second would never be read back.
+            #[deny(unreachable_patterns)]
+            fn from_key(key: &$crate::hooks::collections::Key) -> ::core::option::Option<Self> {
+                match key.as_str()? {
+                    $($key => ::core::option::Option::Some(Self::$variant),)+
+                    _ => ::core::option::Option::None,
+                }
+            }
+        }
+
+        impl ::core::convert::From<$ty> for $crate::hooks::collections::Key {
+            fn from(value: $ty) -> Self {
+                <$ty as $crate::hooks::collections::SelectionValue>::to_key(&value)
+            }
+        }
+    };
+}
 
 #[cfg(test)]
 mod tests {
@@ -164,6 +231,24 @@ mod tests {
     fn string_and_integer_keys_differ() {
         assert_that!(Key::from(1)).is_not_equal_to(Key::from("1"));
         assert_that!(Key::from("a")).is_equal_to(Key::from(String::from("a")));
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    enum Size {
+        Small,
+        Large,
+    }
+
+    crate::selection_value!(Size { Small = "s", Large = "l" });
+
+    #[test]
+    fn selection_values_round_trip() {
+        assert_that!(Size::from_key(&Size::Large.to_key())).is_equal_to(Some(Size::Large));
+        assert_that!(Key::from(Size::Small)).is_equal_to(Key::from("s"));
+        assert_that!(Size::from_key(&Key::from("m"))).is_none();
+        assert_that!(u8::from_key(&Key::from(300))).is_none();
+        assert_that!(String::from_key(&Key::from(3))).is_none();
+        assert_that!(i32::from_key(&7_i32.to_key())).is_equal_to(Some(7));
     }
 
     #[test]

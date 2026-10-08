@@ -187,8 +187,11 @@ async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
     let trigger = page.element("test-disc-trigger").await?;
     trigger.click().await?;
     // Pointer focus: no ring.
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(disclosure.attr("data-focus-visible-within").await?).is_none();
+    stays!(
+        "data-focus-visible-within of the disclosure",
+        None,
+        disclosure.attr("data-focus-visible-within").await?
+    );
     page.press_shift_tab().await?;
     page.press_tab().await?;
     page.wait_for_focus_on(&trigger, "the trigger").await?;
@@ -212,8 +215,11 @@ async fn controlled(page: &Page<'_>) -> Result<(), Report> {
     trigger.click().await?;
     page.wait_for_text("test-disc-controlled-changes", "false")
         .await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(disclosure.attr("data-expanded").await?).is_equal_to(Some("true".to_owned()));
+    stays!(
+        "data-expanded of the disclosure",
+        Some("true".to_owned()),
+        disclosure.attr("data-expanded").await?
+    );
     expect_expanded(page, &trigger, true).await?;
 
     let disabled = page.css(".test-disc-disabled-expanded").await?;

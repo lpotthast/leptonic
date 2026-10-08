@@ -492,8 +492,11 @@ impl BrowserTest<str> for SliderThumbTests {
         assert_that!(thumb_disabled[0].attr("disabled").await?).is_none();
         assert_that!(thumb_disabled[1].attr("disabled").await?).is_some();
         click_track(&page, "thumb-disabled", 180).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-        assert_that!(value(&thumb_disabled[1]).await?).is_equal_to("80".to_owned());
+        stays!(
+            "the disabled thumb's value",
+            "80".to_owned(),
+            value(&thumb_disabled[1]).await?
+        );
         click_track(&page, "thumb-disabled", 40).await?;
         wait_for_value(&thumb_disabled[0], "20").await?;
 

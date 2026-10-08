@@ -2,12 +2,16 @@ use leptonic::{
     atoms::prelude::{
         ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch, ColorThumb, Label,
     },
-    utils::color::{Alpha, AlphaChannel, ColorValue, HSV, HsvChannel},
+    utils::{
+        color::{Alpha, AlphaChannel, ColorValue, HSV, HsvChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorAlphaDemo() -> impl IntoView {
+    let locale = use_locale();
     // An HSV color with an alpha channel: its channels are HSV's plus `AlphaChannel::Alpha`.
     let color = RwSignal::new(
         Alpha::new(HSV {
@@ -23,7 +27,7 @@ pub fn ColorAlphaDemo() -> impl IntoView {
         .map(|channel| {
             view! {
                 <ColorSlider channel value=color set_value=color classes="demo-color-atoms-slider">
-                    <Label>{Alpha::<HSV>::channel_name(channel)}</Label>
+                    <Label>{move || Alpha::<HSV>::channel_name(channel, &locale.get())}</Label>
                     <ColorSliderOutput classes="demo-color-atoms-slider-output"/>
                     <ColorSliderTrack classes="demo-color-atoms-slider-track">
                         <ColorThumb classes="demo-color-atoms-thumb"/>
@@ -41,6 +45,6 @@ pub fn ColorAlphaDemo() -> impl IntoView {
                 <ColorSwatch color=color classes="demo-color-atoms-swatch"/>
             </div>
         </div>
-        <p class="demo-status">{move || format!("{}: {}.", color.get().to_css_string(), color.get().color_name())}</p>
+        <p class="demo-status">{move || format!("{}: {}.", color.get().to_css_string(), color.get().color_name(&locale.get()))}</p>
     }
 }

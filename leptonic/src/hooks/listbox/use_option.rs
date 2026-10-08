@@ -10,7 +10,7 @@ use crate::{
         IntoAttrs, PropsWithStyles,
         collections::{
             ItemLink, Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
-            UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
+            UseSelectableItemProps, UseSelectableItemReturn, use_node_aria_label, use_selectable_item,
         },
         focus::use_focus_visible::{
             Modality, UseFocusVisibleInput, get_modality, use_focus_visible,
@@ -82,7 +82,7 @@ pub struct UseOptionProps {
     pub role: AriaRole,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_selected: Signal<Option<AriaSelected>>,
-    pub aria_label: Option<String>,
+    pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     /// In a virtualized listbox: the option's position (from 1) ...
@@ -97,7 +97,7 @@ pub type UseOptionAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
-    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::AriaPosinset, Signal<Option<usize>>>,
@@ -162,9 +162,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     if node.is_none() {
         crate::utils::dev_warn!("use_option: the key {key:?} is not in the listbox's collection");
     }
-    let aria_label = node
-        .as_ref()
-        .and_then(|n| n.aria_label.as_deref().map(str::to_owned));
+    let aria_label = use_node_aria_label(state.collection, key.clone());
     let link = node.and_then(|n| n.link);
 
     let position_key = StoredValue::new(key.clone());
@@ -190,10 +188,10 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         is_disabled: Signal::stored(false),
         should_select_on_press_up,
         allows_different_press_origin: should_select_on_press_up && should_focus_on_hover,
-        on_action: on_action.map(|on_action| {
+        on_action: Signal::stored(on_action.map(|on_action| {
             let key = key.clone();
             Callback::new(move |()| on_action.run(key.clone()))
-        }),
+        })),
         link_behavior,
         focus: None,
         should_use_virtual_focus,
@@ -234,7 +232,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
                     (selection.selection_mode() != SelectionMode::None)
                         .then(|| AriaSelected::from(is_selected.get()))
                 }),
-                aria_label,
+                aria_label: aria_label.into(),
                 aria_labelledby: label.referenced_id,
                 aria_describedby: description.referenced_id,
                 aria_posinset: Signal::derive(move || {

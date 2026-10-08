@@ -5,7 +5,7 @@ use leptos::prelude::*;
 
 use super::GridFocusMode;
 use crate::hooks::collections::{
-    Collection, CollectionMemo, ItemElements, Key, ListState, NodeKind, SelectionManager,
+    Collection, CollectionMemo, ItemElements, Key, ListState, Node, NodeKind, SelectionManager,
     SelectionOptions,
 };
 
@@ -82,7 +82,8 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
     }
 
     // When the focused row (or a cell of it) disappears, focus moves to the row that took its
-    // place (or the closest one before), to the same column.
+    // place (or the closest one before), to the same column. A row collapsed out of view moves
+    // focus to its closest ancestor row shown.
     Effect::new(move |previous: Option<Arc<Collection>>| {
         let current = collection.get();
         let focused = untrack(|| manager.focused_key());
@@ -108,7 +109,7 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
     }
 }
 
-/// The key to focus after the focused `key` was removed.
+/// The key to focus after the focused `key` was removed (or collapsed out of view).
 fn refocus(
     previous: &Collection,
     current: &Collection,
@@ -121,6 +122,20 @@ fn refocus(
     } else {
         node
     };
+    // A row collapsed out of view (tree grids): its closest ancestor row still shown, to the
+    // same column.
+    let mut ancestor = row.parent_key.as_ref();
+    while let Some(parent) = ancestor {
+        if current.get(parent).is_some_and(Node::is_item) {
+            if node.kind == NodeKind::Cell
+                && let Some(cell) = current.cells(parent).nth(node.index)
+            {
+                return Some(cell.key.clone());
+            }
+            return Some(parent.clone());
+        }
+        ancestor = previous.get(parent).and_then(|n| n.parent_key.as_ref());
+    }
     let previous_rows: Vec<&Key> = previous.items().map(|n| &n.key).collect();
     let rows: Vec<Key> = current.items().map(|n| n.key.clone()).collect();
     if rows.is_empty() {
@@ -140,7 +155,7 @@ fn refocus(
         .find(|k| usable(k))
         .or_else(|| rows[..index].iter().rev().find(|k| usable(k)))?;
     if node.kind == NodeKind::Cell {
-        let cells: Vec<Key> = current.children(new_row).map(|n| n.key.clone()).collect();
+        let cells: Vec<Key> = current.cells(new_row).map(|n| n.key.clone()).collect();
         if let Some(cell) = cells.get(node.index) {
             return Some(cell.clone());
         }
@@ -156,7 +171,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        hooks::collections::SelectionMode,
+        hooks::collections::{CollectionBuilder, ItemBuilder, SelectionMode},
         testing::{flush_effects, with_owner},
     };
 
@@ -200,6 +215,62 @@ mod tests {
         let removed: HashSet<&str> = removed.iter().copied().collect();
         rows.update(|rows| rows.retain(|row| !removed.contains(row)));
         flush_effects();
+    }
+
+    /// A tree grid: docs > (cv, work > (letter)), photos; the rows in `expanded` show their
+    /// child rows.
+    fn tree_grid(expanded: RwSignal<HashSet<Key>>, focus_mode: GridFocusMode) -> GridState {
+        let full = Collection::build(|b| {
+            fn row<'b>(b: &'b mut CollectionBuilder, key: &'static str) -> ItemBuilder<'b> {
+                b.row(key, key, |r| {
+                    r.cell(key);
+                    r.cell("kind");
+                })
+            }
+            let _ = row(b, "docs").children(|b| {
+                row(b, "cv");
+                let _ = row(b, "work").children(|b| {
+                    row(b, "letter");
+                });
+            });
+            row(b, "photos");
+        });
+        let collection: CollectionMemo =
+            Memo::new(move |_| Arc::new(expanded.with(|expanded| full.with_expanded(expanded))));
+        use_grid_state(UseGridStateInput {
+            collection,
+            selection: SelectionOptions::default(),
+            focus_mode,
+        })
+    }
+
+    #[test]
+    fn a_row_collapsed_out_of_view_moves_focus_to_its_closest_shown_ancestor() {
+        with_owner(|| {
+            let expanded = RwSignal::new(HashSet::from([Key::from("docs"), Key::from("work")]));
+            let state = tree_grid(expanded, GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("letter"));
+
+            // Collapsing `docs` (e.g. through bound expanded keys) hides `work` and `letter`.
+            expanded.set(HashSet::from([Key::from("work")]));
+            flush_effects();
+            assert_that!(focused(&state)).is_equal_to(Some(Key::from("docs")));
+        });
+    }
+
+    #[test]
+    fn a_cell_collapsed_out_of_view_moves_focus_to_the_same_column_of_its_ancestor() {
+        with_owner(|| {
+            let expanded = RwSignal::new(HashSet::from([Key::from("docs")]));
+            let state = tree_grid(expanded, GridFocusMode::Cell);
+            flush_effects();
+            focus(&state, Key::cell(&Key::from("cv"), 1));
+
+            expanded.set(HashSet::new());
+            flush_effects();
+            assert_that!(focused(&state)).is_equal_to(Some(Key::cell(&Key::from("docs"), 1)));
+        });
     }
 
     #[test]

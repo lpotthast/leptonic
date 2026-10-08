@@ -45,7 +45,7 @@ use crate::{
 /// Input of [`use_radio`].
 #[derive(Debug, Clone)]
 pub struct UseRadioInput {
-    /// The radio group (from [`use_radio_group`](super::use_radio_group)).
+    /// The radio group (from [`use_radio_group`](fn@super::use_radio_group)).
     pub group: RadioGroupData,
     /// The value the radio selects.
     pub value: Key,
@@ -194,7 +194,7 @@ impl IntoAttrs for UseRadioInputProps {
 }
 
 /// Provides the behavior and accessibility of a radio: an `<input type="radio">` inside a
-/// `<label>`, in a [`use_radio_group`](super::use_radio_group). Only the selected radio (or,
+/// `<label>`, in a [`use_radio_group`](fn@super::use_radio_group). Only the selected radio (or,
 /// while none is, the one focused last or each) is a tab stop.
 #[allow(clippy::too_many_lines)]
 pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {

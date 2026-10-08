@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         field::Label,
         input::Input,
         number_field::{
@@ -78,10 +78,12 @@ pub fn PressLongDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=lp_disabled set_selected=set_lp_disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=lp_disabled set_selected=set_lp_disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
             <NumberField
                 value=threshold_ms
                 set_value=threshold_ms

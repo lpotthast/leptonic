@@ -10,7 +10,7 @@ use web_sys::FocusEvent;
 
 use super::{
     states::{
-        CalendarData, CalendarFormatters, CalendarStates, selected_date_description, strings,
+        CalendarData, CalendarFormatters, CalendarStates, selected_date_description,
         visible_range_description,
     },
     use_calendar_state::CalendarState,
@@ -27,6 +27,7 @@ use crate::{
         slot_id::{SlotProps, use_slot},
     },
 };
+use crate::utils::intl_strings::{CalendarStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -42,7 +43,6 @@ use crate::{
 //   props, state and ref as arguments).
 //
 // ## OMITTED FEATURES
-// - Localized strings: "Next", "Previous" and the descriptions are English.
 // - The title of several months is "May 2024 to July 2024" (react-aria: the locale's date range
 //   format, "May – July 2024"): ICU4X has no range formatting yet.
 //
@@ -169,6 +169,7 @@ fn use_calendar_base(
     let state = *state;
     let calendar = state.calendar();
     let locale = use_locale();
+    let strings = use_localized_strings::<CalendarStrings>();
     let id = id.unwrap_or_else(|| use_id("calendar"));
 
     let title =
@@ -254,14 +255,14 @@ fn use_calendar_base(
         },
         previous_button: UseButtonInput {
             on_press: Some(Callback::new(move |_| calendar.focus_previous_page())),
-            aria_label: MaybeProp::from(strings::PREVIOUS.to_owned()),
+            aria_label: Signal::derive(move || Some(strings.read().previous())).into(),
             is_disabled: previous_disabled,
             on_focus_change: Some(Callback::new(move |focused| previous_focused.set(focused))),
             ..UseButtonInput::default()
         },
         next_button: UseButtonInput {
             on_press: Some(Callback::new(move |_| calendar.focus_next_page())),
-            aria_label: MaybeProp::from(strings::NEXT.to_owned()),
+            aria_label: Signal::derive(move || Some(strings.read().next())).into(),
             is_disabled: next_disabled,
             on_focus_change: Some(Callback::new(move |focused| next_focused.set(focused))),
             ..UseButtonInput::default()

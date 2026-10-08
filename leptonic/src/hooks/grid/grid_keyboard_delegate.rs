@@ -204,8 +204,14 @@ impl GridKeyboardDelegate {
         })
     }
 
+    /// The first enabled row after `from` (from the start when `None`), among the rows shown (a
+    /// tree's expanded rows).
+    pub(crate) fn row_after(&self, from: Option<&Key>) -> Option<Key> {
+        self.find_next_key(from, Self::is_row, false)
+    }
+
     fn cells(c: &Collection, row: &Key) -> Vec<Key> {
-        c.children(row).map(|n| n.key.clone()).collect()
+        c.cells(row).map(|n| n.key.clone()).collect()
     }
 
     fn first_cell(&self, row: &Key) -> Option<Key> {
@@ -220,7 +226,7 @@ impl GridKeyboardDelegate {
     pub(crate) fn key_for_item_in_row_by_index(&self, row: &Key, index: usize) -> Option<Key> {
         self.with(|c| {
             let mut i = 0;
-            for child in c.children(row) {
+            for child in c.cells(row) {
                 if let Some(span) = child.col_span
                     && span + i > index
                 {

@@ -1,7 +1,7 @@
 // Upstream: ../starters/docs/src/Switch.css @ 99e6102368
 // Upstream: ../starters/docs/src/Switch.tsx @ 99e6102368
 //
-// `Switch` (upstream's `SwitchButton`). Markup: the track with its handle as the switch's first
+// `SwitchField` and `SwitchButton`. Markup: the track with its handle as the button's first
 // child, then the label text:
 //
 //   <div class="track indicator"><div class="handle"></div></div>
@@ -10,23 +10,30 @@
 // The starter puts the `indicator` utility (and `data-disabled`) on the handle itself while the
 // switch is off; here the rules below do that from the switch's data attributes, so the markup
 // stays static.
-//
-// Leptonic has no `SwitchField` (upstream's wrapper of the switch, its description and its
-// error), so its rules are left out.
 @use "utilities";
 
 @layer utilities {
-  .leptonic-Switch:not([data-selected]) .handle {
+  .leptonic-SwitchButton:not([data-selected]) .handle {
     @include utilities.indicator;
   }
 
-  .leptonic-Switch[data-disabled]:not([data-selected]) .handle {
+  .leptonic-SwitchButton[data-disabled]:not([data-selected]) .handle {
     background: var(--field-background);
     box-shadow: inset 0 0 0 1px var(--border-color-disabled);
   }
 }
 
-.leptonic-Switch {
+.leptonic-SwitchField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+
+  &[data-disabled] .leptonic-Description {
+    color: var(--text-color-disabled);
+  }
+}
+
+.leptonic-SwitchButton {
   display: flex;
   /* This is needed so the HiddenInput is positioned correctly */
   position: relative;

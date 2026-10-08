@@ -12,6 +12,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
+use crate::utils::intl_strings::{ComboBoxStrings, FocusAnnouncementArgs, use_localized_strings};
 use crate::{
     hooks::{
         InputType, IntoAttrs, TextFieldElement,
@@ -57,8 +58,6 @@ use crate::{
 // - `name`, `is_read_only` and `validation_behavior` are read from the state (C8).
 // - `form_value` and the values of the hidden inputs (`form_values`) come from the hook
 //   (react-aria-components renders them in `ComboBox`).
-// - The button and listbox labels ("Show suggestions", "Suggestions") and the screen reader
-//   announcements are English only (react-aria: localized strings).
 //
 // ## DIFFERENT BEHAVIOR
 // - The group size in the focus announcement counts the section's options (react-aria counts its
@@ -465,8 +464,9 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 .or_else(|| has_label.get().then(|| label_id.clone()))
         })
     };
+    let strings = use_localized_strings::<ComboBoxStrings>();
     let button = UseButtonInput {
-        aria_label: "Show suggestions".into(),
+        aria_label: Signal::derive(move || Some(strings.read().button_label())).into(),
         aria_labelledby: {
             let button_id = button_id.clone();
             Signal::derive(move || {
@@ -575,7 +575,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 
     let listbox = UseListBoxInput {
         id: Some(listbox_id),
-        aria_label: "Suggestions".into(),
+        aria_label: Signal::derive(move || Some(strings.read().listbox_label())).into(),
         aria_labelledby: field_labelledby,
         options: CollectionOptions {
             auto_focus: Signal::derive(move || {
@@ -635,14 +635,13 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 /// VoiceOver doesn't announce `aria-activedescendant` changes reliably, also the focused option
 /// (with the section it enters) and the selection.
 fn announce_changes(state: &ComboBoxState) {
-    use std::fmt::Write;
-
     use crate::{
         hooks::collections::NodeKind,
         utils::{live_announcer::announce_assertive, platform::device::is_apple_device},
     };
 
     let state = *state;
+    let strings = use_localized_strings::<ComboBoxStrings>();
 
     let option_text = |node: &crate::hooks::collections::Node| {
         node.aria_label
@@ -650,14 +649,6 @@ fn announce_changes(state: &ComboBoxState) {
             .unwrap_or(&node.text_value)
             .to_owned()
     };
-    let options = |count: usize| {
-        if count == 1 {
-            "1 option".to_owned()
-        } else {
-            format!("{count} options")
-        }
-    };
-
     // The focused option, and the section it is in.
     let last_section = StoredValue::new(None::<Key>);
     let last_item = StoredValue::new(None::<Key>);
@@ -679,7 +670,7 @@ fn announce_changes(state: &ComboBoxState) {
                     .as_ref()
                     .and_then(|key| collection.get(key))
                     .filter(|node| node.kind == NodeKind::Section);
-                let mut announcement = String::new();
+                let mut group = None;
                 if let Some(section) = section
                     && section_key != last_section.get_value()
                 {
@@ -697,17 +688,16 @@ fn announce_changes(state: &ComboBoxState) {
                         .children(&section.key)
                         .filter(|node| node.is_item())
                         .count();
-                    let _ = write!(
-                        announcement,
-                        "Entered group {title}, with {}. ",
-                        options(count)
-                    );
+                    group = Some((title, count));
                 }
-                announcement.push_str(&option_text(focused));
-                if state.list.selection.is_selected(&focused.key) {
-                    announcement.push_str(", selected");
-                }
-                announce_assertive(announcement);
+                let (title, count) = group.clone().unwrap_or_default();
+                announce_assertive(strings.read().focus_announcement(FocusAnnouncementArgs {
+                    is_group_change: group.is_some(),
+                    group_title: &title,
+                    group_count: count,
+                    option_text: &option_text(focused),
+                    is_selected: state.list.selection.is_selected(&focused.key),
+                }));
             }
             last_section.set_value(section_key);
             last_item.set_value(item_key);
@@ -725,7 +715,7 @@ fn announce_changes(state: &ComboBoxState) {
             let did_open_without_focused_item =
                 is_open != last_open.get_value() && (!has_focused_key || is_apple_device());
             if is_open && (did_open_without_focused_item || last_size.get_value() != Some(count)) {
-                announce_assertive(format!("{} available.", options(count)));
+                announce_assertive(strings.read().count_announcement(count));
             }
             last_size.set_value(Some(count));
             last_open.set_value(is_open);
@@ -744,7 +734,7 @@ fn announce_changes(state: &ComboBoxState) {
                 && selected_key != last_selected.get_value()
                 && let Some(item) = state.selected_items().first()
             {
-                announce_assertive(format!("{}, selected", option_text(item)));
+                announce_assertive(strings.read().selected_announcement(&option_text(item)));
             }
             last_selected.set_value(selected_key);
         });

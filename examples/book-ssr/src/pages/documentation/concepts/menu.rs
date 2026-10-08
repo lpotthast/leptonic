@@ -22,6 +22,12 @@ pub fn PageMenuOverview() -> impl IntoView {
                             <b>"Menu"</b>" as a "<Link href=format!("{}#context-menus", routes::doc::menu::Atom.materialize())>"context menu"</Link>
                         </TableCell>
                     </TableRow>
+                    <TableRow>
+                        <TableCell>"Offer actions for each row of a list or table"</TableCell>
+                        <TableCell>
+                            <b>"Menu"</b>" in a "<Link href=format!("{}#contextmenutrigger", routes::doc::menu::Atom.materialize())>"ContextMenuTrigger"</Link>
+                        </TableCell>
+                    </TableRow>
                     <TableRow><TableCell>"Choose a value from a dropdown"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
                     <TableRow><TableCell>"Show rich contextual content"</TableCell><TableCell><Link href=routes::doc::Popover.materialize()>"Popover"</Link></TableCell></TableRow>
                 </DocTable>

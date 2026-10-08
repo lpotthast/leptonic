@@ -1,5 +1,5 @@
 // Upstream: react-aria/test/interactions/useContextMenu.test.tsx @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -49,9 +49,11 @@ impl BrowserTest<str> for ContextMenuTests {
             .focus()
             .await?;
         page.send_keys_to_active(Key::Control + Key::Enter).await?;
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert_that!(page.element("test-context-menu-log").await?.text().await?)
-            .is_equal_to(String::new());
+        stays!(
+            "the text of #test-context-menu-log",
+            String::new(),
+            page.element("test-context-menu-log").await?.text().await?
+        );
 
         page.expect_no_page_errors().await
     }

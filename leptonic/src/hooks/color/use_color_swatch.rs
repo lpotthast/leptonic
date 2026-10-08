@@ -8,6 +8,10 @@ use crate::{
         style::ForcedColorAdjustProperty, styles::Styles,
     },
 };
+use crate::utils::{
+    i18n::use_locale,
+    intl_strings::{ColorStrings, use_localized_strings},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -16,9 +20,6 @@ use crate::{
 // ## API DIFFERENCES
 // - The color is any color value or signal of one (`ColorProp`, react-aria: a `Color` or a
 //   string); a swatch always has one (react-aria: optional, transparent by default).
-//
-// ## OMITTED FEATURES
-// - Localized strings: "color swatch" and the color names are English.
 //
 // =============================================================================
 
@@ -47,6 +48,8 @@ pub struct UseColorSwatchReturn {
 #[derive(Debug, Clone)]
 pub struct UseColorSwatchProps {
     pub id: String,
+    /// "color swatch" (localized).
+    pub aria_roledescription: Signal<String>,
     pub aria_label: Signal<String>,
     pub aria_labelledby: Option<String>,
 }
@@ -54,7 +57,7 @@ pub struct UseColorSwatchProps {
 pub type UseColorSwatchAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaRoledescription, &'static str>,
+    Attr<attr::AriaRoledescription, Signal<String>>,
     Attr<attr::AriaLabel, Signal<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
 );
@@ -66,7 +69,7 @@ impl IntoAttrs for UseColorSwatchProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, AriaRole::Img),
-            Attr(attr::AriaRoledescription, "color swatch"),
+            Attr(attr::AriaRoledescription, self.aria_roledescription),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
         )
@@ -84,14 +87,16 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
         id,
     } = input;
     let id = id.unwrap_or_else(|| use_id("color-swatch"));
+    let locale = use_locale();
+    let strings = use_localized_strings::<ColorStrings>();
     let aria_label = Signal::derive(move || {
         // A fully transparent color is "transparent" (react-aria).
         let name = color_name.get().unwrap_or_else(|| {
             let color = color.get();
             if color.alpha <= 0.0 {
-                "transparent".to_owned()
+                strings.read().transparent()
             } else {
-                color.color_name()
+                color.color_name(&locale.get())
             }
         });
         match aria_label.get().filter(|label| !label.is_empty()) {
@@ -110,6 +115,7 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
         color_swatch_props: PropsWithStyles::new(
             UseColorSwatchProps {
                 id,
+                aria_roledescription: Signal::derive(move || strings.read().color_swatch()),
                 aria_label,
                 aria_labelledby,
             },

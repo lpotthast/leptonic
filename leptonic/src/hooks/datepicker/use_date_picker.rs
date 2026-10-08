@@ -12,6 +12,9 @@ use super::{
     use_date_picker_state::DatePickerState,
     use_date_range_picker_state::DateRangePickerState,
 };
+use crate::utils::intl_strings::{
+    DatePickerStrings, SelectedRangeDescriptionArgs, use_localized_strings,
+};
 use crate::{
     hooks::{
         OverlayTriggerState, PropsWithStyles, UseButtonInput,
@@ -39,9 +42,6 @@ use crate::{
 //   description) and ids, rather than merged props objects; the calendar takes the state.
 // - One input each (C8): `UseDatePickerInput`, `UseDateRangePickerInput` (the state, the group's
 //   element and `DatePickerOptions`).
-//
-// ## OMITTED FEATURES
-// - Localized strings: the button is named "Calendar", the description "Selected Date: ...".
 //
 // =============================================================================
 
@@ -108,9 +108,10 @@ pub fn use_date_picker<V: DateValue>(input: UseDatePickerInput<V>) -> UseDatePic
         group,
         options,
     } = input;
+    let strings = use_localized_strings::<DatePickerStrings>();
     let description = Signal::derive(move || {
         let date = state.format_value();
-        (!date.is_empty()).then(|| format!("Selected Date: {date}"))
+        (!date.is_empty()).then(|| strings.read().selected_date_description(&date))
     });
     picker_aria(options, state.overlay, description, group)
 }
@@ -127,10 +128,16 @@ pub fn use_date_range_picker<V: DateValue>(
         group,
         options,
     } = input;
+    let strings = use_localized_strings::<DatePickerStrings>();
     let description = Signal::derive(move || {
-        state
-            .format_value()
-            .map(|(start, end)| format!("Selected Range: {start} to {end}"))
+        state.format_value().map(|(start, end)| {
+            strings
+                .read()
+                .selected_range_description(SelectedRangeDescriptionArgs {
+                    start_date: &start,
+                    end_date: &end,
+                })
+        })
     });
     picker_aria(options, state.overlay, description, group)
 }
@@ -299,7 +306,10 @@ pub(crate) fn picker_aria(
         button: UseButtonInput {
             id: Some(button_id),
             aria_haspopup: Signal::stored(Some(AriaHasPopup::Dialog)),
-            aria_label: MaybeProp::from("Calendar".to_owned()),
+            aria_label: {
+                let strings = use_localized_strings::<DatePickerStrings>();
+                Signal::derive(move || Some(strings.read().calendar())).into()
+            },
             aria_labelledby: button_labelledby,
             aria_describedby: described_by,
             aria_expanded: Signal::derive(move || {

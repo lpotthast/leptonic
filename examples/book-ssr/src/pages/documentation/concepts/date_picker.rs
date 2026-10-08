@@ -105,8 +105,8 @@ pub fn PageDatePickerOverview() -> impl IntoView {
                         "takes the focus when it opens. When it closes, the focus returns to the field."
                     </li>
                     <li>
-                        "The segments follow the locale; their names, the button\u{2019}s name, the descriptions and the "
-                        "validation messages are English for now."
+                        "The segments follow the locale, and so do their names, the button\u{2019}s name, the descriptions "
+                        "and the validation messages."
                     </li>
                 </ul>
                 <KeyboardTable>

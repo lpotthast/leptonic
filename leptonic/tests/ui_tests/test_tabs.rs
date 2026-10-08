@@ -88,22 +88,16 @@ async fn expect_focus(page: &Page<'_>, name: &str, index: usize) -> Result<(), R
 
 /// Wait until the tab at `index` is the selected one.
 async fn expect_selected(page: &Page<'_>, name: &str, index: usize) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
+    wait_for!(format!("{name}: the selected tabs"), vec![index], {
         let mut selected = Vec::new();
-        for tab in tabs(page, name).await? {
-            selected.push(attr(&tab, "aria-selected").await?.as_deref() == Some("true"));
+        for (i, tab) in tabs(page, name).await?.iter().enumerate() {
+            if attr(tab, "aria-selected").await?.as_deref() == Some("true") {
+                selected.push(i);
+            }
         }
-        if selected.iter().position(|s| *s) == Some(index)
-            && selected.iter().filter(|s| **s).count() == 1
-        {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("{name}: expected tab {index} selected, got {selected:?}");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+        selected
+    });
+    Ok(())
 }
 
 async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
@@ -264,8 +258,11 @@ async fn data_attributes(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     page.wait_for_attr(&tabs[2], "data-hovered", None).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(attr(&tabs[1], "data-hovered").await?).is_none();
+    stays!(
+        "data-hovered of the second tab",
+        None,
+        attr(&tabs[1], "data-hovered").await?
+    );
 
     // Press state.
     page.driver
@@ -422,8 +419,11 @@ async fn dynamic(page: &Page<'_>) -> Result<(), Report> {
     let list = dynamic_tabs(page).await?;
     page.wait_for_attr(&list[2], "aria-selected", Some("true"))
         .await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-tabs-dynamic-changes").await?).is_equal_to("2".to_owned());
+    stays!(
+        "the text of #test-tabs-dynamic-changes",
+        "2".to_owned(),
+        page.read_text_of("test-tabs-dynamic-changes").await?
+    );
     Ok(())
 }
 

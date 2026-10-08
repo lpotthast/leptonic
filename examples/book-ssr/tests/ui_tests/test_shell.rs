@@ -190,7 +190,7 @@ impl BrowserTest<str> for DocMenuTests {
     }
 }
 
-/// The search shortcut: Ctrl+K (Cmd+K on macOS) opens the search with focus in its field.
+/// The search shortcut: Ctrl+K (Cmd+K on Apple devices) opens the search with focus in its field.
 pub struct SearchShortcutTests {}
 
 #[async_trait]
@@ -204,14 +204,19 @@ impl BrowserTest<str> for SearchShortcutTests {
         page.set_viewport(1600, 1000).await?;
         page.goto("/doc/overview").await?;
 
+        let primary = if page.is_apple_device().await? {
+            Key::Meta
+        } else {
+            Key::Control
+        };
         driver
             .action_chain()
-            .key_down(Key::Control)
+            .key_down(primary.clone())
             .send_keys("k")
-            .key_up(Key::Control)
+            .key_up(primary)
             .perform()
             .await?;
-        page.wait_until("Ctrl+K opens the search", SEARCH_OPEN)
+        page.wait_until("Ctrl+K (Cmd+K) opens the search", SEARCH_OPEN)
             .await?;
         page.wait_until("the search field has focus", INPUT_FOCUSED)
             .await?;
@@ -360,7 +365,6 @@ impl BrowserTest<str> for ShellStructureTests {
                     String(!!document.querySelector('main .doc-concept-tabs')),
                     [...document.querySelectorAll('#book-doc-sidebar nav h2')].map(h => h.textContent).join(', '),
                     document.querySelector('.doc-search-trigger').getAttribute('aria-label'),
-                    document.querySelector('.doc-search-trigger').getAttribute('aria-keyshortcuts'),
                 ];",
             )
             .await?;
@@ -373,11 +377,23 @@ impl BrowserTest<str> for ShellStructureTests {
                 "true",
                 "Concepts, Building blocks",
                 "Search docs",
-                "Control+K",
             ]
             .map(str::to_owned)
             .to_vec(),
         );
+        // The search button names its shortcut with the platform's primary modifier (once hydrated, on Apple devices).
+        let shortcut = if page.is_apple_device().await? {
+            "Meta+K"
+        } else {
+            "Control+K"
+        };
+        page.wait_until(
+            &format!("the search button's shortcut is {shortcut}"),
+            &format!(
+                "return document.querySelector('.doc-search-trigger').getAttribute('aria-keyshortcuts') === '{shortcut}';"
+            ),
+        )
+        .await?;
 
         // No two controls of the sidebar share a name: a group's toggle is not named like its overview link.
         let duplicates = page
@@ -500,7 +516,7 @@ const MARKDOWN_REQUESTS: &str = "return performance.getEntriesByType('resource')
     .filter(e => new URL(e.name).pathname.endsWith('.md')).length;";
 
 /// "Copy as Markdown": opening a page or navigating to another one downloads no Markdown; the first press downloads
-/// the page's export, a second press copies the cached one without downloading it again.
+/// the page's export and copies it, a second press copies the cached one without downloading it again.
 pub struct CopyMarkdownTests {}
 
 #[async_trait]
@@ -513,6 +529,17 @@ impl BrowserTest<str> for CopyMarkdownTests {
         let page = BookPage { driver, base_url };
         page.goto("/doc/overview").await?;
         assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(0.0);
+        // Reading the clipboard back needs the permission (writing during a press doesn't).
+        driver
+            .cdp()
+            .send_raw(
+                "Browser.grantPermissions",
+                serde_json::json!({
+                    "origin": base_url.trim_end_matches('/'),
+                    "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"],
+                }),
+            )
+            .await?;
 
         // A client-side navigation to another page doesn't download its export either. The book scrolls smoothly:
         // bring the link into view instantly before clicking it.
@@ -527,15 +554,20 @@ impl BrowserTest<str> for CopyMarkdownTests {
             )
             .await?;
         link.click().await?;
+        // The navigation scrolls the new page to the top, smoothly: wait for it, so that the button stays in place.
         page.wait_until(
-            "the installation guide is shown",
-            "return location.pathname === '/doc/installation' && !!document.querySelector('.doc-copy-markdown');",
+            "the installation guide is shown, scrolled to the top",
+            "return location.pathname === '/doc/installation' && !!document.querySelector('.doc-copy-markdown') \
+                && window.scrollY === 0;",
         )
         .await?;
         assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(0.0);
 
-        // The first press downloads the export (copying itself may fail in a headless browser: either result counts).
+        // The first press downloads the export and copies it.
         let press_and_wait = async || -> Result<(), Report> {
+            driver
+                .execute("return navigator.clipboard.writeText('');", vec![])
+                .await?;
             driver
                 .find(By::Css(".doc-copy-markdown"))
                 .await
@@ -544,9 +576,14 @@ impl BrowserTest<str> for CopyMarkdownTests {
                 .await?;
             page.wait_until(
                 "the button reports the copy",
-                "return /Copied|Copy failed/.test(document.querySelector('.doc-copy-markdown').textContent);",
+                "return document.querySelector('.doc-copy-markdown').textContent.includes('Copied');",
             )
             .await?;
+            let copied = driver
+                .execute("return navigator.clipboard.readText();", vec![])
+                .await?
+                .convert::<String>()?;
+            assert_that!(copied.as_str()).starts_with("---\ntitle: \"Installation\"\n");
             page.wait_until(
                 "the button is ready again",
                 "return document.querySelector('.doc-copy-markdown').textContent.includes('Copy as Markdown');",
@@ -556,7 +593,7 @@ impl BrowserTest<str> for CopyMarkdownTests {
         press_and_wait().await?;
         assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(1.0);
 
-        // The second press uses the cached export.
+        // The second press copies the cached export.
         press_and_wait().await?;
         assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(1.0);
         Ok(())
@@ -585,6 +622,112 @@ impl BrowserTest<str> for FontTests {
         assert_that!(fonts[0].as_str()).contains("Roboto");
         assert_that!(fonts[1].as_str()).contains("Roboto");
         assert_that!(fonts[2].as_str()).contains("JetBrains Mono");
+        Ok(())
+    }
+}
+
+/// A code block's copy button puts exactly the block's code on the clipboard and confirms it with a check mark.
+pub struct CodeCopyTests {}
+
+#[async_trait]
+impl BrowserTest<str> for CodeCopyTests {
+    fn name(&self) -> Cow<'_, str> {
+        "code_block_copy_button_copies_the_code".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = BookPage { driver, base_url };
+        page.goto("/doc/interactions/use-press").await?;
+        // Reading the clipboard back needs the permission (writing during a press doesn't).
+        driver
+            .cdp()
+            .send_raw(
+                "Browser.grantPermissions",
+                serde_json::json!({
+                    "origin": base_url.trim_end_matches('/'),
+                    "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"],
+                }),
+            )
+            .await?;
+        driver
+            .execute("return navigator.clipboard.writeText('');", vec![])
+            .await?;
+
+        let button = driver
+            .find(By::Css(
+                "article code.doc-code[data-language] .doc-code-copy",
+            ))
+            .await
+            .context("the page has a code block with a copy button")?;
+        driver
+            .execute(
+                "arguments[0].scrollIntoView({ behavior: 'instant', block: 'center' });",
+                vec![button.to_json()?],
+            )
+            .await?;
+        let icon_before = page
+            .strings("return [document.querySelector('article .doc-code-copy svg').innerHTML];")
+            .await?;
+        button.click().await?;
+        page.wait_until(
+            "the button shows a check mark",
+            &format!(
+                "return document.querySelector('article .doc-code-copy svg').innerHTML !== {};",
+                serde_json::to_string(&icon_before[0])?
+            ),
+        )
+        .await?;
+
+        let code = page
+            .strings("return [document.querySelector('article code.doc-code[data-language] .doc-code-text').textContent];")
+            .await?;
+        let copied = driver
+            .execute("return navigator.clipboard.readText();", vec![])
+            .await?
+            .convert::<String>()?;
+        assert_that!(copied.trim()).is_equal_to(code[0].trim());
+        assert_that!(copied.as_str()).contains("use_press(");
+        Ok(())
+    }
+}
+
+/// Keys in keyboard tables are key caps: one `<kbd>` per key inside the combination's `<kbd>`, drawn with a border in
+/// the code font. A description of a key group in a combination ("Shift + Arrow keys") is text, not a key cap.
+pub struct KeyCapTests {}
+
+#[async_trait]
+impl BrowserTest<str> for KeyCapTests {
+    fn name(&self) -> Cow<'_, str> {
+        "keys_are_key_caps_and_descriptions_are_text".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = BookPage { driver, base_url };
+        page.goto("/doc/color-slider").await?;
+        let row = page
+            .strings(
+                "const cell = [...document.querySelectorAll('article td.doc-table-name')]
+                    .find(td => td.textContent.includes('Arrow keys') && td.textContent.includes('Shift'));
+                 if (!cell) return ['missing'];
+                 // The text a screen reader reads: glyphs are hidden, the keys' names are visually hidden.
+                 const spoken = node => node.nodeType === Node.TEXT_NODE ? node.textContent
+                    : node.nodeType !== Node.ELEMENT_NODE || node.getAttribute('aria-hidden') === 'true' ? ''
+                    : [...node.childNodes].map(spoken).join('');
+                 const caps = [...cell.querySelectorAll('kbd.doc-keys > kbd')];
+                 const style = getComputedStyle(caps[0]);
+                 return [
+                    caps.map(spoken).join(' '),
+                    spoken(cell).replace(/\\s+/g, ' ').trim(),
+                    String(parseFloat(style.borderTopWidth) >= 1 && style.borderTopStyle !== 'none'),
+                    String(style.fontFamily.includes('JetBrains Mono')),
+                 ];",
+            )
+            .await?;
+        assert_that!(row).is_equal_to(
+            ["Shift", "Shift + Arrow keys", "true", "true"]
+                .map(str::to_owned)
+                .to_vec(),
+        );
         Ok(())
     }
 }

@@ -14,7 +14,7 @@ pub fn PageUseToolbar() -> impl IntoView {
                 "The "<Code inline=true>"use_toolbar"</Code>" hook makes a group of controls one tab stop: "<Keys keys="Tab"/>
                 " enters and leaves it, the arrow keys move focus between its controls, and when focus comes back, it returns "
                 "to the control focused last. The hook moves focus itself, so the controls need no tabindex management. "
-                "See the "<Link href=routes::doc::Toolbar.materialize()>"Toolbar overview"</Link>" for concept guidance."
+                "See the "<Link href=routes::doc::Toolbar.materialize()>"Toolbar overview"</Link>" for concept guidance and keyboard interaction."
             </p>
             <ReactAria hook="useToolbar"/>
 
@@ -92,18 +92,6 @@ pub fn PageUseToolbar() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab / Shift + Tab">
-                        "Moves focus into the toolbar (to the control focused last) or out of it."
-                    </KeyRow>
-                    <KeyRow keys="ArrowRight / ArrowLeft">
-                        "Horizontal toolbars: focuses the next or previous control (reversed in right-to-left locales)."
-                    </KeyRow>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Vertical toolbars: focuses the next or previous control."</KeyRow>
-                </KeyboardTable>
-                <p>"Focus doesn\u{2019}t wrap around: at the first or last control, the arrow keys do nothing."</p>
-            </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Toolbar.materialize()>"Toolbar overview"</Link></li>

@@ -21,6 +21,8 @@ use crate::{
         styles::Styles,
     },
 };
+use crate::utils::i18n::use_locale;
+use crate::utils::intl_strings::{AtomStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -93,10 +95,11 @@ pub fn ColorSwatchPicker<C: ColorValue>(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorSwatchPicker", classes);
+    let locale = use_locale();
     let collection = use_list_collection(
         colors,
         |color: &C| color_key((*color).into()),
-        |color: &C| color.color_name(),
+        move |color: &C| color.color_name(&locale.get()),
     );
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<C>);
@@ -135,10 +138,11 @@ pub fn ColorSwatchPicker<C: ColorValue>(
         }
     });
     let has_labelledby = aria_labelledby.is_some();
+    let strings = use_localized_strings::<AtomStrings>();
     let aria_label = MaybeProp::derive(move || {
         aria_label
             .get()
-            .or_else(|| (!has_labelledby).then(|| "Color swatches".to_owned()))
+            .or_else(|| (!has_labelledby).then(|| strings.read().color_swatch_picker()))
     });
     let disabled = RwSignal::new(HashSet::new());
     let context = PickerContext {

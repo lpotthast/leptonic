@@ -10,7 +10,8 @@ pub fn PageAtomCheckbox() -> impl IntoView {
     view! {
         <DocPage title="Checkbox Atoms">
             <p>
-                "The checkbox atoms render unstyled checkboxes: "<Code inline=true>"Checkbox"</Code>" is a "
+                "The checkbox atoms render unstyled checkboxes: a "<Code inline=true>"CheckboxField"</Code>" holds a "
+                "checkbox\u{2019}s state, and its "<Code inline=true>"CheckboxButton"</Code>" is the clickable "
                 <Code inline=true>"<label>"</Code>" around a visually hidden "<Code inline=true>"<input type=\"checkbox\">"</Code>
                 " and your children, which draw the box and the label text. "<Code inline=true>"CheckboxGroup"</Code>
                 " groups checkboxes selecting a set of values; the "
@@ -20,7 +21,7 @@ pub fn PageAtomCheckbox() -> impl IntoView {
 
             <Section title="Hooks Used">
                 <p>
-                    <Code inline=true>"Checkbox"</Code>" calls "
+                    <Code inline=true>"CheckboxField"</Code>" calls "
                     <Link href=format!("{}#use-toggle-state", routes::doc::checkbox::Hook.materialize())>"use_toggle_state"</Link>" and "
                     <Link href=format!("{}#use-checkbox", routes::doc::checkbox::Hook.materialize())>"use_checkbox"</Link>
                     " (inside a group: "
@@ -35,16 +36,18 @@ pub fn PageAtomCheckbox() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::checkbox::Checkbox;
+                        use leptonic::atoms::checkbox::{CheckboxButton, CheckboxField};
                         use leptos::prelude::*;
 
                         let subscribed = RwSignal::new(false);
 
                         view! {
-                            <Checkbox is_selected=subscribed set_selected=subscribed classes="my-checkbox">
-                                <span class="my-checkbox-box" aria-hidden="true"></span>
-                                "Subscribe to the newsletter"
-                            </Checkbox>
+                            <CheckboxField is_selected=subscribed set_selected=subscribed>
+                                <CheckboxButton classes="my-checkbox">
+                                    <span class="my-checkbox-box" aria-hidden="true"></span>
+                                    "Subscribe to the newsletter"
+                                </CheckboxButton>
+                            </CheckboxField>
                         }
                     "#)}
                 </Code>
@@ -55,7 +58,7 @@ pub fn PageAtomCheckbox() -> impl IntoView {
             </Section>
 
             <Section title="Demo">
-                <p>"The box is a "<Code inline=true>"<span>"</Code>" styled through the label\u{2019}s data attributes:"</p>
+                <p>"The box is a "<Code inline=true>"<span>"</Code>" styled through the data attributes of the "<Code inline=true>"CheckboxButton"</Code>":"</p>
                 <Demo
                     description="Newsletter checkbox drawn with CSS, with indeterminate, disabled and read-only toggles"
                     source=include_str!("demos/checkbox.rs")
@@ -75,64 +78,14 @@ pub fn PageAtomCheckbox() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Checkbox">
-                <Section title="Props" id="checkbox-props">
-                    <ApiTable kind=ApiKind::Props of="atoms::checkbox::Checkbox">
-                        <ApiRow name="value" ty="Option<Key>" default="None">
-                            "The checkbox\u{2019}s value in its "<Code inline=true>"CheckboxGroup"</Code>
-                            " (required there). The group then holds the selection: "<Code inline=true>"default_selected"</Code>
-                            ", "<Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" don\u{2019}t apply."
-                        </ApiRow>
-                        <ApiRow name="default_selected" ty="bool" default="false">"Whether the checkbox starts checked."</ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">
-                            "Called when the checkbox is checked or unchecked, also while "<Code inline=true>"is_selected"</Code>
-                            " controls the selection."
-                        </ApiRow>
-                        <ApiRow name="is_selected" ty="Option<Signal<bool>>" default="None">
-                            "Whether the toggle is selected (controlled): a value or any signal."
-                        </ApiRow>
-                        <ApiRow name="set_selected" ty="Option<Out<bool>>" default="None">
-                            "Receives the selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
-                        </ApiRow>
-                        <ApiRow name="is_indeterminate" ty="Signal<bool>" default="false">
-                            "Shows the checkbox as partially checked, whatever its selection."
-                        </ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the checkbox."</ApiRow>
-                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"The checkbox can be focused but not changed."</ApiRow>
-                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the checkbox as required."</ApiRow>
-                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the checkbox invalid."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<bool>>" default="None">"Validates the selection."</ApiRow>
-                        <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
-                            "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
-                            <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s "<Code inline=true>"name"</Code>" (in a group: the group\u{2019}s)."</ApiRow>
-                        <ApiRow name="form_value" ty="Option<String>" default="None">
-                            "The value submitted while checked (in a group: "<Code inline=true>"value"</Code>")."
-                        </ApiRow>
-                        <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, when it isn\u{2019}t inside it."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
-                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a checkbox without label text."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling or describing elements."</ApiRow>
-                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the checkbox when it mounts."</ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the checkbox gains or loses focus."</ApiRow>
-                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Option<Children>" default="None">"The box and the label text."</ApiRow>
-                    </ApiTable>
-                    <p>
-                        "See "<Link href=format!("{}#toggleoptions", routes::doc::checkbox::Hook.materialize())>"ToggleOptions"</Link>
-                        " for how these settings behave."
-                    </p>
-                </Section>
-            </Section>
-
             <Section title="CheckboxField">
                 <p>
-                    "For a checkbox with a description or an error message of its own, use a "<Code inline=true>"CheckboxField"</Code>
-                    ": a "<Code inline=true>"<div>"</Code>" around a "<Code inline=true>"CheckboxButton"</Code>" (the clickable "
-                    <Code inline=true>"<label>"</Code>" around a visually hidden "<Code inline=true>"<input type=\"checkbox\">"</Code>
-                    " and your children), a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>
-                    ". It takes the props of "<Code inline=true>"Checkbox"</Code>" (its "<Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>" go to the "<Code inline=true>"<div>"</Code>"); in a "<Code inline=true>"CheckboxGroup"</Code>" the group validates, so a "<Code inline=true>"FieldError"</Code>" in it shows nothing. Both render the data attributes below."
+                    "A checkbox: a "<Code inline=true>"<div>"</Code>" holding its state, around a "
+                    <AnchorLink href="#checkboxbutton">"CheckboxButton"</AnchorLink>" and, as needed, a "
+                    <Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>" of its own. In a "
+                    <Code inline=true>"CheckboxGroup"</Code>" the group validates, so a "<Code inline=true>"FieldError"</Code>
+                    " in it shows nothing. There is no single "<Code inline=true>"Checkbox"</Code>" atom: a checkbox is always "
+                    "a field and its button."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -189,6 +142,10 @@ pub fn PageAtomCheckbox() -> impl IntoView {
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<div>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"The "<Code inline=true>"CheckboxButton"</Code>", and a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>" as needed. Required."</ApiRow>
                     </ApiTable>
+                    <p>
+                        "See "<Link href=format!("{}#toggleoptions", routes::doc::checkbox::Hook.materialize())>"ToggleOptions"</Link>
+                        " for how these settings behave."
+                    </p>
                 </Section>
             </Section>
 
@@ -208,26 +165,30 @@ pub fn PageAtomCheckbox() -> impl IntoView {
 
             <Section title="CheckboxGroup">
                 <p>
-                    "A "<Code inline=true>"<div role=\"group\">"</Code>" selecting a set of values. Its "<Code inline=true>"Checkbox"</Code>
-                    "es need a "<Code inline=true>"value"</Code>". Label it with a "<Code inline=true>"Label"</Code>
+                    "A "<Code inline=true>"<div role=\"group\">"</Code>" selecting a set of values. Its "<Code inline=true>"CheckboxField"</Code>
+                    "s need a "<Code inline=true>"value"</Code>". Label it with a "<Code inline=true>"Label"</Code>
                     " (or "<Code inline=true>"aria_label"</Code>"), and add a "<Code inline=true>"Description"</Code>
                     " and a "<Code inline=true>"FieldError"</Code>" as needed; they describe the group and each checkbox. See "
                     <Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>"."
                 </p>
+                <p>
+                    "It is generic over the type "<Code inline=true>"V"</Code>" of its values: a "<Code inline=true>"Key"</Code>
+                    ", a "<Code inline=true>"String"</Code>", an integer or your enum (see "<Link href=format!("{}#selectionvalue", routes::doc::CollectionState.materialize())>"SelectionValue"</Link>")."
+                </p>
                 <Section title="Props" id="checkbox-group-props">
                     <ApiTable kind=ApiKind::Props of="atoms::checkbox::CheckboxGroup">
-                        <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">"The initially checked values."</ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Vec<Key>>>" default="None">
+                        <ApiRow name="default_value" ty="Vec<V>" default="vec![]">"The initially checked values."</ApiRow>
+                        <ApiRow name="value" ty="Option<Signal<Vec<V>>>" default="None">
                             "The checked values (controlled): a value or any signal."
                         </ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Vec<Key>>>" default="None">
+                        <ApiRow name="set_value" ty="Option<Out<Vec<V>>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">"Called with the checked values when they change."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<Vec<V>>>" default="None">"Called with the checked values when they change."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Disables the checkboxes, or prevents changes."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"At least one checkbox must be checked."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the group invalid."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<Vec<Key>>>" default="None">"Validates the checked values."</ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<Vec<V>>>" default="None">"Validates the checked values."</ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
                             <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
@@ -253,7 +214,10 @@ pub fn PageAtomCheckbox() -> impl IntoView {
             <Section title="Data Attributes">
                 <p>
                     "Each attribute is "<Code inline=true>"true"</Code>" while its state applies, and absent otherwise. "
-                    <Code inline=true>"Checkbox"</Code>" sets them on its "<Code inline=true>"<label>"</Code>":"
+                    <Code inline=true>"CheckboxButton"</Code>" sets them on its "<Code inline=true>"<label>"</Code>"; "
+                    <Code inline=true>"CheckboxField"</Code>" sets those of the checkbox\u{2019}s state (all but "
+                    <Code inline=true>"data-pressed"</Code>", "<Code inline=true>"data-hovered"</Code>" and the focus attributes) "
+                    "on its "<Code inline=true>"<div>"</Code>":"
                 </p>
                 <ApiTable kind=ApiKind::DataAttributes>
                     <ApiRow name="data-selected" ty="true">"The checkbox is checked."</ApiRow>
@@ -278,21 +242,24 @@ pub fn PageAtomCheckbox() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. "<Code inline=true>"Checkbox"</Code>" renders a "<Code inline=true>"<label>"</Code>
-                    " (default class "<Code inline=true>"leptonic-Checkbox"</Code>") around a visually hidden "
-                    <Code inline=true>"<input>"</Code>", followed by your children. Draw the box yourself as the first child, "
-                    "hidden from assistive technology, and put the label text after it:"
+                    "The atoms bring no styles. "<Code inline=true>"CheckboxField"</Code>" renders a "<Code inline=true>"<div>"</Code>
+                    " (default class "<Code inline=true>"leptonic-CheckboxField"</Code>"), "<Code inline=true>"CheckboxButton"</Code>" a "
+                    <Code inline=true>"<label>"</Code>" (default class "<Code inline=true>"leptonic-CheckboxButton"</Code>") around a "
+                    "visually hidden "<Code inline=true>"<input>"</Code>", followed by your children. Draw the box yourself as the "
+                    "button\u{2019}s first child, hidden from assistive technology, and put the label text after it:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        <Checkbox is_selected=subscribed set_selected=subscribed classes="demo-check">
-                            <span class="demo-check-box" aria-hidden="true"></span>
-                            "Subscribe to the newsletter"
-                        </Checkbox>
+                        <CheckboxField is_selected=subscribed set_selected=subscribed>
+                            <CheckboxButton classes="demo-check">
+                                <span class="demo-check-box" aria-hidden="true"></span>
+                                "Subscribe to the newsletter"
+                            </CheckboxButton>
+                        </CheckboxField>
                     "#)}
                 </Code>
                 <p>
-                    "Style the box through the data attributes of the label. The input has the focus, but is invisible, so "
+                    "Style the box through the data attributes of the button. The input has the focus, but is invisible, so "
                     "draw the focus ring around the box with "<Code inline=true>"data-focus-visible"</Code>". The demos above "
                     "use this CSS:"
                 </p>
@@ -334,7 +301,7 @@ pub fn PageAtomCheckbox() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox overview"</Link></li>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
-                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
+                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>
         </DocPage>

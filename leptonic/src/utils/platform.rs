@@ -53,6 +53,14 @@ pub mod device {
     pub fn is_android() -> bool {
         detected().is_android
     }
+
+    /// Whether the browser supports touch events (`'ontouchstart' in window`); `false` on the
+    /// server.
+    pub fn has_touch_events() -> bool {
+        leptos_use::use_window().as_ref().is_some_and(|window| {
+            js_sys::Reflect::has(window, &"ontouchstart".into()).unwrap_or(false)
+        })
+    }
 }
 
 /// Tests for browser types.

@@ -156,3 +156,227 @@ pub fn use_color_slider_state<C: ColorValue>(
         locale,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // Upstream: @adobe/react-spectrum/test/color/ColorSlider.test.tsx (the state's part of it).
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{
+        testing::{flush_effects, with_owner},
+        utils::color::{Alpha, AlphaChannel, HSL, HslChannel, RGB8, RgbChannel},
+    };
+
+    const BLACK: RGB8 = RGB8 { r: 0, g: 0, b: 0 };
+
+    /// The colors a callback was called with.
+    fn recorder<C: ColorValue>() -> (RwSignal<Vec<C>>, Callback<C>) {
+        let calls = RwSignal::new(Vec::new());
+        let callback = Callback::new(move |color| calls.update(|c| c.push(color)));
+        (calls, callback)
+    }
+
+    fn input<C: ColorValue>(default_value: C, channel: C::Channel) -> UseColorSliderStateInput<C> {
+        UseColorSliderStateInput {
+            default_value,
+            value: None,
+            channel,
+            is_disabled: Signal::default(),
+            orientation: Signal::stored(Orientation::Horizontal),
+            on_change: None,
+            on_change_end: None,
+        }
+    }
+
+    /// A keyboard change, as `use_slider_thumb` makes it: a drag around the change.
+    fn key<C: ColorValue>(state: &ColorSliderState<C>, change: impl Fn(&SliderState<f64>)) {
+        state.slider.set_thumb_dragging(0, true);
+        change(&state.slider);
+        state.slider.set_thumb_dragging(0, false);
+    }
+
+    fn red(r: u8) -> RGB8 {
+        RGB8 { r, ..BLACK }
+    }
+
+    // Upstream: "sets input props", "sets aria-valuetext to formatted value".
+    #[test]
+    fn uses_the_channels_range_and_formatting() {
+        with_owner(|| {
+            let state = use_color_slider_state(input(BLACK, RgbChannel::Red));
+            assert_that!(state.slider.min_value.get_untracked()).is_equal_to(0.0);
+            assert_that!(state.slider.max_value.get_untracked()).is_equal_to(255.0);
+            assert_that!(state.slider.step.get_untracked()).is_equal_to(1.0);
+            assert_that!(state.formatted_value().get_untracked()).is_equal_to("0".to_owned());
+
+            let hsl = HSL {
+                hue: 10.0,
+                saturation: 0.5,
+                lightness: 0.5,
+            };
+            let state = use_color_slider_state(input(hsl, HslChannel::Hue));
+            assert_that!(state.slider.max_value.get_untracked()).is_equal_to(360.0);
+            assert_that!(state.slider.thumb_value(0)).is_equal_to(10.0);
+            assert_that!(state.formatted_value().get_untracked()).is_equal_to("10°".to_owned());
+            assert_that!(state.slider.thumb_value_label(0)).is_equal_to("10°".to_owned());
+        });
+    }
+
+    // Upstream: "keyboard events" > "works".
+    #[test]
+    fn keyboard_changes_call_on_change_and_on_change_end() {
+        with_owner(|| {
+            let (changes, on_change) = recorder();
+            let (ends, on_change_end) = recorder();
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                on_change: Some(on_change),
+                on_change_end: Some(on_change_end),
+                ..input(BLACK, RgbChannel::Red)
+            });
+            let page = || Some(untrack(|| state.slider.page_size()));
+            key(&state, |s| s.increment_thumb(0, None)); // ArrowRight
+            key(&state, |s| s.decrement_thumb(0, None)); // ArrowLeft
+            key(&state, |s| s.increment_thumb(0, page())); // PageUp
+            key(&state, |s| s.increment_thumb(0, None)); // ArrowRight
+            key(&state, |s| s.decrement_thumb(0, page())); // PageDown
+            key(&state, |s| s.set_thumb_value(0, s.thumb_max_value(0))); // End
+            key(&state, |s| s.decrement_thumb(0, page())); // PageDown
+            key(&state, |s| s.set_thumb_value(0, s.thumb_min_value(0))); // Home
+
+            let expected: Vec<RGB8> = [1, 0, 17, 18, 1, 255, 238, 0].map(red).to_vec();
+            assert_that!(changes.get_untracked()).is_equal_to(expected.clone());
+            assert_that!(ends.get_untracked()).is_equal_to(expected);
+            assert_that!(state.value.get_untracked()).is_equal_to(BLACK);
+        });
+    }
+
+    // Upstream: "keyboard events" > "doesn't work when disabled".
+    #[test]
+    fn a_disabled_slider_ignores_changes() {
+        with_owner(|| {
+            let (changes, on_change) = recorder();
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                is_disabled: Signal::stored(true),
+                on_change: Some(on_change),
+                ..input(BLACK, RgbChannel::Red)
+            });
+            key(&state, |s| s.increment_thumb(0, None));
+            key(&state, |s| s.decrement_thumb(0, None));
+            assert_that!(changes.get_untracked()).is_empty();
+            assert_that!(state.value.get_untracked()).is_equal_to(BLACK);
+        });
+    }
+
+    // Upstream: "dragging the thumb works" (the state's part: the changes while dragging, one
+    // end, the other channels kept).
+    #[test]
+    fn dragging_changes_the_channel_and_reports_the_end_once() {
+        with_owner(|| {
+            let (changes, on_change) = recorder();
+            let (ends, on_change_end) = recorder();
+            let start = RGB8 {
+                r: 0,
+                g: 100,
+                b: 200,
+            };
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                on_change: Some(on_change),
+                on_change_end: Some(on_change_end),
+                ..input(start, RgbChannel::Red)
+            });
+            state.slider.set_thumb_dragging(0, true);
+            assert_that!(state.is_dragging.get_untracked()).is_true();
+            state.slider.set_thumb_percent(0, 0.2);
+            state.slider.set_thumb_percent(0, 0.5);
+            assert_that!(ends.get_untracked()).is_empty();
+            state.slider.set_thumb_dragging(0, false);
+            assert_that!(state.is_dragging.get_untracked()).is_false();
+
+            let with_red = |r| RGB8 { r, ..start };
+            assert_that!(changes.get_untracked()).is_equal_to(vec![with_red(51), with_red(128)]);
+            assert_that!(ends.get_untracked()).is_equal_to(vec![with_red(128)]);
+            assert_that!(state.value.get_untracked()).is_equal_to(with_red(128));
+        });
+    }
+
+    // Upstream: "supports form reset".
+    #[test]
+    fn remembers_the_initial_bound_color_for_form_resets() {
+        with_owner(|| {
+            let app = RwSignal::new(red(127));
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                value: Some(ValueBinding::from(app)),
+                ..input(BLACK, RgbChannel::Red)
+            });
+            assert_that!(state.slider.thumb_value(0)).is_equal_to(127.0);
+            state.slider.set_thumb_value(0, 255.0);
+            assert_that!(app.get_untracked()).is_equal_to(red(255));
+
+            assert_that!(state.default_value()).is_equal_to(red(127));
+            assert_that!(state.slider.default_values()).is_equal_to(vec![127.0]);
+            state
+                .slider
+                .set_thumb_value(0, state.slider.default_values()[0]);
+            assert_that!(app.get_untracked()).is_equal_to(red(127));
+        });
+    }
+
+    #[test]
+    fn changes_keep_the_other_channels_the_app_set() {
+        with_owner(|| {
+            let app = RwSignal::new(BLACK);
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                value: Some(ValueBinding::from(app)),
+                ..input(BLACK, RgbChannel::Red)
+            });
+            flush_effects();
+            app.set(RGB8 {
+                r: 10,
+                g: 20,
+                b: 30,
+            });
+            flush_effects();
+            assert_that!(state.slider.thumb_value(0)).is_equal_to(10.0);
+            key(&state, |s| s.increment_thumb(0, None));
+            assert_that!(app.get_untracked()).is_equal_to(RGB8 {
+                r: 11,
+                g: 20,
+                b: 30,
+            });
+        });
+    }
+
+    // Upstream: `getDisplayColor`.
+    #[test]
+    fn the_display_color_shows_the_channel() {
+        with_owner(|| {
+            let color = Alpha {
+                color: HSL {
+                    hue: 200.0,
+                    saturation: 0.2,
+                    lightness: 0.3,
+                },
+                alpha: 0.5,
+            };
+            let display = |channel| {
+                use_color_slider_state(input(color, channel))
+                    .display_color()
+                    .get_untracked()
+            };
+            // The hue at full saturation (and opaque).
+            assert_that!(display(AlphaChannel::Color(HslChannel::Hue))).is_equal_to(Alpha::new(
+                HSL {
+                    hue: 200.0,
+                    saturation: 1.0,
+                    lightness: 0.5,
+                },
+            ));
+            // Other color channels: the color, opaque.
+            assert_that!(display(AlphaChannel::Color(HslChannel::Lightness)))
+                .is_equal_to(Alpha::new(color.color));
+            // Alpha: the color as it is.
+            assert_that!(display(AlphaChannel::Alpha)).is_equal_to(color);
+        });
+    }
+}

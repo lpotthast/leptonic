@@ -106,7 +106,7 @@ pub use button::*;
 pub use collections::{
     Collection, CollectionBuilder, CollectionMemo, DisabledBehavior, FocusStrategy, ItemBuilder,
     ItemElements, ItemLink, Key, ListState, Node, NodeKind, SectionBuilder, SelectionBehavior,
-    SelectionMode, SingleSelectListState, ToKey, use_collection, use_list_collection,
+    SelectionMode, SelectionValue, SingleSelectListState, use_collection, use_list_collection,
     use_list_state, use_single_select_list_state,
 };
 pub use color::*;

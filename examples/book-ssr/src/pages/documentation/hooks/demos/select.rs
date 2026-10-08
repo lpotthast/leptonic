@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::{checkbox::Checkbox, focus_scope::FocusScope},
+    atoms::{checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
     hooks::{
         IntoAttrs, ListBoxData, SelectMode, UseHiddenSelectReturn, UseListBoxInput,
         UseListBoxReturn, UseOptionInput, UseOptionReturn, UseOverlayInput, UseSelectInput,
@@ -106,10 +106,12 @@ pub fn SelectDemo() -> impl IntoView {
             "Selected: "{move || state.selected_key().map_or_else(|| "none".to_owned(), |key| key.to_string())}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

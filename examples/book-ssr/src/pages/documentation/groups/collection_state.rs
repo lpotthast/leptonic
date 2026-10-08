@@ -245,28 +245,76 @@ pub fn PageCollectionState() -> impl IntoView {
                     "and order, and a concrete type keeps their large bodies from being compiled once per item type."
                 </p>
 
-                <Section title="ToKey">
+                <Section title="SelectionValue">
                     <p>
-                        "Converts a typed value into its key. It is implemented for strings and integers; implement it for "
-                        "your own ids and enums to build collections from them:"
+                        "The atoms that hold a value-like selection are generic over the type of their values: "
+                        <Code inline=true>"RadioGroup<V>"</Code>" ("<Code inline=true>"Option<V>"</Code>"), "
+                        <Code inline=true>"CheckboxGroup<V>"</Code>" ("<Code inline=true>"Vec<V>"</Code>"), "
+                        <Code inline=true>"ToggleButtonGroup<V>"</Code>" ("<Code inline=true>"HashSet<V>"</Code>"). "
+                        <Code inline=true>"Select<S>"</Code>" and "<Code inline=true>"ComboBox<S>"</Code>" take the shape of "
+                        "their value as their type, which is their selection mode: "<Code inline=true>"Option<V>"</Code>
+                        " for one value, "<Code inline=true>"Vec<V>"</Code>" for several. "
+                        <Code inline=true>"V: SelectionValue"</Code>" converts between a value and the "
+                        <Code inline=true>"Key"</Code>" that identifies its item in the collection: "
+                        <Code inline=true>"to_key(&self) -> Key"</Code>" and "<Code inline=true>"from_key(&Key) -> Option<Self>"</Code>
+                        ". It is implemented for "<Code inline=true>"Key"</Code>", "<Code inline=true>"String"</Code>" and the "
+                        "integers. The items (radio and checkbox fields, listbox items, toggle buttons) keep taking a "
+                        <Code inline=true>"Key"</Code>", into which a value converts."
+                    </p>
+                    <p>
+                        "The atom learns "<Code inline=true>"V"</Code>" from any typed prop ("<Code inline=true>"value"</Code>", "
+                        <Code inline=true>"default_value"</Code>", "<Code inline=true>"on_change"</Code>", \u{2026}). A group "
+                        "without one (only a "<Code inline=true>"name"</Code>", or nothing) names it: "
+                        <Code inline=true>"<RadioGroup<Key> name=\"plan\">"</Code>", "<Code inline=true>"<Select<Option<Key>>>"</Code>
+                        ". "<Code inline=true>"default_value"</Code>
+                        " takes no "<Code inline=true>"into"</Code>", so that it fixes the type: write "
+                        <Code inline=true>"default_value=Key::from(\"pro\")"</Code>" or an enum value, not "<Code inline=true>"\"pro\""</Code>"."
+                    </p>
+                    <p>
+                        "Selecting an item whose key is no value of "<Code inline=true>"V"</Code>" ("<Code inline=true>"from_key"</Code>
+                        " returns "<Code inline=true>"None"</Code>") doesn\u{2019}t reach your state: "
+                        <Code inline=true>"value=\"small\""</Code>" in a "<Code inline=true>"RadioGroup<Size>"</Code>" whose keys "
+                        "are "<Code inline=true>"\"s\""</Code>", "<Code inline=true>"\"m\""</Code>", \u{2026} The atom drops such "
+                        "keys and logs a warning in debug builds. Pass values ("<Code inline=true>"value=Size::Small"</Code>
+                        ") rather than keys, and the compiler catches the mismatch instead. Keys of different types differ, "
+                        "too: a "<Code inline=true>"ListBoxItem"</Code>" keyed "<Code inline=true>"\"10\""</Code>" in a collection "
+                        "keyed "<Code inline=true>"10"</Code>" isn\u{2019}t found, which also warns in debug builds."
+                    </p>
+                </Section>
+
+                <Section title="selection_value!">
+                    <p>
+                        "Implements "<Code inline=true>"SelectionValue"</Code>" (and "<Code inline=true>"From<T> for Key"</Code>
+                        ") for a fieldless enum, naming each variant\u{2019}s key. The keys are what forms submit. Derive "
+                        <Code inline=true>"Clone"</Code>", "<Code inline=true>"PartialEq"</Code>", "<Code inline=true>"Eq"</Code>
+                        " and "<Code inline=true>"Hash"</Code>" yourself. Two variants with the same key are a compile error:"
                     </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{Key, ToKey, use_collection};
+                            use leptonic::{
+                                atoms::{
+                                    field::Label,
+                                    radio::{RadioButton, RadioField, RadioGroup},
+                                },
+                                selection_value,
+                            };
+                            use leptos::prelude::*;
 
-                            #[derive(Clone, Copy)]
+                            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
                             enum Plan { Free, Pro }
 
-                            impl ToKey for Plan {
-                                fn to_key(&self) -> Key {
-                                    Key::from(match self { Plan::Free => "free", Plan::Pro => "pro" })
-                                }
-                            }
+                            selection_value!(Plan { Free = "free", Pro = "pro" });
 
-                            let plans = use_collection(|b| {
-                                b.item(Plan::Free.to_key(), "Free");
-                                b.item(Plan::Pro.to_key(), "Pro");
-                            });
+                            // App state of the enum's type: the group reads and writes `Option<Plan>`.
+                            let plan = RwSignal::new(Some(Plan::Free));
+
+                            view! {
+                                <RadioGroup value=plan set_value=plan name="plan">
+                                    <Label>"Plan"</Label>
+                                    <RadioField value=Plan::Free><RadioButton>"Free"</RadioButton></RadioField>
+                                    <RadioField value=Plan::Pro><RadioButton>"Pro"</RadioButton></RadioField>
+                                </RadioGroup>
+                            }
                         "#)}
                     </Code>
                 </Section>
@@ -617,10 +665,11 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="allows_different_press_origin" ty="bool">
                             "Let a press that started elsewhere (e.g. on a menu trigger) select the item when it ends on it. Required."
                         </ApiRow>
-                        <ApiRow name="on_action" ty="Option<Callback<()>>">
+                        <ApiRow name="on_action" ty="Signal<Option<Callback<()>>>">
                             "The item\u{2019}s action, e.g. opening a detail view. Without a selection mode, pressing performs "
                             "it; with one, "<Keys keys="Enter"/>" or a double-click does (with the "<Code inline=true>"Replace"</Code>
-                            " behavior). Required."
+                            " behavior). A signal, so that an item can gain or lose its action (a tree row that gets children "
+                            "becomes expandable). Required; "<Code inline=true>"Signal::stored(None)"</Code>" for none."
                         </ApiRow>
                         <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>">
                             "Called when a context menu is requested on the item (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the item\u{2019}s menu then replaces the browser\u{2019}s. Required; "<Code inline=true>"None"</Code>" keeps the browser\u{2019}s menu."

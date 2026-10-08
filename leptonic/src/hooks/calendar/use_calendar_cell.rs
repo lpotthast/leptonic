@@ -9,7 +9,8 @@ use leptos::{
 };
 use web_sys::{FocusEvent, MouseEvent, PointerEvent};
 
-use super::states::{CalendarData, strings};
+use super::states::CalendarData;
+use crate::utils::intl_strings::{CalendarStrings, use_localized_strings};
 use crate::{
     hooks::{
         IntoAttrs, PressEvent, PropsWithStyles, UsePressAttrs, UsePressInput, UsePressProps,
@@ -35,10 +36,6 @@ use crate::{
 //   react-aria-components keys cells by their position), so that the focus stays in the grid.
 // - The cells share the calendar's formatters (`CalendarData`); their states are memos, so that
 //   moving the highlighted range only updates the cells that change.
-//
-// ## OMITTED FEATURES
-// - Localized strings: "Today, {date}", "{date} selected", "First available date", the range
-//   selection prompts are English.
 //
 // =============================================================================
 
@@ -256,7 +253,9 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     let today = use_today();
     let is_today = memo(move || today.get() == Some(date.get()));
     let selected_date_description = data.selected_date_description;
+    let strings = use_localized_strings::<CalendarStrings>();
     let label = memo(move || {
+        let strings = strings.read();
         let mut label = String::new();
         // The first and last dates of a selected range name the whole range.
         if let Some(range) = range
@@ -271,21 +270,21 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         label.push_str(&formatters.full_date(date.get()));
         let mut label = if is_today.get() {
             if is_selected.get() {
-                strings::today_selected(&label)
+                strings.today_date_selected(&label)
             } else {
-                strings::today(&label)
+                strings.today_date(&label)
             }
         } else if is_selected.get() {
-            strings::selected(&label)
+            strings.date_selected(&label)
         } else {
             label
         };
         if calendar.min_value.get() == Some(date.get()) {
             label.push_str(", ");
-            label.push_str(strings::MINIMUM_DATE);
+            label.push_str(&strings.minimum_date());
         } else if calendar.max_value.get() == Some(date.get()) {
             label.push_str(", ");
-            label.push_str(strings::MAXIMUM_DATE);
+            label.push_str(&strings.maximum_date());
         }
         label
     });
@@ -295,9 +294,9 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         let range = range?;
         (is_focused.get() && !calendar.is_read_only.get() && is_selectable.get()).then(|| {
             if range.anchor_date.get().is_some() {
-                strings::FINISH_RANGE_SELECTION.to_owned()
+                strings.read().finish_range_selection_prompt()
             } else {
-                strings::START_RANGE_SELECTION.to_owned()
+                strings.read().start_range_selection_prompt()
             }
         })
     });

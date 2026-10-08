@@ -33,9 +33,8 @@ pub fn PageSsr() -> impl IntoView {
                     <TableRow>
                         <TableCell><Code inline=true>"ssr"</Code></TableCell>
                         <TableCell>
-                            "The server side of Leptos, leptos-use and leptos-element-capture (and of the rich text editor, if "
-                            "enabled). Leptonic leaves out code that only makes sense in a browser, such as its document-wide "
-                            "focus tracking."
+                            "The server side of Leptos, leptos-use and leptos-element-capture. Leptonic leaves out code that only "
+                            "makes sense in a browser, such as its document-wide focus tracking."
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -227,8 +226,8 @@ pub fn PageSsr() -> impl IntoView {
                         <TableCell>
                             "A theme remembered with "<Code inline=true>"signal_ls"</Code>" lives in local storage, which "
                             "the server can\u{2019}t read: the server renders the default theme, and the page switches to the "
-                            "stored theme when it hydrates (see "
-                            <Link href=routes::doc::Themes.materialize()>"Themes"</Link>")."
+                            "stored theme when it hydrates. Keep the theme in a cookie to render it on the server (see "
+                            <Link href=format!("{}#remembering-the-theme-on-the-server", routes::doc::Themes.materialize())>"Themes"</Link>")."
                         </TableCell>
                     </TableRow>
                 </DocTable>

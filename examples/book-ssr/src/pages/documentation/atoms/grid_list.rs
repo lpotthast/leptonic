@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::grid_file_list::GridFileListDemo;
+use super::demos::{grid_file_list::GridFileListDemo, grid_list_sections::GridListSectionsDemo};
 use crate::{kit::*, routes};
 
 #[component]
@@ -172,16 +172,9 @@ pub fn PageAtomGridList() -> impl IntoView {
                     <Code inline=true>"role=\"row\""</Code>" element with a "<Code inline=true>"role=\"rowheader\""</Code>
                     " cell, labelling the group. It shows its children, or else the section\u{2019}s header text."
                 </p>
-                <Code language=Language::Rust>
-                    {indoc!(r#"
-                        <GridList collection=files aria_label="Files">
-                            <GridListSection key="recent">
-                                <GridListHeader classes="my-grid-list-header"/>
-                                <GridListItem key="report">"Report.pdf"</GridListItem>
-                            </GridListSection>
-                        </GridList>
-                    "#)}
-                </Code>
+                <Demo description="Files in two sections with header rows, each row with a description, multiple selection" source=include_str!("demos/grid_list_sections.rs")>
+                    <GridListSectionsDemo/>
+                </Demo>
                 <Section title="GridListSection Props" id="gridlistsection-props">
                     <ApiTable kind=ApiKind::Props of="GridListSection">
                         <ApiRow name="key" ty="Key">"The section\u{2019}s key in the grid list\u{2019}s collection. Required."</ApiRow>
@@ -255,6 +248,10 @@ pub fn PageAtomGridList() -> impl IntoView {
                         "use_grid_selection_checkbox"
                     </Link>". To share the selection with other parts of your app, bind "<Code inline=true>"selection"</Code>
                     " and "<Code inline=true>"set_selection"</Code>" to your own signal."
+                </p>
+                <p>
+                    "For a context menu on the rows, put the grid list and a menu into a "
+                    <Link href=format!("{}#contextmenutrigger", routes::doc::menu::Atom.materialize())>"ContextMenuTrigger"</Link>"."
                 </p>
             </Section>
 

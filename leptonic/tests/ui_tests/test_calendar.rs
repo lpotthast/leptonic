@@ -128,9 +128,11 @@ async fn value(page: &Page<'_>, name: &str) -> Result<String, Report> {
 /// The value of the calendar `name` stays `expected` (checked again after the effects of an
 /// interaction had time to run).
 async fn expect_value_unchanged(page: &Page<'_>, name: &str, expected: &str) -> Result<(), Report> {
-    assert_that!(value(page, name).await?).is_equal_to(expected.to_owned());
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(value(page, name).await?).is_equal_to(expected.to_owned());
+    stays!(
+        format!("the value of {name}"),
+        expected.to_owned(),
+        value(page, name).await?
+    );
     Ok(())
 }
 
@@ -691,9 +693,11 @@ async fn setting_the_focused_date_keeps_the_focus(page: &Page<'_>) -> Result<(),
         .await?;
     let june20 = date(page, "focus", "Thursday, June 20, 2019").await?;
     page.wait_for_attr(&june20, "tabindex", Some("0")).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.active_element_id().await?)
-        .is_equal_to(Some("test-calendar-focus-set".to_owned()));
+    stays!(
+        "the focused element",
+        Some("test-calendar-focus-set".to_owned()),
+        page.active_element_id().await?
+    );
     Ok(())
 }
 
@@ -799,19 +803,12 @@ async fn wait_for_selected_days(
     name: &str,
     expected: &[&str],
 ) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
-        let days = selected_days(page, name).await?;
-        if days == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!(
-                "expected the selected days {expected:?} of {name}, got {days:?}"
-            );
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        format!("the selected days of {name}"),
+        expected,
+        selected_days(page, name).await?
+    );
+    Ok(())
 }
 
 /// Two quick taps select a range: the first starts it (a tap is released before the touch drag
@@ -821,8 +818,11 @@ async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
     touch_tap(page, &june11).await?;
     wait_for_selected_days(page, "range-touch", &["11"]).await?;
     // Past the drag delay: still only started.
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-    assert_that!(selected_days(page, "range-touch").await?).is_equal_to(vec!["11".to_owned()]);
+    stays!(
+        "the selected days",
+        vec!["11".to_owned()],
+        selected_days(page, "range-touch").await?
+    );
     assert_that!(value(page, "range-touch").await?)
         .is_equal_to("2019-06-05 - 2019-06-10".to_owned());
 
@@ -868,9 +868,11 @@ async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> 
     let june10 = date(page, "range-touch", "Monday, June 10, 2019").await?;
     touch(page, &june10, "pointerdown").await?;
     touch(page, &june10, "pointercancel").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-    assert_that!(value(page, "range-touch").await?)
-        .is_equal_to("2019-06-17 - 2019-06-23".to_owned());
+    stays!(
+        "the range",
+        "2019-06-17 - 2019-06-23".to_owned(),
+        value(page, "range-touch").await?
+    );
     date(page, "range-touch", "Tuesday, June 25, 2019")
         .await?
         .click()
@@ -981,17 +983,12 @@ async fn wait_for_grid_labels(
     name: &str,
     expected: &[&str],
 ) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
-        let labels = grid_labels(page, name).await?;
-        if labels == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected the grids of {name} {expected:?}, got {labels:?}");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        format!("the grid labels of {name}"),
+        expected,
+        grid_labels(page, name).await?
+    );
+    Ok(())
 }
 
 /// `pageBehavior: single` pages by one month, week or day of the visible duration.
@@ -1182,13 +1179,11 @@ async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     wait_for_grid_label(page, "pickers", "Appointment date, June 2030").await?;
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    while option_texts(&year).await?.first().map(String::as_str) != Some("2020") {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("the year picker didn't follow the focused year");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the year picker's first year",
+        Some("2020".to_owned()),
+        option_texts(&year).await?.first().cloned()
+    );
     assert_that!(option_texts(&year).await?).is_equal_to(
         (2020..2040)
             .map(|year| year.to_string())

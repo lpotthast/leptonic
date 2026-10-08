@@ -8,7 +8,11 @@ use leptos::{
 use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
-use super::{GridKeyboardDelegate, GridState};
+use super::{
+    GridKeyboardDelegate, GridState, UseGridSelectionAnnouncementInput,
+    UseHighlightSelectionDescriptionInput, use_grid_selection_announcement,
+    use_highlight_selection_description,
+};
 use crate::{
     hooks::{
         IntoAttrs,
@@ -26,8 +30,8 @@ use crate::{
     utils::{
         CapturedElement, EventAccessors, EventHandler,
         aria::{AriaMultiselectable, AriaRole},
-        filter::{Collator, CollatorOptions},
-        i18n::{use_direction, use_locale},
+        filter::{CollatorOptions, use_collator},
+        i18n::use_direction,
         id::use_id,
     },
 };
@@ -53,8 +57,7 @@ fn unless_navigation_disabled<E: Clone + 'static>(
 //   `WeakMap` keyed by the state).
 //
 // ## OMITTED FEATURES
-// - Selection announcements and the "highlight selection" description: they need localized
-//   messages.
+// - `getRowText` (the text the selection announcement reads for a row is its text value).
 // - Virtualization (`aria-rowcount`/`aria-colcount`).
 //
 // =============================================================================
@@ -164,11 +167,12 @@ pub fn use_grid_keyboard_delegate(
     state: GridState,
     element: CapturedElement,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
-    let locale = use_locale();
+    // One collator per locale, not per read of the delegate.
+    let collator = use_collator(CollatorOptions::default());
     let direction = use_direction();
     let layout_delegate = Arc::new(DomLayoutDelegate::new(element, state.list.item_elements));
     Signal::derive(move || {
-        let collator = locale.with(|locale| Collator::new(locale, &CollatorOptions::default()));
+        let collator = collator.get();
         Arc::new(
             GridKeyboardDelegate::new(
                 state.list.collection,
@@ -176,7 +180,7 @@ pub fn use_grid_keyboard_delegate(
                 layout_delegate.clone(),
             )
             .with_direction(direction.get())
-            .with_collator(Arc::new(collator))
+            .with_collator(collator)
             .with_focus_mode(state.focus_mode),
         ) as Arc<dyn KeyboardDelegate>
     })
@@ -247,6 +251,17 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
         }
     });
 
+    // Touch users learn how to select rows that have actions; selection changes are announced.
+    let description = use_highlight_selection_description(UseHighlightSelectionDescriptionInput {
+        selection,
+        has_item_actions: on_row_action.is_some() || on_cell_action.is_some(),
+    });
+    use_grid_selection_announcement(UseGridSelectionAnnouncementInput {
+        selection,
+        collection: state.list.collection,
+        get_row_text: None,
+    });
+
     // An empty grid is a tab stop itself, unless it has tabbable content.
     let rows = state.list.collection;
     let is_empty = Signal::derive(move || rows.with(|c| c.size() == 0));
@@ -282,7 +297,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
                 (selection.selection_mode() == SelectionMode::Multiple)
                     .then_some(AriaMultiselectable::True)
             }),
-            aria_describedby: Signal::stored(None),
+            aria_describedby: description,
             collection,
             tabbable_child: tabbable_child.props,
         },

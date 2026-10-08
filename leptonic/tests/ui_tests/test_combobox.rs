@@ -1,5 +1,5 @@
 // Upstream: react-aria-components/test/ComboBox.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -64,40 +64,22 @@ async fn option_texts(page: &Page<'_>) -> Result<Vec<String>, Report> {
 
 /// Waits until the listbox shows exactly `expected`.
 async fn expect_options(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    loop {
-        let texts = option_texts(page).await?;
-        if texts == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected options {expected:?}, got {texts:?}");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!("the options", expected, option_texts(page).await?);
+    Ok(())
 }
 
 /// The focused option is the input's active descendant; DOM focus stays in the input.
 async fn expect_virtual_focus(page: &Page<'_>, option: &str) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    loop {
-        let active_descendant = input_attr(page, "aria-activedescendant").await?;
-        let focused = match &active_descendant {
+    wait_for!(
+        "the active descendant",
+        Some(option.to_owned()),
+        match input_attr(page, "aria-activedescendant").await? {
             Some(id) if !id.is_empty() => {
                 Some(page.css(&format!("[id='{id}']")).await?.text().await?)
             }
             _ => None,
-        };
-        if focused.as_deref() == Some(option) {
-            break;
         }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!(
-                "expected {option:?} to be the active descendant, got {focused:?}"
-            );
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    );
     let active = page.driver.active_element().await?;
     assert_that!(active == input(page).await?)
         .with_detail_message("DOM focus stays in the input")
@@ -152,16 +134,17 @@ async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), Repo
 async fn escape_reverts_the_input(page: &Page<'_>) -> Result<(), Report> {
     let input = input(page).await?;
     input.send_keys("x").await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(input_value(page).await?).is_equal_to("Bananax".to_owned());
+    stays!(
+        "the input's value",
+        "Bananax".to_owned(),
+        input_value(page).await?
+    );
     input.send_keys(Key::Escape).await?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while input_value(page).await? != "Banana" {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("Escape did not revert the input");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the input's value after Escape",
+        "Banana".to_owned(),
+        input_value(page).await?
+    );
     assert_that!(page.read_text_of("test-cb-value").await?).is_equal_to("Banana".to_owned());
     Ok(())
 }
@@ -240,17 +223,12 @@ async fn input_labelled(page: &Page<'_>, label: &str) -> Result<WebElement, Repo
 }
 
 async fn wait_for_input_value(input: &WebElement, expected: &str) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    loop {
-        let value = input.prop("value").await?.unwrap_or_default();
-        if value == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected input value {expected:?}, got {value:?}");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the input's value",
+        expected.to_owned(),
+        input.prop("value").await?.unwrap_or_default()
+    );
+    Ok(())
 }
 
 /// A controlled value changed from outside resets the input to the selected item's text

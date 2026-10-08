@@ -90,6 +90,8 @@ impl BrowserTest<str> for VirtualListTests {
             .execute(
                 &format!(
                     "const line = Array.from({LOG}.querySelectorAll('.line')).find(l => l.textContent === 'Line 1');
+                     window.selectionSeen = false;
+                     document.addEventListener('selectionchange', () => window.selectionSeen = true, {{ once: true }});
                      const range = document.createRange();
                      range.selectNodeContents(line);
                      const selection = window.getSelection();
@@ -99,6 +101,9 @@ impl BrowserTest<str> for VirtualListTests {
                 vec![],
             )
             .await?;
+        // `selectionchange` is dispatched later; the list's own listener (registered at mount) has
+        // run once this one did. A user doesn't select and scroll within one task.
+        wait_until(&page, "window.selectionSeen").await?;
         // Scrolling back to the end follows again; the selected row stays rendered.
         wait_until(
             &page,
@@ -256,7 +261,8 @@ impl BrowserTest<str> for ComponentSpreadRebuildKnownIssues {
 
 /// Following turns off when the user scrolls away from the end: measured row sizes must survive
 /// that (the layout options change, but only `anchor_to`), else the content jumps and every row is
-/// measured again.
+/// measured again. A behavior guard: the original bug didn't reproduce here (its timing); the
+/// regression test is the unit test `anchoring_changes_keep_measured_sizes`.
 pub struct VirtualListFollowToggleTests {}
 
 #[async_trait]
@@ -321,9 +327,12 @@ impl BrowserTest<str> for VirtualListFollowToggleTests {
         page.wait_for_text("test-vl-follow", "not following")
             .await?;
         // Settle (a re-layout runs in effects and frames), then check: the content didn't move.
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        assert_that!(eval_string(&page, &format!("(() => {{ {anchor} }})()")).await?)
-            .is_equal_to(before);
+        stays_for!(
+            "the anchor row and its offset",
+            std::time::Duration::from_millis(500),
+            before,
+            eval_string(&page, &format!("(() => {{ {anchor} }})()")).await?
+        );
         assert_that!(eval_string(&page, "JSON.stringify(window.__vlReestimated)").await?)
             .is_equal_to("[]".to_owned());
         page.expect_no_page_errors().await

@@ -1,4 +1,4 @@
-use leptonic::atoms::checkbox::Checkbox;
+use leptonic::atoms::checkbox::{CheckboxButton, CheckboxField};
 use leptos::prelude::*;
 
 #[component]
@@ -22,10 +22,12 @@ pub fn LayoutSkeletonDemo() -> impl IntoView {
             </Show>
         </div>
         <div class="demo-controls">
-            <Checkbox is_selected=is_loading set_selected=is_loading classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Loading"
-            </Checkbox>
+            <CheckboxField is_selected=is_loading set_selected=is_loading>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Loading"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

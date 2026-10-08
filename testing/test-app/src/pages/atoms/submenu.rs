@@ -7,6 +7,7 @@ use leptonic::{
         },
         text_field::TextField,
     },
+    utils::i18n::{I18nProvider, Locale},
     hooks::{
         MenuTriggerType, SubmenuKind,
         collections::{Key, use_collection},
@@ -42,6 +43,18 @@ pub fn PageAtomSubmenu() -> impl IntoView {
     });
     let email_items = use_collection(|b| {
         for (key, text) in [("work", "Work"), ("personal", "Personal")] {
+            b.item(key, text);
+        }
+    });
+
+    let rtl: Locale = "ar-EG".parse().expect("a valid locale");
+    let rtl_items = use_collection(|b| {
+        for (key, text) in [("rtl-open", "Open (RTL)"), ("rtl-share", "Share (RTL)")] {
+            b.item(key, text);
+        }
+    });
+    let rtl_share_items = use_collection(|b| {
+        for (key, text) in [("rtl-email", "Email (RTL)"), ("rtl-sms", "SMS (RTL)")] {
             b.item(key, text);
         }
     });
@@ -126,6 +139,29 @@ pub fn PageAtomSubmenu() -> impl IntoView {
                 </Popover>
             </MenuTrigger>
 
+            // A menu tree in a right-to-left subtree (ArrowLeft opens submenus).
+            <I18nProvider locale=rtl>
+                <MenuTrigger>
+                    <Button attr:id="test-submenu-rtl-trigger">"RTL"</Button>
+                    <Popover classes="test-popover">
+                        <Menu collection=rtl_items on_action=on_action classes="test-menu">
+                            <MenuItem key="rtl-open">"Open (RTL)"</MenuItem>
+                            <SubmenuTrigger key="rtl-share">
+                                <MenuItem key="rtl-share">"Share (RTL)"</MenuItem>
+                                <Popover classes="test-popover">
+                                    <Menu
+                                        collection=rtl_share_items
+                                        on_action=on_action
+                                        classes="test-menu"
+                                    >
+                                        <MenuItems let:node>{node.text_value.to_string()}</MenuItems>
+                                    </Menu>
+                                </Popover>
+                            </SubmenuTrigger>
+                        </Menu>
+                    </Popover>
+                </MenuTrigger>
+            </I18nProvider>
         </div>
     }
 }

@@ -255,16 +255,12 @@ async fn row(page: &DndPage<'_>, letter: &str) -> Result<WebElement, Report> {
 }
 
 async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(), Report> {
-    page.wait_until(
-        &format!("the drop indicator {label:?} to have focus"),
-        || async {
-            let active = page.driver.active_element().await?;
-            Ok(attr(&active, "aria-label").await?.as_deref() == Some(label)
-                && attr(&active, "aria-roledescription").await?.as_deref()
-                    == Some("drop indicator"))
-        },
-    )
-    .await
+    wait_until!(format!("the drop indicator {label:?} to have focus"), {
+        let active = page.driver.active_element().await?;
+        attr(&active, "aria-label").await?.as_deref() == Some(label)
+            && attr(&active, "aria-roledescription").await?.as_deref() == Some("drop indicator")
+    });
+    Ok(())
 }
 
 /// Reordering with the keyboard: the drop target starts after the dragged row, arrow keys move
@@ -728,8 +724,7 @@ async fn start_virtual_drag(page: &DndPage<'_>, query: &str) -> Result<WebElemen
     // The drag manager sets the session up one frame later (then the page becomes inert); clicks
     // before that would go to the drag source itself.
     let input = page.css("input[aria-label='Text field']").await?;
-    page.wait_until("the drag session to start", || page.is_inert(&input))
-        .await?;
+    wait_until!("the drag session to start", page.is_inert(&input).await?);
     Ok(source)
 }
 
@@ -739,10 +734,11 @@ async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Rep
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
     page.wait_for_focus_on(&source, "the draggable").await?;
-    page.wait_until("the drag source's description", || async {
-        Ok(page.description(&source).await? == "Dragging. Click to cancel drag.")
-    })
-    .await?;
+    wait_for!(
+        "the drag source's description",
+        "Dragging. Click to cancel drag.",
+        page.description(&source).await?
+    );
     page.expect_log_settled(TARGETS_LOG, &["dragstart"]).await?;
 
     page.focus_by_script(&target_1).await?;
@@ -782,8 +778,7 @@ async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Rep
 async fn hides_everything_but_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
     let input = page.css("input[aria-label='Text field']").await?;
-    page.wait_until("the page to become inert", || page.is_inert(&input))
-        .await?;
+    wait_until!("the page to become inert", page.is_inert(&input).await?);
     for label in ["Before", "Not a drop target"] {
         let button = page.by_role_and_text("button", label).await?;
         assert_that!(page.is_inert(&button).await?)
@@ -817,10 +812,11 @@ async fn clicking_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Repo
     page.virtual_click(&source).await?;
     page.wait_for_attr(&source, "data-dragging", Some("false"))
         .await?;
-    page.wait_until("the drag source's description", || async {
-        Ok(page.description(&source).await? == "Click to start dragging.")
-    })
-    .await?;
+    wait_for!(
+        "the drag source's description",
+        "Click to start dragging.",
+        page.description(&source).await?
+    );
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dragend Cancel"])
         .await
 }

@@ -7,6 +7,7 @@ use super::{
     HSV, RGB8, to_fixed_percent,
 };
 use crate::utils::{
+    i18n::Locale,
     locale::WritingDirection,
     number_formatter::{NumberFormatOptions, NumberStyle},
 };
@@ -137,10 +138,10 @@ impl<C: ColorValue> ColorValue for Alpha<C> {
         channel == AlphaChannel::Alpha
     }
 
-    fn channel_name(channel: Self::Channel) -> &'static str {
+    fn channel_name(channel: Self::Channel, locale: &Locale) -> String {
         match channel {
-            AlphaChannel::Color(channel) => C::channel_name(channel),
-            AlphaChannel::Alpha => "Alpha",
+            AlphaChannel::Color(channel) => C::channel_name(channel, locale),
+            AlphaChannel::Alpha => super::naming::channel_name("alpha", locale),
         }
     }
 
@@ -174,16 +175,12 @@ impl<C: ColorValue> ColorValue for Alpha<C> {
     }
 
     /// The color's name, with its transparency (react-aria: e.g. "vibrant red, 80% transparent").
-    fn color_name(&self) -> String {
-        let name = self.color.color_name();
-        if self.alpha >= 1.0 {
-            return name;
-        }
-        format!("{name}, {:.0}% transparent", (1.0 - self.alpha) * 100.0)
+    fn color_name(&self, locale: &Locale) -> String {
+        super::naming::color_name(self.color.to_rgb8(), self.alpha, locale)
     }
 
-    fn hue_name(&self) -> String {
-        self.color.hue_name()
+    fn hue_name(&self, locale: &Locale) -> String {
+        self.color.hue_name(locale)
     }
 
     fn area_gradient(
@@ -291,10 +288,10 @@ impl Alpha<OpaqueColor> {
         }
     }
 
-    /// The color's name, e.g. "dark vibrant blue" or "vibrant red, 80% transparent".
+    /// The color's name in `locale`, e.g. "dark vibrant blue" or "vibrant red, 80% transparent".
     #[must_use]
-    pub fn color_name(self) -> String {
-        self.to::<Alpha<RGB8>>().color_name()
+    pub fn color_name(self, locale: &Locale) -> String {
+        self.to::<Alpha<RGB8>>().color_name(locale)
     }
 }
 

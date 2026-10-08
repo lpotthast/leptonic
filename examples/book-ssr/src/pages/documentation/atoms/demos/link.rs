@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::{Checkbox, CurrentMatch, Link};
+use leptonic::atoms::prelude::{CheckboxButton, CheckboxField, CurrentMatch, Link};
 use leptos::prelude::*;
 
 /// The pages of the Link concept. The link to the page you are on has `aria-current="page"`.
@@ -21,10 +21,12 @@ pub fn LinkAtomDemo() -> impl IntoView {
         </nav>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

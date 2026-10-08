@@ -26,6 +26,7 @@ use crate::{
         pointer_type::PointerType,
     },
 };
+use crate::utils::intl_strings::{SpinButtonStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -43,9 +44,6 @@ use crate::{
 // - The stepper buttons are returned as `UseButtonInput` (react-aria: `AriaButtonProps`).
 //   Pass them to `use_button`, adding labels and other settings with struct update syntax.
 // - `text_value: None` means "derive from `value`"; `Some("")` announces "Empty".
-//
-// ## OMITTED FEATURES
-// - Localized "Empty" text (English only, until leptonic has localized strings).
 //
 // =============================================================================
 
@@ -293,12 +291,13 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
     // Use the real minus sign (U+2212), so that macOS VoiceOver reads "minus" even when other
     // characters (like a currency symbol) sit between the sign and the number. An empty field is
     // announced as "Empty" instead of iOS VoiceOver reading a stale value.
+    let strings = use_localized_strings::<SpinButtonStrings>();
     let aria_text_value = Memo::new(move |_| match text_value.get() {
-        Some(text) if text.is_empty() => "Empty".to_owned(),
+        Some(text) if text.is_empty() => strings.read().empty(),
         Some(text) => text.replacen('-', "\u{2212}", 1),
         // Without a value: "Empty" as well (react-aria: the text "undefined").
         None => value.get().map_or_else(
-            || "Empty".to_owned(),
+            || strings.read().empty(),
             |v| v.to_string().replacen('-', "\u{2212}", 1),
         ),
     });

@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::{
         field::Label,
-        radio::{Radio, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
     },
     hooks::{Orientation, collections::Key},
     utils::{
@@ -44,22 +44,30 @@ fn LocaleSwitcher() -> impl IntoView {
         <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change classes="demo-choice-group">
             <Label classes="demo-choice-group-label">"Locale"</Label>
             <div class="demo-choice-group-items">
-                <Radio value="en-US" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "English (US)"
-                </Radio>
-                <Radio value="de-DE" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "German"
-                </Radio>
-                <Radio value="hi-IN" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "Hindi"
-                </Radio>
-                <Radio value="ar-EG" classes="demo-radio">
-                    <span class="demo-radio-circle" aria-hidden="true"></span>
-                    "Arabic (Egypt)"
-                </Radio>
+                <RadioField value="en-US">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "English (US)"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="de-DE">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "German"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="hi-IN">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "Hindi"
+                    </RadioButton>
+                </RadioField>
+                <RadioField value="ar-EG">
+                    <RadioButton classes="demo-radio">
+                        <span class="demo-radio-circle" aria-hidden="true"></span>
+                        "Arabic (Egypt)"
+                    </RadioButton>
+                </RadioField>
             </div>
         </RadioGroup>
         <dl class="demo-format-list">

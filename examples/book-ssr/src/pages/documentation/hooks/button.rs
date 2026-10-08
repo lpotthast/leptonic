@@ -13,7 +13,7 @@ pub fn PageUseButton() -> impl IntoView {
                 "The "<Code inline=true>"use_button"</Code>" hook makes an element behave and announce itself as a button: "
                 "presses from mouse, touch, keyboard and screen readers, focus, hover and focus-visible state, and the "
                 "attributes the element you render needs. See the "<Link href=routes::doc::Button.materialize()>"Button overview"</Link>
-                " for concept guidance."
+                " for concept guidance and keyboard interaction."
             </p>
 
             <ReactAria hook="useButton"/>
@@ -286,22 +286,6 @@ pub fn PageUseButton() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Focuses the button, unless "<Code inline=true>"exclude_from_tab_order"</Code>" is set."</KeyRow>
-                    <KeyRow keys="Enter / Space">"Presses the button."</KeyRow>
-                    <KeyRow keys="Shift + F10 / ContextMenu">
-                        "Requests a context menu, when "<Code inline=true>"on_context_menu"</Code>" is set. On macOS, "
-                        <Keys keys="Control + Enter"/>" does too."
-                    </KeyRow>
-                </KeyboardTable>
-
-                <p>
-                    "The "<Code inline=true>"shortcuts"</Code>" you pass are handled first. Holding a key down doesn\u{2019}t "
-                    "trigger them again; see "<Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link>
-                    " for how shortcuts work."
-                </p>
-            </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Button.materialize()>"Button overview"</Link></li>

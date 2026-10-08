@@ -523,3 +523,334 @@ pub fn merge_validation(results: &[ValidationResult]) -> ValidationResult {
         validation_details: details,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // Upstream has no tests of `useFormValidationState` itself; these follow its implementation
+    // (sources, their priority, the deferred commit of `validationBehavior="native"`).
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::testing::{flush_effects, with_owner};
+
+    fn input<T: Send + Sync + 'static>(
+        value: Signal<T>,
+        validation_behavior: ValidationBehavior,
+    ) -> UseFormValidationStateInput<T> {
+        UseFormValidationStateInput {
+            is_invalid: Signal::default(),
+            value,
+            validate: None,
+            builtin_validation: Signal::default(),
+            validation_behavior,
+            name: None,
+        }
+    }
+
+    fn required() -> ValidateFn<String> {
+        Arc::new(|value: &String| {
+            if value.is_empty() {
+                Err(vec!["Required".to_owned()])
+            } else {
+                Ok(())
+            }
+        })
+    }
+
+    fn invalid(errors: &[&str]) -> ValidationResult {
+        ValidationResult {
+            is_invalid: true,
+            validation_errors: errors.iter().map(|&e| e.to_owned()).collect(),
+            validation_details: CUSTOM_VALIDITY_STATE,
+        }
+    }
+
+    /// What a native input reports when it is `required` and empty.
+    fn value_missing() -> ValidationResult {
+        ValidationResult {
+            is_invalid: true,
+            validation_errors: vec!["Fill out this field".to_owned()],
+            validation_details: ValidityStateSnapshot {
+                value_missing: true,
+                valid: false,
+                ..VALID_VALIDITY_STATE
+            },
+        }
+    }
+
+    #[test]
+    fn aria_shows_validate_errors_while_the_user_edits() {
+        with_owner(|| {
+            let value = RwSignal::new(String::new());
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                validate: Some(required()),
+                ..input(value.into(), ValidationBehavior::Aria)
+            });
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Required"]));
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(invalid(&["Required"]));
+            assert_that!(state.is_invalid.get_untracked()).is_true();
+            assert_that!(state.validation_errors.get_untracked())
+                .is_equal_to(vec!["Required".to_owned()]);
+
+            value.set("a".to_owned());
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+    }
+
+    #[test]
+    fn native_shows_validate_errors_after_a_commit() {
+        with_owner(|| {
+            let value = RwSignal::new(String::new());
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                validate: Some(required()),
+                ..input(value.into(), ValidationBehavior::Native)
+            });
+            flush_effects();
+            // Realtime (for the native input's custom validity), not displayed yet.
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(invalid(&["Required"]));
+            assert_that!(state.is_invalid.get_untracked()).is_false();
+
+            // Committed after the next render (an Effect).
+            state.commit_validation();
+            assert_that!(state.is_invalid.get_untracked()).is_false();
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Required"]));
+
+            // Fixed: displayed as invalid until the next commit.
+            value.set("a".to_owned());
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+            assert_that!(state.is_invalid.get_untracked()).is_true();
+            state.commit_validation();
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+    }
+
+    #[test]
+    fn is_invalid_marks_the_field_invalid_before_the_other_sources() {
+        for behavior in [ValidationBehavior::Aria, ValidationBehavior::Native] {
+            with_owner(|| {
+                let value = RwSignal::new(String::new());
+                let is_invalid = RwSignal::new(true);
+                let state = use_form_validation_state(UseFormValidationStateInput {
+                    is_invalid: is_invalid.into(),
+                    validate: Some(required()),
+                    ..input(value.into(), behavior)
+                });
+                flush_effects();
+                // Without errors, shown at once (also with native validation).
+                assert_that!(state.display_validation.get_untracked()).is_equal_to(invalid(&[]));
+                assert_that!(state.realtime_validation.get_untracked()).is_equal_to(invalid(&[]));
+
+                // `false` leaves the other sources in charge (see the deviations).
+                is_invalid.set(false);
+                assert_that!(state.realtime_validation.get_untracked())
+                    .is_equal_to(invalid(&["Required"]));
+                value.set("a".to_owned());
+                assert_that!(state.display_validation.get_untracked())
+                    .is_equal_to(DEFAULT_VALIDATION_RESULT);
+            });
+        }
+    }
+
+    #[test]
+    fn an_empty_error_list_is_valid() {
+        with_owner(|| {
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                validate: Some(Arc::new(|_: &String| Err(Vec::new()))),
+                ..input(Signal::stored(String::new()), ValidationBehavior::Aria)
+            });
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+    }
+
+    #[test]
+    fn updated_native_validity_shows_at_once_with_aria_and_on_commit_with_native() {
+        with_owner(|| {
+            let state =
+                use_form_validation_state(input(Signal::stored(()), ValidationBehavior::Aria));
+            flush_effects();
+            state.update_validation(value_missing());
+            assert_that!(state.display_validation.get_untracked()).is_equal_to(value_missing());
+            // Not a realtime source: the native input reports it itself.
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+        with_owner(|| {
+            let state =
+                use_form_validation_state(input(Signal::stored(()), ValidationBehavior::Native));
+            flush_effects();
+            state.update_validation(value_missing());
+            flush_effects();
+            assert_that!(state.is_invalid.get_untracked()).is_false();
+            state.commit_validation();
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked()).is_equal_to(value_missing());
+        });
+    }
+
+    #[test]
+    fn a_commit_shows_validate_then_builtin_then_native_validity() {
+        with_owner(|| {
+            let value = RwSignal::new(String::new());
+            let builtin = RwSignal::new(Some(invalid(&["Out of range"])));
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                validate: Some(required()),
+                builtin_validation: builtin.into(),
+                ..input(value.into(), ValidationBehavior::Native)
+            });
+            flush_effects();
+            state.update_validation(value_missing());
+            let commit = || {
+                state.commit_validation();
+                flush_effects();
+                state.display_validation.get_untracked()
+            };
+            assert_that!(commit()).is_equal_to(invalid(&["Required"]));
+            value.set("a".to_owned());
+            assert_that!(commit()).is_equal_to(invalid(&["Out of range"]));
+            builtin.set(None);
+            assert_that!(commit()).is_equal_to(value_missing());
+        });
+    }
+
+    #[test]
+    fn a_valid_builtin_validation_is_no_source() {
+        with_owner(|| {
+            let builtin = RwSignal::new(Some(invalid(&["Out of range"])));
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                builtin_validation: builtin.into(),
+                ..input(Signal::stored(()), ValidationBehavior::Aria)
+            });
+            flush_effects();
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(invalid(&["Out of range"]));
+            state.update_validation(value_missing());
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Out of range"]));
+
+            // Valid: the next source (the native validity) shows.
+            builtin.set(Some(DEFAULT_VALIDATION_RESULT));
+            assert_that!(state.display_validation.get_untracked()).is_equal_to(value_missing());
+        });
+    }
+
+    #[test]
+    fn a_reset_shows_valid_and_cancels_a_pending_commit() {
+        with_owner(|| {
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                validate: Some(required()),
+                ..input(Signal::stored(String::new()), ValidationBehavior::Native)
+            });
+            flush_effects();
+            state.commit_validation();
+            flush_effects();
+            assert_that!(state.is_invalid.get_untracked()).is_true();
+
+            // Valid although the value isn't (until the next submit).
+            state.reset_validation();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+
+            // A commit right before the reset (e.g. from the reset's change): canceled.
+            state.commit_validation();
+            state.reset_validation();
+            flush_effects();
+            assert_that!(state.is_invalid.get_untracked()).is_false();
+
+            // The next commit shows the error again.
+            state.commit_validation();
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Required"]));
+        });
+    }
+
+    #[test]
+    fn server_errors_show_until_the_user_changes_the_value() {
+        with_owner(|| {
+            let errors = RwSignal::new(HashMap::from([(
+                "email".to_owned(),
+                vec!["Already taken".to_owned()],
+            )]));
+            provide_context(FormValidationContext {
+                errors: errors.into(),
+            });
+            let field = |name: Option<&str>| {
+                use_form_validation_state(UseFormValidationStateInput {
+                    validate: Some(required()),
+                    name: name.map(str::to_owned),
+                    ..input(Signal::stored(String::new()), ValidationBehavior::Native)
+                })
+            };
+            let state = field(Some("email"));
+            let other = field(Some("name"));
+            let unnamed = field(None);
+            flush_effects();
+            // Shown at once (also with native validation), before `validate`'s errors.
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Already taken"]));
+            assert_that!(state.realtime_validation.get_untracked())
+                .is_equal_to(invalid(&["Already taken"]));
+            assert_that!(other.is_invalid.get_untracked()).is_false();
+            assert_that!(unnamed.is_invalid.get_untracked()).is_false();
+
+            // The user changed the value: cleared.
+            state.commit_validation();
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Required"]));
+
+            // A new server response (with the same errors): shown again.
+            errors.set(errors.get_untracked());
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Already taken"]));
+
+            // A form reset clears them too.
+            state.reset_validation();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+    }
+
+    #[test]
+    fn merge_validation_combines_errors_and_details() {
+        let merged = merge_validation(&[
+            invalid(&["A", "B"]),
+            value_missing(),
+            invalid(&["B"]),
+            DEFAULT_VALIDATION_RESULT,
+        ]);
+        assert_that!(merged).is_equal_to(ValidationResult {
+            is_invalid: true,
+            validation_errors: vec![
+                "A".to_owned(),
+                "B".to_owned(),
+                "Fill out this field".to_owned(),
+            ],
+            validation_details: ValidityStateSnapshot {
+                custom_error: true,
+                value_missing: true,
+                valid: false,
+                ..VALID_VALIDITY_STATE
+            },
+        });
+        assert_that!(merge_validation(&[
+            DEFAULT_VALIDATION_RESULT,
+            DEFAULT_VALIDATION_RESULT
+        ]))
+        .is_equal_to(DEFAULT_VALIDATION_RESULT);
+    }
+}

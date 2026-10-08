@@ -1,6 +1,6 @@
 // Upstream: react-aria/test/overlays/useOverlay.test.js @ 99e6102368
 // Upstream: react-aria/test/overlays/usePreventScroll.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -42,10 +42,7 @@ async fn is_open(page: &Page<'_>, id: &str) -> Result<bool, Report> {
 
 /// Waits a moment, then checks that `id` is (still) open.
 async fn expect_still_open(page: &Page<'_>, id: &str) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(is_open(page, id).await?)
-        .with_detail_message(format!("#{id} is still open"))
-        .is_true();
+    stays!(format!("#{id} still open"), true, is_open(page, id).await?);
     Ok(())
 }
 
@@ -144,15 +141,18 @@ async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     assert_that!(root_overflow(page).await?).is_equal_to("hidden".to_owned());
 
-    // Closed from inside: the outer modal is usable again. (Known issue, see PLAN.md: the focus
-    // doesn't return to its button; `FocusScope` restores it before `aria_hide_outside` reveals
-    // the outer modal.)
+    // Closed from inside: the outer modal is usable again, focus back on its button.
     page.click_element_with_id("test-ov-modal-inner-close")
         .await?;
     page.wait_for_no_selector("[role=dialog][aria-label=Inner]")
         .await?;
     page.wait_for_no_selector("[inert] .test-ov-outer-backdrop, .test-ov-outer-backdrop[inert]")
         .await?;
+    page.wait_for_focus_on(
+        &page.element("test-ov-modal-inner-open").await?,
+        "the outer modal's button that opened the inner one",
+    )
+    .await?;
     assert_that!(root_overflow(page).await?)
         .with_detail_message("the outer modal still prevents scrolling")
         .is_equal_to("hidden".to_owned());
@@ -165,12 +165,12 @@ async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
     click_page_corner(page).await?;
     page.wait_for_no_selector("[role=dialog][aria-label=Inner]")
         .await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(
+    stays!(
+        "the elements matching [role=dialog][aria-label=Outer]",
+        1,
         page.count_matching("[role=dialog][aria-label=Outer]")
             .await?
-    )
-    .is_equal_to(1);
+    );
     click_page_corner(page).await?;
     page.wait_for_no_selector("[role=dialog][aria-label=Outer]")
         .await?;

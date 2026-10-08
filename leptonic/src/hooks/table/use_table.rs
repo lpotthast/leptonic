@@ -14,10 +14,13 @@ use crate::{
     },
     utils::{
         CapturedElement,
-        filter::{Collator, CollatorOptions},
-        i18n::{use_direction, use_locale},
+        aria::AriaRole,
+        filter::{CollatorOptions, use_collator},
+        i18n::use_direction,
         id::use_id,
+        intl_strings::{TableStrings, use_localized_strings},
         live_announcer::{Assertiveness, announce_with_timeout},
+        slot_id::join_slot_ids,
         use_description::use_description,
     },
 };
@@ -31,9 +34,7 @@ use crate::{
 //   `WeakMap`s keyed by the state).
 //
 // ## OMITTED FEATURES
-// - Localized strings: the sort is described and announced in English ("sorted by column Name
-//   in ascending order").
-// - Virtualization (`aria-rowcount`), tree tables (`role="treegrid"`).
+// - Virtualization (`aria-rowcount`).
 //
 // =============================================================================
 
@@ -118,13 +119,13 @@ pub fn use_table_keyboard_delegate(
     state: TableState,
     element: CapturedElement,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
-    let locale = use_locale();
+    // One collator per locale, not per read of the delegate.
+    let collator = use_collator(CollatorOptions::default());
     let direction = use_direction();
     let grid = state.grid;
     let layout_delegate = Arc::new(DomLayoutDelegate::new(element, grid.list.item_elements));
     Signal::derive(move || {
-        let collator =
-            Arc::new(locale.with(|locale| Collator::new(locale, &CollatorOptions::default())));
+        let collator = collator.get();
         let direction = direction.get();
         let grid_delegate = GridKeyboardDelegate::new(
             grid.list.collection,
@@ -179,6 +180,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
 
     // The sort, described to the table and announced when it changes (not initially: focusing
     // the table describes it).
+    let strings = use_localized_strings::<TableStrings>();
     let sort_description = Memo::new(move |_| {
         state.sort_descriptor.get().map(|sort| {
             let column = state.table.with(|table| {
@@ -188,11 +190,11 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
                     .map(|column| column.text_value.to_string())
                     .unwrap_or_default()
             });
-            let order = match sort.direction {
-                SortDirection::Ascending => "ascending",
-                SortDirection::Descending => "descending",
-            };
-            format!("sorted by column {column} in {order} order")
+            let strings = strings.read();
+            match sort.direction {
+                SortDirection::Ascending => strings.ascending_sort(&column),
+                SortDirection::Descending => strings.descending_sort(&column),
+            }
         })
     });
     Effect::new(move |previous: Option<Option<String>>| {
@@ -208,8 +210,18 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         }
         description
     });
+    // The sort description comes first, then the grid's own (react-aria merges both).
     let props = UseGridProps {
-        aria_describedby: use_description(sort_description.into()),
+        // A tree table is a tree grid (react-aria: `role="treegrid"` with a tree column).
+        role: Signal::stored(if state.tree.is_some() {
+            AriaRole::Treegrid
+        } else {
+            AriaRole::Grid
+        }),
+        aria_describedby: join_slot_ids(&[
+            use_description(sort_description.into()),
+            props.aria_describedby,
+        ]),
         ..props
     };
 

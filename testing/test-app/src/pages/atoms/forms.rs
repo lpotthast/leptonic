@@ -1,9 +1,9 @@
 use leptonic::{
     atoms::{
-        checkbox::{Checkbox, CheckboxButton, CheckboxField, CheckboxGroup},
+        checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         field::{Description, FieldError, Label},
-        radio::{Radio, RadioButton, RadioField, RadioGroup},
-        switch::{Switch, SwitchButton, SwitchField},
+        radio::{RadioButton, RadioField, RadioGroup},
+        switch::{SwitchButton, SwitchField},
     },
     hooks::{Orientation, ValidationBehavior, collections::Key},
     utils::i18n::{I18nProvider, Locale},
@@ -29,51 +29,51 @@ pub fn PageAtomForms() -> impl IntoView {
 
         // Every control changes from its default; resetting the form restores them.
         <form id="fm-reset">
-            <Checkbox name="terms">"Terms"</Checkbox>
+            <CheckboxField name="terms"><CheckboxButton>"Terms"</CheckboxButton></CheckboxField>
             <CheckboxGroup name="pets" default_value=vec![Key::from("cats")]>
                 <Label>"Pets"</Label>
-                <Checkbox value="dogs">"Dogs"</Checkbox>
-                <Checkbox value="cats">"Cats"</Checkbox>
+                <CheckboxField value="dogs"><CheckboxButton>"Dogs"</CheckboxButton></CheckboxField>
+                <CheckboxField value="cats"><CheckboxButton>"Cats"</CheckboxButton></CheckboxField>
             </CheckboxGroup>
-            <RadioGroup name="size" default_value="m">
+            <RadioGroup name="size" default_value=Key::from("m")>
                 <Label>"Size"</Label>
-                <Radio value="s">"Small"</Radio>
-                <Radio value="m">"Medium"</Radio>
+                <RadioField value="s"><RadioButton>"Small"</RadioButton></RadioField>
+                <RadioField value="m"><RadioButton>"Medium"</RadioButton></RadioField>
             </RadioGroup>
-            <Switch name="wifi" default_selected=true>"Wi-Fi"</Switch>
+            <SwitchField name="wifi" default_selected=true><SwitchButton>"Wi-Fi"</SwitchButton></SwitchField>
             <button id="fm-reset-button" type="reset">"Reset"</button>
         </form>
 
         // A reset canceled by the form's own listener changes nothing.
         <form id="fm-reset-canceled" on:reset=|e| e.prevent_default()>
-            <Checkbox name="kept">"Kept"</Checkbox>
-            <Switch name="kept-switch">"Kept switch"</Switch>
+            <CheckboxField name="kept"><CheckboxButton>"Kept"</CheckboxButton></CheckboxField>
+            <SwitchField name="kept-switch"><SwitchButton>"Kept switch"</SwitchButton></SwitchField>
             <button id="fm-reset-canceled-button" type="reset">"Reset"</button>
         </form>
 
         // Enter on a focused control submits the form (implicit submission).
         <form id="fm-submit" on:submit=on_submit>
-            <Checkbox name="submit-checkbox">"Submit checkbox"</Checkbox>
-            <RadioGroup name="submit-radio" aria_label="Submit radios">
-                <Radio value="a">"Submit radio"</Radio>
-            </RadioGroup>
-            <Switch name="submit-switch">"Submit switch"</Switch>
+            <CheckboxField name="submit-checkbox"><CheckboxButton>"Submit checkbox"</CheckboxButton></CheckboxField>
+            <RadioGroup<Key> name="submit-radio" aria_label="Submit radios">
+                <RadioField value="a"><RadioButton>"Submit radio"</RadioButton></RadioField>
+            </RadioGroup<Key>>
+            <SwitchField name="submit-switch"><SwitchButton>"Submit switch"</SwitchButton></SwitchField>
             <button type="submit">"Submit"</button>
         </form>
         <div>"Submits: " <span id="fm-submits">{submits}</span></div>
 
         // Right to left: horizontal groups swap ArrowLeft and ArrowRight, vertical ones don't.
         <I18nProvider locale=rtl>
-            <RadioGroup aria_label="RTL horizontal" orientation=Orientation::Horizontal>
-                <Radio value="a">"RTL horizontal A"</Radio>
-                <Radio value="b">"RTL horizontal B"</Radio>
-                <Radio value="c">"RTL horizontal C"</Radio>
-            </RadioGroup>
-            <RadioGroup aria_label="RTL vertical">
-                <Radio value="a">"RTL vertical A"</Radio>
-                <Radio value="b">"RTL vertical B"</Radio>
-                <Radio value="c">"RTL vertical C"</Radio>
-            </RadioGroup>
+            <RadioGroup<Key> aria_label="RTL horizontal" orientation=Orientation::Horizontal>
+                <RadioField value="a"><RadioButton>"RTL horizontal A"</RadioButton></RadioField>
+                <RadioField value="b"><RadioButton>"RTL horizontal B"</RadioButton></RadioField>
+                <RadioField value="c"><RadioButton>"RTL horizontal C"</RadioButton></RadioField>
+            </RadioGroup<Key>>
+            <RadioGroup<Key> aria_label="RTL vertical">
+                <RadioField value="a"><RadioButton>"RTL vertical A"</RadioButton></RadioField>
+                <RadioField value="b"><RadioButton>"RTL vertical B"</RadioButton></RadioField>
+                <RadioField value="c"><RadioButton>"RTL vertical C"</RadioButton></RadioField>
+            </RadioGroup<Key>>
         </I18nProvider>
 
         // Fields: a checkbox, switch and radio with their own description (and error message).
@@ -88,30 +88,30 @@ pub fn PageAtomForms() -> impl IntoView {
                 <Description>"Switch help"</Description>
                 <FieldError />
             </SwitchField>
-            <RadioGroup is_required=true>
+            <RadioGroup<Key> is_required=true>
                 <Label>"Field radios"</Label>
                 <RadioField value="a">
                     <RadioButton>"Field radio A"</RadioButton>
                     <Description>"Radio A help"</Description>
                 </RadioField>
                 <FieldError />
-            </RadioGroup>
-            <CheckboxGroup>
+            </RadioGroup<Key>>
+            <CheckboxGroup<Key>>
                 <Label>"Field group"</Label>
                 <CheckboxField value="x">
                     <CheckboxButton>"Field group X"</CheckboxButton>
                     <Description>"X help"</Description>
                 </CheckboxField>
-            </CheckboxGroup>
+            </CheckboxGroup<Key>>
         </form>
 
         // A required group validated in realtime.
-        <CheckboxGroup is_required=true validation_behavior=ValidationBehavior::Aria>
+        <CheckboxGroup<Key> is_required=true validation_behavior=ValidationBehavior::Aria>
             <Label>"Favorite pet"</Label>
-            <Checkbox value="dogs">"Realtime dogs"</Checkbox>
-            <Checkbox value="cats">"Realtime cats"</Checkbox>
-            <Checkbox value="dragons">"Realtime dragons"</Checkbox>
+            <CheckboxField value="dogs"><CheckboxButton>"Realtime dogs"</CheckboxButton></CheckboxField>
+            <CheckboxField value="cats"><CheckboxButton>"Realtime cats"</CheckboxButton></CheckboxField>
+            <CheckboxField value="dragons"><CheckboxButton>"Realtime dragons"</CheckboxButton></CheckboxField>
             <FieldError />
-        </CheckboxGroup>
+        </CheckboxGroup<Key>>
     }
 }

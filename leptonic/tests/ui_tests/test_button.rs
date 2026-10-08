@@ -145,8 +145,11 @@ async fn pending(page: &ButtonPage<'_>) -> Result<(), Report> {
         .await?;
     assert_that!(button.attr("disabled").await?).is_none();
     button.click().await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-button-pending-count").await?).is_equal_to("1".to_owned());
+    stays!(
+        "the pending button's presses",
+        "1".to_owned(),
+        page.read_text_of("test-button-pending-count").await?
+    );
     // Still focused, but neither hovered nor pressed.
     page.wait_for_attr(&button, "data-focused", Some("true"))
         .await?;
@@ -155,8 +158,11 @@ async fn pending(page: &ButtonPage<'_>) -> Result<(), Report> {
     // Keyboard presses are ignored too.
     page.send_keys_to_active(Key::Enter).await?;
     page.send_keys_to_active(" ").await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-button-pending-count").await?).is_equal_to("1".to_owned());
+    stays!(
+        "the pending button's presses",
+        "1".to_owned(),
+        page.read_text_of("test-button-pending-count").await?
+    );
 
     page.click_element_with_id("test-button-pending-reset")
         .await?;
@@ -175,9 +181,11 @@ async fn pending_form_submission(page: &ButtonPage<'_>) -> Result<(), Report> {
         .await?;
     page.wait_for_attr(&submit, "type", Some("button")).await?;
     submit.click().await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-button-pending-submits").await?)
-        .is_equal_to("1".to_owned());
+    stays!(
+        "the submissions",
+        "1".to_owned(),
+        page.read_text_of("test-button-pending-submits").await?
+    );
 
     // Keyboard: Enter on the button.
     page.click_element_with_id("test-button-pending-submit-toggle")
@@ -194,9 +202,11 @@ async fn pending_form_submission(page: &ButtonPage<'_>) -> Result<(), Report> {
         .await?;
     page.wait_for_attr(&submit, "type", Some("button")).await?;
     page.send_keys_to_active(Key::Enter).await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-button-pending-submits").await?)
-        .is_equal_to("2".to_owned());
+    stays!(
+        "the submissions",
+        "2".to_owned(),
+        page.read_text_of("test-button-pending-submits").await?
+    );
 
     // Implicit: Enter in a text field submits through the submit button, unless it is pending.
     page.click_element_with_id("test-button-pending-submit-toggle")
@@ -219,9 +229,11 @@ async fn pending_form_submission(page: &ButtonPage<'_>) -> Result<(), Report> {
         .await?
         .send_keys(Key::Enter)
         .await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-button-pending-submits").await?)
-        .is_equal_to("3".to_owned());
+    stays!(
+        "the submissions",
+        "3".to_owned(),
+        page.read_text_of("test-button-pending-submits").await?
+    );
     Ok(())
 }
 
@@ -251,7 +263,10 @@ async fn pending_trigger(page: &ButtonPage<'_>) -> Result<(), Report> {
         .await?;
     page.wait_for_text("test-button-pending-trigger-focused", "true")
         .await?;
-    tokio::time::sleep(Duration::from_millis(300)).await;
-    assert_that!(page.count_matching("[role=dialog]").await?).is_equal_to(0);
+    stays!(
+        "open dialogs",
+        0,
+        page.count_matching("[role=dialog]").await?
+    );
     Ok(())
 }

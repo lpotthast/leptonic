@@ -93,11 +93,12 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                     <Code inline=true>"outside_text_fields"</Code>" handler there."
                 </p>
                 <p>
-                    "A shortcut requires exactly its modifiers. Characters typed with "<Keys keys="Shift"/>" need "
-                    <Code inline=true>".shift()"</Code>", e.g. "<Code inline=true>"Shortcut::key(\"?\").shift()"</Code>
-                    ". Which characters these are depends on the keyboard layout: on a German keyboard, "
-                    <Keys keys="/"/>" is "<Keys keys="Shift + 7"/>", so "<Code inline=true>"Shortcut::key(\"/\")"</Code>
-                    " currently doesn\u{2019}t fire there."
+                    "A shortcut requires exactly its modifiers, with one exception: for a character without case ("
+                    <Code inline=true>"/"</Code>", "<Code inline=true>"?"</Code>", digits), "<Keys keys="Shift"/>" is ignored unless the shortcut "
+                    "requires it, as the keyboard layout decides whether typing the character takes it. So "
+                    <Code inline=true>"Shortcut::key(\"/\")"</Code>" also fires on a German keyboard, where "<Keys keys="/"/>
+                    " is "<Keys keys="Shift + 7"/>", and "<Code inline=true>"Shortcut::key(\"?\")"</Code>" needs no "
+                    <Code inline=true>".shift()"</Code>"."
                 </p>
             </Section>
 

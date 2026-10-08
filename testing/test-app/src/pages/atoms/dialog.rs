@@ -11,7 +11,8 @@ use leptos::prelude::*;
 /// A dismissable modal dialog named by `aria_label` (react-aria-components' `Dialog.test.js`
 /// setup), opened by a button. A second modal next to it (in the same owner) closes through a
 /// button closing it. A third one opens from a `DialogTrigger` (`#test-dialog-trigger`); its
-/// "Count" button (`#test-dialog-count`) only counts and must not toggle the modal. A fourth one
+/// "Count" button (`#test-dialog-count`) only counts and must not toggle the modal, and its
+/// `#test-dialog-nested-trigger` opens a modal nested in its markup ("Nested"). A fourth one
 /// (`#test-dialog-open-autofocus`) opts into `auto_focus`: its first button gets the focus instead
 /// of the dialog.
 #[component]
@@ -85,6 +86,17 @@ pub fn PageAtomDialog() -> impl IntoView {
                         <Button attr:id="test-dialog-count" on_press=move |_| count.update(|c| *c += 1)>
                             "Count " {count}
                         </Button>
+                        // A modal nested in this one's markup.
+                        <DialogTrigger>
+                            <Button attr:id="test-dialog-nested-trigger">"Open nested"</Button>
+                            <ModalBackdrop is_dismissable=true>
+                                <ModalContent>
+                                    <Dialog aria_label="Nested">
+                                        <button id="test-dialog-nested-inside">"Inside nested"</button>
+                                    </Dialog>
+                                </ModalContent>
+                            </ModalBackdrop>
+                        </DialogTrigger>
                     </Dialog>
                 </ModalContent>
             </ModalBackdrop>

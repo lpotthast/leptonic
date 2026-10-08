@@ -105,7 +105,7 @@ pub struct UseSliderReturn {
     pub track_props: PropsWithStyles<UseSliderTrackProps>,
     /// For an `<output>` showing the values.
     pub output_props: UseSliderOutputProps,
-    /// For [`use_slider_thumb`](super::use_slider_thumb).
+    /// For [`use_slider_thumb`](fn@super::use_slider_thumb).
     pub data: SliderData,
     /// The track element, for the thumbs.
     pub track_element: CapturedElement,
@@ -223,7 +223,7 @@ fn closest_thumb(value: f64, values: &[f64]) -> Option<usize> {
 
 /// A slider: a group of thumbs on a track, named by a label. Pressing the track moves the
 /// closest thumb there (and drags it). Render each thumb with
-/// [`use_slider_thumb`](super::use_slider_thumb).
+/// [`use_slider_thumb`](fn@super::use_slider_thumb).
 #[allow(clippy::too_many_lines)]
 pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     let UseSliderInput {

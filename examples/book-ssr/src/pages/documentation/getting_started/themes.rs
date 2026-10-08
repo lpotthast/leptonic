@@ -31,7 +31,8 @@ pub fn PageThemes() -> impl IntoView {
                     "); pass "<Code inline=true>"theme"</Code>" and "<Code inline=true>"set_theme"</Code>" to control it. To "
                     "remember the user\u{2019}s choice, control it with "<Code inline=true>"signal_ls"</Code>", which keeps a "
                     "value in local storage. It starts with the given default, as the server renders, and loads the stored "
-                    "theme right after hydration:"
+                    "theme right after hydration, so a page in a server-rendered app shows the default theme for a moment ("
+                    <AnchorLink href="#remembering-the-theme-on-the-server">"keep it in a cookie"</AnchorLink>" to avoid that):"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -81,6 +82,59 @@ pub fn PageThemes() -> impl IntoView {
                 </ApiTable>
             </Section>
 
+            <Section title="Remembering the Theme on the Server">
+                <p>
+                    "The server can\u{2019}t read local storage: with "<Code inline=true>"signal_ls"</Code>", a server-rendered "
+                    "page arrives in the default theme and switches when it hydrates, a visible flash for readers of the "
+                    "other theme. Keep the theme in a cookie instead, which the browser sends with every request: "
+                    "leptos-use\u{2019}s "<Code inline=true>"use_cookie_with_options"</Code>" (feature "
+                    <Code inline=true>"use_cookie"</Code>", and "<Code inline=true>"axum"</Code>" or "
+                    <Code inline=true>"actix"</Code>" in your "<Code inline=true>"ssr"</Code>" feature, so it reads the "
+                    "request\u{2019}s cookies) reads it on both sides. Render the theme on "<Code inline=true>"<html>"</Code>
+                    " with leptos_meta\u{2019}s "<Code inline=true>"Html"</Code>" too, so that styles on "
+                    <Code inline=true>"<body>"</Code>" (outside the provider) have their theme colors from the start. This "
+                    "book does it this way:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use codee::string::FromToStringCodec;
+                        use leptonic::atoms::prelude::{LeptonicTheme, Theme, ThemeProvider};
+                        use leptos::prelude::*;
+                        use leptos_meta::Html;
+                        use leptos_use::{SameSite, UseCookieOptions, use_cookie_with_options};
+
+                        // The theme's name ("light", "dark") in a cookie, for a year.
+                        let (cookie, set_cookie) = use_cookie_with_options::<String, FromToStringCodec>(
+                            "theme",
+                            UseCookieOptions::default()
+                                .path("/")
+                                .same_site(SameSite::Lax)
+                                .max_age(365 * 24 * 60 * 60 * 1000),
+                        );
+                        let theme = Signal::derive(move || {
+                            cookie.with(|name| {
+                                [LeptonicTheme::Light, LeptonicTheme::Dark]
+                                    .into_iter()
+                                    .find(|theme| name.as_deref() == Some(theme.name()))
+                                    .unwrap_or_default()
+                            })
+                        });
+                        let set_theme = move |theme: LeptonicTheme| set_cookie.set(Some(theme.name().to_owned()));
+
+                        view! {
+                            <Html {..} data-theme=move || theme.get().name()/>
+                            <ThemeProvider theme set_theme>
+                                <App/>
+                            </ThemeProvider>
+                        }
+                    "#)}
+                </Code>
+                <p>
+                    "The shell must render leptos_meta\u{2019}s "<Code inline=true>"<MetaTags/>"</Code>" for "
+                    <Code inline=true>"Html"</Code>"\u{2019}s attributes to reach the server\u{2019}s "<Code inline=true>"<html>"</Code>"."
+                </p>
+            </Section>
+
             <Section title="Switching Themes">
                 <p>
                     "Read and change the theme with "<Code inline=true>"use_theme"</Code>". It returns the "
@@ -91,26 +145,28 @@ pub fn PageThemes() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{LeptonicTheme, Switch, use_theme};
+                        use leptonic::atoms::prelude::{LeptonicTheme, SwitchButton, SwitchField, use_theme};
 
                         let theme = use_theme::<LeptonicTheme>().expect("inside a ThemeProvider");
                         let is_dark = Signal::derive(move || theme.theme().get() == LeptonicTheme::Dark);
 
                         view! {
-                            <Switch
+                            <SwitchField
                                 is_selected=is_dark
                                 set_selected=move |dark: bool| {
                                     theme.set_theme(if dark { LeptonicTheme::Dark } else { LeptonicTheme::Light });
                                 }
                             >
-                                "Dark theme"
-                            </Switch>
+                                <SwitchButton>
+                                    "Dark theme"
+                                </SwitchButton>
+                            </SwitchField>
                         }
                     "#)}
                 </Code>
                 <p>
                     "Style the switch like any atom (see the "
-                    <Link href=format!("{}#styling", routes::doc::switch::Atom.materialize())>"Switch Atom"</Link>
+                    <Link href=format!("{}#styling", routes::doc::switch::Atom.materialize())>"Switch Atoms"</Link>
                     "); an icon of the current theme inside it is decorative, as the label names the switch."
                 </p>
             </Section>

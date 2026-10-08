@@ -1,5 +1,5 @@
 // Upstream: react-aria/test/menu/useMenuTrigger.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -62,8 +62,11 @@ async fn mouse_press_opens_once(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     page.wait_for_text("test-mt-is-open", "true").await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-mt-is-open").await?).is_equal_to("true".to_owned());
+    stays!(
+        "the text of #test-mt-is-open",
+        "true".to_owned(),
+        page.read_text_of("test-mt-is-open").await?
+    );
     assert_that!(trigger_attr(page, "aria-expanded").await?).is_equal_to(Some("true".to_owned()));
     // Mouse users get the menu focused, not its first item.
     assert_that!(page.read_text_of("test-mt-strategy").await?).is_equal_to("none".to_owned());

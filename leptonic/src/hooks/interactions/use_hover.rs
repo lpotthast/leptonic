@@ -29,7 +29,7 @@ use crate::{
 // =============================================================================
 
 /// iOS fires `pointerenter` twice: once with `pointerType="touch"` and again with
-/// `pointerType="mouse"` (https://bugs.webkit.org/show_bug.cgi?id=214609). After a touch
+/// `pointerType="mouse"` (<https://bugs.webkit.org/show_bug.cgi?id=214609>). After a touch
 /// `pointerup`, emulated mouse hovers are ignored for 500 ms. One document listener, shared by
 /// all hover hooks (react-aria's `setupGlobalTouchEvents`).
 #[cfg(not(feature = "ssr"))]

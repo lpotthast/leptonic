@@ -3,6 +3,7 @@ use leptos::prelude::*;
 
 use super::visually_hidden::VisuallyHidden;
 use crate::utils::id::use_id;
+use crate::utils::intl_strings::{OverlayStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -11,10 +12,6 @@ use crate::utils::id::use_id;
 // ## API DIFFERENCES
 // - `on_dismiss` is required: a dismiss button that dismisses nothing is a trap for screen reader
 //   users.
-//
-// ## OMITTED FEATURES
-// - Localized default label: "Dismiss" is English until leptonic has a localized string
-//   formatter.
 //
 // =============================================================================
 
@@ -48,10 +45,11 @@ pub fn DismissButton(
             .collect::<Vec<_>>()
     });
     let has_labelledby = labelledby.as_ref().is_some_and(|ids| !ids.is_empty());
+    let strings = use_localized_strings::<OverlayStrings>();
     let label = move || {
         aria_label
             .get()
-            .or_else(|| (!has_labelledby).then(|| "Dismiss".to_owned()))
+            .or_else(|| (!has_labelledby).then(|| strings.read().dismiss()))
     };
     // Labelled by other elements and its own label: its own id comes first.
     let own_id = id.clone();

@@ -1,31 +1,37 @@
 //! Keeps the API tables of the pages in sync with the library: every Input, Return, Fields and Props `ApiTable` names
 //! the documented Rust item with `of` and must list exactly the item's public fields (Input, Return and Fields tables,
-//! for structs) or props (Props tables, for `#[component]` functions). `of` is the item's name, qualified with the end
-//! of its module path where the name alone is ambiguous (`of="atoms::button::Button"`).
+//! for structs) or props (Props tables, for `#[component]` functions), each with the type of the field or prop as its
+//! `ty` (compared by the last path segments, so `Arc` matches `std::sync::Arc`; a type parameter of the item may be
+//! described freely: `L: Layout`). `of` is the item's name, qualified with the end of its module path where the name
+//! alone is ambiguous (`of="atoms::button::Button"`).
 
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     path::{Path, PathBuf},
 };
 
 use assertr::prelude::*;
-use syn::{FnArg, Item, Pat, Visibility};
+use syn::{
+    FnArg, GenericArgument, Item, Pat, Path as TypePath, PathArguments, ReturnType, Token, Type,
+    TypeParamBound, Visibility, parse::Parser, punctuated::Punctuated,
+};
+
+/// The fields or props of one item: name → type, as `type_name` prints it (`None` for a type parameter of the item,
+/// which a page describes in its own words: `L: Layout`, `Fn(T) -> impl IntoView`).
+type Members = BTreeMap<String, Option<String>>;
 
 /// The documented items of the library: public struct fields and component props, by module path
 /// (`atoms::button::Button`).
 #[derive(Default)]
 struct LibraryItems {
-    structs: HashMap<String, BTreeSet<String>>,
-    components: HashMap<String, BTreeSet<String>>,
+    structs: HashMap<String, Members>,
+    components: HashMap<String, Members>,
 }
 
 /// Looks up `of` in `items`: a plain name (`Button`) must be unique, a qualified one (`atoms::button::Button`) matches
 /// the end of the module path.
-fn lookup<'a>(
-    items: &'a HashMap<String, BTreeSet<String>>,
-    of: &str,
-) -> Result<&'a BTreeSet<String>, Vec<&'a str>> {
+fn lookup<'a>(items: &'a HashMap<String, Members>, of: &str) -> Result<&'a Members, Vec<&'a str>> {
     let candidates: Vec<_> = items
         .iter()
         .filter(|(path, _)| *path == of || path.ends_with(&format!("::{of}")))
@@ -70,12 +76,17 @@ impl LibraryItems {
         for item in items {
             match item {
                 Item::Struct(item) if matches!(item.vis, Visibility::Public(_)) => {
-                    let fields = item
-                        .fields
-                        .iter()
-                        .filter(|field| matches!(field.vis, Visibility::Public(_)))
-                        .filter_map(|field| field.ident.as_ref().map(ToString::to_string))
-                        .collect();
+                    let generics = type_parameters(&item.generics);
+                    let fields =
+                        item.fields
+                            .iter()
+                            .filter(|field| matches!(field.vis, Visibility::Public(_)))
+                            .filter_map(|field| {
+                                field.ident.as_ref().map(|ident| {
+                                    (ident.to_string(), member_type(&field.ty, &generics))
+                                })
+                            })
+                            .collect();
                     self.structs.insert(path(&item.ident), fields);
                 }
                 Item::Fn(item)
@@ -84,13 +95,16 @@ impl LibraryItems {
                         .iter()
                         .any(|attr| attr.path().is_ident("component")) =>
                 {
+                    let generics = type_parameters(&item.sig.generics);
                     let props = item
                         .sig
                         .inputs
                         .iter()
                         .filter_map(|input| match input {
                             FnArg::Typed(arg) => match arg.pat.as_ref() {
-                                Pat::Ident(pat) => Some(pat.ident.to_string()),
+                                Pat::Ident(pat) => {
+                                    Some((pat.ident.to_string(), member_type(&arg.ty, &generics)))
+                                }
                                 _ => None,
                             },
                             FnArg::Receiver(_) => None,
@@ -115,7 +129,10 @@ struct DocumentedTable {
     kind: String,
     /// The documented item (`of`), if the table names one.
     of: Option<String>,
-    rows: BTreeSet<String>,
+    /// Row name → the row's `ty`, if it has one, and the name's position in the row (`name="on_focus, on_blur"` with
+    /// `ty="Option<Callback<FocusEvent>>"` documents both names with one type, `name="classes, styles"` with
+    /// `ty="Classes, Styles"` one type per name).
+    rows: BTreeMap<String, Option<(String, usize)>>,
 }
 
 /// The API tables of all page sources below `dir`.
@@ -137,8 +154,12 @@ fn documented_tables(dir: &Path) -> Vec<DocumentedTable> {
                 .expect("`ApiTable` has a kind")
                 .to_owned();
             let rows = tags(body, "ApiRow")
-                .filter_map(|row| attribute(row, "name"))
-                .flat_map(|names| names.split(", ").map(str::to_owned).collect::<Vec<_>>())
+                .filter_map(|row| Some((attribute(row, "name")?, attribute(row, "ty"))))
+                .flat_map(|(names, ty)| {
+                    names.split(", ").enumerate().map(move |(position, name)| {
+                        (name.to_owned(), ty.map(|ty| (ty.to_owned(), position)))
+                    })
+                })
                 .collect();
             tables.push(DocumentedTable {
                 page: page.clone(),
@@ -184,6 +205,84 @@ fn attribute<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
         + pattern.len();
     let len = tag[start..].find('"')?;
     Some(&tag[start..start + len])
+}
+
+fn type_parameters(generics: &syn::Generics) -> Vec<String> {
+    generics
+        .type_params()
+        .map(|param| param.ident.to_string())
+        .collect()
+}
+
+fn member_type(ty: &Type, type_parameters: &[String]) -> Option<String> {
+    let name = type_name(ty);
+    (!type_parameters.contains(&name)).then_some(name)
+}
+
+/// `ty` with paths shortened to their last segment (`Option<Arc<dyn KeyboardDelegate>>` for
+/// `Option<std::sync::Arc<dyn KeyboardDelegate>>`), the form pages write types in. Library inputs and props use only
+/// paths, references, tuples, trait objects and `impl Trait`; other types print as `?`.
+fn type_name(ty: &Type) -> String {
+    let list = |types: Vec<String>| types.join(", ");
+    let path = |path: &TypePath| {
+        let Some(segment) = path.segments.last() else {
+            return String::new();
+        };
+        let arguments = match &segment.arguments {
+            PathArguments::None => String::new(),
+            PathArguments::AngleBracketed(arguments) => format!(
+                "<{}>",
+                list(
+                    arguments
+                        .args
+                        .iter()
+                        .filter_map(|argument| match argument {
+                            GenericArgument::Type(ty) => Some(type_name(ty)),
+                            _ => None,
+                        })
+                        .collect()
+                )
+            ),
+            PathArguments::Parenthesized(arguments) => format!(
+                "({}){}",
+                list(
+                    arguments
+                        .inputs
+                        .iter()
+                        .map(|arg| type_name(&arg.ty))
+                        .collect()
+                ),
+                match &arguments.output {
+                    ReturnType::Default => String::new(),
+                    ReturnType::Type(_, ty) => format!(" -> {}", type_name(ty)),
+                }
+            ),
+        };
+        format!("{}{arguments}", segment.ident)
+    };
+    let bounds = |bounds: &Punctuated<TypeParamBound, Token![+]>| {
+        bounds
+            .iter()
+            .filter_map(|bound| match bound {
+                TypeParamBound::Trait(bound) => Some(path(&bound.path)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join(" + ")
+    };
+    match ty {
+        Type::Path(ty) => path(&ty.path),
+        Type::Reference(ty) => format!(
+            "&{}{}",
+            if ty.mutability.is_some() { "mut " } else { "" },
+            type_name(&ty.elem)
+        ),
+        Type::Tuple(ty) => format!("({})", list(ty.elems.iter().map(type_name).collect())),
+        Type::TraitObject(ty) => format!("dyn {}", bounds(&ty.bounds)),
+        Type::ImplTrait(ty) => format!("impl {}", bounds(&ty.bounds)),
+        Type::Paren(ty) => type_name(&ty.elem),
+        _ => "?".to_owned(),
+    }
 }
 
 fn rust_files(dir: &Path) -> Vec<PathBuf> {
@@ -253,8 +352,10 @@ fn api_tables_match_the_library() {
                 continue;
             }
         };
-        let missing: Vec<_> = actual.difference(&table.rows).collect();
-        let unknown: Vec<_> = table.rows.difference(actual).collect();
+        let actual: BTreeSet<_> = actual.keys().collect();
+        let documented: BTreeSet<_> = table.rows.keys().collect();
+        let missing: Vec<_> = actual.difference(&documented).collect();
+        let unknown: Vec<_> = documented.difference(&actual).collect();
         if !missing.is_empty() || !unknown.is_empty() {
             problems.push(format!(
                 "{page} `{of}`: undocumented {missing:?}, not in the library {unknown:?}"
@@ -264,6 +365,54 @@ fn api_tables_match_the_library() {
 
     assert_that!(problems)
         .with_detail_message("API tables out of sync with the library")
+        .is_empty();
+}
+
+/// The `ty` of every row of an Input, Return, Fields or Props table is the type of the field or prop it documents.
+#[test]
+fn api_types_match_the_library() {
+    let library = LibraryItems::read(&library_dir());
+    let pages = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pages");
+
+    let mut problems = Vec::new();
+    for table in documented_tables(&pages) {
+        let items = match table.kind.as_str() {
+            "Props" => &library.components,
+            "Input" | "Return" | "Fields" => &library.structs,
+            _ => continue,
+        };
+        let Some(Ok(actual)) = table.of.as_deref().map(|of| lookup(items, of)) else {
+            continue; // Reported by `api_tables_match_the_library`.
+        };
+        let page = table
+            .page
+            .strip_prefix(&pages)
+            .unwrap_or(&table.page)
+            .display()
+            .to_string();
+        let of = table.of.as_deref().unwrap_or_default();
+        for (name, documented) in &table.rows {
+            let (Some((ty, position)), Some(Some(actual))) = (documented, actual.get(name)) else {
+                continue;
+            };
+            let Ok(types) = Punctuated::<Type, Token![,]>::parse_terminated.parse_str(ty) else {
+                problems.push(format!("{page} `{of}`.{name}: `{ty}` is not a Rust type"));
+                continue;
+            };
+            let documented = types
+                .iter()
+                .nth(if types.len() == 1 { 0 } else { *position })
+                .map(type_name);
+            if documented.as_ref() != Some(actual) {
+                problems.push(format!(
+                    "{page} `{of}`.{name}: documented `{ty}`, is `{actual}`"
+                ));
+            }
+        }
+    }
+
+    assert_that!(problems)
+        .with_detail_message("API table types out of sync with the library")
         .is_empty();
 }
 

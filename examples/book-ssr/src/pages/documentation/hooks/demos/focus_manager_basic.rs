@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
     hooks::*,
 };
 use leptos::{prelude::*, web_sys};
@@ -62,14 +62,18 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
         <p class="demo-status">{move || status.get()}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=wrap set_selected=wrap classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Wrap around"
-            </Checkbox>
-            <Checkbox is_selected=tabbable_only set_selected=tabbable_only classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Tabbable only"
-            </Checkbox>
+            <CheckboxField is_selected=wrap set_selected=wrap>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Wrap around"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=tabbable_only set_selected=tabbable_only>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Tabbable only"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

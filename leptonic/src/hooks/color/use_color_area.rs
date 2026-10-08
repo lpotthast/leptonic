@@ -13,6 +13,9 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::use_color_area_state::ColorAreaState;
+use crate::utils::intl_strings::{
+    ColorInputLabelArgs, ColorNameAndValueArgs, ColorStrings, use_localized_strings,
+};
 use crate::{
     hooks::{
         FocusWithinEvent, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
@@ -48,8 +51,6 @@ use crate::{
 //   gradient comes from the color type (`ColorValue::area_gradient`).
 //
 // ## OMITTED FEATURES
-// - Localized strings: "Color picker", "2D slider", "{name}: {value}" and the color names are
-//   English until leptonic has a localized string formatter.
 // - The mouse and touch fallbacks for browsers without `PointerEvent` (CLAUDE.md).
 //
 // =============================================================================
@@ -163,6 +164,8 @@ impl IntoAttrs for UseColorAreaThumbProps {
 #[derive(Debug)]
 pub struct UseColorAreaInputProps {
     pub id: String,
+    /// "2D slider" (localized).
+    pub aria_roledescription: Signal<String>,
     pub min: f64,
     pub max: f64,
     pub step: f64,
@@ -200,7 +203,7 @@ pub type UseColorAreaInputAttrs = (
         Attr<attr::Tabindex, Signal<Option<i32>>>,
     ),
     (
-        Attr<attr::AriaRoledescription, &'static str>,
+        Attr<attr::AriaRoledescription, Signal<String>>,
         Attr<attr::AriaLabel, Signal<Option<String>>>,
         Attr<attr::AriaLabelledby, Option<String>>,
         Attr<attr::AriaDescribedby, Option<String>>,
@@ -238,7 +241,7 @@ impl IntoAttrs for UseColorAreaInputProps {
                 Attr(attr::Tabindex, self.tabindex),
             ),
             (
-                Attr(attr::AriaRoledescription, TWO_DIMENSIONAL_SLIDER),
+                Attr(attr::AriaRoledescription, self.aria_roledescription),
                 Attr(attr::AriaLabel, self.aria_label),
                 Attr(attr::AriaLabelledby, self.aria_labelledby),
                 Attr(attr::AriaDescribedby, self.aria_describedby),
@@ -256,9 +259,6 @@ impl IntoAttrs for UseColorAreaInputProps {
         )
     }
 }
-
-const COLOR_PICKER: &str = "Color picker";
-const TWO_DIMENSIONAL_SLIDER: &str = "2D slider";
 
 /// One of the area's two inputs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -574,17 +574,18 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
 
     let (x_channel, y_channel, z_channel) = (state.x_channel, state.y_channel, state.z_channel);
     let locale = use_locale();
+    let strings = use_localized_strings::<ColorStrings>();
     let display_color = state.display_color();
     let value_text = move |channel: C::Channel| {
         Signal::derive(move || {
             let color = display_color.get();
             let locale = locale.get();
+            let strings = strings.read();
             let name_and_value = |c: C::Channel| {
-                format!(
-                    "{}: {}",
-                    C::channel_name(c),
-                    color.format_channel_value(c, &locale)
-                )
+                strings.color_name_and_value(ColorNameAndValueArgs {
+                    name: &C::channel_name(c, &locale),
+                    value: &color.format_channel_value(c, &locale),
+                })
             };
             let text = if changed_via_input.get() || changed_via_keyboard.get() {
                 name_and_value(channel)
@@ -596,7 +597,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 };
                 [channel, other, z_channel].map(name_and_value).join(", ")
             };
-            format!("{text}, {}", color.color_name())
+            format!("{text}, {}", color.color_name(&locale))
         })
     };
 
@@ -607,18 +608,27 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             .map(|ids| format!("{own_id} {ids}"))
     };
     let input_label = Signal::derive(move || {
+        let strings = strings.read();
+        let color_picker = strings.color_picker();
         Some(match aria_label.get() {
-            Some(label) => format!("{label}, {COLOR_PICKER}"),
-            None => COLOR_PICKER.to_owned(),
+            Some(label) => strings.color_input_label(ColorInputLabelArgs {
+                label: &label,
+                channel_label: &color_picker,
+            }),
+            None => color_picker,
         })
     });
     let area_id = use_id("color-area");
     let has_labelledby = aria_labelledby.is_some();
-    let area_label = Signal::derive(move || match aria_label.get() {
-        Some(label) => Some(format!("{label}, {COLOR_PICKER}")),
-        // On touch devices, the area itself is announced (react-aria's default label).
-        None => (is_mobile && !has_labelledby).then(|| COLOR_PICKER.to_owned()),
+    let area_label = Signal::derive(move || {
+        let color_picker = strings.read().color_picker();
+        match aria_label.get() {
+            Some(label) => Some(format!("{label}, {color_picker}")),
+            // On touch devices, the area itself is announced (react-aria's default label).
+            None => (is_mobile && !has_labelledby).then_some(color_picker),
+        }
     });
+    let roledescription = Signal::derive(move || strings.read().two_dimensional_slider());
 
     let input_styles = || visually_hidden_full_size_styles();
     let x_range = C::channel_range(x_channel);
@@ -628,6 +638,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     // So that only one "2D slider" is listed by screen readers, the unfocused input is hidden
     // until the value changes by keyboard (react-aria).
     let x_input_props = UseColorAreaInputProps {
+        aria_roledescription: roledescription,
         aria_labelledby: labelled_by(&x_id),
         id: x_id,
         min: x_range.min_value,
@@ -660,6 +671,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         element_capture: x_input.attr(),
     };
     let y_input_props = UseColorAreaInputProps {
+        aria_roledescription: roledescription,
         aria_labelledby: labelled_by(&y_id),
         id: y_id,
         min: y_range.min_value,

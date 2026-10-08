@@ -100,7 +100,7 @@ pub enum KeyboardKey {
     Pause,
     /// Any other key value.
     ///
-    /// Used both for custom display labels in the <Kbd> component (as `Cow::Borrowed`)
+    /// Used both for custom display labels in the `Kbd` atom (as `Cow::Borrowed`)
     /// and as a catch-all for unrecognized `KeyboardEvent.key()` values (as `Cow::Owned`).
     Other(Cow<'static, str>),
 }

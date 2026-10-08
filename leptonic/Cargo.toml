@@ -18,7 +18,7 @@ build = "build.rs"
 features = ["docsrs"]
 
 [features]
-default = ["hooks"]
+default = ["hooks", "intl-strings"]
 
 ssr = [
     "leptos/ssr",
@@ -27,12 +27,13 @@ ssr = [
 ]
 hydrate = ["leptos/hydrate", "leptos-element-capture/hydrate"]
 
-# Core functionality. Hooks provide low level functions like `usePress` which hande interactions, aria attributes and more.
-# Use hooks to build your own components.
+# Core functionality. Hooks provide low level functions like `use_ress` which handle interactions, aria attributes and
+# more. Use hooks to build your own components.
 hooks = []
 
-# Atoms are headless / unstyled Leptos components. All atoms render a single html element and are therefore easy to style.
-# Atoms use hooks and allow you to build more complex component without requring too much knowledge about hooks.
+# Atoms are mostly unopinionated headless / unstyled Leptos components buily on top of hooks, basically making
+# hook-usage easy from a Leptos app. All atoms render a single HTML element and are therefore easy to style and compose.
+# Atoms allow you to build more complex component without requring too much knowledge about the underlying hooks.
 atoms = ["hooks"]
 
 # Enables clipboard support.
@@ -41,7 +42,11 @@ clipboard = ["hooks", "web-sys/Clipboard", "web-sys/ClipboardItem", "web-sys/Blo
 # Syntax highlighting of source code into classed HTML (`utils::syntax_highlight`).
 syntax-highlight = ["dep:syntect"]
 
-full = ["hooks", "atoms", "clipboard", "syntax-highlight"]
+# The hooks' messages (labels, descriptions, announcements) in react-aria's 34 locales. Without it,
+# they are English (en-US) in every locale (a smaller wasm).
+intl-strings = []
+
+full = ["hooks", "atoms", "clipboard", "syntax-highlight", "intl-strings"]
 
 nightly = ["leptos/nightly"]
 

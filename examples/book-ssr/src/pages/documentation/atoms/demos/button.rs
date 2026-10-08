@@ -17,10 +17,12 @@ pub fn ButtonDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <atoms::Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </atoms::Checkbox>
+            <atoms::CheckboxField is_selected=disabled set_selected=disabled>
+                <atoms::CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </atoms::CheckboxButton>
+            </atoms::CheckboxField>
         </div>
     }
 }

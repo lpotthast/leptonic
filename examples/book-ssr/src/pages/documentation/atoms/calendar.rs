@@ -1,7 +1,9 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{calendar::AtomCalendarDemo, calendar_range::AtomRangeCalendarDemo};
+use super::demos::{
+    calendar::AtomCalendarDemo, calendar_pickers::CalendarPickersDemo, calendar_range::AtomRangeCalendarDemo,
+};
 use crate::{kit::*, routes};
 
 /// A link to a section of the Calendar Hooks page.
@@ -271,7 +273,15 @@ pub fn PageAtomCalendar() -> impl IntoView {
                 </Section>
 
                 <Section title="Example" id="calendarmonthpicker-example">
-                    <p>"A "<Code inline=true>"<select>"</Code>" for either picker, placed in the calendar\u{2019}s header:"</p>
+                    <p>
+                        "A birthday is easier to reach by picking its year than by paging through decades. The demo renders "
+                        "both pickers as "<Link href=routes::doc::select::Atom.materialize()>"Select"</Link>" atoms in the "
+                        "calendar\u{2019}s header:"
+                    </p>
+                    <Demo description="A birthday calendar with a month and a year picker in its header, each a Select" source=include_str!("demos/calendar_pickers.rs")>
+                        <CalendarPickersDemo/>
+                    </Demo>
+                    <p>"A plain "<Code inline=true>"<select>"</Code>" works too:"</p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{atoms::calendar::*, hooks::calendar::UseCalendarPickerReturn};

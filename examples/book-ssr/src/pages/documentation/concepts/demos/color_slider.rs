@@ -1,11 +1,15 @@
 use leptonic::{
     atoms::prelude::{ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorThumb, Label},
-    utils::color::{ColorValue, HSV, HsvChannel},
+    utils::{
+        color::{ColorValue, HSV, HsvChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorSliderConceptDemo() -> impl IntoView {
+    let locale = use_locale();
     let color = RwSignal::new(HSV {
         hue: 210.0,
         saturation: 0.6,
@@ -20,6 +24,6 @@ pub fn ColorSliderConceptDemo() -> impl IntoView {
                 <ColorThumb classes="demo-color-atoms-thumb"/>
             </ColorSliderTrack>
         </ColorSlider>
-        <p class="demo-status">{move || format!("Color: {}, hue: {}", color.get().to_rgb8(), color.get().hue_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, hue: {}", color.get().to_rgb8(), color.get().hue_name(&locale.get()))}</p>
     }
 }

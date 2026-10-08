@@ -94,7 +94,11 @@ pub fn PagePopoverOverview() -> impl IntoView {
 
                 <KeyboardTable>
                     <KeyRow keys="Enter / Space">"On the trigger: opens or closes the popover."</KeyRow>
-                    <KeyRow keys="Tab / Shift + Tab">"Moves focus within the popover."</KeyRow>
+                    <KeyRow keys="Tab / Shift + Tab">
+                        "Moves focus within the popover. The "<Code inline=true>"Popover"</Code>" atom keeps the focus inside "
+                        "while it is modal or holds a dialog; otherwise moving the focus out closes the popover (with the hooks, "
+                        "keep it inside with a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>")."
+                    </KeyRow>
                     <KeyRow keys="Escape">"Closes the popover and returns focus to the trigger."</KeyRow>
                 </KeyboardTable>
             </Section>

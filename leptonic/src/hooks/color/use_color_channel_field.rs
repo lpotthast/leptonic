@@ -6,6 +6,7 @@ use crate::{
     hooks::form::use_number_field::{UseNumberFieldInput, UseNumberFieldReturn, use_number_field},
     utils::color::ColorValue,
 };
+use crate::utils::i18n::use_locale;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -35,11 +36,13 @@ pub fn use_color_channel_field<C: ColorValue>(
     let aria_label = field.aria_label;
     let has_label = field.has_label;
     let has_labelledby = field.aria_labelledby.is_some();
+    let locale = use_locale();
     use_number_field(UseNumberFieldInput {
         state: state.number,
         aria_label: MaybeProp::derive(move || {
             aria_label.get().or_else(|| {
-                (!has_label.get() && !has_labelledby).then(|| C::channel_name(channel).to_owned())
+                (!has_label.get() && !has_labelledby)
+                    .then(|| C::channel_name(channel, &locale.get()))
             })
         }),
         ..field

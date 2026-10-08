@@ -3,7 +3,10 @@ use leptonic::{
         ColorArea, ColorField, ColorPicker, ColorSlider, ColorSliderOutput, ColorSliderTrack,
         ColorSwatch, ColorSwatchPicker, ColorSwatchPickerItems, ColorThumb, Input, Label,
     },
-    utils::color::{Color, ColorValue, HSV, HsvChannel, RGB8},
+    utils::{
+        color::{Color, ColorValue, HSV, HsvChannel, RGB8},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
@@ -24,6 +27,7 @@ const PRESETS: [RGB8; 4] = [
 
 #[component]
 pub fn ColorPickerAtomDemo() -> impl IntoView {
+    let locale = use_locale();
     // Every atom inside the picker shows and changes this color, each in its own color space.
     let color = RwSignal::new(Color::from(HSV {
         hue: 210.0,
@@ -68,7 +72,7 @@ pub fn ColorPickerAtomDemo() -> impl IntoView {
         <p class="demo-status">
             {move || {
                 let rgb = color.get().to::<RGB8>();
-                format!("Color: {rgb}, {}", rgb.color_name())
+                format!("Color: {rgb}, {}", rgb.color_name(&locale.get()))
             }}
         </p>
     }

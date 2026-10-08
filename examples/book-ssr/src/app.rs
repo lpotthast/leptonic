@@ -1,16 +1,16 @@
 use std::time::Duration;
 
+use codee::string::FromToStringCodec;
 use leptonic::{
     atoms::prelude::{
-        AnchorLink, Button, Dialog, LeptonicTheme, Link, ModalBackdrop, ModalContent, Switch,
-        Theme, ThemeProvider, Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion,
-        ToastTitle, VisuallyHidden, use_theme,
+        AnchorLink, Button, Dialog, LeptonicTheme, Link, ModalBackdrop, ModalContent, SwitchButton,
+        SwitchField, Theme, ThemeProvider, Toast, ToastCloseButton, ToastContent, ToastDescription,
+        ToastRegion, ToastTitle, VisuallyHidden, use_theme,
     },
     hooks::{
         IntoAttrs, LandmarkController, LandmarkRole, LinkTarget, ToastOptions, ToastQueue,
         UseLandmarkInput, use_landmark,
     },
-    signal_ls,
     utils::{
         CapturedElement,
         aria::{AriaExpanded, AriaHasPopup},
@@ -18,9 +18,13 @@ use leptonic::{
     },
 };
 use leptos::prelude::*;
-use leptos_meta::{Link as MetaLink, Meta, MetaTags, Stylesheet, Title, provide_meta_context};
+use leptos_meta::{
+    Html, Link as MetaLink, Meta, MetaTags, Stylesheet, Title, provide_meta_context,
+};
 use leptos_router::{components::Router, hooks::use_location};
-use leptos_use::{use_document, use_media_query};
+use leptos_use::{
+    SameSite, UseCookieOptions, use_cookie_with_options, use_document, use_media_query,
+};
 
 use crate::{kit::Icon, pages::documentation::doc_search::DocSearch, routes};
 
@@ -32,7 +36,8 @@ const VERSION_LABEL: &str = "v0.6.0 (main)";
 const GITHUB_URL: &str = "https://github.com/lpotthast/leptonic";
 
 /// Describes the book where a page has no description of its own (search engines, link previews).
-pub const SITE_DESCRIPTION: &str = "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks and unstyled atoms.";
+pub const SITE_DESCRIPTION: &str =
+    "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks and unstyled atoms.";
 
 /// Id of every page's `<main>`, the target of the skip link.
 pub const MAIN_ID: &str = "book-main";
@@ -42,13 +47,15 @@ pub const MAIN_ID: &str = "book-main";
 /// Coupled with `$small` in `style/book/_theme.scss`, which switches the layout in CSS: change both together.
 pub const SMALL_SCREEN_MAX_WIDTH: &str = "800px";
 
+/// How long the theme cookie keeps the reader's theme: a year.
+const THEME_COOKIE_MAX_AGE_MS: i64 = 365 * 24 * 60 * 60 * 1000;
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
-        // The theme provider mirrors the current theme onto `<html>` once hydrated. Until then, the server's default
-        // theme applies, so that the page background (on `<body>`, outside the provider) has its theme colors from
-        // the start.
-        <html lang="en" data-theme=LeptonicTheme::default().name()>
+        // `App` sets the reader's theme on `<html>` (leptos_meta's `Html`), so that the page background (on `<body>`,
+        // outside the theme provider) has its theme colors from the start.
+        <html lang="en">
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -85,8 +92,24 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
-    // The reader's theme, remembered in the browser.
-    let (theme, set_theme) = signal_ls("theme", LeptonicTheme::default());
+    // The reader's theme, in a cookie: the server reads it too, so a page arrives in the reader's theme. (Kept only in
+    // the browser, e.g. with `signal_ls`, the page would show the default theme until it hydrates.)
+    let (theme_cookie, set_theme_cookie) = use_cookie_with_options::<String, FromToStringCodec>(
+        "theme",
+        UseCookieOptions::default()
+            .path("/")
+            .same_site(SameSite::Lax)
+            .max_age(THEME_COOKIE_MAX_AGE_MS),
+    );
+    let theme = Signal::derive(move || {
+        theme_cookie.with(|name| {
+            [LeptonicTheme::Light, LeptonicTheme::Dark]
+                .into_iter()
+                .find(|theme| name.as_deref() == Some(theme.name()))
+                .unwrap_or_default()
+        })
+    });
+    let set_theme = move |theme: LeptonicTheme| set_theme_cookie.set(Some(theme.name().to_owned()));
     let toasts = BookToasts(ToastQueue::new(None));
     provide_context(toasts);
 
@@ -100,6 +123,9 @@ pub fn App() -> impl IntoView {
 
         // Fallback; every page sets its own title (and description).
         <Title text="Leptonic"/>
+
+        // The theme on `<html>` in the server's HTML too (`ThemeProvider` sets it in the browser).
+        <Html {..} data-theme=move || theme.get().name()/>
 
         <ThemeProvider theme set_theme>
             <Router>
@@ -373,8 +399,8 @@ fn GithubLink() -> impl IntoView {
     }
 }
 
-/// Switches between the light and the dark theme (leptonic's `Switch` atom on the theme of the `ThemeProvider`),
-/// showing the sun or the moon in its knob.
+/// Switches between the light and the dark theme (leptonic's `SwitchField` and `SwitchButton` atoms on the theme of the
+/// `ThemeProvider`), showing the sun or the moon in its knob.
 #[component]
 fn ThemeToggle() -> impl IntoView {
     let theme = use_theme::<LeptonicTheme>()
@@ -389,16 +415,18 @@ fn ThemeToggle() -> impl IntoView {
     };
 
     view! {
-        <Switch is_selected=is_dark set_selected=set_dark aria_label="Dark theme" classes="book-theme-toggle">
-            <span class="book-theme-toggle-track" aria-hidden="true">
-                <span class="book-theme-toggle-knob">
-                    {move || {
-                        let icon = if is_dark.get() { icondata::BsMoon } else { icondata::BsSun };
-                        view! { <Icon icon/> }
-                    }}
+        <SwitchField is_selected=is_dark set_selected=set_dark aria_label="Dark theme">
+            <SwitchButton classes="book-theme-toggle">
+                <span class="book-theme-toggle-track" aria-hidden="true">
+                    <span class="book-theme-toggle-knob">
+                        {move || {
+                            let icon = if is_dark.get() { icondata::BsMoon } else { icondata::BsSun };
+                            view! { <Icon icon/> }
+                        }}
+                    </span>
                 </span>
-            </span>
-        </Switch>
+            </SwitchButton>
+        </SwitchField>
     }
 }
 

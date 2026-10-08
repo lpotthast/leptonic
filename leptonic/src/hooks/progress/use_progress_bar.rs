@@ -34,7 +34,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_progress_bar`] (and, with its own value type, [`use_meter`](crate::hooks::use_meter)).
+/// Input of [`use_progress_bar`] (and, with its own value type, [`use_meter`](fn@crate::hooks::use_meter)).
 #[derive(Debug, Clone)]
 pub struct UseProgressBarInput<T: NumberValue> {
     /// The progress, clamped to the range. `None`: indeterminate (the progress isn't known).

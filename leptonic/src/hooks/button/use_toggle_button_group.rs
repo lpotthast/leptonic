@@ -92,7 +92,7 @@ pub struct UseToggleButtonGroupItemInput {
 
 /// A toggle button in a [`use_toggle_button_group`]: selects or deselects its key. In a
 /// single-selection group, it is a `radio` with `aria-checked`. Returns the input of
-/// [`use_button`](super::use_button).
+/// [`use_button`](fn@super::use_button).
 pub fn use_toggle_button_group_item(input: UseToggleButtonGroupItemInput) -> UseButtonInput {
     let UseToggleButtonGroupItemInput {
         group,

@@ -23,7 +23,7 @@ use crate::{
         CapturedElement, ElementCaptureAttr, EventHandler,
         aria::{AriaDisabled, AriaInvalid, AriaReadonly, AriaRequired, AriaRole},
         date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, MonthFormat},
-        filter::{CollatorOptions, Filter},
+        filter::{CollatorOptions, use_filter},
         i18n::{use_direction, use_locale},
         id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
@@ -34,6 +34,7 @@ use crate::{
         styles::Styles,
     },
 };
+use crate::utils::intl_strings::{DatePickerStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -409,10 +410,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
         ..UseKeyboardInput::default()
     });
 
-    let filter = Memo::new_with_compare(
-        move |_| Filter::new(&locale.get(), &CollatorOptions::default()),
-        |_, _| true,
-    );
+    let filter = use_filter(CollatorOptions::default());
     let starts_with =
         move |name: &str, key: &str| filter.with_untracked(|filter| filter.starts_with(name, key));
     let day_periods = Memo::new(move |_| day_periods(&locale.get()));
@@ -675,9 +673,10 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     let field_label = data.aria_label;
     let field_labelledby = data.aria_labelledby;
     let label_id = id.clone();
+    let strings = use_localized_strings::<DatePickerStrings>();
     let label = Signal::derive(move || {
         let labelledby = field_labelledby.get();
-        let name = display_name(kind);
+        let name = display_name(&strings.read(), kind);
         let label = format!(
             "{name}{}{}",
             field_label

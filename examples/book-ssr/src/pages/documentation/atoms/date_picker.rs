@@ -132,9 +132,12 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">
                             "Whether a date can\u{2019}t be chosen: the calendar marks it unavailable, and a typed one is invalid."
                         </ApiRow>
-                        <ApiRow name="granularity, hour_cycle, hide_time_zone, should_force_leading_zeros" ty="see DateField" default="None, None, false, false">
-                            "The segments, as on "<Link href=format!("{}#datefield-props", routes::doc::date_field::Atom.materialize())>"DateField"</Link>"."
+                        <ApiRow name="granularity" ty="MaybeProp<Granularity>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
+                        <ApiRow name="hour_cycle" ty="MaybeProp<HourCycle>" default="None">
+                            <Code inline=true>"H12"</Code>" or "<Code inline=true>"H24"</Code>". Default: the locale\u{2019}s."
                         </ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of zoned values."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads months, days and hours to two digits."</ApiRow>
                         <ApiRow name="should_close_on_select" ty="Signal<bool>" default="true">
                             "Whether selecting a date closes the popover. Without, a value with a time waits for a time selected "
                             "in the popover, or for the popover to close."
@@ -197,9 +200,17 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">"The earliest and latest valid date of either end."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen."</ApiRow>
                         <ApiRow name="allows_non_contiguous_ranges" ty="bool" default="false">"Whether a range may span unavailable dates."</ApiRow>
-                        <ApiRow name="granularity, hour_cycle, hide_time_zone, should_force_leading_zeros" ty="see DateField" default="None, None, false, false">"The segments of both ends."</ApiRow>
+                        <ApiRow name="granularity" ty="MaybeProp<Granularity>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
+                        <ApiRow name="hour_cycle" ty="MaybeProp<HourCycle>" default="None">
+                            <Code inline=true>"H12"</Code>" or "<Code inline=true>"H24"</Code>". Default: the locale\u{2019}s."
+                        </ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of zoned values."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads months, days and hours to two digits."</ApiRow>
                         <ApiRow name="should_close_on_select" ty="Signal<bool>" default="true">"Whether selecting a range closes the popover."</ApiRow>
-                        <ApiRow name="is_open, set_open, default_open, on_open_change" ty="see DatePicker" default="None, None, false, None">"The popover\u{2019}s open state."</ApiRow>
+                        <ApiRow name="is_open" ty="Option<Signal<bool>>" default="None">"Whether the popover is open (controlled)."</ApiRow>
+                        <ApiRow name="set_open" ty="Option<Out<bool>>" default="None">"Receives the open state."</ApiRow>
+                        <ApiRow name="default_open" ty="bool" default="false">"Whether the popover starts open (uncontrolled)."</ApiRow>
+                        <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">"Called when the popover opens or closes."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only, is_required, is_invalid" ty="Signal<bool>" default="false">"As on "<Code inline=true>"DatePicker"</Code>"."</ApiRow>
                         <ApiRow name="validate" ty="Option<ValidateFn<Option<RangeValue<V>>>>" default="None">"Custom validation of the range."</ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">"As on "<Code inline=true>"DatePicker"</Code>"."</ApiRow>

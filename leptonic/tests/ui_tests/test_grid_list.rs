@@ -38,6 +38,7 @@ impl BrowserTest<str> for GridListTests {
         disabled_row_is_marked(&page).await?;
         select_all_skips_disabled_row(&page).await?;
         shift_arrow_extends_selection(&page).await?;
+        selection_announcements(&page).await?;
 
         Ok(())
     }
@@ -111,8 +112,11 @@ async fn keyboard_navigation_skips_disabled_rows(page: &Page<'_>) -> Result<(), 
             .map_err(|e| e.context(format!("after pressing {key:?}")).into_dynamic())?;
     }
     // Moving focus does not select (selection behavior "toggle").
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-gl-selection").await?).is_equal_to(String::new());
+    stays!(
+        "the text of #test-gl-selection",
+        String::new(),
+        page.read_text_of("test-gl-selection").await?
+    );
     Ok(())
 }
 
@@ -246,4 +250,53 @@ async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
     press(page, Key::Shift + Key::Down, "Drafts", "Drafts").await?;
     press(page, Key::Shift + Key::Down, "Sent", "Drafts,Sent").await?;
     press(page, Key::Shift + Key::Up, "Drafts", "Drafts").await
+}
+
+/// The newest polite announcement of the live announcer.
+async fn last_announcement(page: &Page<'_>) -> Result<String, Report> {
+    let entries = page
+        .driver
+        .find_all(By::Css("[data-live-announcer] [aria-live=polite] div"))
+        .await?;
+    match entries.last() {
+        Some(entry) => Ok(entry.prop("textContent").await?.unwrap_or_default()),
+        None => Ok(String::new()),
+    }
+}
+
+/// Selection changes are announced ("should allow multiple items to be selected in multiple
+/// selection" and "should support select all and clear all via keyboard" in `ListView.test.js`).
+async fn selection_announcements(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list").await?;
+    row(page, "Inbox").await?.click().await?;
+    wait_for!(
+        "the announcement",
+        "Inbox selected.",
+        last_announcement(page).await?
+    );
+    row(page, "Drafts").await?.click().await?;
+    wait_for!(
+        "the announcement",
+        "Drafts selected. 2 items selected.",
+        last_announcement(page).await?
+    );
+    row(page, "Drafts").await?.click().await?;
+    wait_for!(
+        "the announcement",
+        "Drafts not selected. 1 item selected.",
+        last_announcement(page).await?
+    );
+    page.send_keys_to_active(Key::Control + "a").await?;
+    wait_for!(
+        "the announcement",
+        "All items selected.",
+        last_announcement(page).await?
+    );
+    page.send_keys_to_active(Key::Escape).await?;
+    wait_for!(
+        "the announcement",
+        "No items selected.",
+        last_announcement(page).await?
+    );
+    Ok(())
 }

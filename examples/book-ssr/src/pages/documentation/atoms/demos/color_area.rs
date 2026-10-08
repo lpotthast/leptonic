@@ -1,6 +1,9 @@
 use leptonic::{
-    atoms::prelude::{Checkbox, ColorArea, ColorSwatch, ColorThumb},
-    utils::color::{ColorValue, HSV, HsvChannel},
+    atoms::prelude::{CheckboxButton, CheckboxField, ColorArea, ColorSwatch, ColorThumb},
+    utils::{
+        color::{ColorValue, HSV, HsvChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
@@ -13,7 +16,7 @@ const INITIAL: HSV = HSV {
 
 #[component]
 pub fn ColorAreaAtomDemo() -> impl IntoView {
-    let locale = leptonic::utils::i18n::use_locale();
+    let locale = use_locale();
     // The area owns its color (`default_value`). `on_change` reports every change, `on_change_end`
     // only the color at the end of a drag or key press.
     let color = RwSignal::new(INITIAL);
@@ -25,7 +28,7 @@ pub fn ColorAreaAtomDemo() -> impl IntoView {
         let c = color.get();
         format!(
             "{}, saturation {}, brightness {}",
-            c.hue_name(),
+            c.hue_name(&locale.get()),
             c.format_channel_value(HsvChannel::Saturation, &locale.get()),
             c.format_channel_value(HsvChannel::Brightness, &locale.get()),
         )
@@ -61,10 +64,12 @@ pub fn ColorAreaAtomDemo() -> impl IntoView {
 
         <p class="demo-status">{move || format!("Committed: {}", committed.get().to_rgb8())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

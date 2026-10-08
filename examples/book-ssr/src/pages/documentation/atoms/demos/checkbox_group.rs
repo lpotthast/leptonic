@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::{
-        checkbox::{Checkbox, CheckboxGroup},
+        checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         field::{Description, FieldError, Label},
     },
     hooks::Key,
@@ -31,10 +31,12 @@ pub fn CheckboxGroupAtomDemo() -> impl IntoView {
             {DAYS
                 .into_iter()
                 .map(|day| view! {
-                    <Checkbox value=day classes="demo-check">
-                        <span class="demo-check-box" aria-hidden="true"></span>
-                        {day}
-                    </Checkbox>
+                    <CheckboxField value=day>
+                        <CheckboxButton classes="demo-check">
+                            <span class="demo-check-box" aria-hidden="true"></span>
+                            {day}
+                        </CheckboxButton>
+                    </CheckboxField>
                 })
                 .collect_view()}
             <Description classes="demo-choice-group-description">
@@ -52,10 +54,12 @@ pub fn CheckboxGroupAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -103,10 +103,6 @@ pub fn PageInteractions() -> impl IntoView {
                         </TableRow>
                     </DocTable>
 
-                    <p>
-                        <Code inline=true>"MergedPressHoverProps"</Code>" currently drops the "<Code inline=true>"dblclick"</Code>
-                        " handler, so "<Code inline=true>"on_double_press"</Code>" doesn\u{2019}t fire on merged props."
-                    </p>
                 </Section>
 
                 <Section title="Other Areas">

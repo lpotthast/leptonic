@@ -1,18 +1,29 @@
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         field::{Description, Label},
-        radio::{Radio, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::{Key, Orientation},
+    hooks::Orientation,
+    selection_value,
 };
 use leptos::prelude::*;
 
-const PLANS: [(&str, &str); 3] = [("free", "Free"), ("pro", "Pro"), ("team", "Team")];
+/// The plans. The group's value is a `Plan`: `selection_value!` names each plan's key, which forms submit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Plan {
+    Free,
+    Pro,
+    Team,
+}
+
+selection_value!(Plan { Free = "free", Pro = "pro", Team = "team" });
+
+const PLANS: [(Plan, &str); 3] = [(Plan::Free, "Free"), (Plan::Pro, "Pro"), (Plan::Team, "Team")];
 
 #[component]
 pub fn RadioAtomDemo() -> impl IntoView {
-    let plan = RwSignal::new(Some(Key::from("free")));
+    let plan = RwSignal::new(Some(Plan::Free));
     let disabled = RwSignal::new(false);
     let read_only = RwSignal::new(false);
     let team_disabled = RwSignal::new(true);
@@ -31,15 +42,16 @@ pub fn RadioAtomDemo() -> impl IntoView {
                 {PLANS
                     .into_iter()
                     .map(|(value, label)| view! {
-                        // The atom renders a `<label>` around a visually hidden input; the children draw the circle.
-                        <Radio
+                        // The button is a `<label>` around a hidden input; its children draw the circle.
+                        <RadioField
                             value
-                            is_disabled=Signal::derive(move || value == "team" && team_disabled.get())
-                            classes="demo-radio"
+                            is_disabled=Signal::derive(move || value == Plan::Team && team_disabled.get())
                         >
-                            <span class="demo-radio-circle" aria-hidden="true"></span>
-                            {label}
-                        </Radio>
+                            <RadioButton classes="demo-radio">
+                                <span class="demo-radio-circle" aria-hidden="true"></span>
+                                {label}
+                            </RadioButton>
+                        </RadioField>
                     })
                     .collect_view()}
             </div>
@@ -47,28 +59,31 @@ pub fn RadioAtomDemo() -> impl IntoView {
         </RadioGroup>
 
         <p class="demo-status">
-            {move || {
-                let selected = plan.get();
-                PLANS
-                    .into_iter()
-                    .find(|(value, _)| selected.as_ref() == Some(&Key::from(*value)))
-                    .map_or_else(|| "No plan selected.".to_owned(), |(_, label)| format!("Plan: {label}."))
+            {move || match plan.get() {
+                Some(plan) => format!("Plan: {plan:?}."),
+                None => "No plan selected.".to_owned(),
             }}
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Read-only"
-            </Checkbox>
-            <Checkbox is_selected=team_disabled set_selected=team_disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Team plan disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=read_only set_selected=read_only>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Read-only"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=team_disabled set_selected=team_disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Team plan disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

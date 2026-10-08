@@ -2,8 +2,8 @@ use indoc::indoc;
 use leptos::prelude::*;
 
 use super::demos::{
-    menu::MenuDemo, menu_context::MenuContextDemo, menu_subdialog::MenuSubdialogDemo,
-    menu_submenu::MenuSubmenuDemo,
+    menu::MenuDemo, menu_context::MenuContextDemo, menu_context_rows::MenuContextRowsDemo,
+    menu_subdialog::MenuSubdialogDemo, menu_submenu::MenuSubmenuDemo,
 };
 use crate::{kit::*, routes};
 
@@ -29,6 +29,14 @@ pub fn PageAtomMenu() -> impl IntoView {
                             "handlers and ARIA attributes through a "
                             <Link href=routes::doc::interactions::PressResponder.materialize()>"PressResponder"</Link>"; "
                             "context menus use "<Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"ContextMenuTrigger"</Code></TableCell>
+                        <TableCell>
+                            <Link href=hook_section("use-menu-trigger-state")>"use_menu_trigger_state"</Link>"; the items inside "
+                            "open it through their "<Code inline=true>"on_context_menu"</Code>" ("
+                            <Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>")"
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -148,6 +156,38 @@ pub fn PageAtomMenu() -> impl IntoView {
                 <Demo description="A context menu with Cut, Copy and Paste, showing the last action" source=include_str!("demos/menu_context.rs")>
                     <MenuContextDemo/>
                 </Demo>
+                <p>
+                    "For a context menu per row of a list or table, use "
+                    <AnchorLink href="#contextmenutrigger">"ContextMenuTrigger"</AnchorLink>"."
+                </p>
+                </Section>
+            </Section>
+
+            <Section title="ContextMenuTrigger">
+                <p>
+                    "Opens its menu on the item of a collection inside it where the user asks for a context menu: a "
+                    <Code inline=true>"GridListItem"</Code>", "<Code inline=true>"TableRow"</Code>" or "
+                    <Code inline=true>"ListBoxItem"</Code>" (a right click, "<Keys keys="Shift + F10"/>", the context menu "
+                    "key, a long press on iOS). Put the collection and a "<Code inline=true>"Popover"</Code>" with the "
+                    <Code inline=true>"Menu"</Code>" inside. One menu serves every item: it opens at the pointer (from the "
+                    "keyboard, at the item\u{2019}s center), is labelled by the item, and focus returns to the item when it closes."
+                </p>
+                <p>
+                    <Code inline=true>"use_context_menu_target()"</Code>" returns a "<Code inline=true>"Signal<Option<Key>>"</Code>
+                    " with the key of the item the menu was opened for, for the menu\u{2019}s "
+                    <Code inline=true>"on_action"</Code>". It reads the context of the "<Code inline=true>"ContextMenuTrigger"</Code>
+                    ", so call it in a component inside the trigger, as the demo\u{2019}s "<Code inline=true>"FileMenu"</Code>" does."
+                </p>
+                <Demo description="A context menu on each row of a file list, telling which file an action was for" source=include_str!("demos/menu_context_rows.rs")>
+                    <MenuContextRowsDemo/>
+                </Demo>
+
+                <Section title="Props" id="contextmenutrigger-props">
+                <ApiTable kind=ApiKind::Props of="ContextMenuTrigger">
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the items\u{2019} context menu requests are ignored."</ApiRow>
+                    <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">"Called when the menu opens or closes."</ApiRow>
+                    <ApiRow name="children" ty="Children">"The collection and the popover with the menu. Required."</ApiRow>
+                </ApiTable>
                 </Section>
             </Section>
 

@@ -213,7 +213,7 @@ pub fn PageAtomLink() -> impl IntoView {
                 <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
                 <li><Link href=routes::doc::link::Hook.materialize()>"Link Hooks"</Link></li>
                 <li><Link href=routes::doc::breadcrumbs::Atom.materialize()>"Breadcrumbs Atoms"</Link></li>
-                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link></li>
+                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atom"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -1,7 +1,9 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{table::TableAtomDemo, table_resizing::TableResizingAtomDemo};
+use super::demos::{
+    table::TableAtomDemo, table_resizing::TableResizingAtomDemo, table_tree::TableTreeAtomDemo,
+};
 use crate::{kit::*, routes};
 
 #[component]
@@ -56,6 +58,13 @@ pub fn PageAtomTable() -> impl IntoView {
                             <Link href=format!("{}#use-table-cell", routes::doc::table::Hook.materialize())>"use_table_cell"</Link>
                             "; in the checkbox column "<Link href=format!("{}#use-table-selection-checkbox", routes::doc::table::Hook.materialize())>"use_table_selection_checkbox"</Link>" with "
                             <Link href=routes::doc::checkbox::Hook.materialize()>"use_checkbox"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"TableExpandButton"</Code></TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" with the row\u{2019}s "
+                            <Code inline=true>"expand_button"</Code>" ("<Link href=format!("{}#use-table-row", routes::doc::table::Hook.materialize())>"use_table_row"</Link>")"
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -181,6 +190,16 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="on_row_action, on_cell_action" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of an activated row or cell."
                         </ApiRow>
+                        <ApiRow name="tree_column" ty="Option<Key>" default="None">
+                            "Makes the table a tree table: the column showing the hierarchy. Rows with child rows ("
+                            <Code inline=true>"ItemBuilder::children"</Code>") then expand and collapse."
+                        </ApiRow>
+                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="HashSet::new()">
+                            "The initially expanded rows of a tree table. Ignored with "<Code inline=true>"expanded_keys"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="expanded_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"The expanded rows (controlled): a value or any signal."</ApiRow>
+                        <ApiRow name="set_expanded_keys" ty="Option<Out<HashSet<Key>>>" default="None">"Receives the expanded rows."</ApiRow>
+                        <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called when rows are expanded or collapsed."</ApiRow>
                         <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the table."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<table>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"A "<Code inline=true>"TableHeader"</Code>" and a "<Code inline=true>"TableBody"</Code>". Required."</ApiRow>
@@ -206,7 +225,7 @@ pub fn PageAtomTable() -> impl IntoView {
                 <Section title="Props" id="table-body-props">
                     <ApiTable kind=ApiKind::Props of="atoms::table::TableBody">
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<tbody>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Children">"One "<Code inline=true>"TableRow"</Code>" per row of the collection. Required."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"One "<Code inline=true>"TableRow"</Code>" per row of the collection; none for an empty table ("<Code inline=true>"<TableBody/>"</Code>")."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -245,6 +264,24 @@ pub fn PageAtomTable() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<td>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Option<ChildrenFn>" default="None">"The cell\u{2019}s content."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="TableExpandButton">
+                <p>
+                    "The expand button of a tree table\u{2019}s row: put it into the row\u{2019}s cell in the tree column. It "
+                    "is labelled \u{201c}Expand\u{201d} or \u{201c}Collapse\u{201d} plus the row, isn\u{2019}t a tab stop (the "
+                    "arrow keys expand and collapse), and is "<Code inline=true>"hidden"</Code>" while the row has no child "
+                    "rows. Its children draw the chevron. It sets "<Code inline=true>"data-expanded"</Code>", "
+                    <Code inline=true>"data-pressed"</Code>", "<Code inline=true>"data-hovered"</Code>", "
+                    <Code inline=true>"data-focus-visible"</Code>" and "<Code inline=true>"data-disabled"</Code>". See "
+                    <AnchorLink href="#tree-tables">"Tree Tables"</AnchorLink>"."
+                </p>
+                <Section title="Props" id="table-expand-button-props">
+                    <ApiTable kind=ApiKind::Props of="TableExpandButton">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<button>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"The chevron."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -326,6 +363,53 @@ pub fn PageAtomTable() -> impl IntoView {
                 </Demo>
             </Section>
 
+            <Section title="Tree Tables">
+                <p>
+                    "Rows can have child rows: a file browser, an org chart, a bill of materials. Add them in the collection "
+                    "after a row\u{2019}s cells with "<Code inline=true>"t.row(..).children(|b| { b.row(..); })"</Code>", or "
+                    "build all rows with "<Code inline=true>"t.rows(|b| ..)"</Code>", which suits a recursive function. Then "
+                    "name the column that shows the hierarchy with "<Code inline=true>"tree_column"</Code>": the table becomes "
+                    "a "<Code inline=true>"treegrid"</Code>", and rows with child rows expand and collapse. Without a tree "
+                    "column, child rows aren\u{2019}t part of the table."
+                </p>
+                <p>
+                    "Render every row, flat and in collection order (each row before its child rows); rows under a collapsed "
+                    "row stay in the DOM with "<Code inline=true>"hidden"</Code>". Put a "
+                    <AnchorLink href="#tableexpandbutton">"TableExpandButton"</AnchorLink>" into the tree column\u{2019}s "
+                    "cells. Which rows are expanded is the table\u{2019}s state ("<Code inline=true>"default_expanded_keys"</Code>
+                    "), or yours with "<Code inline=true>"expanded_keys"</Code>" and "<Code inline=true>"set_expanded_keys"</Code>
+                    ". On a focused row, "<Keys keys="ArrowRight"/>" expands it and "<Keys keys="ArrowLeft"/>" collapses it "
+                    "or moves to the parent row (see the "<Link href=format!("{}#accessibility", routes::doc::Table.materialize())>"Table overview"</Link>"). "
+                    "Collapsing a row while one of its child rows has focus moves focus to that row, and type-ahead only "
+                    "searches the rows that are shown. A row without child rows is never expanded, even when its key is among "
+                    "the expanded keys: it has no "<Code inline=true>"data-expanded"</Code>" and its expand button stays hidden."
+                </p>
+                <Demo description="A file browser: folders expand and collapse, the expanded folders in an RwSignal" source=include_str!("demos/table_tree.rs")>
+                    <TableTreeAtomDemo/>
+                </Demo>
+                <p>
+                    "Each row sets the custom property "<Code inline=true>"--table-row-level"</Code>" (1 for top-level rows): "
+                    "indent the tree column\u{2019}s cells ("<Code inline=true>"data-tree-column"</Code>") with it. The expand "
+                    "button of a row without child rows is "<Code inline=true>"hidden"</Code>": if you reset its styles ("
+                    <Code inline=true>"all: unset"</Code>"), keep it hidden, or keep its space as below, so the names line up."
+                </p>
+                <p>
+                    "Collapsed rows are still in the DOM, so positional selectors count them. Zebra stripes or a rounded last "
+                    "row need "<Code inline=true>":nth-child(2n of :not([hidden]))"</Code>" and "
+                    <Code inline=true>":nth-last-child(1 of :not([hidden]))"</Code>" instead of "<Code inline=true>":nth-child(2n)"</Code>
+                    " and "<Code inline=true>":last-child"</Code>", and a "<Code inline=true>"display"</Code>" you set on rows "
+                    "must not override "<Code inline=true>"[hidden]"</Code>"."
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .my-table [data-tree-column] { padding-inline-start: calc(var(--table-row-level) * 1rem); }
+                        .my-table tbody tr:nth-child(2n of :not([hidden])) { background: var(--stripe); }
+                        .my-expand-button[hidden] { display: inline-flex; visibility: hidden; }
+                        .my-expand-button[data-expanded] .chevron { transform: rotate(90deg); }
+                    ")}
+                </Code>
+            </Section>
+
             <Section title="Data Attributes">
                 <p>"Flags are rendered as "<Code inline=true>"data-selected=\"true\""</Code>" while the state applies, and are absent otherwise."</p>
                 <ApiTable kind=ApiKind::DataAttributes>
@@ -352,6 +436,13 @@ pub fn PageAtomTable() -> impl IntoView {
                         "pointer is over it."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: being pressed."</ApiRow>
+                    <ApiRow name="data-expanded" ty="true">
+                        "In a tree table, on "<Code inline=true>"TableRow"</Code>", its cells and "<Code inline=true>"TableExpandButton"</Code>
+                        ": the row\u{2019}s child rows are shown."
+                    </ApiRow>
+                    <ApiRow name="data-has-child-items" ty="true">"In a tree table, on "<Code inline=true>"TableRow"</Code>" and its cells: the row has child rows."</ApiRow>
+                    <ApiRow name="data-level" ty="1, 2, \u{2026}">"In a tree table, on "<Code inline=true>"TableRow"</Code>" and its cells: the row\u{2019}s level."</ApiRow>
+                    <ApiRow name="data-tree-column" ty="true">"On the cells of the tree column."</ApiRow>
                     <ApiRow name="data-resizing" ty="true">
                         "In a "<Code inline=true>"ResizableTableContainer"</Code>", on a column header and its resizer: the "
                         "column is being resized."

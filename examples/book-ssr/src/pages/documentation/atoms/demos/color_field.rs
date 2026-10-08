@@ -1,11 +1,17 @@
 use leptonic::{
-    atoms::prelude::{Checkbox, ColorChannelField, ColorField, ColorSwatch, Input, Label},
-    utils::color::{ColorValue, RGB8, RgbChannel},
+    atoms::prelude::{
+        CheckboxButton, CheckboxField, ColorChannelField, ColorField, ColorSwatch, Input, Label,
+    },
+    utils::{
+        color::{ColorValue, RGB8, RgbChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorFieldAtomDemo() -> impl IntoView {
+    let locale = use_locale();
     // The hex field and the three channel fields edit the same color.
     let color = RwSignal::new(Some(RGB8 {
         r: 30,
@@ -19,7 +25,7 @@ pub fn ColorFieldAtomDemo() -> impl IntoView {
         .map(|channel| {
             view! {
                 <ColorChannelField channel value=color set_value=color is_disabled=disabled classes="demo-field">
-                    <Label classes="demo-field-label">{RGB8::channel_name(channel)}</Label>
+                    <Label classes="demo-field-label">{move || RGB8::channel_name(channel, &locale.get())}</Label>
                     <Input classes="demo-color-atoms-input"/>
                 </ColorChannelField>
             }
@@ -44,13 +50,15 @@ pub fn ColorFieldAtomDemo() -> impl IntoView {
         </div>
 
         <p class="demo-status">
-            {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {c}, {}", c.color_name()))}
+            {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {c}, {}", c.color_name(&locale.get())))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

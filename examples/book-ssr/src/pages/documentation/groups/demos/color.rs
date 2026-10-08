@@ -4,19 +4,23 @@ use leptonic::{
         ColorThumb, Dialog, DialogTrigger, Input, Label, Popover,
     },
     hooks::Placement,
-    utils::color::{Color, ColorValue, HSV, HsvChannel, RGB8},
+    utils::{
+        color::{Color, ColorValue, HSV, HsvChannel, RGB8},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorPopoverDemo() -> impl IntoView {
+    let locale = use_locale();
     let color = RwSignal::new(Color::from(HSV {
         hue: 212.0,
         saturation: 0.84,
         brightness: 0.9,
     }));
     let rgb = Signal::derive(move || color.get().to::<RGB8>());
-    let description = move || format!("{}, {}", rgb.get(), rgb.get().color_name());
+    let description = move || format!("{}, {}", rgb.get(), rgb.get().color_name(&locale.get()));
 
     view! {
         <DialogTrigger>

@@ -4,12 +4,14 @@ use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
 
+use super::typed_values::{KeyedStateProps, keyed_state_props};
 use crate::{
     Out,
     hooks::{
         IntoAttrs, Orientation, ToggleGroupSelectionMode, ToggleGroupState, UseButtonInput,
         UseToggleButtonGroupInput, UseToggleButtonGroupItemInput, UseToggleButtonInput,
-        UseToggleGroupStateInput, UseToggleStateInput, UseToolbarInput, collections::Key,
+        UseToggleGroupStateInput, UseToggleStateInput, UseToolbarInput,
+        collections::{Key, SelectionValue},
         use_button, use_toggle_button, use_toggle_button_group, use_toggle_button_group_item,
         use_toggle_group_state, use_toggle_state,
     },
@@ -24,8 +26,9 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - State (C4): `default_selected` + `on_change`, or `is_selected` + `set_selected`; the group's
-//   `default_selected_keys` + `on_selection_change`, or `selected_keys` + `set_selected_keys`
-//   (react-aria: `isSelected`/`selectedKeys` + `onChange`/`onSelectionChange`).
+//   typed value (`V: SelectionValue`, the set of the selected buttons' values) as `default_value`
+//   + `on_change`, or `value` + `set_value`, as every value-like selection (react-aria:
+//   `isSelected`/`selectedKeys` + `onChange`/`onSelectionChange`).
 // - In a group, the button's key is `value` (react-aria: `id`, which is also the DOM id).
 // - Render props become `data-*` attributes plus plain children.
 //
@@ -120,23 +123,28 @@ pub fn ToggleButton(
 /// `radiogroup` when only one button can be selected.
 ///
 /// Data attributes: `data-orientation`, `data-disabled`.
-// The keys are the group state's `HashSet<Key>`; a component prop can't be generic over hashers.
+///
+/// The value is the set of the selected buttons' values (typed, `V: SelectionValue`; the buttons
+/// take theirs as their `value`, a `Key`).
+// A component prop can't be generic over hashers.
 /// Default class: `leptonic-ToggleButtonGroup`.
 #[allow(clippy::too_many_arguments, clippy::implicit_hasher)]
 #[component]
-pub fn ToggleButtonGroup(
+pub fn ToggleButtonGroup<V: SelectionValue>(
     #[prop(optional)] selection_mode: ToggleGroupSelectionMode,
     /// Whether the last selected button can't be deselected.
     #[prop(optional)]
     disallow_empty_selection: bool,
-    #[prop(into, optional)] default_selected_keys: HashSet<Key>,
+    /// The initially selected buttons. Ignored with `value`.
+    #[prop(optional)]
+    default_value: HashSet<V>,
     /// The selected buttons (controlled): a value or any signal.
     #[prop(into, optional)]
-    selected_keys: Option<Signal<HashSet<Key>>>,
+    value: Option<Signal<HashSet<V>>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
-    set_selected_keys: Option<Out<HashSet<Key>>>,
-    #[prop(into, optional)] on_selection_change: Option<Callback<HashSet<Key>>>,
+    set_value: Option<Out<HashSet<V>>>,
+    #[prop(into, optional)] on_change: Option<Callback<HashSet<V>>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// The axis of the arrow keys (react-aria's default: horizontal).
     #[prop(default = Orientation::Horizontal)]
@@ -148,15 +156,19 @@ pub fn ToggleButtonGroup(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ToggleButtonGroup", classes);
-    let (selected_keys, on_selection_change) = crate::utils::ValueBinding::from_state_props(
-        selected_keys,
-        set_selected_keys,
-        on_selection_change,
-    );
+    let KeyedStateProps {
+        default_value,
+        value,
+        set_value,
+        on_change,
+        ..
+    } = keyed_state_props(Some(default_value), value, set_value, on_change, None);
+    let (selected_keys, on_selection_change) =
+        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_toggle_group_state(UseToggleGroupStateInput {
         selection_mode,
         disallow_empty_selection,
-        default_selected_keys,
+        default_selected_keys: default_value.unwrap_or_default(),
         selected_keys,
         on_selection_change,
         is_disabled,

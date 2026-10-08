@@ -196,6 +196,7 @@ mod tests {
                 }))
             });
             let table_state = use_table_state(UseTableStateInput {
+                tree: None,
                 table,
                 selection: SelectionOptions {
                     disabled_behavior: DisabledBehavior::Selection,
@@ -241,6 +242,7 @@ mod tests {
                 }))
             });
             let table_state = use_table_state(UseTableStateInput {
+                tree: None,
                 table,
                 selection: SelectionOptions {
                     disabled_behavior: DisabledBehavior::Selection,

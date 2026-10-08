@@ -6,6 +6,7 @@ use leptonic::{
         FocusMode, KeyboardNavigationBehavior, SelectionBehavior, SelectionMode,
         collections::{ItemLink, Key, Selection, use_collection, use_list_collection},
     },
+    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 
@@ -16,6 +17,7 @@ const FRUITS: [&str; 3] = ["Apple", "Banana", "Cherry"];
 /// Grid list features, as react-aria-components' `GridList` tests render them:
 /// - `#glf-children`: arrow navigation; rows "Item 1" and "Item 2" whose first child takes focus
 ///   (buttons "Item n first", "Item n last").
+/// - `#glf-children-rtl`: the same in ar-AE, right to left (one row: "RTL first", "RTL last").
 /// - `#glf-tab`: Tab navigation; a row with the buttons "Tab first" and "Tab last".
 /// - `#glf-child-arrows`: Tab navigation; rows whose child takes focus and that allow arrow
 ///   navigation (buttons "Arrow 1", "Arrow 2", "Arrow 3").
@@ -81,6 +83,17 @@ pub fn PageAtomGridListFeatures() -> impl IntoView {
                     })
                     .collect_view()}
             </GridList>
+        </div>
+
+        <div id="glf-children-rtl" dir="rtl">
+            <I18nProvider locale={"ar-AE".parse::<Locale>().expect("a locale")}>
+                <GridList collection=items("RTL", 1) aria_label="Children RTL">
+                    <GridListItem key="1" focus_mode=FocusMode::Child>
+                        <button aria-label="RTL first">"First"</button>
+                        <button aria-label="RTL last">"Last"</button>
+                    </GridListItem>
+                </GridList>
+            </I18nProvider>
         </div>
 
         <div id="glf-tab">

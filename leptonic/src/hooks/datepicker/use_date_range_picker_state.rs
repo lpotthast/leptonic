@@ -25,6 +25,7 @@ use crate::{
         i18n::{Locale, use_locale},
     },
 };
+use crate::utils::intl_strings::{DateValidationStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -41,7 +42,6 @@ use crate::{
 // ## OMITTED FEATURES
 // - Range formatting with shared fields ("June 1 – 15, 2024", `formatRange`): ICU4X has none
 //   yet; start and end are formatted apart.
-// - Localized validation messages: English.
 // - Server errors under the end's name (react-aria validates under both names); the start's
 //   name (else the end's) applies.
 //
@@ -257,9 +257,11 @@ fn range_validation<V: DateValue>(
     max: Option<&V>,
     is_date_unavailable: Option<Callback<V, bool>>,
     formatter: &DateFormatter,
+    strings: &DateValidationStrings,
 ) -> ValidationResult {
-    let start_result = validation_result(start, min, max, is_date_unavailable, formatter);
-    let end_result = validation_result(end, min, max, is_date_unavailable, formatter);
+    let start_result =
+        validation_result(start, min, max, is_date_unavailable, formatter, strings);
+    let end_result = validation_result(end, min, max, is_date_unavailable, formatter, strings);
     let mut result = merge_validation(&[start_result, end_result]);
     if let (Some(start), Some(end)) = (start, end)
         && end.compare(start).is_lt()
@@ -268,7 +270,7 @@ fn range_validation<V: DateValue>(
             result,
             ValidationResult {
                 is_invalid: true,
-                validation_errors: vec!["Start date must be before end date.".to_owned()],
+                validation_errors: vec![strings.range_reversed()],
                 validation_details: ValidityStateSnapshot {
                     range_underflow: true,
                     range_overflow: true,
@@ -415,6 +417,7 @@ pub fn use_date_range_picker_state<V: DateValue>(
         should_force_leading_zeros: should_force_leading_zeros.get(),
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
+    let strings = use_localized_strings::<DateValidationStrings>();
     let builtin_validation = Signal::derive(move || {
         let (start, end) = (start.get(), end.get());
         let (min, max) = (min_value.get(), max_value.get());
@@ -426,6 +429,7 @@ pub fn use_date_range_picker_state<V: DateValue>(
             max.as_ref(),
             is_date_unavailable.get_value(),
             &formatter,
+            &strings.read(),
         ))
     });
     let validation = use_form_validation_state(UseFormValidationStateInput {

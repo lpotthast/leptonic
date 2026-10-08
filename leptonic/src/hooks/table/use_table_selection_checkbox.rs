@@ -2,11 +2,14 @@
 use leptos::prelude::*;
 
 use super::TableData;
-use crate::hooks::{
-    UseGridSelectionCheckboxInput,
-    collections::{Key, SelectionMode},
-    form::{ToggleOptions, ToggleState, use_checkbox::UseCheckboxInput},
-    use_grid_selection_checkbox,
+use crate::{
+    hooks::{
+        UseGridSelectionCheckboxInput,
+        collections::{Key, SelectionMode},
+        form::{ToggleOptions, ToggleState, use_checkbox::UseCheckboxInput},
+        use_grid_selection_checkbox,
+    },
+    utils::intl_strings::{TableStrings, use_localized_strings},
 };
 
 // =============================================================================
@@ -15,9 +18,6 @@ use crate::hooks::{
 //
 // ## API DIFFERENCES
 // - Return the `UseCheckboxInput` for `use_checkbox`, to render the checkbox with it.
-//
-// ## OMITTED FEATURES
-// - Localized labels: "Select" and "Select All" are English (no message bundles yet).
 //
 // =============================================================================
 
@@ -57,6 +57,7 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
     let UseTableSelectAllCheckboxInput { table } = input;
     let selection = table.state.grid.list.selection;
     let rows = table.state.table;
+    let strings = use_localized_strings::<TableStrings>();
     let state = ToggleState::new(
         Signal::derive(move || selection.is_select_all()),
         false,
@@ -71,7 +72,7 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
                 selection.selection_mode() != SelectionMode::Multiple
                     || rows.with(|t| t.size() == 0)
             }),
-            aria_label: "Select All".into(),
+            aria_label: Signal::derive(move || Some(strings.read().select_all())).into(),
             ..ToggleOptions::default()
         },
         state,

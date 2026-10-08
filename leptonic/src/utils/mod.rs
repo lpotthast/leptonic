@@ -23,6 +23,7 @@ pub mod fraction;
 pub mod heading_level;
 pub mod i18n;
 pub mod id;
+pub mod intl_strings;
 pub mod key;
 pub mod keyboard_shortcut;
 pub mod list_formatter;

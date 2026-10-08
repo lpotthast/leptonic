@@ -436,6 +436,12 @@ fn guides() -> NavGroup {
                 doc::Accessibility.materialize(),
                 Guide,
             ),
+            page(
+                "Build Times & Bundle Size",
+                "Settings that keep rebuilds fast and the browser bundle small",
+                doc::BuildTimes.materialize(),
+                Guide,
+            ),
         ],
     )
 }
@@ -545,7 +551,7 @@ fn fields() -> NavGroup {
                 doc::Switch.materialize(),
                 vec![
                     hooks(doc::switch::Hook.materialize()),
-                    atom(doc::switch::Atom.materialize()),
+                    atoms(doc::switch::Atom.materialize()),
                 ],
             ),
             concept(
@@ -1273,6 +1279,12 @@ fn utilities() -> NavGroup {
                 "ListFormatter",
                 "Joins items into a list such as \u{201c}A, B, and C\u{201d} for a locale",
                 doc::utilities::ListFormatter.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "use_localized_strings",
+                "The hooks' labels, descriptions and announcements in 34 languages, for your own code too",
+                doc::utilities::UseLocalizedStrings.materialize(),
                 PageKind::Utility,
             ),
             page(

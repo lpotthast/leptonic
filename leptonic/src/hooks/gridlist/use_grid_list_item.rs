@@ -95,7 +95,7 @@ pub struct UseGridListItemReturn {
 #[derive(Debug)]
 pub struct UseGridListItemRowProps {
     pub role: AriaRole,
-    pub aria_label: Option<String>,
+    pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -112,7 +112,7 @@ pub struct UseGridListItemRowProps {
 
 pub type UseGridListItemRowAttrs = (
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -198,40 +198,46 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
     let direction = use_direction();
     let row_id = grid_list_row_id(&list_id, &key);
 
-    let (label, has_label) = untrack(|| {
-        state.collection.with(|c| {
-            let node = c.get(&key);
-            let label = node.and_then(|n| {
-                n.aria_label
-                    .as_deref()
-                    .map(str::to_owned)
-                    .or_else(|| (!n.text_value.is_empty()).then(|| n.text_value.to_string()))
-            });
-            let has_label = label.is_some();
-            (label, has_label)
+    // The row's label: its `aria_label`, else its text (reactive: items can be renamed).
+    let label_key = StoredValue::new(key.clone());
+    let label = Memo::new(move |_| {
+        label_key.with_value(|key| {
+            state.collection.with(|c| {
+                c.get(key).and_then(|n| {
+                    n.aria_label
+                        .as_deref()
+                        .map(str::to_owned)
+                        .or_else(|| (!n.text_value.is_empty()).then(|| n.text_value.to_string()))
+                })
+            })
         })
     });
 
     // -- Tree rows --
-    let has_child_rows = tree.is_some()
-        && untrack(|| {
-            state
-                .collection
-                .with(|c| c.get(&key).is_some_and(|n| n.has_child_nodes))
-        });
     let tree_key = StoredValue::new(key.clone());
+    // Reactive: an item that gets children becomes expandable.
+    let has_child_rows = Memo::new(move |_| {
+        tree.is_some()
+            && tree_key.with_value(|key| {
+                state
+                    .collection
+                    .with(|c| c.get(key).is_some_and(|n| n.has_child_nodes))
+            })
+    });
     let is_expanded = move || tree.is_some_and(|tree| tree_key.with_value(|k| tree.is_expanded(k)));
     // Without an action, link or selection, pressing a parent row toggles it.
-    let on_action = on_action.map(|on_action| {
+    let app_action = on_action.map(|on_action| {
         let key = key.clone();
         Callback::new(move |()| on_action.run(key.clone()))
     });
-    let on_action = on_action.or_else(|| {
-        let tree = tree?;
-        let toggles = has_child_rows
-            && !untrack(|| tree_key.with_value(|k| selection.is_link(k)))
-            && untrack(|| selection.selection_mode()) == SelectionMode::None;
-        toggles.then(|| Callback::new(move |()| tree.toggle_key(tree_key.get_value())))
+    let toggle_action = tree.map(|tree| Callback::new(move |()| tree.toggle_key(tree_key.get_value())));
+    let on_action = Signal::derive(move || {
+        app_action.or_else(|| {
+            let toggles = has_child_rows.get()
+                && !tree_key.with_value(|k| selection.is_link(k))
+                && selection.selection_mode() == SelectionMode::None;
+            toggle_action.filter(|_| toggles)
+        })
     });
     let position = Signal::derive(move || {
         tree_positions?.with(|positions| tree_key.with_value(|key| positions.get(key).copied()))
@@ -354,13 +360,13 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         };
         let key = e.typed_key();
         let expanded = untrack(is_expanded);
-        if key == expand_key && has_child_rows && !expanded {
+        if key == expand_key && has_child_rows.get_untracked() && !expanded {
             tree.toggle_key(tree_key.get_value());
             e.stop_propagation();
             return true;
         }
         if key == collapse_key {
-            if has_child_rows && expanded {
+            if has_child_rows.get_untracked() && expanded {
                 tree.toggle_key(tree_key.get_value());
                 e.stop_propagation();
                 return true;
@@ -561,17 +567,19 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         row_props: PropsWithStyles::new(
             UseGridListItemRowProps {
                 role: AriaRole::Row,
-                aria_label: label,
+                aria_label: label.into(),
                 aria_labelledby: Signal::derive(move || {
                     let description = description_id.get()?;
-                    has_label.then(|| format!("{row_id} {description}"))
+                    label.with(Option::is_some).then(|| format!("{row_id} {description}"))
                 }),
                 aria_selected: Signal::derive(move || {
                     key.with_value(|k| selection.can_select_item(k))
                         .then(|| AriaSelected::from(is_selected.get()))
                 }),
                 aria_expanded: Signal::derive(move || {
-                    has_child_rows.then(|| AriaExpanded::from(is_expanded()))
+                    has_child_rows
+                        .get()
+                        .then(|| AriaExpanded::from(is_expanded()))
                 }),
                 aria_level: Signal::derive(move || position.get().map(|p| p.level)),
                 aria_posinset: Signal::derive(move || position.get().map(|p| p.index)),

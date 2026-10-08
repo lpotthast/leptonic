@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{select::SelectAtomDemo, select_form::SelectFormDemo};
+use super::demos::{select::SelectAtomDemo, select_form::SelectFormDemo, select_multiple::SelectMultipleAtomDemo};
 use crate::{kit::*, routes};
 
 #[component]
@@ -85,7 +85,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                         );
 
                         view! {
-                            <Select collection=fruits on_change=Callback::new(|keys: Vec<Key>| log!("{keys:?}"))>
+                            <Select collection=fruits on_change=Callback::new(|key: Option<Key>| log!("{key:?}"))>
                                 <Label>"Fruit"</Label>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Pick a fruit"/>
@@ -133,8 +133,11 @@ pub fn PageAtomSelect() -> impl IntoView {
                     "Give the select a "<Code inline=true>"name"</Code>" and render a "<Code inline=true>"HiddenSelect"</Code>
                     ": it mirrors the value in a visually hidden native "<Code inline=true>"<select>"</Code>", so the value "
                     "is submitted with the form (as the option\u{2019}s key), resetting the form restores "
-                    <Code inline=true>"default_value"</Code>", and browsers can autofill it. Pick a size, then submit or "
-                    "reset the form:"
+                    <Code inline=true>"default_value"</Code>", and browsers can autofill it. The select is generic over its "
+                    "value type: here an enum "<Code inline=true>"Size"</Code>", whose keys (\u{201c}m\u{201d} for "
+                    <Code inline=true>"Size::Medium"</Code>") "<Code inline=true>"selection_value!"</Code>" names (see "
+                    <Link href=format!("{}#selectionvalue", routes::doc::CollectionState.materialize())>"SelectionValue"</Link>
+                    "). Pick a size, then submit or reset the form:"
                 </p>
                 <Demo
                     description="T-shirt size select inside a form, showing the submitted value and form reset"
@@ -156,6 +159,23 @@ pub fn PageAtomSelect() -> impl IntoView {
                     "contain any markup besides the parts."
                 </p>
                 <p>
+                    "Its type parameter "<Code inline=true>"S"</Code>" is the shape of its value, and so its selection mode: "
+                    <Code inline=true>"Option<V>"</Code>" selects one option, "<Code inline=true>"Vec<V>"</Code>" any number of "
+                    "them (in the order selected). "<Code inline=true>"V"</Code>" is a "<Code inline=true>"Key"</Code>", a "
+                    <Code inline=true>"String"</Code>", an integer or your enum (see "
+                    <Link href=format!("{}#selectionvalue", routes::doc::CollectionState.materialize())>"SelectionValue"</Link>
+                    "). A typed "<Code inline=true>"value"</Code>", "<Code inline=true>"default_value"</Code>" or "
+                    <Code inline=true>"on_change"</Code>" fixes it; without one, name it: "
+                    <Code inline=true>"<Select<Option<Key>>>"</Code>", or "<Code inline=true>"<Select<Vec<Key>>>"</Code>" for a "
+                    "multiple select."
+                </p>
+                <Demo
+                    description="Multiple select of pizza toppings: a Vec of an enum as its value, the popover staying open while picking"
+                    source=include_str!("demos/select_multiple.rs")
+                >
+                    <SelectMultipleAtomDemo/>
+                </Demo>
+                <p>
                     "Label it with a "<Link href=routes::doc::field::Atom.materialize()>"Label"</Link>": a "
                     <Code inline=true>"<span>"</Code>" labelling the trigger and the listbox, which focuses the trigger when "
                     "clicked. A "<Code inline=true>"Description"</Code>" describes the trigger while it is rendered, and a "
@@ -167,21 +187,18 @@ pub fn PageAtomSelect() -> impl IntoView {
                             "The options, from "<Code inline=true>"use_collection"</Code>" or "
                             <Code inline=true>"use_list_collection"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="selection_mode" ty="SelectMode" default="Single">
-                            <Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>"."
+                        <ApiRow name="default_value" ty="S" default="S::default()">
+                            "The initially selected value: "<Code inline=true>"None"</Code>" or an empty "<Code inline=true>"Vec"</Code>
+                            " by default. Resetting the form restores it."
                         </ApiRow>
-                        <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">
-                            "The initially selected keys (at most one in "<Code inline=true>"Single"</Code>" mode). Resetting "
-                            "the form restores it."
+                        <ApiRow name="value" ty="Option<Signal<S>>" default="None">
+                            "The selected value (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
                         </ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Vec<Key>>>" default="None">
-                            "The selected keys (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
+                        <ApiRow name="set_value" ty="Option<Out<S>>" default="None">
+                            "Receives the selected value: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Vec<Key>>>" default="None">
-                            "Receives the selected keys: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
-                        </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
-                            "Called with the selected keys, in collection order, when they change."
+                        <ApiRow name="on_change" ty="Option<Callback<S>>" default="None">
+                            "Called with the selected value when it changes (several values in the order they were selected)."
                         </ApiRow>
                         <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
                             "Options that can\u{2019}t be focused or selected, besides those disabled in the collection."
@@ -222,8 +239,8 @@ pub fn PageAtomSelect() -> impl IntoView {
                             "Marks the select invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
                             <Code inline=true>"false"</Code>" leaves validation to the other sources."
                         </ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<Vec<Key>>>" default="None">
-                            "Validates the selected keys, returning error messages."
+                        <ApiRow name="validate" ty="Option<ValidateFn<S>>" default="None">
+                            "Validates the selected value, returning error messages."
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
@@ -270,7 +287,7 @@ pub fn PageAtomSelect() -> impl IntoView {
 
             <Section title="SelectValue">
                 <p>
-                    "The text of the selected option (in "<Code inline=true>"Multiple"</Code>" mode: the options\u{2019} texts as a "
+                    "The text of the selected option (in a multiple select: the options\u{2019} texts as a "
                     "list in the locale\u{2019}s language, \u{201c}Apple, Banana, and Cherry\u{201d}), or the placeholder, as a "<Code inline=true>"<span>"</Code>". The text comes from "
                     "the collection\u{2019}s text values. To show something richer, read the selection from the "
                     <AnchorLink href="#composition">"context"</AnchorLink>" instead."

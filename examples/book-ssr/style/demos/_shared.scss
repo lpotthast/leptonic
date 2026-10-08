@@ -255,7 +255,7 @@ textarea.demo-atom-input { min-height: 4em; resize: vertical; font: inherit; }
 // -- Event logs and states --
 
 // Event log of interaction and focus demos.
-.demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--typography-code-padding); border: none; border-radius: var(--typography-code-border-radius); background-color: var(--typography-code-background-color); color: var(--typography-code-color); }
+.demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--book-space-m); border: none; border-radius: var(--book-radius-s); background-color: var(--book-code-background-color); color: var(--book-code-color); }
 
 .demo-container-title { margin: 0 0 var(--book-space-m) 0; font-weight: 700; }
 

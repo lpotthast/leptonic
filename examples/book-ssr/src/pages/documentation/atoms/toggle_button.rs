@@ -56,7 +56,7 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                         view! {
                             <ToggleButton is_selected=muted set_selected=muted classes="my-toggle">"Mute"</ToggleButton>
 
-                            <ToggleButtonGroup aria_label="Text alignment" selected_keys=alignment set_selected_keys=alignment>
+                            <ToggleButtonGroup aria_label="Text alignment" value=alignment set_value=alignment>
                                 <ToggleButton value="left" classes="my-toggle">"Left"</ToggleButton>
                                 <ToggleButton value="center" classes="my-toggle">"Center"</ToggleButton>
                                 <ToggleButton value="right" classes="my-toggle">"Right"</ToggleButton>
@@ -129,7 +129,8 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                     " each. It is a toolbar: one tab stop, with the arrow keys moving focus between the buttons. With single "
                     "selection, it is a "<Code inline=true>"radiogroup"</Code>" of buttons with "<Code inline=true>"role=\"radio\""</Code>
                     " and "<Code inline=true>"aria-checked"</Code>". Give it a name with "<Code inline=true>"aria_label"</Code>" or "
-                    <Code inline=true>"aria_labelledby"</Code>"."
+                    <Code inline=true>"aria_labelledby"</Code>". It is generic over the type "<Code inline=true>"V"</Code>
+                    " of the buttons\u{2019} values (see "<Link href=format!("{}#selectionvalue", routes::doc::CollectionState.materialize())>"SelectionValue"</Link>")."
                 </p>
 
                 <Section title="Props" id="toggle-button-group-props">
@@ -140,18 +141,18 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                         <ApiRow name="disallow_empty_selection" ty="bool" default="false">
                             "Keeps at least one button selected: the last selected button can\u{2019}t be deselected."
                         </ApiRow>
-                        <ApiRow name="default_selected_keys" ty="HashSet<Key>" default="HashSet::new()">
-                            "The initially selected buttons. Ignored with "<Code inline=true>"selected_keys"</Code>"."
+                        <ApiRow name="default_value" ty="HashSet<V>" default="HashSet::new()">
+                            "The initially selected buttons\u{2019} values. Ignored with "<Code inline=true>"value"</Code>"."
                         </ApiRow>
-                        <ApiRow name="selected_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
+                        <ApiRow name="value" ty="Option<Signal<HashSet<V>>>" default="None">
                             "Binds the selection to app state: a value or any signal."
                         </ApiRow>
-                        <ApiRow name="set_selected_keys" ty="Option<Out<HashSet<Key>>>" default="None">
+                        <ApiRow name="set_value" ty="Option<Out<HashSet<V>>>" default="None">
                             "Receives the new selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>
                             ", closure or "<Code inline=true>"Callback"</Code>"."
                         </ApiRow>
-                        <ApiRow name="on_selection_change" ty="Option<Callback<HashSet<Key>>>" default="None">
-                            "Called with the selected buttons when they change."
+                        <ApiRow name="on_change" ty="Option<Callback<HashSet<V>>>" default="None">
+                            "Called with the selected buttons\u{2019} values when they change."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables all buttons."</ApiRow>
                         <ApiRow name="orientation" ty="Orientation" default="Horizontal">

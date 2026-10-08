@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
     utils::use_description::use_description,
 };
 use leptos::prelude::*;
@@ -25,10 +25,12 @@ pub fn UseDescriptionDemo() -> impl IntoView {
             "Delete draft"
         </Button>
         <div class="demo-controls">
-            <Checkbox is_selected=is_described set_selected=is_described classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Describe the button"
-            </Checkbox>
+            <CheckboxField is_selected=is_described set_selected=is_described>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Describe the button"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
         <p class="demo-status">
             {move || match description_id.get() {

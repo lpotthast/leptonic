@@ -13,6 +13,7 @@ use crate::{
         visually_hidden::visually_hidden_full_size_styles,
     },
 };
+use crate::utils::i18n::use_locale;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -22,10 +23,6 @@ use crate::{
 // - Returns the `use_slider` and `use_slider_thumb` results with the color's additions: the
 //   value text and `track_styles` (the gradient) and `input_styles` (visually hidden).
 // - Disabled and orientation come from the state (C8), not repeated on the input.
-//
-// ## OMITTED FEATURES
-// - Localized names: channel, hue and color names are English until leptonic has localized
-//   strings.
 //
 // =============================================================================
 
@@ -61,7 +58,7 @@ pub struct UseColorSliderReturn {
 }
 
 /// Behavior and accessibility of a slider changing one channel of a color, on top of
-/// [`use_slider`] and [`use_slider_thumb`]: a gradient track, the channel's value text.
+/// [`use_slider`](fn@use_slider) and [`use_slider_thumb`](fn@use_slider_thumb): a gradient track, the channel's value text.
 pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColorSliderReturn {
     let UseColorSliderInput {
         state,
@@ -76,9 +73,11 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
 
     // Without any label, the channel names the slider (react-aria).
     let has_other_label = aria_labelledby.is_some();
+    let locale = use_locale();
     let aria_label = MaybeProp::derive(move || {
         aria_label.get().or_else(|| {
-            (!has_label.get() && !has_other_label).then(|| C::channel_name(channel).to_owned())
+            (!has_label.get() && !has_other_label)
+                .then(|| C::channel_name(channel, &locale.get()))
         })
     });
 
@@ -118,9 +117,9 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         if C::is_alpha_channel(channel) {
             text
         } else if C::hue_channel() == Some(channel) {
-            format!("{text}, {}", color.hue_name())
+            format!("{text}, {}", color.hue_name(&locale.get()))
         } else {
-            format!("{text}, {}", color.color_name())
+            format!("{text}, {}", color.color_name(&locale.get()))
         }
     });
 

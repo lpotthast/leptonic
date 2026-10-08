@@ -12,6 +12,10 @@
   font-family: var(--typography-code-font-family);
   font-size: var(--book-code-font-size);
   font-weight: 400;
+  // Show the characters readers type: JetBrains Mono would draw `->`, `!=` or `>>>` as ligatures, and paragraphs
+  // would hyphenate identifiers.
+  font-variant-ligatures: none;
+  hyphens: manual;
   text-size-adjust: none;
   -webkit-text-size-adjust: none;
 
@@ -34,8 +38,11 @@
   }
 }
 
+// The text of a block ends left of the copy button, so that the button never covers code, even when the code
+// scrolls sideways.
 .doc-code-text {
   display: block;
+  margin-inline-end: 2em;
   white-space: pre;
   overflow: auto;
 }

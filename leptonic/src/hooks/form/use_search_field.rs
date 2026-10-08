@@ -11,6 +11,7 @@ use crate::{
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
     },
 };
+use crate::utils::intl_strings::{SearchFieldStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -26,10 +27,6 @@ use crate::{
 // - Enter and Escape are keyboard shortcuts merged with the text field's own (`shortcuts`), the
 //   search field's winning for those keys (react-aria: both keydown handlers run, the search
 //   field's first).
-//
-// ## OMITTED FEATURES
-// - Localized clear button label: "Clear search" is English until leptonic has a localized
-//   string formatter.
 //
 // =============================================================================
 
@@ -49,7 +46,7 @@ pub struct UseSearchFieldInput {
 pub struct UseSearchFieldReturn {
     /// The text field: label, input, description and error message props and validation.
     pub text_field: UseTextFieldReturn,
-    /// The clear button's configuration, for [`use_button`](crate::hooks::use_button): out of the
+    /// The clear button's configuration, for [`use_button`](fn@crate::hooks::use_button): out of the
     /// tab order, keeps focus in the input, empties the field.
     pub clear_button: UseButtonInput,
 }
@@ -127,8 +124,9 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     });
 
     let element = text_field.element;
+    let strings = use_localized_strings::<SearchFieldStrings>();
     let clear_button = UseButtonInput {
-        aria_label: "Clear search".into(),
+        aria_label: Signal::derive(move || Some(strings.read().clear_search())).into(),
         is_disabled: Signal::derive(move || is_disabled.get() || is_read_only.get()),
         exclude_from_tab_order: Signal::stored(true),
         prevent_focus_on_press: true,

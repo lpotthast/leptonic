@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         field::{Description, FieldError, Label},
-        radio::{Radio, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
     },
     hooks::Key,
 };
@@ -40,10 +40,12 @@ pub fn FieldPartsDemo() -> impl IntoView {
             {OPTIONS
                 .into_iter()
                 .map(|(value, label)| view! {
-                    <Radio value classes="demo-radio">
-                        <span class="demo-radio-circle" aria-hidden="true"></span>
-                        {label}
-                    </Radio>
+                    <RadioField value>
+                        <RadioButton classes="demo-radio">
+                            <span class="demo-radio-circle" aria-hidden="true"></span>
+                            {label}
+                        </RadioButton>
+                    </RadioField>
                 })
                 .collect_view()}
             // Referenced by the group (`aria-describedby`) while it is rendered.
@@ -59,10 +61,12 @@ pub fn FieldPartsDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

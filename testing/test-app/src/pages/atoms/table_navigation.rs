@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use leptonic::{
-    atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
+    atoms::{
+        button::Button,
+        table::{Table, TableBody, TableCell, TableHeader, TableRow},
+    },
     hooks::{
         CellFocusMode, KeyboardNavigationBehavior, SelectionMode, TableCollection, TableOptions,
         collections::Selection,
@@ -312,8 +315,59 @@ fn EmptyTable() -> impl IntoView {
     view! {
         <Table table=table aria_label="Empty table" selection_mode=SelectionMode::Multiple>
             <TableHeader />
-            <TableBody>{()}</TableBody>
+            <TableBody />
         </Table>
+    }
+}
+
+/// A selectable table whose "Actions" cells (`CellFocusMode::Child`) hold two `Button` atoms
+/// (crudkit's action column); presses are logged to `#test-tn-actions-log`.
+#[component]
+fn ActionsTable() -> impl IntoView {
+    let table = Memo::new(|_| {
+        Arc::new(TableCollection::build(|t| {
+            t.column("name", "Name").row_header();
+            t.column("actions", "Actions");
+            for name in ["Alice", "Bob"] {
+                t.row(name, name, |r| {
+                    r.cell(name);
+                    r.cell("");
+                });
+            }
+        }))
+    });
+    let log = RwSignal::new(Vec::<String>::new());
+    let pressed = move |what: String| Callback::new(move |_| log.update(|l| l.push(what.clone())));
+    view! {
+        <Table table=table aria_label="Actions table" selection_mode=SelectionMode::Multiple>
+            <TableHeader />
+            <TableBody>
+                {["Alice", "Bob"]
+                    .map(|name| {
+                        view! {
+                            <TableRow key=name>
+                                <TableCell column="name">{name}</TableCell>
+                                <TableCell column="actions" focus_mode=CellFocusMode::Child>
+                                    <Button
+                                        attr:aria-label=format!("Edit {name}")
+                                        on_press=pressed(format!("edit {name}"))
+                                    >
+                                        "Edit"
+                                    </Button>
+                                    <Button
+                                        attr:aria-label=format!("Delete {name}")
+                                        on_press=pressed(format!("delete {name}"))
+                                    >
+                                        "Delete"
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        }
+                    })
+                    .collect_view()}
+            </TableBody>
+        </Table>
+        <div>"Presses: " <span id="test-tn-actions-log">{move || log.get().join(", ")}</span></div>
     }
 }
 
@@ -360,6 +414,8 @@ pub fn PageAtomTableNavigation() -> impl IntoView {
             <button id="test-tn-before-empty">"Before"</button>
             <EmptyTable />
             <button id="test-tn-after-empty">"After"</button>
+            <button id="test-tn-before-actions">"Before"</button>
+            <ActionsTable />
         </div>
     }
 }

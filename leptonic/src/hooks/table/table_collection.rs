@@ -120,7 +120,12 @@ impl TableCollection {
     pub fn build_with(options: TableOptions, f: impl FnOnce(&mut TableBuilder)) -> Self {
         let mut builder = TableBuilder {
             columns: ColumnsBuilder::default(),
-            rows: CollectionBuilder::default(),
+            rows: {
+                // The selection checkbox cell, in every row (child rows too).
+                let mut rows = CollectionBuilder::default();
+                rows.leading_empty_cells = usize::from(options.show_selection_checkboxes);
+                rows
+            },
             show_selection_checkboxes: options.show_selection_checkboxes,
         };
         f(&mut builder);
@@ -132,12 +137,13 @@ impl TableCollection {
         &self.collection
     }
 
-    /// The number of body rows.
+    /// The number of body rows, child rows (tree tables) included.
     pub fn size(&self) -> usize {
         self.collection.size()
     }
 
-    /// The body rows.
+    /// The top-level body rows (a tree table's child rows are their children in
+    /// [`collection`](Self::collection)).
     pub fn rows(&self) -> impl Iterator<Item = &Node> {
         self.collection.items()
     }
@@ -213,20 +219,21 @@ impl TableBuilder {
     }
 
     /// Add a body row with one cell per data column. Cell keys are generated:
-    /// `Key::cell(row, i)`, counting the selection checkbox cell (if any) as cell `0`.
+    /// `Key::cell(row, i)`, counting the selection checkbox cell (if any) as cell `0`. Child rows
+    /// (a tree table, see `UseTableStateInput::tree`) go into the returned row's `children`.
     pub fn row(
         &mut self,
         key: impl Into<Key>,
         text_value: impl Into<Arc<str>>,
         cells: impl FnOnce(&mut RowBuilder),
     ) -> ItemBuilder<'_> {
-        let show_selection_checkboxes = self.show_selection_checkboxes;
-        self.rows.row(key, text_value, |r| {
-            if show_selection_checkboxes {
-                r.cell("");
-            }
-            cells(r);
-        })
+        self.rows.row(key, text_value, cells)
+    }
+
+    /// Add body rows through the [`CollectionBuilder`] that also builds child rows
+    /// (`ItemBuilder::children`): for rows built by a recursive function.
+    pub fn rows(&mut self, rows: impl FnOnce(&mut CollectionBuilder)) {
+        rows(&mut self.rows);
     }
 
     fn finish(self) -> TableCollection {
@@ -545,6 +552,48 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+
+    /// Child rows follow their row's cells (with the selection cell too); collapsed rows keep
+    /// their cells, only their child rows are hidden.
+    #[test]
+    fn tree_rows_nest_and_collapse() {
+        let table = TableCollection::build_with(
+            TableOptions {
+                show_selection_checkboxes: true,
+            },
+            |t| {
+                t.column("name", "Name");
+                let _ = t
+                    .row("docs", "Documents", |r| {
+                        r.cell("Documents");
+                    })
+                    .children(|b| {
+                        b.row("cv", "CV", |r| {
+                            r.cell("CV");
+                        });
+                    });
+                t.row("photos", "Photos", |r| {
+                    r.cell("Photos");
+                });
+            },
+        );
+        let rows = |c: &Collection| c.items().map(|n| n.key.to_string()).collect::<Vec<_>>();
+        // Without a tree view (no tree column), child rows aren't part of the table.
+        assert_that!(rows(table.collection())).is_equal_to(vec!["docs".to_owned(), "photos".to_owned()]);
+        let c = table.collection();
+        assert_that!(c.children(&k("cv")).count()).is_equal_to(2);
+        assert_that!(c.get(&k("cv")).map(|n| n.level)).is_equal_to(Some(1));
+
+        let collapsed = c.with_expanded(&std::collections::HashSet::new());
+        assert_that!(rows(&collapsed)).is_equal_to(vec!["docs".to_owned(), "photos".to_owned()]);
+        assert_that!(collapsed.children(&k("docs")).count()).is_equal_to(2);
+        let expanded = c.with_expanded(&std::collections::HashSet::from([k("docs")]));
+        assert_that!(rows(&expanded)).is_equal_to(vec![
+            "docs".to_owned(),
+            "cv".to_owned(),
+            "photos".to_owned(),
+        ]);
+    }
 
     fn k(s: &str) -> Key {
         Key::from(s)

@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::checkbox::Checkbox,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::*,
     utils::{color::RGB8, css::CssColor, style::BackgroundColorProperty, styles::Styles},
 };
@@ -58,10 +58,12 @@ pub fn ColorFieldDemo() -> impl IntoView {
             {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {c}"))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
     hooks::{
         InputType, IntoAttrs, TextFieldElement, UseTextFieldInput, UseTextFieldReturn,
         UseTextFieldStateInput, ValidationBehavior, use_text_field, use_text_field_state,
@@ -99,10 +99,12 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
 
         <div class="demo-controls">
             <Button on_press=move |_| username.set_value(String::new()) classes="demo-btn">"Clear"</Button>
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

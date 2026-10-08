@@ -43,8 +43,6 @@ use crate::{
 // - Any color type: the hue is its hue channel, or its HSL form's (see `use_color_wheel_state`).
 //
 // ## OMITTED FEATURES
-// - Localized channel names and the hue's localized name (English until leptonic has a
-//   localized string formatter).
 // - The mouse and touch fallbacks for browsers without `PointerEvent` (CLAUDE.md).
 //
 // =============================================================================
@@ -414,10 +412,11 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
 
     // Without any label, the channel names the wheel (react-aria).
     let has_labelledby = aria_labelledby.is_some();
+    let locale = use_locale();
     let input_label = Signal::derive(move || {
         aria_label
             .get()
-            .or_else(|| (!has_labelledby).then(|| HSL::channel_name(HslChannel::Hue).to_owned()))
+            .or_else(|| (!has_labelledby).then(|| HSL::channel_name(HslChannel::Hue, &locale.get())))
     });
     let input_id = use_id("color-wheel");
     // With other labels next to its `aria-label`, the input names itself too (`use_label`).
@@ -434,7 +433,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     };
     let value = state.value;
     let hue = state.hue;
-    let locale = use_locale();
     let range = HSL::channel_range(HslChannel::Hue);
 
     let size = computed_size(crate::utils::css::computed_px(outer_radius * 2.0));
@@ -518,7 +516,7 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                         HSL::channel_format_options(HslChannel::Hue),
                     )
                     .format(hue.get());
-                    format!("{degrees}, {}", value.get().hue_name())
+                    format!("{degrees}, {}", value.get().hue_name(&locale.get()))
                 }),
                 on_input: EventHandler::new(move |e: Event| {
                     if let Some(target) = e

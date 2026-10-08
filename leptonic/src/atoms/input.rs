@@ -62,7 +62,7 @@ impl InputContext {
         }
     }
 
-    /// The input of a [`use_text_field`](crate::hooks::use_text_field) field, which can also be
+    /// The input of a [`use_text_field`](fn@crate::hooks::use_text_field) field, which can also be
     /// a [`TextArea`].
     pub fn text_field(props: UseTextFieldInputProps, state: InputState) -> Self {
         let attrs_props = props.clone();

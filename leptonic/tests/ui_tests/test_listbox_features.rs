@@ -304,7 +304,7 @@ impl BrowserTest<str> for ListBoxLayoutTests {
 
 /// `disabledBehavior="selection"` (on the listbox and on one item: focusable but not
 /// selectable), "should support empty state", and focus moving on when the focused option is
-/// removed.
+/// removed, labels following the collection.
 pub struct ListBoxDisabledAndEmptyTests {}
 
 #[async_trait]
@@ -353,6 +353,17 @@ impl BrowserTest<str> for ListBoxDisabledAndEmptyTests {
             .await?;
         page.wait_for_count("#lbf-removal [role=option]", 2).await?;
         page.wait_for_active_text("Kangaroo").await?;
+
+        // Labels follow the collection: an item and a section relabelled in place.
+        let cat = option(&page, "#lbf-relabel", "Cat").await?;
+        let group = page.css("#lbf-relabel [role=group]").await?;
+        assert_that!(cat.attr("aria-label").await?).is_equal_to(Some("Cat".to_owned()));
+        assert_that!(group.attr("aria-label").await?).is_equal_to(Some("Pets".to_owned()));
+        page.click_element_with_id("lbf-relabel-cat").await?;
+        page.wait_for_attr(&cat, "aria-label", Some("Kitten"))
+            .await?;
+        page.wait_for_attr(&group, "aria-label", Some("Animals"))
+            .await?;
         page.expect_no_page_errors().await
     }
 }

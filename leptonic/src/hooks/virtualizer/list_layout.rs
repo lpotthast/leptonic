@@ -1040,4 +1040,44 @@ mod tests {
         )
         .is_true();
     }
+
+    /// The cost of an append to a long log (as `VirtualList` rebuilds its collection): run with
+    /// `cargo test --release -p leptonic --features full --lib timing_ -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "timing"]
+    fn timing_appends_to_a_long_list() {
+        let build = |count: usize| {
+            Arc::new(Collection::build(|b| {
+                for i in 0..count {
+                    b.item(Key::from(i64::try_from(i).expect("a small count")), "");
+                }
+            }))
+        };
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                estimated_row_size: Some(20.0),
+                ..ListLayoutOptions::default()
+            },
+            build(20_000),
+            Size::new(800.0, 600.0),
+        );
+        let _ = harness.visible();
+        let mut build_total = std::time::Duration::ZERO;
+        let mut layout_total = std::time::Duration::ZERO;
+        for round in 1..=20 {
+            let start = std::time::Instant::now();
+            let collection = build(20_000 + round * 50);
+            build_total += start.elapsed();
+            let start = std::time::Instant::now();
+            harness.collection = collection;
+            harness.update(InvalidationContext::default());
+            let _ = harness.visible();
+            layout_total += start.elapsed();
+        }
+        println!(
+            "per append: build {:?}, layout {:?}",
+            build_total / 20,
+            layout_total / 20
+        );
+    }
 }

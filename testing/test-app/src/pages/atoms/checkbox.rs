@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::{
-        checkbox::{Checkbox, CheckboxGroup},
+        checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         field::{Description, FieldError, Label},
     },
     hooks::{ValidationBehavior, collections::Key},
@@ -20,16 +20,15 @@ fn TestCheckbox(
 ) -> impl IntoView {
     let value = RwSignal::new(default_selected);
     view! {
-        <Checkbox
+        <CheckboxField
             default_selected
             on_change=move |selected| value.set(selected)
             is_indeterminate
             is_disabled
             is_read_only
-            is_invalid
-        >
+            is_invalid><CheckboxButton>
             {label}
-        </Checkbox>
+        </CheckboxButton></CheckboxField>
         <div>"Selected: " <span id=format!("test-cb-{name}-value")>{move || value.get().to_string()}</span></div>
     }
 }
@@ -59,48 +58,47 @@ pub fn PageAtomCheckbox() -> impl IntoView {
         <TestCheckbox name="invalid" label="Invalid" is_invalid=true />
 
         // Bound to a signal, which a button changes from outside.
-        <Checkbox is_selected=bound set_selected=bound>"Bound"</Checkbox>
+        <CheckboxField is_selected=bound set_selected=bound><CheckboxButton>"Bound"</CheckboxButton></CheckboxField>
         <button id="test-cb-bound-flip" on:click=move |_| bound.update(|b| *b = !*b)>"Flip"</button>
         // Bound and read-only; `on_change` reports changes of a bound state too.
-        <Checkbox is_selected=bound_read_only set_selected=bound_read_only is_read_only=true>"Bound read only"</Checkbox>
-        <Checkbox
+        <CheckboxField is_selected=bound_read_only set_selected=bound_read_only is_read_only=true><CheckboxButton>"Bound read only"</CheckboxButton></CheckboxField>
+        <CheckboxField
             is_selected=bound_reported
             set_selected=bound_reported
-            on_change=move |selected: bool| reported.set(selected.to_string())
-        >
+            on_change=move |selected: bool| reported.set(selected.to_string())><CheckboxButton>
             "Bound reported"
-        </Checkbox>
+        </CheckboxButton></CheckboxField>
         <div>"Reported: " <span id="test-cb-reported">{reported}</span></div>
 
         <form id="test-cb-required-form">
-            <Checkbox is_required=true validation_behavior=ValidationBehavior::Native>"Required native"</Checkbox>
-            <Checkbox is_required=true validation_behavior=ValidationBehavior::Aria>"Required aria"</Checkbox>
+            <CheckboxField is_required=true validation_behavior=ValidationBehavior::Native><CheckboxButton>"Required native"</CheckboxButton></CheckboxField>
+            <CheckboxField is_required=true validation_behavior=ValidationBehavior::Aria><CheckboxButton>"Required aria"</CheckboxButton></CheckboxField>
         </form>
 
         <CheckboxGroup name="pets" on_change=show_group>
             <Label>"Pets"</Label>
-            <Checkbox value="dogs">"Dogs"</Checkbox>
-            <Checkbox value="cats">"Cats"</Checkbox>
-            <Checkbox value="dragons" is_disabled=true>"Dragons"</Checkbox>
+            <CheckboxField value="dogs"><CheckboxButton>"Dogs"</CheckboxButton></CheckboxField>
+            <CheckboxField value="cats"><CheckboxButton>"Cats"</CheckboxButton></CheckboxField>
+            <CheckboxField value="dragons" is_disabled=true><CheckboxButton>"Dragons"</CheckboxButton></CheckboxField>
             <Description>"Pick your pets."</Description>
         </CheckboxGroup>
         <div>"Group: " <span id="test-cb-group-value">{group_value}</span></div>
 
-        <CheckboxGroup aria_label="Disabled group" is_disabled=true>
-            <Checkbox value="a">"Disabled group A"</Checkbox>
-        </CheckboxGroup>
+        <CheckboxGroup<Key> aria_label="Disabled group" is_disabled=true>
+            <CheckboxField value="a"><CheckboxButton>"Disabled group A"</CheckboxButton></CheckboxField>
+        </CheckboxGroup<Key>>
         <CheckboxGroup aria_label="Read-only group" is_read_only=true default_value=vec![Key::from("a")]>
-            <Checkbox value="a">"Read-only group A"</Checkbox>
-            <Checkbox value="b">"Read-only group B"</Checkbox>
+            <CheckboxField value="a"><CheckboxButton>"Read-only group A"</CheckboxButton></CheckboxField>
+            <CheckboxField value="b"><CheckboxButton>"Read-only group B"</CheckboxButton></CheckboxField>
         </CheckboxGroup>
 
         <form id="test-cb-group-form">
-            <CheckboxGroup is_required=true validation_behavior=ValidationBehavior::Native>
+            <CheckboxGroup<Key> is_required=true validation_behavior=ValidationBehavior::Native>
                 <Label>"Required group"</Label>
-                <Checkbox value="a">"Required group A"</Checkbox>
-                <Checkbox value="b">"Required group B"</Checkbox>
+                <CheckboxField value="a"><CheckboxButton>"Required group A"</CheckboxButton></CheckboxField>
+                <CheckboxField value="b"><CheckboxButton>"Required group B"</CheckboxButton></CheckboxField>
                 <FieldError />
-            </CheckboxGroup>
+            </CheckboxGroup<Key>>
         </form>
     }
 }

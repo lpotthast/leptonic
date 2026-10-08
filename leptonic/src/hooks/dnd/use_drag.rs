@@ -38,6 +38,7 @@ use crate::{
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
+use crate::utils::intl_strings::{DndStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -150,6 +151,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         has_drag_button,
         is_disabled,
     } = input;
+    let strings = use_localized_strings::<DndStrings>();
 
     let position = StoredValue::new((0.0_f64, 0.0_f64));
     let dragging_element: StoredValue<Option<SendWrapper<web_sys::Element>>> =
@@ -186,6 +188,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
             });
         }
         drag_manager::begin_dragging(DragTarget {
+            strings: strings.get_untracked(),
             element: target.clone(),
             items: items.get_untracked(),
             allowed_drop_operations: allowed_operations(),
@@ -341,14 +344,12 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let modality = use_drag_modality();
     let description = use_description(Signal::derive(move || {
         let modality = modality.get();
-        Some(
-            if is_dragging.get() {
-                messages::end_drag(modality)
-            } else {
-                messages::drag_description(modality)
-            }
-            .to_owned(),
-        )
+        let strings = strings.read();
+        Some(if is_dragging.get() {
+            messages::end_drag(&strings, modality)
+        } else {
+            messages::drag_description(&strings, modality)
+        })
     }));
 
     let on_pointerdown = move |e: PointerEvent| {

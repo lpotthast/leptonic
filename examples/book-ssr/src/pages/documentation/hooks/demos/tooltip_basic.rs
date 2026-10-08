@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::CapturedElement};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*, utils::CapturedElement};
 use leptos::{portal::Portal, prelude::*};
 
 /// A tooltip built from the three tooltip hooks, positioned with `use_overlay_position`.
@@ -61,14 +61,18 @@ pub fn TooltipDemo() -> impl IntoView {
             {move || if is_open.get() { "The tooltip is open." } else { "The tooltip is closed." }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
-            <Checkbox is_selected=keep_open set_selected=keep_open classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Keep open while hovered"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=keep_open set_selected=keep_open>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Keep open while hovered"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
 
         <Portal>

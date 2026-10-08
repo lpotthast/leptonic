@@ -212,13 +212,11 @@ async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
         .execute("document.getElementById('test-sel-form').reset()", vec![])
         .await?;
     page.wait_for_selector("[aria-haspopup=listbox]").await?;
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    while page.css(TRIGGER).await?.text().await? != "Banana" {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("the form reset did not restore \"Banana\"");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the trigger after the form reset",
+        "Banana",
+        page.css(TRIGGER).await?.text().await?
+    );
     assert_that!(hidden_select_value(page).await?).is_equal_to("Banana".to_owned());
     Ok(())
 }

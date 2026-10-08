@@ -102,6 +102,12 @@ pub fn PageTableOverview() -> impl IntoView {
                         " on the table when rows can be selected; selection checkboxes are labelled \u{201c}Select\u{201d} and "
                         "\u{201c}Select All\u{201d}"
                     </li>
+                    <li>
+                        "A tree table is a "<Code inline=true>"role=\"treegrid\""</Code>": rows carry "
+                        <Code inline=true>"aria-level"</Code>", "<Code inline=true>"aria-posinset"</Code>" and "
+                        <Code inline=true>"aria-setsize"</Code>", and rows with child rows "<Code inline=true>"aria-expanded"</Code>
+                        "; the expand buttons are labelled \u{201c}Expand\u{201d} or \u{201c}Collapse\u{201d} and the row"
+                    </li>
                     <li>"One tab stop with roving focus: the table remembers the focused row or cell"</li>
                 </ul>
 
@@ -114,6 +120,11 @@ pub fn PageTableOverview() -> impl IntoView {
                     <KeyRow keys="ArrowRight / ArrowLeft">
                         "From a row, move to its first or last cell; then between cells, and back to the row at the end. "
                         "In a header row, move between the column headers. Mirrored in right-to-left languages."
+                    </KeyRow>
+                    <KeyRow keys="ArrowRight">"Tree tables, on a row with child rows: expand it first; once expanded, move into its cells."</KeyRow>
+                    <KeyRow keys="ArrowLeft">
+                        "Tree tables, on a row: collapse it if it is expanded; from a row without child rows or a collapsed "
+                        "one, move to its parent row. Mirrored in right-to-left languages."
                     </KeyRow>
                     <KeyRow keys="Home / End">"The first or last row; in a row\u{2019}s cells or a header row, its first or last cell."</KeyRow>
                     <KeyRow keys="Control + Home / Control + End">
@@ -138,7 +149,7 @@ pub fn PageTableOverview() -> impl IntoView {
 
                 <p>
                     "The table describes its sort (\u{201c}sorted by column Type in ascending order\u{201d}) and announces "
-                    "each change of it right away. The texts are English for now."
+                    "each change of it right away, in the locale\u{2019}s language."
                 </p>
             </Section>
 

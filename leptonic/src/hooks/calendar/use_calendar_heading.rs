@@ -4,7 +4,8 @@
 use jiff::civil::Date;
 use leptos::prelude::*;
 
-use super::states::{CalendarStates, era_format, strings};
+use super::states::{CalendarStates, era_format};
+use crate::utils::intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings};
 use crate::utils::{
     date::{DateDuration, DateExt},
     date_time_formatter::{
@@ -86,10 +87,10 @@ pub fn use_calendar_heading(input: UseCalendarHeadingInput) -> Signal<String> {
             },
         );
         if is_days {
-            strings::date_range(
-                &formatter.format_date(start),
-                &formatter.format_date(range.end),
-            )
+            CalendarStrings::for_locale(locale.get()).date_range(DateRangeArgs {
+                start_date: &formatter.format_date(start),
+                end_date: &formatter.format_date(range.end),
+            })
         } else {
             formatter.format_date(start)
         }

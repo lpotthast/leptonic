@@ -64,17 +64,12 @@ async fn wait_for_segment_text(
     kind: &str,
     expected: &str,
 ) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
-        let text = segment(page, section, kind).await?.text().await?;
-        if text == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected {section} {kind} {expected:?}, got {text:?}");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        format!("the {kind} segment of {section}"),
+        expected,
+        segment(page, section, kind).await?.text().await?
+    );
+    Ok(())
 }
 
 async fn expect_focus(page: &Page<'_>, section: &str, kind: &str) -> Result<(), Report> {
@@ -252,8 +247,11 @@ async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&read_only, "aria-readonly").await?).is_equal_to(Some("true".to_owned()));
     read_only.click().await?;
     page.send_keys_to_active(Key::Up).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(read_only.text().await?).is_equal_to("6".to_owned());
+    stays!(
+        "the read-only field's text",
+        "6".to_owned(),
+        read_only.text().await?
+    );
     Ok(())
 }
 

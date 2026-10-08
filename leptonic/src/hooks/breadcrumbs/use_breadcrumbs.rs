@@ -2,18 +2,9 @@
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::hooks::IntoAttrs;
+use crate::utils::intl_strings::{BreadcrumbsStrings, use_localized_strings};
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// ## DIFFERENT BEHAVIOR
-// - The default label is English ("Breadcrumbs") until localized strings are ported.
-//
-// =============================================================================
-
-/// The label of breadcrumbs without an `aria_label`.
-const DEFAULT_LABEL: &str = "Breadcrumbs";
+// No deviations from react-aria beyond the project-wide API conventions.
 
 /// Input of [`use_breadcrumbs`].
 #[derive(Debug, Clone, Default)]
@@ -50,13 +41,14 @@ pub type UseBreadcrumbsAttrs = Attr<attr::AriaLabel, Signal<String>>;
 
 /// Breadcrumbs: the trail of links to the current page, a navigation landmark (named
 /// "Breadcrumbs" by default) around a list of items. Render each item with
-/// [`use_breadcrumb_item`](super::use_breadcrumb_item).
+/// [`use_breadcrumb_item`](fn@super::use_breadcrumb_item).
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
     let UseBreadcrumbsInput { aria_label } = input;
+    let strings = use_localized_strings::<BreadcrumbsStrings>();
     UseBreadcrumbsReturn {
         props: UseBreadcrumbsProps {
             aria_label: Signal::derive(move || {
-                aria_label.get().unwrap_or_else(|| DEFAULT_LABEL.to_owned())
+                aria_label.get().unwrap_or_else(|| strings.read().breadcrumbs())
             }),
         },
     }

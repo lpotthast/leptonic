@@ -55,3 +55,36 @@
     &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
     &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
 }
+
+// A button whose action is pending (`data-pending`): the label stays, a spinner joins it, presses are ignored.
+.demo-pending-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid transparent;
+    border-radius: var(--book-radius-m);
+    background: var(--brand-color);
+    color: var(--book-on-brand-color);
+    font: inherit;
+    cursor: pointer;
+
+    &[data-pending] { cursor: progress; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// The progress bar inside the pending button: only a spinner, as the button's label already says what is in progress.
+.demo-pending-progress { display: inline-flex; }
+
+.demo-spinner {
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: demo-spin 0.8s linear infinite;
+
+    @media (prefers-reduced-motion: reduce) { animation: none; border-right-color: currentColor; opacity: 0.6; }
+}
+
+@keyframes demo-spin { to { transform: rotate(1turn); } }

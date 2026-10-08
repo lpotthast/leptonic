@@ -269,18 +269,20 @@ async fn row_actions(page: &Page<'_>) -> Result<(), Report> {
 async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     const COLUMNS: &str = "Columns table";
     let expect_headers = |expected: Vec<&'static str>| async move {
-        let expected: Vec<String> = expected.into_iter().map(str::to_owned).collect();
-        page.wait_for_value("the column headers", expected, || {
-            column_headers(page, COLUMNS)
-        })
-        .await
+        wait_for!(
+            "the column headers",
+            expected,
+            column_headers(page, COLUMNS).await?
+        );
+        Ok::<(), Report>(())
     };
     let expect_cells = |expected: Vec<&'static str>| async move {
-        let expected: Vec<String> = expected.into_iter().map(str::to_owned).collect();
-        page.wait_for_value("the cells of Games", expected, || async {
-            cell_texts(&row(page, COLUMNS, "Games").await?).await
-        })
-        .await
+        wait_for!(
+            "the cells of Games",
+            expected,
+            cell_texts(&row(page, COLUMNS, "Games").await?).await?
+        );
+        Ok::<(), Report>(())
     };
     expect_headers(vec!["", "Name", "Type", "Date Modified"]).await?;
     expect_cells(vec!["", "Games", "File folder", "6/7/2020"]).await?;
@@ -333,8 +335,11 @@ async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(date.attr("aria-sort").await?).is_none();
     assert_that!(date.attr("data-allows-sorting").await?).is_none();
     hover(page, &date).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(date.attr("data-hovered").await?).is_none();
+    stays!(
+        "data-hovered of the date",
+        None,
+        date.attr("data-hovered").await?
+    );
     page.click_element_with_id("test-ts-sort-date").await?;
     page.wait_for_attr(&date, "aria-sort", Some("none")).await?;
     page.wait_for_attr(&date, "data-allows-sorting", Some("true"))
@@ -351,15 +356,10 @@ async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     let select_all = "[role=grid][aria-label='Columns table'] thead input[type=checkbox]";
     assert_that!(page.count_matching(select_all).await?).is_equal_to(1);
     page.click_element_with_id("test-ts-single").await?;
-    page.wait_for_value("select all checkboxes", 0, || {
-        page.count_matching(select_all)
-    })
-    .await?;
+    wait_for!("select all checkboxes", 0, page.count_matching(select_all).await?);
     page.click_element_with_id("test-ts-single").await?;
-    page.wait_for_value("select all checkboxes", 1, || {
-        page.count_matching(select_all)
-    })
-    .await
+    wait_for!("select all checkboxes", 1, page.count_matching(select_all).await?);
+    Ok(())
 }
 
 async fn hover(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {

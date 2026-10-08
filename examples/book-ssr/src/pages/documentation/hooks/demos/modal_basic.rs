@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::Checkbox, focus_scope::FocusScope},
+    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
     hooks::*,
 };
 use leptos::{portal::Portal, prelude::*};
@@ -67,14 +67,18 @@ pub fn ModalHooksDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=close_on_outside_click set_selected=close_on_outside_click classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Close on outside click"
-            </Checkbox>
-            <Checkbox is_selected=close_on_escape set_selected=close_on_escape classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Close on Escape"
-            </Checkbox>
+            <CheckboxField is_selected=close_on_outside_click set_selected=close_on_outside_click>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Close on outside click"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=close_on_escape set_selected=close_on_escape>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Close on Escape"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
 
         <Show when=move || state.is_open.get()>

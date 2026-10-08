@@ -5,6 +5,7 @@ use super::{
     hue_space_area_gradient, hue_stops, round_fraction,
 };
 use crate::utils::{
+    i18n::Locale,
     locale::WritingDirection,
     math::to_fixed_number,
     number_formatter::{NumberFormatOptions, NumberStyle, UnitDisplay},
@@ -180,12 +181,13 @@ impl ColorValue for HSL {
         }
     }
 
-    fn channel_name(channel: HslChannel) -> &'static str {
-        match channel {
-            HslChannel::Hue => "Hue",
-            HslChannel::Saturation => "Saturation",
-            HslChannel::Lightness => "Lightness",
-        }
+    fn channel_name(channel: HslChannel, locale: &Locale) -> String {
+        let key = match channel {
+            HslChannel::Hue => "hue",
+            HslChannel::Saturation => "saturation",
+            HslChannel::Lightness => "lightness",
+        };
+        super::naming::channel_name(key, locale)
     }
 
     fn display_color(&self, channel: HslChannel) -> Self {

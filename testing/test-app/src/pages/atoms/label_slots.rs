@@ -44,7 +44,7 @@ pub fn PageAtomLabelSlots() -> impl IntoView {
                 "Toggle labels"
             </button>
             <div id="test-ls-select">
-                <Select collection=fruits()>
+                <Select<Option<Key>> collection=fruits()>
                     {label("Fruit")}
                     <SelectTrigger>
                         <SelectValue placeholder="Pick a fruit" />
@@ -56,10 +56,10 @@ pub fn PageAtomLabelSlots() -> impl IntoView {
                                 .collect_view()}
                         </ListBox>
                     </SelectPopover>
-                </Select>
+                </Select<Option<Key>>>
             </div>
             <div id="test-ls-combobox">
-                <ComboBox collection=fruits()>
+                <ComboBox<Option<Key>> collection=fruits()>
                     {label("Fruit")}
                     <Input />
                     <ComboBoxButton>"▼"</ComboBoxButton>
@@ -68,7 +68,7 @@ pub fn PageAtomLabelSlots() -> impl IntoView {
                             <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
                         </ListBox>
                     </ComboBoxPopover>
-                </ComboBox>
+                </ComboBox<Option<Key>>>
             </div>
             <div id="test-ls-number-field">
                 <NumberField default_value=1_i32>

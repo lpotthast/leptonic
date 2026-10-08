@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::prelude::{Button, Checkbox, Link, ToggleButton, Toolbar},
+    atoms::prelude::{Button, CheckboxButton, CheckboxField, Link, ToggleButton, Toolbar},
     utils::{
         i18n::{I18nProvider, Locale},
         orientation::Orientation,
@@ -58,7 +58,7 @@ pub fn PageAtomToolbar() -> impl IntoView {
                 <ToggleButton>"B"</ToggleButton>
                 <ToggleButton>"U"</ToggleButton>
                 <ToggleButton>"I"</ToggleButton>
-                <Checkbox>"Night Mode"</Checkbox>
+                <CheckboxField><CheckboxButton>"Night Mode"</CheckboxButton></CheckboxField>
                 <Link href="/atoms/toolbar#help">"Help"</Link>
             </Toolbar>
         </div>

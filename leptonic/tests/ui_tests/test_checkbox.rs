@@ -145,9 +145,11 @@ async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&label, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(attr(&input, "disabled").await?).is_some();
     label.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-cb-disabled-value").await?)
-        .is_equal_to("false".to_owned());
+    stays!(
+        "the text of #test-cb-disabled-value",
+        "false".to_owned(),
+        page.read_text_of("test-cb-disabled-value").await?
+    );
     assert_that!(attr(&label, "data-selected").await?).is_none();
     Ok(())
 }
@@ -159,8 +161,11 @@ async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&input, "aria-readonly").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(checked(&input).await?).is_true();
     label.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-cb-readonly-value").await?).is_equal_to("true".to_owned());
+    stays!(
+        "the text of #test-cb-readonly-value",
+        "true".to_owned(),
+        page.read_text_of("test-cb-readonly-value").await?
+    );
     // The DOM follows the state, not the rejected click.
     assert_that!(checked(&input).await?).is_true();
     assert_that!(attr(&label, "data-selected").await?).is_equal_to(Some("true".to_owned()));
@@ -225,8 +230,11 @@ async fn bound_read_only_and_on_change(page: &Page<'_>) -> Result<(), Report> {
     read_only.click().await?;
     input.focus().await?;
     page.send_keys_to_active(Key::Space).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(attr(&read_only, "data-selected").await?).is_none();
+    stays!(
+        "data-selected of the read-only checkbox",
+        None,
+        attr(&read_only, "data-selected").await?
+    );
     assert_that!(checked(&input).await?).is_false();
 
     label(page, "Bound reported").await?.click().await?;
@@ -280,8 +288,11 @@ async fn group(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&dragons, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(attr(&input(&dragons).await?, "disabled").await?).is_some();
     dragons.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-cb-group-value").await?).is_equal_to("cats".to_owned());
+    stays!(
+        "the text of #test-cb-group-value",
+        "cats".to_owned(),
+        page.read_text_of("test-cb-group-value").await?
+    );
     Ok(())
 }
 
@@ -308,8 +319,11 @@ async fn group_disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
         .is_equal_to(Some("true".to_owned()));
     b.click().await?;
     a.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(attr(&a, "data-selected").await?).is_equal_to(Some("true".to_owned()));
+    stays!(
+        "data-selected of A",
+        Some("true".to_owned()),
+        attr(&a, "data-selected").await?
+    );
     assert_that!(attr(&b, "data-selected").await?).is_none();
     assert_that!(checked(&input(&a).await?).await?).is_true();
     assert_that!(checked(&input(&b).await?).await?).is_false();

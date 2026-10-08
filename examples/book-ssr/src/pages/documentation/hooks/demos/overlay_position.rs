@@ -3,7 +3,7 @@ use leptonic::{
         button::Button,
         field::Label,
         focus_scope::FocusScope,
-        radio::{Radio, RadioGroup},
+        radio::{RadioButton, RadioField, RadioGroup},
     },
     hooks::*,
 };
@@ -13,19 +13,13 @@ use leptos_element_capture::CapturedElement;
 /// `use_overlay_position` with `use_overlay` and `use_overlay_trigger`: a button toggles a panel placed next to it.
 #[component]
 pub fn PositioningDemo() -> impl IntoView {
-    // The radio groups select keys; each option's key comes from its `ToKey` implementation.
-    let side_key = RwSignal::new(Some(Side::Top.to_key()));
-    let align_key = RwSignal::new(Some(Align::End.to_key()));
+    // The radio groups select the enums themselves (`selection_value!` below).
+    let side = RwSignal::new(Some(Side::Top));
+    let align = RwSignal::new(Some(Align::End));
     let placement = Signal::derive(move || {
-        let side = Side::ALL
-            .into_iter()
-            .find(|side| side_key.get() == Some(side.to_key()))
-            .unwrap_or(Side::Top);
-        let align = Align::ALL
-            .into_iter()
-            .find(|align| align_key.get() == Some(align.to_key()))
-            .unwrap_or(Align::End);
-        side.placement(align)
+        side.get()
+            .unwrap_or(Side::Top)
+            .placement(align.get().unwrap_or(Align::End))
     });
 
     let target = CapturedElement::new();
@@ -99,30 +93,34 @@ pub fn PositioningDemo() -> impl IntoView {
 
     view! {
         <div class="demo-option-groups">
-            <RadioGroup value=side_key set_value=side_key classes=["demo-choice-group", "demo-option-group"]>
+            <RadioGroup value=side set_value=side classes=["demo-choice-group", "demo-option-group"]>
                 <Label classes="demo-choice-group-label">"Side"</Label>
                 <div class="demo-choice-group-items">
                     {Side::ALL
                         .into_iter()
                         .map(|side| view! {
-                            <Radio value=side.to_key() classes="demo-radio">
-                                <span class="demo-radio-circle" aria-hidden="true"></span>
-                                {format!("{side:?}")}
-                            </Radio>
+                            <RadioField value=side>
+                                <RadioButton classes="demo-radio">
+                                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                                    {format!("{side:?}")}
+                                </RadioButton>
+                            </RadioField>
                         })
                         .collect_view()}
                 </div>
             </RadioGroup>
-            <RadioGroup value=align_key set_value=align_key classes=["demo-choice-group", "demo-option-group"]>
+            <RadioGroup value=align set_value=align classes=["demo-choice-group", "demo-option-group"]>
                 <Label classes="demo-choice-group-label">"Alignment"</Label>
                 <div class="demo-choice-group-items">
                     {Align::ALL
                         .into_iter()
                         .map(|align| view! {
-                            <Radio value=align.to_key() classes="demo-radio">
-                                <span class="demo-radio-circle" aria-hidden="true"></span>
-                                {format!("{align:?}")}
-                            </Radio>
+                            <RadioField value=align>
+                                <RadioButton classes="demo-radio">
+                                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                                    {format!("{align:?}")}
+                                </RadioButton>
+                            </RadioField>
                         })
                         .collect_view()}
                 </div>
@@ -170,7 +168,7 @@ pub fn PositioningDemo() -> impl IntoView {
 }
 
 /// The side of the trigger the overlay goes to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Side {
     Top,
     Bottom,
@@ -215,14 +213,17 @@ impl Side {
     }
 }
 
-impl ToKey for Side {
-    fn to_key(&self) -> Key {
-        Key::from(*self as u8)
-    }
-}
+leptonic::selection_value!(Side {
+    Top = "top",
+    Bottom = "bottom",
+    Left = "left",
+    Right = "right",
+    Start = "start",
+    End = "end",
+});
 
 /// The alignment along the side.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Align {
     Start,
     Center,
@@ -233,8 +234,8 @@ impl Align {
     const ALL: [Self; 3] = [Self::Start, Self::Center, Self::End];
 }
 
-impl ToKey for Align {
-    fn to_key(&self) -> Key {
-        Key::from(*self as u8)
-    }
-}
+leptonic::selection_value!(Align {
+    Start = "start",
+    Center = "center",
+    End = "end",
+});

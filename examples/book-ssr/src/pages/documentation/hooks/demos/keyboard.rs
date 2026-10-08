@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    atoms::{checkbox::Checkbox, focus_ring::FocusRing}, hooks::*, utils::Propagation,
+    atoms::{checkbox::{CheckboxButton, CheckboxField}, focus_ring::FocusRing}, hooks::*, utils::Propagation,
 };
 use leptos::prelude::*;
 
@@ -45,10 +45,12 @@ pub fn KeyboardDemo() -> impl IntoView {
         </FocusRing>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=set_disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=set_disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
 
         <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>

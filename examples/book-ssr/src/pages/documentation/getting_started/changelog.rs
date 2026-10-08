@@ -79,15 +79,16 @@ const RELEASES: &[Release] = &[
                  user\u{2019}s theme) and, if your app shows toasts, a `ToastRegion` on a `ToastQueue`. Modals need no \
                  root. The `Leptonic` context is gone (use `leptonic::utils::platform` for platform checks), and so is the \
                  `--leptonic-vh` variable: use the `dvh` unit (`min-height: 100dvh`). See Installation.",
-                    "`ThemeToggle` and `ThemeIcon` \u{2192} a `Switch` atom on the context of `use_theme`. See Themes.",
+                    "`ThemeToggle` and `ThemeIcon` \u{2192} a switch atom on the context of `use_theme`. See Themes.",
                     "Buttons and links: `Button` \u{2192} the `Button` atom; `Link` \u{2192} the `Link` atom (`AnchorLink` \
                  for in-page links); `LinkButton` \u{2192} a `Link` with your button styles. The `variations` and `active` \
                  props of buttons are gone (variations resulted in non-compliant HTML); a variant is a data attribute you \
                  style, e.g. `attr:data-variant=\"secondary\"`.",
                     "Fields: `TextInput`, `PasswordInput` and `NumberInput` (with `Field` and `FieldLabel`) \u{2192} the \
                  `TextField` (`input_type=InputType::Password` for passwords) and `NumberField` atoms, with `Label`, \
-                 `Input`, `Description` and `FieldError` inside; `Checkbox`, `Radio` and `Toggle` \u{2192} the \
-                 `Checkbox`, `RadioGroup` with `Radio`, and `Switch` atoms; `Slider` and `RangeSlider` \u{2192} the \
+                 `Input`, `Description` and `FieldError` inside; `Checkbox`, `Radio` and `Toggle` \u{2192} a \
+                 `CheckboxField` with a `CheckboxButton`, a `RadioGroup` with `RadioField`s and `RadioButton`s, and a \
+                 `SwitchField` with a `SwitchButton`; `Slider` and `RangeSlider` \u{2192} the \
                  `Slider` atom (a range has two thumbs); `Select`, `OptionalSelect` and `Multiselect` \u{2192} the `Select` \
                  atom (`SelectMode` for multiple selection), or a `ComboBox` to search the options.",
                     "Overlays: `Modal` (with `ModalHeader`, `ModalTitle`, `ModalBody` and `ModalFooter`) and `ModalRoot` \
@@ -124,8 +125,8 @@ const RELEASES: &[Release] = &[
             (
                 "Renamed",
                 &[
-                    "`Toggle` \u{2192} the `Switch` atom. Its `state` and `set_state` \u{2192} `is_selected` and \
-                 `set_selected`; its looks (`ToggleIcons`, `ToggleSize` and `ToggleVariant`) are your CSS.",
+                    "`Toggle` \u{2192} a `SwitchField` with a `SwitchButton`. Its `state` and `set_state` \u{2192} the \
+                 field's `is_selected` and `set_selected`; its looks (`ToggleIcons`, `ToggleSize` and `ToggleVariant`) are your CSS.",
                     "`Anchor` \u{2192} `AnchorLink`.",
                     "`LinkExt` \u{2192} `Link`, which takes a `target`; `LinkExtTarget` \u{2192} `LinkTarget`.",
                     "`create_signal_ls` \u{2192} `signal_ls`.",
@@ -143,8 +144,8 @@ const RELEASES: &[Release] = &[
                 &[
                     "`Button`: `on_click` \u{2192} `on_press`, `disabled` \u{2192} `is_disabled`. `button_type` makes a \
                  button submit or reset its form; without it, buttons have `type=\"button\"`.",
-                    "`Checkbox`: `checked` and `set_checked` \u{2192} `is_selected` and `set_selected`. Its children are its \
-                 label. New: `is_indeterminate`, `is_required`, `is_invalid`, `name` and `form_value`. Removed: \
+                    "`Checkbox` \u{2192} a `CheckboxField` with a `CheckboxButton`: `checked` and `set_checked` \u{2192} the \
+                 field's `is_selected` and `set_selected`; the button's children are its label. New: `is_indeterminate`, `is_required`, `is_invalid`, `name` and `form_value`. Removed: \
                  `variant` and `size`.",
                     "`Slider` is generic over its number type and takes one value per thumb (`values` and `set_values`). \
                  `min` and `max` \u{2192} `min_value` and `max_value`, `value_display` \u{2192} `format_options`, \
@@ -177,8 +178,8 @@ const RELEASES: &[Release] = &[
                  between landmarks (Alt+F6 to the main one).",
                     "Atoms, unstyled Leptos components rendering one element each: `Breadcrumbs`, `Button`, `Calendar` \
                  and `RangeCalendar` with `CalendarHeading`, `CalendarPreviousButton`, `CalendarNextButton`, \
-                 `CalendarErrorMessage`, `CalendarGrid` and its parts, `CalendarCell` and `CalendarCellButton`, `Checkbox` \
-                 and `CheckboxGroup`, `ColorArea`, `ColorField` and `ColorChannelField`, `ColorPicker`, \
+                 `CalendarErrorMessage`, `CalendarGrid` and its parts, `CalendarCell` and `CalendarCellButton`, \
+                 `CheckboxField` with `CheckboxButton`, `CheckboxGroup`, `ColorArea`, `ColorField` and `ColorChannelField`, `ColorPicker`, \
                  `ColorSlider` with `ColorSliderTrack` and `ColorSliderOutput`, `ColorSwatch`, `ColorSwatchPicker` with \
                  `ColorSwatchPickerItem`, `ColorThumb`, `ColorWheel` with `ColorWheelTrack`, `ComboBox`, `DateField` and \
                  `TimeField` with `DateInput` and `DateSegment`, `DatePicker` and `DateRangePicker` with `DatePickerGroup` \
@@ -186,8 +187,8 @@ const RELEASES: &[Release] = &[
                  `FocusManagerProvider`, `FocusRing`, `FocusScope`, `Focusable`, `Form`, `Grid`, `GridList`, \
                  `Hoverable`, `Input` and `TextArea`, `Link` and `AnchorLink`, `ListBox`, `Menu` with `MenuTrigger` and \
                  `SubmenuTrigger`, `Meter`, `ModalBackdrop` and `ModalContent`, `NumberField`, `OverlayArrow`, \
-                 `Popover`, `Pressable` and `PressResponder`, `ProgressBar`, `Radio` and `RadioGroup`, `SearchField`, \
-                 `Select`, `Separator`, `ShortcutKeys` and `Keys`, `Slider`, `Switch`, `Table`, `Tabs`, `TagGroup` with \
+                 `Popover`, `Pressable` and `PressResponder`, `ProgressBar`, `RadioGroup` with `RadioField` and `RadioButton`, `SearchField`, \
+                 `Select`, `Separator`, `ShortcutKeys` and `Keys`, `Slider`, `SwitchField` with `SwitchButton`, `Table`, `Tabs`, `TagGroup` with \
                  `TagList`, `Tag` and `TagRemoveButton`, `TextField`, `ToastRegion` and `Toast` with \
                  `ToastContent`, `ToastTitle`, `ToastDescription` and `ToastCloseButton`, `ToggleButton` and \
                  `ToggleButtonGroup`, `Toolbar`, `Tooltip` and `VisuallyHidden`.",
@@ -205,13 +206,16 @@ const RELEASES: &[Release] = &[
                  end. `use_virtualizer_state`, `use_scroll_view`, `use_virtualizer_item` and the `Layout` trait \
                  (`leptonic::hooks::virtualizer`) virtualize markup and layouts of your own.",
                     "`Color` (`leptonic::utils::color`): a color in any of the spaces HSV, HSL and RGB, parsed from \
-                 CSS-like text (`#rgb`, `#rrggbb`, `rgb()`, `hsb()`, `hsl()`), with `color_name()` and `hue_name()` \
-                 describing colors in words (\u{201c}dark vibrant blue\u{201d}).",
+                 CSS-like text (`#rgb`, `#rrggbb`, `rgb()`, `hsb()`, `hsl()`), with `color_name` and `hue_name` \
+                 describing colors in words in the user\u{2019}s locale (\u{201c}dark vibrant blue\u{201d}).",
                     "`leptonic::jiff`, the re-exported date crate: calendars pick `jiff::civil::Date` values; date fields and \
                  pickers are generic over `civil::Date`, `civil::DateTime` and `Zoned`, time fields over `civil::Time`, \
                  `civil::DateTime` and `Zoned`, with segments in the order and format of the locale.",
                     "Internationalization (number, date and list formatting, collation, plural rules) based on ICU4X, \
                  which also works during server-side rendering, with `I18nProvider`, `use_locale` and `use_direction`.",
+                    "Localized texts: the labels, descriptions and announcements of the hooks and atoms come in 34 \
+                 languages and follow the locale (`intl-strings` feature, on by default; `use_localized_strings` gives \
+                 your code the same messages). Grids, grid lists and tables announce selection changes.",
                     "Element ids that are stable between server-side rendering and hydration (`use_id`).",
                     "`leptonic::utils::clipboard::write_text`, to copy text to the clipboard (`clipboard` feature).",
                     "A live announcer for screen reader announcements, and keyboard shortcuts (`Shortcut`, \
@@ -243,6 +247,36 @@ const RELEASES: &[Release] = &[
                  was removed, `on_press` is an `Option<Callback<PressEvent>>`.",
                     "`use_move` reports movement deltas only: the arrow keys move by one pixel on both axes, and callers \
                  track the position and whether a move is in progress (`on_move_start`, `on_move_end`) themselves.",
+                    "Hooks that took several arguments take one input struct, with the former arguments (`state`, \
+                 `element`, \u{2026}) as fields: `use_calendar`, `use_range_calendar`, `use_calendar_heading`, \
+                 `use_date_field`, `use_time_field`, `use_date_segment`, `use_date_picker`, `use_date_picker_group`, \
+                 `use_date_range_picker`, `use_tooltip_trigger`, `use_landmark`, `use_toast`, `use_toast_region`, \
+                 `use_formatted_text_field`, `use_list_keyboard_delegate`, `use_scroll_view`, `use_virtualizer_item`, \
+                 `use_draggable_collection`, `use_table_header_placeholder`, `use_table_selection_checkbox` and \
+                 `use_table_select_all_checkbox`.",
+                    "Renamed: `UseFormValidationStateReturn` \u{2192} `FormValidationState`; the color methods lose \
+                 their `get_` prefix (`channel_value`, `channel_range`, `display_color`, \u{2026}); `HSV::value` \
+                 \u{2192} `brightness`; `RGB8::from_hex` \u{2192} `parse::<RGB8>()`; `DateTimeFormatOptions::hour12` \
+                 \u{2192} `hour_cycle`; `tab_props` and `tab_panel_props` of the tab hooks \u{2192} `props`; the \
+                 `on_change` of the color area\u{2019}s and color wheel\u{2019}s input props \u{2192} `on_input`.",
+                    "Removed: the `LinkButton` atom (use a `Link` with your button styles), `use_filtered_list_state` and \
+                 `use_slot_id`.",
+                    "Value-like selections are typed: `RadioGroup<V>`, `CheckboxGroup<V>` and `ToggleButtonGroup<V>` hold \
+                 values of any `V: SelectionValue` (`Key`, `String`, the integers, or your enum through \
+                 `leptonic::selection_value!`) instead of `Key`s; their items still take a `Key`, into which a value \
+                 converts. `Select<S>` and `ComboBox<S>` take the shape of their value as their type, which replaces the \
+                 `selection_mode` prop: `Option<V>` selects one value, `Vec<V>` several (`<Select<Vec<Key>>>`); the \
+                 `value` of `ComboBoxValue`, which their `validate` gets, is that typed value. `SelectionValue` replaces \
+                 `ToKey`. A group without a typed prop names its type (`<RadioGroup<Key> name=\"plan\">`), and \
+                 `default_value` takes the value itself, not a string. \
+                 `ToggleButtonGroup`'s `default_selected_keys`, `selected_keys`, `set_selected_keys` and \
+                 `on_selection_change` \u{2192} `default_value`, `value`, `set_value` and `on_change`. `TableBody`'s \
+                 children are optional (`<TableBody/>` for an empty table).",
+                    "The single `Checkbox`, `Radio` and `Switch` atoms were removed, as react-aria-components deprecates \
+                 them. A checkbox is a `CheckboxField` (a `<div>` taking the state props) with a `CheckboxButton` inside \
+                 (the clickable `<label>`, with the data attributes the single atom had); likewise a `RadioField` with a \
+                 `RadioButton` in a `RadioGroup`, and a `SwitchField` with a `SwitchButton`. Move `classes` and the \
+                 children to the button; style `.leptonic-CheckboxButton` instead of `.leptonic-Checkbox`.",
                 ],
             ),
         ],

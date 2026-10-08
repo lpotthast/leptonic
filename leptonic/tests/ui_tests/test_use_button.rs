@@ -1,5 +1,5 @@
 // Upstream: react-aria/test/button/useButton.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -114,8 +114,11 @@ async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
 
     let before = page.read_text_of("test-btn-presses").await?;
     page.click_element_with_id("test-btn-div").await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-btn-presses").await?).is_equal_to(before);
+    stays!(
+        "the text of #test-btn-presses",
+        before,
+        page.read_text_of("test-btn-presses").await?
+    );
 
     page.click_element_with_id("test-btn-toggle-disabled")
         .await?;
@@ -125,8 +128,11 @@ async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
 async fn form_submission(page: &Page<'_>) -> Result<(), Report> {
     // A button defaults to `type="button"` and does not submit its form.
     page.click_element_with_id("test-btn-in-form").await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-btn-submits").await?).is_equal_to("0".to_owned());
+    stays!(
+        "the text of #test-btn-submits",
+        "0".to_owned(),
+        page.read_text_of("test-btn-submits").await?
+    );
 
     page.click_element_with_id("test-btn-submit").await?;
     page.wait_for_text("test-btn-submits", "1").await?;

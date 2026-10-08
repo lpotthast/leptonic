@@ -37,9 +37,8 @@ pub fn PageAtomComboBox() -> impl IntoView {
                 collection=fruits
                 filter=use_contains_filter()
                 disabled_keys=Signal::stored(HashSet::from([Key::from("Cherry")]))
-                on_change=Callback::new(move |keys: Vec<Key>| {
-                    let keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
-                    value.set(keys.join(","));
+                on_change=Callback::new(move |key: Option<Key>| {
+                    value.set(key.map(|k| k.to_string()).unwrap_or_default());
                 })
             >
                 <Label>"Fruit"</Label>
@@ -78,10 +77,10 @@ fn ModalComboBox() -> impl IntoView {
         |fruit| (*fruit).to_owned(),
     );
     let is_open = RwSignal::new(false);
-    let value = RwSignal::new(Vec::<Key>::new());
+    let value = RwSignal::new(None::<Key>);
     view! {
         <button id="test-cb-modal-open" on:click=move |_| is_open.set(true)>"Open modal"</button>
-        <div>"Modal value: " <span id="test-cb-modal-value">{move || join(&value.get())}</span></div>
+        <div>"Modal value: " <span id="test-cb-modal-value">{move || join(value.get().as_slice())}</span></div>
         <ModalBackdrop is_open=is_open set_open=is_open is_dismissable=true>
             <ModalContent>
                 <Dialog aria_label="Modal with combo box">
@@ -113,16 +112,16 @@ fn ControlledComboBox() -> impl IntoView {
         |fruit: &String| Key::from(fruit.as_str()),
         |fruit: &String| fruit.clone(),
     );
-    let value = RwSignal::new(vec![Key::from("Apple")]);
+    let value = RwSignal::new(Some(Key::from("Apple")));
     view! {
-        <button id="test-cb-controlled-set" on:click=move |_| value.set(vec![Key::from("Banana")])>
+        <button id="test-cb-controlled-set" on:click=move |_| value.set(Some(Key::from("Banana")))>
             "Select Banana"
         </button>
         <button
             id="test-cb-controlled-add"
             on:click=move |_| {
                 items.update(|items| items.push("Fig".to_owned()));
-                value.set(vec![Key::from("Fig")]);
+                value.set(Some(Key::from("Fig")));
             }
         >
             "Add and select Fig"
@@ -130,7 +129,7 @@ fn ControlledComboBox() -> impl IntoView {
         <button
             id="test-cb-controlled-select-then-add"
             on:click=move |_| {
-                value.set(vec![Key::from("Grape")]);
+                value.set(Some(Key::from("Grape")));
                 items.update(|items| items.push("Grape".to_owned()));
             }
         >
@@ -175,11 +174,9 @@ fn DerivedComboBox() -> impl IntoView {
         |source: &String| Key::from(source.as_str()),
         |source: &String| source.clone(),
     );
-    let value = Signal::derive(move || vec![Key::from(label(source.get()).as_str())]);
-    let set_value = move |keys: Vec<Key>| {
-        let process = keys
-            .first()
-            .and_then(|key| key.to_string().strip_prefix("Process ")?.parse().ok());
+    let value = Signal::derive(move || Some(Key::from(label(source.get()).as_str())));
+    let set_value = move |key: Option<Key>| {
+        let process = key.and_then(|key| key.to_string().strip_prefix("Process ")?.parse().ok());
         selected.set(process);
     };
     view! {
@@ -216,17 +213,17 @@ fn TimedComboBox() -> impl IntoView {
         |fruit| Key::from(*fruit),
         |fruit| (*fruit).to_owned(),
     );
-    let value = RwSignal::new(vec![Key::from("Apple")]);
+    let value = RwSignal::new(Some(Key::from("Apple")));
     let start = move |_| {
         set_timeout(
-            move || value.set(vec![Key::from("Banana")]),
+            move || value.set(Some(Key::from("Banana"))),
             std::time::Duration::from_millis(300),
         );
     };
     let trigger = RwSignal::new(false);
     Effect::new(move |_| {
         if trigger.get() {
-            value.set(vec![Key::from("Cherry")]);
+            value.set(Some(Key::from("Cherry")));
         }
     });
     view! {

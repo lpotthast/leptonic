@@ -25,6 +25,7 @@ use crate::{
         styles::Styles,
     },
 };
+use crate::utils::i18n::use_locale;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -139,9 +140,10 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     })
     .with_on_click(slider.label_props.on_click)
     .with_presence(label_presence)
-    .with_default_text(Signal::derive(move || {
-        <Ch::Color as ColorValue>::channel_name(channel).to_owned()
-    }));
+    .with_default_text({
+        let locale = use_locale();
+        Signal::derive(move || <Ch::Color as ColorValue>::channel_name(channel, &locale.get()))
+    });
     let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
     let context = ColorSliderContext {
         orientation,

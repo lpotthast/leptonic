@@ -135,16 +135,17 @@ async fn close_on_press_disabled_and_close_delay(page: &Page<'_>) -> Result<(), 
     page.send_keys_to_active(Key::Enter).await?;
     page.wait_for_text("test-tooltip-saves", "2").await?;
     // Settled: still open.
-    tokio::time::sleep(Duration::from_millis(300)).await;
-    assert_that!(page.count_matching(TOOLTIP).await?).is_equal_to(1);
+    stays!("the open tooltips", 1, page.count_matching(TOOLTIP).await?);
 
     // 800 ms close delay.
     let left = Instant::now();
     hover(page.driver, &page.element("test-tooltip-away").await?).await?;
-    tokio::time::sleep(Duration::from_millis(400)).await;
-    assert_that!(page.count_matching(TOOLTIP).await?)
-        .with_detail_message("still open while the close delay runs")
-        .is_equal_to(1);
+    stays_for!(
+        "the open tooltips while the close delay runs",
+        Duration::from_millis(400),
+        1,
+        page.count_matching(TOOLTIP).await?
+    );
     page.wait_for_no_selector(TOOLTIP).await?;
     assert_that!(left.elapsed() >= Duration::from_millis(700))
         .with_detail_message("closed after the close delay")
@@ -157,8 +158,12 @@ async fn focus_trigger_mode(page: &Page<'_>) -> Result<(), Report> {
     let focus_only = page.element("test-tooltip-focus-only").await?;
     hover(page.driver, &focus_only).await?;
     // Settled: hovering opened nothing.
-    tokio::time::sleep(Duration::from_millis(400)).await;
-    assert_that!(page.count_matching(TOOLTIP).await?).is_equal_to(0);
+    stays_for!(
+        "the open tooltips",
+        Duration::from_millis(400),
+        0,
+        page.count_matching(TOOLTIP).await?
+    );
 
     // Focused by keyboard (from "Save", focused by the press before).
     page.driver

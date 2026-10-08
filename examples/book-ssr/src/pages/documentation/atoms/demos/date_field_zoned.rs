@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::{
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         datepicker::{DateField, DateInput, DateSegment},
         field::Label,
     },
@@ -47,14 +47,18 @@ pub fn DateFieldZonedDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Read-only"
-            </Checkbox>
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=read_only set_selected=read_only>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Read-only"
+                </CheckboxButton>
+            </CheckboxField>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

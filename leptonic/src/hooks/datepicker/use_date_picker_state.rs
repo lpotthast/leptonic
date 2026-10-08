@@ -20,6 +20,7 @@ use crate::{
     },
     utils::{ValueBinding, i18n::use_locale},
 };
+use crate::utils::intl_strings::{DateValidationStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -308,6 +309,7 @@ pub fn use_date_picker_state<V: DateValue>(
         should_force_leading_zeros: should_force_leading_zeros.get(),
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
+    let strings = use_localized_strings::<DateValidationStrings>();
     let builtin_validation = Signal::derive(move || {
         let value = binding.value.get();
         let (min, max) = (min_value.get(), max_value.get());
@@ -318,6 +320,7 @@ pub fn use_date_picker_state<V: DateValue>(
             max.as_ref(),
             is_date_unavailable.get_value(),
             &formatter,
+            &strings.read(),
         ))
     });
     let validation = use_form_validation_state(UseFormValidationStateInput {

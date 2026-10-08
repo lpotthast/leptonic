@@ -18,6 +18,8 @@
 //!   sequential, e.g. with `BROWSER_TEST_VISIBLE=1`).
 #![cfg(not(target_arch = "wasm32"))]
 
+#[macro_use]
+mod polling;
 mod common;
 mod pages;
 mod ui_tests;
@@ -38,8 +40,13 @@ async fn browser_tests() -> Result<(), Report> {
     // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
     // leptonic's build script generates none.
     let app_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../testing/test-app");
-    let app = LeptosTestAppConfig::new(app_dir)
-        .with_app_name("leptonic test app")
+    let mut app = LeptosTestAppConfig::new(app_dir).with_app_name("leptonic test app");
+    // The app's own target dir (`TEST_APP_TARGET_DIR`), so that a `CARGO_TARGET_DIR` set for this
+    // crate doesn't also receive the app's server and wasm builds.
+    if let Some(target_dir) = std::env::var_os("TEST_APP_TARGET_DIR") {
+        app = app.with_env("CARGO_TARGET_DIR", target_dir);
+    }
+    let app = app
         .start()
         .await
         .map_err(Report::into_dynamic)?;

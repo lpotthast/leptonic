@@ -192,8 +192,10 @@ pub fn PageNumberFormatter() -> impl IntoView {
                         <TableCell><Code inline=true>"parse::<T>(text)"</Code></TableCell>
                         <TableCell>
                             "The number as any primitive integer or float type, exactly. "<Code inline=true>"None"</Code>
-                            " for empty or invalid text, and when "<Code inline=true>"T"</Code>" can\u{2019}t hold the value "
-                            "(out of range, or fraction digits for an integer type)."
+                            " for empty or invalid text, for fraction digits when "<Code inline=true>"T"</Code>" is an integer "
+                            "type, and beyond a float\u{2019}s range. Integers beyond "<Code inline=true>"T"</Code>"\u{2019}s range "
+                            "saturate at its bounds (\u{201c}300\u{201d} is a "<Code inline=true>"u8"</Code>"\u{2019}s 255), which a "
+                            "number field then clamps to its own range."
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -224,7 +226,8 @@ pub fn PageNumberFormatter() -> impl IntoView {
 
                         let parser = NumberParser::new(&Locale::from(locale!("de-DE")), &NumberFormatOptions::default());
                         assert_eq!(parser.parse::<f64>("1.234,56"), Some(1234.56));
-                        assert_eq!(parser.parse::<u8>("1.234"), None); // too large for a u8
+                        assert_eq!(parser.parse::<u8>("1.234"), Some(255)); // saturates at u8::MAX
+                        assert_eq!(parser.parse::<u8>("1,5"), None); // fraction digits for an integer type
                     "#)}
                 </Code>
             </Section>

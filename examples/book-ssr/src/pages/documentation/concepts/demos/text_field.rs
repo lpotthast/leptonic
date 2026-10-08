@@ -1,5 +1,5 @@
 use leptonic::atoms::{
-    checkbox::Checkbox,
+    checkbox::{CheckboxButton, CheckboxField},
     field::{Description, Label},
     input::Input,
     text_field::TextField,
@@ -21,10 +21,12 @@ pub fn TextFieldConceptDemo() -> impl IntoView {
             {move || name.with(|name| if name.is_empty() { "Hello, stranger!".to_owned() } else { format!("Hello, {name}!") })}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

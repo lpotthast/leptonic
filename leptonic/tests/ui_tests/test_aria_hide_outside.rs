@@ -199,13 +199,14 @@ async fn mutations(page: &Page<'_>) -> Result<(), Report> {
     page.click_element_with_id("test-aho-mo-reparent-target-button")
         .await?;
     page.wait_for_selector("#test-aho-mo-li-target").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_that!(
-        page.count_matching("#test-aho-mo [aria-hidden] #test-aho-mo-li-target, #test-aho-mo-li-target[aria-hidden], #test-aho-mo-li-target-list[aria-hidden]")
-            .await?
-    )
-    .with_detail_message("the item reparented into the target is hidden")
-    .is_equal_to(0);
+    stays!(
+        "the item reparented into the target is hidden",
+        0,
+        page.count_matching(
+            "#test-aho-mo [aria-hidden] #test-aho-mo-li-target, #test-aho-mo-li-target[aria-hidden], #test-aho-mo-li-target-list[aria-hidden]"
+        )
+        .await?
+    );
     page.click_element_with_id("test-aho-mo-reparent-hidden-button")
         .await?;
     page.wait_for_selector("#test-aho-mo-li-hidden").await?;

@@ -6,7 +6,9 @@ use super::{
     AreaGradient, BlendMode, ColorChannelRange, ColorSpaceAxes, ColorValue, ParseColorError,
     axes_of, line_end,
 };
-use crate::utils::{locale::WritingDirection, number_formatter::NumberFormatOptions};
+use crate::utils::{
+    i18n::Locale, locale::WritingDirection, number_formatter::NumberFormatOptions,
+};
 
 /// A channel of the RGB color space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -179,12 +181,13 @@ impl ColorValue for RGB8 {
         NumberFormatOptions::default()
     }
 
-    fn channel_name(channel: RgbChannel) -> &'static str {
-        match channel {
-            RgbChannel::Red => "Red",
-            RgbChannel::Green => "Green",
-            RgbChannel::Blue => "Blue",
-        }
+    fn channel_name(channel: RgbChannel, locale: &Locale) -> String {
+        let key = match channel {
+            RgbChannel::Red => "red",
+            RgbChannel::Green => "green",
+            RgbChannel::Blue => "blue",
+        };
+        super::naming::channel_name(key, locale)
     }
 
     fn display_color(&self, _channel: RgbChannel) -> Self {

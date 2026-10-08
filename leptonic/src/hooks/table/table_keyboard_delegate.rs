@@ -99,30 +99,20 @@ impl TableKeyboardDelegate {
     }
 
     fn first_row(&self) -> Option<Key> {
-        self.with(|t| {
-            t.rows()
-                .find(|n| !self.grid.is_disabled(&n.key))
-                .map(|n| n.key.clone())
-        })
+        self.grid.row_after(None)
     }
 
-    /// The enabled body row after `row`.
+    /// The enabled row shown after `row` (in a tree table, child rows of expanded rows too).
     fn next_row(&self, row: &Key) -> Option<Key> {
-        self.with(|t| {
-            t.rows()
-                .skip_while(|n| n.key != *row)
-                .skip(1)
-                .find(|n| !self.grid.is_disabled(&n.key))
-                .map(|n| n.key.clone())
-        })
+        self.grid.row_after(Some(row))
     }
 
     fn first_cell_of(&self, row: &Key) -> Option<Key> {
-        self.with(|t| t.collection().children(row).next().map(|n| n.key.clone()))
+        self.with(|t| t.collection().cells(row).next().map(|n| n.key.clone()))
     }
 
     fn last_cell_of(&self, row: &Key) -> Option<Key> {
-        self.with(|t| t.collection().children(row).last().map(|n| n.key.clone()))
+        self.with(|t| t.collection().cells(row).last().map(|n| n.key.clone()))
     }
 }
 
@@ -248,7 +238,7 @@ impl KeyboardDelegate for TableKeyboardDelegate {
             }
             let row_header_cell = self.with(|t| {
                 t.collection()
-                    .children(&k)
+                    .cells(&k)
                     .find(|cell| {
                         t.cell_column(&cell.key)
                             .is_some_and(|c| t.row_header_columns().contains(&c.key))

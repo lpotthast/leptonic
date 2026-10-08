@@ -15,7 +15,7 @@ use crate::{
         collections::{
             CloseOnSelect, Key, LinkBehavior, SelectionMode, UseSelectableItemAttrs,
             UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
-            use_selectable_item,
+            use_node_aria_label, use_selectable_item,
         },
         focus::use_focus_visible::{
             Modality, UseFocusVisibleInput, get_modality, set_modality, use_focus_visible,
@@ -87,10 +87,11 @@ pub struct UseMenuItemReturn {
 /// Props for the menu item element.
 #[derive(Debug)]
 pub struct UseMenuItemProps {
-    pub role: AriaRole,
+    /// Follows the menu's selection mode.
+    pub role: Signal<AriaRole>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_checked: Signal<Option<AriaChecked>>,
-    pub aria_label: Option<String>,
+    pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
@@ -108,10 +109,10 @@ pub struct UseMenuItemProps {
 
 pub type UseMenuItemAttrs = (
     (
-        Attr<attr::Role, AriaRole>,
+        Attr<attr::Role, Signal<AriaRole>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
         Attr<attr::AriaChecked, Signal<Option<AriaChecked>>>,
-        Attr<attr::AriaLabel, Option<String>>,
+        Attr<attr::AriaLabel, Signal<Option<String>>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
@@ -183,12 +184,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     } = menu;
     let selection = state.selection;
 
-    let aria_label = untrack(|| {
-        state.collection.with(|c| {
-            c.get(&key)
-                .and_then(|n| n.aria_label.as_deref().map(str::to_owned))
-        })
-    });
+    let aria_label = use_node_aria_label(state.collection, key.clone());
 
     let label = use_slot("label");
     let description = use_slot("description");
@@ -215,7 +211,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         is_disabled: Signal::stored(false),
         should_select_on_press_up: true,
         allows_different_press_origin: true,
-        on_action: None,
+        on_action: Signal::stored(None),
         link_behavior: LinkBehavior::None,
         focus: None,
         should_use_virtual_focus: false,
@@ -393,12 +389,12 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     UseMenuItemReturn {
         props: PropsWithStyles::new(
             UseMenuItemProps {
-                role: match untrack(|| selection.selection_mode()) {
+                role: Signal::derive(move || match selection.selection_mode() {
                     _ if is_trigger => AriaRole::Menuitem,
                     SelectionMode::None => AriaRole::Menuitem,
                     SelectionMode::Single => AriaRole::Menuitemradio,
                     SelectionMode::Multiple => AriaRole::Menuitemcheckbox,
-                },
+                }),
                 aria_disabled: Signal::derive(move || {
                     is_disabled.get().then_some(AriaDisabled::True)
                 }),
@@ -406,7 +402,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                     (!is_trigger && selection.selection_mode() != SelectionMode::None)
                         .then(|| AriaChecked::from(is_selected.get()))
                 }),
-                aria_label,
+                aria_label: aria_label.into(),
                 aria_labelledby: label.referenced_id,
                 aria_describedby: Signal::derive(move || {
                     let ids: Vec<String> = [description_id.get(), keyboard_id.get()]

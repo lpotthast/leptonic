@@ -120,6 +120,7 @@ pub fn TableHookDemo() -> impl IntoView {
     });
 
     let state = use_table_state(UseTableStateInput {
+        tree: None,
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
             // Disabled rows stay focusable; they only can't be selected.

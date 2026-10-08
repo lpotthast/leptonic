@@ -10,22 +10,33 @@ use leptonic::{
         ButtonType,
         collections::{Key, use_list_collection},
     },
+    selection_value,
 };
 use leptos::{ev::SubmitEvent, prelude::*, wasm_bindgen::JsCast};
 
-const SIZES: [(&str, &str); 5] = [
-    ("s", "Small"),
-    ("m", "Medium"),
-    ("l", "Large"),
-    ("xl", "X-Large"),
-    ("xxl", "XX-Large"),
+/// The sizes. The select's value is an `Option<Size>`; forms submit the keys named here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Size {
+    Small,
+    Medium,
+    Large,
+    XLarge,
+}
+
+selection_value!(Size { Small = "s", Medium = "m", Large = "l", XLarge = "xl" });
+
+const SIZES: [(Size, &str); 4] = [
+    (Size::Small, "Small"),
+    (Size::Medium, "Medium"),
+    (Size::Large, "Large"),
+    (Size::XLarge, "X-Large"),
 ];
 
 #[component]
 pub fn SelectFormDemo() -> impl IntoView {
     let sizes = use_list_collection(
         Signal::stored(SIZES.to_vec()),
-        |(key, _)| Key::from(*key),
+        |(size, _)| Key::from(*size),
         |(_, label)| (*label).to_owned(),
     );
     let submitted = RwSignal::new(None::<String>);
@@ -48,7 +59,7 @@ pub fn SelectFormDemo() -> impl IntoView {
     view! {
         <Form classes="demo-sel-form" on:submit=on_submit on:reset=move |_| submitted.set(None)>
             // `name` makes the select a form field; `HiddenSelect` holds its value.
-            <Select collection=sizes name="size" default_value=vec![Key::from("m")] classes="demo-sel">
+            <Select collection=sizes name="size" default_value=Some(Size::Medium) classes="demo-sel">
                 <Label classes="demo-sel-label">"T-shirt size"</Label>
                 <SelectTrigger classes="demo-sel-trigger">
                     <SelectValue classes="demo-sel-value"/>

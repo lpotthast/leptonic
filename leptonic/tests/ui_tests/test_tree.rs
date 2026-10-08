@@ -57,17 +57,8 @@ async fn visible_rows(page: &Page<'_>) -> Result<Vec<String>, Report> {
 }
 
 async fn expect_rows(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
-        let rows = visible_rows(page).await?;
-        if rows == expected {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected rows {expected:?}, got {rows:?}");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
+    wait_for!("the visible rows", expected, visible_rows(page).await?);
+    Ok(())
 }
 
 async fn expect_focus(page: &Page<'_>, text: &str) -> Result<(), Report> {
@@ -203,8 +194,8 @@ async fn tree_rows(page: &Page<'_>, tree: &str) -> Result<Vec<String>, Report> {
 
 async fn expect_tree_rows(page: &Page<'_>, tree: &str, expected: &[&str]) -> Result<(), Report> {
     let expected: Vec<String> = expected.iter().map(|s| (*s).to_owned()).collect();
-    page.wait_for_value("the visible rows", expected, || tree_rows(page, tree))
-        .await
+    wait_for!("the visible rows", expected, tree_rows(page, tree).await?);
+    Ok(())
 }
 
 async fn expect_tree_focus(page: &Page<'_>, tree: &str, text: &str) -> Result<(), Report> {
@@ -267,8 +258,11 @@ async fn disabled_items_cannot_be_used(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(school.attr("aria-expanded").await?).is_equal_to(Some("false".to_owned()));
     school.find(By::Css("button")).await?.click().await?;
     school.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-tc-all-expanded").await?).is_equal_to(String::new());
+    stays!(
+        "the text of #test-tc-all-expanded",
+        String::new(),
+        page.read_text_of("test-tc-all-expanded").await?
+    );
     assert_that!(page.read_text_of("test-tc-all-selection").await?).is_equal_to(String::new());
     assert_that!(school.attr("aria-expanded").await?).is_equal_to(Some("false".to_owned()));
 
@@ -325,7 +319,7 @@ async fn collapsing_the_parent_of_the_focused_row(page: &Page<'_>) -> Result<(),
     expect_tree_focus(page, TREE, "Notes").await
 }
 
-/// An item that gets children becomes expandable: it gets an expand button.
+/// An item that gets children becomes expandable: it gets an expand button and `aria-expanded`.
 async fn an_item_getting_children(page: &Page<'_>) -> Result<(), Report> {
     const TREE: &str = "Selection tree";
     let notes = tree_row(page, TREE, "Notes").await?;
@@ -333,13 +327,14 @@ async fn an_item_getting_children(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(notes.find_all(By::Css("button")).await?.len()).is_equal_to(0);
     page.click_element_with_id("test-tc-selection-add-child")
         .await?;
-    // (Its `aria-expanded` doesn't follow yet: `use_grid_list_item` reads `has_child_nodes`
-    // once.)
     let notes = tree_row(page, TREE, "Notes").await?;
-    page.wait_for_value("expand buttons of Notes", 1, || async {
-        Ok(notes.find_all(By::Css("button")).await?.len())
-    })
-    .await?;
+    wait_for!(
+        "expand buttons of Notes",
+        1,
+        notes.find_all(By::Css("button")).await?.len()
+    );
+    page.wait_for_attr(&notes, "aria-expanded", Some("false"))
+        .await?;
     let button = notes.find(By::Css("button")).await?;
     assert_that!(button.attr("aria-label").await?).is_equal_to(Some("Expand".to_owned()));
     button.click().await?;
@@ -348,5 +343,7 @@ async fn an_item_getting_children(page: &Page<'_>) -> Result<(), Report> {
         TREE,
         &["Photos", "Projects", "School", "Notes", "Draft"],
     )
-    .await
+    .await?;
+    page.wait_for_attr(&notes, "aria-expanded", Some("true"))
+        .await
 }

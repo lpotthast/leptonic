@@ -74,7 +74,7 @@ pub fn PageTimeFieldOverview() -> impl IntoView {
                     "A time field is a "<Code inline=true>"role=\"group\""</Code>" of spin buttons, as a date field: see the "
                     <Link href=format!("{}#accessibility", routes::doc::DateField.materialize())>"Date Field overview"</Link>
                     " for its semantics and keys. Once it has a value, it is described by it (\u{201c}Selected Time: "
-                    "2:30 PM\u{201d}, in English for now). "<Keys keys="PageUp"/>" and "<Keys keys="PageDown"/>" step "
+                    "2:30 PM\u{201d} in English). "<Keys keys="PageUp"/>" and "<Keys keys="PageDown"/>" step "
                     "the hour by 2 and the minutes and seconds by 15."
                 </p>
             </Section>

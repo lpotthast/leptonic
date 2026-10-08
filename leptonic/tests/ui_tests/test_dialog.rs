@@ -125,6 +125,21 @@ impl BrowserTest<str> for DialogTests {
                 .await?
         )
         .is_equal_to(1);
+        // A modal nested in its markup: Escape closes only the nested one, focus returns to its
+        // trigger inside the outer modal.
+        page.click_element_with_id("test-dialog-nested-trigger")
+            .await?;
+        page.wait_for_focus("dialog", Some("Inside nested")).await?;
+        page.send_keys_to_active(Key::Escape).await?;
+        page.wait_for_no_selector("[role=dialog][aria-label=Nested]")
+            .await?;
+        page.wait_for_active_id("test-dialog-nested-trigger")
+            .await?;
+        assert_that!(
+            page.count_matching("[role=dialog][aria-label=Triggered]")
+                .await?
+        )
+        .is_equal_to(1);
         page.send_keys_to_active(Key::Escape).await?;
         page.wait_for_no_selector("[role=dialog][aria-label=Triggered]")
             .await?;

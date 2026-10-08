@@ -4,7 +4,7 @@
 // Upstream: react-aria-components/test/TimeField.test.js @ 99e6102368
 // Upstream: react-aria/test/datepicker/useDatePicker.test.tsx @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/datepicker/DatePickerBase.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
 use browser_test::{
@@ -91,9 +91,7 @@ async fn expect_value_unchanged(
     expected: &str,
 ) -> Result<(), Report> {
     let id = format!("test-dp-{section}-value");
-    assert_that!(page.read_text_of(&id).await?).is_equal_to(expected.to_owned());
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of(&id).await?).is_equal_to(expected.to_owned());
+    stays!(id, expected.to_owned(), page.read_text_of(&id).await?);
     Ok(())
 }
 
@@ -169,8 +167,11 @@ async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     wait_for_value(page, "close-false", "2019-02-04").await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.count_matching("[role=dialog]").await?).is_equal_to(1);
+    stays!(
+        "open dialogs",
+        1,
+        page.count_matching("[role=dialog]").await?
+    );
     page.send_keys_to_active(Key::Escape).await?;
     page.wait_for_no_selector("[role=dialog]").await
 }
@@ -196,13 +197,11 @@ async fn programmatic_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input_text(page, "empty").await?.as_str()).contains("mm");
     page.click_element_with_id("test-dp-empty-set").await?;
     wait_for_value(page, "empty", "2020-02-03").await?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    while !input_text(page, "empty").await?.contains("2020") {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("the field doesn't show the value set");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the field showing the year set",
+        true,
+        input_text(page, "empty").await?.contains("2020")
+    );
     Ok(())
 }
 
@@ -234,24 +233,12 @@ async fn wait_for_description(
     text: &str,
     present: bool,
 ) -> Result<(), Report> {
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    loop {
-        let described = descriptions(page, element).await?;
-        if described.contains(text) == present {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!(
-                "expected the description {} {text:?}, got {described:?}",
-                if present {
-                    "to contain"
-                } else {
-                    "not to contain"
-                }
-            );
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        format!("whether the description contains {text:?}"),
+        present,
+        descriptions(page, element).await?.contains(text)
+    );
+    Ok(())
 }
 
 /// The browser's message for a missing required value.
@@ -290,13 +277,11 @@ async fn required_picker(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys_to_active(Key::Up).await?;
     page.press_tab().await?;
     page.send_keys_to_active(Key::Up).await?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    while !input_valid(page, input).await? {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("the picker's input didn't become valid");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the picker's input validity",
+        true,
+        input_valid(page, input).await?
+    );
     assert_that!(descriptions(page, &group).await?.as_str()).contains(message.as_str());
 
     page.click_element_with_id("test-dp-required-after").await?;
@@ -322,13 +307,11 @@ async fn required_time_field(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys_to_active(Key::Up).await?;
     page.press_tab().await?;
     page.send_keys_to_active(Key::Up).await?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    while !input_valid(page, input).await? {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("the time field's input didn't become valid");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the time field's input validity",
+        true,
+        input_valid(page, input).await?
+    );
     assert_that!(descriptions(page, &group).await?.as_str()).contains(message.as_str());
     page.click_element_with_id("test-dp-time-required-after")
         .await?;
@@ -372,8 +355,11 @@ async fn range_placeholder_times(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     // Waits for the times while open.
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.count_matching("[role=dialog]").await?).is_equal_to(1);
+    stays!(
+        "open dialogs",
+        1,
+        page.count_matching("[role=dialog]").await?
+    );
     expect_value_unchanged(page, "range-open", "none").await?;
     page.send_keys_to_active(Key::Escape).await?;
     page.wait_for_no_selector("[role=dialog]").await?;
@@ -392,8 +378,11 @@ async fn enter_does_nothing(page: &Page<'_>) -> Result<(), Report> {
     year.click().await?;
     page.wait_for_focus_on(&year, "the year").await?;
     page.send_keys_to_active(Key::Enter).await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    page.wait_for_focus_on(&year, "the year").await?;
+    stays!(
+        "focus on the year",
+        true,
+        page.driver.active_element().await? == year
+    );
     // A submitted form would have reloaded the page with `?keys=...`.
     let url = page.driver.current_url().await?;
     assert_that!(url.query().unwrap_or_default().contains("keys")).is_false();
@@ -485,16 +474,11 @@ async fn autofill(page: &Page<'_>) -> Result<(), Report> {
     let container = input.find(By::XPath("..")).await?;
     assert_that!(attr(&container, "aria-hidden").await?).is_equal_to(Some("true".to_owned()));
     fill_hidden_date_input(page, "empty-field", "2000-05-30").await?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    while input_text(page, "empty-field").await? != "5/30/2000" {
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!(
-                "the field shows {:?}",
-                input_text(page, "empty-field").await?
-            );
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    wait_for!(
+        "the autofilled field's text",
+        "5/30/2000",
+        input_text(page, "empty-field").await?
+    );
 
     fill_hidden_date_input(page, "empty", "2000-05-30").await?;
     wait_for_value(page, "empty", "2000-05-30").await
@@ -516,19 +500,23 @@ async fn selection_while_elsewhere(page: &Page<'_>) -> Result<(), Report> {
             vec![year.to_json()?],
         )
         .await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_that!(page.active_element_id().await?)
-        .is_equal_to(Some("test-dp-keys-before".to_owned()));
+    stays!(
+        "the focused element",
+        Some("test-dp-keys-before".to_owned()),
+        page.active_element_id().await?
+    );
     Ok(())
 }
 
-/// A German date field: day, month, year, two-digit day and month, typed in that order.
+/// A German date field: day, month, year, two-digit day and month, typed in that order; its
+/// segments are named in German ("Tag").
 async fn german_order(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(segment_types(page, "de").await?)
         .is_equal_to(["day", "month", "year"].map(str::to_owned).to_vec());
     assert_that!(input_text(page, "de").await?.as_str()).is_equal_to("05.06.2024");
     let day = segment(page, "de", "day").await?;
-    assert_that!(attr(&day, "aria-label").await?.unwrap_or_default().as_str()).starts_with("day");
+    // Segment names follow the locale.
+    assert_that!(attr(&day, "aria-label").await?.unwrap_or_default().as_str()).starts_with("Tag");
     day.click().await?;
     page.wait_for_focus_on(&day, "the day").await?;
     type_text(page, "17").await?;
@@ -581,10 +569,46 @@ async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(style.as_str()).contains("direction:ltr");
     assert_that!(style.as_str()).contains("unicode-bidi:embed");
 
-    // Open: arrow keys by position in right-to-left locales (react-spectrum
-    // `DatePickerBase.test.js`) stop at the leftmost date segment instead of reaching the button
-    // (PLAN.md).
+    // Arrow keys by position ("DatePicker should support arrow keys to move between segments in
+    // an RTL locale", react-spectrum `DatePickerBase.test.js`): ArrowLeft walks leftwards through
+    // the segments to the button, ArrowRight back.
+    let button = page.css("#test-dp-rtl button").await?;
+    // Focused directly, as upstream does (a click at the center of a bidi-embedded segment can
+    // land on its neighbor).
+    page.driver
+        .execute("arguments[0].focus();", vec![day.to_json()?])
+        .await?;
+    page.wait_for_focus_on(&day, "the day").await?;
+    let mut left = active_left(page).await?;
+    let mut steps = 0;
+    while page.driver.active_element().await? != button {
+        steps += 1;
+        if steps > 6 {
+            leptos_browser_test::bail!("ArrowLeft didn't reach the button from the day");
+        }
+        page.send_keys_to_active(Key::Left).await?;
+        wait_for!("focus moving left", true, active_left(page).await? < left);
+        left = active_left(page).await?;
+    }
+    page.send_keys_to_active(Key::Right).await?;
+    wait_for!(
+        "focus moving right of the button",
+        true,
+        active_left(page).await? > left
+    );
     Ok(())
+}
+
+/// The left edge of the focused element.
+async fn active_left(page: &Page<'_>) -> Result<f64, Report> {
+    Ok(page
+        .driver
+        .execute(
+            "return document.activeElement.getBoundingClientRect().left;",
+            vec![],
+        )
+        .await?
+        .convert()?)
 }
 
 /// Switching the locale to a right-to-left one embeds the segments left to right (the styles
@@ -597,19 +621,13 @@ async fn switching_to_right_to_left(page: &Page<'_>) -> Result<(), Report> {
         .replace(' ', "");
     assert_that!(style.contains("unicode-bidi")).is_false();
     page.click_element_with_id("test-dp-switch-he").await?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    loop {
+    wait_for!("the day segment's isolation in he-IL", true, {
         let day = segment(page, "switch", "day").await?;
         let style = attr(&day, "style")
             .await?
             .unwrap_or_default()
             .replace(' ', "");
-        if style.contains("unicode-bidi:embed") && style.contains("direction:ltr") {
-            return Ok(());
-        }
-        if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("the segment styles didn't follow the locale: {style:?}");
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+        style.contains("unicode-bidi:embed") && style.contains("direction:ltr")
+    });
+    Ok(())
 }

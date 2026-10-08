@@ -1,9 +1,10 @@
 use leptonic::{
-    atoms::checkbox::Checkbox,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
         css::CssColor,
+        i18n::use_locale,
         style::BackgroundColorProperty,
     },
 };
@@ -11,6 +12,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorAreaDemo() -> impl IntoView {
+    let locale = use_locale();
     let disabled = RwSignal::new(false);
 
     let state = use_color_area_state(UseColorAreaStateInput {
@@ -64,12 +66,14 @@ pub fn ColorAreaDemo() -> impl IntoView {
             </div>
         </div>
 
-        <p class="demo-status">{move || format!("Color: {}, {}", color.get().to_rgb8(), color.get().color_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, {}", color.get().to_rgb8(), color.get().color_name(&locale.get()))}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

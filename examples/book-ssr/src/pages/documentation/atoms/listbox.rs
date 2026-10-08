@@ -200,7 +200,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                 </p>
                 <Section title="Props" id="listbox-item-props">
                     <ApiTable kind=ApiKind::Props of="ListBoxItem">
-                        <ApiRow name="key" ty="Key">"The option\u{2019}s key in the listbox\u{2019}s collection. Required."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The option\u{2019}s key in the listbox\u{2019}s collection (a key that isn\u{2019}t there warns in debug builds). Required."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the option "<Code inline=true>"<div>"</Code>"."
                         </ApiRow>

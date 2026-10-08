@@ -1,7 +1,6 @@
 // Upstream: react-aria/test/interactions/useMove.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
-use assertr::prelude::*;
 use browser_test::{
     BrowserTest, async_trait,
     thirtyfour::{Key, WebDriver},
@@ -138,9 +137,11 @@ async fn fire(
 
 /// The log stays as it is (waiting briefly for wrong events).
 async fn expect_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    assert_that!(page.element("test-move-log").await?.text().await?)
-        .is_equal_to(expected.to_owned());
+    stays!(
+        "the text of #test-move-log",
+        expected.to_owned(),
+        page.element("test-move-log").await?.text().await?
+    );
     Ok(())
 }
 

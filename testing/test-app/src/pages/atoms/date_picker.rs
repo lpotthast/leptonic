@@ -181,7 +181,7 @@ fn LocaleSwitch(id: &'static str, to: &'static str) -> impl IntoView {
 /// - range-time: a range picker of dates and times (to the second) on January 2023.
 /// - range-open: a range picker of dates and times not closing on select, placeholder time 10:30.
 /// - keys: a date field on December 31, 2024; empty: an empty date field.
-/// - de: a German date field (June 5, 2024); rtl: a Hebrew date picker with a time; switch: an
+/// - de: a German date field (June 5, 2024); rtl: a Hebrew date picker with a time (`dir="rtl"`); switch: an
 ///   English date field switching to Hebrew.
 #[component]
 pub fn PageAtomDatePicker() -> impl IntoView {
@@ -302,7 +302,10 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                     </TimeField>
                 </I18nProvider>
             </section>
-            <section id="test-dp-rtl">
+            // Laid out right to left, as an app does (`I18nProvider` renders no `dir`), the group's
+            // parts in a row.
+            <section id="test-dp-rtl" dir="rtl">
+                <style>"#test-dp-rtl .leptonic-DatePickerGroup { display: inline-flex; }"</style>
                 <I18nProvider locale=locale("he-IL")>
                     <DatePicker<DateTime>
                         value=rtl

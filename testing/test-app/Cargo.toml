@@ -40,7 +40,7 @@ axum = { version = "0.8.9", optional = true, default-features = false, features 
 console_error_panic_hook = { version = "0.1.7", default-features = false }
 # `TimeoutFuture`: a stand-in for a download in the clipboard fixture.
 gloo-timers = { version = "0.4.0", default-features = false, features = ["futures"] }
-leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard"] }
+leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard", "intl-strings"] }
 leptos = { version = "0.8.22", default-features = false }
 leptos_axum = { version = "0.8.10", optional = true, default-features = false, features = ["default"] }
 leptos_meta = { version = "0.8.7", default-features = false }

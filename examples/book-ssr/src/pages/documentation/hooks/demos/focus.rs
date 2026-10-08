@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use leptonic::{atoms::checkbox::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -36,10 +36,12 @@ pub fn FocusDemo() -> impl IntoView {
             {move || if is_focused.get() { "The field has focus." } else { "The field doesn\u{2019}t have focus." }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
 
         <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>

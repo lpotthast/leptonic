@@ -257,7 +257,7 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
                 <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
                 <li><Link href=routes::doc::focus::Focusable.materialize()>"Focusable"</Link></li>
-                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link></li>
+                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atom"</Link></li>
                 <li><Link href=routes::doc::dialog::Atom.materialize()>"Dialog Atoms"</Link>" ("<Code inline=true>"DialogTrigger"</Code>")"</li>
             </SeeAlso>
         </DocPage>

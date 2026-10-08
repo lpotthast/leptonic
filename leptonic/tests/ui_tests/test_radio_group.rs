@@ -39,6 +39,7 @@ impl BrowserTest<str> for RadioGroupTests {
         validation(&page).await?;
         controlled(&page).await?;
         label_context_stays_inside(&page).await?;
+        typed_values(&page).await?;
 
         Ok(())
     }
@@ -208,8 +209,7 @@ async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&a, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(attr(&radio(page, "Disabled group A").await?, "disabled").await?).is_some();
     a.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(attr(&a, "data-selected").await?).is_none();
+    stays!("data-selected of A", None, attr(&a, "data-selected").await?);
     Ok(())
 }
 
@@ -221,8 +221,11 @@ async fn read_only_group(page: &Page<'_>) -> Result<(), Report> {
     let a = label(page, "Read-only A").await?;
     let b = label(page, "Read-only B").await?;
     b.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(attr(&a, "data-selected").await?).is_equal_to(Some("true".to_owned()));
+    stays!(
+        "data-selected of A",
+        Some("true".to_owned()),
+        attr(&a, "data-selected").await?
+    );
     assert_that!(attr(&b, "data-selected").await?).is_none();
     assert_that!(radio(page, "Read-only A").await?.prop("checked").await?)
         .is_equal_to(Some("true".to_owned()));
@@ -235,9 +238,11 @@ async fn read_only_group(page: &Page<'_>) -> Result<(), Report> {
     let b_input = radio(page, "Read-only B").await?;
     page.wait_for_focus_on(&b_input, "Read-only B").await?;
     page.send_keys_to_active(Key::Space).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(radio(page, "Read-only A").await?.prop("checked").await?)
-        .is_equal_to(Some("true".to_owned()));
+    stays!(
+        "whether Read-only A is checked",
+        Some("true".to_owned()),
+        radio(page, "Read-only A").await?.prop("checked").await?
+    );
     assert_that!(b_input.prop("checked").await?).is_equal_to(Some("false".to_owned()));
     assert_that!(attr(&a, "data-selected").await?).is_equal_to(Some("true".to_owned()));
     Ok(())
@@ -320,5 +325,25 @@ async fn controlled(page: &Page<'_>) -> Result<(), Report> {
 async fn label_context_stays_inside(page: &Page<'_>) -> Result<(), Report> {
     let standalone = label(page, "Standalone label").await?;
     assert_that!(attr(&standalone, "id").await?).is_none();
+    Ok(())
+}
+
+/// A group with enum values (`selection_value!`): the app's signal holds the enum, the form
+/// submits the variant's key.
+async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
+    page.wait_for_text("test-rg-typed-value", "Some(Small)")
+        .await?;
+    label(page, "Typed large").await?.click().await?;
+    page.wait_for_text("test-rg-typed-value", "Some(Large)")
+        .await?;
+    let submitted: Vec<String> = page
+        .driver
+        .execute(
+            "return new FormData(document.getElementById('test-rg-typed-form')).getAll('size');",
+            vec![],
+        )
+        .await?
+        .convert()?;
+    assert_that!(submitted).is_equal_to(vec!["l".to_owned()]);
     Ok(())
 }

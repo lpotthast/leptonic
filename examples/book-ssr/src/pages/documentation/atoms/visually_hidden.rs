@@ -105,9 +105,9 @@ pub fn PageAtomVisuallyHidden() -> impl IntoView {
                 <p>
                     "Leptonic uses the atom itself: "
                     <Link href=routes::doc::overlay_behavior::DismissButton.materialize()><Code inline=true>"DismissButton"</Code></Link>
-                    " renders a visually hidden button that lets screen reader users close an overlay, and the "
-                    <Link href=routes::doc::slider::Atom.materialize()>"Slider atoms"</Link>" hide the native range "
-                    <Code inline=true>"<input>"</Code>" of each thumb in it, which screen readers and the keyboard operate."
+                    " renders a visually hidden button that lets screen reader users close an overlay, and each "
+                    <Link href=routes::doc::slider::Atom.materialize()>"SliderThumb"</Link>" atom hides its native range "
+                    <Code inline=true>"<input>"</Code>" in it, which screen readers and the keyboard operate."
                 </p>
             </Section>
 

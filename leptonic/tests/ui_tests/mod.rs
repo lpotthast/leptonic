@@ -1,5 +1,3 @@
-#[macro_use]
-mod polling;
 pub mod test_aria_hide_outside;
 pub mod test_breadcrumbs;
 pub mod test_button;
@@ -49,6 +47,7 @@ pub mod test_link;
 pub mod test_listbox;
 pub mod test_listbox_features;
 pub mod test_live_announcer;
+pub mod test_localized_atoms;
 pub mod test_long_press;
 pub mod test_menu;
 pub mod test_menu_atoms;
@@ -77,6 +76,7 @@ pub mod test_table;
 pub mod test_table_navigation;
 pub mod test_table_resizing;
 pub mod test_table_selection;
+pub mod test_table_tree;
 pub mod test_tabs;
 pub mod test_tag_group;
 pub mod test_tag_group_atoms;
@@ -182,6 +182,7 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_table::TableTests {})
         .with(test_table_navigation::TableNavigationTests {})
         .with(test_table_selection::TableSelectionTests {})
+        .with(test_table_tree::TableTreeTests {})
         .with(test_tabs::TabsTests {})
         .with(test_calendar::CalendarTests {})
         .with(test_calendar::RangeCalendarTouchTests {})
@@ -224,6 +225,7 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_spin_button::SpinButtonTests {})
         .with(test_submenu::SubmenuTests {})
         .with(test_link::LinkTests {})
+        .with(test_localized_atoms::LocalizedAtomTests {})
         .with(test_breadcrumbs::BreadcrumbsTests {})
         .with(test_disclosure::DisclosureTests {})
         .with(test_popover::PopoverTests {})

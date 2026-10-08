@@ -75,7 +75,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         );
 
                         view! {
-                            <ComboBox collection=fruits filter=use_contains_filter()>
+                            <ComboBox<Option<Key>> collection=fruits filter=use_contains_filter()>
                                 <Label>"Fruit"</Label>
                                 <Input/>
                                 <ComboBoxButton><span aria-hidden="true">"▼"</span></ComboBoxButton>
@@ -84,7 +84,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                                         <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
                                     </ListBox>
                                 </ComboBoxPopover>
-                            </ComboBox>
+                            </ComboBox<Option<Key>>>
                         }
                     "#)}
                 </Code>
@@ -115,6 +115,14 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     "which may contain any markup besides the parts."
                 </p>
                 <p>
+                    "Its type parameter "<Code inline=true>"S"</Code>" is the shape of its value, and so its selection mode: "
+                    <Code inline=true>"Option<V>"</Code>" selects one option, "<Code inline=true>"Vec<V>"</Code>" several. "
+                    <Code inline=true>"V"</Code>" is a "<Code inline=true>"Key"</Code>", a "<Code inline=true>"String"</Code>
+                    ", an integer or your enum (see "<Link href=format!("{}#selectionvalue", routes::doc::CollectionState.materialize())>"SelectionValue"</Link>
+                    "). A typed "<Code inline=true>"value"</Code>" or "<Code inline=true>"default_value"</Code>" fixes it; "
+                    "without one, name it, as in "<Code inline=true>"<ComboBox<Option<Key>>>"</Code>"."
+                </p>
+                <p>
                     "Label it with a "<Link href=routes::doc::field::Atom.materialize()>"Label"</Link>": a "
                     <Code inline=true>"<label>"</Code>" for the input, which also labels the button and the listbox. A "
                     <Code inline=true>"Description"</Code>" describes the input while it is rendered, and a "
@@ -129,16 +137,17 @@ pub fn PageAtomComboBox() -> impl IntoView {
                             "Shows the options matching the input, e.g. "<Code inline=true>"use_contains_filter()"</Code>
                             ". Without a filter, all options are shown."
                         </ApiRow>
-                        <ApiRow name="selection_mode" ty="SelectMode" default="Single">"One option or several."</ApiRow>
-                        <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">"The initially selected keys."</ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Vec<Key>>>" default="None">
-                            "The selected keys (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
+                        <ApiRow name="default_value" ty="S" default="S::default()">
+                            "The initially selected value: "<Code inline=true>"None"</Code>" or an empty "<Code inline=true>"Vec"</Code>" by default."
                         </ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Vec<Key>>>" default="None">
+                        <ApiRow name="value" ty="Option<Signal<S>>" default="None">
+                            "The selected value (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_value" ty="Option<Out<S>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
-                            "Called with the selected keys when they change."
+                        <ApiRow name="on_change" ty="Option<Callback<S>>" default="None">
+                            "Called with the selected value when it changes."
                         </ApiRow>
                         <ApiRow name="default_input_value" ty="Option<String>" default="None">
                             "The initial input text. By default, the selected option\u{2019}s text."
@@ -192,8 +201,9 @@ pub fn PageAtomComboBox() -> impl IntoView {
                             "Marks the combobox invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
                             <Code inline=true>"false"</Code>" leaves validation to the other sources."
                         </ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<ComboBoxValue>>" default="None">
-                            "Validates the input text and the selected keys."
+                        <ApiRow name="validate" ty="Option<ValidateFn<ComboBoxValue<S>>>" default="None">
+                            "Validates the input text ("<Code inline=true>"input_value"</Code>") and the selected value ("
+                            <Code inline=true>"value"</Code>") together."
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "

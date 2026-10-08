@@ -17,6 +17,12 @@
     color: var(--book-brand-text-color);
   }
 
+  // Prose reads better with room between its lines, which also keeps the backgrounds of inline code on consecutive
+  // lines from covering the line above. Demos keep their own line heights.
+  :is(p, li):not(.demo *) {
+    line-height: 1.6;
+  }
+
   // The direct link (`#`) after a heading, a space away from its text.
   .doc-heading-anchor {
     margin-inline-start: 0.3em;
@@ -122,6 +128,8 @@
     color: var(--book-code-color);
     font-family: var(--typography-code-font-family);
     font-size: var(--book-code-font-size);
+    font-variant-ligatures: none;
+    hyphens: manual;
     line-height: 1.6;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
@@ -143,6 +151,11 @@
       white-space: nowrap;
       overflow-wrap: normal;
     }
+  }
+
+  // Defaults are short values: they wrap between words, never inside one ("percent", not "perce-nt").
+  td.doc-table-default .doc-code[data-inline="true"] {
+    overflow-wrap: break-word;
   }
 
   th:last-child,

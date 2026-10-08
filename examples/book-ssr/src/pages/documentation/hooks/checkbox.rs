@@ -83,7 +83,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         ", convert the signal: "<Code inline=true>"ToggleState::from(rw_signal)"</Code>" or "
                         <Code inline=true>"ToggleState::from((read, write))"</Code>
                         ". The toggle then reads and writes the signal, like Leptos\u{2019} "
-                        <Code inline=true>"bind:checked"</Code>". The Checkbox atom takes your state as its "
+                        <Code inline=true>"bind:checked"</Code>". The "<Code inline=true>"CheckboxField"</Code>" atom takes your state as its "
                         <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" props instead."
                     </p>
                 </Section>
@@ -201,7 +201,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     <p>
                         "The visible native input below is the simplest setup. To draw your own box, hide the input with "
                         <Code inline=true>"visually_hidden_styles()"</Code>" and style the label, as the "
-                        <Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox atom"</Link>" does."
+                        <Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox"</Link>" atom does."
                     </p>
                     <Demo
                         description="Checkbox with an indeterminate toggle and a disabled toggle"

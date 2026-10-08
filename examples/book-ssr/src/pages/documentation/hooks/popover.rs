@@ -15,7 +15,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             <p>
                 "The "<Code inline=true>"use_popover"</Code>" hook gives an overlay you render yourself the behavior of a "
                 "popover: placement next to its trigger, dismissal and, while modal, a locked page. See the "
-                <Link href=routes::doc::Popover.materialize()>"Popover overview"</Link>" for when to use a popover."
+                <Link href=routes::doc::Popover.materialize()>"Popover overview"</Link>" for when to use a popover and for its keyboard interaction."
             </p>
 
             <ReactAria hook="usePopover"/>
@@ -262,12 +262,6 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Escape">"Closes the popover."</KeyRow>
-                    <KeyRow keys="Tab">"Moves focus; leaving the popover closes it. Contain focus with a FocusScope."</KeyRow>
-                </KeyboardTable>
-            </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>

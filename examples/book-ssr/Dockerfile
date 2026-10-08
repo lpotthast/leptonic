@@ -17,9 +17,10 @@ WORKDIR /build
 ARG DEFAULT_LEPTOS_OUTPUT_NAME
 
 RUN <<EOF
-    apt update
-    apt upgrade
-    apt install -y curl tar ca-certificates pkg-config libssl-dev git unzip gzip brotli zstd musl-tools musl-dev clang llvm npm --no-install-recommends
+    set -eu
+    apt-get update
+    apt-get upgrade -y
+    apt-get install -y curl tar ca-certificates pkg-config libssl-dev git unzip gzip brotli zstd musl-tools musl-dev clang llvm npm --no-install-recommends
 
     rustup default stable
     rustup target add x86_64-unknown-linux-musl
@@ -43,6 +44,7 @@ ENV LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl"
 ENV LEPTOS_OUTPUT_NAME=${DEFAULT_LEPTOS_OUTPUT_NAME}
 
 RUN <<EOF
+    set -eu
     cargo leptos build --release
 
     /bin/bash ./precompress.sh "/build/examples/book-ssr/target/site"

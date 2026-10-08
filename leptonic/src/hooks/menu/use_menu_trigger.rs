@@ -23,6 +23,7 @@ use crate::{
         pointer_type::PointerType,
     },
 };
+use crate::utils::intl_strings::{MenuStrings, use_localized_strings};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenuTrigger.ts
 
@@ -35,9 +36,6 @@ use crate::{
 //   are `AriaButtonProps` too, but also smuggle DOM handlers for long press through
 //   `PressResponder`. Leptonic's `use_press` handles long presses itself, so everything fits into
 //   the button input and the trigger element gets exactly one press handler.
-//
-// ## OMITTED FEATURES
-// - Localized long press description (English only, until leptonic has localized strings).
 //
 // =============================================================================
 
@@ -74,7 +72,7 @@ pub struct UseMenuTriggerInput<S: MenuTriggerStateApi> {
 /// The return value of the `use_menu_trigger` hook.
 #[derive(Debug)]
 pub struct UseMenuTriggerReturn {
-    /// Configuration for the trigger button. Pass it to [`use_button`](crate::hooks::use_button),
+    /// Configuration for the trigger button. Pass it to [`use_button`](fn@crate::hooks::use_button),
     /// adding your own settings with struct update syntax:
     /// `use_button(UseButtonInput { on_hover_start: .., ..menu_trigger.button })`.
     pub button: UseButtonInput,
@@ -232,9 +230,10 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
             on_long_press: Some(Callback::new(move |_: LongPressEvent| {
                 state.open(Some(FocusStrategy::First));
             })),
-            long_press_accessibility_description: MaybeProp::from(
-                "Long press or press Alt + ArrowDown to open menu".to_owned(),
-            ),
+            long_press_accessibility_description: {
+                let strings = use_localized_strings::<MenuStrings>();
+                Signal::derive(move || Some(strings.read().long_press_message())).into()
+            },
             ..UseButtonInput::default()
         },
     };

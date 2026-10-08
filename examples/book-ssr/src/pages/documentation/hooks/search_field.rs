@@ -11,7 +11,7 @@ pub fn PageUseSearchField() -> impl IntoView {
                 "The "<Code inline=true>"use_search_field"</Code>" hook turns a "
                 <Link href=format!("{}#use-text-field", routes::doc::text_field::Hook.materialize())>"use_text_field"</Link>" input into a search field "
                 "that submits on "<Keys keys="Enter"/>" and clears on "<Keys keys="Escape"/>". See the "
-                <Link href=routes::doc::SearchField.materialize()>"Search Field overview"</Link>" for concept guidance."
+                <Link href=routes::doc::SearchField.materialize()>"Search Field overview"</Link>" for concept guidance and keyboard interaction."
             </p>
 
             <ReactAria hook="useSearchField"/>
@@ -71,16 +71,6 @@ pub fn PageUseSearchField() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Enter">"Calls "<Code inline=true>"on_submit"</Code>" with the value, or submits the form without it."</KeyRow>
-                    <KeyRow keys="Escape">
-                        "Empties a non-empty field and calls "<Code inline=true>"on_clear"</Code>". In an empty field, the key "
-                        "is left to surrounding elements, so it can close a dialog."
-                    </KeyRow>
-                </KeyboardTable>
-                <p>"While the field is read-only, both keys are left to the browser and surrounding elements."</p>
-            </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::SearchField.materialize()>"Search Field overview"</Link></li>

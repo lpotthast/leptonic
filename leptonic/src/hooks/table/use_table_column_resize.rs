@@ -13,7 +13,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use super::{
-    messages, table_utils::ColumnSize, use_table::TableData,
+    table_utils::ColumnSize, use_table::TableData,
     use_table_column_resize_state::TableColumnResizeState,
 };
 use crate::{
@@ -30,6 +30,7 @@ use crate::{
         focus::focus_safely,
         i18n::use_direction,
         id::use_id,
+        intl_strings::{TableStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         locale::WritingDirection,
         pointer_type::PointerType,
@@ -57,7 +58,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct UseTableColumnResizeInput {
     pub state: TableColumnResizeState,
-    /// The table (from [`use_table`](super::use_table)), for the column header's id.
+    /// The table (from [`use_table`](fn@super::use_table)), for the column header's id.
     pub table: TableData,
     /// The column this resizer resizes.
     pub column: Key,
@@ -281,12 +282,6 @@ impl Resizer {
             false
         }
     }
-}
-
-fn has_touch_events() -> bool {
-    leptos_use::use_window()
-        .as_ref()
-        .is_some_and(|window| js_sys::Reflect::has(window, &"ontouchstart".into()).unwrap_or(false))
 }
 
 /// Provides the behavior and accessibility of a table column resizer: a handle resizing its
@@ -513,16 +508,17 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
 
     // Keyboard users without a trigger are told how to start resizing.
     let modality = use_interaction_modality();
+    let strings = use_localized_strings::<TableStrings>();
     let has_trigger = trigger.is_some();
     let description = Signal::derive(move || {
         let modality = match modality.get() {
-            Some(Modality::Virtual) if has_touch_events() => None,
+            Some(Modality::Virtual) if crate::utils::platform::device::has_touch_events() => None,
             modality => modality,
         };
         let describes = !has_trigger
             && matches!(modality, Some(Modality::Keyboard | Modality::Virtual))
             && !is_resizing.get();
-        describes.then(|| messages::RESIZER_DESCRIPTION.to_owned())
+        describes.then(|| strings.read().resizer_description())
     });
     let aria_describedby = use_description(description);
 
@@ -561,7 +557,9 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                 id,
                 aria_label,
                 aria_describedby,
-                aria_valuetext: Signal::derive(move || messages::column_size(value.get())),
+                aria_valuetext: Signal::derive(move || {
+                    strings.read().column_size(&value.get().to_string())
+                }),
                 min,
                 max,
                 value,

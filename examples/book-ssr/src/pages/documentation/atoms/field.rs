@@ -45,14 +45,14 @@ pub fn PageAtomField() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::atoms::{
                             field::{Description, FieldError, Label},
-                            radio::{Radio, RadioGroup},
+                            radio::{RadioButton, RadioField, RadioGroup},
                         };
 
                         view! {
                             <RadioGroup is_required=true>
                                 <Label>"Shipping"</Label>
-                                <Radio value="standard">"Standard"</Radio>
-                                <Radio value="express">"Express"</Radio>
+                                <RadioField value="standard"><RadioButton>"Standard"</RadioButton></RadioField>
+                                <RadioField value="express"><RadioButton>"Express"</RadioButton></RadioField>
                                 <Description>"Express arrives within two business days."</Description>
                                 <FieldError/>
                             </RadioGroup>

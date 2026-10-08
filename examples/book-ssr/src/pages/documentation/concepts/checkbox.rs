@@ -60,7 +60,7 @@ pub fn PageCheckboxOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></TableCell>
                         <TableCell>
-                            "Unstyled "<Code inline=true>"Checkbox"</Code>" and "<Code inline=true>"CheckboxGroup"</Code>
+                            "Unstyled "<Code inline=true>"CheckboxField"</Code>", "<Code inline=true>"CheckboxButton"</Code>" and "<Code inline=true>"CheckboxGroup"</Code>
                             " with their parts, styled through data attributes."
                         </TableCell>
                     </TableRow>
@@ -69,10 +69,11 @@ pub fn PageCheckboxOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "Pass the "<Code inline=true>"Checkbox"</Code>" atom an "<Code inline=true>"RwSignal"</Code>" as "
-                    <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>", and the label as "
-                    "children; pressing the label toggles the checkbox too. The atom renders a "<Code inline=true>"<label>"</Code>
-                    " around a visually hidden input, so the box is drawn by your own markup, styled through the atom\u{2019}s "
+                    "Pass the "<Code inline=true>"CheckboxField"</Code>" atom an "<Code inline=true>"RwSignal"</Code>" as "
+                    <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>", and give its "
+                    <Code inline=true>"CheckboxButton"</Code>" the label as children; pressing the label toggles the checkbox too. "
+                    "The button renders a "<Code inline=true>"<label>"</Code>
+                    " around a visually hidden input, so the box is drawn by your own markup, styled through the button\u{2019}s "
                     "data attributes (the CSS is on the "
                     <Link href=format!("{}#styling", routes::doc::checkbox::Atom.materialize())>"Checkbox Atoms"</Link>" page):"
                 </p>

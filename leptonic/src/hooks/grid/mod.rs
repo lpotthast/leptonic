@@ -18,16 +18,24 @@ pub mod use_grid_row;
 /// A group of rows (like `<tbody>`).
 pub mod use_grid_row_group;
 
+/// Announces selection changes (many screen readers don't).
+pub mod use_grid_selection_announcement;
+
 /// A checkbox selecting a row.
 pub mod use_grid_selection_checkbox;
 
 /// Grid state: rows and cells, selection, focus (and refocusing when rows disappear).
 pub mod use_grid_state;
 
+/// How to select items whose press performs their action, on touch devices.
+pub mod use_highlight_selection_description;
+
 pub use grid_keyboard_delegate::*;
 pub use use_grid::*;
 pub use use_grid_cell::*;
 pub use use_grid_row::*;
 pub use use_grid_row_group::*;
+pub use use_grid_selection_announcement::*;
 pub use use_grid_selection_checkbox::*;
 pub use use_grid_state::*;
+pub use use_highlight_selection_description::*;

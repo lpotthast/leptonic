@@ -88,7 +88,7 @@ fn Showcase() -> impl IntoView {
         input::Input,
         popover::Popover,
         slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
-        switch::Switch,
+        switch::{SwitchButton, SwitchField},
         text_field::TextField,
     };
 
@@ -178,12 +178,14 @@ fn Showcase() -> impl IntoView {
                         <SliderThumb classes="book-welcome-slider-thumb"/>
                     </SliderTrack>
                 </Slider>
-                <Switch is_selected=notify set_selected=notify classes="book-welcome-switch">
-                    <span class="book-welcome-switch-track" aria-hidden="true">
-                        <span class="book-welcome-switch-thumb"></span>
-                    </span>
-                    "Email me before the launch"
-                </Switch>
+                <SwitchField is_selected=notify set_selected=notify>
+                    <SwitchButton classes="book-welcome-switch">
+                        <span class="book-welcome-switch-track" aria-hidden="true">
+                            <span class="book-welcome-switch-thumb"></span>
+                        </span>
+                        "Email me before the launch"
+                    </SwitchButton>
+                </SwitchField>
             </div>
             <div class="book-welcome-showcase-actions">
                 <Button on_press=save classes="book-welcome-button">"Save"</Button>

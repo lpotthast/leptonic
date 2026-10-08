@@ -1,12 +1,15 @@
 use leptonic::{
     atoms::prelude::{ColorThumb, ColorWheel, ColorWheelTrack},
-    utils::color::{ColorValue, HSV, HsvChannel},
+    utils::{
+        color::{ColorValue, HSV, HsvChannel},
+        i18n::use_locale,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorWheelConceptDemo() -> impl IntoView {
-    let locale = leptonic::utils::i18n::use_locale();
+    let locale = use_locale();
     let color = RwSignal::new(HSV {
         hue: 210.0,
         saturation: 1.0,
@@ -24,6 +27,6 @@ pub fn ColorWheelConceptDemo() -> impl IntoView {
             <ColorWheelTrack/>
             <ColorThumb classes="demo-color-atoms-thumb"/>
         </ColorWheel>
-        <p class="demo-status">{move || format!("Hue: {}, {}", color.get().format_channel_value(HsvChannel::Hue, &locale.get()), color.get().hue_name())}</p>
+        <p class="demo-status">{move || format!("Hue: {}, {}", color.get().format_channel_value(HsvChannel::Hue, &locale.get()), color.get().hue_name(&locale.get()))}</p>
     }
 }

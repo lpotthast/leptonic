@@ -121,6 +121,9 @@ pub struct Node {
     pub col_index: Option<usize>,
     /// Cells (and table column groups): how many columns the cell spans.
     pub col_span: Option<usize>,
+    /// The position in document order among all nodes of the collection (items' children
+    /// included), for O(1) order comparisons.
+    pub(crate) position: usize,
 }
 
 impl Node {

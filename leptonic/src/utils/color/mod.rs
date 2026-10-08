@@ -25,10 +25,6 @@
 // - Channel values are formatted with leptonic's ICU4X `NumberFormatter` (react-aria:
 //   `Intl.NumberFormat`), with the channel's format options.
 //
-// ## OMITTED FEATURES
-// - Localized channel and color names: `channel_name`, `color_name` and `hue_name` are English
-//   until leptonic has a localized string formatter.
-//
 // =============================================================================
 
 mod alpha;
@@ -187,8 +183,8 @@ pub trait ColorValue:
             .format(self.channel_value(channel))
     }
 
-    /// The name of `channel` (e.g. "Hue", "Red"), in English.
-    fn channel_name(channel: Self::Channel) -> &'static str;
+    /// The name of `channel` in `locale` (e.g. "Hue", "Red"; react-aria's `getChannelName`).
+    fn channel_name(channel: Self::Channel, locale: &Locale) -> String;
 
     /// The color to draw a gradient of `channel` with (react-aria's `getDisplayColor`): a hue at
     /// full saturation, other channels as they are (`Alpha` makes them opaque, except for its
@@ -210,15 +206,15 @@ pub trait ColorValue:
         None
     }
 
-    /// The color's name in English, e.g. "vibrant red" or "very dark grayish blue" (react-aria's
+    /// The color's name in `locale`, e.g. "vibrant red" or "very dark grayish blue" (react-aria's
     /// `getColorName`).
-    fn color_name(&self) -> String {
-        naming::color_name(self.to_rgb8())
+    fn color_name(&self, locale: &Locale) -> String {
+        naming::color_name(self.to_rgb8(), 1.0, locale)
     }
 
-    /// The name of the color's hue in English, e.g. "red orange" (react-aria's `getHueName`).
-    fn hue_name(&self) -> String {
-        naming::hue_name(self.to_rgb8())
+    /// The name of the color's hue in `locale`, e.g. "red orange" (react-aria's `getHueName`).
+    fn hue_name(&self, locale: &Locale) -> String {
+        naming::hue_name(self.to_rgb8(), locale)
     }
 
     /// The CSS background of a 2D color area showing `x_channel` × `y_channel`

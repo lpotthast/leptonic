@@ -1,4 +1,4 @@
-use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::Propagation};
+use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*, utils::Propagation};
 use leptos::prelude::*;
 
 #[component]
@@ -45,10 +45,12 @@ pub fn EventPropagationPressDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=button_bubbles set_selected=set_button_bubbles classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Let the button\u{2019}s presses bubble"
-            </Checkbox>
+            <CheckboxField is_selected=button_bubbles set_selected=set_button_bubbles>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Let the button\u{2019}s presses bubble"
+                </CheckboxButton>
+            </CheckboxField>
         </div>
     }
 }

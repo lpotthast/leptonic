@@ -202,7 +202,7 @@ pub fn PageAtomDisclosure() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure overview"</Link></li>
                 <li><Link href=routes::doc::disclosure::Hook.materialize()>"Disclosure Hooks"</Link></li>
-                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link></li>
+                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atom"</Link></li>
             </SeeAlso>
         </DocPage>
     }

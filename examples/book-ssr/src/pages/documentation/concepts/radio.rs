@@ -58,7 +58,7 @@ pub fn PageRadioOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></TableCell>
                         <TableCell>
-                            "Unstyled "<Code inline=true>"RadioGroup"</Code>" and "<Code inline=true>"Radio"</Code>
+                            "Unstyled "<Code inline=true>"RadioGroup"</Code>", "<Code inline=true>"RadioField"</Code>" and "<Code inline=true>"RadioButton"</Code>
                             " with label, description and error message parts, styled through data attributes."
                         </TableCell>
                     </TableRow>
@@ -69,8 +69,8 @@ pub fn PageRadioOverview() -> impl IntoView {
                 <p>
                     "A "<Code inline=true>"RadioGroup"</Code>" atom with a "<Code inline=true>"Label"</Code>" holds the "
                     "selected key; pass it an "<Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"value"</Code>" and "
-                    <Code inline=true>"set_value"</Code>" to keep the selection in your app. Each "<Code inline=true>"Radio"</Code>
-                    " has a "<Code inline=true>"value"</Code>" and its label as children, next to the circle you draw "
+                    <Code inline=true>"set_value"</Code>" to keep the selection in your app. Each "<Code inline=true>"RadioField"</Code>
+                    " has a "<Code inline=true>"value"</Code>", its "<Code inline=true>"RadioButton"</Code>" the label as children, next to the circle you draw "
                     "yourself (the CSS is on the "
                     <Link href=format!("{}#styling", routes::doc::radio::Atom.materialize())>"Radio Atoms"</Link>" page):"
                 </p>

@@ -36,6 +36,7 @@ use crate::{
         use_description::use_description,
     },
 };
+use crate::utils::intl_strings::{DatePickerStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -52,25 +53,25 @@ use crate::{
 // - The hidden input is part of the return (`input_props`); the form reset and validation
 //   capture it (`input_element`).
 //
-// ## OMITTED FEATURES
-// - Localized field names and descriptions (`useDisplayNames`): English ("year", "Selected
-//   Date: ..."); ICU4X has no display names for date fields yet.
+// ## DIFFERENT BEHAVIOR
+// - Segment names come from the date picker's messages ("year", "Jahr"), react-aria's fallback
+//   when the browser has no `Intl.DisplayNames` (ICU4X has no display names for date fields).
 //
 // =============================================================================
 
-/// The English names of the segments (react-aria's `useDisplayNames`).
-pub(crate) fn display_name(kind: DateSegmentType) -> &'static str {
+/// The names of the segments (react-aria's `useDisplayNames`).
+pub(crate) fn display_name(strings: &DatePickerStrings, kind: DateSegmentType) -> String {
     match kind {
-        DateSegmentType::Era => "era",
-        DateSegmentType::Year => "year",
-        DateSegmentType::Month => "month",
-        DateSegmentType::Day => "day",
-        DateSegmentType::Hour => "hour",
-        DateSegmentType::Minute => "minute",
-        DateSegmentType::Second => "second",
-        DateSegmentType::DayPeriod => "AM/PM",
-        DateSegmentType::TimeZoneName => "time zone",
-        DateSegmentType::Literal => "",
+        DateSegmentType::Era => strings.era(),
+        DateSegmentType::Year => strings.year(),
+        DateSegmentType::Month => strings.month(),
+        DateSegmentType::Day => strings.day(),
+        DateSegmentType::Hour => strings.hour(),
+        DateSegmentType::Minute => strings.minute(),
+        DateSegmentType::Second => strings.second(),
+        DateSegmentType::DayPeriod => strings.day_period(),
+        DateSegmentType::TimeZoneName => strings.time_zone_name(),
+        DateSegmentType::Literal => String::new(),
     }
 }
 
@@ -580,13 +581,14 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
     });
 
     // "Selected Date: May 20, 2024" ("Selected Time" for time fields).
+    let strings = use_localized_strings::<DatePickerStrings>();
     let description = Signal::derive(move || {
         state.value.get().map(|_| {
             let formatted = state.format_value();
             if state.max_granularity.get() == MaxGranularity::Hour {
-                format!("Selected Time: {formatted}")
+                strings.read().selected_time_description(&formatted)
             } else {
-                format!("Selected Date: {formatted}")
+                strings.read().selected_date_description(&formatted)
             }
         })
     });

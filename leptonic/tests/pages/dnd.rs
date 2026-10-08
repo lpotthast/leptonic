@@ -70,21 +70,15 @@ impl DndPage<'_> {
     /// Waits until the log `#<id>` is exactly `expected`.
     pub async fn expect_log(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
         let expected: Vec<String> = expected.iter().map(|e| (*e).to_owned()).collect();
-        self.wait_for_value(&format!("the log #{id}"), expected, || self.log(id))
-            .await
+        wait_for!(format!("the log #{id}"), expected, self.log(id).await?);
+        Ok(())
     }
 
     /// Waits until the log `#<id>` is exactly `expected`, and checks it still is after the page
     /// settled (nothing more is logged).
     pub async fn expect_log_settled(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
         self.expect_log(id, expected).await?;
-        tokio::time::sleep(SETTLE).await;
-        let actual = self.log(id).await?;
-        if actual != expected {
-            leptos_browser_test::bail!(
-                "the log #{id} changed to {actual:?}, expected {expected:?}"
-            );
-        }
+        stays!(format!("the log #{id}"), expected, self.log(id).await?);
         Ok(())
     }
 

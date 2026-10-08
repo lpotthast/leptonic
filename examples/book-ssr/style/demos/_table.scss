@@ -20,7 +20,7 @@
     td {
         padding: var(--book-space-s) var(--book-space-m);
         border-bottom: 1px solid var(--book-border-color);
-        text-align: left;
+        text-align: start;
         white-space: nowrap;
     }
 
@@ -57,7 +57,7 @@
 
     // Numbers align right, so their digits line up.
     .demo-table-number {
-        text-align: right;
+        text-align: end;
         font-variant-numeric: tabular-nums;
     }
 }
@@ -224,4 +224,43 @@
     &[data-resizable-direction="right"] {
         cursor: w-resize;
     }
+}
+
+// Tree tables: the tree column's cells indent by the row's level (`--table-row-level`, set on each row), and their
+// expand button turns its chevron while the row is expanded.
+.demo-tree-table {
+    [data-tree-column] {
+        padding-inline-start: calc(var(--book-space-m) + (var(--table-row-level, 1) - 1) * 1.25em);
+    }
+}
+
+.demo-tree-table-expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+    margin-inline-end: var(--book-space-xs);
+    padding: 0;
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: var(--book-muted-color);
+    font: inherit;
+    vertical-align: middle;
+    cursor: pointer;
+
+    // Rows without child rows hide the button; keep its space so that names line up.
+    &[hidden] { display: inline-flex; visibility: hidden; }
+    &[data-hovered] { background: var(--book-hover-background-color); color: var(--main-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+
+    span { transition: transform var(--book-transition); }
+    &[data-expanded] span { transform: rotate(90deg); }
+
+    // Mirrored in right-to-left pages: the collapsed chevron points to the start of the line.
+    &:dir(rtl) span { transform: scaleX(-1); }
+    &:dir(rtl)[data-expanded] span { transform: rotate(90deg); }
+
+    @media (prefers-reduced-motion: reduce) { span { transition: none; } }
 }

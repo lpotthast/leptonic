@@ -2,10 +2,10 @@ use std::time::Duration;
 
 use leptonic::{
     hooks::{
-        IntoAttrs, PressEvent, PressPropagation, UseKeyboardInput, UsePressInput, UsePressReturn,
-        use_keyboard, use_press,
+        IntoAttrs, PressEvent, PressPropagation, UseHoverInput, UseKeyboardInput, UsePressInput,
+        UsePressReturn, use_hover, use_keyboard, use_press,
     },
-    utils::propagation_control::Propagation,
+    utils::{MergeWith, propagation_control::Propagation},
 };
 use leptos::{html, prelude::*};
 
@@ -382,9 +382,17 @@ fn LinkPress() -> impl IntoView {
     }
 }
 
-/// `on_double_press` (a leptonic addition).
+/// `on_double_press` (a leptonic addition), also with press and hover props merged
+/// (`#test-press-double-hover`).
 #[component]
 fn DoublePress() -> impl IntoView {
+    let hover_log = EventLog(RwSignal::new(Vec::new()));
+    let press = use_press(UsePressInput {
+        on_double_press: Some(Callback::new(move |_| hover_log.push("double"))),
+        ..UsePressInput::default()
+    });
+    let hover = use_hover(UseHoverInput::default());
+    let (hover_attrs, hover_styles) = press.props.merge_with(hover.props).into_parts();
     let log = EventLog(RwSignal::new(Vec::new()));
     let UsePressReturn { props, .. } = use_press(UsePressInput {
         on_press: Some(Callback::new(move |_| log.push("press"))),
@@ -400,6 +408,10 @@ fn DoublePress() -> impl IntoView {
                 "Double press me"
             </div>
             <div>"Log: " <span id="test-press-double-log">{log.render()}</span></div>
+            <div id="test-press-double-hover" role="button" tabindex="0" {..hover_attrs} style=hover_styles>
+                "Double press me (with hover)"
+            </div>
+            <div>"Log: " <span id="test-press-double-hover-log">{hover_log.render()}</span></div>
         </section>
     }
 }

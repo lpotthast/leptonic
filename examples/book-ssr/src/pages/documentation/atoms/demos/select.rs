@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::{
         button::Button,
-        checkbox::Checkbox,
+        checkbox::{CheckboxButton, CheckboxField},
         field::{Description, Label},
         listbox::{
             ListBox, ListBoxItem, ListBoxItemDescription, ListBoxItemLabel, ListBoxSection,
@@ -63,7 +63,7 @@ pub fn SelectAtomDemo() -> impl IntoView {
         }
     });
     // App state: the selected office. The select shows it, and choosing an option writes it.
-    let office = RwSignal::new(Vec::<Key>::new());
+    let office = RwSignal::new(None::<Key>);
     let disabled = RwSignal::new(false);
 
     view! {
@@ -114,15 +114,17 @@ pub fn SelectAtomDemo() -> impl IntoView {
 
         <p class="demo-status">
             "Selected key: "
-            {move || office.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}
+            {move || office.with(|key| key.as_ref().map_or_else(|| "none".to_owned(), ToString::to_string))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
-                <span class="demo-check-box" aria-hidden="true"></span>
-                "Disabled"
-            </Checkbox>
+            <CheckboxField is_selected=disabled set_selected=disabled>
+                <CheckboxButton classes="demo-check">
+                    <span class="demo-check-box" aria-hidden="true"></span>
+                    "Disabled"
+                </CheckboxButton>
+            </CheckboxField>
             // The app changes the selection by writing its state.
-            <Button on_press=move |_| office.set(Vec::new()) classes="demo-btn">"Clear"</Button>
+            <Button on_press=move |_| office.set(None) classes="demo-btn">"Clear"</Button>
         </div>
     }
 }
