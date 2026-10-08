@@ -2,13 +2,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions, xpath},
+    polling::wait_for,
+};
 
 const PATH: &str = "/atoms/table-navigation";
 
@@ -28,182 +28,165 @@ impl BrowserTest<str> for TableNavigationTests {
         let page = Page { driver, base_url };
         page.goto_path(PATH).await?;
 
-        tab_from_a_cell_focuses_its_first_tabbable_child(&page).await?;
-        tab_from_a_cell_without_children_exits_the_table(&page).await?;
-        shift_tab_from_a_child_returns_to_the_cell(&page).await?;
-        keys_in_a_text_input_stay_there(&page).await?;
-        clicking_a_child_or_a_row(&page).await?;
-        child_focus_mode_in_tab_navigation(&page).await?;
-        arrow_navigation_through_cell_children(&page).await?;
-        arrow_navigation_with_cell_focus_mode(&page).await?;
-        right_to_left(&page).await?;
-        page_up_reaches_the_column_headers(&page).await?;
-        column_spans(&page).await?;
-        an_empty_table(&page).await?;
-        enter_on_a_button_that_is_not_the_first_child(&page).await?;
+        cases!(
+            tab_from_a_cell_focuses_its_first_tabbable_child(&page),
+            tab_from_a_cell_without_children_exits_the_table(&page),
+            shift_tab_from_a_child_returns_to_the_cell(&page),
+            keys_in_a_text_input_stay_there(&page),
+            clicking_a_child_or_a_row(&page),
+            child_focus_mode_in_tab_navigation(&page),
+            arrow_navigation_through_cell_children(&page),
+            arrow_navigation_with_cell_focus_mode(&page),
+            right_to_left(&page),
+            page_up_reaches_the_column_headers(&page),
+            column_spans(&page),
+            an_empty_table(&page),
+            enter_on_a_button_that_is_not_the_first_child(&page),
+        );
 
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
 async fn table(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
-    page.css(&format!("[role=grid][aria-label='{label}']"))
+    page.element(format!("[role=grid][aria-label='{label}']"))
         .await
 }
 
 /// The cell, row header or column header with `text` in the table `label`.
 async fn cell(page: &Page<'_>, label: &str, text: &str) -> Result<WebElement, Report> {
-    Ok(table(page, label)
+    table(page, label)
         .await?
-        .find(By::XPath(format!(
+        .element(xpath(format!(
             ".//*[@role='gridcell' or @role='rowheader' or @role='columnheader'][normalize-space(.)='{text}']"
         )))
-        .await?)
+        .await
 }
 
 /// The row whose row header is `text` in the table `label`.
 async fn row(page: &Page<'_>, label: &str, text: &str) -> Result<WebElement, Report> {
-    Ok(table(page, label)
+    table(page, label)
         .await?
-        .find(By::XPath(format!(
+        .element(xpath(format!(
             ".//*[@role='row'][.//*[@role='rowheader'][normalize-space(.)='{text}']]"
         )))
-        .await?)
+        .await
 }
 
 /// The last cell of the row whose row header is `text`.
 async fn last_cell(page: &Page<'_>, label: &str, text: &str) -> Result<WebElement, Report> {
-    Ok(row(page, label, text)
+    row(page, label, text)
         .await?
-        .find(By::XPath("./*[last()]"))
-        .await?)
+        .element(xpath("./*[last()]"))
+        .await
 }
 
 /// The element with `aria-label` `name` (a button or input) in the table `label`.
 async fn labelled(page: &Page<'_>, label: &str, name: &str) -> Result<WebElement, Report> {
-    Ok(table(page, label)
+    table(page, label)
         .await?
-        .find(By::XPath(format!(".//*[@aria-label='{name}']")))
-        .await?)
-}
-
-async fn expect_focus(page: &Page<'_>, element: &WebElement, what: &str) -> Result<(), Report> {
-    page.wait_for_focus_on(element, what).await
-}
-
-async fn press(page: &Page<'_>, key: Key) -> Result<(), Report> {
-    page.send_keys_to_active(key).await
+        .element(xpath(format!(".//*[@aria-label='{name}']")))
+        .await
 }
 
 /// On a freshly loaded page (no focused rows yet, as each upstream test renders anew), focus
 /// the first row of the table after the "Before" button `before`.
 async fn enter(page: &Page<'_>, before: &str, label: &str, first_row: &str) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    page.click_element_with_id(before).await?;
-    page.press_tab().await?;
-    expect_focus(page, &row(page, label, first_row).await?, "the first row").await
+    page.element(before).await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&row(page, label, first_row).await?)
+        .await?;
+    Ok(())
 }
 
 const TAB: &str = "Tab mode table";
 
 /// "Tab from a focused cell moves focus to the first tabbable child".
 async fn tab_from_a_cell_focuses_its_first_tabbable_child(page: &Page<'_>) -> Result<(), Report> {
-    enter(page, "test-tn-before-tab", TAB, "Games").await?;
-    press(page, Key::Left).await?;
-    expect_focus(
-        page,
-        &last_cell(page, TAB, "Games").await?,
-        "the notes cell",
-    )
-    .await?;
-    page.press_tab().await?;
-    expect_focus(
-        page,
-        &labelled(page, TAB, "Games notes").await?,
-        "the notes input",
-    )
-    .await
+    enter(page, "#test-tn-before-tab", TAB, "Games").await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&last_cell(page, TAB, "Games").await?)
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&labelled(page, TAB, "Games notes").await?)
+        .await?;
+    Ok(())
 }
 
 /// "Tab from a cell with no tabbable children or from the last child in a cell exits the
 /// table".
 async fn tab_from_a_cell_without_children_exits_the_table(page: &Page<'_>) -> Result<(), Report> {
-    enter(page, "test-tn-before-tab", TAB, "Games").await?;
-    press(page, Key::Right).await?;
-    expect_focus(page, &cell(page, TAB, "Games").await?, "the row header").await?;
-    page.press_tab().await?;
-    page.wait_for_active_id("test-tn-after-tab").await?;
+    enter(page, "#test-tn-before-tab", TAB, "Games").await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&cell(page, TAB, "Games").await?)
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-tn-after-tab").await?)
+        .await?;
 
     // Back into the table: the row header again.
-    page.press_shift_tab().await?;
-    expect_focus(page, &cell(page, TAB, "Games").await?, "the row header").await?;
-    press(page, Key::Left).await?;
-    press(page, Key::Left).await?;
-    expect_focus(
-        page,
-        &last_cell(page, TAB, "Games").await?,
-        "the notes cell",
-    )
-    .await?;
-    page.press_tab().await?;
-    expect_focus(
-        page,
-        &labelled(page, TAB, "Games notes").await?,
-        "the notes input",
-    )
-    .await?;
-    page.press_tab().await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&cell(page, TAB, "Games").await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&last_cell(page, TAB, "Games").await?)
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&labelled(page, TAB, "Games notes").await?)
+        .await?;
+    page.send_keys(Key::Tab).await?;
     let button = table(page, TAB)
         .await?
-        .find(By::XPath(
+        .element(xpath(
             ".//button[normalize-space(.)='Button next to input']",
         ))
         .await?;
-    expect_focus(page, &button, "the button next to the input").await?;
-    page.press_tab().await?;
-    page.wait_for_active_id("test-tn-after-tab").await
+    page.wait_for_focus(&button).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-tn-after-tab").await?)
+        .await?;
+    Ok(())
 }
 
 /// "Shift+Tab from a child returns focus to the cell".
 async fn shift_tab_from_a_child_returns_to_the_cell(page: &Page<'_>) -> Result<(), Report> {
-    enter(page, "test-tn-before-tab", TAB, "Games").await?;
-    press(page, Key::Left).await?;
+    enter(page, "#test-tn-before-tab", TAB, "Games").await?;
+    page.send_keys(Key::Left).await?;
     let notes = last_cell(page, TAB, "Games").await?;
-    expect_focus(page, &notes, "the notes cell").await?;
-    page.press_tab().await?;
-    expect_focus(
-        page,
-        &labelled(page, TAB, "Games notes").await?,
-        "the notes input",
-    )
-    .await?;
-    page.press_shift_tab().await?;
-    expect_focus(page, &notes, "the notes cell").await
+    page.wait_for_focus(&notes).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&labelled(page, TAB, "Games notes").await?)
+        .await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&notes).await?;
+    Ok(())
 }
 
 /// "should not navigate to next cell when arrow keys are pressed while a text input child has
 /// focus", "should not trigger typeahead when typing in a text input child" and "should not
 /// trigger selection when pressing Space or Enter in a text input child".
 async fn keys_in_a_text_input_stay_there(page: &Page<'_>) -> Result<(), Report> {
-    enter(page, "test-tn-before-tab", TAB, "Games").await?;
-    press(page, Key::Left).await?;
-    page.press_tab().await?;
+    enter(page, "#test-tn-before-tab", TAB, "Games").await?;
+    page.send_keys(Key::Left).await?;
+    page.send_keys(Key::Tab).await?;
     let input = labelled(page, TAB, "Games notes").await?;
-    expect_focus(page, &input, "the notes input").await?;
-    page.driver
-        .execute("arguments[0].value = ''", vec![input.to_json()?])
-        .await?;
+    page.wait_for_focus(&input).await?;
+    input.virtual_input("").await?;
     for key in [Key::Down, Key::Up, Key::Right, Key::Left] {
-        press(page, key).await?;
+        page.send_keys(key).await?;
     }
-    page.send_keys_to_active("Games").await?;
-    page.send_keys_to_active(" ").await?;
-    press(page, Key::Enter).await?;
-    // Settle, then check nothing moved or got selected.
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    expect_focus(page, &input, "the notes input").await?;
-    assert_that!(input.prop("value").await?).is_equal_to(Some("Games ".to_owned()));
-    assert_that!(page.read_text_of("test-tn-tab-selection").await?).is_equal_to(String::new());
+    page.send_keys("Games").await?;
+    page.send_keys(" ").await?;
+    page.send_keys(Key::Enter).await?;
+    // Nothing moved or got selected.
+    page.focus_stays(&input).await?;
+    input.wait_for_prop("value", "Games ").await?;
+    page.element("#test-tn-tab-selection")
+        .await?
+        .inner_text_stays("")
+        .await?;
     Ok(())
 }
 
@@ -212,15 +195,18 @@ async fn keys_in_a_text_input_stay_there(page: &Page<'_>) -> Result<(), Report> 
 async fn clicking_a_child_or_a_row(page: &Page<'_>) -> Result<(), Report> {
     let input = labelled(page, TAB, "Program Files notes").await?;
     input.click().await?;
-    expect_focus(page, &input, "the clicked input").await?;
-    stays!(
-        "the text of #test-tn-tab-selection",
-        String::new(),
-        page.read_text_of("test-tn-tab-selection").await?
-    );
+    page.wait_for_focus(&input).await?;
+    page.element("#test-tn-tab-selection")
+        .await?
+        .inner_text_stays("")
+        .await?;
 
     cell(page, TAB, "System file").await?.click().await?;
-    page.wait_for_text("test-tn-tab-selection", "3").await
+    page.element("#test-tn-tab-selection")
+        .await?
+        .wait_for_inner_text("3")
+        .await?;
+    Ok(())
 }
 
 /// `focusMode="child"` in tab navigation: arrowing onto the cell focuses its last child (the
@@ -229,192 +215,167 @@ async fn clicking_a_child_or_a_row(page: &Page<'_>) -> Result<(), Report> {
 async fn child_focus_mode_in_tab_navigation(page: &Page<'_>) -> Result<(), Report> {
     const ARROWS: &str = "Tab mode arrows table";
     const CHILD: &str = "Tab mode child table";
-    enter(page, "test-tn-before-child", CHILD, "Games").await?;
-    press(page, Key::Left).await?;
+    enter(page, "#test-tn-before-child", CHILD, "Games").await?;
+    page.send_keys(Key::Left).await?;
     let button = labelled_button(page, CHILD).await?;
-    expect_focus(page, &button, "the button next to the input").await?;
-    page.press_shift_tab().await?;
-    expect_focus(
-        page,
-        &labelled(page, CHILD, "Games notes").await?,
-        "the notes input",
-    )
-    .await?;
-    page.press_shift_tab().await?;
-    page.wait_for_active_id("test-tn-before-child").await?;
+    page.wait_for_focus(&button).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&labelled(page, CHILD, "Games notes").await?)
+        .await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-tn-before-child").await?)
+        .await?;
 
-    enter(page, "test-tn-before-arrows", ARROWS, "Games").await?;
-    press(page, Key::Left).await?;
-    expect_focus(page, &labelled_button(page, ARROWS).await?, "the button").await?;
-    press(page, Key::Down).await?;
-    expect_focus(
-        page,
-        &labelled(page, ARROWS, "Program Files notes").await?,
-        "the next row's notes input",
-    )
-    .await
+    enter(page, "#test-tn-before-arrows", ARROWS, "Games").await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&labelled_button(page, ARROWS).await?)
+        .await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&labelled(page, ARROWS, "Program Files notes").await?)
+        .await?;
+    Ok(())
 }
 
 async fn labelled_button(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
-    Ok(table(page, label)
+    table(page, label)
         .await?
-        .find(By::XPath(
+        .element(xpath(
             ".//button[normalize-space(.)='Button next to input']",
         ))
-        .await?)
+        .await
 }
 
 /// "default focusMode: ArrowRight crosses from last child to first child of next cell,
 /// ArrowLeft reverses".
 async fn arrow_navigation_through_cell_children(page: &Page<'_>) -> Result<(), Report> {
     const ARROW: &str = "Arrow mode table";
-    enter(page, "test-tn-before-arrow-mode", ARROW, "Row 1").await?;
+    enter(page, "#test-tn-before-arrow-mode", ARROW, "Row 1").await?;
     // Without selection or actions, rows show no hover; cells do (react-aria-components).
     let first_row = row(page, ARROW, "Row 1").await?;
     let row_header = cell(page, ARROW, "Row 1").await?;
-    page.driver
-        .action_chain()
-        .move_to_element_center(&row_header)
-        .perform()
-        .await?;
-    page.wait_for_attr(&row_header, "data-hovered", Some("true"))
+    row_header.hover().await?;
+    row_header
+        .wait_for_attr("data-hovered", Some("true"))
         .await?;
     assert_that!(first_row.attr("data-hovered").await?).is_none();
-    press(page, Key::Right).await?;
-    press(page, Key::Right).await?;
-    expect_focus(
-        page,
-        &labelled(page, ARROW, "R1C2 first").await?,
-        "R1C2 first",
-    )
-    .await?;
-    press(page, Key::Right).await?;
-    expect_focus(
-        page,
-        &labelled(page, ARROW, "R1C2 last").await?,
-        "R1C2 last",
-    )
-    .await?;
-    press(page, Key::Right).await?;
-    expect_focus(
-        page,
-        &labelled(page, ARROW, "R1C3 first").await?,
-        "R1C3 first",
-    )
-    .await?;
-    press(page, Key::Left).await?;
-    expect_focus(
-        page,
-        &labelled(page, ARROW, "R1C2 last").await?,
-        "R1C2 last",
-    )
-    .await
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&labelled(page, ARROW, "R1C2 first").await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&labelled(page, ARROW, "R1C2 last").await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&labelled(page, ARROW, "R1C3 first").await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&labelled(page, ARROW, "R1C2 last").await?)
+        .await?;
+    Ok(())
 }
 
 /// "arrow navigation with focusMode="cell": cell element stays focused on navigate, arrows
 /// enter/exit children within cell".
 async fn arrow_navigation_with_cell_focus_mode(page: &Page<'_>) -> Result<(), Report> {
     const ARROW: &str = "Arrow cell table";
-    enter(page, "test-tn-before-arrow-cell", ARROW, "Row 1").await?;
+    enter(page, "#test-tn-before-arrow-cell", ARROW, "Row 1").await?;
     let cells = row(page, ARROW, "Row 1")
         .await?
-        .find_all(By::Css("[role=gridcell]"))
+        .elements("[role=gridcell]")
         .await?;
     let (col2, col3) = (&cells[0], &cells[1]);
     let first = |n: u8| format!("R1C{n} first");
-    press(page, Key::Right).await?;
-    press(page, Key::Right).await?;
-    expect_focus(page, col2, "column 2's cell").await?;
-    press(page, Key::Right).await?;
-    expect_focus(page, &labelled(page, ARROW, &first(2)).await?, "R1C2 first").await?;
-    press(page, Key::Right).await?;
-    expect_focus(
-        page,
-        &labelled(page, ARROW, "R1C2 last").await?,
-        "R1C2 last",
-    )
-    .await?;
-    press(page, Key::Left).await?;
-    expect_focus(page, &labelled(page, ARROW, &first(2)).await?, "R1C2 first").await?;
-    press(page, Key::Left).await?;
-    expect_focus(page, col2, "column 2's cell").await?;
-    press(page, Key::Right).await?;
-    press(page, Key::Right).await?;
-    press(page, Key::Right).await?;
-    expect_focus(page, col3, "column 3's cell").await?;
-    press(page, Key::Right).await?;
-    expect_focus(page, &labelled(page, ARROW, &first(3)).await?, "R1C3 first").await?;
-    press(page, Key::Left).await?;
-    expect_focus(page, col3, "column 3's cell").await?;
-    press(page, Key::Left).await?;
-    expect_focus(page, col2, "column 2's cell").await
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(col2).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&labelled(page, ARROW, &first(2)).await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&labelled(page, ARROW, "R1C2 last").await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&labelled(page, ARROW, &first(2)).await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(col2).await?;
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(col3).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&labelled(page, ARROW, &first(3)).await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(col3).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(col2).await?;
+    Ok(())
 }
 
 /// In a right-to-left table, ArrowLeft moves forward: from the row into its first cell, on to
 /// the next cell, and between column headers.
 async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
     const RTL: &str = "RTL table";
-    enter(page, "test-tn-before-rtl", RTL, "Games").await?;
-    press(page, Key::Left).await?;
-    expect_focus(page, &cell(page, RTL, "Games").await?, "the row header").await?;
-    press(page, Key::Left).await?;
-    expect_focus(
-        page,
-        &cell(page, RTL, "File folder").await?,
-        "the type cell",
-    )
-    .await?;
-    press(page, Key::Right).await?;
-    expect_focus(page, &cell(page, RTL, "Games").await?, "the row header").await?;
-    press(page, Key::Up).await?;
-    expect_focus(
-        page,
-        &cell(page, RTL, "Name").await?,
-        "the Name column header",
-    )
-    .await?;
-    press(page, Key::Left).await?;
-    expect_focus(
-        page,
-        &cell(page, RTL, "Type").await?,
-        "the Type column header",
-    )
-    .await
+    enter(page, "#test-tn-before-rtl", RTL, "Games").await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&cell(page, RTL, "Games").await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&cell(page, RTL, "File folder").await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&cell(page, RTL, "Games").await?)
+        .await?;
+    page.send_keys(Key::Up).await?;
+    page.wait_for_focus(&cell(page, RTL, "Name").await?).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&cell(page, RTL, "Type").await?).await?;
+    Ok(())
 }
 
 /// PageDown moves a page down; PageUp moves up through the rows into the column headers
 /// (react-aria's paging steps with the table's `getKeyAbove`).
 async fn page_up_reaches_the_column_headers(page: &Page<'_>) -> Result<(), Report> {
     const PAGED: &str = "Paged table";
-    enter(page, "test-tn-before-paged", PAGED, "Row 1").await?;
-    press(page, Key::PageDown).await?;
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    loop {
-        let text = page.active_element_text().await?;
-        let number: u32 = text
-            .trim()
-            .strip_prefix("Row ")
-            .and_then(|rest| rest.split_whitespace().next())
-            .and_then(|n| n.parse().ok())
-            .unwrap_or(0);
-        if number > 5 {
+    enter(page, "#test-tn-before-paged", PAGED, "Row 1").await?;
+    page.send_keys(Key::PageDown).await?;
+    wait_for("the focused row's number")
+        .observing(|| focused_row_number(page))
+        .to_be("past 5 (a page down)", |row| *row > 5)
+        .await?;
+    // Each PageUp moves focus up (a page of rows, then into the column headers), until it
+    // reaches the column header.
+    let header = cell(page, PAGED, "Name").await?;
+    for _ in 0..3 {
+        let before = page.focused_element().await?;
+        if before == header {
             break;
         }
-        if std::time::Instant::now() > deadline {
-            rootcause::bail!("PageDown did not move a page down; focus is on {text:?}");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let before = before.describe().await?;
+        page.send_keys(Key::PageUp).await?;
+        wait_for("the focused element")
+            .observing(|| async { page.focused_element().await?.describe().await })
+            .to_be(&format!("another than {before} (moved up)"), |focused| {
+                *focused != before
+            })
+            .await?;
     }
-    for _ in 0..3 {
-        press(page, Key::PageUp).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    expect_focus(
-        page,
-        &cell(page, PAGED, "Name").await?,
-        "the Name column header",
-    )
-    .await
+    page.wait_for_focus(&header).await?;
+    Ok(())
+}
+
+/// The number of the focused row ("Row 7"), 0 if focus is not on a row.
+async fn focused_row_number(page: &Page<'_>) -> Result<u32, Report> {
+    Ok(page
+        .focused_element()
+        .await?
+        .inner_text()
+        .await?
+        .strip_prefix("Row ")
+        .and_then(|rest| rest.split_whitespace().next())
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(0))
 }
 
 /// "should render table with colSpans" and "should focus to the same colIndex when moving
@@ -422,25 +383,30 @@ async fn page_up_reaches_the_column_headers(page: &Page<'_>) -> Result<(), Repor
 async fn column_spans(page: &Page<'_>) -> Result<(), Report> {
     const SPANS: &str = "Table with various colspans";
     let span2 = cell(page, SPANS, "R1 span 2").await?;
-    assert_that!(span2.attr("colspan").await?).is_equal_to(Some("2".to_owned()));
+    assert_that!(span2.attr("colspan").await?)
+        .get_some()
+        .is_equal_to("2");
     assert_that!(
         cell(page, SPANS, "R1C4")
             .await?
             .attr("aria-colindex")
             .await?
     )
-    .is_equal_to(Some("4".to_owned()));
+    .get_some()
+    .is_equal_to("4");
     assert_that!(
         cell(page, SPANS, "R3 span 4")
             .await?
             .attr("colspan")
             .await?
     )
-    .is_equal_to(Some("4".to_owned()));
+    .get_some()
+    .is_equal_to("4");
     assert_that!(cell(page, SPANS, "R3 span 4").await?.attr("role").await?)
-        .is_equal_to(Some("rowheader".to_owned()));
+        .get_some()
+        .is_equal_to("rowheader");
 
-    enter(page, "test-tn-before-colspan", SPANS, "R1C1").await?;
+    enter(page, "#test-tn-before-colspan", SPANS, "R1C1").await?;
     // Each step: the keys, then the cell that must have focus.
     let steps: [(&[Key], &str); 17] = [
         (&[Key::Right], "R1C1"),
@@ -463,9 +429,10 @@ async fn column_spans(page: &Page<'_>) -> Result<(), Report> {
     ];
     for (keys, expected) in steps {
         for key in keys {
-            press(page, key.clone()).await?;
+            page.send_keys(key.clone()).await?;
         }
-        expect_focus(page, &cell(page, SPANS, expected).await?, expected).await?;
+        page.wait_for_focus(&cell(page, SPANS, expected).await?)
+            .await?;
     }
     Ok(())
 }
@@ -476,55 +443,59 @@ async fn column_spans(page: &Page<'_>) -> Result<(), Report> {
 async fn an_empty_table(page: &Page<'_>) -> Result<(), Report> {
     const EMPTY: &str = "Empty table";
     let empty = table(page, EMPTY).await?;
-    page.click_element_with_id("test-tn-before-empty").await?;
-    page.press_tab().await?;
-    expect_focus(page, &empty, "the empty table").await?;
+    page.element("#test-tn-before-empty").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&empty).await?;
     for key in [Key::Down, Key::Up, Key::Right, Key::End] {
-        press(page, key).await?;
+        page.send_keys(key).await?;
     }
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    expect_focus(page, &empty, "the empty table").await?;
-    let select_all = empty.find(By::Css("input[type=checkbox]")).await?;
+    page.focus_stays(&empty).await?;
+    let select_all = empty.element("input[type=checkbox]").await?;
     assert_that!(select_all.is_enabled().await?).is_false();
-    page.press_tab().await?;
-    page.wait_for_active_id("test-tn-after-empty").await
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-tn-after-empty").await?)
+        .await?;
+    Ok(())
 }
 
 /// Enter and clicks on a `Button` atom that isn't its cell's first child (`CellFocusMode::Child`)
 /// press that button, and focus stays on it (crudkit: Enter first moved focus to the first child).
 async fn enter_on_a_button_that_is_not_the_first_child(page: &Page<'_>) -> Result<(), Report> {
     const ACTIONS: &str = "Actions table";
-    enter(page, "test-tn-before-actions", ACTIONS, "Alice").await?;
-    press(page, Key::Right).await?;
-    press(page, Key::Right).await?;
+    enter(page, "#test-tn-before-actions", ACTIONS, "Alice").await?;
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
     let edit = labelled(page, ACTIONS, "Edit Alice").await?;
-    expect_focus(page, &edit, "Edit Alice").await?;
-    press(page, Key::Right).await?;
+    page.wait_for_focus(&edit).await?;
+    page.send_keys(Key::Right).await?;
     let delete = labelled(page, ACTIONS, "Delete Alice").await?;
-    expect_focus(page, &delete, "Delete Alice").await?;
+    page.wait_for_focus(&delete).await?;
 
-    press(page, Key::Enter).await?;
-    page.wait_for_text("test-tn-actions-log", "delete Alice")
+    page.send_keys(Key::Enter).await?;
+    page.element("#test-tn-actions-log")
+        .await?
+        .wait_for_inner_text("delete Alice")
         .await?;
-    expect_focus(page, &delete, "Delete Alice after Enter").await?;
-    press(page, Key::Space).await?;
-    page.wait_for_text("test-tn-actions-log", "delete Alice, delete Alice")
+    page.wait_for_focus(&delete).await?;
+    page.send_keys(Key::Space).await?;
+    page.element("#test-tn-actions-log")
+        .await?
+        .wait_for_inner_text("delete Alice, delete Alice")
         .await?;
-    expect_focus(page, &delete, "Delete Alice after Space").await?;
+    page.wait_for_focus(&delete).await?;
 
     let delete_bob = labelled(page, ACTIONS, "Delete Bob").await?;
     delete_bob.click().await?;
-    page.wait_for_text(
-        "test-tn-actions-log",
-        "delete Alice, delete Alice, delete Bob",
-    )
-    .await?;
-    expect_focus(page, &delete_bob, "Delete Bob after a click").await?;
-    press(page, Key::Enter).await?;
-    page.wait_for_text(
-        "test-tn-actions-log",
-        "delete Alice, delete Alice, delete Bob, delete Bob",
-    )
-    .await?;
-    expect_focus(page, &delete_bob, "Delete Bob after a click and Enter").await
+    page.element("#test-tn-actions-log")
+        .await?
+        .wait_for_inner_text("delete Alice, delete Alice, delete Bob")
+        .await?;
+    page.wait_for_focus(&delete_bob).await?;
+    page.send_keys(Key::Enter).await?;
+    page.element("#test-tn-actions-log")
+        .await?
+        .wait_for_inner_text("delete Alice, delete Alice, delete Bob, delete Bob")
+        .await?;
+    page.wait_for_focus(&delete_bob).await?;
+    Ok(())
 }

@@ -91,6 +91,11 @@ The components layer is gone (2026-10-07, see history); leptonic is hooks + atom
   should batch appends (one per animation frame); measure in the browser before going further (incremental
   appends would need a persistent node map).
 ### Bugs and review leftovers
+- [ ] Grid list with sections (`#glf-sections` in the test-app): the Banana row's `aria-labelledby` resolves to
+  "BananaYellow Yellow": its first referenced element contains the description too, so the accessible name repeats
+  it. Compare with react-aria's `GridListItem` labelling (found by the browser test consolidation, 2026-10-08).
+- [ ] Reorderable collection rows set `data-dragging` as a presence flag (`""`), the DnD hooks and other atoms write
+  `"true"`/`"false"`: make it consistent (2026-10-08).
 The 2026-10-07 react-aria fidelity review was applied the same day by nine agents (history: "Fidelity review
 2026-10-07"). What is open from it is below, by family.
 
@@ -198,11 +203,6 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   page visit and an unstable Leptos feature: try a coarser grouping first).
 
 ### Testing infrastructure
-- [ ] Remaining fixed sleeps (~75, 2026-10-08): the plain "sleep, then assert" ones are `stays!` now and the
-  closure helpers are gone (one API: `wait_for!`/`wait_until!`/`stays!`/`stays_for!`, `tests/polling/mod.rs`).
-  Left: sleeps before a helper that asserts (often a hidden negative check, e.g. test_table_selection.rs
-  `expect_selection` after a press, test_landmark.rs warnings, test_tree.rs:115, test_tabs.rs:350), steps inside
-  pointer drags (slider, color area/wheel), and real timers (long press, type-ahead reset, toast) that may stay.
 - [ ] `use_toast_state.rs`'s `now()` calls `js_sys::Date::now()` in every non-`ssr` build, which panics in native
   tests (found 2026-10-08; the virtualizer's twin is fixed: `cfg(target_arch = "wasm32")`). Native toast timer
   tests need the same fix.
@@ -211,10 +211,34 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   the fix in a scratch copy).
 - [ ] `testing/test-app/style/leptonic` (107 generated files) is no longer written (2026-10-07) but still tracked in
   git: untrack it (`git rm -r --cached`, the user's call).
-- [ ] Chrome profiles leak (browser-test crate, the user's): chromedriver's `/tmp/org.chromium.Chromium.scoped_dir.*`
-  profiles stay behind when a session isn't quit cleanly; 2026-10-06 they filled the /tmp quota (14 GB), again
-  2026-10-07 (245 dirs, ~17 GB; Chrome sessions then fail to start: "Devtools port number file"). Fix in
-  browser-test: an own `--user-data-dir` per session, removed on drop, or a sweep at startup.
+- [ ] `browser-test` is a path dependency on the user's checkout (`../../browser-test`, 0.6.0 unreleased: per-session
+  Chrome profiles in `<target>/tmp/browser-test-profiles`, cancellation, `rustls-no-provider` + `ring`, focused
+  session pages, failure reports). Switch to the crates.io release once it is published (the user's call).
+- [ ] Decide (user): make every `cases!` case its own `BrowserTest` (2026-10-08 proposal). Today a test's cases
+  share one session and one page: the first failing case hides every later one (`?`; `FailurePolicy::RunAll` stops
+  at test level), each case inherits the page state the cases before it left behind (6 files have `reset(page)`
+  helpers, 30 reload the page inside cases), `BROWSER_TEST_FILTER` and the run summary only see ~150 tests, not the
+  ~800 cases, and one long test (menu, table resizing) bounds the parallel run's wall time. Plan: each case loads its
+  own page; a flow whose steps belong together stays one test with `step`s; `cases!` goes away. Needs the browser-test
+  proposals below (at least session reuse) and a pilot first: split one file (e.g. `test_checkbox.rs`) and measure
+  page load + hydration per case against the session cost.
+- [ ] browser-test API proposals (for the case split above):
+  - **Session reuse** (essential): a worker resets a session after a passed test and offers it to the next test
+    instead of quitting it (fresh sessions after failures). Reset: close extra windows, release WebDriver actions
+    (pointer position, held keys), `about:blank`, clear cookies and storage (CDP `Storage.clearDataForOrigin` for
+    the visited origins), reset permissions (clipboard tests grant them) and the window size, re-apply the test's
+    timeouts. A runner setting (`with_session_reuse(..)`, default: fresh) and a per-test opt-out
+    (`fn session(&self) -> SessionKind { Reusable | Fresh }`) for tests that change browser state a reset can't
+    restore. Sessions are then bounded by parallelism, not by test count; no need to group tests sequentially just
+    to save sessions (sequential groups stay for tests sharing server state).
+  - **Function tests**: `BrowserTests::with_fn(name, |driver, ctx| async { .. })` (or a `test_fn` adapter), so
+    800 tests don't need 800 structs. (leptonic side: a `page_tests("/atoms/checkbox", [..])` helper building a
+    named group whose tests navigate, then run one case.)
+  - **Qualified names and filtering**: report test names with their named groups (`checkbox / hover`), and filter
+    by them in the runner (`BrowserTests::filtered(..)` or `BROWSER_TEST_FILTER` in browser-test), replacing
+    leptonic's `Selected`.
+- [ ] browser-test's own runner tests (they kill child runs on purpose) left one empty
+  `/tmp/org.chromium.Chromium.scoped_dir.*` (2026-10-08): find which session still lets chromedriver create one.
 - [ ] The test-app's `cargo check` needs `LEPTOS_OUTPUT_NAME=...` set (note it in CLAUDE.md's commands).
 
 ## Book
@@ -225,6 +249,12 @@ and, while the book waits for them, under "Waiting on the library" below. Finish
 `documentation/history.md` ("Book").
 
 ### Next
+- [ ] The book's browser tests still use browser-test 0.5, which leaks a Chrome profile into `/tmp` (a RAM disk) for
+  every session not quit cleanly. Switch as the library did (2026-10-08, `leptonic/tests/browser_test.rs`): browser-test
+  0.6 with `Cancellation::on_shutdown_signals()`, `ChromeProfilesDir` in `CARGO_TARGET_TMPDIR`, features
+  `rustls-no-provider` + `rustls` with `ring` (installed as the default provider), and a direct `thirtyfour` with
+  `cdp` if the book's tests use `driver.cdp()`. Failure reports (test-code frames, last steps) then come with it;
+  `documentation/browser-tests.md` describes the library suite's helpers and checks, which the book's may follow.
 - [ ] The Dockerfile builds from the repository root (path dependency on `../../leptonic`); not yet test-built. A test
   build (images, a downloaded install script, a full release build) is the user's call (main, 2026-10-07).
 

@@ -1,19 +1,21 @@
 // No upstream: `VirtualList` is a leptonic addition (react-aria has no virtualized plain list).
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
-use rootcause::Report;
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use rootcause::{Report, prelude::ResultExt};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::{expect, wait_for},
+};
 
 /// A virtualized log (`VirtualList`, no react-aria equivalent): it renders a slice of its 2,000
 /// lines and follows its end while lines are appended; scrolling away stops following, toggling
 /// it on scrolls back to the end; rows holding the text selection stay rendered; the rows' text
 /// is selectable.
 pub struct VirtualListTests {}
-
-const LOG: &str = "document.getElementById('test-vl-log')";
 
 #[async_trait]
 impl BrowserTest<str> for VirtualListTests {
@@ -25,182 +27,16 @@ impl BrowserTest<str> for VirtualListTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/virtual_list").await?;
 
-        // Following: at the end, with the last line rendered, and only a slice of all lines.
-        wait_until(&page, &at_end()).await?;
-        wait_until(&page, &rendered("Line 1999")).await?;
-        let count = eval_number(&page, &format!("{LOG}.querySelectorAll('.line').length")).await?;
-        assert_that!(count).is_less_than(100.0);
-        let user_select = eval_string(
-            &page,
-            &format!("getComputedStyle({LOG}.querySelector('.line')).userSelect"),
-        )
-        .await?;
-        assert_that!(user_select).is_not_equal_to("none".to_owned());
-
-        // Appended lines come into view, in visual order in the DOM.
-        page.click_element_with_id("test-vl-append").await?;
-        wait_until(&page, &rendered("Line 2049")).await?;
-        wait_until(&page, &at_end()).await?;
-        assert_that!(eval_bool(&page, &in_visual_order()).await?).is_true();
-
-        // After scroll jumps too; a selection from one visible row to another holds exactly the
-        // rows between.
-        for top in [10_000, 5_000, 20_000] {
-            page.driver
-                .execute(&format!("{LOG}.scrollTop = {top};"), vec![])
-                .await?;
-            wait_until(&page, &rows_cover_viewport()).await?;
-            assert_that!(eval_bool(&page, &in_visual_order()).await?).is_true();
-        }
-        let selected = eval_string(
-            &page,
-            &format!(
-                "(() => {{ const lines = Array.from({LOG}.querySelectorAll('.line')) \
-                 .filter(l => /^Line \\d+$/.test(l.textContent)) \
-                 .sort((a, b) => parseFloat(a.parentElement.style.top) - parseFloat(b.parentElement.style.top)); \
-                 const range = document.createRange(); range.setStartBefore(lines[0]); \
-                 range.setEndAfter(lines[2]); return range.toString().replace(/\\s+/g, ' ').trim() + '|' + \
-                 [lines[0], lines[2]].map(l => l.textContent).join(','); }})()"
-            ),
-        )
-        .await?;
-        let (text, ends) = selected.split_once('|').unwrap_or_default();
-        let (first, last) = ends.split_once(',').unwrap_or_default();
-        assert_that!(text.starts_with(first) && text.ends_with(last)).is_true();
-        // Only the rows between (no long line: the rows were picked from short ones in a run).
-        assert_that!(text.matches("Line ").count()).is_less_than(5);
-
-        // Scrolling away stops following; appended lines don't move the view.
-        page.driver
-            .execute(&format!("{LOG}.scrollTop = 0;"), vec![])
-            .await?;
-        page.wait_for_text("test-vl-follow", "not following")
-            .await?;
-        page.click_element_with_id("test-vl-append").await?;
-        wait_until(
-            &page,
-            &format!("{LOG}.scrollHeight > 0 && {}", rendered("Line 1")),
-        )
-        .await?;
-        let top = eval_number(&page, &format!("{LOG}.scrollTop")).await?;
-        assert_that!(top).is_equal_to(0.0);
-
-        // A row holding the text selection stays rendered while scrolled away.
-        page.driver
-            .execute(
-                &format!(
-                    "const line = Array.from({LOG}.querySelectorAll('.line')).find(l => l.textContent === 'Line 1');
-                     window.selectionSeen = false;
-                     document.addEventListener('selectionchange', () => window.selectionSeen = true, {{ once: true }});
-                     const range = document.createRange();
-                     range.selectNodeContents(line);
-                     const selection = window.getSelection();
-                     selection.removeAllRanges();
-                     selection.addRange(range);"
-                ),
-                vec![],
-            )
-            .await?;
-        // `selectionchange` is dispatched later; the list's own listener (registered at mount) has
-        // run once this one did. A user doesn't select and scroll within one task.
-        wait_until(&page, "window.selectionSeen").await?;
-        // Scrolling back to the end follows again; the selected row stays rendered.
-        wait_until(
-            &page,
-            &format!(
-                "({LOG}.scrollTop = {LOG}.scrollHeight, \
-                 document.getElementById('test-vl-follow').textContent === 'following')"
-            ),
-        )
-        .await?;
-        wait_until(&page, &rendered("Line 2099")).await?;
-        assert_that!(eval_bool(&page, &rendered("Line 1")).await?).is_true();
-        assert_that!(eval_string(&page, "window.getSelection().toString()").await?)
-            .is_equal_to("Line 1".to_owned());
-        // Without the selection, the row goes.
-        page.driver
-            .execute("window.getSelection().removeAllRanges();", vec![])
-            .await?;
-        wait_until(&page, &format!("!{}", rendered("Line 1"))).await?;
-
-        // Turning following on scrolls to the end.
-        page.driver
-            .execute(&format!("{LOG}.scrollTop = 0;"), vec![])
-            .await?;
-        page.wait_for_text("test-vl-follow", "not following")
-            .await?;
-        page.click_element_with_id("test-vl-follow").await?;
-        page.wait_for_text("test-vl-follow", "following").await?;
-        wait_until(&page, &rendered("Line 2099")).await?;
-        wait_until(&page, &at_end()).await?;
-
-        page.expect_no_page_errors().await
+        cases!(
+            follows_its_end(&page),
+            appended_lines_come_into_view(&page),
+            scroll_jumps_render_rows_in_order(&page),
+            scrolling_away_stops_following(&page),
+            selected_row_stays_rendered(&page),
+            turning_following_on_scrolls_to_the_end(&page),
+        );
+        Ok(())
     }
-}
-
-/// Whether the rows' wrappers are in visual order in the DOM (a text selection follows the DOM).
-fn in_visual_order() -> String {
-    format!(
-        "(() => {{ const tops = Array.from({LOG}.querySelectorAll('.line')).map(l => \
-         parseFloat(l.parentElement.style.top)); return tops.every((top, i) => i === 0 || \
-         tops[i - 1] <= top); }})()"
-    )
-}
-
-/// Whether the rendered rows cover the log's viewport (rendering after a scroll finished).
-fn rows_cover_viewport() -> String {
-    format!(
-        "(() => {{ const rows = Array.from({LOG}.querySelectorAll('.line')).map(l => l.parentElement); \
-         if (rows.length === 0) return false; \
-         const top = Math.min(...rows.map(r => parseFloat(r.style.top))); \
-         const bottom = Math.max(...rows.map(r => parseFloat(r.style.top) + parseFloat(r.style.height))); \
-         return top <= {LOG}.scrollTop && bottom >= {LOG}.scrollTop + {LOG}.clientHeight; }})()"
-    )
-}
-
-/// Whether the log shows its end.
-fn at_end() -> String {
-    format!("Math.abs({LOG}.scrollHeight - {LOG}.clientHeight - {LOG}.scrollTop) < 2")
-}
-
-/// Whether a line with exactly this text is rendered.
-fn rendered(text: &str) -> String {
-    format!("Array.from({LOG}.querySelectorAll('.line')).some(l => l.textContent === '{text}')")
-}
-
-async fn eval_bool(page: &Page<'_>, expression: &str) -> Result<bool, Report> {
-    Ok(page
-        .driver
-        .execute(&format!("return {expression};"), vec![])
-        .await?
-        .convert::<bool>()?)
-}
-
-async fn eval_number(page: &Page<'_>, expression: &str) -> Result<f64, Report> {
-    Ok(page
-        .driver
-        .execute(&format!("return {expression};"), vec![])
-        .await?
-        .convert::<f64>()?)
-}
-
-async fn eval_string(page: &Page<'_>, expression: &str) -> Result<String, Report> {
-    Ok(page
-        .driver
-        .execute(&format!("return {expression};"), vec![])
-        .await?
-        .convert::<String>()?)
-}
-
-/// Waits until the JavaScript expression `condition` is true.
-async fn wait_until(page: &Page<'_>, condition: &str) -> Result<(), Report> {
-    for _ in 0..100 {
-        if eval_bool(page, condition).await? {
-            return Ok(());
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
-    rootcause::bail!("never true: {condition}")
 }
 
 /// A view rebuilt in place (the same type, a new owner: tachys reuses the DOM) whose elements carry
@@ -217,20 +53,9 @@ impl BrowserTest<str> for VirtualListRebuildTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/virtual_list").await?;
-        wait_until(
-            &page,
-            "!!document.querySelector('#test-vl-rebuilt-list .line')",
-        )
-        .await?;
-        for round in 1..=3 {
-            page.click_element_with_id("test-vl-source").await?;
-            page.wait_for_text("test-vl-rebuilt-plain", &format!("Plain {round}"))
-                .await?;
-            page.click_element_with_id("test-vl-rebuilt-list").await?;
-            page.click_element_with_id("test-vl-rebuilt-plain").await?;
-            page.press_tab().await?;
-        }
-        page.expect_no_page_errors().await
+
+        cases!(rebuilt_views_drop_the_old_handlers(&page));
+        Ok(())
     }
 }
 
@@ -250,12 +75,9 @@ impl BrowserTest<str> for ComponentSpreadRebuildKnownIssues {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/virtual_list").await?;
-        page.click_element_with_id("test-vl-source").await?;
-        page.wait_for_text("test-vl-rebuilt-plain", "Plain 1")
-            .await?;
-        page.click_element_with_id("test-vl-rebuilt-wrapper")
-            .await?;
-        page.expect_no_page_errors().await
+
+        cases!(rebuilt_component_spread_drops_the_old_handlers(&page));
+        Ok(())
     }
 }
 
@@ -274,67 +96,306 @@ impl BrowserTest<str> for VirtualListFollowToggleTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/virtual_list").await?;
-        wait_until(&page, &at_end()).await?;
-        wait_until(&page, &rendered("Line 1999")).await?;
 
-        // Records every row wrapper whose measured height goes back to the 20px estimate.
-        page.driver
-            .execute(
-                &format!(
-                    "window.__vlReestimated = [];
-                     new MutationObserver(records => {{
-                         for (const record of records) {{
-                             const wrapper = record.target;
-                             if (!wrapper.firstElementChild?.classList.contains('line')) continue;
-                             const old = /height: ([0-9.]+)px/.exec(record.oldValue ?? '')?.[1];
-                             if (old !== undefined && old !== '20' && wrapper.style.height === '20px') {{
-                                 window.__vlReestimated.push(wrapper.textContent.slice(0, 12));
-                             }}
-                         }}
-                     }}).observe({LOG}, {{ subtree: true, attributes: true, attributeFilter: ['style'], attributeOldValue: true }});"
-                ),
-                vec![],
-            )
-            .await?;
-
-        // A user scroll (one step every 50ms, so it doesn't end in between): up from the end,
-        // then down again, so the rows above the stop were rendered and measured. Then the
-        // first row in view and its offset, before the scroll ends (300ms later) and turns
-        // following off.
-        let anchor = format!(
-            "const log = {LOG}; \
-             const row = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement) \
-             .find(r => parseFloat(r.style.top) >= log.scrollTop); \
-             return row.textContent.slice(0, 12) + '@' + (parseFloat(row.style.top) - log.scrollTop);"
-        );
-        let before = page
-            .driver
-            .execute_async(
-                &format!(
-                    "const done = arguments[arguments.length - 1]; \
-                     const anchor = () => {{ {anchor} }}; \
-                     const steps = [...Array(30).fill(-150), ...Array(12).fill(150)]; \
-                     const next = i => {{ \
-                         if (i === steps.length) {{ setTimeout(() => done(anchor()), 120); return; }} \
-                         {LOG}.scrollTop += steps[i]; setTimeout(() => next(i + 1), 50); \
-                     }}; \
-                     next(0);"
-                ),
-                vec![],
-            )
-            .await?
-            .convert::<String>()?;
-        page.wait_for_text("test-vl-follow", "not following")
-            .await?;
-        // Settle (a re-layout runs in effects and frames), then check: the content didn't move.
-        stays_for!(
-            "the anchor row and its offset",
-            std::time::Duration::from_millis(500),
-            before,
-            eval_string(&page, &format!("(() => {{ {anchor} }})()")).await?
-        );
-        assert_that!(eval_string(&page, "JSON.stringify(window.__vlReestimated)").await?)
-            .is_equal_to("[]".to_owned());
-        page.expect_no_page_errors().await
+        cases!(follow_toggle_keeps_measured_sizes(&page));
+        Ok(())
     }
+}
+
+/// Runs `script` with `log` bound to the log element and `arg` to `arg`; `script` returns its
+/// result (`return ...`) if any.
+async fn on_log<T: DeserializeOwned>(
+    page: &Page<'_>,
+    script: &str,
+    arg: impl Serialize,
+) -> Result<T, Report> {
+    page.eval(
+        &format!(
+            "const log = document.getElementById('test-vl-log'); const arg = arguments[0]; {script}"
+        ),
+        vec![serde_json::to_value(arg)?],
+    )
+    .await
+}
+
+/// How far the log is scrolled from its end, in pixels.
+const DISTANCE_TO_END: &str = "return log.scrollHeight - log.clientHeight - log.scrollTop;";
+
+/// The texts of the rendered lines, in DOM order.
+const RENDERED_LINES: &str =
+    "return Array.from(log.querySelectorAll('.line')).map(l => l.textContent);";
+
+/// The `top` of each rendered row, in DOM order (a text selection follows the DOM).
+const ROW_TOPS: &str = "return Array.from(log.querySelectorAll('.line')).map(l => parseFloat(l.parentElement.style.top));";
+
+/// The extent of the rendered rows and of the log's viewport, in content pixels.
+const COVERAGE: &str = "
+    const rows = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement);
+    return {
+        rows_top: rows.length ? Math.min(...rows.map(r => parseFloat(r.style.top))) : null,
+        rows_bottom: rows.length
+            ? Math.max(...rows.map(r => parseFloat(r.style.top) + parseFloat(r.style.height)))
+            : null,
+        view_top: log.scrollTop,
+        view_bottom: log.scrollTop + log.clientHeight,
+    };";
+
+/// The extent of the rendered rows and of the viewport ([`COVERAGE`]).
+#[derive(Debug, Deserialize)]
+struct Coverage {
+    rows_top: Option<f64>,
+    rows_bottom: Option<f64>,
+    view_top: f64,
+    view_bottom: f64,
+}
+
+impl Coverage {
+    fn covers_the_view(&self) -> bool {
+        matches!(
+            (self.rows_top, self.rows_bottom),
+            (Some(top), Some(bottom)) if top <= self.view_top && bottom >= self.view_bottom
+        )
+    }
+}
+
+/// Wait until the log is scrolled to its end (within 2px).
+async fn wait_for_the_end(page: &Page<'_>) -> Result<(), Report> {
+    wait_for("the log's distance from its end")
+        .observing(|| on_log::<f64>(page, DISTANCE_TO_END, ()))
+        .to_be("less than 2px", |distance| distance.abs() < 2.0)
+        .await
+}
+
+/// Wait until the line with the text `line` is rendered.
+async fn wait_for_rendered(page: &Page<'_>, line: &str) -> Result<(), Report> {
+    wait_for("the rendered lines")
+        .observing(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
+        .to_be(&format!("including {line:?}"), |lines| {
+            lines.iter().any(|rendered| rendered == line)
+        })
+        .await
+}
+
+/// The rendered rows' tops are in visual order in the DOM.
+async fn assert_rows_in_visual_order(page: &Page<'_>) -> Result<(), Report> {
+    let tops = on_log::<Vec<f64>>(page, ROW_TOPS, ()).await?;
+    let mut sorted = tops.clone();
+    sorted.sort_by(f64::total_cmp);
+    assert_that!(tops).is_equal_to(sorted);
+    Ok(())
+}
+
+/// Selects from the first to the third short line ("Line <n>") in visual order; returns the
+/// selection's text (whitespace collapsed) and the texts of its first and last line.
+const SELECT_THREE_SHORT_ROWS: &str = "
+    const lines = Array.from(log.querySelectorAll('.line'))
+        .filter(l => /^Line \\d+$/.test(l.textContent))
+        .sort((a, b) => parseFloat(a.parentElement.style.top) - parseFloat(b.parentElement.style.top));
+    const range = document.createRange();
+    range.setStartBefore(lines[0]);
+    range.setEndAfter(lines[2]);
+    return [range.toString().replace(/\\s+/g, ' ').trim(), [lines[0].textContent, lines[2].textContent]];";
+
+/// The first row in the log's view and its offset from the view's top, e.g. `Line 1234@-3`.
+const ANCHOR: &str = "
+    const row = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement)
+        .find(r => parseFloat(r.style.top) >= log.scrollTop);
+    return row.textContent.slice(0, 12) + '@' + (parseFloat(row.style.top) - log.scrollTop);";
+
+/// Following: at the end, with the last line rendered, and only a slice of all lines; the lines'
+/// text is selectable.
+async fn follows_its_end(page: &Page<'_>) -> Result<(), Report> {
+    wait_for_the_end(page).await?;
+    wait_for_rendered(page, "Line 1999").await?;
+    assert_that!(page.count("#test-vl-log .line").await?).is_less_than(100);
+    let line = page.element("#test-vl-log .line").await?;
+    assert_that!(line.css_value("user-select").await?).is_not_equal_to("none");
+    Ok(())
+}
+
+/// Appended lines come into view, in visual order in the DOM.
+async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-vl-append").await?.click().await?;
+    wait_for_rendered(page, "Line 2049").await?;
+    wait_for_the_end(page).await?;
+    assert_rows_in_visual_order(page).await?;
+    Ok(())
+}
+
+/// After scroll jumps too, the rows are in visual order; a selection from one visible row to
+/// another holds exactly the rows between.
+async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Report> {
+    for top in [10_000, 5_000, 20_000] {
+        on_log::<()>(page, "log.scrollTop = arg;", top).await?;
+        wait_for(format!("the rendered rows, scrolled to {top}"))
+            .observing(|| on_log::<Coverage>(page, COVERAGE, ()))
+            .to_be("covering the viewport", Coverage::covers_the_view)
+            .await?;
+        assert_rows_in_visual_order(page)
+            .await
+            .context_with(|| format!("scrolled to {top}"))?;
+    }
+    let (text, [first, last]) =
+        on_log::<(String, [String; 2])>(page, SELECT_THREE_SHORT_ROWS, ()).await?;
+    assert_that!(text.as_str())
+        .starts_with(&first)
+        .ends_with(&last);
+    // Only the rows between (no long line: the rows were picked from short ones in a run).
+    assert_that!(text.matches("Line ").count()).is_less_than(5);
+    Ok(())
+}
+
+/// Scrolling away stops following; appended lines don't move the view.
+async fn scrolling_away_stops_following(page: &Page<'_>) -> Result<(), Report> {
+    on_log::<()>(page, "log.scrollTop = arg;", 0).await?;
+    page.element("#test-vl-follow")
+        .await?
+        .wait_for_inner_text("not following")
+        .await?;
+    page.element("#test-vl-append").await?.click().await?;
+    wait_for_rendered(page, "Line 1").await?;
+    assert_that!(on_log::<f64>(page, "return log.scrollTop;", ()).await?).is_equal_to(0.0);
+    Ok(())
+}
+
+/// A row holding the text selection stays rendered while scrolled away; without the selection,
+/// it goes.
+async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> {
+    on_log::<()>(
+        page,
+        "const line = Array.from(log.querySelectorAll('.line')).find(l => l.textContent === arg);
+         window.selectionChanges = 0;
+         document.addEventListener('selectionchange', () => window.selectionChanges += 1);
+         const range = document.createRange();
+         range.selectNodeContents(line);
+         const selection = window.getSelection();
+         selection.removeAllRanges();
+         selection.addRange(range);",
+        "Line 1",
+    )
+    .await?;
+    // `selectionchange` is dispatched later; the list's own listener (registered at mount) has
+    // run once this one did. A user doesn't select and scroll within one task.
+    wait_for("the number of selection changes")
+        .observing(|| on_log::<u32>(page, "return window.selectionChanges;", ()))
+        .to_be("at least 1", |changes| *changes >= 1)
+        .await?;
+    // Scrolling back to the end follows again; the selected row stays rendered.
+    let follow = page.element("#test-vl-follow").await?;
+    wait_for("the following state, scrolled to the end")
+        .observing(|| async {
+            on_log::<()>(page, "log.scrollTop = log.scrollHeight;", ()).await?;
+            follow.inner_text().await
+        })
+        .to_be_equal_to("following")
+        .await?;
+    wait_for_rendered(page, "Line 2099").await?;
+    assert_that!(on_log::<Vec<String>>(page, RENDERED_LINES, ()).await?)
+        .contains("Line 1".to_owned());
+    assert_that!(on_log::<String>(page, "return window.getSelection().toString();", ()).await?)
+        .is_equal_to("Line 1");
+
+    on_log::<()>(page, "window.getSelection().removeAllRanges();", ()).await?;
+    wait_for("the rendered lines")
+        .observing(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
+        .to_be("without \"Line 1\"", |lines| {
+            lines.iter().all(|line| line != "Line 1")
+        })
+        .await?;
+    Ok(())
+}
+
+/// Turning following on scrolls to the end.
+async fn turning_following_on_scrolls_to_the_end(page: &Page<'_>) -> Result<(), Report> {
+    let follow = page.element("#test-vl-follow").await?;
+    on_log::<()>(page, "log.scrollTop = arg;", 0).await?;
+    follow.wait_for_inner_text("not following").await?;
+    follow.click().await?;
+    follow.wait_for_inner_text("following").await?;
+    wait_for_rendered(page, "Line 2099").await?;
+    wait_for_the_end(page).await?;
+    Ok(())
+}
+
+/// Rebuilding the view three times: clicks on the rebuilt list and the plain element, and Tab, hit
+/// only live handlers (a disposed owner's handler panics, which fails the test).
+async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-vl-rebuilt-list .line").await?;
+    for round in 1..=3 {
+        page.element("#test-vl-source").await?.click().await?;
+        page.element("#test-vl-rebuilt-plain")
+            .await?
+            .wait_for_inner_text(&format!("Plain {round}"))
+            .await?;
+        page.element("#test-vl-rebuilt-list").await?.click().await?;
+        page.element("#test-vl-rebuilt-plain")
+            .await?
+            .click()
+            .await?;
+        page.send_keys(Key::Tab).await?;
+    }
+    Ok(())
+}
+
+/// A click on the rebuilt component with spread attributes hits only live handlers.
+async fn rebuilt_component_spread_drops_the_old_handlers(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-vl-source").await?.click().await?;
+    page.element("#test-vl-rebuilt-plain")
+        .await?
+        .wait_for_inner_text("Plain 1")
+        .await?;
+    page.element("#test-vl-rebuilt-wrapper")
+        .await?
+        .click()
+        .await?;
+    Ok(())
+}
+
+/// A user scroll up from the end and down again (so the rows above the stop were rendered and
+/// measured) turns following off; the content doesn't move, and no measured row height goes back
+/// to the estimate.
+async fn follow_toggle_keeps_measured_sizes(page: &Page<'_>) -> Result<(), Report> {
+    wait_for_the_end(page).await?;
+    wait_for_rendered(page, "Line 1999").await?;
+
+    // Records every row wrapper whose measured height goes back to the 20px estimate.
+    on_log::<()>(
+        page,
+        "window.__vlReestimated = [];
+         new MutationObserver(records => {
+             for (const record of records) {
+                 const wrapper = record.target;
+                 if (!wrapper.firstElementChild?.classList.contains('line')) continue;
+                 const old = /height: ([0-9.]+)px/.exec(record.oldValue ?? '')?.[1];
+                 if (old !== undefined && old !== '20' && wrapper.style.height === '20px') {
+                     window.__vlReestimated.push(wrapper.textContent.slice(0, 12));
+                 }
+             }
+         }).observe(log, { subtree: true, attributes: true, attributeFilter: ['style'], attributeOldValue: true });",
+        (),
+    )
+    .await?;
+
+    // The user scroll: one step every 50ms (real timers pacing it, so the scroll doesn't end in
+    // between), 30 up, 12 down. Then the first row in view and its offset, before the scroll ends
+    // (300ms later) and turns following off.
+    for step in std::iter::repeat_n(-150, 30).chain(std::iter::repeat_n(150, 12)) {
+        on_log::<()>(page, "log.scrollTop += arg;", step).await?;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    tokio::time::sleep(Duration::from_millis(70)).await;
+    let before = on_log::<String>(page, ANCHOR, ()).await?;
+    page.element("#test-vl-follow")
+        .await?
+        .wait_for_inner_text("not following")
+        .await?;
+    // Settle (a re-layout runs in effects and frames), then check: the content didn't move.
+    expect("the anchor row and its offset")
+        .observing(|| on_log::<String>(page, ANCHOR, ()))
+        .for_at_least(Duration::from_millis(500))
+        .to_stay_equal_to(before)
+        .await?;
+    assert_that!(on_log::<Vec<String>>(page, "return window.__vlReestimated;", ()).await?)
+        .is_empty();
+    Ok(())
 }

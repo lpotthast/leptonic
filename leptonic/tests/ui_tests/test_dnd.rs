@@ -2,13 +2,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, dnd::DndPage};
+use crate::{
+    pages::{ElementActions, PageActions, dnd::DndPage, role, xpath},
+    polling::wait_for,
+};
 
 const LOG: &str = "test-dnd-log";
 const TARGETS_LOG: &str = "test-dnd-targets-log";
@@ -29,11 +29,13 @@ impl BrowserTest<str> for DndTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = DndPage { driver, base_url };
-        basic_drag_and_drop(&page).await?;
-        escape_cancels(&page).await?;
-        reorder_a_list(&page).await?;
-        native_basic_drag_and_drop(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            basic_drag_and_drop(&page),
+            escape_cancels(&page),
+            reorder_a_list(&page),
+            native_basic_drag_and_drop(&page),
+        );
+        Ok(())
     }
 }
 
@@ -48,12 +50,14 @@ impl BrowserTest<str> for DndKeyboardNavigationTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = DndPage { driver, base_url };
-        tab_forward_skips_non_drop_targets(&page).await?;
-        tab_backward_skips_non_drop_targets(&page).await?;
-        prefers_an_ancestor_drop_target(&page).await?;
-        enter_on_the_drag_source_cancels(&page).await?;
-        ignores_drop_targets_in_hidden_trees(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            tab_forward_skips_non_drop_targets(&page),
+            tab_backward_skips_non_drop_targets(&page),
+            prefers_an_ancestor_drop_target(&page),
+            enter_on_the_drag_source_cancels(&page),
+            ignores_drop_targets_in_hidden_trees(&page),
+        );
+        Ok(())
     }
 }
 
@@ -68,12 +72,14 @@ impl BrowserTest<str> for DndChangingTargetsTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = DndPage { driver, base_url };
-        a_removed_drop_target(&page).await?;
-        a_drop_target_hidden_during_the_drag(&page).await?;
-        an_added_drop_target_keeps_the_current_target(&page).await?;
-        a_hidden_drag_source_is_skipped(&page).await?;
-        escape_with_a_hidden_drag_source(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            a_removed_drop_target(&page),
+            a_drop_target_hidden_during_the_drag(&page),
+            an_added_drop_target_keeps_the_current_target(&page),
+            a_hidden_drag_source_is_skipped(&page),
+            escape_with_a_hidden_drag_source(&page),
+        );
+        Ok(())
     }
 }
 
@@ -88,14 +94,16 @@ impl BrowserTest<str> for DndOperationsTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = DndPage { driver, base_url };
-        disabled_drag(&page).await?;
-        disabled_drop(&page).await?;
-        drop_operation_override(&page).await?;
-        allowed_drop_operations(&page).await?;
-        canceled_targets_are_hidden(&page).await?;
-        alt_enter_activates(&page).await?;
-        native_disabled(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            disabled_drag(&page),
+            disabled_drop(&page),
+            drop_operation_override(&page),
+            allowed_drop_operations(&page),
+            canceled_targets_are_hidden(&page),
+            alt_enter_activates(&page),
+            native_disabled(&page),
+        );
+        Ok(())
     }
 }
 
@@ -111,17 +119,15 @@ impl BrowserTest<str> for DndScreenReaderTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = DndPage { driver, base_url };
-        navigating_with_focus_events_only(&page).await?;
-        hides_everything_but_drop_targets(&page).await?;
-        clicking_the_drag_source_cancels(&page).await?;
-        restores_focus_from_non_drop_targets(&page).await?;
-        ignores_clicks_not_from_screen_readers(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            navigating_with_focus_events_only(&page),
+            hides_everything_but_drop_targets(&page),
+            clicking_the_drag_source_cancels(&page),
+            restores_focus_from_non_drop_targets(&page),
+            ignores_clicks_not_from_screen_readers(&page),
+        );
+        Ok(())
     }
-}
-
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
 }
 
 /// A real mouse click, a few pixels off the element's center.
@@ -135,12 +141,14 @@ async fn click_off_center(page: &DndPage<'_>, element: &WebElement) -> Result<()
     Ok(())
 }
 
+/// The drop target button `label`.
 async fn droppable(page: &DndPage<'_>, label: &str) -> Result<WebElement, Report> {
-    page.by_role_and_text("button", label).await
+    page.element(role("button").text(label)).await
 }
 
+/// The drag source ("Drag me").
 async fn draggable(page: &DndPage<'_>) -> Result<WebElement, Report> {
-    page.by_role_and_text("button", "Drag me").await
+    page.element(role("button").text("Drag me")).await
 }
 
 /// Opens `/hooks/dnd-targets` with the query and starts a keyboard drag of "Drag me" (focus moves
@@ -149,60 +157,72 @@ async fn start_keyboard_drag(page: &DndPage<'_>, query: &str) -> Result<WebEleme
     page.goto_path(&format!("/hooks/dnd-targets{query}"))
         .await?;
     let source = draggable(page).await?;
-    page.by_role_and_text("button", "Before")
+    page.element(role("button").text("Before"))
         .await?
         .click()
         .await?;
-    page.press_tab().await?;
+    page.send_keys(Key::Tab).await?;
     if query.contains("ancestor") {
         // The ancestor drop target comes first.
-        page.press_tab().await?;
+        page.send_keys(Key::Tab).await?;
     }
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("true"))
-        .await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Enter).await?;
+    source.wait_for_attr("data-dragging", Some("true")).await?;
     Ok(source)
 }
 
 // ---- /hooks/dnd ----
 
+/// "should perform basic drag and drop" (keyboard): Enter starts the drag and focuses the nearest
+/// drop target, Tab moves between targets, Enter drops; sources and targets are described only
+/// while it matters.
 async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
-    let draggable = page.element("test-dnd-draggable").await?;
+    let draggable = page.element("#test-dnd-draggable").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    assert_that!(attr(&draggable, "data-dragging").await?).is_equal_to(Some("false".to_owned()));
-    assert_that!(attr(&draggable, "draggable").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(draggable.attr("data-dragging").await?)
+        .get_some()
+        .is_equal_to("false");
+    assert_that!(draggable.attr("draggable").await?)
+        .get_some()
+        .is_equal_to("true");
 
-    page.click_element_with_id("test-dnd-before").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&draggable, "the draggable").await?;
-    assert_that!(page.description(&draggable).await?)
-        .is_equal_to("Press Enter to start dragging.".to_owned());
+    page.element("#test-dnd-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&draggable).await?;
+    assert_that!(draggable.referenced_text("aria-describedby").await?)
+        .is_equal_to("Press Enter to start dragging.");
 
-    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys(Key::Enter).await?;
     // The drag moves focus to the nearest drop target.
-    page.wait_for_focus_on(&target_1, "the first drop target")
+    page.wait_for_focus(&target_1).await?;
+    draggable
+        .wait_for_attr("data-dragging", Some("true"))
         .await?;
-    assert_that!(attr(&draggable, "data-dragging").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&target_1, "data-droptarget").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(page.description(&target_1).await?)
-        .is_equal_to("Press Enter to drop. Press Escape to cancel drag.".to_owned());
+    target_1
+        .wait_for_attr("data-droptarget", Some("true"))
+        .await?;
+    assert_that!(target_1.referenced_text("aria-describedby").await?)
+        .is_equal_to("Press Enter to drop. Press Escape to cancel drag.");
     page.expect_log(LOG, &["dragstart", "dropenter 1"]).await?;
 
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "the second drop target")
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
+    target_1
+        .wait_for_attr("data-droptarget", Some("false"))
         .await?;
-    assert_that!(attr(&target_1, "data-droptarget").await?).is_equal_to(Some("false".to_owned()));
-    assert_that!(attr(&target_2, "data-droptarget").await?).is_equal_to(Some("true".to_owned()));
+    target_2
+        .wait_for_attr("data-droptarget", Some("true"))
+        .await?;
     page.expect_log(
         LOG,
         &["dragstart", "dropenter 1", "dropexit 1", "dropenter 2"],
     )
     .await?;
 
-    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys(Key::Enter).await?;
     page.expect_log(
         LOG,
         &[
@@ -217,49 +237,55 @@ async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
         ],
     )
     .await?;
-    page.wait_for_focus_on(&target_2, "the second drop target")
+    page.wait_for_focus(&target_2).await?;
+    draggable
+        .wait_for_attr("data-dragging", Some("false"))
         .await?;
-    assert_that!(attr(&draggable, "data-dragging").await?).is_equal_to(Some("false".to_owned()));
-    assert_that!(attr(&target_2, "data-droptarget").await?).is_equal_to(Some("false".to_owned()));
+    target_2
+        .wait_for_attr("data-droptarget", Some("false"))
+        .await?;
     // Drop targets are only described during drags.
-    assert_that!(attr(&target_2, "aria-describedby").await?).is_none();
+    assert_that!(target_2.attr("aria-describedby").await?).is_none();
     Ok(())
 }
 
+/// "should cancel the drag when pressing the escape key": focus returns to the drag source.
 async fn escape_cancels(page: &DndPage<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
-    let draggable = page.element("test-dnd-draggable").await?;
-    page.click_element_with_id("test-dnd-before").await?;
-    page.press_tab().await?;
-    page.send_keys_to_active(Key::Enter).await?;
+    let draggable = page.element("#test-dnd-draggable").await?;
+    page.element("#test-dnd-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.send_keys(Key::Enter).await?;
     let target_1 = droppable(page, "Drop here").await?;
-    page.wait_for_focus_on(&target_1, "the first drop target")
-        .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_focus_on(&draggable, "the draggable").await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_focus(&draggable).await?;
     page.expect_log(
         LOG,
         &["dragstart", "dropenter 1", "dropexit 1", "dragend Cancel"],
     )
-    .await
+    .await?;
+    Ok(())
 }
 
+/// The row of the letter `letter` in the reorderable list.
 async fn row(page: &DndPage<'_>, letter: &str) -> Result<WebElement, Report> {
-    page.css("[role=grid][aria-label='Letters']")
+    page.element("[role=grid][aria-label='Letters']")
         .await?
-        .find(By::XPath(format!(
+        .element(xpath(format!(
             ".//*[@role='row'][.//*[@role='gridcell'][normalize-space(.)='{letter}']]"
         )))
         .await
-        .map_err(Into::into)
 }
 
+/// Waits until the drop indicator labelled `label` has focus.
 async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(), Report> {
-    wait_until!(format!("the drop indicator {label:?} to have focus"), {
-        let active = page.driver.active_element().await?;
-        attr(&active, "aria-label").await?.as_deref() == Some(label)
-            && attr(&active, "aria-roledescription").await?.as_deref() == Some("drop indicator")
-    });
+    let indicator = page
+        .element(format!(
+            "[aria-roledescription='drop indicator'][aria-label='{label}']"
+        ))
+        .await?;
+    page.wait_for_focus(&indicator).await?;
     Ok(())
 }
 
@@ -267,64 +293,71 @@ async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(),
 /// between the valid positions (rows can't be dropped on), Enter drops.
 async fn reorder_a_list(page: &DndPage<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
-    page.click_element_with_id("test-dnd-before-list").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&row(page, "A").await?, "row A")
-        .await?;
-    page.send_keys_to_active(Key::Down).await?;
+    page.element("#test-dnd-before-list").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&row(page, "A").await?).await?;
+    page.send_keys(Key::Down).await?;
     let b = row(page, "B").await?;
-    page.wait_for_focus_on(&b, "row B").await?;
+    page.wait_for_focus(&b).await?;
 
-    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys(Key::Enter).await?;
     expect_focused_indicator(page, "Insert between B and C").await?;
-    assert_that!(attr(&b, "data-dragging").await?).is_some();
+    // A presence flag on collection rows (`""`), unlike the hooks' `"true"`/`"false"`.
+    assert_that!(b.attr("data-dragging").await?).is_some();
     // Rows can't be dropped on: they are hidden (inert) during the drag.
     assert_that!(page.is_inert(&row(page, "A").await?).await?).is_true();
     assert_that!(page.is_inert(&b).await?).is_false();
 
-    page.send_keys_to_active(Key::Up).await?;
+    page.send_keys(Key::Up).await?;
     expect_focused_indicator(page, "Insert between A and B").await?;
-    page.send_keys_to_active(Key::Up).await?;
+    page.send_keys(Key::Up).await?;
     expect_focused_indicator(page, "Insert before A").await?;
 
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-dnd-order", "BACD").await?;
+    page.send_keys(Key::Enter).await?;
+    page.element("#test-dnd-order")
+        .await?
+        .wait_for_inner_text("BACD")
+        .await?;
     let b = row(page, "B").await?;
-    page.wait_for_focus_on(&b, "row B").await?;
+    page.wait_for_focus(&b).await?;
     assert_that!(page.is_inert(&row(page, "A").await?).await?).is_false();
-    assert_that!(attr(&b, "aria-hidden").await?).is_none();
+    assert_that!(b.attr("aria-hidden").await?).is_none();
     Ok(())
 }
 
 /// "native drag and drop: should perform basic drag and drop".
 async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
-    let draggable = page.element("test-dnd-draggable").await?;
+    let draggable = page.element("#test-dnd-draggable").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
 
     page.fire_drag_event(&draggable, "dragstart", &[]).await?;
     page.expect_log(LOG, &["dragstart"]).await?;
-    assert_that!(page.transfer("getData('text/plain')").await?)
-        .is_equal_to(serde_json::Value::from("hello world"));
-    assert_that!(page.transfer("effectAllowed").await?).is_equal_to(serde_json::Value::from("all"));
-    page.wait_for_attr(&draggable, "data-dragging", Some("true"))
+    assert_that!(page.transfer::<String>("getData('text/plain')").await?)
+        .is_equal_to("hello world");
+    assert_that!(page.transfer::<String>("effectAllowed").await?).is_equal_to("all");
+    draggable
+        .wait_for_attr("data-dragging", Some("true"))
         .await?;
 
     // Entering a drop target accepts the drag (prevents the default).
     assert_that!(page.fire_drag_event(&target_1, "dragenter", &[]).await?).is_true();
     assert_that!(page.fire_drag_event(&target_1, "dragover", &[]).await?).is_true();
-    assert_that!(page.transfer("dropEffect").await?).is_equal_to(serde_json::Value::from("move"));
+    assert_that!(page.transfer::<String>("dropEffect").await?).is_equal_to("move");
     page.expect_log(LOG, &["dragstart", "dropenter 1"]).await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("true"))
+    target_1
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
 
     page.fire_drag_event(&target_1, "dragleave", &[]).await?;
     page.fire_drag_event(&target_2, "dragenter", &[]).await?;
     page.fire_drag_event(&target_2, "dragover", &[]).await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("false"))
+    target_1
+        .wait_for_attr("data-droptarget", Some("false"))
         .await?;
-    page.wait_for_attr(&target_2, "data-droptarget", Some("true"))
+    target_2
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
 
     assert_that!(page.fire_drag_event(&target_2, "drop", &[]).await?).is_true();
@@ -342,26 +375,31 @@ async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
         ],
     )
     .await?;
-    page.wait_for_attr(&draggable, "data-dragging", Some("false"))
+    draggable
+        .wait_for_attr("data-dragging", Some("false"))
         .await?;
-    page.wait_for_attr(&target_2, "data-droptarget", Some("false"))
-        .await
+    target_2
+        .wait_for_attr("data-droptarget", Some("false"))
+        .await?;
+    Ok(())
 }
 
 // ---- /hooks/dnd-targets: keyboard navigation ----
 
+/// "should Tab forward and skip non drop target elements": past the last drop target, back to the
+/// drag source.
 async fn tab_forward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
     // Past the last drop target: back to the drag source.
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_1).await?;
     page.expect_log(
         TARGETS_LOG,
         &[
@@ -374,111 +412,129 @@ async fn tab_forward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), Re
         ],
     )
     .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
+/// "should Tab backward and skip non drop target elements".
 async fn tab_backward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_shift_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.press_shift_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.press_shift_tab().await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
+/// "should prefer an ancestor drop target over the nearest drop target": it is entered first.
 async fn prefers_an_ancestor_drop_target(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?ancestor").await?;
     let ancestor = page
-        .css("[role=button][data-droptarget]:has([role=button])")
+        .element("[role=button][data-droptarget]:has([role=button])")
         .await?;
-    page.wait_for_focus_on(&ancestor, "the ancestor drop target")
-        .await?;
-    page.wait_for_attr(&ancestor, "data-droptarget", Some("true"))
+    page.wait_for_focus(&ancestor).await?;
+    ancestor
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dropenter 0"])
         .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
+/// "should cancel the drag when pressing Enter on the original drag target": one drag only, Enter
+/// doesn't start another one.
 async fn enter_on_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_shift_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Enter).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    page.wait_for_focus(&source).await?;
     // One drag only: Enter didn't start another one.
     page.expect_log_settled(
         TARGETS_LOG,
         &["dragstart", "dropenter 1", "dropexit 1", "dragend Cancel"],
     )
-    .await
+    .await?;
+    Ok(())
 }
 
+/// "should ignore drop targets in aria-hidden trees" (target 9).
 async fn ignores_drop_targets_in_hidden_trees(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?hidden-tree").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    assert_that!(page.log(TARGETS_LOG).await?.join(",").contains(" 9")).is_false();
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    // Target 9 in the hidden tree is never entered.
+    page.expect_log_settled(
+        TARGETS_LOG,
+        &[
+            "dragstart",
+            "dropenter 1",
+            "dropexit 1",
+            "dropenter 2",
+            "dropexit 2",
+        ],
+    )
+    .await?;
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
 // ---- /hooks/dnd-targets: changing targets ----
 
+/// "should handle when a drop target is removed": the first one takes over.
 async fn a_removed_drop_target(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
     // The current drop target goes: the first one takes over.
     page.dispatch_action(TARGETS_PAGE, ACTION, "remove-target")
         .await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
+/// "should handle when a drop target is hidden with aria-hidden": the first one takes over.
 async fn a_drop_target_hidden_during_the_drag(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
     page.dispatch_action(TARGETS_PAGE, ACTION, "hide-target")
         .await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
 /// A drop target registered during a drag runs the targets' `get_drop_operation` (which read a
@@ -487,13 +543,13 @@ async fn a_drop_target_hidden_during_the_drag(page: &DndPage<'_>) -> Result<(), 
 async fn an_added_drop_target_keeps_the_current_target(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
+    page.wait_for_focus(&target_1).await?;
     page.dispatch_action(TARGETS_PAGE, ACTION, "add-target")
         .await?;
     let target_3 = droppable(page, "Drop here 3").await?;
-    page.press_tab().await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_3, "Drop here 3").await?;
+    page.send_keys(Key::Tab).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_3).await?;
     page.expect_log_settled(
         TARGETS_LOG,
         &[
@@ -506,8 +562,8 @@ async fn an_added_drop_target_keeps_the_current_target(page: &DndPage<'_>) -> Re
         ],
     )
     .await?;
-    page.wait_for_focus_on(&target_3, "Drop here 3").await?;
-    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_focus(&target_3).await?;
+    page.send_keys(Key::Enter).await?;
     page.expect_log(
         TARGETS_LOG,
         &[
@@ -523,46 +579,51 @@ async fn an_added_drop_target_keeps_the_current_target(page: &DndPage<'_>) -> Re
         ],
     )
     .await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
+/// "should not tab to the original draggable element if it is in an aria-hidden tree": Tab cycles
+/// through the drop targets only.
 async fn a_hidden_drag_source_is_skipped(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
+    page.wait_for_focus(&target_1).await?;
     page.dispatch_action(TARGETS_PAGE, ACTION, "hide-draggable")
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.press_shift_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.press_shift_tab().await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
+/// "should not restore focus to the original draggable element on Escape if it is in an aria-hidden
+/// tree".
 async fn escape_with_a_hidden_drag_source(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
+    page.wait_for_focus(&target_1).await?;
     page.dispatch_action(TARGETS_PAGE, ACTION, "hide-draggable")
         .await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("true"))
+    target_1
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("false"))
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    target_1
+        .wait_for_attr("data-droptarget", Some("false"))
         .await?;
     // Focus isn't restored into the hidden tree.
-    page.settle().await;
-    page.wait_for_focus_on(&target_1, "Drop here").await
+    page.focus_stays(&target_1).await?;
+    Ok(())
 }
 
 // ---- /hooks/dnd-targets: disabled, operations ----
@@ -572,21 +633,25 @@ async fn escape_with_a_hidden_drag_source(page: &DndPage<'_>) -> Result<(), Repo
 async fn disabled_drag(page: &DndPage<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-targets?disabled-drag").await?;
     let source = draggable(page).await?;
-    assert_that!(attr(&source, "draggable").await?).is_equal_to(Some("false".to_owned()));
-    assert_that!(attr(&source, "data-dragging").await?).is_equal_to(Some("false".to_owned()));
-    page.by_role_and_text("button", "Before")
+    assert_that!(source.attr("draggable").await?)
+        .get_some()
+        .is_equal_to("false");
+    assert_that!(source.attr("data-dragging").await?)
+        .get_some()
+        .is_equal_to("false");
+    page.element(role("button").text("Before"))
         .await?
         .click()
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    assert_that!(attr(&source, "aria-describedby").await?).is_none();
-    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    assert_that!(source.attr("aria-describedby").await?).is_none();
+    page.send_keys(Key::Enter).await?;
     page.expect_log_settled(TARGETS_LOG, &["parent keydown Enter"])
         .await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.expect_attr_settled(&source, "data-dragging", Some("false"))
-        .await
+    page.wait_for_focus(&source).await?;
+    source.attr_stays("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
 /// "useDrop should support isDisabled" (keyboard): the disabled target isn't one.
@@ -594,25 +659,26 @@ async fn disabled_drop(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?disabled-drop").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.expect_attr_settled(&target_1, "data-droptarget", Some("false"))
+    page.wait_for_focus(&target_2).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&target_2).await?;
+    target_1
+        .attr_stays("data-droptarget", Some("false"))
         .await?;
-    assert_that!(attr(&target_1, "aria-describedby").await?).is_none();
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    assert_that!(target_1.attr("aria-describedby").await?).is_none();
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
 /// "should support getDropOperation to override the default operation".
 async fn drop_operation_override(page: &DndPage<'_>) -> Result<(), Report> {
     start_keyboard_drag(page, "?op=copy").await?;
-    page.wait_for_focus_on(&droppable(page, "Drop here").await?, "Drop here")
+    page.wait_for_focus(&droppable(page, "Drop here").await?)
         .await?;
-    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys(Key::Enter).await?;
     page.expect_log(
         TARGETS_LOG,
         &[
@@ -623,15 +689,16 @@ async fn drop_operation_override(page: &DndPage<'_>) -> Result<(), Report> {
             "dropexit 1",
         ],
     )
-    .await
+    .await?;
+    Ok(())
 }
 
 /// "should support getAllowedDropOperations to limit allowed operations".
 async fn allowed_drop_operations(page: &DndPage<'_>) -> Result<(), Report> {
     start_keyboard_drag(page, "?allowed=link&op=copy").await?;
-    page.wait_for_focus_on(&droppable(page, "Drop here").await?, "Drop here")
+    page.wait_for_focus(&droppable(page, "Drop here").await?)
         .await?;
-    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys(Key::Enter).await?;
     page.expect_log(
         TARGETS_LOG,
         &[
@@ -642,7 +709,8 @@ async fn allowed_drop_operations(page: &DndPage<'_>) -> Result<(), Report> {
             "dropexit 1",
         ],
     )
-    .await
+    .await?;
+    Ok(())
 }
 
 /// "should hide drop targets where getDropOperation returns cancel".
@@ -650,14 +718,16 @@ async fn canceled_targets_are_hidden(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?cancel-2").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
+    page.wait_for_focus(&target_1).await?;
     assert_that!(page.is_inert(&target_2).await?).is_true();
-    page.press_tab().await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&source).await?;
+    page.send_keys(Key::Escape).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    wait_for("Drop here 2")
+        .observing(|| page.is_inert(&target_2))
+        .to_be("not inert", |inert| !inert)
         .await?;
-    assert_that!(page.is_inert(&target_2).await?).is_false();
     Ok(())
 }
 
@@ -665,12 +735,14 @@ async fn canceled_targets_are_hidden(page: &DndPage<'_>) -> Result<(), Report> {
 async fn alt_enter_activates(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.send_keys_to_active(Key::Alt + Key::Enter).await?;
+    page.wait_for_focus(&target_1).await?;
+    page.send_keys(Key::Alt + Key::Enter).await?;
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dropenter 1", "dropactivate 1"])
         .await?;
-    assert_that!(attr(&source, "data-dragging").await?).is_equal_to(Some("true".to_owned()));
-    page.send_keys_to_active(Key::Escape).await?;
+    assert_that!(source.attr("data-dragging").await?)
+        .get_some()
+        .is_equal_to("true");
+    page.send_keys(Key::Escape).await?;
     page.expect_log(
         TARGETS_LOG,
         &[
@@ -681,7 +753,8 @@ async fn alt_enter_activates(page: &DndPage<'_>) -> Result<(), Report> {
             "dragend Cancel",
         ],
     )
-    .await
+    .await?;
+    Ok(())
 }
 
 /// "useDrag/useDrop should support isDisabled" (native): a disabled source writes no data, a
@@ -690,9 +763,8 @@ async fn native_disabled(page: &DndPage<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-targets?disabled-drag").await?;
     let source = draggable(page).await?;
     page.fire_drag_event(&source, "dragstart", &[]).await?;
-    assert_that!(page.transfer("types.length").await?).is_equal_to(serde_json::Value::from(0));
-    page.expect_attr_settled(&source, "data-dragging", Some("false"))
-        .await?;
+    assert_that!(page.transfer::<u32>("types.length").await?).is_equal_to(0);
+    source.attr_stays("data-dragging", Some("false")).await?;
 
     page.goto_path("/hooks/dnd-targets?disabled-drop").await?;
     let source = draggable(page).await?;
@@ -704,8 +776,10 @@ async fn native_disabled(page: &DndPage<'_>) -> Result<(), Report> {
     page.fire_drag_event(&source, "dragend", &[]).await?;
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dragend Cancel"])
         .await?;
-    page.expect_attr_settled(&target_1, "data-droptarget", Some("false"))
-        .await
+    target_1
+        .attr_stays("data-droptarget", Some("false"))
+        .await?;
+    Ok(())
 }
 
 // ---- /hooks/dnd-targets: screen readers ----
@@ -715,16 +789,18 @@ async fn start_virtual_drag(page: &DndPage<'_>, query: &str) -> Result<WebElemen
     page.goto_path(&format!("/hooks/dnd-targets{query}"))
         .await?;
     let source = draggable(page).await?;
-    page.focus_by_script(&source).await?;
-    assert_that!(page.description(&source).await?)
-        .is_equal_to("Click to start dragging.".to_owned());
-    page.virtual_click(&source).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("true"))
-        .await?;
+    source.focus().await?;
+    assert_that!(source.referenced_text("aria-describedby").await?)
+        .is_equal_to("Click to start dragging.");
+    source.virtual_click().await?;
+    source.wait_for_attr("data-dragging", Some("true")).await?;
     // The drag manager sets the session up one frame later (then the page becomes inert); clicks
     // before that would go to the drag source itself.
-    let input = page.css("input[aria-label='Text field']").await?;
-    wait_until!("the drag session to start", page.is_inert(&input).await?);
+    let input = page.element("input[aria-label='Text field']").await?;
+    wait_for("the text field outside the drag session")
+        .observing(|| page.is_inert(&input))
+        .to_be("inert (the session started)", |inert| *inert)
+        .await?;
     Ok(source)
 }
 
@@ -733,25 +809,27 @@ async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Rep
     let source = start_virtual_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    wait_for!(
-        "the drag source's description",
-        "Dragging. Click to cancel drag.",
-        page.description(&source).await?
-    );
+    page.wait_for_focus(&source).await?;
+    wait_for("the drag source's description")
+        .observing(|| source.referenced_text("aria-describedby"))
+        .to_be_equal_to("Dragging. Click to cancel drag.")
+        .await?;
     page.expect_log_settled(TARGETS_LOG, &["dragstart"]).await?;
 
-    page.focus_by_script(&target_1).await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("true"))
+    target_1.focus().await?;
+    target_1
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
-    assert_that!(page.description(&target_1).await?).is_equal_to("Click to drop.".to_owned());
-    page.focus_by_script(&target_2).await?;
-    page.wait_for_attr(&target_2, "data-droptarget", Some("true"))
+    assert_that!(target_1.referenced_text("aria-describedby").await?).is_equal_to("Click to drop.");
+    target_2.focus().await?;
+    target_2
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("false"))
+    target_1
+        .wait_for_attr("data-droptarget", Some("false"))
         .await?;
 
-    page.virtual_click(&target_2).await?;
+    target_2.virtual_click().await?;
     page.expect_log(
         TARGETS_LOG,
         &[
@@ -765,11 +843,10 @@ async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Rep
         ],
     )
     .await?;
-    page.wait_for_focus_on(&target_2, "Drop here 2").await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await?;
-    assert_that!(attr(&target_1, "aria-describedby").await?).is_none();
-    assert_that!(attr(&target_2, "aria-describedby").await?).is_none();
+    page.wait_for_focus(&target_2).await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    assert_that!(target_1.attr("aria-describedby").await?).is_none();
+    assert_that!(target_2.attr("aria-describedby").await?).is_none();
     Ok(())
 }
 
@@ -777,17 +854,19 @@ async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Rep
 /// as react-aria's `shouldUseInert`).
 async fn hides_everything_but_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
-    let input = page.css("input[aria-label='Text field']").await?;
-    wait_until!("the page to become inert", page.is_inert(&input).await?);
+    let input = page.element("input[aria-label='Text field']").await?;
+    wait_for("the text field outside the drag session")
+        .observing(|| page.is_inert(&input))
+        .to_be("inert", |inert| *inert)
+        .await?;
     for label in ["Before", "Not a drop target"] {
-        let button = page.by_role_and_text("button", label).await?;
+        let button = page.element(role("button").text(label)).await?;
         assert_that!(page.is_inert(&button).await?)
             .with_detail_message(label)
             .is_true();
     }
     let text = page
-        .driver
-        .find(By::XPath("//span[normalize-space(.)='Text']"))
+        .element(xpath("//span[normalize-space(.)='Text']"))
         .await?;
     assert_that!(page.is_inert(&text).await?).is_true();
     for target in [
@@ -798,55 +877,53 @@ async fn hides_everything_but_drop_targets(page: &DndPage<'_>) -> Result<(), Rep
         assert_that!(page.is_inert(target).await?).is_false();
     }
     // Clicking the drag source again cancels; the page isn't inert anymore.
-    page.virtual_click(&source).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
+    source.virtual_click().await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    let before = page.element(role("button").text("Before")).await?;
+    wait_for("Before")
+        .observing(|| page.is_inert(&before))
+        .to_be("not inert", |inert| !inert)
         .await?;
-    let before = page.by_role_and_text("button", "Before").await?;
-    assert_that!(page.is_inert(&before).await?).is_false();
     Ok(())
 }
 
 /// "should support clicking the original drag target to cancel drag".
 async fn clicking_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
-    page.virtual_click(&source).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
+    source.virtual_click().await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    wait_for("the drag source's description")
+        .observing(|| source.referenced_text("aria-describedby"))
+        .to_be_equal_to("Click to start dragging.")
         .await?;
-    wait_for!(
-        "the drag source's description",
-        "Click to start dragging.",
-        page.description(&source).await?
-    );
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dragend Cancel"])
-        .await
+        .await?;
+    Ok(())
 }
 
 /// "should restore focus to the current drop target (or the drag target) when focusing a non
 /// drop target element" and "... when blurring all elements".
 async fn restores_focus_from_non_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
-    let input = page.css("input[aria-label='Text field']").await?;
+    let input = page.element("input[aria-label='Text field']").await?;
     // No current drop target: back to the drag source.
-    page.focus_by_script(&input).await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
-    page.driver
-        .execute("document.activeElement.blur();", vec![])
-        .await?;
-    page.wait_for_focus_on(&source, "the draggable").await?;
+    input.focus().await?;
+    page.wait_for_focus(&source).await?;
+    page.blur_focused().await?;
+    page.wait_for_focus(&source).await?;
 
     let target_1 = droppable(page, "Drop here").await?;
-    page.focus_by_script(&target_1).await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("true"))
+    target_1.focus().await?;
+    target_1
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
-    page.focus_by_script(&input).await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.driver
-        .execute("document.activeElement.blur();", vec![])
-        .await?;
-    page.wait_for_focus_on(&target_1, "Drop here").await?;
-    page.virtual_click(&source).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    input.focus().await?;
+    page.wait_for_focus(&target_1).await?;
+    page.blur_focused().await?;
+    page.wait_for_focus(&target_1).await?;
+    source.virtual_click().await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }
 
 /// "should ignore clicks not from screen readers to start dragging" and "... during dragging".
@@ -855,20 +932,19 @@ async fn ignores_clicks_not_from_screen_readers(page: &DndPage<'_>) -> Result<()
     let source = draggable(page).await?;
     // Off center: a pointer at the very center counts as a screen reader's (TalkBack).
     click_off_center(page, &source).await?;
-    page.expect_attr_settled(&source, "data-dragging", Some("false"))
-        .await?;
+    source.attr_stays("data-dragging", Some("false")).await?;
 
     let source = start_virtual_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
-    page.focus_by_script(&target_1).await?;
-    page.wait_for_attr(&target_1, "data-droptarget", Some("true"))
+    target_1.focus().await?;
+    target_1
+        .wait_for_attr("data-droptarget", Some("true"))
         .await?;
     click_off_center(page, &target_1).await?;
-    page.expect_attr_settled(&source, "data-dragging", Some("true"))
-        .await?;
+    source.attr_stays("data-dragging", Some("true")).await?;
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dropenter 1"])
         .await?;
-    page.virtual_click(&source).await?;
-    page.wait_for_attr(&source, "data-dragging", Some("false"))
-        .await
+    source.virtual_click().await?;
+    source.wait_for_attr("data-dragging", Some("false")).await?;
+    Ok(())
 }

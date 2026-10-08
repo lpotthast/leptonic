@@ -1,10 +1,10 @@
 // Upstream: react-aria/test/interactions/useInteractOutside.test.js @ 99e6102368
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
 /// `use_interact_outside`: a press outside the element (not inside) fires start and the
 /// interaction; other buttons and a pointer up without a pointer down don't; nothing while
@@ -20,71 +20,70 @@ impl BrowserTest<str> for InteractOutsideTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/hooks/interact-outside").await?;
-
-        // "should fire interact outside events based on pointer events".
-        page.element("test-interact-outside-target")
-            .await?
-            .click()
-            .await?;
-        expect_log(&page, "").await?;
-        page.element("test-interact-outside-away")
-            .await?
-            .click()
-            .await?;
-        page.wait_for_text("test-interact-outside-log", "start,outside")
-            .await?;
-        js_click(driver, "test-interact-outside-reset").await?;
-        page.wait_for_text("test-interact-outside-log", "").await?;
-
-        // "should only listen for the left mouse button", "should not fire interact outside if
-        // there is a pointer up event without a pointer down first".
-        fire_on_body(driver, "pointerdown", 1).await?;
-        fire_on_body(driver, "pointerup", 1).await?;
-        fire_on_body(driver, "pointerup", 0).await?;
-        expect_log(&page, "").await?;
-
-        // "does not handle pointer events if disabled".
-        js_click(driver, "test-interact-outside-disable").await?;
-        page.element("test-interact-outside-away")
-            .await?
-            .click()
-            .await?;
-        expect_log(&page, "").await?;
-
-        page.expect_no_page_errors().await
+        cases!(
+            pointer_events(&page),
+            left_button_only(&page),
+            disabled(&page)
+        );
+        Ok(())
     }
 }
 
-async fn fire_on_body(driver: &WebDriver, kind: &str, button: i32) -> Result<(), Report> {
-    driver
-        .execute(
-            &format!(
-                "document.body.dispatchEvent(new PointerEvent('{kind}', {{ bubbles: true, \
-                 cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, \
-                 button: {button} }}));"
-            ),
-            vec![],
+/// The log of interactions outside.
+async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-interact-outside-log").await
+}
+
+/// "should fire interact outside events based on pointer events".
+async fn pointer_events(page: &Page<'_>) -> Result<(), Report> {
+    let log = log(page).await?;
+    page.element("#test-interact-outside-target")
+        .await?
+        .click()
+        .await?;
+    log.inner_text_stays("").await?;
+    page.element("#test-interact-outside-away")
+        .await?
+        .click()
+        .await?;
+    log.wait_for_inner_text("start,outside").await?;
+    // A virtual click has no pointer events: not an interaction outside.
+    page.element("#test-interact-outside-reset")
+        .await?
+        .virtual_click()
+        .await?;
+    log.wait_for_inner_text("").await?;
+    Ok(())
+}
+
+/// "should only listen for the left mouse button", "should not fire interact outside if there is
+/// a pointer up event without a pointer down first".
+async fn left_button_only(page: &Page<'_>) -> Result<(), Report> {
+    let body = page.element("body").await?;
+    for (kind, button) in [("pointerdown", 1), ("pointerup", 1), ("pointerup", 0)] {
+        body.dispatch(
+            SyntheticEvent::pointer(kind)
+                .with("pointerType", "mouse")
+                .with("pointerId", 1)
+                .with("isPrimary", true)
+                .with("button", button),
         )
         .await?;
+    }
+    log(page).await?.inner_text_stays("").await?;
     Ok(())
 }
 
-/// Clicks a button by script: no pointer events, so not an interaction outside.
-async fn js_click(driver: &WebDriver, id: &str) -> Result<(), Report> {
-    driver
-        .execute(&format!("document.getElementById('{id}').click();"), vec![])
+/// "does not handle pointer events if disabled".
+async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-interact-outside-disable")
+        .await?
+        .virtual_click()
         .await?;
-    Ok(())
-}
-
-async fn expect_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    stays!(
-        "the text of #test-interact-outside-log",
-        expected.to_owned(),
-        page.element("test-interact-outside-log")
-            .await?
-            .text()
-            .await?
-    );
+    page.element("#test-interact-outside-away")
+        .await?
+        .click()
+        .await?;
+    log(page).await?.inner_text_stays("").await?;
     Ok(())
 }

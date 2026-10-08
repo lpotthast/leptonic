@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, role};
 
 /// The disclosure atoms: the trigger controls its panel (`aria-expanded`, `aria-controls`,
 /// `aria-labelledby`), which is `hidden="until-found"` while collapsed; other buttons in the
@@ -18,17 +15,10 @@ use crate::pages::{BaseActions, Page};
 /// groups.
 pub struct DisclosureTests {}
 
-async fn button(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
-    Ok(page
-        .driver
-        .find(By::XPath(format!("//button[normalize-space(.)='{text}']")))
-        .await?)
-}
-
 /// The panel controlled by the trigger `trigger`.
 async fn panel_of(page: &Page<'_>, trigger: &WebElement) -> Result<WebElement, Report> {
     let id = trigger.attr("aria-controls").await?.unwrap_or_default();
-    page.element(&id).await
+    page.element(format!("#{id}")).await
 }
 
 async fn expect_expanded(
@@ -36,30 +26,18 @@ async fn expect_expanded(
     trigger: &WebElement,
     expanded: bool,
 ) -> Result<(), Report> {
-    page.wait_for_attr(
-        trigger,
-        "aria-expanded",
-        Some(if expanded { "true" } else { "false" }),
-    )
-    .await?;
+    trigger
+        .wait_for_attr(
+            "aria-expanded",
+            Some(if expanded { "true" } else { "false" }),
+        )
+        .await?;
     let panel = panel_of(page, trigger).await?;
-    // WebDriver reports boolean attributes as "true": read the attribute's value with a script.
-    let expected = if expanded { "null" } else { "until-found" };
-    for _ in 0..100 {
-        let value: Option<String> = page
-            .driver
-            .execute(
-                "return arguments[0].getAttribute('hidden');",
-                vec![panel.to_json()?],
-            )
-            .await?
-            .convert()?;
-        if value.as_deref().unwrap_or("null") == expected {
-            return Ok(());
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
-    leptos_browser_test::bail!("the panel's `hidden` did not become {expected}")
+    // The `hidden` property, not the attribute: WebDriver reports boolean attributes as "true".
+    panel
+        .wait_for_prop("hidden", if expanded { "false" } else { "until-found" })
+        .await?;
+    Ok(())
 }
 
 #[async_trait]
@@ -72,203 +50,256 @@ impl BrowserTest<str> for DisclosureTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/disclosure").await?;
 
-        // "should toggle expanded state when trigger is clicked", with ARIA wiring.
-        let trigger = page.element("test-disc-trigger").await?;
-        let panel = panel_of(&page, &trigger).await?;
-        assert_that!(panel.attr("role").await?).is_equal_to(Some("group".to_owned()));
-        assert_that!(panel.attr("aria-labelledby").await?)
-            .is_equal_to(Some("test-disc-trigger".to_owned()));
-        expect_expanded(&page, &trigger, false).await?;
+        cases!(
+            trigger_controls_its_panel(&page),
+            adjacent_interactive_elements(&page),
+            toggles_by_press_and_enter(&page),
+            find_in_page_expands(&page),
+            nested_disclosures(&page),
+            one_expanded_at_a_time(&page),
+            multiple_expanded(&page),
+            panel_as_landmark(&page),
+            repeated_keydown_toggles_once(&page),
+            disabled_group(&page),
+            focus_ring(&page),
+            controlled(&page),
+            groups(&page),
+        );
 
-        // "should support interactive elements adjacent to heading": the menu opens, the
-        // disclosure stays collapsed.
-        page.click_element_with_id("test-disc-menu-trigger").await?;
-        page.wait_for_selector("[role=menu]").await?;
-        expect_expanded(&page, &trigger, false).await?;
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=menu]").await?;
-
-        trigger.click().await?;
-        expect_expanded(&page, &trigger, true).await?;
-        trigger.click().await?;
-        expect_expanded(&page, &trigger, false).await?;
-        page.wait_for_text("test-disc-changes", "2").await?;
-
-        // Keyboard: Enter toggles once.
-        page.send_keys_to_active(Key::Enter).await?;
-        expect_expanded(&page, &trigger, true).await?;
-        page.wait_for_text("test-disc-changes", "3").await?;
-        trigger.click().await?;
-        expect_expanded(&page, &trigger, false).await?;
-
-        // Find in page (`beforematch`) expands the collapsed panel.
-        page.driver
-            .execute(
-                "arguments[0].dispatchEvent(new Event('beforematch'));",
-                vec![panel.to_json()?],
-            )
-            .await?;
-        expect_expanded(&page, &trigger, true).await?;
-
-        // "should support nested Disclosures".
-        let outer = button(&page, "Outer").await?;
-        let inner = button(&page, "Inner").await?;
-        outer.click().await?;
-        expect_expanded(&page, &outer, true).await?;
-        expect_expanded(&page, &inner, false).await?;
-        inner.click().await?;
-        expect_expanded(&page, &inner, true).await?;
-        expect_expanded(&page, &outer, true).await?;
-        inner.click().await?;
-        expect_expanded(&page, &inner, false).await?;
-
-        // "should only allow one Disclosure to be expanded at a time by default".
-        let group_a = button(&page, "Group A").await?;
-        let group_b = button(&page, "Group B").await?;
-        group_a.click().await?;
-        expect_expanded(&page, &group_a, true).await?;
-        group_b.click().await?;
-        expect_expanded(&page, &group_b, true).await?;
-        expect_expanded(&page, &group_a, false).await?;
-
-        // "should allow multiple Disclosures to be expanded when allowsMultipleExpanded is true".
-        let multi_c = button(&page, "Multi C").await?;
-        let multi_d = button(&page, "Multi D").await?;
-        multi_c.click().await?;
-        multi_d.click().await?;
-        expect_expanded(&page, &multi_c, true).await?;
-        expect_expanded(&page, &multi_d, true).await?;
-
-        // A panel as a landmark: the role the panel asks for, on the server and the client.
-        let region = button(&page, "Region").await?;
-        let region_panel = panel_of(&page, &region).await?;
-        assert_that!(region_panel.attr("role").await?).is_equal_to(Some("region".to_owned()));
-        let server_html: String = page
-            .driver
-            .execute_async(
-                "const done = arguments[arguments.length - 1];
-                 fetch(location.href).then(r => r.text()).then(done);",
-                vec![],
-            )
-            .await?
-            .convert()?;
-        assert_that!(server_html.matches("role=\"region\"").count()).is_equal_to(1);
-        // "should not expand or collapse on repeat keydown events".
-        region.click().await?;
-        expect_expanded(&page, &region, true).await?;
-        page.driver
-            .execute(
-                "const el = document.activeElement;
-                 for (let i = 0; i < 3; i++) {
-                     el.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', repeat: i > 0, bubbles: true}));
-                 }
-                 el.dispatchEvent(new KeyboardEvent('keyup', {key: 'Enter', bubbles: true}));",
-                vec![],
-            )
-            .await?;
-        expect_expanded(&page, &region, false).await?;
-
-        // "should disable all Disclosures when DisclosureGroup is disabled".
-        let disabled_e = button(&page, "Disabled E").await?;
-        assert_that!(disabled_e.attr("disabled").await?).is_some();
-        assert_that!(disabled_e.attr("data-disabled").await?).is_equal_to(Some("true".to_owned()));
-
-        focus_ring(&page).await?;
-        controlled(&page).await?;
-        groups(&page).await?;
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
+}
+
+/// The trigger controls its panel, a group labelled by the trigger, collapsed at first.
+async fn trigger_controls_its_panel(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-disc-trigger").await?;
+    let panel = panel_of(page, &trigger).await?;
+    assert_that!(panel.attr("role").await?)
+        .get_some()
+        .is_equal_to("group");
+    assert_that!(panel.attr("aria-labelledby").await?)
+        .get_some()
+        .is_equal_to("test-disc-trigger");
+    expect_expanded(page, &trigger, false).await?;
+    Ok(())
+}
+
+/// "should support interactive elements adjacent to heading": the menu opens, the disclosure
+/// stays collapsed.
+async fn adjacent_interactive_elements(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-disc-trigger").await?;
+    page.element("#test-disc-menu-trigger")
+        .await?
+        .click()
+        .await?;
+    page.element("[role=menu]").await?;
+    expect_expanded(page, &trigger, false).await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count("[role=menu]", 0).await?;
+    Ok(())
+}
+
+/// "should toggle expanded state when trigger is clicked"; Enter toggles once.
+async fn toggles_by_press_and_enter(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-disc-trigger").await?;
+    let changes = page.element("#test-disc-changes").await?;
+    trigger.click().await?;
+    expect_expanded(page, &trigger, true).await?;
+    trigger.click().await?;
+    expect_expanded(page, &trigger, false).await?;
+    changes.wait_for_inner_text("2").await?;
+
+    page.send_keys(Key::Enter).await?;
+    expect_expanded(page, &trigger, true).await?;
+    changes.wait_for_inner_text("3").await?;
+    trigger.click().await?;
+    expect_expanded(page, &trigger, false).await?;
+    Ok(())
+}
+
+/// Find in page (`beforematch`, which doesn't bubble) expands the collapsed panel.
+async fn find_in_page_expands(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-disc-trigger").await?;
+    expect_expanded(page, &trigger, false).await?;
+    panel_of(page, &trigger)
+        .await?
+        .dispatch(SyntheticEvent::plain("beforematch").with("bubbles", false))
+        .await?;
+    expect_expanded(page, &trigger, true).await?;
+    Ok(())
+}
+
+/// "should support nested Disclosures".
+async fn nested_disclosures(page: &Page<'_>) -> Result<(), Report> {
+    let outer = page.element(role("button").text("Outer")).await?;
+    let inner = page.element(role("button").text("Inner")).await?;
+    outer.click().await?;
+    expect_expanded(page, &outer, true).await?;
+    expect_expanded(page, &inner, false).await?;
+    inner.click().await?;
+    expect_expanded(page, &inner, true).await?;
+    expect_expanded(page, &outer, true).await?;
+    inner.click().await?;
+    expect_expanded(page, &inner, false).await?;
+    Ok(())
+}
+
+/// "should only allow one Disclosure to be expanded at a time by default".
+async fn one_expanded_at_a_time(page: &Page<'_>) -> Result<(), Report> {
+    let a = page.element(role("button").text("Group A")).await?;
+    let b = page.element(role("button").text("Group B")).await?;
+    a.click().await?;
+    expect_expanded(page, &a, true).await?;
+    b.click().await?;
+    expect_expanded(page, &b, true).await?;
+    expect_expanded(page, &a, false).await?;
+    Ok(())
+}
+
+/// "should allow multiple Disclosures to be expanded when allowsMultipleExpanded is true".
+async fn multiple_expanded(page: &Page<'_>) -> Result<(), Report> {
+    let c = page.element(role("button").text("Multi C")).await?;
+    let d = page.element(role("button").text("Multi D")).await?;
+    c.click().await?;
+    d.click().await?;
+    expect_expanded(page, &c, true).await?;
+    expect_expanded(page, &d, true).await?;
+    Ok(())
+}
+
+/// A panel as a landmark: the role the panel asks for, on the server and the client.
+async fn panel_as_landmark(page: &Page<'_>) -> Result<(), Report> {
+    let region = page.element(role("button").text("Region")).await?;
+    assert_that!(panel_of(page, &region).await?.attr("role").await?)
+        .get_some()
+        .is_equal_to("region");
+    // The script's promise is awaited by WebDriver.
+    let server_html: String = page
+        .eval("return fetch(location.href).then(r => r.text());", vec![])
+        .await?;
+    assert_that!(server_html.matches("role=\"region\"").count())
+        .with_detail_message("panels with role=\"region\" in the server's HTML")
+        .is_equal_to(1);
+    Ok(())
+}
+
+/// "should not expand or collapse on repeat keydown events": Enter held down toggles once.
+async fn repeated_keydown_toggles_once(page: &Page<'_>) -> Result<(), Report> {
+    let region = page.element(role("button").text("Region")).await?;
+    region.click().await?;
+    expect_expanded(page, &region, true).await?;
+    page.hold_key("Enter", 2).await?;
+    expect_expanded(page, &region, false).await?;
+    Ok(())
+}
+
+/// "should disable all Disclosures when DisclosureGroup is disabled".
+async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element(role("button").text("Disabled E")).await?;
+    assert_that!(trigger.is_enabled().await?).is_false();
+    assert_that!(trigger.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    Ok(())
 }
 
 /// "should support focus ring": `data-focus-visible-within` while keyboard focus is within.
 async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
-    let disclosure = page.element("test-disc-main").await?;
-    let trigger = page.element("test-disc-trigger").await?;
+    let disclosure = page.element("#test-disc-main").await?;
+    let trigger = page.element("#test-disc-trigger").await?;
     trigger.click().await?;
     // Pointer focus: no ring.
-    stays!(
-        "data-focus-visible-within of the disclosure",
-        None,
-        disclosure.attr("data-focus-visible-within").await?
-    );
-    page.press_shift_tab().await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&trigger, "the trigger").await?;
-    page.wait_for_attr(&disclosure, "data-focus-visible-within", Some("true"))
+    disclosure
+        .attr_stays("data-focus-visible-within", None)
+        .await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&trigger).await?;
+    disclosure
+        .wait_for_attr("data-focus-visible-within", Some("true"))
         .await?;
     // Past the menu button next to the heading, out of the disclosure.
-    page.press_tab().await?;
-    page.wait_for_active_id("test-disc-menu-trigger").await?;
-    page.press_tab().await?;
-    page.wait_for_attr(&disclosure, "data-focus-visible-within", None)
-        .await
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-disc-menu-trigger").await?)
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    disclosure
+        .wait_for_attr("data-focus-visible-within", None)
+        .await?;
+    Ok(())
 }
 
 /// "should support controlled isExpanded prop", "should expand a disabled disclosure via
 /// isExpanded", "should not expand when beforematch event occurs if controlled and closed".
 async fn controlled(page: &Page<'_>) -> Result<(), Report> {
-    let disclosure = page.css(".test-disc-controlled").await?;
-    let trigger = button(page, "Controlled").await?;
-    assert_that!(disclosure.attr("data-expanded").await?).is_equal_to(Some("true".to_owned()));
+    let disclosure = page.element(".test-disc-controlled").await?;
+    let trigger = page.element(role("button").text("Controlled")).await?;
+    assert_that!(disclosure.attr("data-expanded").await?)
+        .get_some()
+        .is_equal_to("true");
     expect_expanded(page, &trigger, true).await?;
     trigger.click().await?;
-    page.wait_for_text("test-disc-controlled-changes", "false")
+    page.element("#test-disc-controlled-changes")
+        .await?
+        .wait_for_inner_text("false")
         .await?;
-    stays!(
-        "data-expanded of the disclosure",
-        Some("true".to_owned()),
-        disclosure.attr("data-expanded").await?
-    );
+    disclosure.attr_stays("data-expanded", Some("true")).await?;
     expect_expanded(page, &trigger, true).await?;
 
-    let disabled = page.css(".test-disc-disabled-expanded").await?;
-    let disabled_trigger = button(page, "Disabled expanded").await?;
-    assert_that!(disabled.attr("data-disabled").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(disabled_trigger.attr("disabled").await?).is_some();
+    let disabled = page.element(".test-disc-disabled-expanded").await?;
+    let disabled_trigger = page
+        .element(role("button").text("Disabled expanded"))
+        .await?;
+    assert_that!(disabled.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(disabled_trigger.is_enabled().await?).is_false();
     expect_expanded(page, &disabled_trigger, true).await?;
-    assert_that!(
-        page.by_role_and_text("group", "Disabled expanded content")
-            .await?
-            .is_displayed()
-            .await?
-    )
-    .is_true();
+    let disabled_panel = panel_of(page, &disabled_trigger).await?;
+    assert_that!(disabled_panel.inner_text().await?).is_equal_to("Disabled expanded content");
+    assert_that!(disabled_panel.is_displayed().await?).is_true();
 
-    let closed = button(page, "Closed controlled").await?;
+    let closed = page
+        .element(role("button").text("Closed controlled"))
+        .await?;
     expect_expanded(page, &closed, false).await?;
-    let panel = panel_of(page, &closed).await?;
-    page.driver
-        .execute(
-            "arguments[0].dispatchEvent(new Event('beforematch'));",
-            vec![panel.to_json()?],
-        )
+    panel_of(page, &closed)
+        .await?
+        .dispatch(SyntheticEvent::plain("beforematch").with("bubbles", false))
         .await?;
-    page.wait_for_text("test-disc-closed-requests", "true")
+    page.element("#test-disc-closed-requests")
+        .await?
+        .wait_for_inner_text("true")
         .await?;
-    expect_expanded(page, &closed, false).await
+    expect_expanded(page, &closed, false).await?;
+    Ok(())
 }
 
 /// "should call onExpandedChange when a Disclosure is toggled", "should support controlled
 /// expandedKeys prop", "should support nested DisclosureGroups".
 async fn groups(page: &Page<'_>) -> Result<(), Report> {
-    button(page, "Report 1").await?.click().await?;
-    page.wait_for_text("test-disc-group-keys", "report1")
+    let keys = page.element("#test-disc-group-keys").await?;
+    page.element(role("button").text("Report 1"))
+        .await?
+        .click()
         .await?;
-    button(page, "Report 2").await?.click().await?;
-    page.wait_for_text("test-disc-group-keys", "report2")
+    keys.wait_for_inner_text("report1").await?;
+    page.element(role("button").text("Report 2"))
+        .await?
+        .click()
         .await?;
+    keys.wait_for_inner_text("report2").await?;
 
-    let controlled_1 = button(page, "Controlled 1").await?;
-    let controlled_2 = button(page, "Controlled 2").await?;
+    let controlled_1 = page.element(role("button").text("Controlled 1")).await?;
+    let controlled_2 = page.element(role("button").text("Controlled 2")).await?;
     expect_expanded(page, &controlled_1, true).await?;
     expect_expanded(page, &controlled_2, false).await?;
-    page.click_element_with_id("test-disc-expand-2").await?;
+    page.element("#test-disc-expand-2").await?.click().await?;
     expect_expanded(page, &controlled_1, false).await?;
     expect_expanded(page, &controlled_2, true).await?;
 
-    let nested_1 = button(page, "Nested 1").await?;
-    let nested_2 = button(page, "Nested 2").await?;
+    let nested_1 = page.element(role("button").text("Nested 1")).await?;
+    let nested_2 = page.element(role("button").text("Nested 2")).await?;
     expect_expanded(page, &nested_2, false).await?;
     nested_1.click().await?;
     expect_expanded(page, &nested_1, true).await?;
@@ -278,5 +309,6 @@ async fn groups(page: &Page<'_>) -> Result<(), Report> {
     expect_expanded(page, &nested_1, true).await?;
     nested_2.click().await?;
     expect_expanded(page, &nested_2, false).await?;
-    expect_expanded(page, &nested_1, true).await
+    expect_expanded(page, &nested_1, true).await?;
+    Ok(())
 }

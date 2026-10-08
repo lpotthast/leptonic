@@ -2,13 +2,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::wait_for,
+};
 
 /// Behavior of `use_text_field`: labelling, description and validation wiring, the value
 /// staying in sync with the hook-owned state in both directions, and form reset.
@@ -24,41 +24,40 @@ impl BrowserTest<str> for TextFieldTests {
         let page = Page { driver, base_url };
         page.goto_path("/hooks/text-field").await?;
 
-        labelling(&page).await?;
-        typing_updates_the_state(&page).await?;
-        validation(&page).await?;
-        programmatic_changes_update_the_input(&page).await?;
-        form_reset_restores_the_default(&page).await?;
+        cases!(
+            labelling(&page),
+            typing_updates_the_state(&page),
+            validation(&page),
+            programmatic_changes_update_the_input(&page),
+            form_reset_restores_the_default(&page),
+        );
 
         Ok(())
     }
 }
 
+/// The text field's input.
 async fn input(page: &Page<'_>) -> Result<WebElement, Report> {
-    page.css("#test-tf-form input").await
+    page.element("#test-tf-form input").await
 }
 
-async fn input_value(page: &Page<'_>) -> Result<String, Report> {
-    Ok(input(page).await?.prop("value").await?.unwrap_or_default())
+/// The fixture's mirror of the hook-owned value.
+async fn state_value(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-tf-value").await
 }
 
 /// The label's `for` points to the input, which is labelled by the label and described by the
 /// description.
 async fn labelling(page: &Page<'_>) -> Result<(), Report> {
     let input = input(page).await?;
-    let id = input.attr("id").await?.unwrap_or_default();
-    let label = page.driver.find(By::Css("#test-tf-form label")).await?;
-    assert_that!(label.attr("for").await?).is_equal_to(Some(id));
-    let label_id = label.attr("id").await?.unwrap_or_default();
-    assert_that!(input.attr("aria-labelledby").await?).is_equal_to(Some(label_id));
-
-    let description = page
-        .driver
-        .find(By::XPath("//div[text()='Your first name.']"))
-        .await?;
-    let description_id = description.attr("id").await?.unwrap_or_default();
-    assert_that!(input.attr("aria-describedby").await?).is_equal_to(Some(description_id));
-    assert_that!(input_value(page).await?).is_equal_to("Ada".to_owned());
+    let label = page.element("#test-tf-form label").await?;
+    let input_id = input.id().await?;
+    assert_that!(label.attr("for").await?).is_equal_to(input_id);
+    assert_that!(input.referenced_text("aria-labelledby").await?).is_equal_to("Name");
+    assert_that!(input.referenced_text("aria-describedby").await?).is_equal_to("Your first name.");
+    assert_that!(input.value().await?)
+        .get_some()
+        .is_equal_to("Ada");
     Ok(())
 }
 
@@ -66,7 +65,11 @@ async fn typing_updates_the_state(page: &Page<'_>) -> Result<(), Report> {
     let input = input(page).await?;
     input.click().await?;
     input.send_keys(Key::End + "line").await?;
-    page.wait_for_text("test-tf-value", "Adaline").await
+    state_value(page)
+        .await?
+        .wait_for_inner_text("Adaline")
+        .await?;
+    Ok(())
 }
 
 /// An invalid value marks the input `aria-invalid` and describes it with the error message
@@ -76,37 +79,41 @@ async fn validation(page: &Page<'_>) -> Result<(), Report> {
     for _ in 0..5 {
         input.send_keys(Key::Backspace).await?;
     }
-    page.wait_for_text("test-tf-value", "Ad").await?;
-    page.wait_for_selector("#test-tf-form [aria-invalid=true]")
+    state_value(page).await?.wait_for_inner_text("Ad").await?;
+    input.wait_for_attr("aria-invalid", Some("true")).await?;
+    wait_for("the description of the input")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Your first name. At least 3 characters.")
         .await?;
-    let error = page
-        .driver
-        .find(By::XPath("//div[text()='At least 3 characters.']"))
-        .await?;
-    let error_id = error.attr("id").await?.unwrap_or_default();
-    let described_by = input.attr("aria-describedby").await?.unwrap_or_default();
-    assert_that!(described_by.split(' ').any(|id| id == error_id)).is_true();
 
     input.send_keys("a").await?;
-    page.wait_for_text("test-tf-value", "Ada").await?;
-    page.wait_for_no_selector("#test-tf-form [aria-invalid=true]")
-        .await
+    state_value(page).await?.wait_for_inner_text("Ada").await?;
+    input.wait_for_attr("aria-invalid", None).await?;
+    wait_for("the description of the input")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Your first name.")
+        .await?;
+    Ok(())
 }
 
 /// Changing the state from outside updates what the input shows (the DOM property, not just
 /// the attribute).
 async fn programmatic_changes_update_the_input(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-tf-clear").await?;
-    page.wait_for_text("test-tf-value", "").await?;
-    assert_that!(input_value(page).await?).is_equal_to(String::new());
+    page.element("#test-tf-clear").await?.click().await?;
+    state_value(page).await?.wait_for_inner_text("").await?;
+    input(page).await?.wait_for_prop("value", "").await?;
     Ok(())
 }
 
 async fn form_reset_restores_the_default(page: &Page<'_>) -> Result<(), Report> {
-    input(page).await?.send_keys("Grace").await?;
-    page.wait_for_text("test-tf-value", "Grace").await?;
-    page.click_element_with_id("test-tf-reset").await?;
-    page.wait_for_text("test-tf-value", "Ada").await?;
-    assert_that!(input_value(page).await?).is_equal_to("Ada".to_owned());
+    let input = input(page).await?;
+    input.send_keys("Grace").await?;
+    state_value(page)
+        .await?
+        .wait_for_inner_text("Grace")
+        .await?;
+    page.element("#test-tf-reset").await?.click().await?;
+    state_value(page).await?.wait_for_inner_text("Ada").await?;
+    input.wait_for_prop("value", "Ada").await?;
     Ok(())
 }

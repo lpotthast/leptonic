@@ -50,8 +50,8 @@ Several agent sessions work in this repository at the same time, each owning one
 
 - **Library** (`leptonic/`, `leptonic-theme/`, `testing/`): open work in `PLAN.md`; guiding decisions and API
   conventions in `documentation/conventions.md` (summary table in `documentation/hooks-implementation.md`); pitfalls
-  in `documentation/lessons.md`; consumers in `documentation/consumers.md`; finished work in
-  `documentation/history.md`; the atom theme (CSS ported from react-aria-components' starter styles) in
+  in `documentation/lessons.md`; how browser tests are written in `documentation/browser-tests.md`; consumers in
+  `documentation/consumers.md`; finished work in `documentation/history.md`; the atom theme (CSS ported from react-aria-components' starter styles) in
   `documentation/atom-theme.md`; compile times and binary sizes (measurements, findings, advice for users) in
   `documentation/build-performance.md`.
 - **Book** (`examples/book-ssr/`): todos in `PLAN.md` (section "Book"); page structure, kit and writing rules in
@@ -295,20 +295,25 @@ Tests must not depend on each other or on shared server state; checks of the who
 
 - **Fixtures**: every test page lives in its own module under `testing/test-app/src/pages/{atoms,hooks}/`
   and is registered in `FIXTURES` (`testing/test-app/src/pages/mod.rs`). It is served at `/{group}/{name}`.
-- **Hydration**: the test-app sets `data-hydrated` on `<body>` once hydration finished. `BaseActions::goto_path`
+- **Hydration**: the test-app sets `data-hydrated` on `<body>` once hydration finished. `PageActions::goto_path`
   waits for it, so tests never interact with a page whose event handlers aren't attached yet.
-- **Tests**: page objects in `tests/pages/` (implement `BaseActions` to get shared helpers: clicking, reading text,
-  focus/active-element queries, keyboard input, waiting), test implementations in `tests/ui_tests/test_*.rs`
-  (implement `BrowserTest<str>`; the context is the app's base URL). Register new tests in `ui_tests::all()`.
+- **Tests**: test implementations in `tests/ui_tests/test_*.rs` (implement `BrowserTest<str>`; the context is the
+  app's base URL; `run` lists its cases with `cases!`; register new tests in `ui_tests::all()`), shared helpers in
+  `tests/pages/` (`PageActions` on a page, `ElementActions` on an element, `Locator`s, `SyntheticEvent`). **Style:**
+  `documentation/browser-tests.md`: one way per check (find an element with a locator, then its method; every state
+  has read / `wait_for_*` / `*_stays`), assertr on settled state; reference `test_checkbox.rs`.
 - **Failures fail `cargo test`**: the runner uses `FailurePolicy::RunAll` and reports every failing test.
   Assertions use `assertr` (panics are reported as test failures); helpers return `Result<_, rootcause::Report>`.
-- **Prefer waiting over sleeping**: use the polling helpers (`wait_for_selector`, `wait_for_text`,
-  `wait_for_active_text`, `wait_for_attr`, `wait_for_prop`, and for anything else the `wait_for!`/`wait_until!`
-  macros of `tests/polling/mod.rs`) instead of fixed sleeps or hand-rolled loops; focus and state often change in
-  effects after the event. Negative checks ("nothing changed") use `stays!` (re-checked over 300 ms; `stays_for!`
-  over a longer window), not a single read.
-- **Find elements as users do**: by role and text (`by_role_and_text`, `css("[role=listbox]")`). Atoms generate
-  their own ids.
+- **Prefer waiting over sleeping**: the session's implicit wait is zero; `element(locator)` waits for its element,
+  `wait_for_*` for a state (`wait_for_attr`, `wait_for_inner_text`, `wait_for_count`, `wait_for_focus`), never
+  `find`/`find_all` or a fixed sleep; focus and state often change in effects after the event. Negative checks
+  ("nothing changed") use the `*_stays` methods or `expect(..).observing(..).to_stay_equal_to(..)` (re-checked over
+  300 ms), not a single read.
+- **Failure reports** (browser-test): every failure shows the failing test-code line and its callers, the test's last
+  steps, and the error with the expected and last seen value. Pages also fail a test on Rust panics, uncaught errors
+  and `console.error` output (`page.diagnostics()`).
+- **Find elements as users do**: by role and text (`role("option").text("Apple")`), by label
+  (`css("label").text("Name")`). Atoms generate their own ids.
 - **Derive tests from react-aria**: react-aria's own tests (`../react-spectrum/packages/react-aria/test/`,
   `react-aria-components/test/`) specify expected behavior. Base our tests on them and name the mirrored upstream test
   file in an `// Upstream:` header of the test file, so `scripts/upstream-drift.sh` reports upstream test changes.
@@ -324,7 +329,9 @@ Tests must not depend on each other or on shared server state; checks of the who
   builds the test-app there instead of in the inherited `CARGO_TARGET_DIR` (agents:
   `CARGO_TARGET_DIR=<repo>/target/agents TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`). The run summary lists the
   slowest tests and steps; `BROWSER_TEST_LOG_STEPS=1` logs every step. Never run two suites of one app at the same
-  time: they share the app's build directory.
+  time: they share the app's build directory. Ctrl-C cancels a run cleanly (browsers and chromedriver shut down).
+  Sessions keep their Chrome profiles in `<target>/tmp/browser-test-profiles` (never in `/tmp`, a RAM disk here);
+  each is removed when its session ends, and a run removes those that killed runs left behind.
 - **Toolchain**: the installed `wasm-bindgen` CLI version must match the `wasm-bindgen` version in the test-app's
   `Cargo.lock`; otherwise `cargo leptos serve` fails. Update the lockfile (`cargo update -p wasm-bindgen -p js-sys
   -p web-sys -p wasm-bindgen-futures`) or the CLI.

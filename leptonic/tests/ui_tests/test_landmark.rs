@@ -2,13 +2,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::{expect, wait_for},
+};
 
 /// `use_landmark`: F6/Shift+F6 move between landmarks in document order and wrap; Alt+F6 goes to
 /// the main landmark; a landmark regains the element focused in it last; `aria-hidden` landmarks
@@ -27,16 +27,18 @@ impl BrowserTest<str> for LandmarkTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
-        navigation_order(&page).await?;
-        restores_last_focused(&page).await?;
-        alt_f6_to_main(&page).await?;
-        added_and_removed(&page).await?;
-        wrap_event(&page).await?;
-        label_updates(&page).await?;
-        nested_order(&page).await?;
-        controller(&page).await?;
-        duplicate_role_warnings(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            navigation_order(&page),
+            restores_last_focused(&page),
+            alt_f6_to_main(&page),
+            added_and_removed(&page),
+            wrap_event(&page),
+            label_updates(&page),
+            nested_order(&page),
+            controller(&page),
+            duplicate_role_warnings(&page),
+        );
+        Ok(())
     }
 }
 
@@ -46,153 +48,173 @@ impl BrowserTest<str> for LandmarkTests {
 /// the tabIndex=-1 if something else is focused".
 async fn navigation_order(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
-    let nav = page.element("test-lm-nav").await?;
-    assert_that!(nav.attr("tabindex").await?).is_equal_to(Some("-1".to_owned()));
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await?;
+    let nav = page.element("#test-lm-nav").await?;
+    let main = page.element("#test-lm-main").await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&nav).await?;
+    assert_that!(nav.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("-1");
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&main).await?;
     // The region inside `aria-hidden` is skipped; forward wraps.
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&nav).await?;
     // Backward wraps too.
-    page.send_keys_to_active(Key::Shift + Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await?;
-    page.send_keys_to_active(Key::Shift + Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
+    page.send_keys(Key::Shift + Key::F6).await?;
+    page.wait_for_focus(&main).await?;
+    page.send_keys(Key::Shift + Key::F6).await?;
+    page.wait_for_focus(&nav).await?;
     // Focusing something else drops the landmark's tabindex.
-    page.click_element_with_id("test-lm-name").await?;
-    page.wait_for_attr(&nav, "tabindex", None).await
+    page.element("#test-lm-name").await?.click().await?;
+    nav.wait_for_attr("tabindex", None).await?;
+    Ok(())
 }
 
 /// "F6 should focus the last focused element in a landmark region".
 async fn restores_last_focused(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
-    page.driver
-        .execute("document.getElementById('test-lm-home').focus()", vec![])
+    page.element("#test-lm-home").await?.focus().await?;
+    page.send_keys(Key::Tab).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-lm-contact").await?)
         .await?;
-    page.press_tab().await?;
-    page.press_tab().await?;
-    page.wait_for_active_id("test-lm-contact").await?;
-    page.press_tab().await?;
-    page.wait_for_active_id("test-lm-name").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-contact").await
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-lm-name").await?)
+        .await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-contact").await?)
+        .await?;
+    Ok(())
 }
 
 /// "can alt+F6 to main landmark".
 async fn alt_f6_to_main(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
-    page.driver
-        .execute("document.getElementById('test-lm-home').focus()", vec![])
+    page.element("#test-lm-home").await?.focus().await?;
+    page.send_keys(Key::Alt + Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-main").await?)
         .await?;
-    page.send_keys_to_active(Key::Alt + Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await
+    Ok(())
 }
 
 /// "Should navigate to a landmark that has been added to the DOM" (as a child of an existing
 /// landmark), "Should not navigate to a landmark that has been removed from the DOM".
 async fn added_and_removed(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
-    page.click_element_with_id("test-lm-toggle").await?;
-    page.wait_for_selector("#test-lm-extra").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-extra").await?;
+    page.element("#test-lm-toggle").await?.click().await?;
+    page.element("#test-lm-extra").await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-nav").await?)
+        .await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-main").await?)
+        .await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-extra").await?)
+        .await?;
 
-    page.click_element_with_id("test-lm-toggle").await?;
-    page.wait_for_no_selector("#test-lm-extra").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await
+    page.element("#test-lm-toggle").await?.click().await?;
+    page.wait_for_count("#test-lm-extra", 0).await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-nav").await?)
+        .await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-main").await?)
+        .await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&page.element("#test-lm-nav").await?)
+        .await?;
+    Ok(())
 }
 
 /// "landmark navigation fires custom event when wrapping forward": a listener preventing it keeps
 /// the focus where it is.
 async fn wrap_event(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
-    page.driver
-        .execute(
-            "window.__landmarkEvents = []; window.addEventListener('react-aria-landmark-navigation', e => { e.preventDefault(); window.__landmarkEvents.push(e.detail.direction); });",
-            vec![],
-        )
-        .await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    page.wait_for_active_id("test-lm-main").await?;
-    let events = page
-        .driver
-        .execute("return window.__landmarkEvents", vec![])
-        .await?
-        .convert::<Vec<String>>()?;
-    assert_that!(events).is_equal_to(vec!["forward".to_owned()]);
+    let nav = page.element("#test-lm-nav").await?;
+    let main = page.element("#test-lm-main").await?;
+    page.eval::<()>(
+        "window.__landmarkEvents = [];
+         window.addEventListener('react-aria-landmark-navigation', e => {
+             e.preventDefault();
+             window.__landmarkEvents.push(e.detail.direction);
+         });",
+        vec![],
+    )
+    .await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&nav).await?;
+    page.send_keys(Key::F6).await?;
+    page.wait_for_focus(&main).await?;
+    page.send_keys(Key::F6).await?;
+    page.focus_stays(&main).await?;
+    let events: Vec<String> = page.eval("return window.__landmarkEvents;", vec![]).await?;
+    assert_that!(events).contains_exactly(["forward"]);
     Ok(())
 }
 
 /// "updates the landmark if the label changes".
 async fn label_updates(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
-    let main = page.element("test-lm-main").await?;
-    assert_that!(main.attr("aria-label").await?).is_equal_to(Some("Content".to_owned()));
-    page.click_element_with_id("test-lm-rename").await?;
-    page.wait_for_attr(&main, "aria-label", Some("Article"))
-        .await
+    let main = page.element("#test-lm-main").await?;
+    assert_that!(main.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Content");
+    page.element("#test-lm-rename").await?.click().await?;
+    main.wait_for_attr("aria-label", Some("Article")).await?;
+    Ok(())
 }
 
 /// "goes in dom order with two nested landmarks", "can F6 to a nested landmark region that is
 /// first".
 async fn nested_order(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
-    for id in [
-        "test-lmn-main",
-        "test-lmn-region-1",
-        "test-lmn-region-2",
-        "test-lmn-main",
+    for landmark in [
+        "#test-lmn-main",
+        "#test-lmn-region-1",
+        "#test-lmn-region-2",
+        "#test-lmn-main",
     ] {
-        page.send_keys_to_active(Key::F6).await?;
-        page.wait_for_active_id(id).await?;
+        page.send_keys(Key::F6).await?;
+        page.wait_for_focus(&page.element(landmark).await?).await?;
     }
-    for id in ["test-lmn-region-2", "test-lmn-region-1", "test-lmn-main"] {
-        page.send_keys_to_active(Key::Shift + Key::F6).await?;
-        page.wait_for_active_id(id).await?;
+    for landmark in ["#test-lmn-region-2", "#test-lmn-region-1", "#test-lmn-main"] {
+        page.send_keys(Key::Shift + Key::F6).await?;
+        page.wait_for_focus(&page.element(landmark).await?).await?;
     }
     Ok(())
 }
 
-/// Calls a controller method of the fixture (a script click doesn't move the focus).
-async fn call_controller(page: &Page<'_>, button: &str) -> Result<(), Report> {
-    page.driver
-        .execute(
-            &format!("document.getElementById('{button}').click()"),
-            vec![],
-        )
-        .await?;
-    Ok(())
+/// Calls a controller method of the fixture through the button `selector` (a virtual click
+/// doesn't move the focus).
+async fn call_controller(page: &Page<'_>, selector: &str) -> Result<(), Report> {
+    page.element(selector).await?.virtual_click().await
 }
 
 /// `LandmarkController`: "should navigate forward", "should navigate backward", "should focus
 /// main", from the focused element.
 async fn controller(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
-    page.click_element_with_id("test-lmn-first").await?;
-    call_controller(page, "test-lmn-next").await?;
-    page.wait_for_active_id("test-lmn-region-1").await?;
-    call_controller(page, "test-lmn-forward").await?;
-    page.wait_for_active_id("test-lmn-region-2").await?;
-    call_controller(page, "test-lmn-previous").await?;
-    page.wait_for_active_id("test-lmn-region-1").await?;
-    call_controller(page, "test-lmn-main-button").await?;
-    page.wait_for_active_id("test-lmn-main").await
+    page.element("#test-lmn-first").await?.click().await?;
+    call_controller(page, "#test-lmn-next").await?;
+    page.wait_for_focus(&page.element("#test-lmn-region-1").await?)
+        .await?;
+    call_controller(page, "#test-lmn-forward").await?;
+    page.wait_for_focus(&page.element("#test-lmn-region-2").await?)
+        .await?;
+    call_controller(page, "#test-lmn-previous").await?;
+    page.wait_for_focus(&page.element("#test-lmn-region-1").await?)
+        .await?;
+    call_controller(page, "#test-lmn-main-button").await?;
+    page.wait_for_focus(&page.element("#test-lmn-main").await?)
+        .await?;
+    Ok(())
+}
+
+/// The page's `console.warn` messages.
+async fn warnings(page: &Page<'_>) -> Result<Vec<String>, Report> {
+    Ok(page.diagnostics().await?.console_warnings)
 }
 
 /// "Should warn if 2+ landmarks with same role are used but not labelled.", "Should warn if 2+
@@ -200,56 +222,40 @@ async fn controller(page: &Page<'_>) -> Result<(), Report> {
 /// labelled." (the two regions of the page).
 async fn duplicate_role_warnings(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
-    page.driver
-        .execute(
-            "window.__warnings = [];
-            const warn = console.warn;
-            console.warn = (...args) => { window.__warnings.push(args.join(' ')); warn(...args); };",
-            vec![],
-        )
-        .await?;
-    let warnings = async || -> Result<Vec<String>, Report> {
-        Ok(page
-            .driver
-            .execute("return window.__warnings;", vec![])
-            .await?
-            .convert()?)
-    };
     // The two distinctly labelled regions don't warn.
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(warnings().await?).is_empty();
-
-    page.click_element_with_id("test-lmn-add-unlabelled")
+    expect("the warnings")
+        .observing(|| warnings(page))
+        .to_stay_equal_to(Vec::<String>::new())
         .await?;
-    page.wait_for_selector("#test-lmn-nav-2").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    let unlabelled = warnings().await?;
-    assert_that!(unlabelled.iter().any(|warning| {
-        warning.contains("more than one landmark with the role Navigation")
-            && warning.contains("label each")
-    }))
-    .with_detail_message(format!("warnings: {unlabelled:?}"))
-    .is_true();
+
+    page.element("#test-lmn-add-unlabelled")
+        .await?
+        .click()
+        .await?;
+    page.element("#test-lmn-nav-2").await?;
+    wait_for("the warnings")
+        .observing(|| warnings(page))
+        .to_be("about unlabelled navigation landmarks", |warnings| {
+            warnings.iter().any(|warning| {
+                warning.contains("more than one landmark with the role Navigation")
+                    && warning.contains("label each")
+            })
+        })
+        .await?;
 
     page.goto_path("/hooks/landmark-nested").await?;
-    page.driver
-        .execute(
-            "window.__warnings = [];
-            const warn = console.warn;
-            console.warn = (...args) => { window.__warnings.push(args.join(' ')); warn(...args); };",
-            vec![],
-        )
+    page.element("#test-lmn-add-same-label")
+        .await?
+        .click()
         .await?;
-    page.click_element_with_id("test-lmn-add-same-label")
+    page.element("#test-lmn-same-2").await?;
+    wait_for("the warnings")
+        .observing(|| warnings(page))
+        .to_be("about equally labelled landmarks", |warnings| {
+            warnings
+                .iter()
+                .any(|warning| warning.contains("label them uniquely"))
+        })
         .await?;
-    page.wait_for_selector("#test-lmn-same-2").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    let same = warnings().await?;
-    assert_that!(
-        same.iter()
-            .any(|warning| warning.contains("label them uniquely"))
-    )
-    .with_detail_message(format!("warnings: {same:?}"))
-    .is_true();
     Ok(())
 }

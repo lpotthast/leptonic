@@ -93,14 +93,15 @@ pub mod test_virtual_list;
 pub mod test_virtualizer;
 pub mod test_visually_hidden;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, panic::AssertUnwindSafe};
 
 use browser_test::{
     BrowserTest, BrowserTests, ElementQueryWait, Parallelism, async_trait, thirtyfour::WebDriver,
 };
-use leptos_browser_test::Report;
+use futures::FutureExt as _;
+use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{Page, PageActions};
 
 /// Every browser test: the UI tests at `parallelism` at once, then the checks of the whole run
 /// ([`after_all`]).
@@ -304,8 +305,13 @@ impl Selected {
     }
 }
 
-/// Runs a test, then fails it if the page reported uncaught errors (see
-/// `BaseActions::expect_no_page_errors`; `goto_path` checks the page it leaves).
+/// Runs a test, then checks what the page reported (panics, uncaught errors, console errors,
+/// literal `attr:` attributes; see `PageActions::expect_no_page_errors`; `goto_path` checks the
+/// page it leaves):
+/// - the test passed: page errors fail it;
+/// - the test failed: page errors are added to its failure, as they are often the cause (a panic
+///   in an event handler shows as a wait that times out);
+/// - an assertion panicked: page errors are logged, then the panic continues.
 struct CheckPageErrors<T>(T);
 
 #[async_trait]
@@ -323,7 +329,30 @@ impl<T: BrowserTest<str>> BrowserTest<str> for CheckPageErrors<T> {
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        self.0.run(driver, base_url).await?;
-        Page { driver, base_url }.expect_no_page_errors().await
+        let page = Page { driver, base_url };
+        let outcome = AssertUnwindSafe(self.0.run(driver, base_url))
+            .catch_unwind()
+            .await;
+        let page_errors = page.expect_no_page_errors().await;
+        match (outcome, page_errors) {
+            (Ok(Ok(())), page_errors) => {
+                page_errors.context("the page reported problems after the test passed")?;
+                Ok(())
+            }
+            (Ok(Err(failure)), Ok(())) => Err(failure),
+            (Ok(Err(failure)), Err(page_errors)) => Err(failure
+                .context(format!(
+                    "the page also reported problems, possibly the cause:\n{page_errors}"
+                ))
+                .into_dynamic()),
+            (Err(panic), page_errors) => {
+                if let Err(page_errors) = page_errors {
+                    tracing::error!(
+                        "The page reported problems, possibly the cause of the panic:\n{page_errors}"
+                    );
+                }
+                std::panic::resume_unwind(panic)
+            }
+        }
     }
 }

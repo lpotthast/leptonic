@@ -3,13 +3,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions, css},
+    polling::wait_for,
+};
 
 /// Behavior of the checkbox hooks (through the `Checkbox` and `CheckboxGroup` atoms): a native
 /// checkbox inside a label, toggled by pressing the label or with Space; hover, focus ring,
@@ -24,202 +24,214 @@ impl BrowserTest<str> for CheckboxTests {
         "checkbox_tests".into()
     }
 
-    async fn run(
-        &self,
-        driver: &browser_test::thirtyfour::WebDriver,
-        base_url: &str,
-    ) -> Result<(), Report> {
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/checkbox").await?;
-
-        selected_state(&page).await?;
-        keyboard_and_focus_ring(&page).await?;
-        virtual_label_click(&page).await?;
-        hover(&page).await?;
-        indeterminate_state(&page).await?;
-        disabled_state(&page).await?;
-        read_only_state(&page).await?;
-        invalid_state(&page).await?;
-        required_state(&page).await?;
-        bound_state(&page).await?;
-        bound_read_only_and_on_change(&page).await?;
-        group(&page).await?;
-        group_disabled_and_read_only(&page).await?;
-        group_validation(&page).await?;
-
+        cases!(
+            selected_state(&page),
+            keyboard_and_focus_ring(&page),
+            virtual_label_click(&page),
+            hover(&page),
+            indeterminate_state(&page),
+            disabled_state(&page),
+            read_only_state(&page),
+            invalid_state(&page),
+            required_state(&page),
+            bound_state(&page),
+            bound_read_only_and_on_change(&page),
+            group(&page),
+            group_disabled_and_read_only(&page),
+            group_validation(&page),
+        );
         Ok(())
     }
 }
 
-/// The `<label>` of the checkbox with the visible text `text`.
+/// The `<label>` of the checkbox with the text `text`.
 async fn label(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
-    Ok(page
-        .driver
-        .find(By::XPath(format!("//label[normalize-space(.)='{text}']")))
-        .await?)
+    page.element(css("label").text(text)).await
 }
 
+/// The native checkbox inside `label`.
 async fn input(label: &WebElement) -> Result<WebElement, Report> {
-    Ok(label.find(By::Css("input")).await?)
+    label.element("input").await
 }
 
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
+/// The fixture's output of the "Basic" checkbox's state (`true`/`false`).
+async fn basic_value(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-cb-basic-value").await
 }
 
-async fn checked(input: &WebElement) -> Result<bool, Report> {
-    Ok(input.prop("checked").await?.as_deref() == Some("true"))
-}
-
+/// Pressing the label toggles the checkbox: `data-selected` on the label, the native `checked`
+/// state, and the state the atom reports.
 async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Basic").await?;
     let input = input(&label).await?;
-    assert_that!(attr(&input, "type").await?).is_equal_to(Some("checkbox".to_owned()));
-    assert_that!(attr(&label, "data-selected").await?).is_none();
-    assert_that!(checked(&input).await?).is_false();
+    let value = basic_value(page).await?;
+    assert_that!(input.attr("type").await?)
+        .get_some()
+        .is_equal_to("checkbox");
+    assert_that!(label.attr("data-selected").await?).is_none();
+    assert_that!(input.is_selected().await?).is_false();
 
     label.click().await?;
-    page.wait_for_attr(&label, "data-selected", Some("true"))
-        .await?;
-    page.wait_for_text("test-cb-basic-value", "true").await?;
-    assert_that!(checked(&input).await?).is_true();
+    label.wait_for_attr("data-selected", Some("true")).await?;
+    value.wait_for_inner_text("true").await?;
+    assert_that!(input.is_selected().await?).is_true();
 
     label.click().await?;
-    page.wait_for_attr(&label, "data-selected", None).await?;
-    page.wait_for_text("test-cb-basic-value", "false").await?;
-    assert_that!(checked(&input).await?).is_false();
+    label.wait_for_attr("data-selected", None).await?;
+    value.wait_for_inner_text("false").await?;
+    assert_that!(input.is_selected().await?).is_false();
     Ok(())
 }
 
+/// Tab focuses the checkbox with a focus ring; Space toggles it.
 async fn keyboard_and_focus_ring(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Basic").await?;
     let input = input(&label).await?;
-    page.click_element_with_id("test-cb-before").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&input, "the basic checkbox").await?;
-    page.wait_for_attr(&label, "data-focused", Some("true"))
-        .await?;
-    page.wait_for_attr(&label, "data-focus-visible", Some("true"))
+    let value = basic_value(page).await?;
+    page.element("#test-cb-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&input).await?;
+    label.wait_for_attr("data-focused", Some("true")).await?;
+    label
+        .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
 
-    page.send_keys_to_active(Key::Space).await?;
-    page.wait_for_text("test-cb-basic-value", "true").await?;
-    page.send_keys_to_active(Key::Space).await?;
-    page.wait_for_text("test-cb-basic-value", "false").await?;
+    page.send_keys(Key::Space).await?;
+    value.wait_for_inner_text("true").await?;
+    page.send_keys(Key::Space).await?;
+    value.wait_for_inner_text("false").await?;
 
-    page.press_tab().await?;
-    page.wait_for_attr(&label, "data-focused", None).await?;
-    page.wait_for_attr(&label, "data-focus-visible", None).await
+    page.send_keys(Key::Tab).await?;
+    label.wait_for_attr("data-focused", None).await?;
+    label.wait_for_attr("data-focus-visible", None).await?;
+    Ok(())
 }
 
+/// A virtual click on the label toggles, as with a native label.
+async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+    let label = label(page, "Basic").await?;
+    let value = basic_value(page).await?;
+    label.virtual_click().await?;
+    value.wait_for_inner_text("true").await?;
+    label.virtual_click().await?;
+    value.wait_for_inner_text("false").await?;
+    Ok(())
+}
+
+/// The pointer over the label sets `data-hovered`; leaving clears it.
 async fn hover(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Basic").await?;
-    assert_that!(attr(&label, "data-hovered").await?).is_none();
-    page.driver
-        .action_chain()
-        .move_to_element_center(&label)
-        .perform()
-        .await?;
-    page.wait_for_attr(&label, "data-hovered", Some("true"))
-        .await?;
-    let other = page.element("test-cb-before").await?;
-    page.driver
-        .action_chain()
-        .move_to_element_center(&other)
-        .perform()
-        .await?;
-    page.wait_for_attr(&label, "data-hovered", None).await
+    assert_that!(label.attr("data-hovered").await?).is_none();
+    label.hover().await?;
+    label.wait_for_attr("data-hovered", Some("true")).await?;
+    page.element("#test-cb-before").await?.hover().await?;
+    label.wait_for_attr("data-hovered", None).await?;
+    Ok(())
 }
 
 async fn indeterminate_state(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Indeterminate").await?;
     let input = input(&label).await?;
-    assert_that!(attr(&label, "data-indeterminate").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(input.prop("indeterminate").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(label.attr("data-indeterminate").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input.prop("indeterminate").await?)
+        .get_some()
+        .is_equal_to("true");
     Ok(())
 }
 
+/// A disabled checkbox ignores presses.
 async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Disabled").await?;
     let input = input(&label).await?;
-    assert_that!(attr(&label, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&input, "disabled").await?).is_some();
+    assert_that!(label.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input.is_enabled().await?).is_false();
     label.click().await?;
-    stays!(
-        "the text of #test-cb-disabled-value",
-        "false".to_owned(),
-        page.read_text_of("test-cb-disabled-value").await?
-    );
-    assert_that!(attr(&label, "data-selected").await?).is_none();
+    let value = page.element("#test-cb-disabled-value").await?;
+    value.inner_text_stays("false").await?;
+    assert_that!(label.attr("data-selected").await?).is_none();
     Ok(())
 }
 
+/// A read-only checkbox keeps its state; the DOM follows the state, not the rejected press.
 async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Read only").await?;
     let input = input(&label).await?;
-    assert_that!(attr(&label, "data-readonly").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&input, "aria-readonly").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(checked(&input).await?).is_true();
+    assert_that!(label.attr("data-readonly").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input.attr("aria-readonly").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input.is_selected().await?).is_true();
     label.click().await?;
-    stays!(
-        "the text of #test-cb-readonly-value",
-        "true".to_owned(),
-        page.read_text_of("test-cb-readonly-value").await?
-    );
-    // The DOM follows the state, not the rejected click.
-    assert_that!(checked(&input).await?).is_true();
-    assert_that!(attr(&label, "data-selected").await?).is_equal_to(Some("true".to_owned()));
+    let value = page.element("#test-cb-readonly-value").await?;
+    value.inner_text_stays("true").await?;
+    assert_that!(input.is_selected().await?).is_true();
+    assert_that!(label.attr("data-selected").await?)
+        .get_some()
+        .is_equal_to("true");
     Ok(())
 }
 
 async fn invalid_state(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Invalid").await?;
     let input = input(&label).await?;
-    assert_that!(attr(&label, "data-invalid").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&input, "aria-invalid").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(label.attr("data-invalid").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input.attr("aria-invalid").await?)
+        .get_some()
+        .is_equal_to("true");
     Ok(())
 }
 
+/// Native validation uses `required`, ARIA validation `aria-required`. The native error shows
+/// once the form is validated, and clears when checked.
 async fn required_state(page: &Page<'_>) -> Result<(), Report> {
-    // Native validation: the `required` attribute, no `aria-required`.
     let native = label(page, "Required native").await?;
     let native_input = input(&native).await?;
-    assert_that!(attr(&native, "data-required").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&native_input, "required").await?).is_some();
-    assert_that!(attr(&native_input, "aria-required").await?).is_none();
-    // ARIA validation: `aria-required`, no `required`.
+    assert_that!(native.attr("data-required").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(native_input.attr("required").await?).is_some();
+    assert_that!(native_input.attr("aria-required").await?).is_none();
+
     let aria = label(page, "Required aria").await?;
     let aria_input = input(&aria).await?;
-    assert_that!(attr(&aria_input, "required").await?).is_none();
-    assert_that!(attr(&aria_input, "aria-required").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(aria_input.attr("required").await?).is_none();
+    assert_that!(aria_input.attr("aria-required").await?)
+        .get_some()
+        .is_equal_to("true");
 
-    // Native validation shows once the form is validated, and clears when checked.
-    assert_that!(attr(&native, "data-invalid").await?).is_none();
-    page.driver
-        .execute(
-            "document.getElementById('test-cb-required-form').checkValidity()",
-            Vec::new(),
-        )
-        .await?;
-    page.wait_for_attr(&native, "data-invalid", Some("true"))
-        .await?;
+    assert_that!(native.attr("data-invalid").await?).is_none();
+    let form = page.element("#test-cb-required-form").await?;
+    assert_that!(form.check_validity().await?).is_false();
+    native.wait_for_attr("data-invalid", Some("true")).await?;
     native.click().await?;
-    page.wait_for_attr(&native, "data-invalid", None).await
+    native.wait_for_attr("data-invalid", None).await?;
+    Ok(())
 }
 
 /// A checkbox bound to a signal follows changes from outside and writes the signal.
 async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
     let label = label(page, "Bound").await?;
     let input = input(&label).await?;
-    page.click_element_with_id("test-cb-bound-flip").await?;
-    page.wait_for_attr(&label, "data-selected", Some("true"))
-        .await?;
-    assert_that!(checked(&input).await?).is_true();
+    let flip = page.element("#test-cb-bound-flip").await?;
+    flip.click().await?;
+    label.wait_for_attr("data-selected", Some("true")).await?;
+    assert_that!(input.is_selected().await?).is_true();
     label.click().await?;
-    page.wait_for_attr(&label, "data-selected", None).await?;
-    page.click_element_with_id("test-cb-bound-flip").await?;
-    page.wait_for_attr(&label, "data-selected", Some("true"))
-        .await
+    label.wait_for_attr("data-selected", None).await?;
+    flip.click().await?;
+    label.wait_for_attr("data-selected", Some("true")).await?;
+    Ok(())
 }
 
 /// A bound checkbox stays read-only (by press and by Space), and reports changes to
@@ -229,163 +241,143 @@ async fn bound_read_only_and_on_change(page: &Page<'_>) -> Result<(), Report> {
     let input = input(&read_only).await?;
     read_only.click().await?;
     input.focus().await?;
-    page.send_keys_to_active(Key::Space).await?;
-    stays!(
-        "data-selected of the read-only checkbox",
-        None,
-        attr(&read_only, "data-selected").await?
-    );
-    assert_that!(checked(&input).await?).is_false();
+    page.send_keys(Key::Space).await?;
+    read_only.attr_stays("data-selected", None).await?;
+    assert_that!(input.is_selected().await?).is_false();
 
     label(page, "Bound reported").await?.click().await?;
-    page.wait_for_text("test-cb-reported", "true").await
+    let reported = page.element("#test-cb-reported").await?;
+    reported.wait_for_inner_text("true").await?;
+    Ok(())
 }
 
+/// A group: labelled and described, its checkboxes share the group's name and submit their keys;
+/// the state lists the checked keys; a disabled checkbox in an enabled group ignores presses.
 async fn group(page: &Page<'_>) -> Result<(), Report> {
-    let group = page.css("[role=group]").await?;
-    let group_label = page
-        .driver
-        .find(By::XPath("//span[normalize-space(.)='Pets']"))
-        .await?;
-    let label_id = attr(&group_label, "id").await?;
-    assert_that!(attr(&group, "aria-labelledby").await?).is_equal_to(label_id);
+    let group = page.element("[role=group]").await?;
+    assert_that!(group.referenced_text("aria-labelledby").await?).is_equal_to("Pets");
+    assert_that!(group.referenced_text("aria-describedby").await?).is_equal_to("Pick your pets.");
 
     let dogs = label(page, "Dogs").await?;
     let cats = label(page, "Cats").await?;
     let dragons = label(page, "Dragons").await?;
     let dogs_input = input(&dogs).await?;
     let cats_input = input(&cats).await?;
-    // The group's name (none is generated), the key as value.
-    assert_that!(attr(&dogs_input, "name").await?).is_equal_to(Some("pets".to_owned()));
-    assert_that!(attr(&cats_input, "name").await?).is_equal_to(Some("pets".to_owned()));
-    assert_that!(attr(&dogs_input, "value").await?).is_equal_to(Some("dogs".to_owned()));
-    // The group's description describes the group and each checkbox.
-    let description = page
-        .driver
-        .find(By::XPath("//*[normalize-space(.)='Pick your pets.']"))
-        .await?;
-    let description_id = attr(&description, "id").await?.unwrap_or_default();
-    assert_that!(attr(&group, "aria-describedby").await?.unwrap_or_default())
-        .contains(description_id.as_str());
-    assert_that!(
-        attr(&dogs_input, "aria-describedby")
-            .await?
-            .unwrap_or_default()
-    )
-    .contains(description_id.as_str());
+    assert_that!(dogs_input.attr("name").await?)
+        .get_some()
+        .is_equal_to("pets");
+    assert_that!(cats_input.attr("name").await?)
+        .get_some()
+        .is_equal_to("pets");
+    assert_that!(dogs_input.value().await?)
+        .get_some()
+        .is_equal_to("dogs");
+    assert_that!(dogs_input.referenced_text("aria-describedby").await?)
+        .is_equal_to("Pick your pets.");
 
+    let value = page.element("#test-cb-group-value").await?;
     dogs.click().await?;
-    page.wait_for_text("test-cb-group-value", "dogs").await?;
+    value.wait_for_inner_text("dogs").await?;
     cats.click().await?;
-    page.wait_for_text("test-cb-group-value", "cats,dogs")
-        .await?;
+    value.wait_for_inner_text("cats,dogs").await?;
     dogs.click().await?;
-    page.wait_for_text("test-cb-group-value", "cats").await?;
-    page.wait_for_attr(&dogs, "data-selected", None).await?;
-    assert_that!(attr(&cats, "data-selected").await?).is_equal_to(Some("true".to_owned()));
+    value.wait_for_inner_text("cats").await?;
+    dogs.wait_for_attr("data-selected", None).await?;
+    assert_that!(cats.attr("data-selected").await?)
+        .get_some()
+        .is_equal_to("true");
 
-    // A disabled checkbox in an enabled group.
-    assert_that!(attr(&dragons, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&input(&dragons).await?, "disabled").await?).is_some();
+    assert_that!(dragons.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input(&dragons).await?.is_enabled().await?).is_false();
     dragons.click().await?;
-    stays!(
-        "the text of #test-cb-group-value",
-        "cats".to_owned(),
-        page.read_text_of("test-cb-group-value").await?
-    );
+    value.inner_text_stays("cats").await?;
     Ok(())
 }
 
+/// A disabled group disables its checkboxes; a read-only group keeps their states.
 async fn group_disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
     let disabled_group = page
-        .css("[role=group][aria-label='Disabled group']")
+        .element("[role=group][aria-label='Disabled group']")
         .await?;
-    assert_that!(attr(&disabled_group, "aria-disabled").await?)
-        .is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&disabled_group, "data-disabled").await?)
-        .is_equal_to(Some("true".to_owned()));
+    assert_that!(disabled_group.attr("aria-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(disabled_group.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
     let disabled = label(page, "Disabled group A").await?;
-    assert_that!(attr(&disabled, "data-disabled").await?).is_equal_to(Some("true".to_owned()));
-    assert_that!(attr(&input(&disabled).await?, "disabled").await?).is_some();
+    assert_that!(disabled.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(input(&disabled).await?.is_enabled().await?).is_false();
 
     let read_only_group = page
-        .css("[role=group][aria-label='Read-only group']")
+        .element("[role=group][aria-label='Read-only group']")
         .await?;
-    assert_that!(attr(&read_only_group, "data-readonly").await?)
-        .is_equal_to(Some("true".to_owned()));
+    assert_that!(read_only_group.attr("data-readonly").await?)
+        .get_some()
+        .is_equal_to("true");
     let a = label(page, "Read-only group A").await?;
     let b = label(page, "Read-only group B").await?;
-    assert_that!(attr(&input(&b).await?, "aria-readonly").await?)
-        .is_equal_to(Some("true".to_owned()));
+    assert_that!(input(&b).await?.attr("aria-readonly").await?)
+        .get_some()
+        .is_equal_to("true");
     b.click().await?;
     a.click().await?;
-    stays!(
-        "data-selected of A",
-        Some("true".to_owned()),
-        attr(&a, "data-selected").await?
-    );
-    assert_that!(attr(&b, "data-selected").await?).is_none();
-    assert_that!(checked(&input(&a).await?).await?).is_true();
-    assert_that!(checked(&input(&b).await?).await?).is_false();
+    a.attr_stays("data-selected", Some("true")).await?;
+    assert_that!(b.attr("data-selected").await?).is_none();
+    assert_that!(input(&a).await?.is_selected().await?).is_true();
+    assert_that!(input(&b).await?.is_selected().await?).is_false();
     Ok(())
 }
 
 /// A required group (native validation): every checkbox is `required` while none is checked;
-/// validating the form marks the group invalid and shows the error, checking one clears it.
+/// validating the form marks the group invalid and adds the browser's validation message to its
+/// description; checking one clears both.
 async fn group_validation(page: &Page<'_>) -> Result<(), Report> {
-    let form = page.element("test-cb-group-form").await?;
-    let group = form.find(By::Css("[role=group]")).await?;
+    let form = page.element("#test-cb-group-form").await?;
+    let group = form.element("[role=group]").await?;
     let a = label(page, "Required group A").await?;
     let b = label(page, "Required group B").await?;
     for label in [&a, &b] {
-        assert_that!(attr(&input(label).await?, "required").await?).is_some();
-        assert_that!(attr(label, "data-invalid").await?).is_none();
+        assert_that!(input(label).await?.attr("required").await?).is_some();
+        assert_that!(label.attr("data-invalid").await?).is_none();
     }
-    assert_that!(attr(&group, "data-invalid").await?).is_none();
-    let described = attr(&group, "aria-describedby").await?;
+    assert_that!(group.attr("data-invalid").await?).is_none();
+    let description = group.referenced_text("aria-describedby").await?;
 
-    page.driver
-        .execute(
-            "document.getElementById('test-cb-group-form').checkValidity()",
-            Vec::new(),
-        )
-        .await?;
-    page.wait_for_attr(&group, "data-invalid", Some("true"))
-        .await?;
+    assert_that!(form.check_validity().await?).is_false();
+    group.wait_for_attr("data-invalid", Some("true")).await?;
     for label in [&a, &b] {
-        page.wait_for_attr(label, "data-invalid", Some("true"))
-            .await?;
+        label.wait_for_attr("data-invalid", Some("true")).await?;
     }
-    let error_id = attr(&group, "aria-describedby").await?.unwrap_or_default();
-    assert_that!(Some(error_id.clone())).is_not_equal_to(described.clone());
-    let error = page
-        .element(error_id.split(' ').next_back().unwrap_or_default())
+    let message = input(&a)
+        .await?
+        .prop("validationMessage")
+        .await?
+        .unwrap_or_default();
+    assert_that!(&message).is_not_blank();
+    let invalid_description = [description.as_str(), message.as_str()]
+        .into_iter()
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    wait_for("the group's description")
+        .observing(|| group.referenced_text("aria-describedby"))
+        .to_be_equal_to(invalid_description)
         .await?;
-    assert_that!(error.text().await?.is_empty()).is_false();
 
     a.click().await?;
-    page.wait_for_attr(&group, "data-invalid", None).await?;
+    group.wait_for_attr("data-invalid", None).await?;
     for label in [&a, &b] {
-        page.wait_for_attr(label, "data-invalid", None).await?;
-        assert_that!(attr(&input(label).await?, "required").await?).is_none();
+        label.wait_for_attr("data-invalid", None).await?;
+        assert_that!(input(label).await?.attr("required").await?).is_none();
     }
-    page.wait_for_attr(&group, "aria-describedby", described.as_deref())
-        .await
-}
-
-/// A virtual click on the label toggles, as with a native label.
-async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
-    let label = label(page, "Basic").await?;
-    virtual_click(page, &label).await?;
-    page.wait_for_text("test-cb-basic-value", "true").await?;
-    virtual_click(page, &label).await?;
-    page.wait_for_text("test-cb-basic-value", "false").await
-}
-
-/// `element.click()` from script: a virtual click, as assistive technology sends.
-async fn virtual_click(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    page.driver
-        .execute("arguments[0].click()", vec![element.to_json()?])
+    wait_for("the group's description")
+        .observing(|| group.referenced_text("aria-describedby"))
+        .to_be_equal_to(description.clone())
         .await?;
     Ok(())
 }

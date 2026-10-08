@@ -1,13 +1,10 @@
 // Upstream: react-aria/test/interactions/useMove.test.js @ 99e6102368
 use std::borrow::Cow;
 
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
 /// `use_move`: pointer movement (start on the first move, deltas, end on pointer up or cancel),
 /// nothing for right clicks, taps or further pointers, no bubbling to a movable parent, arrow
@@ -24,73 +21,133 @@ impl BrowserTest<str> for MoveTests {
         let page = Page { driver, base_url };
         page.goto_path("/hooks/move").await?;
 
-        // "responds to pointer events".
-        fire(driver, "single", "pointerdown", 1, 1, 30, 0).await?;
-        expect_log(&page, "").await?;
-        fire(driver, "single", "pointermove", 1, 10, 25, 0).await?;
-        page.wait_for_text("test-move-log", "single:start:pen,single:move:pen:9:-5")
-            .await?;
-        fire(driver, "single", "pointerup", 1, 10, 25, 0).await?;
-        page.wait_for_text(
-            "test-move-log",
-            "single:start:pen,single:move:pen:9:-5,single:end:pen",
-        )
+        cases!(
+            responds_to_pointer_events(&page),
+            ends_with_pointercancel(&page),
+            ignores_right_clicks_and_taps(&page),
+            ignores_additional_pointers(&page),
+            doesnt_bubble_to_a_movable_parent(&page),
+            responds_to_keys(&page),
+        );
+        Ok(())
+    }
+}
+
+/// The log of move events.
+async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-move-log").await
+}
+
+/// Clears the log, by a script click.
+async fn reset(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-move-reset")
+        .await?
+        .virtual_click()
         .await?;
-        reset(&page).await?;
+    log(page).await?.wait_for_inner_text("").await?;
+    Ok(())
+}
 
-        // "ends with pointercancel".
-        fire(driver, "single", "pointerdown", 1, 1, 30, 0).await?;
-        fire(driver, "single", "pointermove", 1, 10, 25, 0).await?;
-        fire(driver, "single", "pointercancel", 1, 10, 25, 0).await?;
-        page.wait_for_text(
-            "test-move-log",
-            "single:start:pen,single:move:pen:9:-5,single:end:pen",
-        )
+/// A pen pointer event: `kind` of pointer `pointer_id` at (`x`, `y`) with `button` (0: primary,
+/// 2: secondary). The hook listens on the document while moving, so it bubbles.
+fn pen(kind: &str, pointer_id: i32, x: i32, y: i32, button: i32) -> SyntheticEvent {
+    let buttons = if kind == "pointerup" || kind == "pointercancel" {
+        0
+    } else {
+        1 << button.min(1)
+    };
+    SyntheticEvent::pointer(kind)
+        .with("pointerType", "pen")
+        .with("pointerId", pointer_id)
+        .with("isPrimary", pointer_id == 1)
+        .with("clientX", x)
+        .with("clientY", y)
+        .with("button", button)
+        .with("buttons", buttons)
+}
+
+/// "responds to pointer events": the first move starts, up ends.
+async fn responds_to_pointer_events(page: &Page<'_>) -> Result<(), Report> {
+    let log = log(page).await?;
+    let single = page.element("#test-move-single").await?;
+    single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
+    log.inner_text_stays("").await?;
+    single.dispatch(pen("pointermove", 1, 10, 25, 0)).await?;
+    log.wait_for_inner_text("single:start:pen,single:move:pen:9:-5")
         .await?;
-        reset(&page).await?;
-
-        // "doesn't respond to right click", "doesn't fire anything when tapping".
-        fire(driver, "single", "pointerdown", 1, 1, 30, 2).await?;
-        fire(driver, "single", "pointermove", 1, 10, 25, 2).await?;
-        fire(driver, "single", "pointerup", 1, 10, 25, 2).await?;
-        fire(driver, "single", "pointerdown", 1, 1, 30, 0).await?;
-        fire(driver, "single", "pointerup", 1, 1, 30, 0).await?;
-        expect_log(&page, "").await?;
-
-        // "ignores any additional pointers".
-        fire(driver, "single", "pointerdown", 1, 1, 30, 0).await?;
-        fire(driver, "single", "pointerdown", 3, 1, 30, 0).await?;
-        fire(driver, "single", "pointermove", 3, 1, 40, 0).await?;
-        fire(driver, "single", "pointerup", 3, 1, 40, 0).await?;
-        expect_log(&page, "").await?;
-        fire(driver, "single", "pointermove", 1, 10, 25, 0).await?;
-        fire(driver, "single", "pointerup", 1, 10, 25, 0).await?;
-        page.wait_for_text(
-            "test-move-log",
-            "single:start:pen,single:move:pen:9:-5,single:end:pen",
-        )
+    single.dispatch(pen("pointerup", 1, 10, 25, 0)).await?;
+    log.wait_for_inner_text("single:start:pen,single:move:pen:9:-5,single:end:pen")
         .await?;
-        reset(&page).await?;
+    reset(page).await?;
+    Ok(())
+}
 
-        // "doesn't bubble to useMove on parent elements".
-        fire(driver, "child", "pointerdown", 1, 1, 30, 0).await?;
-        fire(driver, "child", "pointermove", 1, 10, 25, 0).await?;
-        fire(driver, "child", "pointerup", 1, 10, 25, 0).await?;
-        page.wait_for_text(
-            "test-move-log",
-            "child:start:pen,child:move:pen:9:-5,child:end:pen",
-        )
+/// "ends with pointercancel".
+async fn ends_with_pointercancel(page: &Page<'_>) -> Result<(), Report> {
+    let single = page.element("#test-move-single").await?;
+    single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
+    single.dispatch(pen("pointermove", 1, 10, 25, 0)).await?;
+    single.dispatch(pen("pointercancel", 1, 10, 25, 0)).await?;
+    log(page)
+        .await?
+        .wait_for_inner_text("single:start:pen,single:move:pen:9:-5,single:end:pen")
         .await?;
-        reset(&page).await?;
+    reset(page).await?;
+    Ok(())
+}
 
-        // "responds to keypresses", "allows handling other key events".
-        page.element("test-move-single").await?.focus().await?;
-        for key in [Key::Up, Key::Down, Key::Left, Key::Right] {
-            page.send_keys_to_active(key).await?;
-        }
-        page.send_keys_to_active(Key::PageUp).await?;
-        page.wait_for_text(
-            "test-move-log",
+/// "doesn't respond to right click", "doesn't fire anything when tapping".
+async fn ignores_right_clicks_and_taps(page: &Page<'_>) -> Result<(), Report> {
+    let single = page.element("#test-move-single").await?;
+    single.dispatch(pen("pointerdown", 1, 1, 30, 2)).await?;
+    single.dispatch(pen("pointermove", 1, 10, 25, 2)).await?;
+    single.dispatch(pen("pointerup", 1, 10, 25, 2)).await?;
+    single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
+    single.dispatch(pen("pointerup", 1, 1, 30, 0)).await?;
+    log(page).await?.inner_text_stays("").await?;
+    Ok(())
+}
+
+/// "ignores any additional pointers".
+async fn ignores_additional_pointers(page: &Page<'_>) -> Result<(), Report> {
+    let log = log(page).await?;
+    let single = page.element("#test-move-single").await?;
+    single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
+    single.dispatch(pen("pointerdown", 3, 1, 30, 0)).await?;
+    single.dispatch(pen("pointermove", 3, 1, 40, 0)).await?;
+    single.dispatch(pen("pointerup", 3, 1, 40, 0)).await?;
+    log.inner_text_stays("").await?;
+    single.dispatch(pen("pointermove", 1, 10, 25, 0)).await?;
+    single.dispatch(pen("pointerup", 1, 10, 25, 0)).await?;
+    log.wait_for_inner_text("single:start:pen,single:move:pen:9:-5,single:end:pen")
+        .await?;
+    reset(page).await?;
+    Ok(())
+}
+
+/// "doesn't bubble to useMove on parent elements".
+async fn doesnt_bubble_to_a_movable_parent(page: &Page<'_>) -> Result<(), Report> {
+    let child = page.element("#test-move-child").await?;
+    child.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
+    child.dispatch(pen("pointermove", 1, 10, 25, 0)).await?;
+    child.dispatch(pen("pointerup", 1, 10, 25, 0)).await?;
+    log(page)
+        .await?
+        .wait_for_inner_text("child:start:pen,child:move:pen:9:-5,child:end:pen")
+        .await?;
+    reset(page).await?;
+    Ok(())
+}
+
+/// "responds to keypresses", "allows handling other key events".
+async fn responds_to_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-move-single").await?.focus().await?;
+    for key in [Key::Up, Key::Down, Key::Left, Key::Right, Key::PageUp] {
+        page.send_keys(key).await?;
+    }
+    log(page)
+        .await?
+        .wait_for_inner_text(
             "single:start:keyboard,single:move:keyboard:0:-1,single:end:keyboard,\
              single:start:keyboard,single:move:keyboard:0:1,single:end:keyboard,\
              single:start:keyboard,single:move:keyboard:-1:0,single:end:keyboard,\
@@ -98,59 +155,5 @@ impl BrowserTest<str> for MoveTests {
              keydown:PageUp",
         )
         .await?;
-
-        page.expect_no_page_errors().await
-    }
-}
-
-/// Dispatches a synthetic pen pointer event on `#test-move-<name>` (it bubbles to the document,
-/// where the hook listens while moving).
-#[allow(clippy::too_many_arguments)]
-async fn fire(
-    driver: &WebDriver,
-    name: &str,
-    kind: &str,
-    pointer_id: i32,
-    x: i32,
-    y: i32,
-    button: i32,
-) -> Result<(), Report> {
-    let buttons = if kind == "pointerup" || kind == "pointercancel" {
-        0
-    } else {
-        1 << button.min(1)
-    };
-    driver
-        .execute(
-            &format!(
-                "document.getElementById('test-move-{name}').dispatchEvent(new PointerEvent('{kind}', {{
-                     bubbles: true, cancelable: true, composed: true, pointerType: 'pen',
-                     pointerId: {pointer_id}, isPrimary: {pointer_id} === 1, clientX: {x},
-                     clientY: {y}, button: {button}, buttons: {buttons}
-                 }}));"
-            ),
-            vec![],
-        )
-        .await?;
     Ok(())
-}
-
-/// The log stays as it is (waiting briefly for wrong events).
-async fn expect_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    stays!(
-        "the text of #test-move-log",
-        expected.to_owned(),
-        page.element("test-move-log").await?.text().await?
-    );
-    Ok(())
-}
-
-async fn reset(page: &Page<'_>) -> Result<(), Report> {
-    page.driver
-        .execute(
-            "document.getElementById('test-move-reset').click();",
-            vec![],
-        )
-        .await?;
-    page.wait_for_text("test-move-log", "").await
 }

@@ -3,13 +3,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::wait_for,
+};
 
 /// The TextField, Input, TextArea, Label, Description, FieldError and Form atoms.
 pub struct TextFieldAtomTests {}
@@ -24,225 +24,167 @@ impl BrowserTest<str> for TextFieldAtomTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/text-field").await?;
 
-        for element in ["input", "textarea"] {
-            provides_slots(&page, element).await?;
-        }
-        hover_state(&page).await?;
-        focus_visible_state(&page).await?;
-        read_only_and_required_state(&page).await?;
-        for form in ["tf-native-input", "tf-native-textarea"] {
-            native_validation_errors(&page, form).await?;
-        }
-        customized_validation_errors(&page).await?;
-        invalid_without_message_renders_no_error(&page).await?;
-        id_goes_on_the_input(&page).await?;
-        form_attribute(&page).await?;
-        server_validation_errors(&page).await?;
-        bound_values_keep_the_dom_in_sync(&page).await?;
-        form_validation_behavior(&page).await?;
+        cases!(
+            provides_slots(&page, "input"),
+            provides_slots(&page, "textarea"),
+            hover_state(&page),
+            focus_visible_state(&page),
+            read_only_and_required_state(&page),
+            native_validation_errors(&page, "tf-native-input"),
+            native_validation_errors(&page, "tf-native-textarea"),
+            customized_validation_errors(&page),
+            invalid_without_message_renders_no_error(&page),
+            id_goes_on_the_input(&page),
+            form_attribute(&page),
+            server_validation_errors(&page),
+            bound_values_keep_the_dom_in_sync(&page),
+            form_validation_behavior(&page),
+        );
 
         Ok(())
     }
 }
 
-/// The field (`<div>`) around the element matching `selector`.
-pub(crate) async fn field_of(page: &Page<'_>, selector: &str) -> Result<WebElement, Report> {
-    page.css(&format!("{selector} > div")).await
-}
-
-/// The texts of the elements an attribute (`aria-labelledby`, `aria-describedby`) refers to.
-pub(crate) async fn referenced_texts(
-    page: &Page<'_>,
-    element: &WebElement,
-    attr: &str,
-) -> Result<String, Report> {
-    let ids = element.attr(attr).await?.unwrap_or_default();
-    let mut texts = Vec::new();
-    // The text content: a referenced element counts for the accessible name or description also
-    // while hidden (e.g. a description the theme hides while an error shows).
-    for id in ids.split_whitespace() {
-        let text = page.element(id).await?.prop("textContent").await?;
-        texts.push(text.unwrap_or_default().trim().to_owned());
-    }
-    Ok(texts.join(" "))
-}
-
-/// Waits until `element`'s `attr` refers to elements with the texts `expected`.
-pub(crate) async fn wait_for_referenced_texts(
-    page: &Page<'_>,
-    element: &WebElement,
-    attr: &str,
-    expected: &str,
-) -> Result<(), Report> {
-    for _ in 0..50 {
-        if referenced_texts(page, element, attr).await? == expected {
-            return Ok(());
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    assert_that!(referenced_texts(page, element, attr).await?).is_equal_to(expected.to_owned());
-    Ok(())
-}
-
-pub(crate) async fn is_valid(page: &Page<'_>, element: &WebElement) -> Result<bool, Report> {
-    let valid = page
-        .driver
-        .execute(
-            "return arguments[0].validity.valid;",
-            vec![element.to_json()?],
-        )
-        .await?;
-    Ok(valid.json().as_bool().unwrap_or_default())
-}
-
-pub(crate) async fn check_validity(page: &Page<'_>, form_id: &str) -> Result<(), Report> {
-    page.driver
-        .execute(
-            &format!("document.getElementById('{form_id}').checkValidity();"),
-            vec![],
-        )
-        .await?;
-    Ok(())
-}
-
-pub(crate) async fn expect_focused(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    page.wait_for_focus_on(element, "the field's input").await
+/// The `TextField` in the fixture section matching `section`.
+async fn field_in(page: &Page<'_>, section: &str) -> Result<WebElement, Report> {
+    page.element(format!("{section} .leptonic-TextField")).await
 }
 
 /// "provides slots": the value, `type` (inputs only), data attributes on the field, the label
 /// and the description and error message referenced by the input.
 async fn provides_slots(page: &Page<'_>, element: &str) -> Result<(), Report> {
     let container = format!("#tf-slots-{element}");
-    let input = page.css(&format!("{container} {element}")).await?;
-    assert_that!(input.prop("value").await?).is_equal_to(Some("test".to_owned()));
-    let expected_type = (element == "input").then(|| "text".to_owned());
-    assert_that!(input.attr("type").await?).is_equal_to(expected_type);
-    assert_that!(field_of(page, &container).await?.attr("data-foo").await?)
-        .is_equal_to(Some("bar".to_owned()));
+    let input = page.element(format!("{container} {element}")).await?;
+    assert_that!(input.value().await?)
+        .get_some()
+        .is_equal_to("test");
+    assert_that!(input.attr("type").await?.as_deref())
+        .with_detail_message(format!("the type of the {element}"))
+        .is_equal_to((element == "input").then_some("text"));
+    assert_that!(field_in(page, &container).await?.attr("data-foo").await?)
+        .get_some()
+        .is_equal_to("bar");
 
-    assert_that!(referenced_texts(page, &input, "aria-labelledby").await?)
-        .is_equal_to("Test".to_owned());
-    let label = page.css(&format!("{container} label")).await?;
-    let id = input.attr("id").await?;
+    assert_that!(input.referenced_text("aria-labelledby").await?).is_equal_to("Test");
+    let label = page.element(format!("{container} label")).await?;
+    let id = input.id().await?;
     assert_that!(label.attr("for").await?).is_equal_to(id);
-    wait_for_referenced_texts(page, &input, "aria-describedby", "Description Error").await
-}
-
-async fn hover_state(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#tf-slots-input input").await?;
-    assert_that!(input.attr("data-hovered").await?).is_none();
-    page.driver
-        .action_chain()
-        .move_to_element_center(&input)
-        .perform()
+    wait_for("the description of the input")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Description Error")
         .await?;
-    page.wait_for_selector("#tf-slots-input input[data-hovered]")
-        .await?;
-    let heading = page.driver.find(By::Css("h1")).await?;
-    page.driver
-        .action_chain()
-        .move_to_element_center(&heading)
-        .perform()
-        .await?;
-    page.wait_for_no_selector("#tf-slots-input input[data-hovered]")
-        .await
-}
-
-async fn focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#tf-slots-input input").await?;
-    assert_that!(input.attr("data-focus-visible").await?).is_none();
-    // Tab from the element before the input.
-    page.driver
-        .execute(
-            "document.querySelector('h1').setAttribute('tabindex', '-1'); \
-             document.querySelector('h1').focus();",
-            vec![],
-        )
-        .await?;
-    page.press_tab().await?;
-    expect_focused(page, &input).await?;
-    page.wait_for_selector("#tf-slots-input input[data-focus-visible][data-focused]")
-        .await?;
-    page.press_tab().await?;
-    page.wait_for_no_selector("#tf-slots-input input[data-focus-visible]")
-        .await
-}
-
-async fn read_only_and_required_state(page: &Page<'_>) -> Result<(), Report> {
-    let plain = field_of(page, "#tf-slots-input").await?;
-    assert_that!(plain.attr("data-readonly").await?).is_none();
-    assert_that!(plain.attr("data-required").await?).is_none();
-    assert_that!(
-        field_of(page, "#tf-read-only")
-            .await?
-            .attr("data-readonly")
-            .await?
-    )
-    .is_some();
-    assert_that!(
-        field_of(page, "#tf-required")
-            .await?
-            .attr("data-required")
-            .await?
-    )
-    .is_some();
     Ok(())
 }
 
-/// "supports validation errors": with native validation, the error shows once the form is
-/// checked (focusing the input), stays while typing and goes once the value is committed.
+async fn hover_state(page: &Page<'_>) -> Result<(), Report> {
+    let input = page.element("#tf-slots-input input").await?;
+    assert_that!(input.attr("data-hovered").await?).is_none();
+    input.hover().await?;
+    input.wait_for_attr("data-hovered", Some("true")).await?;
+    let heading = page.element("h1").await?;
+    heading.hover().await?;
+    input.wait_for_attr("data-hovered", None).await?;
+    Ok(())
+}
+
+async fn focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
+    let input = page.element("#tf-slots-input input").await?;
+    assert_that!(input.attr("data-focus-visible").await?).is_none();
+    // Tab from the element before the input.
+    let heading = page.element("h1").await?;
+    page.eval::<()>(
+        "arguments[0].setAttribute('tabindex', '-1');",
+        vec![heading.to_json()?],
+    )
+    .await?;
+    heading.focus().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&input).await?;
+    input.wait_for_attr("data-focused", Some("true")).await?;
+    input
+        .wait_for_attr("data-focus-visible", Some("true"))
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("data-focus-visible", None).await?;
+    Ok(())
+}
+
+async fn read_only_and_required_state(page: &Page<'_>) -> Result<(), Report> {
+    let plain = field_in(page, "#tf-slots-input").await?;
+    assert_that!(plain.attr("data-readonly").await?).is_none();
+    assert_that!(plain.attr("data-required").await?).is_none();
+    let read_only = field_in(page, "#tf-read-only").await?;
+    assert_that!(read_only.attr("data-readonly").await?).is_some();
+    let required = field_in(page, "#tf-required").await?;
+    assert_that!(required.attr("data-required").await?).is_some();
+    Ok(())
+}
+
+/// "supports validation errors": with native validation, the error (the browser's validation
+/// message) shows once the form is checked (focusing the input), stays while typing and goes
+/// once the value is committed.
 async fn native_validation_errors(page: &Page<'_>, form: &str) -> Result<(), Report> {
     let container = format!("#{form}");
     let input = page
-        .css(&format!("{container} input, {container} textarea"))
+        .element(format!("{container} input, {container} textarea"))
         .await?;
+    let field = field_in(page, &container).await?;
     assert_that!(input.attr("required").await?).is_some();
     assert_that!(input.attr("aria-required").await?).is_none();
     assert_that!(input.attr("aria-describedby").await?).is_none();
-    assert_that!(is_valid(page, &input).await?).is_false();
+    assert_that!(input.is_valid().await?).is_false();
 
-    check_validity(page, form).await?;
-    page.wait_for_selector(&format!("{container} [aria-describedby]"))
+    assert_that!(page.element(&container).await?.check_validity().await?).is_false();
+    let message = input.prop("validationMessage").await?.unwrap_or_default();
+    assert_that!(&message).is_not_blank();
+    wait_for("the description of the input")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to(message.as_str())
         .await?;
-    assert_that!(referenced_texts(page, &input, "aria-describedby").await?).is_not_empty();
-    assert_that!(
-        field_of(page, &container)
-            .await?
-            .attr("data-invalid")
-            .await?
-    )
-    .is_some();
-    expect_focused(page, &input).await?;
+    field.wait_for_attr("data-invalid", Some("true")).await?;
+    page.wait_for_focus(&input).await?;
 
-    page.send_keys_to_active("Devon").await?;
-    assert_that!(input.attr("aria-describedby").await?).is_some();
-    assert_that!(is_valid(page, &input).await?).is_true();
-
-    page.press_tab().await?;
-    page.wait_for_no_selector(&format!("{container} [aria-describedby]"))
+    page.send_keys("Devon").await?;
+    let described = input.attr("aria-describedby").await?;
+    input
+        .attr_stays("aria-describedby", described.as_deref())
         .await?;
-    page.wait_for_no_selector(&format!("{container} [data-invalid]"))
-        .await
+    assert_that!(input.is_valid().await?).is_true();
+
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("aria-describedby", None).await?;
+    field.wait_for_attr("data-invalid", None).await?;
+    Ok(())
 }
 
 /// "supports customizing validation errors".
 async fn customized_validation_errors(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#tf-custom-error input").await?;
-    check_validity(page, "tf-custom-error").await?;
-    wait_for_referenced_texts(page, &input, "aria-describedby", "Please enter a name").await?;
-    page.wait_for_focus_on(&input, "the custom error field's input")
+    let input = page.element("#tf-custom-error input").await?;
+    assert_that!(
+        page.element("#tf-custom-error")
+            .await?
+            .check_validity()
+            .await?
+    )
+    .is_false();
+    wait_for("the description of the input")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Please enter a name")
         .await?;
-    page.send_keys_to_active("Devon").await?;
-    assert_that!(is_valid(page, &input).await?).is_true();
-    page.press_tab().await?;
-    page.wait_for_no_selector("#tf-custom-error input[aria-describedby]")
-        .await
+    page.wait_for_focus(&input).await?;
+    page.send_keys("Devon").await?;
+    assert_that!(input.is_valid().await?).is_true();
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("aria-describedby", None).await?;
+    Ok(())
 }
 
 /// "should not render the field error div if no error is provided and isInvalid is true".
 async fn invalid_without_message_renders_no_error(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#tf-invalid-without-message input").await?;
-    assert_that!(input.attr("aria-invalid").await?).is_equal_to(Some("true".to_owned()));
+    let input = page.element("#tf-invalid-without-message input").await?;
+    assert_that!(input.attr("aria-invalid").await?)
+        .get_some()
+        .is_equal_to("true");
     assert_that!(input.attr("data-invalid").await?).is_some();
     assert_that!(input.attr("aria-describedby").await?).is_none();
     Ok(())
@@ -251,93 +193,95 @@ async fn invalid_without_message_renders_no_error(page: &Page<'_>) -> Result<(),
 /// "should render the id attribute only on the input element" / "should link an id on the
 /// input to the label htmlFor".
 async fn id_goes_on_the_input(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#tf-id input").await?;
-    assert_that!(input.attr("id").await?).is_equal_to(Some("name".to_owned()));
-    assert_that!(field_of(page, "#tf-id").await?.attr("id").await?).is_none();
-    let label = page.css("#tf-id label").await?;
-    assert_that!(label.attr("for").await?).is_equal_to(Some("name".to_owned()));
+    let input = page.element("#tf-id input").await?;
+    assert_that!(input.id().await?)
+        .get_some()
+        .is_equal_to("name");
+    assert_that!(field_in(page, "#tf-id").await?.id().await?).is_none();
+    let label = page.element("#tf-id label").await?;
+    assert_that!(label.attr("for").await?)
+        .get_some()
+        .is_equal_to("name");
     Ok(())
 }
 
 async fn form_attribute(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#tf-form-attribute input").await?;
-    assert_that!(input.attr("form").await?).is_equal_to(Some("test".to_owned()));
+    let input = page.element("#tf-form-attribute input").await?;
+    assert_that!(input.attr("form").await?)
+        .get_some()
+        .is_equal_to("test");
     Ok(())
 }
 
 /// Form: "supports server validation errors".
 async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#form-server input").await?;
+    let input = page.element("#form-server input").await?;
     assert_that!(input.attr("aria-describedby").await?).is_none();
 
     for _ in 0..2 {
         // Submitting twice doesn't clear the server error.
-        page.click_element_with_id("form-server-submit").await?;
-        check_validity(page, "form-server").await?;
-        wait_for_referenced_texts(page, &input, "aria-describedby", "Invalid name.").await?;
-        assert_that!(is_valid(page, &input).await?).is_false();
-        expect_focused(page, &input).await?;
+        page.element("#form-server-submit").await?.click().await?;
+        assert_that!(page.element("#form-server").await?.check_validity().await?).is_false();
+        wait_for("the description of the input")
+            .observing(|| input.referenced_text("aria-describedby"))
+            .to_be_equal_to("Invalid name.")
+            .await?;
+        assert_that!(input.is_valid().await?).is_false();
+        page.wait_for_focus(&input).await?;
     }
 
     input.clear().await?;
-    page.send_keys_to_active("Devon").await?;
-    page.press_tab().await?;
-    page.wait_for_no_selector("#form-server [aria-describedby]")
-        .await?;
-    assert_that!(is_valid(page, &input).await?).is_true();
+    page.send_keys("Devon").await?;
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("aria-describedby", None).await?;
+    assert_that!(input.is_valid().await?).is_true();
 
     // The server answers with the same errors again: they show again (react-aria resets on
     // every new errors object).
-    page.click_element_with_id("form-server-submit").await?;
-    wait_for_referenced_texts(page, &input, "aria-describedby", "Invalid name.").await?;
-    assert_that!(is_valid(page, &input).await?).is_false();
+    page.element("#form-server-submit").await?.click().await?;
+    wait_for("the description of the input")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Invalid name.")
+        .await?;
+    assert_that!(input.is_valid().await?).is_false();
     Ok(())
 }
 
 /// No upstream test (React keeps a controlled input's DOM value in sync by itself): text a bound
 /// value rejects or changes shows as the value holds it.
 async fn bound_values_keep_the_dom_in_sync(page: &Page<'_>) -> Result<(), Report> {
-    let fixed = page.css("#tf-rejecting input").await?;
+    let fixed = page.element("#tf-rejecting input").await?;
     fixed.focus().await?;
-    page.send_keys_to_active("x").await?;
-    stays!(
-        "the fixed field's value",
-        Some("fixed".to_owned()),
-        fixed.prop("value").await?
-    );
+    page.send_keys("x").await?;
+    fixed.prop_stays("value", "fixed").await?;
 
-    let upper = page.css("#tf-uppercase input").await?;
+    let upper = page.element("#tf-uppercase input").await?;
     upper.focus().await?;
-    page.send_keys_to_active("ab").await?;
-    for _ in 0..50 {
-        if upper.prop("value").await?.as_deref() == Some("AB") {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    assert_that!(upper.prop("value").await?).is_equal_to(Some("AB".to_owned()));
+    page.send_keys("ab").await?;
+    upper.wait_for_prop("value", "AB").await?;
     Ok(())
 }
 
 /// Form: `Native` by default, `Aria` sets `novalidate`, fields override the form's behavior.
 async fn form_validation_behavior(page: &Page<'_>) -> Result<(), Report> {
+    // Boolean attributes read as "true" while present.
     for (form, novalidate, native) in [
         ("form-native", false, true),
         ("form-aria", true, false),
         ("form-native-field-aria", false, false),
         ("form-aria-field-native", true, true),
     ] {
-        let form_element = page.element(form).await?;
-        assert_that!(form_element.attr("novalidate").await?.is_some())
+        let form_element = page.element(format!("#{form}")).await?;
+        assert_that!(form_element.attr("novalidate").await?.as_deref())
             .with_detail_message(format!("novalidate of #{form}"))
-            .is_equal_to(novalidate);
-        let input = page.css(&format!("#{form} input")).await?;
-        assert_that!(input.attr("required").await?.is_some())
+            .is_equal_to(novalidate.then_some("true"));
+        let input = form_element.element("input").await?;
+        assert_that!(input.attr("required").await?.as_deref())
             .with_detail_message(format!("required in #{form}"))
-            .is_equal_to(native);
-        assert_that!(input.attr("aria-required").await?.is_some())
+            .is_equal_to(native.then_some("true"));
+        assert_that!(input.attr("aria-required").await?.as_deref())
             .with_detail_message(format!("aria-required in #{form}"))
-            .is_equal_to(!native);
+            .is_equal_to((!native).then_some("true"));
     }
     Ok(())
 }

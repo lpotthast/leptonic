@@ -4,7 +4,7 @@
 //! Every test gets a fresh WebDriver session. A failing test fails `cargo test`.
 //!
 //! Every test's timing is logged when it finishes, and a summary (slowest tests, slowest steps,
-//! time spent on sessions) is printed at the end. The `BaseActions` helpers (navigation, waits,
+//! time spent on sessions) is printed at the end. The `PageActions` helpers (navigation, waits,
 //! lookups) run as `browser_test::step`s: slow ones (> 2s) are logged as warnings, and
 //! `BROWSER_TEST_LOG_STEPS=1` logs every step with its duration.
 //!
@@ -18,23 +18,30 @@
 //!   sequential, e.g. with `BROWSER_TEST_VISIBLE=1`).
 #![cfg(not(target_arch = "wasm32"))]
 
-#[macro_use]
 mod polling;
+#[macro_use]
+mod cases;
 mod common;
 mod pages;
 mod ui_tests;
 
-use std::time::{Duration, Instant};
+use std::{
+    path::Path,
+    time::{Duration, Instant},
+};
 
 use browser_test::{
-    BrowserTestRunner, DriverOutput, FailurePolicy, Parallelism, Pause, StderrSummary, Timeouts,
-    Visibility, thirtyfour::ChromiumLikeCapabilities,
+    BrowserTestRunner, Cancellation, ChromeProfilesDir, DriverOutput, FailurePolicy, Parallelism,
+    Pause, StderrSummary, Timeouts, Visibility, thirtyfour::ChromiumLikeCapabilities,
 };
 use leptos_browser_test::{LeptosTestAppConfig, Report};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn browser_tests() -> Result<(), Report> {
     common::tracing::init_subscriber();
+    // Chrome for Testing is downloaded through rustls with `ring` (browser-test's `rustls-no-provider`).
+    // Installing fails only if a provider is installed already, which is as good.
+    let _ = rustls::crypto::ring::default_provider().install_default();
 
     let app_start = Instant::now();
     // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
@@ -46,10 +53,7 @@ async fn browser_tests() -> Result<(), Report> {
     if let Some(target_dir) = std::env::var_os("TEST_APP_TARGET_DIR") {
         app = app.with_env("CARGO_TARGET_DIR", target_dir);
     }
-    let app = app
-        .start()
-        .await
-        .map_err(Report::into_dynamic)?;
+    let app = app.start().await.map_err(Report::into_dynamic)?;
     tracing::info!(
         "Built and started the test app in {:.2}s.",
         app_start.elapsed().as_secs_f64()
@@ -73,8 +77,16 @@ fn parallelism() -> Result<Parallelism, Report> {
 
 /// A runner with the settings of the `BROWSER_TEST_*` variables. An invalid value is an error.
 fn runner() -> Result<BrowserTestRunner, Report> {
-    Ok(BrowserTestRunner::new()
+    // Ctrl-C (or SIGTERM) cancels the run: running tests stop, and chromedriver and its browsers
+    // shut down instead of outliving the process.
+    Ok(BrowserTestRunner::new(Cancellation::on_shutdown_signals())
         .with_report_consumer(StderrSummary)
+        // The sessions' Chrome profiles (tens of MB each) go into the target dir's `tmp`, on disk,
+        // rather than the system's temporary directory (often a RAM disk). Each is removed when its
+        // session ends; a run removes those that killed runs left behind.
+        .with_chrome_profiles_dir(ChromeProfilesDir::new(
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join("browser-test-profiles"),
+        ))
         .with_chrome_capabilities(|caps| {
             // Chrome for Testing is extracted in user mode, so its setuid sandbox helper can't be
             // installed. Without these flags, Chrome may exit before chromedriver opens a session.
@@ -86,9 +98,12 @@ fn runner() -> Result<BrowserTestRunner, Report> {
         .with_visibility(Visibility::from_env()?.unwrap_or_default())
         .with_pause(Pause::from_env()?.unwrap_or_default())
         .with_driver_output(DriverOutput::from_env()?.unwrap_or_default())
+        // Lookups and element waits poll with thirtyfour's element queries (`polling`); an implicit
+        // wait would make every lookup of a missing element block, and compound with the polling.
         .with_timeouts(
             Timeouts::builder()
-                .implicit_wait_timeout(Duration::from_secs(3))
+                .implicit_wait_timeout(Duration::ZERO)
                 .build(),
-        ))
+        )
+        .with_element_query_wait(polling::element_query_wait()))
 }

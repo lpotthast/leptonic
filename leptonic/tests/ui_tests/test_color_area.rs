@@ -3,13 +3,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::wait_for,
+};
 
 /// The `ColorArea`/`ColorThumb` atoms: the hidden inputs' attributes and labelling, keyboard
 /// steps (arrows, Shift, PageUp/PageDown, Home/End), pressing and dragging, disabled areas,
@@ -26,152 +26,17 @@ impl BrowserTest<str> for ColorAreaTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/color-area").await?;
 
-        // "sets input props".
-        let (x, y) = inputs(&page, "test-ca-default").await?;
-        for input in [&x, &y] {
-            assert_that!(attr(input, "type").await?).is_equal_to(Some("range".to_owned()));
-            assert_that!(attr(input, "aria-label").await?)
-                .is_equal_to(Some("Color picker".to_owned()));
-            assert_that!(attr(input, "min").await?).is_equal_to(Some("0".to_owned()));
-            assert_that!(attr(input, "max").await?).is_equal_to(Some("255".to_owned()));
-            assert_that!(attr(input, "step").await?).is_equal_to(Some("1".to_owned()));
-        }
-        assert_that!(attr(&x, "aria-valuetext").await?).is_equal_to(Some(
-            "Red: 255, Green: 0, Blue: 255, light vibrant magenta".to_owned(),
-        ));
-        assert_that!(attr(&y, "aria-valuetext").await?).is_equal_to(Some(
-            "Green: 0, Red: 255, Blue: 255, light vibrant magenta".to_owned(),
-        ));
-        assert_that!(attr(&x, "tabindex").await?).is_none();
-        assert_that!(attr(&y, "tabindex").await?).is_equal_to(Some("-1".to_owned()));
-        assert_that!(attr(&y, "aria-hidden").await?).is_equal_to(Some("true".to_owned()));
+        cases!(
+            input_props(&page),
+            keyboard(&page),
+            keyboard_steps(&page),
+            press_and_drag(&page),
+            disabled(&page),
+            labelling(&page),
+            forms(&page),
+        );
 
-        // Keyboard: "left/right", "up/down".
-        page.element("test-ca-before").await?.focus().await?;
-        page.press_tab().await?;
-        expect_active(&page, &x).await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_text("test-ca-log", "change:FE00FF,end:FE00FF")
-            .await?;
-        assert_that!(attr(&x, "aria-valuetext").await?)
-            .is_equal_to(Some("Red: 254, light vibrant magenta".to_owned()));
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_text(
-            "test-ca-log",
-            "change:FE00FF,end:FE00FF,change:FF00FF,end:FF00FF",
-        )
-        .await?;
-        clear(&page).await?;
-        page.send_keys_to_active(Key::Up).await?;
-        page.wait_for_text("test-ca-log", "change:FF01FF,end:FF01FF")
-            .await?;
-        // The input of the axis that moved has the focus, both are revealed.
-        expect_active(&page, &y).await?;
-        assert_that!(attr(&x, "aria-hidden").await?).is_none();
-        clear(&page).await?;
-
-        // "shiftleft/shiftright", "shiftup/shiftdown", "pageup/pagedown", "home/end".
-        let (shift_x, _) = inputs(&page, "test-ca-shift").await?;
-        shift_x.focus().await?;
-        for (keys, expected) in [
-            (Key::Shift + Key::Left, "DF00F0"),
-            (Key::Shift + Key::Right, "F000F0"),
-            (Key::Shift + Key::Up, "F011F0"),
-            (Key::Shift + Key::Down, "F000F0"),
-            (Key::PageUp.into(), "F011F0"),
-            (Key::PageDown.into(), "F000F0"),
-            (Key::Home.into(), "DF00F0"),
-            (Key::End.into(), "F000F0"),
-        ] {
-            page.send_keys_to_active(keys).await?;
-            page.wait_for_text("test-ca-log", &format!("change:{expected},end:{expected}"))
-                .await?;
-            clear(&page).await?;
-        }
-
-        // "clicking on the area chooses the color at that point", then dragging the thumb.
-        let area = page.css("#test-ca-default [role=group]").await?;
-        // Pointer actions don't scroll: keep the area in view.
-        driver
-            .execute(
-                "arguments[0].scrollIntoView({block: 'center'});",
-                vec![area.to_json()?],
-            )
-            .await?;
-        driver
-            .action_chain()
-            .move_to_element_with_offset(&area, -50, 50)
-            .click()
-            .perform()
-            .await?;
-        // The point a quarter in from the left and bottom (±1: sub-pixel positions).
-        wait_for_last_log(&page, "end:").await?;
-        expect_channels(&page, &x, &y, (64.0, 64.0)).await?;
-        expect_active(&page, &x).await?;
-        clear(&page).await?;
-        let thumb = page.css("#test-ca-default [role=presentation]").await?;
-        driver
-            .action_chain()
-            .click_and_hold_element(&thumb)
-            .move_by_offset(100, -100)
-            .release()
-            .perform()
-            .await?;
-        wait_for_last_log(&page, "end:").await?;
-        expect_channels(&page, &x, &y, (192.0, 192.0)).await?;
-        clear(&page).await?;
-
-        // "disabled": not focusable, no events.
-        let (disabled_x, disabled_y) = inputs(&page, "test-ca-disabled").await?;
-        assert_that!(attr(&disabled_x, "disabled").await?.is_some()).is_true();
-        assert_that!(attr(&disabled_y, "disabled").await?.is_some()).is_true();
-        page.element("test-ca-a").await?.focus().await?;
-        page.press_tab().await?;
-        page.wait_for_active_id("test-ca-b").await?;
-
-        // Labelling: "should support a custom aria-label", "... aria-labelledby".
-        let (label_x, label_y) = inputs(&page, "test-ca-label").await?;
-        for input in [&label_x, &label_y] {
-            assert_that!(attr(input, "aria-label").await?)
-                .is_equal_to(Some("Color hue, Color picker".to_owned()));
-            assert_that!(attr(input, "aria-labelledby").await?).is_none();
-        }
-        let group = page.css("#test-ca-label [role=group]").await?;
-        assert_that!(attr(&group, "aria-label").await?)
-            .is_equal_to(Some("Color hue, Color picker".to_owned()));
-        let (lb_x, lb_y) = inputs(&page, "test-ca-labelledby").await?;
-        for input in [&lb_x, &lb_y] {
-            let id = attr(input, "id").await?.unwrap_or_default();
-            assert_that!(attr(input, "aria-labelledby").await?)
-                .is_equal_to(Some(format!("{id} test-ca-label-id")));
-        }
-        let group = page.css("#test-ca-labelledby [role=group]").await?;
-        assert_that!(attr(&group, "aria-labelledby").await?)
-            .is_equal_to(Some("test-ca-label-id".to_owned()));
-        assert_that!(attr(&group, "aria-label").await?).is_none();
-
-        // "supports form name", "supports form reset".
-        let (form_x, form_y) = inputs(&page, "test-ca-form").await?;
-        assert_that!(attr(&form_x, "name").await?).is_equal_to(Some("red".to_owned()));
-        assert_that!(attr(&form_y, "name").await?).is_equal_to(Some("green".to_owned()));
-        form_x.focus().await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_attr(
-            &form_x,
-            "aria-valuetext",
-            Some("Red: 11, very dark grayish cyan blue"),
-        )
-        .await?;
-        page.element("test-ca-reset").await?.click().await?;
-        // Focus left the area: the full text again.
-        page.wait_for_attr(
-            &form_x,
-            "aria-valuetext",
-            Some("Red: 10, Green: 20, Blue: 30, very dark grayish cyan blue"),
-        )
-        .await?;
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
@@ -186,215 +51,376 @@ impl BrowserTest<str> for ColorAreaSpacesTests {
         "color_area_spaces_tests".into()
     }
 
-    #[allow(clippy::too_many_lines)]
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/color-area").await?;
 
-        // An HSV area: saturation and brightness from 0 to 1, formatted as percentages.
-        let (x, y) = inputs(&page, "test-ca-hsv").await?;
-        for input in [&x, &y] {
-            assert_that!(attr(input, "min").await?).is_equal_to(Some("0".to_owned()));
-            assert_that!(attr(input, "max").await?).is_equal_to(Some("1".to_owned()));
-            assert_that!(attr(input, "step").await?).is_equal_to(Some("0.01".to_owned()));
-        }
-        assert_that!(attr(&x, "aria-valuetext").await?.unwrap_or_default())
-            .starts_with("Saturation: 50%, Brightness: 50%, Hue: 0°, ");
-        x.focus().await?;
-        page.send_keys_to_active(Key::Right).await?;
-        wait_for_value(&x, "0.51").await?;
-        assert_that!(attr(&x, "aria-valuetext").await?.unwrap_or_default())
-            .starts_with("Saturation: 51%, ");
+        cases!(
+            hsv(&page),
+            gradients(&page),
+            right_to_left(&page),
+            input_event(&page),
+            thumb_without_alpha(&page),
+            mounted_again(&page),
+        );
 
-        // Gradients: the space's later channel on top (react-aria's `useColorAreaGradient`),
-        // whichever axis it is on.
-        let layer = gradient_layers(&page, "test-ca-hsv").await?;
-        assert_that!(layer[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)");
-        let layer = gradient_layers(&page, "test-ca-hsv-swapped").await?;
-        assert_that!(layer[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)");
-        assert_that!(layer[0].contains("to right") || layer[0].contains("90deg")).is_true();
-        assert_that!(layer[1].contains("to top") || layer[1].contains("0deg")).is_true();
-        let layer = gradient_layers(&page, "test-ca-hsl-swapped").await?;
-        assert_that!(layer[0].as_str())
-            .contains("rgb(0, 0, 0), rgba(0, 0, 0, 0), rgb(255, 255, 255)");
-
-        // Right to left: x grows to the left (a press a quarter in from the left is 75%), and
-        // ArrowLeft increases it.
-        let (rtl_x, rtl_y) = inputs(&page, "test-ca-rtl").await?;
-        let area = page.css("#test-ca-rtl [role=group]").await?;
-        driver
-            .execute(
-                "arguments[0].scrollIntoView({block: 'center'});",
-                vec![area.to_json()?],
-            )
-            .await?;
-        driver
-            .action_chain()
-            .move_to_element_with_offset(&area, -50, 50)
-            .click()
-            .perform()
-            .await?;
-        for _ in 0..50 {
-            let (x, y) = (number(&page, &rtl_x).await?, number(&page, &rtl_y).await?);
-            if (x - 191.0).abs() <= 1.0 && (y - 64.0).abs() <= 1.0 {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        }
-        expect_channels(&page, &rtl_x, &rtl_y, (191.0, 64.0)).await?;
-        let before = number(&page, &rtl_x).await?;
-        rtl_x.focus().await?;
-        page.send_keys_to_active(Key::Left).await?;
-        wait_for_value(&rtl_x, &(before + 1.0).to_string()).await?;
-
-        // The `input` event (assistive technology sets the value), then the keyboard: the value
-        // property follows the state.
-        let (input_x, _) = inputs(&page, "test-ca-input").await?;
-        driver
-            .execute(
-                "arguments[0].value = '100'; \
-                 arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
-                vec![input_x.to_json()?],
-            )
-            .await?;
-        page.wait_for_text("test-ca-input-log", "input:640000")
-            .await?;
-        input_x.focus().await?;
-        page.send_keys_to_active(Key::Right).await?;
-        wait_for_value(&input_x, "101").await?;
-
-        // The thumb shows the color without its alpha (react-aria's `getDisplayColor`).
-        let thumb = page.css("#test-ca-alpha .leptonic-ColorThumb").await?;
-        let background = thumb.css_value("background-color").await?;
-        assert_that!(background == "rgb(255, 0, 255)" || background == "rgba(255, 0, 255, 1)")
-            .with_detail_message(background)
-            .is_true();
-
-        // A thumb mounted again (inside a `<Show>`) renders and works.
-        let toggle = page.element("test-ca-toggle").await?;
-        toggle.click().await?;
-        page.wait_for_count("#test-ca-show input[type=range]", 0)
-            .await?;
-        toggle.click().await?;
-        page.wait_for_count("#test-ca-show input[type=range]", 2)
-            .await?;
-        let (shown_x, _) = inputs(&page, "test-ca-show").await?;
-        shown_x.focus().await?;
-        page.send_keys_to_active(Key::Right).await?;
-        wait_for_value(&shown_x, "11").await?;
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
+}
+
+/// The x and y inputs of the area `#id`.
+async fn inputs(page: &Page<'_>, id: &str) -> Result<(WebElement, WebElement), Report> {
+    let found = page.elements(format!("#{id} input[type=range]")).await?;
+    assert_that!(found).has_length(2);
+    let mut found = found.into_iter();
+    Ok((
+        found.next().expect("x input"),
+        found.next().expect("y input"),
+    ))
+}
+
+/// The value of a range input as a number.
+async fn number(input: &WebElement) -> Result<f64, Report> {
+    Ok(input.value().await?.unwrap_or_default().parse()?)
+}
+
+/// The change log of the areas: `change:<hex>` and `end:<hex>` entries, comma-separated.
+async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-ca-log").await
+}
+
+/// Empties the log (a script click, which leaves focus where it is).
+async fn clear(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-ca-clear")
+        .await?
+        .virtual_click()
+        .await?;
+    log(page).await?.wait_for_inner_text("").await?;
+    Ok(())
+}
+
+/// Waits until the log's last entry starts with `expected` (dragging logs many changes).
+async fn wait_for_last_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
+    wait_for("the last entry of the change log")
+        .observing(|| last_log(page))
+        .to_be(&format!("starting with {expected:?}"), |entry| {
+            entry.starts_with(expected)
+        })
+        .await?;
+    Ok(())
+}
+
+async fn last_log(page: &Page<'_>) -> Result<String, Report> {
+    let log = log(page).await?.inner_text().await?;
+    Ok(log.rsplit(',').next().unwrap_or_default().to_owned())
+}
+
+/// The inputs' values are the expected channel values, ±1.
+async fn expect_channels(
+    x: &WebElement,
+    y: &WebElement,
+    (expected_x, expected_y): (f64, f64),
+) -> Result<(), Report> {
+    assert_that!(number(x).await?).is_close_to(expected_x, 1.0);
+    assert_that!(number(y).await?).is_close_to(expected_y, 1.0);
+    Ok(())
 }
 
 /// The layers of the computed background of the area in `#id`.
 async fn gradient_layers(page: &Page<'_>, id: &str) -> Result<Vec<String>, Report> {
-    let area = page.css(&format!("#{id} [role=group]")).await?;
-    let background = page
-        .driver
-        .execute(
-            "return getComputedStyle(arguments[0]).backgroundImage;",
-            vec![area.to_json()?],
-        )
-        .await?
-        .json()
-        .as_str()
-        .unwrap_or_default()
-        .to_owned();
+    let area = page.element(format!("#{id} [role=group]")).await?;
+    let background = area.css_value("background-image").await?;
     Ok(background
         .split(", linear-gradient(")
         .map(str::to_owned)
         .collect())
 }
 
-/// Waits until the input's `value` property is `expected`.
-async fn wait_for_value(input: &WebElement, expected: &str) -> Result<(), Report> {
-    let mut last = None;
-    for _ in 0..100 {
-        last = input.prop("value").await?;
-        if last.as_deref() == Some(expected) {
-            return Ok(());
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+/// "sets input props".
+async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+    let (x, y) = inputs(page, "test-ca-default").await?;
+    for input in [&x, &y] {
+        assert_that!(input.attr("type").await?)
+            .get_some()
+            .is_equal_to("range");
+        assert_that!(input.attr("aria-label").await?)
+            .get_some()
+            .is_equal_to("Color picker");
+        assert_that!(input.attr("min").await?)
+            .get_some()
+            .is_equal_to("0");
+        assert_that!(input.attr("max").await?)
+            .get_some()
+            .is_equal_to("255");
+        assert_that!(input.attr("step").await?)
+            .get_some()
+            .is_equal_to("1");
     }
-    Err(rootcause::report!(
-        "the input's value is {last:?}, not {expected:?}"
-    ))
+    assert_that!(x.attr("aria-valuetext").await?)
+        .get_some()
+        .is_equal_to("Red: 255, Green: 0, Blue: 255, light vibrant magenta");
+    assert_that!(y.attr("aria-valuetext").await?)
+        .get_some()
+        .is_equal_to("Green: 0, Red: 255, Blue: 255, light vibrant magenta");
+    assert_that!(x.attr("tabindex").await?).is_none();
+    assert_that!(y.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("-1");
+    assert_that!(y.attr("aria-hidden").await?)
+        .get_some()
+        .is_equal_to("true");
+    Ok(())
 }
 
-async fn number(page: &Page<'_>, input: &WebElement) -> Result<f64, Report> {
-    Ok(page
-        .driver
-        .execute("return Number(arguments[0].value);", vec![input.to_json()?])
-        .await?
-        .json()
-        .as_f64()
-        .unwrap_or_default())
-}
-
-async fn inputs(page: &Page<'_>, id: &str) -> Result<(WebElement, WebElement), Report> {
-    let mut found = page
-        .driver
-        .find_all(browser_test::thirtyfour::By::Css(format!(
-            "#{id} input[type=range]"
-        )))
-        .await?
-        .into_iter();
-    let x = found.next().expect("x input");
-    let y = found.next().expect("y input");
-    Ok((x, y))
-}
-
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
-}
-
-async fn expect_active(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    let id = attr(element, "id").await?.unwrap_or_default();
-    page.wait_for_active_id(&id).await
-}
-
-async fn clear(page: &Page<'_>) -> Result<(), Report> {
-    page.driver
-        .execute("document.getElementById('test-ca-clear').click();", vec![])
+/// Keyboard: "left/right", "up/down".
+async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    let (x, y) = inputs(page, "test-ca-default").await?;
+    let log = log(page).await?;
+    page.element("#test-ca-before").await?.focus().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&x).await?;
+    page.send_keys(Key::Left).await?;
+    log.wait_for_inner_text("change:FE00FF,end:FE00FF").await?;
+    assert_that!(x.attr("aria-valuetext").await?)
+        .get_some()
+        .is_equal_to("Red: 254, light vibrant magenta");
+    page.send_keys(Key::Right).await?;
+    log.wait_for_inner_text("change:FE00FF,end:FE00FF,change:FF00FF,end:FF00FF")
         .await?;
-    page.wait_for_text("test-ca-log", "").await
+    clear(page).await?;
+    page.send_keys(Key::Up).await?;
+    log.wait_for_inner_text("change:FF01FF,end:FF01FF").await?;
+    // The input of the axis that moved has the focus, both are revealed.
+    page.wait_for_focus(&y).await?;
+    assert_that!(x.attr("aria-hidden").await?).is_none();
+    clear(page).await?;
+    Ok(())
 }
 
-/// Waits until the log's last entry starts with `expected` (dragging logs many changes).
-async fn wait_for_last_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    let mut last = String::new();
-    for _ in 0..50 {
-        let log = page.element("test-ca-log").await?.text().await?;
-        last = log.rsplit(',').next().unwrap_or_default().to_owned();
-        if last.starts_with(expected) {
-            return Ok(());
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+/// "shiftleft/shiftright", "shiftup/shiftdown", "pageup/pagedown", "home/end".
+async fn keyboard_steps(page: &Page<'_>) -> Result<(), Report> {
+    let (shift_x, _) = inputs(page, "test-ca-shift").await?;
+    let log = log(page).await?;
+    shift_x.focus().await?;
+    for (keys, expected) in [
+        (Key::Shift + Key::Left, "DF00F0"),
+        (Key::Shift + Key::Right, "F000F0"),
+        (Key::Shift + Key::Up, "F011F0"),
+        (Key::Shift + Key::Down, "F000F0"),
+        (Key::PageUp.into(), "F011F0"),
+        (Key::PageDown.into(), "F000F0"),
+        (Key::Home.into(), "DF00F0"),
+        (Key::End.into(), "F000F0"),
+    ] {
+        page.send_keys(keys).await?;
+        log.wait_for_inner_text(&format!("change:{expected},end:{expected}"))
+            .await?;
+        clear(page).await?;
     }
-    Err(rootcause::report!(
-        "the last log entry is {last:?}, not {expected:?}"
-    ))
+    Ok(())
 }
 
-/// The inputs' values are the expected channel values, ±1.
-async fn expect_channels(
-    page: &Page<'_>,
-    x: &WebElement,
-    y: &WebElement,
-    (expected_x, expected_y): (f64, f64),
-) -> Result<(), Report> {
-    for (input, expected) in [(x, expected_x), (y, expected_y)] {
-        let value = page
-            .driver
-            .execute("return Number(arguments[0].value);", vec![input.to_json()?])
-            .await?
-            .json()
-            .as_f64()
-            .unwrap_or_default();
-        assert_that!((value - expected).abs() <= 1.0)
-            .with_detail_message(format!("{value} vs. {expected}"))
-            .is_true();
+/// "clicking on the area chooses the color at that point", then dragging the thumb.
+async fn press_and_drag(page: &Page<'_>) -> Result<(), Report> {
+    let (x, y) = inputs(page, "test-ca-default").await?;
+    let area = page.element("#test-ca-default [role=group]").await?;
+    // Pointer actions don't scroll: keep the area in view.
+    area.scroll_into_view().await?;
+    page.driver
+        .action_chain()
+        .move_to_element_with_offset(&area, -50, 50)
+        .click()
+        .perform()
+        .await?;
+    // The point a quarter in from the left and bottom (±1: sub-pixel positions).
+    wait_for_last_log(page, "end:").await?;
+    expect_channels(&x, &y, (64.0, 64.0)).await?;
+    page.wait_for_focus(&x).await?;
+    clear(page).await?;
+    let thumb = page.element("#test-ca-default [role=presentation]").await?;
+    page.driver
+        .action_chain()
+        .click_and_hold_element(&thumb)
+        .move_by_offset(100, -100)
+        .release()
+        .perform()
+        .await?;
+    wait_for_last_log(page, "end:").await?;
+    expect_channels(&x, &y, (192.0, 192.0)).await?;
+    clear(page).await?;
+    Ok(())
+}
+
+/// "disabled": not focusable, no events.
+async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    let (disabled_x, disabled_y) = inputs(page, "test-ca-disabled").await?;
+    assert_that!(disabled_x.is_enabled().await?).is_false();
+    assert_that!(disabled_y.is_enabled().await?).is_false();
+    page.element("#test-ca-a").await?.focus().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-ca-b").await?)
+        .await?;
+    Ok(())
+}
+
+/// Labelling: "should support a custom aria-label", "... aria-labelledby".
+async fn labelling(page: &Page<'_>) -> Result<(), Report> {
+    let (label_x, label_y) = inputs(page, "test-ca-label").await?;
+    for input in [&label_x, &label_y] {
+        assert_that!(input.attr("aria-label").await?)
+            .get_some()
+            .is_equal_to("Color hue, Color picker");
+        assert_that!(input.attr("aria-labelledby").await?).is_none();
     }
+    let group = page.element("#test-ca-label [role=group]").await?;
+    assert_that!(group.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Color hue, Color picker");
+    let (lb_x, lb_y) = inputs(page, "test-ca-labelledby").await?;
+    for input in [&lb_x, &lb_y] {
+        let id = input.id().await?.unwrap_or_default();
+        assert_that!(input.attr("aria-labelledby").await?)
+            .get_some()
+            .is_equal_to(format!("{id} test-ca-label-id"));
+    }
+    let group = page.element("#test-ca-labelledby [role=group]").await?;
+    assert_that!(group.attr("aria-labelledby").await?)
+        .get_some()
+        .is_equal_to("test-ca-label-id");
+    assert_that!(group.attr("aria-label").await?).is_none();
+    Ok(())
+}
+
+/// "supports form name", "supports form reset".
+async fn forms(page: &Page<'_>) -> Result<(), Report> {
+    let (form_x, form_y) = inputs(page, "test-ca-form").await?;
+    assert_that!(form_x.attr("name").await?)
+        .get_some()
+        .is_equal_to("red");
+    assert_that!(form_y.attr("name").await?)
+        .get_some()
+        .is_equal_to("green");
+    form_x.focus().await?;
+    page.send_keys(Key::Right).await?;
+    form_x
+        .wait_for_attr(
+            "aria-valuetext",
+            Some("Red: 11, very dark grayish cyan blue"),
+        )
+        .await?;
+    page.element("#test-ca-reset").await?.click().await?;
+    // Focus left the area: the full text again.
+    form_x
+        .wait_for_attr(
+            "aria-valuetext",
+            Some("Red: 10, Green: 20, Blue: 30, very dark grayish cyan blue"),
+        )
+        .await?;
+    Ok(())
+}
+
+/// An HSV area: saturation and brightness from 0 to 1, formatted as percentages.
+async fn hsv(page: &Page<'_>) -> Result<(), Report> {
+    let (x, y) = inputs(page, "test-ca-hsv").await?;
+    for input in [&x, &y] {
+        assert_that!(input.attr("min").await?)
+            .get_some()
+            .is_equal_to("0");
+        assert_that!(input.attr("max").await?)
+            .get_some()
+            .is_equal_to("1");
+        assert_that!(input.attr("step").await?)
+            .get_some()
+            .is_equal_to("0.01");
+    }
+    assert_that!(x.attr("aria-valuetext").await?)
+        .get_some()
+        .starts_with("Saturation: 50%, Brightness: 50%, Hue: 0°, ");
+    x.focus().await?;
+    page.send_keys(Key::Right).await?;
+    x.wait_for_prop("value", "0.51").await?;
+    assert_that!(x.attr("aria-valuetext").await?)
+        .get_some()
+        .starts_with("Saturation: 51%, ");
+    Ok(())
+}
+
+/// Gradients: the space's later channel on top (react-aria's `useColorAreaGradient`), whichever
+/// axis it is on.
+async fn gradients(page: &Page<'_>) -> Result<(), Report> {
+    let layers = gradient_layers(page, "test-ca-hsv").await?;
+    assert_that!(layers[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)");
+    let layers = gradient_layers(page, "test-ca-hsv-swapped").await?;
+    assert_that!(layers[0].as_str())
+        .contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)")
+        .contains("to right");
+    assert_that!(layers[1].as_str()).contains("to top");
+    let layers = gradient_layers(page, "test-ca-hsl-swapped").await?;
+    assert_that!(layers[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0), rgb(255, 255, 255)");
+    Ok(())
+}
+
+/// Right to left: x grows to the left (a press a quarter in from the left is 75%), and
+/// ArrowLeft increases it.
+async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    let (rtl_x, rtl_y) = inputs(page, "test-ca-rtl").await?;
+    let area = page.element("#test-ca-rtl [role=group]").await?;
+    area.scroll_into_view().await?;
+    page.driver
+        .action_chain()
+        .move_to_element_with_offset(&area, -50, 50)
+        .click()
+        .perform()
+        .await?;
+    wait_for("the channels (x, y)")
+        .observing(|| async { Ok((number(&rtl_x).await?, number(&rtl_y).await?)) })
+        .to_be("(191, 64) (±1)", |(x, y)| {
+            (x - 191.0).abs() <= 1.0 && (y - 64.0).abs() <= 1.0
+        })
+        .await?;
+    let before = number(&rtl_x).await?;
+    rtl_x.focus().await?;
+    page.send_keys(Key::Left).await?;
+    rtl_x
+        .wait_for_prop("value", &(before + 1.0).to_string())
+        .await?;
+    Ok(())
+}
+
+/// The `input` event (assistive technology sets the value), then the keyboard: the value property
+/// follows the state.
+async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+    let (input_x, _) = inputs(page, "test-ca-input").await?;
+    input_x.virtual_input("100").await?;
+    page.element("#test-ca-input-log")
+        .await?
+        .wait_for_inner_text("input:640000")
+        .await?;
+    input_x.focus().await?;
+    page.send_keys(Key::Right).await?;
+    input_x.wait_for_prop("value", "101").await?;
+    Ok(())
+}
+
+/// The thumb shows the color without its alpha (react-aria's `getDisplayColor`).
+async fn thumb_without_alpha(page: &Page<'_>) -> Result<(), Report> {
+    let thumb = page.element("#test-ca-alpha .leptonic-ColorThumb").await?;
+    assert_that!(thumb.css_value("background-color").await?).is_equal_to("rgba(255, 0, 255, 1)");
+    Ok(())
+}
+
+/// A thumb mounted again (inside a `<Show>`) renders and works.
+async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+    let toggle = page.element("#test-ca-toggle").await?;
+    toggle.click().await?;
+    page.wait_for_count("#test-ca-show input[type=range]", 0)
+        .await?;
+    toggle.click().await?;
+    page.wait_for_count("#test-ca-show input[type=range]", 2)
+        .await?;
+    let (shown_x, _) = inputs(page, "test-ca-show").await?;
+    shown_x.focus().await?;
+    page.send_keys(Key::Right).await?;
+    shown_x.wait_for_prop("value", "11").await?;
     Ok(())
 }

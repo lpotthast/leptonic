@@ -14,17 +14,32 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                // Collects uncaught page errors (and Rust panic messages, which the panic hook
-                // logs before the wasm traps) for `BaseActions::expect_no_page_errors`.
+                // What the page reports, for `BaseActions::diagnostics` (each list separately):
+                // Rust panics (the panic hook logs them with `console.error` before the wasm
+                // traps), uncaught errors and unhandled rejections, every other `console.error`,
+                // and `console.warn`. `BaseActions::expect_no_page_errors` fails a test on the
+                // first three.
                 <script>
-                    "window.__pageErrors = [];
-                    window.addEventListener('error', e => window.__pageErrors.push(String(e.message)));
-                    window.addEventListener('unhandledrejection', e => window.__pageErrors.push(String(e.reason)));
+                    "window.__panics = [];
+                    window.__uncaughtErrors = [];
+                    window.__consoleErrors = [];
+                    window.__consoleWarnings = [];
+                    window.addEventListener('error', e => window.__uncaughtErrors.push(String(e.message)));
+                    window.addEventListener('unhandledrejection', e => window.__uncaughtErrors.push(String(e.reason)));
                     const consoleError = console.error.bind(console);
                     console.error = (...args) => {
                         const message = args.map(String).join(' ');
-                        if (message.includes('panicked at')) window.__pageErrors.push(message);
+                        if (message.includes('panicked at')) {
+                            window.__panics.push(message);
+                        } else {
+                            window.__consoleErrors.push(message);
+                        }
                         consoleError(...args);
+                    };
+                    const consoleWarn = console.warn.bind(console);
+                    console.warn = (...args) => {
+                        window.__consoleWarnings.push(args.map(String).join(' '));
+                        consoleWarn(...args);
                     };"
                 </script>
                 <AutoReload options=options.clone() />

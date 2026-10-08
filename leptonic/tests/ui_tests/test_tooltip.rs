@@ -6,13 +6,14 @@ use std::{
 };
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
+use serde::Deserialize;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::expect,
+};
 
 const TOOLTIP: &str = "[role=tooltip]";
 
@@ -32,182 +33,190 @@ impl BrowserTest<str> for TooltipTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/tooltip").await?;
-        hover_focus_and_warm_up(&page).await?;
-        close_on_press_disabled_and_close_delay(&page).await?;
-        focus_trigger_mode(&page).await?;
-        hide_on_scroll(&page).await?;
-        page.expect_no_page_errors().await
+
+        cases!(
+            shows_on_hover(&page),
+            warm_tooltip_replaces_without_animation(&page),
+            shows_on_focus(&page),
+            close_on_press_disabled_and_close_delay(&page),
+            focus_trigger_mode(&page),
+            hide_on_scroll(&page),
+        );
+
+        Ok(())
     }
 }
 
-/// "shows on hover", "shows on focus", "can be keyboard force closed", "once opened, it can be
-/// closed and opened instantly for a period of time", "can only show one tooltip at a time", "has
-/// a trigger described by the tooltip when open".
-async fn hover_focus_and_warm_up(page: &Page<'_>) -> Result<(), Report> {
-    let edit = page.element("test-tooltip-edit").await?;
-    let delete = page.element("test-tooltip-delete").await?;
-    let away = page.element("test-tooltip-away").await?;
+/// What the observer installed by [`warm_tooltip_replaces_without_animation`] saw.
+#[derive(Debug, Deserialize)]
+struct TooltipSwap {
+    /// The most tooltips shown at once.
+    max: u64,
+    /// Whether a tooltip entered or exited with an animation.
+    animated: bool,
+}
 
-    // Shows on hover, after the delay, describing the trigger, above it. The pointer moves over
-    // the page first (as upstream's test): hovering only counts with pointer modality.
-    hover(page.driver, &away).await?;
+/// "shows on hover", "has a trigger described by the tooltip when open": after the delay, above
+/// the trigger. The pointer moves over the page first (as upstream's test): hovering only counts
+/// with pointer modality.
+async fn shows_on_hover(page: &Page<'_>) -> Result<(), Report> {
+    let edit = page.element("#test-tooltip-edit").await?;
+    page.element("#test-tooltip-away").await?.hover().await?;
     assert_that!(edit.attr("aria-describedby").await?).is_none();
-    hover(page.driver, &edit).await?;
-    assert_that!(page.count_matching(TOOLTIP).await?).is_equal_to(0);
-    page.wait_for_selector(TOOLTIP).await?;
+    edit.hover().await?;
+    assert_that!(page.count(TOOLTIP).await?).is_equal_to(0);
+    let tooltip = page.element(TOOLTIP).await?;
     // Visible once it faded in.
-    page.wait_for_selector_text(TOOLTIP, "Edit the entry")
-        .await?;
-    let tooltip = page.css(TOOLTIP).await?;
-    let tooltip_id = tooltip.attr("id").await?;
+    tooltip.wait_for_inner_text("Edit the entry").await?;
+    let tooltip_id = tooltip.id().await?;
     // Generated once, with one prefix (not "tooltip-tooltip-trigger-…").
-    assert_that!(tooltip_id.clone().unwrap_or_default())
+    assert_that!(tooltip_id.as_deref())
         .with_detail_message("the tooltip's generated id")
+        .get_some()
         .does_not_contain("tooltip-trigger");
-    let describedby = edit.attr("aria-describedby").await?;
-    assert_that!(describedby).is_equal_to(tooltip_id);
-    assert_that!(tooltip.attr("data-placement").await?).is_equal_to(Some("top".to_owned()));
-    page.wait_for_no_selector("[role=tooltip][data-entering]")
+    assert_that!(edit.attr("aria-describedby").await?).is_equal_to(tooltip_id);
+    assert_that!(tooltip.attr("data-placement").await?)
+        .get_some()
+        .is_equal_to("top");
+    page.wait_for_count("[role=tooltip][data-entering]", 0)
         .await?;
+    Ok(())
+}
 
-    // Warm: the next tooltip opens right away and replaces the first, both without animation
-    // (`should_skip_animation`): there is never more than one tooltip, and none enters or exits.
-    page.driver
-        .execute(
-            "window.__tooltipSwap = { max: 0, animated: false };
-            new MutationObserver(() => {
-                const tooltips = document.querySelectorAll('[role=tooltip]');
-                window.__tooltipSwap.max = Math.max(window.__tooltipSwap.max, tooltips.length);
-                if (document.querySelector('[role=tooltip][data-entering], [role=tooltip][data-exiting]')) {
-                    window.__tooltipSwap.animated = true;
-                }
-            }).observe(document.body, {
-                subtree: true,
-                childList: true,
-                attributes: true,
-                attributeFilter: ['data-entering', 'data-exiting'],
-            });",
-            vec![],
-        )
+/// "once opened, it can be closed and opened instantly for a period of time", "can only show one
+/// tooltip at a time": while warm, the next tooltip opens right away and replaces the first, both
+/// without animation (`should_skip_animation`). Leaving closes it after the close delay.
+async fn warm_tooltip_replaces_without_animation(page: &Page<'_>) -> Result<(), Report> {
+    let delete = page.element("#test-tooltip-delete").await?;
+    page.element(TOOLTIP)
+        .await?
+        .wait_for_inner_text("Edit the entry")
         .await?;
-    hover(page.driver, &delete).await?;
-    page.wait_for_selector_text(TOOLTIP, "Delete the entry")
+    page.eval::<()>(
+        "window.__tooltipSwap = { max: 0, animated: false };
+         new MutationObserver(() => {
+             const tooltips = document.querySelectorAll('[role=tooltip]');
+             window.__tooltipSwap.max = Math.max(window.__tooltipSwap.max, tooltips.length);
+             if (document.querySelector('[role=tooltip][data-entering], [role=tooltip][data-exiting]')) {
+                 window.__tooltipSwap.animated = true;
+             }
+         }).observe(document.body, {
+             subtree: true,
+             childList: true,
+             attributes: true,
+             attributeFilter: ['data-entering', 'data-exiting'],
+         });",
+        vec![],
+    )
+    .await?;
+    delete.hover().await?;
+    page.element(TOOLTIP)
+        .await?
+        .wait_for_inner_text("Delete the entry")
         .await?;
     page.wait_for_count(TOOLTIP, 1).await?;
-    let swap: serde_json::Value = page
-        .driver
-        .execute("return window.__tooltipSwap;", vec![])
-        .await?
-        .json()
-        .clone();
-    assert_that!(swap["max"].as_u64())
+    let swap: TooltipSwap = page.eval("return window.__tooltipSwap;", vec![]).await?;
+    assert_that!(swap.max)
         .with_detail_message("tooltips shown at once during the swap")
-        .is_equal_to(Some(1));
-    assert_that!(swap["animated"].as_bool())
+        .is_equal_to(1);
+    assert_that!(swap.animated)
         .with_detail_message("whether a tooltip animated during the swap")
-        .is_equal_to(Some(false));
+        .is_false();
 
-    // Leaving closes it after the close delay.
-    hover(page.driver, &away).await?;
-    page.wait_for_no_selector(TOOLTIP).await?;
+    page.element("#test-tooltip-away").await?.hover().await?;
+    page.wait_for_count(TOOLTIP, 0).await?;
     assert_that!(delete.attr("aria-describedby").await?).is_none();
+    Ok(())
+}
 
-    // Shows on focus right away; Escape closes it.
-    page.click_element_with_id("test-tooltip-before").await?;
-    page.press_tab().await?;
-    page.wait_for_active_id("test-tooltip-edit").await?;
-    page.wait_for_selector_text(TOOLTIP, "Edit the entry")
+/// "shows on focus" right away, "can be keyboard force closed" with Escape.
+async fn shows_on_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-tooltip-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-tooltip-edit").await?)
         .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_no_selector(TOOLTIP).await
+    page.element(TOOLTIP)
+        .await?
+        .wait_for_inner_text("Edit the entry")
+        .await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count(TOOLTIP, 0).await?;
+    Ok(())
 }
 
 /// "does not close if the trigger is clicked when shouldCloseOnPress is false" (pointer and
 /// keyboard), and a close delay: the tooltip stays while the delay runs after the pointer left.
 async fn close_on_press_disabled_and_close_delay(page: &Page<'_>) -> Result<(), Report> {
-    let save = page.element("test-tooltip-save").await?;
-    hover(page.driver, &page.element("test-tooltip-away").await?).await?;
-    hover(page.driver, &save).await?;
-    page.wait_for_selector_text(TOOLTIP, "Save the entry")
+    let save = page.element("#test-tooltip-save").await?;
+    let away = page.element("#test-tooltip-away").await?;
+    away.hover().await?;
+    save.hover().await?;
+    page.element(TOOLTIP)
+        .await?
+        .wait_for_inner_text("Save the entry")
         .await?;
     save.click().await?;
-    page.wait_for_text("test-tooltip-saves", "1").await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-tooltip-saves", "2").await?;
+    let saves = page.element("#test-tooltip-saves").await?;
+    saves.wait_for_inner_text("1").await?;
+    page.send_keys(Key::Enter).await?;
+    saves.wait_for_inner_text("2").await?;
     // Settled: still open.
-    stays!("the open tooltips", 1, page.count_matching(TOOLTIP).await?);
+    page.count_stays(TOOLTIP, 1).await?;
 
-    // 800 ms close delay.
+    // 800 ms close delay: closed only after it, measured from before the pointer left.
     let left = Instant::now();
-    hover(page.driver, &page.element("test-tooltip-away").await?).await?;
-    stays_for!(
-        "the open tooltips while the close delay runs",
-        Duration::from_millis(400),
-        1,
-        page.count_matching(TOOLTIP).await?
-    );
-    page.wait_for_no_selector(TOOLTIP).await?;
-    assert_that!(left.elapsed() >= Duration::from_millis(700))
+    away.hover().await?;
+    page.wait_for_count(TOOLTIP, 0).await?;
+    assert_that!(left.elapsed())
         .with_detail_message("closed after the close delay")
-        .is_true();
+        .is_greater_or_equal_to(Duration::from_millis(700));
     Ok(())
 }
 
 /// `trigger=Focus`: "will not open for hover", "will open for focus".
 async fn focus_trigger_mode(page: &Page<'_>) -> Result<(), Report> {
-    let focus_only = page.element("test-tooltip-focus-only").await?;
-    hover(page.driver, &focus_only).await?;
+    let focus_only = page.element("#test-tooltip-focus-only").await?;
+    focus_only.hover().await?;
     // Settled: hovering opened nothing.
-    stays_for!(
-        "the open tooltips",
-        Duration::from_millis(400),
-        0,
-        page.count_matching(TOOLTIP).await?
-    );
+    expect("the number of open tooltips")
+        .observing(|| page.count(TOOLTIP))
+        .for_at_least(Duration::from_millis(400))
+        .to_stay_equal_to(0)
+        .await?;
 
     // Focused by keyboard (from "Save", focused by the press before).
-    page.driver
-        .execute(
-            "document.getElementById('test-tooltip-save').focus()",
-            vec![],
-        )
+    page.element("#test-tooltip-save").await?.focus().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&focus_only).await?;
+    page.element(TOOLTIP)
+        .await?
+        .wait_for_inner_text("Shown on focus")
         .await?;
-    page.press_tab().await?;
-    page.wait_for_active_id("test-tooltip-focus-only").await?;
-    page.wait_for_selector_text(TOOLTIP, "Shown on focus")
-        .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_no_selector(TOOLTIP).await
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count(TOOLTIP, 0).await?;
+    Ok(())
 }
 
 /// "should hide tooltip on scroll": scrolling the trigger's scroll parent closes the tooltip.
 async fn hide_on_scroll(page: &Page<'_>) -> Result<(), Report> {
-    hover(page.driver, &page.element("test-tooltip-away").await?).await?;
-    let trigger = page.element("test-tooltip-scroll-trigger").await?;
+    let away = page.element("#test-tooltip-away").await?;
+    away.hover().await?;
+    let trigger = page.element("#test-tooltip-scroll-trigger").await?;
     trigger.scroll_into_view().await?;
-    hover(page.driver, &trigger).await?;
-    page.wait_for_selector_text(TOOLTIP, "In a scrolling container")
+    trigger.hover().await?;
+    page.element(TOOLTIP)
+        .await?
+        .wait_for_inner_text("In a scrolling container")
         .await?;
-    page.driver
-        .execute(
-            "document.getElementById('test-tooltip-scroll-container').scrollTop = 2;",
-            vec![],
-        )
+    page.element("#test-tooltip-scroll-container")
+        .await?
+        .scroll_to_top(2.0)
         .await?;
     let scrolled = Instant::now();
-    page.wait_for_no_selector(TOOLTIP).await?;
+    page.wait_for_count(TOOLTIP, 0).await?;
     // Right away, not after the close delay (500 ms) of a pointer leaving.
-    assert_that!(scrolled.elapsed() < Duration::from_millis(400))
+    assert_that!(scrolled.elapsed())
         .with_detail_message("closed right away by the scrolling")
-        .is_true();
-    Ok(())
-}
-
-async fn hover(driver: &WebDriver, element: &WebElement) -> Result<(), Report> {
-    driver
-        .action_chain()
-        .move_to_element_center(element)
-        .perform()
-        .await?;
+        .is_less_than(Duration::from_millis(400));
     Ok(())
 }

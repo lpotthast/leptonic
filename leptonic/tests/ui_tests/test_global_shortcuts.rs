@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// `use_global_shortcuts`: `Mod+K` works anywhere, also in a text field (and the browser's default
 /// is prevented); a bare `/` works only outside text fields, where it types instead; `?` matches
@@ -25,89 +22,96 @@ impl BrowserTest<str> for GlobalShortcutsTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/hooks/global-shortcuts").await?;
-
-        // `/` outside a text field focuses the filter (and isn't typed).
-        page.click_element_with_id("test-gs-before").await?;
-        page.send_keys_to_active("/").await?;
-        let filter = page.css("#test-gs-filter input").await?;
-        let filter_focused =
-            "return document.activeElement === document.querySelector('#test-gs-filter input');";
-        let mut focused = false;
-        for _ in 0..100 {
-            focused = page
-                .driver
-                .execute(filter_focused, vec![])
-                .await?
-                .convert::<bool>()?;
-            if focused {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        }
-        assert_that!(focused).is_true();
-        assert_that!(filter.attr("aria-keyshortcuts").await?).is_equal_to(Some("/".to_owned()));
-        assert_that!(filter.prop("value").await?).is_equal_to(Some(String::new()));
-
-        // In a text field, `/` is typed.
-        page.click_element_with_id("test-gs-other").await?;
-        page.send_keys_to_active("a/b").await?;
-        let other = page.element("test-gs-other").await?;
-        assert_that!(other.prop("value").await?).is_equal_to(Some("a/b".to_owned()));
-        page.wait_for_active_id("test-gs-other").await?;
-
-        // Mod+K works anywhere, also while typing.
-        page.send_keys_to_active(Key::Control + "k").await?;
-        page.wait_for_text("test-gs-palette", "1").await?;
-        page.click_element_with_id("test-gs-before").await?;
-        page.send_keys_to_active(Key::Control + "k").await?;
-        page.wait_for_text("test-gs-palette", "2").await?;
-
-        // `?` takes Shift to type: the shortcut without Shift still matches.
-        page.send_keys_to_active("?").await?;
-        page.wait_for_text("test-gs-help", "1").await?;
-
-        // A later binding wins while it exists.
-        page.click_element_with_id("test-gs-nested-toggle").await?;
-        page.wait_for_selector("#test-gs-nested-shown").await?;
-        page.send_keys_to_active(Key::Control + "k").await?;
-        page.wait_for_text("test-gs-nested", "1").await?;
-        assert_that!(page.read_text_of("test-gs-palette").await?).is_equal_to("2".to_owned());
-        page.click_element_with_id("test-gs-nested-toggle").await?;
-        for _ in 0..100 {
-            if page
-                .driver
-                .find_all(By::Css("#test-gs-nested-shown"))
-                .await?
-                .is_empty()
-            {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        }
-        page.send_keys_to_active(Key::Control + "k").await?;
-        page.wait_for_text("test-gs-palette", "3").await?;
-        assert_that!(page.read_text_of("test-gs-nested").await?).is_equal_to("1".to_owned());
-
-        // The shortcut's keys.
-        let keys = page.element("test-gs-keys").await?;
-        let mut texts = Vec::new();
-        for key in keys.find_all(By::Css("kbd")).await? {
-            texts.push(key.text().await?);
-        }
-        // "Ctrl" shown, "Control" read (visually hidden).
-        assert_that!(texts).is_equal_to(vec!["Ctrl\nControl".to_owned(), "K".to_owned()]);
-        assert_that!(keys.find_all(By::Css("[data-separator]")).await?.len()).is_equal_to(1);
-        // Left to right in right-to-left text too (react-aria-components' `Keyboard`).
-        assert_that!(keys.attr("dir").await?).is_equal_to(Some("ltr".to_owned()));
-
-        // Literal keys: as given, on every platform.
-        let literal = page.element("test-gs-literal").await?;
-        let mut texts = Vec::new();
-        for key in literal.find_all(By::Css("kbd")).await? {
-            texts.push(key.text().await?);
-        }
-        assert_that!(texts).is_equal_to(vec!["⌘\nCommand".to_owned(), "X".to_owned()]);
-        assert_that!(literal.find_all(By::Css("[data-separator]")).await?.len()).is_equal_to(1);
-        page.expect_no_page_errors().await
+        cases!(
+            slash_outside_text_fields(&page),
+            slash_in_text_field(&page),
+            mod_k_anywhere(&page),
+            shift_key(&page),
+            later_binding_wins(&page),
+            shortcut_keys(&page),
+        );
+        Ok(())
     }
+}
+
+/// `/` outside a text field focuses the filter (and isn't typed).
+async fn slash_outside_text_fields(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-gs-before").await?.click().await?;
+    page.send_keys("/").await?;
+    let filter = page.element("#test-gs-filter input").await?;
+    page.wait_for_focus(&filter).await?;
+    assert_that!(filter.attr("aria-keyshortcuts").await?)
+        .get_some()
+        .is_equal_to("/");
+    assert_that!(filter.value().await?)
+        .get_some()
+        .is_equal_to("");
+    Ok(())
+}
+
+/// In a text field, `/` is typed.
+async fn slash_in_text_field(page: &Page<'_>) -> Result<(), Report> {
+    let other = page.element("#test-gs-other").await?;
+    other.click().await?;
+    page.send_keys("a/b").await?;
+    other.wait_for_prop("value", "a/b").await?;
+    page.focus_stays(&other).await?;
+    Ok(())
+}
+
+/// Mod+K works anywhere, also while typing.
+async fn mod_k_anywhere(page: &Page<'_>) -> Result<(), Report> {
+    let palette = page.element("#test-gs-palette").await?;
+    page.send_keys(Key::Control + "k").await?;
+    palette.wait_for_inner_text("1").await?;
+    page.element("#test-gs-before").await?.click().await?;
+    page.send_keys(Key::Control + "k").await?;
+    palette.wait_for_inner_text("2").await?;
+    Ok(())
+}
+
+/// `?` takes Shift to type: the shortcut without Shift still matches.
+async fn shift_key(page: &Page<'_>) -> Result<(), Report> {
+    page.send_keys("?").await?;
+    page.element("#test-gs-help")
+        .await?
+        .wait_for_inner_text("1")
+        .await?;
+    Ok(())
+}
+
+/// A later binding wins while it exists.
+async fn later_binding_wins(page: &Page<'_>) -> Result<(), Report> {
+    let toggle = page.element("#test-gs-nested-toggle").await?;
+    let nested = page.element("#test-gs-nested").await?;
+    let palette = page.element("#test-gs-palette").await?;
+    toggle.click().await?;
+    page.element("#test-gs-nested-shown").await?;
+    page.send_keys(Key::Control + "k").await?;
+    nested.wait_for_inner_text("1").await?;
+    palette.inner_text_stays("2").await?;
+
+    toggle.click().await?;
+    page.wait_for_count("#test-gs-nested-shown", 0).await?;
+    page.send_keys(Key::Control + "k").await?;
+    palette.wait_for_inner_text("3").await?;
+    nested.inner_text_stays("1").await?;
+    Ok(())
+}
+
+/// The `ShortcutKeys` atom: "Ctrl" shown, "Control" read (visually hidden); left to right in
+/// right-to-left text too (react-aria-components' `Keyboard`). Literal keys are shown as given,
+/// on every platform.
+async fn shortcut_keys(page: &Page<'_>) -> Result<(), Report> {
+    let keys = page.element("#test-gs-keys").await?;
+    assert_that!(keys.inner_texts("kbd").await?).contains_exactly(["Ctrl\nControl", "K"]);
+    assert_that!(keys.inner_texts("[data-separator]").await?).contains_exactly(["+"]);
+    assert_that!(keys.attr("dir").await?)
+        .get_some()
+        .is_equal_to("ltr");
+
+    let literal = page.element("#test-gs-literal").await?;
+    assert_that!(literal.inner_texts("kbd").await?).contains_exactly(["⌘\nCommand", "X"]);
+    assert_that!(literal.inner_texts("[data-separator]").await?).contains_exactly(["+"]);
+    Ok(())
 }

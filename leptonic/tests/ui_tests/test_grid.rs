@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
-use rootcause::Report;
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 /// Behavior of the grid hooks (through the `Grid` atoms): focus movement in every combination of
 /// grid focus mode (row/cell) and cell focus mode (cell/child), restoring the last focused child
@@ -26,17 +23,19 @@ impl BrowserTest<str> for GridTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/grid").await?;
 
-        aria_structure(&page).await?;
-        row_focus_cell_focus(&page).await?;
-        row_focus_child_focus(&page).await?;
-        cell_focus_child_focus(&page).await?;
-        cell_focus_cell_focus(&page).await?;
-        restores_the_last_focused_child(&page).await?;
-        focusing_a_child_from_outside_keeps_it(&page).await?;
-        two_dimensional_navigation(&page).await?;
-        row_selection(&page).await?;
-        cell_focus_mode_selects_rows(&page).await?;
-        cell_actions(&page).await?;
+        cases!(
+            aria_structure(&page),
+            row_focus_cell_focus(&page),
+            row_focus_child_focus(&page),
+            cell_focus_child_focus(&page),
+            cell_focus_cell_focus(&page),
+            restores_the_last_focused_child(&page),
+            focusing_a_child_from_outside_keeps_it(&page),
+            two_dimensional_navigation(&page),
+            row_selection(&page),
+            cell_focus_mode_selects_rows(&page),
+            cell_actions(&page),
+        );
 
         Ok(())
     }
@@ -51,208 +50,184 @@ struct SwitchGrid {
 
 async fn switch_grid(page: &Page<'_>, label: &str) -> Result<SwitchGrid, Report> {
     let grid = page
-        .css(&format!("[role=grid][aria-label='{label}']"))
+        .element(format!("[role=grid][aria-label='{label}']"))
         .await?;
     Ok(SwitchGrid {
-        rows: grid.find_all(By::Css("[role=row]")).await?,
-        cells: grid.find_all(By::Css("[role=gridcell]")).await?,
-        switches: grid.find_all(By::Css("[role=switch]")).await?,
+        rows: grid.elements("[role=row]").await?,
+        cells: grid.elements("[role=gridcell]").await?,
+        switches: grid.elements("[role=switch]").await?,
     })
 }
 
 /// The row of the "Users" grid whose first cell is `name`.
 async fn row(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
-    page.driver
-        .find(By::XPath(format!(
-            "//*[@role='row'][.//*[@role='gridcell'][normalize-space(.)='{name}']]"
-        )))
-        .await
-        .map_err(Into::into)
+    page.element(xpath(format!(
+        "//*[@role='row'][.//*[@role='gridcell'][normalize-space(.)='{name}']]"
+    )))
+    .await
 }
 
 /// The cell with `text` in the row of `name`.
 async fn cell(page: &Page<'_>, name: &str, text: &str) -> Result<WebElement, Report> {
     row(page, name)
         .await?
-        .find(By::XPath(format!(
+        .element(xpath(format!(
             ".//*[@role='gridcell'][normalize-space(.)='{text}']"
         )))
         .await
-        .map_err(Into::into)
 }
 
 async fn expect_focus_on_row(page: &Page<'_>, name: &str) -> Result<(), Report> {
     let row = row(page, name).await?;
-    page.wait_for_focus_on(&row, &format!("row {name}")).await
+    page.wait_for_focus(&row).await?;
+    Ok(())
 }
 
 async fn expect_focus_on_cell(page: &Page<'_>, name: &str, text: &str) -> Result<(), Report> {
     let cell = cell(page, name, text).await?;
-    page.wait_for_focus_on(&cell, &format!("cell {text} of {name}"))
-        .await
-}
-
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
-}
-
-async fn focus(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    page.driver
-        .execute("arguments[0].focus()", vec![element.to_json()?])
-        .await?;
+    page.wait_for_focus(&cell).await?;
     Ok(())
 }
 
-async fn press(page: &Page<'_>, key: Key) -> Result<(), Report> {
-    page.send_keys_to_active(key).await
-}
-
 async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
-    let users = page.css("[role=grid][aria-label='Users']").await?;
-    assert_that!(attr(&users, "aria-multiselectable").await?).is_equal_to(Some("true".to_owned()));
-    let groups = users.find_all(By::Css("[role=rowgroup]")).await?;
-    assert_that!(groups.len()).is_equal_to(1);
+    let users = page.element("[role=grid][aria-label='Users']").await?;
+    assert_that!(users.attr("aria-multiselectable").await?)
+        .get_some()
+        .is_equal_to("true");
+    let groups = users.elements("[role=rowgroup]").await?;
+    assert_that!(groups).has_length(1);
 
     let alice = row(page, "Alice").await?;
-    assert_that!(attr(&alice, "aria-selected").await?).is_equal_to(Some("false".to_owned()));
+    assert_that!(alice.attr("aria-selected").await?)
+        .get_some()
+        .is_equal_to("false");
     let bob = row(page, "Bob").await?;
-    assert_that!(attr(&bob, "aria-disabled").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(bob.attr("aria-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
 
     let on_leave = cell(page, "Carol", "On leave").await?;
-    assert_that!(attr(&on_leave, "aria-colspan").await?).is_equal_to(Some("2".to_owned()));
-    assert_that!(attr(&on_leave, "aria-colindex").await?).is_equal_to(Some("2".to_owned()));
+    assert_that!(on_leave.attr("aria-colspan").await?)
+        .get_some()
+        .is_equal_to("2");
+    assert_that!(on_leave.attr("aria-colindex").await?)
+        .get_some()
+        .is_equal_to("2");
     Ok(())
 }
 
 async fn row_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     let g = switch_grid(page, "Row-Cell").await?;
-    page.click_element_with_id("test-grid-before").await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&g.rows[0], "Row-Cell: row 1")
-        .await?;
+    page.element("#test-grid-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&g.rows[0]).await?;
     // Keyboard focus is visible on rows and cells.
-    page.wait_for_attr(&g.rows[0], "data-focus-visible", Some("true"))
+    g.rows[0]
+        .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
 
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.cells[0], "Row-Cell: cell 1")
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.cells[0]).await?;
+    g.cells[0]
+        .wait_for_attr("data-focused", Some("true"))
         .await?;
-    page.wait_for_attr(&g.cells[0], "data-focused", Some("true"))
+    g.cells[0]
+        .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
-    page.wait_for_attr(&g.cells[0], "data-focus-visible", Some("true"))
-        .await?;
-    page.wait_for_attr(&g.rows[0], "data-focus-visible", None)
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[0], "Row-Cell: switch 1")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[1], "Row-Cell: switch 2")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.rows[0], "Row-Cell: row 1")
-        .await?;
+    g.rows[0].wait_for_attr("data-focus-visible", None).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.rows[0]).await?;
 
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.cells[0], "Row-Cell: cell 1")
-        .await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.cells[0]).await?;
 
-    focus(page, &g.switches[1]).await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[0], "Row-Cell: switch 1")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.cells[0], "Row-Cell: cell 1")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.rows[0], "Row-Cell: row 1").await
+    g.switches[1].focus().await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.cells[0]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.rows[0]).await?;
+    Ok(())
 }
 
 async fn row_focus_child_focus(page: &Page<'_>) -> Result<(), Report> {
     let g = switch_grid(page, "Row-Child").await?;
-    page.click_element_with_id("test-grid-before-row-child")
+    page.element("#test-grid-before-row-child")
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&g.rows[0], "Row-Child: row 1")
-        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&g.rows[0]).await?;
 
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[0], "Row-Child: switch 1")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[1], "Row-Child: switch 2")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.rows[0], "Row-Child: row 1")
-        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.rows[0]).await?;
 
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[1], "Row-Child: switch 2")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[0], "Row-Child: switch 1")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.rows[0], "Row-Child: row 1")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[1], "Row-Child: switch 2")
-        .await
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.rows[0]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    Ok(())
 }
 
 async fn cell_focus_child_focus(page: &Page<'_>) -> Result<(), Report> {
     let g = switch_grid(page, "Cell-Child").await?;
-    page.click_element_with_id("test-grid-before-cell-child")
+    page.element("#test-grid-before-cell-child")
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&g.switches[0], "Cell-Child: switch 1")
-        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
 
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[1], "Cell-Child: switch 2")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[0], "Cell-Child: switch 1")
-        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
 
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[1], "Cell-Child: switch 2")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[0], "Cell-Child: switch 1")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[1], "Cell-Child: switch 2")
-        .await
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    Ok(())
 }
 
 async fn cell_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     let g = switch_grid(page, "Cell-Cell").await?;
-    page.click_element_with_id("test-grid-before-cell-cell")
+    page.element("#test-grid-before-cell-cell")
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&g.cells[0], "Cell-Cell: cell 1")
-        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&g.cells[0]).await?;
 
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[0], "Cell-Cell: switch 1")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.switches[1], "Cell-Cell: switch 2")
-        .await?;
-    press(page, Key::Right).await?;
-    page.wait_for_focus_on(&g.cells[0], "Cell-Cell: cell 1")
-        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&g.cells[0]).await?;
 
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[1], "Cell-Cell: switch 2")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.switches[0], "Cell-Cell: switch 1")
-        .await?;
-    press(page, Key::Left).await?;
-    page.wait_for_focus_on(&g.cells[0], "Cell-Cell: cell 1")
-        .await
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.switches[0]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&g.cells[0]).await?;
+    Ok(())
 }
 
 /// A cell child focused from outside the grid keeps focus, as when a dialog opened from a row's
@@ -262,24 +237,25 @@ async fn focusing_a_child_from_outside_keeps_it(page: &Page<'_>) -> Result<(), R
     let g = switch_grid(page, "Row-Child").await?;
     let target = &g.switches[4];
     target.click().await?;
-    page.wait_for_focus_on(target, "Row-Child: switch 5 after clicking it")
-        .await?;
+    page.wait_for_focus(target).await?;
 
     for keyboard in [false, true] {
-        page.click_element_with_id("test-grid-before-row-child")
+        let modality = if keyboard { "keyboard" } else { "pointer" };
+        page.element("#test-grid-before-row-child")
+            .await?
+            .click()
             .await?;
         if keyboard {
-            page.send_keys_to_active(Key::Shift).await?;
+            page.send_keys(Key::Shift).await?;
         }
-        focus(page, target).await?;
-        // Focus must stay: give deferred focus handling (microtasks, frames) time to run.
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-        let what = if keyboard {
-            "Row-Child: switch 5 refocused (keyboard modality)"
-        } else {
-            "Row-Child: switch 5 refocused (pointer modality)"
-        };
-        page.wait_for_focus_on(target, what).await?;
+        target.focus().await?;
+        page.wait_for_focus(target)
+            .await
+            .context_with(|| format!("{modality} modality"))?;
+        // Focus must stay: deferred focus handling (microtasks, frames) must not move it.
+        page.focus_stays(target)
+            .await
+            .context_with(|| format!("{modality} modality"))?;
     }
     Ok(())
 }
@@ -295,134 +271,139 @@ async fn focusing_a_child_from_outside_keeps_it(page: &Page<'_>) -> Result<(), R
 /// timers still hold the frame callback queued when tabbing in.
 async fn restores_the_last_focused_child(page: &Page<'_>) -> Result<(), Report> {
     let g = switch_grid(page, "Cell-Child").await?;
-    page.click_element_with_id("test-grid-before-cell-child")
+    page.element("#test-grid-before-cell-child")
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&g.switches[1], "restore Cell-Child: switch 2 (tabbing in)")
-        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&g.switches[1]).await?;
 
-    page.click_element_with_id("test-grid-before-cell-child")
+    page.element("#test-grid-before-cell-child")
+        .await?
+        .click()
         .await?;
-    focus(page, &g.cells[0]).await?;
-    page.wait_for_focus_on(
-        &g.switches[1],
-        "restore Cell-Child: switch 2 (focusing the cell)",
-    )
-    .await
+    g.cells[0].focus().await?;
+    page.wait_for_focus(&g.switches[1]).await?;
+    Ok(())
 }
 
 /// Up/Down keep the column (respecting column spans) and skip the disabled row; Home/End stay in
 /// the row, Ctrl+Home/End go to the first/last row.
 async fn two_dimensional_navigation(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-grid-before-users").await?;
-    page.press_tab().await?;
+    page.element("#test-grid-before-users")
+        .await?
+        .click()
+        .await?;
+    page.send_keys(Key::Tab).await?;
     expect_focus_on_row(page, "Alice").await?;
 
-    press(page, Key::Down).await?;
+    page.send_keys(Key::Down).await?;
     expect_focus_on_row(page, "Carol").await?;
-    press(page, Key::Right).await?;
+    page.send_keys(Key::Right).await?;
     expect_focus_on_cell(page, "Carol", "Carol").await?;
-    press(page, Key::Right).await?;
+    page.send_keys(Key::Right).await?;
     expect_focus_on_cell(page, "Carol", "On leave").await?;
-    press(page, Key::Down).await?;
+    page.send_keys(Key::Down).await?;
     expect_focus_on_cell(page, "Dave", "40").await?;
-    press(page, Key::Up).await?;
+    page.send_keys(Key::Up).await?;
     expect_focus_on_cell(page, "Carol", "On leave").await?;
-    press(page, Key::Up).await?;
+    page.send_keys(Key::Up).await?;
     expect_focus_on_cell(page, "Alice", "30").await?;
 
-    press(page, Key::Home).await?;
+    page.send_keys(Key::Home).await?;
     expect_focus_on_cell(page, "Alice", "Alice").await?;
-    press(page, Key::End).await?;
+    page.send_keys(Key::End).await?;
     expect_focus_on_cell(page, "Alice", "Admin").await?;
-    page.send_keys_to_active(Key::Control + Key::End).await?;
+    page.send_keys(Key::Control + Key::End).await?;
     expect_focus_on_cell(page, "Dave", "User").await?;
-    page.send_keys_to_active(Key::Control + Key::Home).await?;
-    expect_focus_on_cell(page, "Alice", "Alice").await
+    page.send_keys(Key::Control + Key::Home).await?;
+    expect_focus_on_cell(page, "Alice", "Alice").await?;
+    Ok(())
 }
 
 /// Rows are selected by Space and by pressing (a row, or any of its cells).
 async fn row_selection(page: &Page<'_>) -> Result<(), Report> {
+    let selection = page.element("#test-grid-selection").await?;
     // Focus is on Alice's first cell: Space selects her row.
-    page.send_keys_to_active(Key::Space).await?;
-    page.wait_for_text("test-grid-selection", "Alice").await?;
+    page.send_keys(Key::Space).await?;
+    selection.wait_for_inner_text("Alice").await?;
     let alice = row(page, "Alice").await?;
-    assert_that!(attr(&alice, "aria-selected").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(alice.attr("aria-selected").await?)
+        .get_some()
+        .is_equal_to("true");
 
     // Selectable rows show hover.
     let dave = row(page, "Dave").await?;
-    page.driver
-        .action_chain()
-        .move_to_element_center(&cell(page, "Dave", "40").await?)
-        .perform()
-        .await?;
-    page.wait_for_attr(&dave, "data-hovered", Some("true"))
-        .await?;
-    cell(page, "Dave", "40").await?.click().await?;
-    page.wait_for_text("test-grid-selection", "Alice,Dave")
-        .await?;
+    let dave_age = cell(page, "Dave", "40").await?;
+    dave_age.hover().await?;
+    dave.wait_for_attr("data-hovered", Some("true")).await?;
+    dave_age.click().await?;
+    selection.wait_for_inner_text("Alice,Dave").await?;
 
     // The disabled row can't be selected.
     cell(page, "Bob", "Bob").await?.click().await?;
-    page.wait_for_text("test-grid-selection", "Alice,Dave")
-        .await?;
+    selection.inner_text_stays("Alice,Dave").await?;
 
-    row(page, "Alice").await?.click().await?;
-    page.wait_for_text("test-grid-selection", "Dave").await
+    alice.click().await?;
+    selection.wait_for_inner_text("Dave").await?;
+    Ok(())
 }
 
 /// The cell with `text` of the grid labelled `grid`.
 async fn grid_cell(page: &Page<'_>, grid: &str, text: &str) -> Result<WebElement, Report> {
-    page.css(&format!("[role=grid][aria-label='{grid}']"))
+    page.element(format!("[role=grid][aria-label='{grid}']"))
         .await?
-        .find(By::XPath(format!(
+        .element(xpath(format!(
             ".//*[@role='gridcell'][normalize-space(.)='{text}']"
         )))
         .await
-        .map_err(Into::into)
 }
 
 /// In cell focus mode, cells can't be selected themselves (no cell selection): Space and presses
 /// on a cell select its row.
 async fn cell_focus_mode_selects_rows(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-grid-before-fruits")
+    page.element("#test-grid-before-fruits")
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
+    page.send_keys(Key::Tab).await?;
     let apple = grid_cell(page, "Fruits", "Apple").await?;
-    page.wait_for_focus_on(&apple, "Fruits: Apple").await?;
+    page.wait_for_focus(&apple).await?;
 
-    page.send_keys_to_active(Key::Space).await?;
-    page.wait_for_text("test-grid-fruits-selection", "Apple")
-        .await?;
+    let selection = page.element("#test-grid-fruits-selection").await?;
+    page.send_keys(Key::Space).await?;
+    selection.wait_for_inner_text("Apple").await?;
 
     grid_cell(page, "Fruits", "Yellow").await?.click().await?;
-    page.wait_for_text("test-grid-fruits-selection", "Apple,Banana")
-        .await
+    selection.wait_for_inner_text("Apple,Banana").await?;
+    Ok(())
 }
 
 /// With `on_cell_action`, activating a cell runs the action with the cell's key instead of
 /// selecting the row. Only Enter is an action key: Space on such a cell does nothing (cells can't
 /// be selected, and the cell's press handling keeps the key from the row).
 async fn cell_actions(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-grid-before-actions")
+    page.element("#test-grid-before-actions")
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
+    page.send_keys(Key::Tab).await?;
     let apple = grid_cell(page, "Actions", "Apple").await?;
-    page.wait_for_focus_on(&apple, "Actions: Apple").await?;
+    page.wait_for_focus(&apple).await?;
 
-    page.send_keys_to_active(Key::Space).await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-grid-actions-action", "Apple-0")
-        .await?;
-    press(page, Key::Right).await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-grid-actions-action", "Apple-1")
-        .await?;
+    let action = page.element("#test-grid-actions-action").await?;
+    let selection = page.element("#test-grid-actions-selection").await?;
+    page.send_keys(Key::Space).await?;
+    selection.inner_text_stays("").await?;
+    action.inner_text_stays("").await?;
+    page.send_keys(Key::Enter).await?;
+    action.wait_for_inner_text("Apple-0").await?;
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Enter).await?;
+    action.wait_for_inner_text("Apple-1").await?;
 
     grid_cell(page, "Actions", "Yellow").await?.click().await?;
-    page.wait_for_text("test-grid-actions-action", "Banana-1")
-        .await?;
-    assert_that!(page.read_text_of("test-grid-actions-selection").await?)
-        .is_equal_to(String::new());
+    action.wait_for_inner_text("Banana-1").await?;
+    selection.inner_text_stays("").await?;
     Ok(())
 }

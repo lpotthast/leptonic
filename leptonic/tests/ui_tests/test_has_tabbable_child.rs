@@ -1,12 +1,13 @@
 // No upstream: react-aria has no tests of `useHasTabbableChild` (a private hook).
 use std::borrow::Cow;
 
-use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, has_tabbable_child::HasTabbableChildPage};
+use crate::pages::{ElementActions, Page, PageActions};
 
+/// `use_has_tabbable_child`: whether a container has a tabbable descendant, following removed,
+/// re-added, nested and disabled children. Every case starts on a fresh page.
 pub struct HasTabbableChildTests {}
 
 #[async_trait]
@@ -16,102 +17,81 @@ impl BrowserTest<str> for HasTabbableChildTests {
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = HasTabbableChildPage { driver, base_url };
-
-        test_with_tabbable_child(&page).await?;
-        test_child_removed(&page).await?;
-        test_child_re_added(&page).await?;
-        test_no_tabbable_children(&page).await?;
-        test_deeply_nested_tabbable_child(&page).await?;
-        test_child_disabled_attribute_change(&page).await?;
-
+        let page = Page { driver, base_url };
+        cases!(
+            with_tabbable_child(&page),
+            child_removed_and_re_added(&page),
+            no_tabbable_children(&page),
+            deeply_nested_tabbable_child(&page),
+            child_disabled_attribute_change(&page),
+        );
         Ok(())
     }
 }
 
-/// Initial state with button child present: result="true".
-async fn test_with_tabbable_child(page: &HasTabbableChildPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: with tabbable child");
-    page.goto().await?;
+const PATH: &str = "/hooks/has-tabbable-child";
 
-    assert_that!(page.read_result().await?).is_equal_to(true);
-
+/// With a button child, the container has a tabbable child.
+async fn with_tabbable_child(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-htc-result")
+        .await?
+        .wait_for_inner_text("true")
+        .await?;
     Ok(())
 }
 
-/// Click toggle to remove button, then check result="false".
-async fn test_child_removed(page: &HasTabbableChildPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: child removed");
-    page.goto().await?;
+/// Removing the button: no tabbable child; re-adding it: a tabbable child again.
+async fn child_removed_and_re_added(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let result = page.element("#test-htc-result").await?;
+    let toggle = page.element("#test-htc-toggle").await?;
+    result.wait_for_inner_text("true").await?;
 
-    // Initial: has tabbable child
-    assert_that!(page.read_result().await?).is_equal_to(true);
+    toggle.click().await?;
+    result.wait_for_inner_text("false").await?;
 
-    // Toggle to remove the child button
-    page.click_toggle().await?;
-
-    page.wait_for_text("test-htc-result", "false").await?;
-
+    toggle.click().await?;
+    result.wait_for_inner_text("true").await?;
     Ok(())
 }
 
-/// Click toggle to remove, then toggle again to re-add: result="true".
-async fn test_child_re_added(page: &HasTabbableChildPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: child re-added");
-    page.goto().await?;
-
-    // Remove
-    page.click_toggle().await?;
-    page.wait_for_text("test-htc-result", "false").await?;
-
-    // Re-add
-    page.click_toggle().await?;
-    page.wait_for_text("test-htc-result", "true").await?;
-
+/// A deeply nested tabbable child (div > div > button) is found.
+async fn deeply_nested_tabbable_child(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-htc-nested-result")
+        .await?
+        .wait_for_inner_text("true")
+        .await?;
     Ok(())
 }
 
-/// Deeply nested tabbable child (div > div > button): TreeWalker subtree traversal finds it.
-async fn test_deeply_nested_tabbable_child(page: &HasTabbableChildPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: deeply nested tabbable child");
-    page.goto().await?;
+/// Disabling and enabling the child button (an attribute mutation) is followed.
+async fn child_disabled_attribute_change(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let result = page.element("#test-htc-attr-result").await?;
+    let toggle = page.element("#test-htc-attr-toggle").await?;
+    result.wait_for_inner_text("true").await?;
 
-    assert_that!(page.read_nested_result().await?).is_equal_to(true);
+    toggle.click().await?;
+    result.wait_for_inner_text("false").await?;
 
+    toggle.click().await?;
+    result.wait_for_inner_text("true").await?;
     Ok(())
 }
 
-/// Dynamic attribute mutation: disabling/enabling a child button via MutationObserver.
-async fn test_child_disabled_attribute_change(
-    page: &HasTabbableChildPage<'_>,
-) -> Result<(), Report> {
-    tracing::info!("Test: child disabled attribute change");
-    page.goto().await?;
-
-    // Initial: button is enabled, has tabbable child
-    assert_that!(page.read_attr_result().await?).is_equal_to(true);
-
-    // Toggle to disable the child button
-    page.click_attr_toggle().await?;
-    page.wait_for_text("test-htc-attr-result", "false").await?;
-
-    // Toggle again to re-enable
-    page.click_attr_toggle().await?;
-    page.wait_for_text("test-htc-attr-result", "true").await?;
-
-    Ok(())
-}
-
-/// Section with no tabbable children: result="false". Disabled section: result="false".
-async fn test_no_tabbable_children(page: &HasTabbableChildPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: no tabbable children and disabled hook");
-    page.goto().await?;
-
-    // Section with only non-tabbable elements
-    assert_that!(page.read_none_result().await?).is_equal_to(false);
-
-    // Disabled hook section (has a button child, but hook is disabled)
-    assert_that!(page.read_disabled_result().await?).is_equal_to(false);
-
+/// A container with only non-tabbable elements, and a disabled hook (with a button child): no
+/// tabbable child.
+async fn no_tabbable_children(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-htc-none-result")
+        .await?
+        .inner_text_stays("false")
+        .await?;
+    page.element("#test-htc-disabled-result")
+        .await?
+        .inner_text_stays("false")
+        .await?;
     Ok(())
 }

@@ -3,13 +3,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions, role, xpath};
 
 /// The select trigger: the element that opens a listbox.
 const TRIGGER: &str = "[aria-haspopup=listbox]";
@@ -27,196 +24,204 @@ impl BrowserTest<str> for SelectTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/select").await?;
-
-        initial_state(&page).await?;
-        opening_focuses_the_selected_option(&page).await?;
-        escape_closes_and_restores_focus(&page).await?;
-        selecting_an_option(&page).await?;
-        trigger_keyboard(&page).await?;
-        labelling(&page).await?;
-        form_reset(&page).await?;
-
+        cases!(
+            initial_state(&page),
+            opening_focuses_the_selected_option(&page),
+            escape_closes_and_restores_focus(&page),
+            escape_after_opening_with_the_keyboard(&page),
+            bound_select(&page),
+            selecting_an_option(&page),
+            trigger_keyboard(&page),
+            labelling(&page),
+            form_reset(&page),
+        );
         Ok(())
     }
 }
 
-async fn trigger_attr(page: &Page<'_>, name: &str) -> Result<Option<String>, Report> {
-    Ok(page.css(TRIGGER).await?.attr(name).await?)
+/// The hidden native `<select>` that carries the form value.
+async fn hidden_select(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-sel-form select").await
 }
 
-async fn hidden_select_value(page: &Page<'_>) -> Result<String, Report> {
-    let select = page.css("#test-sel-form select").await?;
-    Ok(select.prop("value").await?.unwrap_or_default())
-}
-
+/// The trigger shows the default value, the form has it, the listbox is closed.
 async fn initial_state(page: &Page<'_>) -> Result<(), Report> {
-    assert_that!(page.css(TRIGGER).await?.text().await?).is_equal_to("Banana".to_owned());
-    assert_that!(hidden_select_value(page).await?).is_equal_to("Banana".to_owned());
+    let trigger = page.element(TRIGGER).await?;
+    assert_that!(trigger.inner_text().await?).is_equal_to("Banana");
+    assert_that!(hidden_select(page).await?.value().await?)
+        .get_some()
+        .is_equal_to("Banana");
     // Focus walks skip the hidden select (HiddenSelect.test.tsx, "should always add a data
     // attribute data-react-aria-prevent-focus"; here `data-leptonic-prevent-focus`).
     assert_that!(
-        page.count_matching("#test-sel-form [data-leptonic-prevent-focus] select")
+        page.count("#test-sel-form [data-leptonic-prevent-focus] select")
             .await?
     )
     .is_equal_to(1);
-    assert_that!(trigger_attr(page, "aria-expanded").await?).is_equal_to(Some("false".to_owned()));
+    assert_that!(trigger.attr("aria-expanded").await?)
+        .get_some()
+        .is_equal_to("false");
     // `aria-controls` may only reference the listbox while it exists (i.e. while open).
-    assert_that!(trigger_attr(page, "aria-controls").await?).is_none();
+    assert_that!(trigger.attr("aria-controls").await?).is_none();
     Ok(())
 }
 
+/// Opening focuses the selected option in a modal popover: a dialog named like its listbox, the
+/// rest of the page inert, dismiss buttons around the options.
 async fn opening_focuses_the_selected_option(page: &Page<'_>) -> Result<(), Report> {
-    page.css(TRIGGER).await?.click().await?;
-    page.wait_for_selector("[role=listbox]").await?;
-    assert_that!(trigger_attr(page, "aria-expanded").await?).is_equal_to(Some("true".to_owned()));
-    let listbox_id = page.css("[role=listbox]").await?.id().await?;
-    assert_that!(trigger_attr(page, "aria-controls").await?).is_equal_to(listbox_id);
-    page.wait_for_selector("[role=option][aria-selected=true]:focus")
+    let trigger = page.element(TRIGGER).await?;
+    trigger.click().await?;
+    let listbox = page.element("[role=listbox]").await?;
+    trigger.wait_for_attr("aria-expanded", Some("true")).await?;
+    let listbox_id = listbox.id().await?;
+    assert_that!(trigger.attr("aria-controls").await?).is_equal_to(listbox_id);
+    page.wait_for_focus(&page.element(role("option").text("Banana")).await?)
         .await?;
-    page.wait_for_active_text("Banana").await?;
-    // The popover is modal (react-aria-components): the rest of the page is inert, and screen
-    // reader users get dismiss buttons around the options.
-    page.wait_for_selector("#test-sel-after:is([inert], [inert] *)")
+    page.element("#test-sel-after:is([inert], [inert] *)")
         .await?;
-    assert_that!(page.count_matching("button[aria-label=Dismiss]").await?).is_equal_to(2);
-    // The popover is a dialog named like its listbox (react-aria-components).
-    let listbox_labelledby = page
-        .css("[role=listbox]")
-        .await?
-        .attr("aria-labelledby")
-        .await?;
-    let dialog = page.css("[role=dialog]:has([role=listbox])").await?;
-    assert_that!(listbox_labelledby.is_some()).is_true();
+    assert_that!(page.count("button[aria-label=Dismiss]").await?).is_equal_to(2);
+    let listbox_labelledby = listbox.attr("aria-labelledby").await?;
+    let dialog = page.element("[role=dialog]:has([role=listbox])").await?;
+    assert_that!(&listbox_labelledby).is_some();
     assert_that!(dialog.attr("aria-labelledby").await?).is_equal_to(listbox_labelledby);
     Ok(())
 }
 
+/// Escape closes the popover (gone once its exit animation ran, nothing inert), returns focus to
+/// the trigger and changes nothing.
 async fn escape_closes_and_restores_focus(page: &Page<'_>) -> Result<(), Report> {
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_selector("[aria-haspopup=listbox][aria-expanded=false]")
+    let trigger = page.element(TRIGGER).await?;
+    page.send_keys(Key::Escape).await?;
+    trigger
+        .wait_for_attr("aria-expanded", Some("false"))
         .await?;
-    // Gone once its exit animation ran.
-    page.wait_for_no_selector("[role=listbox]").await?;
-    // Closed, nothing stays inert.
-    page.wait_for_no_selector("[inert]").await?;
-    let trigger = page.css(TRIGGER).await?;
-    assert_that!(page.driver.active_element().await? == trigger).is_true();
-    // Nothing changed.
-    assert_that!(trigger.text().await?).is_equal_to("Banana".to_owned());
+    page.wait_for_count("[role=listbox]", 0).await?;
+    page.wait_for_count("[inert]", 0).await?;
+    page.wait_for_focus(&trigger).await?;
+    assert_that!(trigger.inner_text().await?).is_equal_to("Banana");
+    Ok(())
+}
 
-    // The same when opened with the keyboard (Enter focuses the selected option).
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_selector("[role=option][aria-selected=true]:focus")
+/// Enter opens and focuses the selected option; Escape returns focus to the trigger.
+async fn escape_after_opening_with_the_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element(TRIGGER).await?;
+    page.send_keys(Key::Enter).await?;
+    page.wait_for_focus(&page.element(role("option").text("Banana")).await?)
         .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_no_selector("[role=listbox]").await?;
-    page.wait_for_focus_on(&trigger, "select trigger after Escape")
-        .await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count("[role=listbox]", 0).await?;
+    page.wait_for_focus(&trigger).await?;
+    Ok(())
+}
 
-    // A select bound to app state (`value`) restores focus as well.
-    let bound = page.css("#test-sel-bound [aria-haspopup=listbox]").await?;
+/// A select bound to app state (`value`) restores focus as well, reports changes, and picking
+/// the previous value again after the app changed it is a change.
+async fn bound_select(page: &Page<'_>) -> Result<(), Report> {
+    let bound = page
+        .element("#test-sel-bound [aria-haspopup=listbox]")
+        .await?;
+    let value = page.element("#test-sel-bound-value").await?;
+    let changes = page.element("#test-sel-bound-changes").await?;
     bound.click().await?;
-    page.wait_for_selector("[role=option][aria-selected=true]:focus")
+    page.element("[role=option][aria-selected=true]:focus")
         .await?;
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_no_selector("[role=listbox]").await?;
-    page.wait_for_focus_on(&bound, "bound select trigger after Escape")
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count("[role=listbox]", 0).await?;
+    page.wait_for_focus(&bound).await?;
+    page.send_keys(Key::Enter).await?;
+    page.element("[role=option][aria-selected=true]:focus")
         .await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_selector("[role=option][aria-selected=true]:focus")
-        .await?;
-    page.send_keys_to_active(Key::Down).await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-sel-bound-value", "25").await?;
-    page.wait_for_focus_on(&bound, "bound select trigger after selecting")
-        .await?;
-    page.wait_for_text("test-sel-bound-changes", "1").await?;
+    page.send_keys(Key::Down).await?;
+    page.send_keys(Key::Enter).await?;
+    value.wait_for_inner_text("25").await?;
+    page.wait_for_focus(&bound).await?;
+    changes.wait_for_inner_text("1").await?;
 
-    // After the app changed the value, picking the previous value again is a change.
-    page.element("test-sel-bound-reset").await?.click().await?;
-    page.wait_for_text("test-sel-bound-value", "10").await?;
+    page.element("#test-sel-bound-reset").await?.click().await?;
+    value.wait_for_inner_text("10").await?;
     bound.click().await?;
-    page.wait_for_selector("[role=option][aria-selected=true]:focus")
+    page.element("[role=option][aria-selected=true]:focus")
         .await?;
-    page.send_keys_to_active(Key::Down).await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-sel-bound-value", "25").await?;
-    page.wait_for_text("test-sel-bound-changes", "2").await?;
+    page.send_keys(Key::Down).await?;
+    page.send_keys(Key::Enter).await?;
+    value.wait_for_inner_text("25").await?;
+    changes.wait_for_inner_text("2").await?;
     Ok(())
 }
 
 /// Picking an option closes the popover, updates the trigger and the form value, and returns
 /// focus to the trigger.
 async fn selecting_an_option(page: &Page<'_>) -> Result<(), Report> {
-    page.css(TRIGGER).await?.click().await?;
-    page.wait_for_selector("[role=listbox]").await?;
-    page.by_role_and_text("option", "Durian")
+    let trigger = page.element(TRIGGER).await?;
+    trigger.click().await?;
+    page.element(role("option").text("Durian"))
         .await?
         .click()
         .await?;
-    page.wait_for_text("test-sel-changes", "Durian").await?;
-    page.wait_for_selector("[aria-haspopup=listbox][aria-expanded=false]")
+    page.element("#test-sel-changes")
+        .await?
+        .wait_for_inner_text("Durian")
         .await?;
-    assert_that!(page.css(TRIGGER).await?.text().await?).is_equal_to("Durian".to_owned());
-    assert_that!(hidden_select_value(page).await?).is_equal_to("Durian".to_owned());
-    let trigger = page.css(TRIGGER).await?;
-    assert_that!(page.driver.active_element().await? == trigger).is_true();
+    trigger
+        .wait_for_attr("aria-expanded", Some("false"))
+        .await?;
+    assert_that!(trigger.inner_text().await?).is_equal_to("Durian");
+    assert_that!(hidden_select(page).await?.value().await?)
+        .get_some()
+        .is_equal_to("Durian");
+    page.wait_for_focus(&trigger).await?;
     Ok(())
 }
 
 /// On the closed trigger, ArrowLeft/ArrowRight change the value (skipping disabled options)
 /// and typing selects by text.
 async fn trigger_keyboard(page: &Page<'_>) -> Result<(), Report> {
-    page.send_keys_to_active(Key::Left).await?;
+    let trigger = page.element(TRIGGER).await?;
+    let changes = page.element("#test-sel-changes").await?;
+    page.send_keys(Key::Left).await?;
     // "Cherry" is disabled.
-    page.wait_for_text("test-sel-changes", "Durian | Banana")
+    changes.wait_for_inner_text("Durian | Banana").await?;
+    page.send_keys(Key::Right).await?;
+    changes
+        .wait_for_inner_text("Durian | Banana | Durian")
         .await?;
-    page.send_keys_to_active(Key::Right).await?;
-    page.wait_for_text("test-sel-changes", "Durian | Banana | Durian")
-        .await?;
-    assert_that!(trigger_attr(page, "aria-expanded").await?).is_equal_to(Some("false".to_owned()));
+    trigger.attr_stays("aria-expanded", Some("false")).await?;
 
-    page.send_keys_to_active("e").await?;
-    page.wait_for_text("test-sel-changes", "Durian | Banana | Durian | Elderberry")
+    page.send_keys("e").await?;
+    changes
+        .wait_for_inner_text("Durian | Banana | Durian | Elderberry")
         .await?;
-    assert_that!(page.css(TRIGGER).await?.text().await?).is_equal_to("Elderberry".to_owned());
+    assert_that!(trigger.inner_text().await?).is_equal_to("Elderberry");
     Ok(())
 }
 
 /// The trigger is labelled by its value and the label; clicking the label focuses the trigger.
 async fn labelling(page: &Page<'_>) -> Result<(), Report> {
-    let label = page
-        .driver
-        .find(By::XPath("//span[text()='Fruit']"))
-        .await?;
+    let trigger = page.element(TRIGGER).await?;
+    let label = page.element(xpath("//span[text()='Fruit']")).await?;
     let label_id = label.id().await?.unwrap_or_default();
-    let labelled_by = trigger_attr(page, "aria-labelledby")
-        .await?
-        .unwrap_or_default();
+    let labelled_by = trigger.attr("aria-labelledby").await?.unwrap_or_default();
     let ids: Vec<&str> = labelled_by.split(' ').collect();
-    assert_that!(ids.len()).is_equal_to(2);
-    assert_that!(ids.contains(&label_id.as_str())).is_true();
-    let value = page.css(&format!("#{}", ids[0])).await?;
-    assert_that!(value.text().await?).is_equal_to("Elderberry".to_owned());
+    assert_that!(&ids).has_length(2);
+    assert_that!(ids[1]).is_equal_to(label_id.as_str());
+    let value = page.element(format!("#{}", ids[0])).await?;
+    assert_that!(value.inner_text().await?).is_equal_to("Elderberry");
 
-    page.css("#test-sel-before").await?.click().await?;
+    page.element("#test-sel-before").await?.click().await?;
     label.click().await?;
-    let trigger = page.css(TRIGGER).await?;
-    assert_that!(page.driver.active_element().await? == trigger).is_true();
+    page.wait_for_focus(&trigger).await?;
     Ok(())
 }
 
 /// Resetting the form restores the default value.
 async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
-    page.driver
-        .execute("document.getElementById('test-sel-form').reset()", vec![])
+    page.element("#test-sel-form").await?.reset().await?;
+    page.element(TRIGGER)
+        .await?
+        .wait_for_inner_text("Banana")
         .await?;
-    page.wait_for_selector("[aria-haspopup=listbox]").await?;
-    wait_for!(
-        "the trigger after the form reset",
-        "Banana",
-        page.css(TRIGGER).await?.text().await?
-    );
-    assert_that!(hidden_select_value(page).await?).is_equal_to("Banana".to_owned());
+    assert_that!(hidden_select(page).await?.value().await?)
+        .get_some()
+        .is_equal_to("Banana");
     Ok(())
 }

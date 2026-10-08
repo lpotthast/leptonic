@@ -2,14 +2,14 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
+/// `use_button` on native buttons, inputs, anchors and custom elements: ARIA and native
+/// attributes by element type, press by pointer and keyboard, tab order, disabled state, form
+/// submission, hover and focus visibility.
 pub struct UseButtonTests {}
 
 #[async_trait]
@@ -22,138 +22,157 @@ impl BrowserTest<str> for UseButtonTests {
         let page = Page { driver, base_url };
         page.goto_path("/hooks/button").await?;
 
-        attributes_depend_on_element_type(&page).await?;
-        native_and_custom_elements_press(&page).await?;
-        tab_order(&page).await?;
-        disabled_buttons(&page).await?;
-        form_submission(&page).await?;
-        hover_and_focus_visible(&page).await?;
-
+        cases!(
+            attributes_depend_on_element_type(&page),
+            native_and_custom_elements_press(&page),
+            tab_order(&page),
+            disabled_buttons(&page),
+            form_submission(&page),
+            hover_and_focus_visible(&page),
+        );
         Ok(())
     }
 }
 
+/// Native buttons need no role and default to `type="button"`; other elements are announced as
+/// buttons and are focusable.
 async fn attributes_depend_on_element_type(page: &Page<'_>) -> Result<(), Report> {
-    // Native buttons need no role and default to `type="button"` (not `submit`).
-    assert_that!(page.attr_of("test-btn-native", "role").await?).is_none();
-    assert_that!(page.attr_of("test-btn-native", "type").await?)
-        .is_equal_to(Some("button".to_owned()));
-    // Other elements are announced as buttons and are focusable.
-    assert_that!(page.attr_of("test-btn-div", "role").await?)
-        .is_equal_to(Some("button".to_owned()));
-    assert_that!(page.attr_of("test-btn-div", "tabindex").await?).is_equal_to(Some("0".to_owned()));
-    assert_that!(page.attr_of("test-btn-div", "type").await?).is_none();
-    assert_that!(page.attr_of("test-btn-anchor", "role").await?)
-        .is_equal_to(Some("button".to_owned()));
-    assert_that!(page.attr_of("test-btn-anchor", "href").await?)
-        .is_equal_to(Some("#anchor-target".to_owned()));
+    let native = page.element("#test-btn-native").await?;
+    assert_that!(native.attr("role").await?).is_none();
+    assert_that!(native.attr("type").await?)
+        .get_some()
+        .is_equal_to("button");
+
+    let div = page.element("#test-btn-div").await?;
+    assert_that!(div.attr("role").await?)
+        .get_some()
+        .is_equal_to("button");
+    assert_that!(div.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("0");
+    assert_that!(div.attr("type").await?).is_none();
+
+    let anchor = page.element("#test-btn-anchor").await?;
+    assert_that!(anchor.attr("role").await?)
+        .get_some()
+        .is_equal_to("button");
+    assert_that!(anchor.attr("href").await?)
+        .get_some()
+        .is_equal_to("#anchor-target");
+
     // "handles input elements": `type="button"`, `role="button"`.
-    assert_that!(page.attr_of("test-btn-input", "type").await?)
-        .is_equal_to(Some("button".to_owned()));
-    assert_that!(page.attr_of("test-btn-input", "role").await?)
-        .is_equal_to(Some("button".to_owned()));
+    let input = page.element("#test-btn-input").await?;
+    assert_that!(input.attr("type").await?)
+        .get_some()
+        .is_equal_to("button");
+    assert_that!(input.attr("role").await?)
+        .get_some()
+        .is_equal_to("button");
+
     // "handles target and rel": a new tab also gets `noopener` (a leptonic addition).
-    assert_that!(page.attr_of("test-btn-blank", "target").await?)
-        .is_equal_to(Some("_blank".to_owned()));
-    assert_that!(page.attr_of("test-btn-blank", "rel").await?)
-        .is_equal_to(Some("nofollow noopener".to_owned()));
+    let blank = page.element("#test-btn-blank").await?;
+    assert_that!(blank.attr("target").await?)
+        .get_some()
+        .is_equal_to("_blank");
+    assert_that!(blank.attr("rel").await?)
+        .get_some()
+        .is_equal_to("nofollow noopener");
+
     // RAC Button.test.js "removes href attribute from anchor element when isPending is true".
-    assert_that!(page.attr_of("test-btn-pending-anchor", "href").await?).is_none();
-    assert_that!(
-        page.attr_of("test-btn-pending-anchor", "aria-disabled")
-            .await?
-    )
-    .is_equal_to(Some("true".to_owned()));
+    let pending_anchor = page.element("#test-btn-pending-anchor").await?;
+    assert_that!(pending_anchor.attr("href").await?).is_none();
+    assert_that!(pending_anchor.attr("aria-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
     Ok(())
 }
 
+/// Pointer presses on a native and a custom button, then Enter and Space on the focused custom one.
 async fn native_and_custom_elements_press(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-btn-native").await?;
-    page.wait_for_text("test-btn-presses", "1").await?;
-    page.click_element_with_id("test-btn-div").await?;
-    page.wait_for_text("test-btn-presses", "2").await?;
+    let presses = page.element("#test-btn-presses").await?;
+    page.element("#test-btn-native").await?.click().await?;
+    presses.wait_for_inner_text("1").await?;
+    page.element("#test-btn-div").await?.click().await?;
+    presses.wait_for_inner_text("2").await?;
     // Keyboard activation of the custom element (it has focus after the click).
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-btn-presses", "3").await?;
-    page.send_keys_to_active(" ").await?;
-    page.wait_for_text("test-btn-presses", "4").await?;
+    page.send_keys(Key::Enter).await?;
+    presses.wait_for_inner_text("3").await?;
+    page.send_keys(" ").await?;
+    presses.wait_for_inner_text("4").await?;
     Ok(())
 }
 
+/// Tab visits every button but the one with `exclude_from_tab_order`.
 async fn tab_order(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-btn-before").await?;
-    let mut order = Vec::new();
-    for _ in 0..4 {
-        page.press_tab().await?;
-        order.push(page.active_element_id().await?.unwrap_or_default());
+    page.element("#test-btn-before").await?.click().await?;
+    for id in [
+        "#test-btn-native",
+        "#test-btn-div",
+        "#test-btn-anchor",
+        "#test-btn-after",
+    ] {
+        page.send_keys(Key::Tab).await?;
+        page.wait_for_focus(&page.element(id).await?).await?;
     }
-    // `exclude_from_tab_order` skips the "Excluded" button.
-    assert_that!(order).is_equal_to(vec![
-        "test-btn-native".to_owned(),
-        "test-btn-div".to_owned(),
-        "test-btn-anchor".to_owned(),
-        "test-btn-after".to_owned(),
-    ]);
     Ok(())
 }
 
+/// Native buttons and inputs use the `disabled` attribute, everything else `aria-disabled`;
+/// disabled anchors lose their link and every disabled button its place in the tab order; a
+/// disabled button doesn't press.
 async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-btn-toggle-disabled")
+    let toggle = page.element("#test-btn-toggle-disabled").await?;
+    toggle.click().await?;
+    let native = page.element("#test-btn-native").await?;
+    native.wait_for_attr("disabled", Some("true")).await?;
+
+    page.element("#test-btn-input")
+        .await?
+        .wait_for_attr("disabled", Some("true"))
         .await?;
-    page.wait_for_selector("#test-btn-native[disabled]").await?;
+    let div = page.element("#test-btn-div").await?;
+    assert_that!(div.attr("aria-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(div.attr("disabled").await?).is_none();
+    assert_that!(div.attr("tabindex").await?).is_none();
+    assert_that!(native.attr("aria-disabled").await?).is_none();
+    assert_that!(page.element("#test-btn-anchor").await?.attr("href").await?).is_none();
 
-    // Native buttons and inputs use the `disabled` attribute, everything else `aria-disabled`.
-    page.wait_for_selector("#test-btn-input[disabled]").await?;
-    assert_that!(page.attr_of("test-btn-div", "aria-disabled").await?)
-        .is_equal_to(Some("true".to_owned()));
-    assert_that!(page.attr_of("test-btn-div", "disabled").await?).is_none();
-    assert_that!(page.attr_of("test-btn-native", "aria-disabled").await?).is_none();
-    // Disabled anchors lose their link and their place in the tab order.
-    assert_that!(page.attr_of("test-btn-anchor", "href").await?).is_none();
-    assert_that!(page.attr_of("test-btn-div", "tabindex").await?).is_none();
+    let presses = page.element("#test-btn-presses").await?;
+    let before = presses.inner_text().await?;
+    div.click().await?;
+    presses.inner_text_stays(&before).await?;
 
-    let before = page.read_text_of("test-btn-presses").await?;
-    page.click_element_with_id("test-btn-div").await?;
-    stays!(
-        "the text of #test-btn-presses",
-        before,
-        page.read_text_of("test-btn-presses").await?
-    );
-
-    page.click_element_with_id("test-btn-toggle-disabled")
-        .await?;
+    toggle.click().await?;
     Ok(())
 }
 
+/// A button defaults to `type="button"` and does not submit its form; a submit button does.
 async fn form_submission(page: &Page<'_>) -> Result<(), Report> {
-    // A button defaults to `type="button"` and does not submit its form.
-    page.click_element_with_id("test-btn-in-form").await?;
-    stays!(
-        "the text of #test-btn-submits",
-        "0".to_owned(),
-        page.read_text_of("test-btn-submits").await?
-    );
+    let submits = page.element("#test-btn-submits").await?;
+    page.element("#test-btn-in-form").await?.click().await?;
+    submits.inner_text_stays("0").await?;
 
-    page.click_element_with_id("test-btn-submit").await?;
-    page.wait_for_text("test-btn-submits", "1").await?;
+    page.element("#test-btn-submit").await?.click().await?;
+    submits.wait_for_inner_text("1").await?;
     Ok(())
 }
 
+/// Hovering sets `is_hovered`; pointer focus does not show a focus ring, keyboard focus does.
 async fn hover_and_focus_visible(page: &Page<'_>) -> Result<(), Report> {
-    let state = page.element("test-btn-state").await?;
-    page.driver
-        .action_chain()
-        .move_to_element_center(&state)
-        .perform()
+    let state = page.element("#test-btn-state").await?;
+    let focus_visible = page.element("#test-btn-is-focus-visible").await?;
+    state.hover().await?;
+    page.element("#test-btn-is-hovered")
+        .await?
+        .wait_for_inner_text("true")
         .await?;
-    page.wait_for_text("test-btn-is-hovered", "true").await?;
 
-    // Pointer focus does not show a focus ring, keyboard focus does.
     state.click().await?;
-    assert_that!(page.read_bool("test-btn-is-focus-visible").await?).is_false();
-    page.press_shift_tab().await?;
-    page.press_tab().await?;
-    page.wait_for_text("test-btn-is-focus-visible", "true")
-        .await?;
+    focus_visible.inner_text_stays("false").await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.send_keys(Key::Tab).await?;
+    focus_visible.wait_for_inner_text("true").await?;
     Ok(())
 }

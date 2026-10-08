@@ -1,14 +1,11 @@
 // Upstream: react-aria-components/test/Button.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, button::ButtonPage};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The `Button` atom: presses, the disabled state, ARIA and form props, the state as data
 /// attributes (hover, press, focus ring) and the pending state.
@@ -21,52 +18,63 @@ impl BrowserTest<str> for ButtonTests {
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = ButtonPage { driver, base_url };
-        page.goto().await?;
-
-        presses_and_props(&page).await?;
-        state_attributes(&page).await?;
-        pending(&page).await?;
-        pending_form_submission(&page).await?;
-        pending_labelled(&page).await?;
-        pending_trigger(&page).await?;
-
+        let page = Page { driver, base_url };
+        page.goto_path("/atoms/button").await?;
+        cases!(
+            presses_and_props(&page),
+            state_attributes(&page),
+            pending(&page),
+            pending_form_submission(&page),
+            pending_labelled(&page),
+            pending_trigger(&page),
+        );
         Ok(())
     }
 }
 
-async fn presses_and_props(page: &ButtonPage<'_>) -> Result<(), Report> {
+/// "should render a button with default class", "should support disabled state", "should support
+/// accessibility props", "should support form props".
+async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
     // "should render a button with default class".
-    let basic = page.css("#test-button-basic").await?;
-    assert_that!(basic.attr("class").await?).is_equal_to(Some("leptonic-Button".to_owned()));
+    let basic = page.element("#test-button-basic").await?;
+    assert_that!(basic.attr("class").await?)
+        .get_some()
+        .is_equal_to("leptonic-Button");
     // "should not have aria-disabled defined by default".
     assert_that!(basic.attr("aria-disabled").await?).is_none();
 
-    assert_that!(page.read_basic_count().await?).is_equal_to(0);
-    page.click_basic_button().await?;
-    assert_that!(page.read_basic_count().await?).is_equal_to(1);
-    page.click_basic_button().await?;
-    assert_that!(page.read_basic_count().await?).is_equal_to(2);
+    let basic_count = page.element("#test-button-basic-count").await?;
+    assert_that!(basic_count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
+    basic.click().await?;
+    basic_count.wait_for_inner_text("1").await?;
+    basic.click().await?;
+    basic_count.wait_for_inner_text("2").await?;
     // The pressed button is focused (`data-focused`).
-    page.wait_for_selector("#test-button-basic[data-focused=true]")
-        .await?;
+    basic.wait_for_attr("data-focused", Some("true")).await?;
 
     // "should support disabled state".
-    assert_that!(page.read_disabled_count().await?).is_equal_to(0);
-    page.click_disabled_button().await?;
-    assert_that!(page.read_disabled_count().await?).is_equal_to(0);
-    let disabled = page.css("#test-button-disabled").await?;
-    assert_that!(disabled.attr("data-disabled").await?).is_equal_to(Some("true".to_owned()));
+    let disabled = page.element("#test-button-disabled").await?;
+    let disabled_count = page.element("#test-button-disabled-count").await?;
+    assert_that!(disabled_count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
+    disabled.click().await?;
+    disabled_count.inner_text_stays("0").await?;
+    assert_that!(disabled.attr("data-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
     assert_that!(disabled.attr("disabled").await?).is_some();
     assert_that!(basic.attr("data-disabled").await?).is_none();
 
     // "should support accessibility props".
-    let labelled = page.css("#test-button-labelled").await?;
-    assert_that!(labelled.attr("aria-label").await?).is_equal_to(Some("Page 2".to_owned()));
-    assert_that!(labelled.attr("aria-current").await?).is_equal_to(Some("page".to_owned()));
+    let labelled = page.element("#test-button-labelled").await?;
+    assert_that!(labelled.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Page 2");
+    assert_that!(labelled.attr("aria-current").await?)
+        .get_some()
+        .is_equal_to("page");
 
     // "should support form props".
-    let form_props = page.css("#test-button-form-props").await?;
+    let form_props = page.element("#test-button-form-props").await?;
     for (name, value) in [
         ("type", "submit"),
         ("form", "test-button-form"),
@@ -74,199 +82,153 @@ async fn presses_and_props(page: &ButtonPage<'_>) -> Result<(), Report> {
         ("name", "action"),
         ("value", "save"),
     ] {
-        let actual: Option<String> = page
-            .driver
-            .execute(
-                "return arguments[0].getAttribute(arguments[1]);",
-                vec![form_props.to_json()?, serde_json::Value::from(name)],
-            )
-            .await?
-            .convert()?;
-        assert_that!(actual)
+        assert_that!(form_props.attr(name).await?)
             .with_detail_message(format!("attribute {name}"))
-            .is_equal_to(Some(value.to_owned()));
+            .get_some()
+            .is_equal_to(value);
     }
     Ok(())
 }
 
 /// "should support hover", "should support focus ring", "should support press state".
-async fn state_attributes(page: &ButtonPage<'_>) -> Result<(), Report> {
-    let button = page.css("#test-button-labelled").await?;
+async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
+    let button = page.element("#test-button-labelled").await?;
     for name in ["data-hovered", "data-pressed", "data-focus-visible"] {
         assert_that!(button.attr(name).await?).is_none();
     }
-    page.driver
-        .action_chain()
-        .move_to_element_center(&button)
-        .perform()
-        .await?;
-    page.wait_for_attr(&button, "data-hovered", Some("true"))
-        .await?;
+    button.hover().await?;
+    button.wait_for_attr("data-hovered", Some("true")).await?;
     page.driver
         .action_chain()
         .click_and_hold_element(&button)
         .perform()
         .await?;
-    page.wait_for_attr(&button, "data-pressed", Some("true"))
-        .await?;
+    button.wait_for_attr("data-pressed", Some("true")).await?;
     page.driver.action_chain().release().perform().await?;
-    page.wait_for_attr(&button, "data-pressed", None).await?;
+    button.wait_for_attr("data-pressed", None).await?;
     // Focused by the pointer: no focus ring.
-    page.wait_for_attr(&button, "data-focused", Some("true"))
-        .await?;
+    button.wait_for_attr("data-focused", Some("true")).await?;
     assert_that!(button.attr("data-focus-visible").await?).is_none();
-    page.driver
-        .action_chain()
-        .move_to_element_center(&page.css("h1").await?)
-        .perform()
-        .await?;
-    page.wait_for_attr(&button, "data-hovered", None).await?;
+    page.element("h1").await?.hover().await?;
+    button.wait_for_attr("data-hovered", None).await?;
 
     // Focused by the keyboard: a focus ring, gone when focus leaves.
-    page.press_shift_tab().await?;
-    page.press_tab().await?;
-    page.wait_for_attr(&button, "data-focus-visible", Some("true"))
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.send_keys(Key::Tab).await?;
+    button
+        .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
-    page.press_tab().await?;
-    page.wait_for_attr(&button, "data-focus-visible", None)
-        .await
+    page.send_keys(Key::Tab).await?;
+    button.wait_for_attr("data-focus-visible", None).await?;
+    Ok(())
 }
 
 /// "displays a spinner when isPending prop is true": pending, the button is `aria-disabled`,
 /// ignores presses and hover, and stays focusable.
-async fn pending(page: &ButtonPage<'_>) -> Result<(), Report> {
-    let button = page.css("#test-button-pending").await?;
+async fn pending(page: &Page<'_>) -> Result<(), Report> {
+    let button = page.element("#test-button-pending").await?;
     assert_that!(button.attr("aria-disabled").await?).is_none();
     assert_that!(button.attr("data-pending").await?).is_none();
     button.click().await?;
-    page.wait_for_attr(&button, "aria-disabled", Some("true"))
-        .await?;
-    page.wait_for_attr(&button, "data-pending", Some("true"))
-        .await?;
+    button.wait_for_attr("aria-disabled", Some("true")).await?;
+    button.wait_for_attr("data-pending", Some("true")).await?;
     assert_that!(button.attr("disabled").await?).is_none();
+    let count = page.element("#test-button-pending-count").await?;
     button.click().await?;
-    stays!(
-        "the pending button's presses",
-        "1".to_owned(),
-        page.read_text_of("test-button-pending-count").await?
-    );
+    count.inner_text_stays("1").await?;
     // Still focused, but neither hovered nor pressed.
-    page.wait_for_attr(&button, "data-focused", Some("true"))
-        .await?;
+    button.wait_for_attr("data-focused", Some("true")).await?;
     assert_that!(button.attr("data-hovered").await?).is_none();
     assert_that!(button.attr("data-pressed").await?).is_none();
     // Keyboard presses are ignored too.
-    page.send_keys_to_active(Key::Enter).await?;
-    page.send_keys_to_active(" ").await?;
-    stays!(
-        "the pending button's presses",
-        "1".to_owned(),
-        page.read_text_of("test-button-pending-count").await?
-    );
+    page.send_keys(Key::Enter).await?;
+    page.send_keys(" ").await?;
+    count.inner_text_stays("1").await?;
 
-    page.click_element_with_id("test-button-pending-reset")
+    page.element("#test-button-pending-reset")
+        .await?
+        .click()
         .await?;
-    page.wait_for_attr(&button, "aria-disabled", None).await?;
-    page.wait_for_attr(&button, "data-pending", None).await
+    button.wait_for_attr("aria-disabled", None).await?;
+    button.wait_for_attr("data-pending", None).await?;
+    Ok(())
 }
 
 /// "should prevent explicit mouse/keyboard form submission when isPending", "should prevent
 /// implicit form submission when isPending": pending, a submit button is a plain button.
-async fn pending_form_submission(page: &ButtonPage<'_>) -> Result<(), Report> {
-    let submit = page.css("#test-button-pending-submit").await?;
-    assert_that!(submit.attr("type").await?).is_equal_to(Some("submit".to_owned()));
+async fn pending_form_submission(page: &Page<'_>) -> Result<(), Report> {
+    let submit = page.element("#test-button-pending-submit").await?;
+    let submits = page.element("#test-button-pending-submits").await?;
+    let toggle = page.element("#test-button-pending-submit-toggle").await?;
+    let input_1 = page.element("#test-button-pending-input-1").await?;
+    assert_that!(submit.attr("type").await?)
+        .get_some()
+        .is_equal_to("submit");
     // Mouse: the press submits, then the button turns pending.
     submit.click().await?;
-    page.wait_for_text("test-button-pending-submits", "1")
-        .await?;
-    page.wait_for_attr(&submit, "type", Some("button")).await?;
+    submits.wait_for_inner_text("1").await?;
+    submit.wait_for_attr("type", Some("button")).await?;
     submit.click().await?;
-    stays!(
-        "the submissions",
-        "1".to_owned(),
-        page.read_text_of("test-button-pending-submits").await?
-    );
+    submits.inner_text_stays("1").await?;
 
     // Keyboard: Enter on the button.
-    page.click_element_with_id("test-button-pending-submit-toggle")
-        .await?;
-    page.wait_for_attr(&submit, "type", Some("submit")).await?;
-    page.element("test-button-pending-input-2")
+    toggle.click().await?;
+    submit.wait_for_attr("type", Some("submit")).await?;
+    page.element("#test-button-pending-input-2")
         .await?
         .click()
         .await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&submit, "the submit button").await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-button-pending-submits", "2")
-        .await?;
-    page.wait_for_attr(&submit, "type", Some("button")).await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    stays!(
-        "the submissions",
-        "2".to_owned(),
-        page.read_text_of("test-button-pending-submits").await?
-    );
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&submit).await?;
+    page.send_keys(Key::Enter).await?;
+    submits.wait_for_inner_text("2").await?;
+    submit.wait_for_attr("type", Some("button")).await?;
+    page.send_keys(Key::Enter).await?;
+    submits.inner_text_stays("2").await?;
 
     // Implicit: Enter in a text field submits through the submit button, unless it is pending.
-    page.click_element_with_id("test-button-pending-submit-toggle")
-        .await?;
-    page.wait_for_attr(&submit, "type", Some("submit")).await?;
-    page.element("test-button-pending-input-1")
-        .await?
-        .send_keys(Key::Enter)
-        .await?;
-    page.wait_for_text("test-button-pending-submits", "3")
-        .await?;
-    // The implicit submission clicks the button, whose press may have made it pending already.
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    if submit.attr("type").await?.as_deref() == Some("submit") {
-        page.click_element_with_id("test-button-pending-submit-toggle")
-            .await?;
-    }
-    page.wait_for_attr(&submit, "type", Some("button")).await?;
-    page.element("test-button-pending-input-1")
-        .await?
-        .send_keys(Key::Enter)
-        .await?;
-    stays!(
-        "the submissions",
-        "3".to_owned(),
-        page.read_text_of("test-button-pending-submits").await?
-    );
+    toggle.click().await?;
+    submit.wait_for_attr("type", Some("submit")).await?;
+    input_1.send_keys(Key::Enter).await?;
+    submits.wait_for_inner_text("3").await?;
+    // The implicit submission clicks the button: a virtual press, which makes it pending.
+    submit.wait_for_attr("type", Some("button")).await?;
+    input_1.send_keys(Key::Enter).await?;
+    submits.inner_text_stays("3").await?;
     Ok(())
 }
 
 /// Pending, a button named by `aria-label` is named by itself and its progress bar
 /// (`aria-labelledby` wins over `aria-label`).
-async fn pending_labelled(page: &ButtonPage<'_>) -> Result<(), Report> {
-    let button = page.css("#test-button-pending-labelled").await?;
+async fn pending_labelled(page: &Page<'_>) -> Result<(), Report> {
+    let button = page.element("#test-button-pending-labelled").await?;
     let progress_id = button
-        .find(browser_test::thirtyfour::By::Css("[role=progressbar]"))
+        .element("[role=progressbar]")
         .await?
-        .attr("id")
+        .id()
         .await?
         .unwrap_or_default();
-    assert_that!(progress_id.is_empty()).is_false();
-    page.wait_for_attr(
-        &button,
-        "aria-labelledby",
-        Some(&format!("test-button-pending-labelled {progress_id}")),
-    )
-    .await
+    assert_that!(progress_id.as_str()).is_not_blank();
+    button
+        .wait_for_attr(
+            "aria-labelledby",
+            Some(&format!("test-button-pending-labelled {progress_id}")),
+        )
+        .await?;
+    Ok(())
 }
 
 /// "disables press when in pending state for context": a pending dialog trigger gets focus but
 /// doesn't open its dialog.
-async fn pending_trigger(page: &ButtonPage<'_>) -> Result<(), Report> {
-    page.click_element_with_id("test-button-pending-trigger")
+async fn pending_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-button-pending-trigger")
+        .await?
+        .click()
         .await?;
-    page.wait_for_text("test-button-pending-trigger-focused", "true")
+    page.element("#test-button-pending-trigger-focused")
+        .await?
+        .wait_for_inner_text("true")
         .await?;
-    stays!(
-        "open dialogs",
-        0,
-        page.count_matching("[role=dialog]").await?
-    );
+    page.count_stays("[role=dialog]", 0).await?;
     Ok(())
 }

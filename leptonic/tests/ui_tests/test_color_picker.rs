@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The `ColorPicker` atom: a swatch, an HSV area, a hue slider and a hex field without their
 /// own values share the picker's color, each in its own color space.
@@ -24,60 +21,91 @@ impl BrowserTest<str> for ColorPickerTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/color-picker").await?;
 
-        // "renders".
-        let swatch = driver.find(By::Css("#test-cp-swatch [role=img]")).await?;
-        assert_that!(swatch.attr("aria-label").await?).is_equal_to(Some("vibrant red".to_owned()));
-        // The area's visible input is its x (saturation, 0 to 1 here; react-aria: 0 to 100).
-        let saturation = driver
-            .find(By::Css(
-                "#test-cp-area input[type=range]:not([aria-hidden=true])",
-            ))
-            .await?;
-        let hue = driver
-            .find(By::Css("#test-cp-hue input[type=range]"))
-            .await?;
-        assert_that!(saturation.prop("value").await?).is_equal_to(Some("1".to_owned()));
-        assert_that!(hue.prop("value").await?).is_equal_to(Some("0".to_owned()));
-        let field = driver.find(By::Css("#test-cp-field input")).await?;
-        assert_that!(field.prop("value").await?).is_equal_to(Some("#FF0000".to_owned()));
+        cases!(shared_color(&page), alpha(&page));
 
-        field.focus().await?;
-        // Clear it (End would step to white: the field has a spin button's keys).
-        page.send_keys_to_active(Key::Control + "a").await?;
-        page.send_keys_to_active(Key::Backspace).await?;
-        page.send_keys_to_active("00f").await?;
-        page.send_keys_to_active(Key::Tab).await?;
-
-        page.wait_for_attr(&swatch, "aria-label", Some("dark vibrant blue"))
-            .await?;
-        // The swatch changed: the other parts did in the same update.
-        assert_that!(hue.prop("value").await?).is_equal_to(Some("240".to_owned()));
-        assert_that!(saturation.prop("value").await?).is_equal_to(Some("1".to_owned()));
-        assert_that!(field.prop("value").await?).is_equal_to(Some("#0000FF".to_owned()));
-        page.wait_for_text("test-cp-log", "0000FF").await?;
-
-        // Alpha (react-aria's colors all have one): an alpha slider's value text names no color,
-        // the swatch says how transparent the color is, and opaque parts keep the alpha.
-        let alpha = driver
-            .find(By::Css("#test-cp-alpha input[type=range]"))
-            .await?;
-        assert_that!(alpha.attr("aria-valuetext").await?).is_equal_to(Some("100%".to_owned()));
-        alpha.focus().await?;
-        page.send_keys_to_active(Key::PageDown).await?;
-        page.wait_for_attr(&alpha, "aria-valuetext", Some("90%"))
-            .await?;
-        page.wait_for_attr(
-            &swatch,
-            "aria-label",
-            Some("dark vibrant blue, 10% transparent"),
-        )
-        .await?;
-        hue.focus().await?;
-        page.send_keys_to_active(Key::Home).await?;
-        page.wait_for_attr(&swatch, "aria-label", Some("vibrant red, 10% transparent"))
-            .await?;
-        assert_that!(alpha.attr("aria-valuetext").await?).is_equal_to(Some("90%".to_owned()));
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
+}
+
+async fn swatch(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-cp-swatch [role=img]").await
+}
+
+/// The area's visible input is its x (saturation, 0 to 1 here; react-aria: 0 to 100).
+async fn saturation(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-cp-area input[type=range]:not([aria-hidden=true])")
+        .await
+}
+
+async fn hue(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-cp-hue input[type=range]").await
+}
+
+/// "renders"; the parts follow a color typed into the field.
+async fn shared_color(page: &Page<'_>) -> Result<(), Report> {
+    let swatch = swatch(page).await?;
+    assert_that!(swatch.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("vibrant red");
+    let saturation = saturation(page).await?;
+    let hue = hue(page).await?;
+    assert_that!(saturation.value().await?)
+        .get_some()
+        .is_equal_to("1");
+    assert_that!(hue.value().await?).get_some().is_equal_to("0");
+    let field = page.element("#test-cp-field input").await?;
+    assert_that!(field.value().await?)
+        .get_some()
+        .is_equal_to("#FF0000");
+
+    field.focus().await?;
+    // Clear it (End would step to white: the field has a spin button's keys).
+    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(Key::Backspace).await?;
+    page.send_keys("00f").await?;
+    page.send_keys(Key::Tab).await?;
+
+    swatch
+        .wait_for_attr("aria-label", Some("dark vibrant blue"))
+        .await?;
+    // The swatch changed: the other parts did in the same update.
+    assert_that!(hue.value().await?)
+        .get_some()
+        .is_equal_to("240");
+    assert_that!(saturation.value().await?)
+        .get_some()
+        .is_equal_to("1");
+    assert_that!(field.value().await?)
+        .get_some()
+        .is_equal_to("#0000FF");
+    page.element("#test-cp-log")
+        .await?
+        .wait_for_inner_text("0000FF")
+        .await?;
+    Ok(())
+}
+
+/// Alpha (react-aria's colors all have one): an alpha slider's value text names no color, the
+/// swatch says how transparent the color is, and opaque parts keep the alpha.
+async fn alpha(page: &Page<'_>) -> Result<(), Report> {
+    let swatch = swatch(page).await?;
+    let alpha = page.element("#test-cp-alpha input[type=range]").await?;
+    assert_that!(alpha.attr("aria-valuetext").await?)
+        .get_some()
+        .is_equal_to("100%");
+    alpha.focus().await?;
+    page.send_keys(Key::PageDown).await?;
+    alpha.wait_for_attr("aria-valuetext", Some("90%")).await?;
+    swatch
+        .wait_for_attr("aria-label", Some("dark vibrant blue, 10% transparent"))
+        .await?;
+    hue(page).await?.focus().await?;
+    page.send_keys(Key::Home).await?;
+    swatch
+        .wait_for_attr("aria-label", Some("vibrant red, 10% transparent"))
+        .await?;
+    assert_that!(alpha.attr("aria-valuetext").await?)
+        .get_some()
+        .is_equal_to("90%");
+    Ok(())
 }

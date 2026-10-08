@@ -163,12 +163,17 @@ leptonic-theme = { version = "0.5", path = "../leptonic-theme", default-features
 # executor is installed is dropped instead of panicking (tests without the helper).
 any_spawner = { version = "0.3.0", default-features = false, features = ["tracing"] }
 assertr = { version = "0.7.1", default-features = false, features = ["std", "num"] }
-browser-test = { version = "0.5.0", default-features = false }
+# `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
+# without compiling `aws-lc-rs`.
+browser-test = { path = "../../browser-test", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
 leptos-browser-test = { version = "0.3.0", default-features = false }
 # `effects`: Effects run in native unit tests (`testing::with_owner`); Leptos enables it only for csr/hydrate.
 reactive_graph = { version = "0.2.15", default-features = false, features = ["effects"] }
 rootcause = { version = "0.13.0", default-features = false }
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"] }
+# The `thirtyfour` that `browser-test` re-exports, with Chrome DevTools access (`driver.cdp()`).
+thirtyfour = { version = "0.37.5", default-features = false, features = ["cdp"] }
 tokio = { version = "1.53.2", features = ["rt", "rt-multi-thread", "macros", "time"], default-features = false }
 tracing = { version = "0.1.44", default-features = false }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "registry", "ansi", "std"] }

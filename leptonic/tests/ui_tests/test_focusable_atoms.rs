@@ -3,13 +3,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The `Focusable` atom: its focus handling goes onto the child, which gets a `tabindex` unless it
 /// has one; `Focusable` and `Pressable` children are custom tooltip triggers.
@@ -24,72 +21,97 @@ impl BrowserTest<str> for FocusableAtomTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/focusable").await?;
-
-        // "should apply focusable props to child element": focusable by Tab, focus handlers.
-        let focusable = page.element("test-focusable").await?;
-        page.wait_for_attr(&focusable, "tabindex", Some("0"))
-            .await?;
-        page.element("test-focusable-before").await?.focus().await?;
-        page.press_tab().await?;
-        page.wait_for_active_id("test-focusable").await?;
-        page.wait_for_text("test-focusable-log", "focus").await?;
-
-        // "supports isDisabled", "supports excludeFromTabOrder".
-        let disabled = page.element("test-focusable-disabled").await?;
-        assert_that!(disabled.attr("tabindex").await?).is_none();
-        let excluded = page.element("test-focusable-excluded").await?;
-        page.wait_for_attr(&excluded, "tabindex", Some("-1"))
-            .await?;
-
-        // Tab skips the disabled, the excluded and the merged one (`tabindex="-1"` of its own) onto
-        // the trigger: "should support custom Focusable trigger on focus".
-        page.press_tab().await?;
-        page.wait_for_active_id("test-focusable-trigger").await?;
-        let trigger = page.element("test-focusable-trigger").await?;
-        page.wait_for_selector("[role=tooltip]").await?;
-        // Visible once it faded in.
-        page.wait_for_selector_text("[role=tooltip]", "Focusable tooltip")
-            .await?;
-        let tooltip = page.css("[role=tooltip]").await?;
-        let tooltip_id = tooltip.attr("id").await?;
-        assert_that!(trigger.attr("aria-describedby").await?).is_equal_to(tooltip_id);
-
-        // "should should merge with existing props": the child's own `tabindex` stays, both focus
-        // handlers run.
-        let merged = page.element("test-focusable-merged").await?;
-        assert_that!(merged.attr("tabindex").await?).is_equal_to(Some("-1".to_owned()));
-        merged.focus().await?;
-        page.wait_for_text("test-focusable-log", "focus, blur, own focus, merged focus")
-            .await?;
-
-        // "should support custom Pressable trigger": on hover.
-        hover(driver, &page.element("test-focusable-log").await?).await?;
-        page.element("test-focusable-before").await?.click().await?;
-        page.wait_for_no_selector("[role=tooltip]").await?;
-        let pressable = page.element("test-pressable-trigger").await?;
-        hover(driver, &pressable).await?;
-        page.wait_for_selector("[role=tooltip]").await?;
-        let tooltip = page.css("[role=tooltip]").await?;
-        assert_that!(tooltip.text().await?).is_equal_to("Pressable tooltip".to_owned());
-        let tooltip_id = tooltip.attr("id").await?;
-        assert_that!(pressable.attr("aria-describedby").await?).is_equal_to(tooltip_id);
-
-        // "supports autoFocus".
-        page.element("test-focusable-mount-auto")
-            .await?
-            .click()
-            .await?;
-        page.wait_for_active_id("test-focusable-auto").await?;
-
-        page.expect_no_page_errors().await
+        cases!(
+            focusable_child(&page),
+            disabled_and_excluded(&page),
+            focusable_tooltip_trigger(&page),
+            merged_props(&page),
+            pressable_tooltip_trigger(&page),
+            auto_focus(&page),
+        );
+        Ok(())
     }
 }
 
-async fn hover(driver: &WebDriver, element: &WebElement) -> Result<(), Report> {
-    driver
-        .action_chain()
-        .move_to_element_center(element)
-        .perform()
+/// "should apply focusable props to child element": focusable by Tab, focus handlers.
+async fn focusable_child(page: &Page<'_>) -> Result<(), Report> {
+    let focusable = page.element("#test-focusable").await?;
+    focusable.wait_for_attr("tabindex", Some("0")).await?;
+    page.element("#test-focusable-before")
+        .await?
+        .focus()
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&focusable).await?;
+    page.element("#test-focusable-log")
+        .await?
+        .wait_for_inner_text("focus")
+        .await?;
+    Ok(())
+}
+
+/// "supports isDisabled", "supports excludeFromTabOrder".
+async fn disabled_and_excluded(page: &Page<'_>) -> Result<(), Report> {
+    let disabled = page.element("#test-focusable-disabled").await?;
+    assert_that!(disabled.attr("tabindex").await?).is_none();
+    let excluded = page.element("#test-focusable-excluded").await?;
+    excluded.wait_for_attr("tabindex", Some("-1")).await?;
+    Ok(())
+}
+
+/// Tab skips the disabled, the excluded and the merged one (`tabindex="-1"` of its own) onto the
+/// trigger: "should support custom Focusable trigger on focus".
+async fn focusable_tooltip_trigger(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-focusable-trigger").await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&trigger).await?;
+    // Visible once it faded in.
+    let tooltip = page.element("[role=tooltip]").await?;
+    tooltip.wait_for_inner_text("Focusable tooltip").await?;
+    let tooltip_id = tooltip.id().await?;
+    assert_that!(trigger.attr("aria-describedby").await?).is_equal_to(tooltip_id);
+    Ok(())
+}
+
+/// "should should merge with existing props": the child's own `tabindex` stays, both focus
+/// handlers run.
+async fn merged_props(page: &Page<'_>) -> Result<(), Report> {
+    let merged = page.element("#test-focusable-merged").await?;
+    assert_that!(merged.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("-1");
+    merged.focus().await?;
+    page.element("#test-focusable-log")
+        .await?
+        .wait_for_inner_text("focus, blur, own focus, merged focus")
+        .await?;
+    Ok(())
+}
+
+/// "should support custom Pressable trigger": on hover.
+async fn pressable_tooltip_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-focusable-log").await?.hover().await?;
+    page.element("#test-focusable-before")
+        .await?
+        .click()
+        .await?;
+    page.wait_for_count("[role=tooltip]", 0).await?;
+    let pressable = page.element("#test-pressable-trigger").await?;
+    pressable.hover().await?;
+    let tooltip = page.element("[role=tooltip]").await?;
+    tooltip.wait_for_inner_text("Pressable tooltip").await?;
+    let tooltip_id = tooltip.id().await?;
+    assert_that!(pressable.attr("aria-describedby").await?).is_equal_to(tooltip_id);
+    Ok(())
+}
+
+/// "supports autoFocus".
+async fn auto_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-focusable-mount-auto")
+        .await?
+        .click()
+        .await?;
+    page.wait_for_focus(&page.element("#test-focusable-auto").await?)
         .await?;
     Ok(())
 }

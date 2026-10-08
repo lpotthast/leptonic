@@ -3,13 +3,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions, role},
+    polling::wait_for,
+};
 
 const LISTBOX: &str = "[role=listbox]";
 
@@ -27,58 +27,13 @@ impl BrowserTest<str> for ComboBoxCustomValueTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/combobox-forms").await?;
-        let input = input_in(&page, "#cbf-custom").await?;
-
-        // Select Kangaroo.
-        input.click().await?;
-        input.send_keys("Kan").await?;
-        expect_options(&page, &["Kangaroo"]).await?;
-        input.send_keys(Key::Down).await?;
-        input.send_keys(Key::Enter).await?;
-        page.wait_for_text("cbf-custom-changes", "[3]").await?;
-        wait_for!(
-            "the input value",
-            "Kangaroo".to_owned(),
-            input_value(&input).await?
+        cases!(
+            select_an_option(&page),
+            custom_text_on_blur(&page),
+            escape_keeps_custom_text(&page),
+            enter_commits_custom_text(&page),
         );
-
-        // Typed text matching no option is kept when focus leaves, and clears the selection.
-        input.send_keys(Key::Control + "a").await?;
-        input.send_keys("Wombat").await?;
-        page.wait_for_no_selector(LISTBOX).await?;
-        page.press_tab().await?;
-        page.wait_for_text("cbf-custom-changes", "[3]|[]").await?;
-        stays!(
-            "the input text",
-            "Wombat".to_owned(),
-            input_value(&input).await?
-        );
-        // The form submits the text (`allows_custom_value` submits the text, not the key).
-        assert_that!(form_data(&page, "cbf-custom", "animal").await?)
-            .is_equal_to(vec!["Wombat".to_owned()]);
-
-        // Escape without a selection keeps the custom text (react-stately `revert`).
-        input.click().await?;
-        input.send_keys("x").await?;
-        input.send_keys(Key::Escape).await?;
-        stays!(
-            "the input text",
-            "Wombatx".to_owned(),
-            input_value(&input).await?
-        );
-
-        // Enter commits custom text too; the (empty) value doesn't change again.
-        input.send_keys(Key::Control + "a").await?;
-        input.send_keys("Emu").await?;
-        input.send_keys(Key::Enter).await?;
-        stays!(
-            "the input text",
-            "Emu".to_owned(),
-            input_value(&input).await?
-        );
-        assert_that!(page.read_text_of("cbf-custom-changes").await?)
-            .is_equal_to("[3]|[]".to_owned());
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
@@ -95,69 +50,8 @@ impl BrowserTest<str> for ComboBoxValidationTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/combobox-forms").await?;
-
-        // Native: `required` on the input, the error once the form is checked.
-        let input = input_in(&page, "#cbf-required").await?;
-        let root = page.css("#cbf-required .leptonic-ComboBox").await?;
-        assert_that!(input.attr("required").await?).is_some();
-        assert_that!(input.attr("aria-required").await?).is_none();
-        assert_that!(input.attr("aria-describedby").await?).is_none();
-        assert_that!(is_valid(&page, &input).await?).is_false();
-        assert_that!(root.attr("data-invalid").await?).is_none();
-        assert_that!(root.attr("data-required").await?).is_equal_to(Some("true".to_owned()));
-
-        check_validity(&page, "cbf-required").await?;
-        page.wait_for_focus_on(&input, "the required combo box's input")
-            .await?;
-        page.wait_for_attr(&root, "data-invalid", Some("true"))
-            .await?;
-        assert_that!(described_by_text(&page, &input).await?).is_not_empty();
-
-        input.send_keys("C").await?;
-        page.by_role_and_text("option", "Cat")
-            .await?
-            .click()
-            .await?;
-        wait_for!(
-            "the input value",
-            "Cat".to_owned(),
-            input_value(&input).await?
-        );
-        assert_that!(is_valid(&page, &input).await?).is_true();
-        // The error stays until the value is committed (focus leaves).
-        assert_that!(input.attr("aria-describedby").await?).is_some();
-        page.press_tab().await?;
-        page.wait_for_attr(&input, "aria-describedby", None).await?;
-        page.wait_for_attr(&root, "data-invalid", None).await?;
-
-        // ARIA: `validate` runs on the value, its message shows right away.
-        let input = input_in(&page, "#cbf-validate").await?;
-        input.click().await?;
-        input.send_keys("Do").await?;
-        page.by_role_and_text("option", "Dog")
-            .await?
-            .click()
-            .await?;
-        wait_for!(
-            "the input value",
-            "Dog".to_owned(),
-            input_value(&input).await?
-        );
-        page.wait_for_attr(&input, "aria-invalid", Some("true"))
-            .await?;
-        wait_for!(
-            "the error",
-            "Dogs are not allowed".to_owned(),
-            described_by_text(&page, &input).await?
-        );
-        input.send_keys(Key::Control + "a").await?;
-        input.send_keys("Ca").await?;
-        page.by_role_and_text("option", "Cat")
-            .await?
-            .click()
-            .await?;
-        page.wait_for_attr(&input, "aria-invalid", None).await?;
-        page.expect_no_page_errors().await
+        cases!(native_validation(&page), aria_validation(&page));
+        Ok(())
     }
 }
 
@@ -174,99 +68,13 @@ impl BrowserTest<str> for ComboBoxMultipleTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/combobox-forms").await?;
-
-        // Multiple selection: the popover stays open, the input stays empty.
-        let input = input_in(&page, "#cbf-multiple").await?;
-        open_with_button(&page, "#cbf-multiple").await?;
-        let listbox = page.css(LISTBOX).await?;
-        assert_that!(listbox.attr("aria-multiselectable").await?)
-            .is_equal_to(Some("true".to_owned()));
-        expect_options(&page, &["Cat", "Dog", "Kangaroo"]).await?;
-        page.by_role_and_text("option", "Cat")
-            .await?
-            .click()
-            .await?;
-        page.wait_for_attr(
-            &page.by_role_and_text("option", "Cat").await?,
-            "aria-selected",
-            Some("true"),
-        )
-        .await?;
-        page.by_role_and_text("option", "Dog")
-            .await?
-            .click()
-            .await?;
-        page.wait_for_text("cbf-multiple-changes", "[1]|[1,2]")
-            .await?;
-        assert_that!(page.count_matching(LISTBOX).await?).is_equal_to(1);
-        assert_that!(input_value(&input).await?).is_equal_to(String::new());
-        assert_that!(form_data(&page, "cbf-multiple", "animals").await?)
-            .is_equal_to(vec!["1".to_owned(), "2".to_owned()]);
-        // Deselecting.
-        page.by_role_and_text("option", "Cat")
-            .await?
-            .click()
-            .await?;
-        page.wait_for_text("cbf-multiple-changes", "[1]|[1,2]|[2]")
-            .await?;
-        input.send_keys(Key::Escape).await?;
-        page.wait_for_no_selector(LISTBOX).await?;
-        // Form reset restores the (empty) default.
-        page.click_element_with_id("cbf-multiple-reset").await?;
-        wait_for!(
-            "the submitted animals",
-            vec![String::new()],
-            form_data(&page, "cbf-multiple", "animals").await?
+        cases!(
+            multiple_selection(&page),
+            multiple_form_reset(&page),
+            required_with_multiple_selection(&page),
+            form_value(&page),
         );
-
-        // Required with multiple selection: required only while nothing is selected.
-        let input = input_in(&page, "#cbf-multiple-required").await?;
-        let root = page
-            .css("#cbf-multiple-required .leptonic-ComboBox")
-            .await?;
-        assert_that!(input.attr("required").await?).is_some();
-        assert_that!(is_valid(&page, &input).await?).is_false();
-        check_validity(&page, "cbf-multiple-required").await?;
-        page.wait_for_attr(&root, "data-invalid", Some("true"))
-            .await?;
-        open_with_button(&page, "#cbf-multiple-required").await?;
-        page.by_role_and_text("option", "Cat")
-            .await?
-            .click()
-            .await?;
-        blur(&page).await?;
-        page.wait_for_attr(&input, "required", None).await?;
-        assert_that!(is_valid(&page, &input).await?).is_true();
-        page.wait_for_attr(&root, "data-invalid", None).await?;
-        assert_that!(hidden_values(&page, "#cbf-multiple-required").await?)
-            .is_equal_to(vec![("required-animals".to_owned(), "1".to_owned())]);
-        open_with_button(&page, "#cbf-multiple-required").await?;
-        page.by_role_and_text("option", "Cat")
-            .await?
-            .click()
-            .await?;
-        blur(&page).await?;
-        wait_for!(
-            "the input to be required again",
-            true,
-            input.attr("required").await?.is_some()
-        );
-        assert_that!(is_valid(&page, &input).await?).is_false();
-        assert_that!(hidden_values(&page, "#cbf-multiple-required").await?)
-            .is_equal_to(vec![("required-animals".to_owned(), String::new())]);
-
-        // `form_value`: the key in a hidden input (the input has no name), or the text.
-        let input = input_in(&page, "#cbf-key").await?;
-        assert_that!(input.attr("name").await?).is_none();
-        assert_that!(input_value(&input).await?).is_equal_to("Dog".to_owned());
-        assert_that!(hidden_values(&page, "#cbf-key").await?)
-            .is_equal_to(vec![("key-animal".to_owned(), "2".to_owned())]);
-        let input = input_in(&page, "#cbf-text").await?;
-        assert_that!(input.attr("name").await?).is_equal_to(Some("text-animal".to_owned()));
-        assert_that!(hidden_values(&page, "#cbf-text").await?).is_empty();
-        assert_that!(form_data(&page, "cbf-text", "text-animal").await?)
-            .is_equal_to(vec!["Dog".to_owned()]);
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
@@ -283,35 +91,8 @@ impl BrowserTest<str> for ComboBoxMenuTriggerTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/combobox-forms").await?;
-
-        // Focus opens the popover with all options, though the input holds "Do".
-        let input = input_in(&page, "#cbf-focus").await?;
-        input.click().await?;
-        page.wait_for_selector(LISTBOX).await?;
-        expect_options(&page, &["Cat", "Dog", "Kangaroo"]).await?;
-        page.wait_for_text("cbf-focus-open", "true:Some(Focus)")
-            .await?;
-        // Typing filters again.
-        input.send_keys("g").await?;
-        expect_options(&page, &["Dog"]).await?;
-        input.send_keys(Key::Escape).await?;
-        page.wait_for_no_selector(LISTBOX).await?;
-        page.wait_for_text("cbf-focus-open", "true:Some(Focus)|false:None")
-            .await?;
-
-        // Manual: typing doesn't open, ArrowDown does (with all options).
-        let input = input_in(&page, "#cbf-manual").await?;
-        input.click().await?;
-        input.send_keys("a").await?;
-        stays!("the open listboxes", 0, page.count_matching(LISTBOX).await?);
-        input.send_keys(Key::Down).await?;
-        page.wait_for_selector(LISTBOX).await?;
-        expect_options(&page, &["Cat", "Dog", "Kangaroo"]).await?;
-        page.wait_for_text("cbf-manual-open", "true:Some(Manual)")
-            .await?;
-        input.send_keys(Key::Escape).await?;
-        page.wait_for_no_selector(LISTBOX).await?;
-        page.expect_no_page_errors().await
+        cases!(focus_trigger(&page), manual_trigger(&page));
+        Ok(())
     }
 }
 
@@ -328,156 +109,51 @@ impl BrowserTest<str> for ComboBoxSectionsTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/combobox-forms").await?;
-
-        let input = input_in(&page, "#cbf-sections").await?;
-        input.click().await?;
-        input.send_keys("o").await?;
-        expect_options(&page, &["Dog", "Owl", "Parrot"]).await?;
-        // One group per section left, named by its heading; sections without matches are gone.
-        let groups = page
-            .driver
-            .find_all(By::Css("[role=listbox] [role=group]"))
-            .await?;
-        let mut names = Vec::new();
-        for group in &groups {
-            let id = group.attr("aria-labelledby").await?.unwrap_or_default();
-            names.push(page.element(&id).await?.text().await?);
-        }
-        assert_that!(names).is_equal_to(vec!["Animals".to_owned(), "Birds".to_owned()]);
-        input.send_keys("w").await?;
-        expect_options(&page, &["Owl"]).await?;
-        assert_that!(page.count_matching("[role=listbox] [role=group]").await?).is_equal_to(1);
-        // The disabled option is skipped.
-        input.send_keys(Key::Backspace).await?;
-        expect_options(&page, &["Dog", "Owl", "Parrot"]).await?;
-        assert_that!(
-            page.by_role_and_text("option", "Dog")
-                .await?
-                .attr("aria-disabled")
-                .await?
-        )
-        .is_equal_to(Some("true".to_owned()));
-        input.send_keys(Key::Down).await?;
-        wait_for!(
-            "the active descendant",
-            "Owl".to_owned(),
-            active_descendant_text(&page, &input).await?
+        cases!(
+            filtering_sections(&page),
+            disabled_option_is_skipped(&page),
+            enter_without_a_focused_option(&page),
         );
-        input.send_keys(Key::Enter).await?;
-        wait_for!(
-            "the input value",
-            "Owl".to_owned(),
-            input_value(&input).await?
-        );
-        page.wait_for_no_selector(LISTBOX).await?;
-
-        // Enter with the popover closed submits the form.
-        let input = input_in(&page, "#cbf-submit").await?;
-        input.click().await?;
-        input.send_keys(Key::Enter).await?;
-        page.wait_for_text("cbf-submits", "1").await?;
-        // Enter with the popover open but no focused option only commits (reverting the text).
-        input.send_keys("Ca").await?;
-        page.wait_for_selector(LISTBOX).await?;
-        // The number of options is announced when the popover opens without a focused option.
-        page.wait_for_selector_text(
-            "[data-live-announcer] [aria-live=assertive]",
-            "1 option available.",
-        )
-        .await?;
-        input.send_keys(Key::Enter).await?;
-        page.wait_for_no_selector(LISTBOX).await?;
-        wait_for!("the input value", String::new(), input_value(&input).await?);
-        stays!(
-            "the submissions",
-            "1".to_owned(),
-            page.read_text_of("cbf-submits").await?
-        );
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
 /// The combo box input inside `container`.
 async fn input_in(page: &Page<'_>, container: &str) -> Result<WebElement, Report> {
-    page.css(&format!("{container} [role=combobox]")).await
-}
-
-async fn input_value(input: &WebElement) -> Result<String, Report> {
-    Ok(input.prop("value").await?.unwrap_or_default())
-}
-
-async fn option_texts(page: &Page<'_>) -> Result<Vec<String>, Report> {
-    let mut texts = Vec::new();
-    for option in page
-        .driver
-        .find_all(By::Css("[role=listbox] [role=option]"))
-        .await?
-    {
-        texts.push(option.text().await?);
-    }
-    Ok(texts)
+    page.element(format!("{container} [role=combobox]")).await
 }
 
 /// Waits until the open listbox shows exactly `expected`.
 async fn expect_options(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    let expected: Vec<String> = expected.iter().map(|&text| text.to_owned()).collect();
-    wait_for!("the options", expected, option_texts(page).await?);
+    wait_for("the options")
+        .observing(|| page.inner_texts("[role=listbox] [role=option]"))
+        .to_be_equal_to(expected)
+        .await?;
     Ok(())
 }
 
 /// Opens the popover of the combo box in `container` with its button.
 async fn open_with_button(page: &Page<'_>, container: &str) -> Result<(), Report> {
-    page.css(&format!("{container} button[aria-haspopup]"))
+    page.element(format!("{container} button[aria-haspopup]"))
         .await?
         .click()
         .await?;
-    page.wait_for_selector(LISTBOX).await
+    page.element(LISTBOX).await?;
+    Ok(())
 }
 
-/// The text of the input's active descendant.
+/// The text of the input's active descendant (virtual focus), `""` without one.
 async fn active_descendant_text(page: &Page<'_>, input: &WebElement) -> Result<String, Report> {
     match input.attr("aria-activedescendant").await? {
-        Some(id) if !id.is_empty() => Ok(page.element(&id).await?.text().await?),
+        Some(id) if !id.is_empty() => page.element(format!("#{id}")).await?.inner_text().await,
         _ => Ok(String::new()),
     }
 }
 
-/// The text of the elements describing `element`.
-async fn described_by_text(page: &Page<'_>, element: &WebElement) -> Result<String, Report> {
-    let ids = element.attr("aria-describedby").await?.unwrap_or_default();
-    let mut texts = Vec::new();
-    for id in ids.split_whitespace() {
-        texts.push(page.element(id).await?.text().await?);
-    }
-    Ok(texts.join(" "))
-}
-
-async fn is_valid(page: &Page<'_>, element: &WebElement) -> Result<bool, Report> {
-    Ok(page
-        .driver
-        .execute(
-            "return arguments[0].validity.valid;",
-            vec![element.to_json()?],
-        )
-        .await?
-        .convert::<bool>()?)
-}
-
-async fn check_validity(page: &Page<'_>, form_id: &str) -> Result<(), Report> {
-    page.driver
-        .execute(
-            "document.getElementById(arguments[0]).checkValidity();",
-            vec![serde_json::Value::from(form_id)],
-        )
-        .await?;
-    Ok(())
-}
-
-/// Takes focus away from the active element.
-async fn blur(page: &Page<'_>) -> Result<(), Report> {
-    // In the next animation frame: until then, a press that keeps focus where it is (an option
-    // of the popover) swallows blurs of the focused element (react-aria's `preventFocus`), and a
-    // user can't blur within the frame of a click.
+/// Takes focus away from the focused element, in the next animation frame: until then, a press
+/// that keeps focus where it is (an option of the popover) swallows blurs of the focused element
+/// (react-aria's `preventFocus`), and a user can't blur within the frame of a click.
+async fn blur_in_the_next_frame(page: &Page<'_>) -> Result<(), Report> {
     page.driver
         .execute_async(
             "const done = arguments[0];
@@ -488,33 +164,348 @@ async fn blur(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// The values the form `form_id` submits under `name`.
-async fn form_data(page: &Page<'_>, form_id: &str, name: &str) -> Result<Vec<String>, Report> {
-    Ok(page
-        .driver
-        .execute(
-            "return new FormData(document.getElementById(arguments[0])).getAll(arguments[1]);",
-            vec![
-                serde_json::Value::from(form_id),
-                serde_json::Value::from(name),
-            ],
-        )
-        .await?
-        .convert::<Vec<String>>()?)
-}
-
 /// The names and values of the hidden inputs inside `container`.
 async fn hidden_values(page: &Page<'_>, container: &str) -> Result<Vec<(String, String)>, Report> {
     let mut values = Vec::new();
     for input in page
-        .driver
-        .find_all(By::Css(format!("{container} input[type=hidden]")))
+        .elements(format!("{container} input[type=hidden]"))
         .await?
     {
         values.push((
             input.attr("name").await?.unwrap_or_default(),
-            input.prop("value").await?.unwrap_or_default(),
+            input.value().await?.unwrap_or_default(),
         ));
     }
     Ok(values)
+}
+
+/// Selecting an option with the keyboard.
+async fn select_an_option(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-custom").await?;
+    input.click().await?;
+    input.send_keys("Kan").await?;
+    expect_options(page, &["Kangaroo"]).await?;
+    input.send_keys(Key::Down).await?;
+    input.send_keys(Key::Enter).await?;
+    page.element("#cbf-custom-changes")
+        .await?
+        .wait_for_inner_text("[3]")
+        .await?;
+    input.wait_for_prop("value", "Kangaroo").await?;
+    Ok(())
+}
+
+/// Typed text matching no option is kept when focus leaves and clears the selection; the form
+/// submits the text (`allows_custom_value` submits the text, not the key).
+async fn custom_text_on_blur(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-custom").await?;
+    input.send_keys(Key::Control + "a").await?;
+    input.send_keys("Wombat").await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    page.send_keys(Key::Tab).await?;
+    page.element("#cbf-custom-changes")
+        .await?
+        .wait_for_inner_text("[3]|[]")
+        .await?;
+    input.prop_stays("value", "Wombat").await?;
+    assert_that!(
+        page.element("#cbf-custom")
+            .await?
+            .form_values("animal")
+            .await?
+    )
+    .contains_exactly(["Wombat"]);
+    Ok(())
+}
+
+/// Escape without a selection keeps the custom text (react-stately `revert`).
+async fn escape_keeps_custom_text(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-custom").await?;
+    input.click().await?;
+    input.send_keys("x").await?;
+    input.send_keys(Key::Escape).await?;
+    input.prop_stays("value", "Wombatx").await?;
+    Ok(())
+}
+
+/// Enter commits custom text too; the (empty) value doesn't change again.
+async fn enter_commits_custom_text(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-custom").await?;
+    input.send_keys(Key::Control + "a").await?;
+    input.send_keys("Emu").await?;
+    input.send_keys(Key::Enter).await?;
+    input.prop_stays("value", "Emu").await?;
+    page.element("#cbf-custom-changes")
+        .await?
+        .inner_text_stays("[3]|[]")
+        .await?;
+    Ok(())
+}
+
+/// Native: `required` on the input, the error once the form is checked; it stays until the
+/// value is committed (focus leaves).
+async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-required").await?;
+    let root = page.element("#cbf-required .leptonic-ComboBox").await?;
+    assert_that!(input.attr("required").await?).is_some();
+    assert_that!(input.attr("aria-required").await?).is_none();
+    assert_that!(input.attr("aria-describedby").await?).is_none();
+    assert_that!(input.is_valid().await?).is_false();
+    assert_that!(root.attr("data-invalid").await?).is_none();
+    assert_that!(root.attr("data-required").await?)
+        .get_some()
+        .is_equal_to("true");
+
+    assert_that!(
+        page.element("#cbf-required")
+            .await?
+            .check_validity()
+            .await?
+    )
+    .is_false();
+    page.wait_for_focus(&input).await?;
+    root.wait_for_attr("data-invalid", Some("true")).await?;
+    // The browser's validation message.
+    assert_that!(input.referenced_text("aria-describedby").await?).is_not_blank();
+
+    input.send_keys("C").await?;
+    page.element(role("option").text("Cat"))
+        .await?
+        .click()
+        .await?;
+    input.wait_for_prop("value", "Cat").await?;
+    assert_that!(input.is_valid().await?).is_true();
+    assert_that!(input.attr("aria-describedby").await?).is_some();
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("aria-describedby", None).await?;
+    root.wait_for_attr("data-invalid", None).await?;
+    Ok(())
+}
+
+/// ARIA: `validate` runs on the value, its message shows right away.
+async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-validate").await?;
+    input.click().await?;
+    input.send_keys("Do").await?;
+    page.element(role("option").text("Dog"))
+        .await?
+        .click()
+        .await?;
+    input.wait_for_prop("value", "Dog").await?;
+    input.wait_for_attr("aria-invalid", Some("true")).await?;
+    wait_for("the error")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Dogs are not allowed")
+        .await?;
+    input.send_keys(Key::Control + "a").await?;
+    input.send_keys("Ca").await?;
+    page.element(role("option").text("Cat"))
+        .await?
+        .click()
+        .await?;
+    input.wait_for_attr("aria-invalid", None).await?;
+    Ok(())
+}
+
+/// Multiple selection: the popover stays open, the input stays empty, the form submits every
+/// key; pressing a selected option deselects it.
+async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-multiple").await?;
+    let changes = page.element("#cbf-multiple-changes").await?;
+    open_with_button(page, "#cbf-multiple").await?;
+    let listbox = page.element(LISTBOX).await?;
+    assert_that!(listbox.attr("aria-multiselectable").await?)
+        .get_some()
+        .is_equal_to("true");
+    expect_options(page, &["Cat", "Dog", "Kangaroo"]).await?;
+    let cat = page.element(role("option").text("Cat")).await?;
+    cat.click().await?;
+    cat.wait_for_attr("aria-selected", Some("true")).await?;
+    page.element(role("option").text("Dog"))
+        .await?
+        .click()
+        .await?;
+    changes.wait_for_inner_text("[1]|[1,2]").await?;
+    assert_that!(page.count(LISTBOX).await?).is_equal_to(1);
+    assert_that!(input.value().await?).get_some().is_empty();
+    assert_that!(
+        page.element("#cbf-multiple")
+            .await?
+            .form_values("animals")
+            .await?
+    )
+    .contains_exactly(["1", "2"]);
+    cat.click().await?;
+    changes.wait_for_inner_text("[1]|[1,2]|[2]").await?;
+    input.send_keys(Key::Escape).await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    Ok(())
+}
+
+/// Form reset restores the (empty) default.
+async fn multiple_form_reset(page: &Page<'_>) -> Result<(), Report> {
+    let form = page.element("#cbf-multiple").await?;
+    page.element("#cbf-multiple-reset").await?.click().await?;
+    wait_for("the submitted animals")
+        .observing(|| form.form_values("animals"))
+        .to_be_equal_to(vec![String::new()])
+        .await?;
+    Ok(())
+}
+
+/// Required with multiple selection: required only while nothing is selected.
+async fn required_with_multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-multiple-required").await?;
+    let root = page
+        .element("#cbf-multiple-required .leptonic-ComboBox")
+        .await?;
+    assert_that!(input.attr("required").await?).is_some();
+    assert_that!(input.is_valid().await?).is_false();
+    assert_that!(
+        page.element("#cbf-multiple-required")
+            .await?
+            .check_validity()
+            .await?
+    )
+    .is_false();
+    root.wait_for_attr("data-invalid", Some("true")).await?;
+    open_with_button(page, "#cbf-multiple-required").await?;
+    page.element(role("option").text("Cat"))
+        .await?
+        .click()
+        .await?;
+    blur_in_the_next_frame(page).await?;
+    input.wait_for_attr("required", None).await?;
+    assert_that!(input.is_valid().await?).is_true();
+    root.wait_for_attr("data-invalid", None).await?;
+    assert_that!(hidden_values(page, "#cbf-multiple-required").await?)
+        .contains_exactly([("required-animals".to_owned(), "1".to_owned())]);
+    open_with_button(page, "#cbf-multiple-required").await?;
+    page.element(role("option").text("Cat"))
+        .await?
+        .click()
+        .await?;
+    blur_in_the_next_frame(page).await?;
+    input.wait_for_attr("required", Some("true")).await?;
+    assert_that!(input.is_valid().await?).is_false();
+    assert_that!(hidden_values(page, "#cbf-multiple-required").await?)
+        .contains_exactly([("required-animals".to_owned(), String::new())]);
+    Ok(())
+}
+
+/// `form_value`: the key in a hidden input (the input has no name), or the text.
+async fn form_value(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-key").await?;
+    assert_that!(input.attr("name").await?).is_none();
+    assert_that!(input.value().await?)
+        .get_some()
+        .is_equal_to("Dog");
+    assert_that!(hidden_values(page, "#cbf-key").await?)
+        .contains_exactly([("key-animal".to_owned(), "2".to_owned())]);
+    let input = input_in(page, "#cbf-text").await?;
+    assert_that!(input.attr("name").await?)
+        .get_some()
+        .is_equal_to("text-animal");
+    assert_that!(hidden_values(page, "#cbf-text").await?).is_empty();
+    assert_that!(
+        page.element("#cbf-text")
+            .await?
+            .form_values("text-animal")
+            .await?
+    )
+    .contains_exactly(["Dog"]);
+    Ok(())
+}
+
+/// Focus opens the popover with all options, though the input holds "Do"; typing filters again.
+async fn focus_trigger(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-focus").await?;
+    let open_changes = page.element("#cbf-focus-open").await?;
+    input.click().await?;
+    expect_options(page, &["Cat", "Dog", "Kangaroo"]).await?;
+    open_changes.wait_for_inner_text("true:Some(Focus)").await?;
+    input.send_keys("g").await?;
+    expect_options(page, &["Dog"]).await?;
+    input.send_keys(Key::Escape).await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    open_changes
+        .wait_for_inner_text("true:Some(Focus)|false:None")
+        .await?;
+    Ok(())
+}
+
+/// Manual: typing doesn't open, ArrowDown does (with all options).
+async fn manual_trigger(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-manual").await?;
+    input.click().await?;
+    input.send_keys("a").await?;
+    page.count_stays(LISTBOX, 0).await?;
+    input.send_keys(Key::Down).await?;
+    expect_options(page, &["Cat", "Dog", "Kangaroo"]).await?;
+    page.element("#cbf-manual-open")
+        .await?
+        .wait_for_inner_text("true:Some(Manual)")
+        .await?;
+    input.send_keys(Key::Escape).await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    Ok(())
+}
+
+/// One group per section with matches, named by its heading; sections without matches are gone.
+async fn filtering_sections(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-sections").await?;
+    input.click().await?;
+    input.send_keys("o").await?;
+    expect_options(page, &["Dog", "Owl", "Parrot"]).await?;
+    let mut names = Vec::new();
+    for group in page.elements("[role=listbox] [role=group]").await? {
+        names.push(group.referenced_text("aria-labelledby").await?);
+    }
+    assert_that!(names).contains_exactly(["Animals", "Birds"]);
+    input.send_keys("w").await?;
+    expect_options(page, &["Owl"]).await?;
+    assert_that!(page.count("[role=listbox] [role=group]").await?).is_equal_to(1);
+    Ok(())
+}
+
+/// The disabled option is skipped by the keyboard.
+async fn disabled_option_is_skipped(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-sections").await?;
+    input.send_keys(Key::Backspace).await?;
+    expect_options(page, &["Dog", "Owl", "Parrot"]).await?;
+    let dog = page.element(role("option").text("Dog")).await?;
+    assert_that!(dog.attr("aria-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    input.send_keys(Key::Down).await?;
+    wait_for("the active descendant's text")
+        .observing(|| active_descendant_text(page, &input))
+        .to_be_equal_to("Owl")
+        .await?;
+    input.send_keys(Key::Enter).await?;
+    input.wait_for_prop("value", "Owl").await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    Ok(())
+}
+
+/// Enter with the popover closed submits the form; with the popover open but no focused option
+/// it only commits (reverting the text). The number of options is announced when the popover
+/// opens without a focused option.
+async fn enter_without_a_focused_option(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_in(page, "#cbf-submit").await?;
+    let submits = page.element("#cbf-submits").await?;
+    input.click().await?;
+    input.send_keys(Key::Enter).await?;
+    submits.wait_for_inner_text("1").await?;
+    input.send_keys("Ca").await?;
+    page.element(LISTBOX).await?;
+    page.element("[data-live-announcer] [aria-live=assertive]")
+        .await?
+        .wait_for_inner_text("1 option available.")
+        .await?;
+    input.send_keys(Key::Enter).await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    input.wait_for_prop("value", "").await?;
+    submits.inner_text_stays("1").await?;
+    Ok(())
 }

@@ -3,13 +3,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The `ColorSwatch` atom (named after its color, the label added) and the `ColorSwatchPicker`
 /// atoms (a listbox of swatches, picked with the keyboard).
@@ -25,85 +22,110 @@ impl BrowserTest<str> for ColorSwatchTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/color-swatch").await?;
 
-        // "should render a swatch", "custom aria-label", "custom aria-labelledby", "custom
-        // colorName".
-        let plain = img(&page, "test-csw-plain").await?;
-        assert_that!(attr(&plain, "aria-label").await?).is_equal_to(Some("vibrant red".to_owned()));
-        assert_that!(attr(&plain, "aria-roledescription").await?)
-            .is_equal_to(Some("color swatch".to_owned()));
-        assert_that!(plain.css_value("background-color").await?)
-            .is_equal_to("rgba(255, 0, 0, 1)".to_owned());
-        let label = img(&page, "test-csw-label").await?;
-        assert_that!(attr(&label, "aria-label").await?)
-            .is_equal_to(Some("vibrant red, Background".to_owned()));
-        let labelledby = img(&page, "test-csw-labelledby").await?;
-        let id = attr(&labelledby, "id").await?.unwrap_or_default();
-        assert_that!(attr(&labelledby, "aria-labelledby").await?)
-            .is_equal_to(Some(format!("{id} test-csw-label-id")));
-        let name = img(&page, "test-csw-name").await?;
-        assert_that!(attr(&name, "aria-label").await?)
-            .is_equal_to(Some("Fire truck red".to_owned()));
+        cases!(
+            swatches(&page),
+            picker_default_value(&page),
+            picker_keyboard(&page),
+            picker_disabled_items(&page),
+            swatch_in_item(&page),
+        );
 
-        // "renders a listbox", "supports defaultValue".
-        let listbox = page.css("#test-csw-default [role=listbox]").await?;
-        assert_that!(attr(&listbox, "aria-label").await?)
-            .is_equal_to(Some("Color swatches".to_owned()));
-        let defaults = options(&page, "test-csw-default").await?;
-        assert_that!(defaults.len()).is_equal_to(4);
-        assert_that!(attr(&defaults[2], "aria-selected").await?)
-            .is_equal_to(Some("true".to_owned()));
-        let swatch = defaults[0].find(By::Css("[role=img]")).await?;
-        assert_that!(attr(&swatch, "aria-label").await?)
-            .is_equal_to(Some("vibrant red".to_owned()));
-
-        // "handles keyboard input".
-        let swatches = options(&page, "test-csw-keyboard").await?;
-        page.element("test-csw-before").await?.focus().await?;
-        page.press_tab().await?;
-        page.wait_for_focus_on(&swatches[0], "the first swatch")
-            .await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_focus_on(&swatches[1], "the second swatch")
-            .await?;
-        page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_text("test-csw-log", "00FF00").await?;
-        page.wait_for_attr(&swatches[1], "aria-selected", Some("true"))
-            .await?;
-
-        // "isDisabled" items: not selectable, skipped by the arrow keys.
-        let items = options(&page, "test-csw-disabled").await?;
-        assert_that!(attr(&items[1], "aria-disabled").await?).is_equal_to(Some("true".to_owned()));
-        items[0].focus().await?;
-        page.wait_for_focus_on(&items[0], "the first swatch")
-            .await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_focus_on(&items[2], "the third swatch (the second is disabled)")
-            .await?;
-
-        // A swatch in an item shows the item's color, also inside a `ColorPicker`.
-        let in_picker = options(&page, "test-csw-in-picker").await?;
-        let swatch = in_picker[1].find(By::Css("[role=img]")).await?;
-        assert_that!(attr(&swatch, "aria-label").await?)
-            .is_equal_to(Some("very light vibrant green".to_owned()));
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
+/// The swatch inside `#id`.
 async fn img(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
-    Ok(page
-        .driver
-        .find(By::Css(format!("#{id} [role=img]")))
-        .await?)
+    page.element(format!("#{id} [role=img]")).await
 }
 
+/// The items of the swatch picker inside `#id`.
 async fn options(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
-    Ok(page
-        .driver
-        .find_all(By::Css(format!("#{id} [role=option]")))
-        .await?)
+    page.elements(format!("#{id} [role=option]")).await
 }
 
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
+/// "should render a swatch", "custom aria-label", "custom aria-labelledby", "custom colorName".
+async fn swatches(page: &Page<'_>) -> Result<(), Report> {
+    let plain = img(page, "test-csw-plain").await?;
+    assert_that!(plain.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("vibrant red");
+    assert_that!(plain.attr("aria-roledescription").await?)
+        .get_some()
+        .is_equal_to("color swatch");
+    assert_that!(plain.css_value("background-color").await?).is_equal_to("rgba(255, 0, 0, 1)");
+    let label = img(page, "test-csw-label").await?;
+    assert_that!(label.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("vibrant red, Background");
+    let labelledby = img(page, "test-csw-labelledby").await?;
+    let id = labelledby.id().await?.unwrap_or_default();
+    assert_that!(labelledby.attr("aria-labelledby").await?)
+        .get_some()
+        .is_equal_to(format!("{id} test-csw-label-id"));
+    let name = img(page, "test-csw-name").await?;
+    assert_that!(name.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Fire truck red");
+    Ok(())
+}
+
+/// "renders a listbox", "supports defaultValue".
+async fn picker_default_value(page: &Page<'_>) -> Result<(), Report> {
+    let listbox = page.element("#test-csw-default [role=listbox]").await?;
+    assert_that!(listbox.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Color swatches");
+    let defaults = options(page, "test-csw-default").await?;
+    assert_that!(defaults).has_length(4);
+    assert_that!(defaults[2].attr("aria-selected").await?)
+        .get_some()
+        .is_equal_to("true");
+    let swatch = defaults[0].element("[role=img]").await?;
+    assert_that!(swatch.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("vibrant red");
+    Ok(())
+}
+
+/// "handles keyboard input".
+async fn picker_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    let swatches = options(page, "test-csw-keyboard").await?;
+    page.element("#test-csw-before").await?.focus().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&swatches[0]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&swatches[1]).await?;
+    page.send_keys(Key::Enter).await?;
+    page.element("#test-csw-log")
+        .await?
+        .wait_for_inner_text("00FF00")
+        .await?;
+    swatches[1]
+        .wait_for_attr("aria-selected", Some("true"))
+        .await?;
+    Ok(())
+}
+
+/// "isDisabled" items: not selectable, skipped by the arrow keys.
+async fn picker_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+    let items = options(page, "test-csw-disabled").await?;
+    assert_that!(items[1].attr("aria-disabled").await?)
+        .get_some()
+        .is_equal_to("true");
+    items[0].focus().await?;
+    page.wait_for_focus(&items[0]).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&items[2]).await?;
+    Ok(())
+}
+
+/// A swatch in an item shows the item's color, also inside a `ColorPicker`.
+async fn swatch_in_item(page: &Page<'_>) -> Result<(), Report> {
+    let in_picker = options(page, "test-csw-in-picker").await?;
+    let swatch = in_picker[1].element("[role=img]").await?;
+    assert_that!(swatch.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("very light vibrant green");
+    Ok(())
 }

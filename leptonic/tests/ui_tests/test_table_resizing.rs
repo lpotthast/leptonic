@@ -3,13 +3,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions, xpath},
+    polling::wait_for,
+};
 
 const PATH: &str = "/atoms/table-resizing";
 
@@ -32,14 +32,16 @@ impl BrowserTest<str> for TableResizingTests {
         driver.set_window_rect(0, 0, 1400, 1000).await?;
         page.goto_path(PATH).await?;
 
-        initial_widths(&page).await?;
-        resizing_each_column(&page).await?;
-        cannot_resize_below_the_min_width(&page).await?;
-        resizing_the_first_column_preserves_fr_ratios(&page).await?;
-        resizing_the_last_column_locks_the_columns_before_it(&page).await?;
-        on_resize_start_and_end_without_moving(&page).await?;
-        keyboard_resizing(&page).await?;
-        exiting_keyboard_resizing(&page).await?;
+        cases!(
+            initial_widths(&page),
+            resizing_each_column(&page),
+            cannot_resize_below_the_min_width(&page),
+            resizing_the_first_column_preserves_fr_ratios(&page),
+            resizing_the_last_column_locks_the_columns_before_it(&page),
+            on_resize_start_and_end_without_moving(&page),
+            keyboard_resizing(&page),
+            exiting_keyboard_resizing(&page),
+        );
 
         Ok(())
     }
@@ -47,49 +49,45 @@ impl BrowserTest<str> for TableResizingTests {
 
 /// The `style.width` of the column headers of the table `label`.
 async fn widths(page: &Page<'_>, label: &str) -> Result<Vec<f64>, Report> {
-    let ret = page
-        .driver
-        .execute(
-            "return Array.from(document.querySelector(\"[role=grid][aria-label='\" + arguments[0] \
-             + \"'] thead tr\").children).map(c => Number(c.style.width.replace('px', '')))",
-            vec![serde_json::Value::from(label)],
-        )
+    let header_row = page
+        .element(format!("[role=grid][aria-label='{label}'] thead tr"))
         .await?;
-    Ok(ret.convert()?)
+    page.eval(
+        "return Array.from(arguments[0].children).map(cell => parseFloat(cell.style.width));",
+        vec![header_row.to_json()?],
+    )
+    .await
 }
 
+/// Wait until the column headers of the table `label` have the widths `expected`.
 async fn expect_widths(page: &Page<'_>, label: &str, expected: &[f64]) -> Result<(), Report> {
-    assert_that!(widths(page, label).await?).is_equal_to(expected.to_vec());
+    wait_for(format!("the column widths of {label}"))
+        .observing(|| widths(page, label))
+        .to_be_equal_to(expected.to_vec())
+        .await?;
     Ok(())
 }
 
 async fn column_header(page: &Page<'_>, label: &str, column: &str) -> Result<WebElement, Report> {
-    page.css(&format!("[role=grid][aria-label='{label}']"))
+    page.element(format!("[role=grid][aria-label='{label}']"))
         .await?
-        .find(By::XPath(format!(
+        .element(xpath(format!(
             ".//*[@role='columnheader'][normalize-space(.)='{column}']"
         )))
         .await
-        .map_err(Into::into)
 }
 
 async fn resizer(page: &Page<'_>, label: &str, column: &str) -> Result<WebElement, Report> {
     column_header(page, label, column)
         .await?
-        .find(By::Css("[data-column-resizer]"))
+        .element("[data-column-resizer]")
         .await
-        .map_err(Into::into)
 }
 
 /// Drag the resizer of `column` by `delta` pixels with the mouse.
 async fn resize_col(page: &Page<'_>, label: &str, column: &str, delta: i64) -> Result<(), Report> {
     let resizer = resizer(page, label, column).await?;
-    page.driver
-        .execute(
-            "arguments[0].scrollIntoView({block: 'nearest'})",
-            vec![resizer.to_json()?],
-        )
-        .await?;
+    resizer.scroll_into_view().await?;
     let chain = page
         .driver
         .action_chain()
@@ -104,10 +102,6 @@ async fn resize_col(page: &Page<'_>, label: &str, column: &str, delta: i64) -> R
     Ok(())
 }
 
-async fn expect_text(page: &Page<'_>, id: &str, expected: &str) -> Result<(), Report> {
-    page.wait_for_text(id, expected).await
-}
-
 async fn initial_widths(page: &Page<'_>) -> Result<(), Report> {
     expect_widths(page, "Pokemon", &[100.0, 100.0, 100.0, 100.0, 500.0]).await?;
     expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
@@ -115,22 +109,32 @@ async fn initial_widths(page: &Page<'_>) -> Result<(), Report> {
 
     // The resizers are range inputs labelled by themselves and their column header.
     let header = column_header(page, "Pokemon", "Name").await?;
-    let input = header.find(By::Css("input[type=range]")).await?;
+    let input = header.element("input[type=range]").await?;
     let input_id = input.attr("id").await?.unwrap_or_default();
     let header_id = header.attr("id").await?.unwrap_or_default();
     assert_that!(input.attr("aria-labelledby").await?)
-        .is_equal_to(Some(format!("{input_id} {header_id}")));
-    assert_that!(input.attr("aria-label").await?).is_equal_to(Some("Resizer".to_owned()));
-    assert_that!(input.attr("aria-valuetext").await?).is_equal_to(Some("100 pixels".to_owned()));
-    assert_that!(input.attr("min").await?).is_equal_to(Some("75".to_owned()));
-    assert_that!(input.attr("max").await?).is_equal_to(Some("9007199254740991".to_owned()));
+        .get_some()
+        .is_equal_to(format!("{input_id} {header_id}"));
+    assert_that!(input.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Resizer");
+    assert_that!(input.attr("aria-valuetext").await?)
+        .get_some()
+        .is_equal_to("100 pixels");
+    assert_that!(input.attr("min").await?)
+        .get_some()
+        .is_equal_to("75");
+    assert_that!(input.attr("max").await?)
+        .get_some()
+        .is_equal_to("9007199254740991");
     assert_that!(
         resizer(page, "Pokemon", "Name")
             .await?
             .attr("data-resizable-direction")
             .await?
     )
-    .is_equal_to(Some("both".to_owned()));
+    .get_some()
+    .is_equal_to("both");
     Ok(())
 }
 
@@ -202,15 +206,32 @@ async fn resizing_each_column(page: &Page<'_>) -> Result<(), Report> {
         page.goto_path(PATH).await?;
         resize_col(page, "Pokemon", column, delta).await?;
         expect_widths(page, "Pokemon", &expected).await?;
-        expect_text(page, "test-pokemon-resize-count", "1").await?;
-        expect_text(page, "test-pokemon-resize", sizes).await?;
-        expect_text(page, "test-pokemon-resize-end-count", "1").await?;
-        expect_text(page, "test-pokemon-resize-end", sizes).await?;
-        let grid = page.css("[role=grid][aria-label='Pokemon']").await?;
-        let inputs = grid.find_all(By::Css("input[type=range]")).await?;
+        page.element("#test-pokemon-resize-count")
+            .await?
+            .wait_for_inner_text("1")
+            .await?;
+        page.element("#test-pokemon-resize")
+            .await?
+            .wait_for_inner_text(sizes)
+            .await?;
+        page.element("#test-pokemon-resize-end-count")
+            .await?
+            .wait_for_inner_text("1")
+            .await?;
+        page.element("#test-pokemon-resize-end")
+            .await?
+            .wait_for_inner_text(sizes)
+            .await?;
+        let grid = page.element("[role=grid][aria-label='Pokemon']").await?;
+        let inputs = grid.elements("input[type=range]").await?;
+        assert_that!(inputs.as_slice()).has_length(expected.len());
         for (input, width) in inputs.iter().zip(expected) {
-            assert_that!(input.attr("value").await?).is_equal_to(Some(width.to_string()));
-            assert_that!(input.attr("min").await?).is_equal_to(Some("75".to_owned()));
+            assert_that!(input.attr("value").await?)
+                .get_some()
+                .is_equal_to(width.to_string());
+            assert_that!(input.attr("min").await?)
+                .get_some()
+                .is_equal_to("75");
         }
     }
     Ok(())
@@ -254,12 +275,20 @@ async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Report
     for (count, (column, delta, expected, sizes)) in steps.into_iter().enumerate() {
         resize_col(page, "Minimums", column, delta).await?;
         expect_widths(page, "Minimums", &expected).await?;
-        expect_text(page, "test-minimums-resize-count", &(count + 1).to_string()).await?;
-        expect_text(page, "test-minimums-resize", sizes).await?;
+        page.element("#test-minimums-resize-count")
+            .await?
+            .wait_for_inner_text(&(count + 1).to_string())
+            .await?;
+        page.element("#test-minimums-resize")
+            .await?
+            .wait_for_inner_text(sizes)
+            .await?;
     }
-    let grid = page.css("[role=grid][aria-label='Minimums']").await?;
-    for input in grid.find_all(By::Css("input[type=range]")).await? {
-        assert_that!(input.attr("min").await?).is_equal_to(Some("100".to_owned()));
+    let grid = page.element("[role=grid][aria-label='Minimums']").await?;
+    for input in grid.elements("input[type=range]").await? {
+        assert_that!(input.attr("min").await?)
+            .get_some()
+            .is_equal_to("100");
     }
     // At its minimum width, a column can only grow.
     assert_that!(
@@ -268,7 +297,8 @@ async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Report
             .attr("data-resizable-direction")
             .await?
     )
-    .is_equal_to(Some("left".to_owned()));
+    .get_some()
+    .is_equal_to("left");
     Ok(())
 }
 
@@ -278,7 +308,8 @@ async fn resizing_the_first_column_preserves_fr_ratios(page: &Page<'_>) -> Resul
     resize_col(page, "Ratios", "Name", -50).await?;
     expect_widths(page, "Ratios", &[75.0, 118.0, 118.0, 118.0, 471.0]).await?;
     resize_col(page, "Ratios", "Name", 38).await?;
-    expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await
+    expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
+    Ok(())
 }
 
 /// react-aria: "resizing the last column will lock columns to pixels to the left".
@@ -289,7 +320,8 @@ async fn resizing_the_last_column_locks_the_columns_before_it(
     resize_col(page, "Ratios", "Level", -50).await?;
     expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 400.0]).await?;
     resize_col(page, "Ratios", "Level", 50).await?;
-    expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await
+    expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
+    Ok(())
 }
 
 /// react-aria: "onResizeStart called with expected values" and "onResize end called with values
@@ -297,33 +329,43 @@ async fn resizing_the_last_column_locks_the_columns_before_it(
 async fn on_resize_start_and_end_without_moving(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     resize_col(page, "Ratios", "Height", -50).await?;
-    expect_text(page, "test-ratios-resize-start", "113 112 113 1fr 4fr").await?;
+    page.element("#test-ratios-resize-start")
+        .await?
+        .wait_for_inner_text("113 112 113 1fr 4fr")
+        .await?;
 
     page.goto_path(PATH).await?;
     resize_col(page, "Minimums", "Type", 0).await?;
-    expect_text(page, "test-minimums-resize-end", "113 112 1fr 1fr 4fr").await?;
-    expect_text(page, "test-minimums-resize-count", "0").await?;
-    expect_widths(page, "Minimums", &[113.0, 112.0, 113.0, 112.0, 450.0]).await
+    page.element("#test-minimums-resize-end")
+        .await?
+        .wait_for_inner_text("113 112 1fr 1fr 4fr")
+        .await?;
+    page.element("#test-minimums-resize-count")
+        .await?
+        .wait_for_inner_text("0")
+        .await?;
+    expect_widths(page, "Minimums", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
+    Ok(())
 }
 
 /// Focus the resizer of the first column of the "Pokemon" table: Tab into the table (its first
 /// row), then ArrowUp onto the column header, whose resizer takes the focus.
 async fn focus_first_resizer(page: &Page<'_>) -> Result<WebElement, Report> {
     page.goto_path(PATH).await?;
-    page.click_element_with_id("test-resizing-before").await?;
-    page.press_tab().await?;
-    page.send_keys_to_active(Key::Up).await?;
+    page.element("#test-resizing-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.send_keys(Key::Up).await?;
     let input = column_header(page, "Pokemon", "Name")
         .await?
-        .find(By::Css("input[type=range]"))
+        .element("input[type=range]")
         .await?;
-    page.wait_for_focus_on(&input, "the Name resizer").await?;
+    page.wait_for_focus(&input).await?;
     Ok(input)
 }
 
 async fn press(page: &Page<'_>, key: Key, times: usize) -> Result<(), Report> {
     for _ in 0..times {
-        page.send_keys_to_active(key.clone()).await?;
+        page.send_keys(key.clone()).await?;
     }
     Ok(())
 }
@@ -332,13 +374,15 @@ async fn press(page: &Page<'_>, key: Key, times: usize) -> Result<(), Report> {
 async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
     let input = focus_first_resizer(page).await?;
     // Arrow keys navigate until resizing starts.
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_selector("[aria-label='Pokemon'] th[data-resizing]")
+    page.send_keys(Key::Enter).await?;
+    page.element("[aria-label='Pokemon'] th[data-resizing]")
         .await?;
 
     press(page, Key::Right, 2).await?;
-    assert_that!(input.attr("value").await?).is_equal_to(Some("120".to_owned()));
-    assert_that!(input.attr("aria-valuetext").await?).is_equal_to(Some("120 pixels".to_owned()));
+    input.wait_for_attr("value", Some("120")).await?;
+    input
+        .wait_for_attr("aria-valuetext", Some("120 pixels"))
+        .await?;
     expect_widths(page, "Pokemon", &[120.0, 98.0, 97.0, 98.0, 487.0]).await?;
     press(page, Key::Left, 2).await?;
     expect_widths(page, "Pokemon", &[100.0, 100.0, 100.0, 100.0, 500.0]).await?;
@@ -346,15 +390,21 @@ async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
     expect_widths(page, "Pokemon", &[120.0, 98.0, 97.0, 98.0, 487.0]).await?;
     press(page, Key::Down, 2).await?;
     expect_widths(page, "Pokemon", &[100.0, 100.0, 100.0, 100.0, 500.0]).await?;
-    page.wait_for_focus_on(&input, "the Name resizer").await?;
+    page.wait_for_focus(&input).await?;
 
-    page.send_keys_to_active(Key::Escape).await?;
-    expect_text(page, "test-pokemon-resize-end-count", "1").await?;
-    expect_text(page, "test-pokemon-resize-end", "100 1fr 1fr 1fr 5fr").await?;
-    page.wait_for_no_selector("[aria-label='Pokemon'] th[data-resizing]")
+    page.send_keys(Key::Escape).await?;
+    page.element("#test-pokemon-resize-end-count")
+        .await?
+        .wait_for_inner_text("1")
+        .await?;
+    page.element("#test-pokemon-resize-end")
+        .await?
+        .wait_for_inner_text("100 1fr 1fr 1fr 5fr")
+        .await?;
+    page.wait_for_count("[aria-label='Pokemon'] th[data-resizing]", 0)
         .await?;
     // The resizer had the focus when resizing started: it keeps it.
-    page.wait_for_focus_on(&input, "the Name resizer").await?;
+    page.wait_for_focus(&input).await?;
     Ok(())
 }
 
@@ -362,25 +412,35 @@ async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
 async fn exiting_keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
     for exit in [Key::Enter, Key::Tab] {
         let input = focus_first_resizer(page).await?;
-        page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_selector("[aria-label='Pokemon'] th[data-resizing]")
+        page.send_keys(Key::Enter).await?;
+        page.element("[aria-label='Pokemon'] th[data-resizing]")
             .await?;
         press(page, Key::Right, 1).await?;
-        page.send_keys_to_active(exit).await?;
-        expect_text(page, "test-pokemon-resize-end-count", "1").await?;
-        expect_text(page, "test-pokemon-resize-end", "110 1fr 1fr 1fr 5fr").await?;
-        page.wait_for_no_selector("[aria-label='Pokemon'] th[data-resizing]")
+        page.send_keys(exit).await?;
+        page.element("#test-pokemon-resize-end-count")
+            .await?
+            .wait_for_inner_text("1")
             .await?;
-        page.wait_for_focus_on(&input, "the Name resizer").await?;
+        page.element("#test-pokemon-resize-end")
+            .await?
+            .wait_for_inner_text("110 1fr 1fr 1fr 5fr")
+            .await?;
+        page.wait_for_count("[aria-label='Pokemon'] th[data-resizing]", 0)
+            .await?;
+        page.wait_for_focus(&input).await?;
     }
 
     // Leaving the resizer ends resizing too.
     focus_first_resizer(page).await?;
-    page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_selector("[aria-label='Pokemon'] th[data-resizing]")
+    page.send_keys(Key::Enter).await?;
+    page.element("[aria-label='Pokemon'] th[data-resizing]")
         .await?;
-    page.click_element_with_id("test-resizing-before").await?;
-    expect_text(page, "test-pokemon-resize-end-count", "1").await?;
-    page.wait_for_no_selector("[aria-label='Pokemon'] th[data-resizing]")
-        .await
+    page.element("#test-resizing-before").await?.click().await?;
+    page.element("#test-pokemon-resize-end-count")
+        .await?
+        .wait_for_inner_text("1")
+        .await?;
+    page.wait_for_count("[aria-label='Pokemon'] th[data-resizing]", 0)
+        .await?;
+    Ok(())
 }

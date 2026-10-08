@@ -3,6 +3,77 @@
 Finished work, moved out of `PLAN.md` (which holds open work only). Most recent first within each part; git
 history has the details.
 
+## Library: observations read as sentences (2026-10-08, evening)
+
+- The polling macros (`wait_for!`, `wait_until!`, `stays!`, `stays_for!`) are replaced by a builder in
+  `tests/polling/mod.rs`: `wait_for("the red value").observing(|| number(&red)).to_be("64 (±1)", |red| ..)`,
+  `.to_be_equal_to(v)`; `expect("the press log").observing(|| log.inner_text()).to_stay_equal_to("")`,
+  `.for_at_least(d)` for real timers. Observations are `Fn() -> Future` closures (`async ||` closures still hit the
+  compiler's higher-ranked `Send` limitation in `#[async_trait]` bodies).
+- The ~50 former `wait_until!` sites observe the value their condition is about (distances, rectangles, the focused
+  option's text, warnings, the rendered lines), so a failure shows the last value instead of "false". JavaScript
+  predicates return the values they compare.
+
+## Library: consistent browser test API (2026-10-08, evening)
+
+- Lookups take a `Locator` (`"css"`, `role("option")`, `.text("Apple")` matching text content, `xpath(..)` for
+  relations) and exist on pages and elements alike: `element` (waits for its element), `elements`/`count`/
+  `inner_texts` (read now), `wait_for_count`, `count_stays`. Replaced `css`, `by_role_and_text`, `all`, `texts` and
+  every thirtyfour `query`/`find` in tests.
+- Every state has read / `wait_for_*` / `*_stays`: attribute, property (new `prop_stays`), inner text (`inner_text`,
+  `wait_for_inner_text`, `inner_text_stays`), count (new `count_stays`), focus (`focused_element`, `wait_for_focus`,
+  `focus_stays`). Renamed: `PageActions`/`ElementActions` (were `BaseActions`/`ElementExt`), `virtual_input`,
+  `referenced_text`, `blur_focused`, form `reset`; `parse_text` removed. `Diagnostics`: `panics`,
+  `uncaught_errors`, `console_errors`, `console_warnings` (the test-app's lists named alike).
+- A lookup's text filter skips candidates the page replaces while it reads them (a re-rendered virtualized list),
+  instead of failing. The calendar's `enter` helper waits for the focus on the tabbable date instead of returning
+  silently. The failure probe (`tests/failure_probe.rs`) is removed: browser-test's own tests cover the reports.
+
+## Library: one way per check, failure reports (2026-10-08, afternoon)
+
+- Browser test helpers consolidated to one way per check: find an element (`page.css`, `page.by_role_and_text`,
+  `element.query`), then its one method: `wait_for_attr`/`attr_stays`, `wait_for_text`/`text_stays` (text is
+  `innerText`, trimmed, everywhere), `wait_for_prop`, focus by identity (`page.wait_for_focus_on`, `focus_stays`),
+  `page.wait_for_count`. Removed: id shortcuts (`element`, `click_element_with_id`, `read_text_of`, ...), four other
+  focus waits, three other text waits, `press_tab`. New: `SyntheticEvent` + `element.dispatch` (replaces ~20 event
+  scripts), `page.eval` (the one way to run a script, naming it on failure), `client_rect`, `scroll_to_top`, form
+  actions, `page.diagnostics()`. `ElementExt` moved to `pages/element.rs`; eight trivial page objects removed.
+- Every `run` lists its cases with `cases!` (each a named step); inline logic in ~25 `run` bodies became documented
+  cases. Checks strengthened throughout: full values over `contains`/`is_some`, single reads after interactions became
+  waits or stays checks, exact validation messages and accessible names.
+- The test-app records Rust panics, uncaught errors, `console.error` and `console.warn` separately (before, other
+  console errors were dropped); a test fails on the first three.
+- Failure reports, in browser-test (the user's checkout): every error carries the test-code frames that led to it
+  (also through helpers and steps), panics their location and frames, a failing test its last steps with timing;
+  WebDriver errors show their message only, messages print unquoted, browser-test's internal wrappers and locations
+  are gone. README section "Failure Reports", regression tests there. Full suite: 126/126.
+
+## Library: browser test style and browser-test 0.6 (2026-10-08)
+
+- The browser tests use thirtyfour's own waiting: zero implicit wait, lookups through `driver.query(..)` /
+  `element.query(..)` and element waits through `element.wait_until()`, both polling with `polling::
+  element_query_wait()` (10 s, 50 ms). The hand-rolled poll loops of `pages/mod.rs` and the tests are gone; the
+  `wait_for!`/`wait_until!`/`stays!` macros remain for observations thirtyfour can't wait on, and timeouts report
+  the last value seen and the element (`ElementExt::describe`).
+- Shared helpers instead of per-file copies (22 copies of `attr`, 7 of `wait_for_value`, 7 virtual clicks, 9 of
+  `hover`, ...): `ElementExt` on `WebElement` (`wait_for_attr`/`prop`/`value`, `attr_stays`, `virtual_click`,
+  `hover`, `texts_of`, `is_valid`, `set_value_from_script`, `rendered_text`, `describe`) and new `BaseActions`
+  helpers (`text_stays`, `focus_stays`, `texts_of_all`, `referenced_texts`, `check_validity`, `form_values`,
+  `hold_key`, `blur_active`, `read_parsed::<T>`). Scripts duplicating thirtyfour (`focus`, `scrollIntoView`,
+  `value`, `activeElement`, `location`) replaced; script values passed as `arguments[n]`.
+- assertr used for what it offers: `get_some().is_equal_to(..)` instead of `Some("x".to_owned())`, no assertions on
+  `bool`-wrapped comparisons (`contains`, `contains_exactly`, `is_close_to`, `is_not_blank`, ...).
+- Every file in one layout (imports, `run`, one documented function per case ending with `Ok(())`); long `run`
+  bodies split into cases. Racy reads right after interactions became waits, single-read negative checks became
+  `stays!` checks, and the fixed sleeps went down from ~75 to 7 real timers (type-ahead reset, long press, toast,
+  pointer-move gaps), each commented. Style guide: `documentation/browser-tests.md`.
+- browser-test 0.6 (the user's checkout): per-session Chrome profiles in `<target>/tmp/browser-test-profiles`
+  instead of chromedriver's leaking `/tmp/org.chromium.Chromium.scoped_dir.*` (`/tmp` is a RAM disk here),
+  cancellation on Ctrl-C, `rustls-no-provider` with `ring` instead of `aws-lc-rs`. Fixed in browser-test on the
+  way: on a profile it doesn't create itself, chromedriver starts the page without focus (`document.hasFocus()`
+  false, so script focus fires no `focus` events; 2 tests failed); the runner now brings every session's page to
+  the front (`Page.bringToFront`), with a fail-first regression test there. Full suite: 126/126.
+
 ## Book: tree tables, typed selects, snippet review (2026-10-08)
 
 - Table atoms: "Tree Tables" section (collection with child rows, `tree_column`, flat rendering with `hidden`, expanded

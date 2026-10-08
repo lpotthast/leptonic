@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{Page, PageActions, role, xpath};
 
 /// The toolbar atom ("supports keyboard navigation"): one tab stop, arrow keys along its
 /// orientation across nested toolbars and dividers without wrapping, Tab leaving and re-entering
@@ -26,133 +23,160 @@ impl BrowserTest<str> for ToolbarTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/toolbar").await?;
 
-        let tools = page.css("[aria-label=Tools]").await?;
-        assert_that!(tools.attr("role").await?).is_equal_to(Some("toolbar".to_owned()));
-        assert_that!(tools.attr("aria-orientation").await?)
-            .is_equal_to(Some("horizontal".to_owned()));
-        page.wait_for_selector("[aria-label='Align text'][role=group]")
-            .await?;
+        cases!(
+            structure(&page),
+            keyboard_navigation(&page),
+            tab_leaves_and_reenters(&page),
+            no_wrapping(&page),
+            vertical(&page),
+            right_to_left(&page),
+            right_to_left_vertical(&page),
+            aria_example_children(&page),
+        );
 
-        page.by_role_and_text("button", "Before")
-            .await?
-            .click()
-            .await?;
-        page.press_tab().await?;
-        page.wait_for_active_text("Align left").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("Align center").await?;
-        // Down does nothing in a horizontal toolbar.
-        page.send_keys_to_active(Key::Down).await?;
-        page.wait_for_active_text("Align center").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        // Across the divider into the next group.
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("Zoom in").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_active_text("Align right").await?;
-
-        // Tab leaves; Shift+Tab re-enters at the control focused last.
-        page.press_tab().await?;
-        page.wait_for_active_text("After").await?;
-        page.press_shift_tab().await?;
-        page.wait_for_active_text("Align right").await?;
-        page.press_shift_tab().await?;
-        page.wait_for_active_text("Before").await?;
-        page.press_tab().await?;
-        page.wait_for_active_text("Align right").await?;
-
-        // No wrapping.
-        page.send_keys_to_active(Key::Left).await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_active_text("Align left").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_active_text("Align left").await?;
-        page.by_role_and_text("button", "Zoom out")
-            .await?
-            .click()
-            .await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("Zoom out").await?;
-
-        // "supports keyboard navigation with orientation vertical".
-        let vertical = page.css("[aria-label=Vertical]").await?;
-        assert_that!(vertical.attr("aria-orientation").await?)
-            .is_equal_to(Some("vertical".to_owned()));
-        page.by_role_and_text("button", "Up 1")
-            .await?
-            .click()
-            .await?;
-        page.send_keys_to_active(Key::Down).await?;
-        page.wait_for_active_text("Up 2").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("Up 2").await?;
-        page.send_keys_to_active(Key::Up).await?;
-        page.wait_for_active_text("Up 1").await?;
-
-        // "supports RTL": the arrow keys follow the reading direction.
-        page.by_role_and_text("button", "RTL 1")
-            .await?
-            .click()
-            .await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_active_text("RTL 2").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("RTL 1").await?;
-
-        // "supports RTL with orientation vertical": up and down move; left and right don't.
-        page.by_role_and_text("button", "RV 1")
-            .await?
-            .click()
-            .await?;
-        page.send_keys_to_active(Key::Down).await?;
-        page.wait_for_active_text("RV 2").await?;
-        page.send_keys_to_active(Key::Up).await?;
-        page.wait_for_active_text("RV 1").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.send_keys_to_active(Key::Right).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        page.wait_for_active_text("RV 1").await?;
-
-        // "supports all the aria example children": toggle buttons, a checkbox and a link, without
-        // wrapping at the end.
-        page.element("test-toolbar-input-before")
-            .await?
-            .click()
-            .await?;
-        page.press_tab().await?;
-        page.wait_for_active_text("B").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("U").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("I").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        let checkbox_focused = || async {
-            let focused: bool = page
-                .driver
-                .execute(
-                    "const el = document.activeElement;
-                     return el.type === 'checkbox' && el.closest('label').innerText.includes('Night Mode');",
-                    vec![],
-                )
-                .await?
-                .convert()?;
-            Ok::<bool, Report>(focused)
-        };
-        for _ in 0..100 {
-            if checkbox_focused().await? {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        }
-        assert_that!(checkbox_focused().await?)
-            .with_detail_message("the Night Mode checkbox is focused")
-            .is_true();
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_active_text("Help").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        page.wait_for_active_text("Help").await?;
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
+}
+
+/// The button with the text `text`.
+async fn button(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
+    page.element(role("button").text(text)).await
+}
+
+/// A horizontal toolbar; nested toolbars are groups.
+async fn structure(page: &Page<'_>) -> Result<(), Report> {
+    let tools = page.element("[aria-label=Tools]").await?;
+    assert_that!(tools.attr("role").await?)
+        .get_some()
+        .is_equal_to("toolbar");
+    assert_that!(tools.attr("aria-orientation").await?)
+        .get_some()
+        .is_equal_to("horizontal");
+    let align = page.element("[aria-label='Align text']").await?;
+    assert_that!(align.attr("role").await?)
+        .get_some()
+        .is_equal_to("group");
+    Ok(())
+}
+
+/// One tab stop; the arrow keys along the orientation move across nested toolbars and dividers.
+async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+    button(page, "Before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&button(page, "Align left").await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&button(page, "Align center").await?)
+        .await?;
+    // Down does nothing in a horizontal toolbar.
+    page.send_keys(Key::Down).await?;
+    page.focus_stays(&button(page, "Align center").await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    // Across the divider into the next group.
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&button(page, "Zoom in").await?).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&button(page, "Align right").await?)
+        .await?;
+    Ok(())
+}
+
+/// Tab leaves; Shift+Tab re-enters at the control focused last.
+async fn tab_leaves_and_reenters(page: &Page<'_>) -> Result<(), Report> {
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&button(page, "After").await?).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&button(page, "Align right").await?)
+        .await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&button(page, "Before").await?).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&button(page, "Align right").await?)
+        .await?;
+    Ok(())
+}
+
+/// The arrow keys stop at either end.
+async fn no_wrapping(page: &Page<'_>) -> Result<(), Report> {
+    page.send_keys(Key::Left).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&button(page, "Align left").await?)
+        .await?;
+    page.send_keys(Key::Left).await?;
+    page.focus_stays(&button(page, "Align left").await?).await?;
+    button(page, "Zoom out").await?.click().await?;
+    page.wait_for_focus(&button(page, "Zoom out").await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.focus_stays(&button(page, "Zoom out").await?).await?;
+    Ok(())
+}
+
+/// "supports keyboard navigation with orientation vertical".
+async fn vertical(page: &Page<'_>) -> Result<(), Report> {
+    let vertical = page.element("[aria-label=Vertical]").await?;
+    assert_that!(vertical.attr("aria-orientation").await?)
+        .get_some()
+        .is_equal_to("vertical");
+    button(page, "Up 1").await?.click().await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&button(page, "Up 2").await?).await?;
+    page.send_keys(Key::Right).await?;
+    page.focus_stays(&button(page, "Up 2").await?).await?;
+    page.send_keys(Key::Up).await?;
+    page.wait_for_focus(&button(page, "Up 1").await?).await?;
+    Ok(())
+}
+
+/// "supports RTL": the arrow keys follow the reading direction.
+async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    button(page, "RTL 1").await?.click().await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&button(page, "RTL 2").await?).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&button(page, "RTL 1").await?).await?;
+    Ok(())
+}
+
+/// "supports RTL with orientation vertical": up and down move; left and right don't.
+async fn right_to_left_vertical(page: &Page<'_>) -> Result<(), Report> {
+    button(page, "RV 1").await?.click().await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&button(page, "RV 2").await?).await?;
+    page.send_keys(Key::Up).await?;
+    page.wait_for_focus(&button(page, "RV 1").await?).await?;
+    page.send_keys(Key::Left).await?;
+    page.send_keys(Key::Right).await?;
+    page.focus_stays(&button(page, "RV 1").await?).await?;
+    Ok(())
+}
+
+/// "supports all the aria example children": toggle buttons, a checkbox and a link, without
+/// wrapping at the end.
+async fn aria_example_children(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-toolbar-input-before")
+        .await?
+        .click()
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&button(page, "B").await?).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&button(page, "U").await?).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&button(page, "I").await?).await?;
+    page.send_keys(Key::Right).await?;
+    let night_mode = page
+        .element(xpath(
+            "//label[contains(normalize-space(.), 'Night Mode')]//input[@type='checkbox']",
+        ))
+        .await?;
+    page.wait_for_focus(&night_mode).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&page.element(role("link").text("Help")).await?)
+        .await?;
+    page.send_keys(Key::Right).await?;
+    page.focus_stays(&page.element(role("link").text("Help")).await?)
+        .await?;
+    Ok(())
 }

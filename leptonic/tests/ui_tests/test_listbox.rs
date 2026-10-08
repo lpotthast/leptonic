@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver, WebElement},
-};
-use rootcause::Report;
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 /// Behavior of the `ListBox` atom, asserted on the DOM/ARIA level so that these tests keep
 /// passing while the collection hooks underneath are rewritten. Elements are found by role and
@@ -24,48 +21,59 @@ impl BrowserTest<str> for ListBoxTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/listbox").await?;
-
-        aria_structure(&page).await?;
-        keyboard_navigation_skips_disabled_items(&page).await?;
-        selection(&page).await?;
-        tab_in_and_out(&page).await?;
-        type_ahead(&page).await?;
-        select_all_and_clear(&page).await?;
-        shift_arrow_extends_selection(&page).await?;
-
+        cases!(
+            aria_structure(&page),
+            keyboard_navigation_skips_disabled_items(&page),
+            selection(&page),
+            tab_in_and_out(&page),
+            type_ahead(&page),
+            select_all_and_clear(&page),
+            shift_arrow_extends_selection(&page),
+        );
         Ok(())
     }
 }
 
+/// The option with the text `fruit`.
 async fn option(page: &Page<'_>, fruit: &str) -> Result<WebElement, Report> {
-    page.by_role_and_text("option", fruit).await
+    page.element(role("option").text(fruit)).await
 }
 
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
+/// The fixture's output of the selected keys, comma-separated (`all` for everything).
+async fn selection_output(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#test-lb-selection").await
 }
 
+/// The listbox is labelled and multi-selectable; nothing is selected; Cherry is disabled.
 async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
-    let listbox = page.css("[role=listbox]").await?;
-    assert_that!(attr(&listbox, "aria-label").await?).is_equal_to(Some("Fruits".to_owned()));
-    assert_that!(attr(&listbox, "aria-multiselectable").await?)
-        .is_equal_to(Some("true".to_owned()));
+    let listbox = page.element("[role=listbox]").await?;
+    assert_that!(listbox.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Fruits");
+    assert_that!(listbox.attr("aria-multiselectable").await?)
+        .get_some()
+        .is_equal_to("true");
     for fruit in ["Apple", "Banana", "Cherry", "Durian", "Elderberry"] {
         let option = option(page, fruit).await?;
-        assert_that!(attr(&option, "aria-selected").await?).is_equal_to(Some("false".to_owned()));
+        assert_that!(option.attr("aria-selected").await?)
+            .with_detail_message(fruit)
+            .get_some()
+            .is_equal_to("false");
+        let disabled = option.attr("aria-disabled").await?;
+        if fruit == "Cherry" {
+            assert_that!(disabled).get_some().is_equal_to("true");
+        } else {
+            assert_that!(disabled).with_detail_message(fruit).is_none();
+        }
     }
-    assert_that!(attr(&option(page, "Cherry").await?, "aria-disabled").await?)
-        .is_equal_to(Some("true".to_owned()));
     Ok(())
 }
 
-async fn expect_focus(page: &Page<'_>, fruit: &str) -> Result<(), Report> {
-    page.wait_for_active_text(fruit).await
-}
-
+/// Arrow keys, Home and End move focus, skipping the disabled option, without wrapping.
 async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
-    option(page, "Apple").await?.click().await?;
-    expect_focus(page, "Apple").await?;
+    let apple = option(page, "Apple").await?;
+    apple.click().await?;
+    page.wait_for_focus(&apple).await?;
     for (key, expected) in [
         (Key::Down, "Banana"),
         (Key::Down, "Durian"),
@@ -76,88 +84,96 @@ async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(),
         (Key::Home, "Apple"),
         (Key::Up, "Apple"),
     ] {
-        page.send_keys_to_active(key.clone()).await?;
-        expect_focus(page, expected)
+        page.send_keys(key.clone()).await?;
+        page.wait_for_focus(&option(page, expected).await?)
             .await
-            .map_err(|e| e.context(format!("after pressing {key:?}")).into_dynamic())?;
+            .context_with(|| format!("after pressing {key:?}"))?;
     }
     Ok(())
 }
 
+/// Clicking toggles an option (multiple selection, toggle behavior), Space toggles the focused
+/// one, a disabled option can't be selected.
 async fn selection(page: &Page<'_>) -> Result<(), Report> {
-    // Clicking the first option above selected it (multiple selection, toggle behavior).
-    page.wait_for_text("test-lb-selection", "Apple").await?;
-    assert_that!(attr(&option(page, "Apple").await?, "aria-selected").await?)
-        .is_equal_to(Some("true".to_owned()));
+    let selection = selection_output(page).await?;
+    // Clicking the first option above selected it.
+    selection.wait_for_inner_text("Apple").await?;
+    assert_that!(option(page, "Apple").await?.attr("aria-selected").await?)
+        .get_some()
+        .is_equal_to("true");
 
     option(page, "Durian").await?.click().await?;
-    page.wait_for_text("test-lb-selection", "Apple,Durian")
-        .await?;
+    selection.wait_for_inner_text("Apple,Durian").await?;
 
-    // Space toggles the focused option.
-    page.send_keys_to_active(" ").await?;
-    page.wait_for_text("test-lb-selection", "Apple").await?;
+    page.send_keys(" ").await?;
+    selection.wait_for_inner_text("Apple").await?;
 
-    // Disabled options can't be selected.
     option(page, "Cherry").await?.click().await?;
-    stays!(
-        "the text of #test-lb-selection",
-        "Apple".to_owned(),
-        page.read_text_of("test-lb-selection").await?
-    );
+    selection.inner_text_stays("Apple").await?;
     Ok(())
 }
 
 /// The listbox is a single tab stop; focus returns to the last focused option.
 async fn tab_in_and_out(page: &Page<'_>) -> Result<(), Report> {
-    option(page, "Banana").await?.click().await?;
-    page.press_tab().await?;
-    assert_that!(page.active_element_id().await?).is_equal_to(Some("test-lb-after".to_owned()));
-    page.press_shift_tab().await?;
-    expect_focus(page, "Banana").await
+    let banana = option(page, "Banana").await?;
+    banana.click().await?;
+    page.wait_for_focus(&banana).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-lb-after").await?)
+        .await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&banana).await?;
+    Ok(())
 }
 
 /// Typing moves focus to the next option starting with the typed text, skipping disabled ones.
 async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
-    expect_focus(page, "Banana").await?;
-    page.send_keys_to_active("d").await?;
-    expect_focus(page, "Durian").await?;
-    // Wait for the search to expire, then search again: "Cherry" is disabled.
+    page.wait_for_focus(&option(page, "Banana").await?).await?;
+    page.send_keys("d").await?;
+    let durian = option(page, "Durian").await?;
+    page.wait_for_focus(&durian).await?;
+    // A real timer: let the type-ahead search (1 s) expire, then search again: "Cherry" is
+    // disabled.
     tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
-    page.send_keys_to_active("c").await?;
-    stays!(
-        "the focused element's text",
-        "Durian".to_owned(),
-        page.active_element_text().await?
-    );
-    // Typing continues the search within a second: "e" then "l" finds "Elderberry".
+    page.send_keys("c").await?;
+    page.focus_stays(&durian).await?;
+    // A real timer: let the search expire again. Typing continues the search within a second:
+    // "e" then "l" finds "Elderberry".
     tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
-    page.send_keys_to_active("el").await?;
-    expect_focus(page, "Elderberry").await
+    page.send_keys("el").await?;
+    page.wait_for_focus(&option(page, "Elderberry").await?)
+        .await?;
+    Ok(())
 }
 
 /// Ctrl+A selects everything, Escape clears the selection.
 async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
-    page.send_keys_to_active(Key::Control + "a").await?;
-    page.wait_for_text("test-lb-selection", "all").await?;
-    assert_that!(attr(&option(page, "Durian").await?, "aria-selected").await?)
-        .is_equal_to(Some("true".to_owned()));
-    page.send_keys_to_active(Key::Escape).await?;
-    page.wait_for_text("test-lb-selection", "").await?;
-    assert_that!(attr(&option(page, "Durian").await?, "aria-selected").await?)
-        .is_equal_to(Some("false".to_owned()));
+    let selection = selection_output(page).await?;
+    let durian = option(page, "Durian").await?;
+    page.send_keys(Key::Control + "a").await?;
+    selection.wait_for_inner_text("all").await?;
+    assert_that!(durian.attr("aria-selected").await?)
+        .get_some()
+        .is_equal_to("true");
+    page.send_keys(Key::Escape).await?;
+    selection.wait_for_inner_text("").await?;
+    assert_that!(durian.attr("aria-selected").await?)
+        .get_some()
+        .is_equal_to("false");
     Ok(())
 }
 
 /// Shift+Arrow extends the selection from the anchor (skipping the disabled option).
 async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
+    let selection = selection_output(page).await?;
     option(page, "Banana").await?.click().await?;
-    page.wait_for_text("test-lb-selection", "Banana").await?;
-    page.send_keys_to_active(Key::Shift + Key::Down).await?;
-    expect_focus(page, "Durian").await?;
-    page.wait_for_text("test-lb-selection", "Banana,Durian")
+    selection.wait_for_inner_text("Banana").await?;
+    page.send_keys(Key::Shift + Key::Down).await?;
+    page.wait_for_focus(&option(page, "Durian").await?).await?;
+    selection.wait_for_inner_text("Banana,Durian").await?;
+    page.send_keys(Key::Shift + Key::Down).await?;
+    selection
+        .wait_for_inner_text("Banana,Durian,Elderberry")
         .await?;
-    page.send_keys_to_active(Key::Shift + Key::Down).await?;
-    page.wait_for_text("test-lb-selection", "Banana,Durian,Elderberry")
-        .await
+    Ok(())
 }

@@ -1,11 +1,14 @@
 // Upstream: react-aria/test/focus/FocusScope.test.js @ 99e6102368
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, focus_manager::FocusManagerPage};
+use crate::pages::focus_manager::FocusManagerPage;
 
+/// The focus manager of `FocusScope`: next, previous, first and last, with wrapping, tabbable
+/// filtering, an accept filter, radio groups, hidden and inert elements, and from outside the
+/// scope.
 pub struct FocusManagerTests {}
 
 #[async_trait]
@@ -16,325 +19,207 @@ impl BrowserTest<str> for FocusManagerTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = FocusManagerPage { driver, base_url };
-
-        test_basic_navigation(&page).await?;
-        test_wrap_next(&page).await?;
-        test_wrap_prev(&page).await?;
-        test_nowrap_boundary_next(&page).await?;
-        test_nowrap_boundary_prev(&page).await?;
-        test_tabbable_skip(&page).await?;
-        test_nontabbable_include(&page).await?;
-        test_accept_filter(&page).await?;
-        test_radio_group_checked(&page).await?;
-        test_radio_group_none_checked(&page).await?;
-        test_radio_group_wrap_next(&page).await?;
-        test_radio_group_wrap_prev(&page).await?;
-        test_hidden_elements_skipped(&page).await?;
-        test_inert_elements_skipped(&page).await?;
-        test_focus_next_from_outside_scope(&page).await?;
-        test_focus_previous_from_outside_scope(&page).await?;
-
+        cases!(
+            basic_navigation(&page),
+            wrap_next(&page),
+            wrap_prev(&page),
+            nowrap_boundary_next(&page),
+            nowrap_boundary_prev(&page),
+            tabbable_skip(&page),
+            nontabbable_include(&page),
+            accept_filter(&page),
+            radio_group_checked(&page),
+            radio_group_none_checked(&page),
+            radio_group_wrap_next(&page),
+            radio_group_wrap_prev(&page),
+            hidden_elements_skipped(&page),
+            inert_elements_skipped(&page),
+            focus_next_from_outside_scope(&page),
+            focus_previous_from_outside_scope(&page),
+        );
         Ok(())
     }
 }
 
 /// Basic navigation: focus_first, focus_next, focus_previous, focus_last.
-async fn test_basic_navigation(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: basic navigation");
+async fn basic_navigation(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus first: item-1 should be focused
-    page.click_focus_first().await?;
-    page.wait_for_active_id("test-fm-item-1").await?;
-
-    // Focus next: item-2 should be focused
-    page.click_focus_next().await?;
-    page.wait_for_active_id("test-fm-item-2").await?;
-
-    // Focus next: item-3 should be focused
-    page.click_focus_next().await?;
-    page.wait_for_active_id("test-fm-item-3").await?;
-
-    // Focus previous: item-2 should be focused
-    page.click_focus_prev().await?;
-    page.wait_for_active_id("test-fm-item-2").await?;
-
-    // Focus last: item-3 should be focused
-    page.click_focus_last().await?;
-    page.wait_for_active_id("test-fm-item-3").await?;
-
+    for (control, expected) in [
+        ("focus-first", "item-1"),
+        ("focus-next", "item-2"),
+        ("focus-next", "item-3"),
+        ("focus-prev", "item-2"),
+        ("focus-last", "item-3"),
+    ] {
+        page.click(control).await?;
+        page.expect_focus(expected).await?;
+    }
     Ok(())
 }
 
-/// wrap: true — focus_next at last element wraps to first.
-async fn test_wrap_next(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: wrap=true focus_next wraps at end");
+/// wrap: true — focus_next at the last element wraps to the first.
+async fn wrap_next(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus last item in wrap scope
-    page.click_wrap_item(3).await?;
-    page.wait_for_active_id("test-fm-wrap-item-3").await?;
-
-    // wrap focus_next → should wrap to item-1
-    page.click_wrap_focus_next().await?;
-    page.wait_for_active_id("test-fm-wrap-item-1").await?;
-
+    page.click("wrap-item-3").await?;
+    page.expect_focus("wrap-item-3").await?;
+    page.click("wrap-focus-next").await?;
+    page.expect_focus("wrap-item-1").await?;
     Ok(())
 }
 
-/// wrap: true — focus_previous at first element wraps to last.
-async fn test_wrap_prev(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: wrap=true focus_previous wraps at start");
+/// wrap: true — focus_previous at the first element wraps to the last.
+async fn wrap_prev(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus first item in wrap scope
-    page.click_wrap_item(1).await?;
-    page.wait_for_active_id("test-fm-wrap-item-1").await?;
-
-    // wrap focus_previous → should wrap to item-3
-    page.click_wrap_focus_prev().await?;
-    page.wait_for_active_id("test-fm-wrap-item-3").await?;
-
+    page.click("wrap-item-1").await?;
+    page.expect_focus("wrap-item-1").await?;
+    page.click("wrap-focus-prev").await?;
+    page.expect_focus("wrap-item-3").await?;
     Ok(())
 }
 
-/// wrap: false — focus_next at last element stays put.
-async fn test_nowrap_boundary_next(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: wrap=false focus_next stays at end");
+/// wrap: false — focus_next at the last element stays put.
+async fn nowrap_boundary_next(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus last item in wrap scope
-    page.click_wrap_item(3).await?;
-    page.wait_for_active_id("test-fm-wrap-item-3").await?;
-
-    // no-wrap focus_next → should stay on item-3
-    page.click_nowrap_focus_next().await?;
-    page.wait_for_active_id("test-fm-wrap-item-3").await?;
-
+    page.click("wrap-item-3").await?;
+    page.expect_focus("wrap-item-3").await?;
+    page.click("nowrap-focus-next").await?;
+    page.expect_focus_stays("wrap-item-3").await?;
     Ok(())
 }
 
-/// wrap: false — focus_previous at first element stays put.
-async fn test_nowrap_boundary_prev(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: wrap=false focus_previous stays at start");
+/// wrap: false — focus_previous at the first element stays put.
+async fn nowrap_boundary_prev(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus first item in wrap scope
-    page.click_wrap_item(1).await?;
-    page.wait_for_active_id("test-fm-wrap-item-1").await?;
-
-    // no-wrap focus_previous → should stay on item-1
-    page.click_nowrap_focus_prev().await?;
-    page.wait_for_active_id("test-fm-wrap-item-1").await?;
-
+    page.click("wrap-item-1").await?;
+    page.expect_focus("wrap-item-1").await?;
+    page.click("nowrap-focus-prev").await?;
+    page.expect_focus_stays("wrap-item-1").await?;
     Ok(())
 }
 
-/// tabbable: true — skips item with tabindex=-1.
-async fn test_tabbable_skip(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: tabbable=true skips tabindex=-1 items");
+/// tabbable: true — skips the item with tabindex=-1.
+async fn tabbable_skip(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus item-1 in the tabbable scope
-    page.click_tabbable_item(1).await?;
-    page.wait_for_active_id("test-fm-tabbable-item-1").await?;
-
-    // tabbable focus_next → should skip item-2 (tabindex=-1) and land on item-3
-    page.click_tabbable_focus_next().await?;
-    page.wait_for_active_id("test-fm-tabbable-item-3").await?;
-
-    // tabbable focus_prev → should skip item-2 and land on item-1
-    page.click_tabbable_focus_prev().await?;
-    page.wait_for_active_id("test-fm-tabbable-item-1").await?;
-
+    page.click("tabbable-item-1").await?;
+    page.expect_focus("tabbable-item-1").await?;
+    page.click("tabbable-focus-next").await?;
+    page.expect_focus("tabbable-item-3").await?;
+    page.click("tabbable-focus-prev").await?;
+    page.expect_focus("tabbable-item-1").await?;
     Ok(())
 }
 
 /// tabbable: false — includes items with tabindex=-1.
-async fn test_nontabbable_include(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: tabbable=false includes tabindex=-1 items");
+async fn nontabbable_include(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus item-1 in the tabbable scope
-    page.click_tabbable_item(1).await?;
-    page.wait_for_active_id("test-fm-tabbable-item-1").await?;
-
-    // non-tabbable focus_next → should include item-2 (tabindex=-1)
-    page.click_nontabbable_focus_next().await?;
-    page.wait_for_active_id("test-fm-tabbable-item-2").await?;
-
+    page.click("tabbable-item-1").await?;
+    page.expect_focus("tabbable-item-1").await?;
+    page.click("nontabbable-focus-next").await?;
+    page.expect_focus("tabbable-item-2").await?;
     Ok(())
 }
 
-/// accept filter — custom predicate rejects item-2 during navigation.
-async fn test_accept_filter(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: accept filter skips rejected elements");
+/// An accept filter rejects item 2 during navigation.
+async fn accept_filter(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus item-1 in the accept scope
-    page.click_accept_item(1).await?;
-    page.wait_for_active_id("test-fm-accept-item-1").await?;
-
-    // accept focus_next → should skip item-2 (rejected by filter) and land on item-3
-    page.click_accept_focus_next().await?;
-    page.wait_for_active_id("test-fm-accept-item-3").await?;
-
-    // accept focus_prev → should skip item-2 and land on item-1
-    page.click_accept_focus_prev().await?;
-    page.wait_for_active_id("test-fm-accept-item-1").await?;
-
+    page.click("accept-item-1").await?;
+    page.expect_focus("accept-item-1").await?;
+    page.click("accept-focus-next").await?;
+    page.expect_focus("accept-item-3").await?;
+    page.click("accept-focus-prev").await?;
+    page.expect_focus("accept-item-1").await?;
     Ok(())
 }
 
-/// Radio group with one checked radio — tabbable navigation only stops at the checked radio.
-async fn test_radio_group_checked(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: radio group with checked radio — skips unchecked radios");
+/// A radio group with a checked radio: tabbable navigation stops only at the checked radio.
+async fn radio_group_checked(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus the button before the radio group.
-    page.click_radio_item("test-fm-radio-btn-before").await?;
-    page.wait_for_active_id("test-fm-radio-btn-before").await?;
-
-    // Tabbable focus_next → should skip unchecked radios (a, c), land on checked radio (b).
-    page.click_radio_focus_next().await?;
-    page.wait_for_active_id("test-fm-radio-b").await?;
-
-    // Tabbable focus_next again → should skip remaining unchecked radio (c), land on button after.
-    page.click_radio_focus_next().await?;
-    page.wait_for_active_id("test-fm-radio-btn-after").await?;
-
-    // Tabbable focus_prev → should land back on checked radio (b), skipping unchecked (c).
-    page.click_radio_focus_prev().await?;
-    page.wait_for_active_id("test-fm-radio-b").await?;
-
+    page.click("radio-btn-before").await?;
+    page.expect_focus("radio-btn-before").await?;
+    // Skips the unchecked radios a and c.
+    page.click("radio-focus-next").await?;
+    page.expect_focus("radio-b").await?;
+    page.click("radio-focus-next").await?;
+    page.expect_focus("radio-btn-after").await?;
+    page.click("radio-focus-prev").await?;
+    page.expect_focus("radio-b").await?;
     Ok(())
 }
 
-/// Radio group with no checked radio — tabbable navigation stops at the first radio only.
-async fn test_radio_group_none_checked(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: radio group with no checked radio — stops at first radio");
+/// A radio group without a checked radio: tabbable navigation stops at the first radio only.
+async fn radio_group_none_checked(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus the button before the radio group.
-    page.click_radio_item("test-fm-radio-none-btn-before")
-        .await?;
-    page.wait_for_active_id("test-fm-radio-none-btn-before")
-        .await?;
-
-    // Tabbable focus_next → should land on the first radio (a) since none are checked.
-    page.click_radio_none_focus_next().await?;
-    page.wait_for_active_id("test-fm-radio-none-a").await?;
-
-    // Tabbable focus_next again → should skip radios b and c (same group), land on button after.
-    page.click_radio_none_focus_next().await?;
-    page.wait_for_active_id("test-fm-radio-none-btn-after")
-        .await?;
-
+    page.click("radio-none-btn-before").await?;
+    page.expect_focus("radio-none-btn-before").await?;
+    page.click("radio-none-focus-next").await?;
+    page.expect_focus("radio-none-a").await?;
+    // Skips radios b and c (same group).
+    page.click("radio-none-focus-next").await?;
+    page.expect_focus("radio-none-btn-after").await?;
     Ok(())
 }
 
-/// Radio group wrap: focus_next with wrap+tabbable wraps back to the checked radio.
-async fn test_radio_group_wrap_next(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: radio group wrap — focus_next wraps to checked radio");
+/// focus_next with wrap and tabbable: no next tabbable (same-group radios are filtered), so it
+/// wraps and finds the checked radio again.
+async fn radio_group_wrap_next(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus the checked radio (b).
-    page.click_radio_item("test-fm-radio-wrap-b").await?;
-    page.wait_for_active_id("test-fm-radio-wrap-b").await?;
-
-    // Tabbable wrap focus_next → no next tabbable (same-group radios filtered),
-    // wrap should reset radio group context and find checked radio (b) again.
-    page.click_radio_wrap_focus_next().await?;
-    page.wait_for_active_id("test-fm-radio-wrap-b").await?;
-
+    page.click("radio-wrap-b").await?;
+    page.expect_focus("radio-wrap-b").await?;
+    page.click("radio-wrap-focus-next").await?;
+    page.expect_focus_stays("radio-wrap-b").await?;
     Ok(())
 }
 
-/// Radio group wrap: focus_previous with wrap+tabbable wraps back to the checked radio.
-async fn test_radio_group_wrap_prev(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: radio group wrap — focus_previous wraps to checked radio");
+/// focus_previous with wrap and tabbable wraps back to the checked radio.
+async fn radio_group_wrap_prev(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus the checked radio (b).
-    page.click_radio_item("test-fm-radio-wrap-b").await?;
-    page.wait_for_active_id("test-fm-radio-wrap-b").await?;
-
-    // Tabbable wrap focus_previous → no previous tabbable (same-group radios filtered),
-    // wrap should reset radio group context and find checked radio (b) again.
-    page.click_radio_wrap_focus_prev().await?;
-    page.wait_for_active_id("test-fm-radio-wrap-b").await?;
-
+    page.click("radio-wrap-b").await?;
+    page.expect_focus("radio-wrap-b").await?;
+    page.click("radio-wrap-focus-prev").await?;
+    page.expect_focus_stays("radio-wrap-b").await?;
     Ok(())
 }
 
-/// Hidden elements (display:none, hidden attr, visibility:hidden) are skipped.
-async fn test_hidden_elements_skipped(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: hidden elements skipped during navigation");
+/// Hidden elements (`display: none`, `hidden`, `visibility: hidden`) are skipped.
+async fn hidden_elements_skipped(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus first visible item
-    page.click_vis_item(1).await?;
-    page.wait_for_active_id("test-fm-vis-item-1").await?;
-
-    // Focus next → should skip items 2-4 (hidden) and land on item 5
-    page.click_vis_focus_next().await?;
-    page.wait_for_active_id("test-fm-vis-item-5").await?;
-
-    // Focus prev → should skip items 4-2 (hidden) and land back on item 1
-    page.click_vis_focus_prev().await?;
-    page.wait_for_active_id("test-fm-vis-item-1").await?;
-
+    page.click("vis-item-1").await?;
+    page.expect_focus("vis-item-1").await?;
+    page.click("vis-focus-next").await?;
+    page.expect_focus("vis-item-5").await?;
+    page.click("vis-focus-prev").await?;
+    page.expect_focus("vis-item-1").await?;
     Ok(())
 }
 
-/// Inert subtree elements are skipped during navigation.
-async fn test_inert_elements_skipped(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: inert elements skipped during navigation");
+/// Elements in an inert subtree are skipped.
+async fn inert_elements_skipped(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Focus first item
-    page.click_inert_item(1).await?;
-    page.wait_for_active_id("test-fm-inert-item-1").await?;
-
-    // Focus next → should skip item 2 (inert parent) and land on item 3
-    page.click_inert_focus_next().await?;
-    page.wait_for_active_id("test-fm-inert-item-3").await?;
-
-    // Focus prev → should skip item 2 and land back on item 1
-    page.click_inert_focus_prev().await?;
-    page.wait_for_active_id("test-fm-inert-item-1").await?;
-
+    page.click("inert-item-1").await?;
+    page.expect_focus("inert-item-1").await?;
+    page.click("inert-focus-next").await?;
+    page.expect_focus("inert-item-3").await?;
+    page.click("inert-focus-prev").await?;
+    page.expect_focus("inert-item-1").await?;
     Ok(())
 }
 
-/// focus_next from outside scope focuses the first element in the scope.
-async fn test_focus_next_from_outside_scope(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: focus_next from outside scope focuses first element");
+/// focus_next from outside the scope focuses the scope's first element.
+async fn focus_next_from_outside_scope(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Click the external button (outside the scope).
-    page.click_outside_external().await?;
-    page.wait_for_active_id("test-fm-outside-external").await?;
-
-    // focus_next → should focus the first element in the scope.
-    page.click_outside_focus_next().await?;
-    page.wait_for_active_id("test-fm-outside-item-1").await?;
-
+    page.click("outside-external").await?;
+    page.expect_focus("outside-external").await?;
+    page.click("outside-focus-next").await?;
+    page.expect_focus("outside-item-1").await?;
     Ok(())
 }
 
-/// focus_previous from outside scope focuses the last element in the scope.
-async fn test_focus_previous_from_outside_scope(page: &FocusManagerPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: focus_previous from outside scope focuses last element");
+/// focus_previous from outside the scope focuses the scope's last element.
+async fn focus_previous_from_outside_scope(page: &FocusManagerPage<'_>) -> Result<(), Report> {
     page.goto().await?;
-
-    // Click the external button (outside the scope).
-    page.click_outside_external().await?;
-    page.wait_for_active_id("test-fm-outside-external").await?;
-
-    // focus_previous → should focus the last element in the scope.
-    page.click_outside_focus_prev().await?;
-    page.wait_for_active_id("test-fm-outside-item-3").await?;
-
+    page.click("outside-external").await?;
+    page.expect_focus("outside-external").await?;
+    page.click("outside-focus-prev").await?;
+    page.expect_focus("outside-item-3").await?;
     Ok(())
 }

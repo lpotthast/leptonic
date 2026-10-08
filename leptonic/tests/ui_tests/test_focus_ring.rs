@@ -2,14 +2,14 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{WebDriver, prelude::*},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, focus_ring::FocusRingPage};
+use crate::pages::{ElementActions, Page, PageActions};
 
+/// `use_focus_ring` and the `FocusRing` atom: focus is visible after keyboard focus, not after
+/// pointer focus; `within`, modality switches, disabled, text inputs. Every case starts on a fresh
+/// page.
 pub struct FocusRingTests {}
 
 #[async_trait]
@@ -19,226 +19,205 @@ impl BrowserTest<str> for FocusRingTests {
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = FocusRingPage { driver, base_url };
-
-        test_basic_click_focus(&page).await?;
-        test_basic_tab_focus(&page).await?;
-        test_within_click_focus(&page).await?;
-        test_within_tab_focus(&page).await?;
-        test_modality_switch(&page).await?;
-        test_arrow_key_keyboard_modality(&page).await?;
-        test_disabled_focus_ring(&page).await?;
-        test_atom_text_input(&page).await?;
-
+        let page = Page { driver, base_url };
+        cases!(
+            basic_click_focus(&page),
+            basic_tab_focus(&page),
+            within_click_focus(&page),
+            within_tab_focus(&page),
+            modality_switch(&page),
+            arrow_key_keyboard_modality(&page),
+            disabled_focus_ring(&page),
+            atom_text_input(&page),
+        );
         Ok(())
     }
 }
 
-/// Click focus: focused=true but focus-visible=false (pointer modality).
-async fn test_basic_click_focus(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: basic click focus — no focus ring");
-    page.goto().await?;
+const PATH: &str = "/hooks/focus-ring";
 
-    // Initial state: not focused, not focus-visible
-    page.wait_for_text("test-fr-is-focused", "false").await?;
-    page.wait_for_text("test-fr-is-focus-visible", "false")
-        .await?;
+/// Click `before`, then Tab: keyboard focus on the element after it.
+async fn tab_after(page: &Page<'_>, before: &str) -> Result<(), Report> {
+    page.element(before).await?.click().await?;
+    page.send_keys(Key::Tab).await
+}
 
-    // Click target: focused=true but focus-visible=false (pointer modality)
-    page.click_target().await?;
-    page.wait_for_text("test-fr-is-focused", "true").await?;
-    page.wait_for_text("test-fr-is-focus-visible", "false")
-        .await?;
-    page.wait_for_target_focus_visible_attr(None).await?;
+/// Click focus: focused, but focus is not visible (pointer modality).
+async fn basic_click_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let target = page.element("#test-fr-target").await?;
+    let is_focused = page.element("#test-fr-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-is-focus-visible").await?;
+    assert_that!(is_focused.inner_text().await?).is_equal_to("false");
+    assert_that!(is_focus_visible.inner_text().await?).is_equal_to("false");
 
-    // Click elsewhere to unfocus
-    page.click_elsewhere().await?;
-    page.wait_for_text("test-fr-is-focused", "false").await?;
+    target.click().await?;
+    is_focused.wait_for_inner_text("true").await?;
+    is_focus_visible.inner_text_stays("false").await?;
+    assert_that!(target.attr("data-focus-visible").await?).is_none();
 
+    page.element("#test-fr-elsewhere").await?.click().await?;
+    is_focused.wait_for_inner_text("false").await?;
     Ok(())
 }
 
-/// Tab focus: focused=true AND focus-visible=true (keyboard modality).
-async fn test_basic_tab_focus(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: basic tab focus — focus ring visible");
-    page.goto().await?;
+/// Tab focus: focused, and focus is visible (keyboard modality).
+async fn basic_tab_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let target = page.element("#test-fr-target").await?;
+    let is_focused = page.element("#test-fr-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-is-focus-visible").await?;
 
-    // Tab to target from the "before" button: keyboard modality
-    page.tab_from_before_to_target().await?;
-    page.wait_for_text("test-fr-is-focused", "true").await?;
-    page.wait_for_text("test-fr-is-focus-visible", "true")
+    tab_after(page, "#test-fr-before").await?;
+    page.wait_for_focus(&target).await?;
+    is_focused.wait_for_inner_text("true").await?;
+    is_focus_visible.wait_for_inner_text("true").await?;
+    target
+        .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
-    page.wait_for_target_focus_visible_attr(Some("true"))
-        .await?;
 
-    // Click elsewhere: no longer focused
-    page.click_elsewhere().await?;
-    page.wait_for_text("test-fr-is-focused", "false").await?;
-    page.wait_for_target_focus_visible_attr(None).await?;
-
+    page.element("#test-fr-elsewhere").await?.click().await?;
+    is_focused.wait_for_inner_text("false").await?;
+    target.wait_for_attr("data-focus-visible", None).await?;
     Ok(())
 }
 
-/// within: true, click focus — container shows focused but not focus-visible.
-async fn test_within_click_focus(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: within=true click focus — no focus ring");
-    page.goto().await?;
+/// `within: true`, click focus: the container is focused, its focus not visible.
+async fn within_click_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let is_focused = page.element("#test-fr-within-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-within-is-focus-visible").await?;
+    assert_that!(is_focused.inner_text().await?).is_equal_to("false");
+    assert_that!(is_focus_visible.inner_text().await?).is_equal_to("false");
 
-    // Initial state
-    page.wait_for_text("test-fr-within-is-focused", "false")
+    page.element("#test-fr-within-child-1")
+        .await?
+        .click()
         .await?;
-    page.wait_for_text("test-fr-within-is-focus-visible", "false")
-        .await?;
+    is_focused.wait_for_inner_text("true").await?;
+    is_focus_visible.inner_text_stays("false").await?;
 
-    // Click child-1 (pointer modality): container is focused but not focus-visible
-    page.click_within_child_1().await?;
-    page.wait_for_text("test-fr-within-is-focused", "true")
+    page.element("#test-fr-within-elsewhere")
+        .await?
+        .click()
         .await?;
-    page.wait_for_text("test-fr-within-is-focus-visible", "false")
-        .await?;
-
-    // Click elsewhere: unfocused
-    page.click_within_elsewhere().await?;
-    page.wait_for_text("test-fr-within-is-focused", "false")
-        .await?;
-
+    is_focused.wait_for_inner_text("false").await?;
     Ok(())
 }
 
-/// within: true, Tab focus — container shows focused AND focus-visible.
-async fn test_within_tab_focus(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: within=true tab focus — focus ring visible");
-    page.goto().await?;
+/// `within: true`, Tab focus: the container is focused and its focus visible.
+async fn within_tab_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let is_focused = page.element("#test-fr-within-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-within-is-focus-visible").await?;
 
-    // Tab from "within-before" button to the first child in the container
-    page.tab_from_within_before_to_child().await?;
-    page.wait_for_text("test-fr-within-is-focused", "true")
-        .await?;
-    page.wait_for_text("test-fr-within-is-focus-visible", "true")
-        .await?;
+    tab_after(page, "#test-fr-within-before").await?;
+    is_focused.wait_for_inner_text("true").await?;
+    is_focus_visible.wait_for_inner_text("true").await?;
 
-    // Click elsewhere: unfocused
-    page.click_within_elsewhere().await?;
-    page.wait_for_text("test-fr-within-is-focused", "false")
+    page.element("#test-fr-within-elsewhere")
+        .await?
+        .click()
         .await?;
-    page.wait_for_text("test-fr-within-is-focus-visible", "false")
-        .await?;
-
+    is_focused.wait_for_inner_text("false").await?;
+    is_focus_visible.wait_for_inner_text("false").await?;
     Ok(())
 }
 
-/// Modality switch: Tab-to-focus shows ring, then click same element hides ring.
-async fn test_modality_switch(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: modality switch — Tab then click");
-    page.goto().await?;
+/// Tab focus shows the focus ring; clicking the same element switches to pointer modality and
+/// hides it.
+async fn modality_switch(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let target = page.element("#test-fr-target").await?;
+    let is_focused = page.element("#test-fr-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-is-focus-visible").await?;
 
-    // Tab to target: keyboard modality → focus ring visible
-    page.tab_from_before_to_target().await?;
-    page.wait_for_text("test-fr-is-focused", "true").await?;
-    page.wait_for_text("test-fr-is-focus-visible", "true")
-        .await?;
+    tab_after(page, "#test-fr-before").await?;
+    is_focused.wait_for_inner_text("true").await?;
+    is_focus_visible.wait_for_inner_text("true").await?;
 
-    // Click the same target element: switches to pointer modality → ring disappears
-    page.click_target().await?;
-    page.wait_for_text("test-fr-is-focused", "true").await?;
-    page.wait_for_text("test-fr-is-focus-visible", "false")
-        .await?;
-
+    target.click().await?;
+    is_focused.inner_text_stays("true").await?;
+    is_focus_visible.wait_for_inner_text("false").await?;
     Ok(())
 }
 
-/// Arrow key after click: switches to keyboard modality, focus ring becomes visible.
-async fn test_arrow_key_keyboard_modality(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: arrow key triggers keyboard modality");
-    page.goto().await?;
+/// An arrow key after a click switches to keyboard modality: the focus ring appears.
+async fn arrow_key_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let target = page.element("#test-fr-target").await?;
+    let is_focused = page.element("#test-fr-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-is-focus-visible").await?;
 
-    // Click target: pointer modality, no focus ring
-    page.click_target().await?;
-    page.wait_for_text("test-fr-is-focused", "true").await?;
-    page.wait_for_text("test-fr-is-focus-visible", "false")
-        .await?;
+    target.click().await?;
+    is_focused.wait_for_inner_text("true").await?;
+    is_focus_visible.inner_text_stays("false").await?;
 
-    // Press ArrowDown: switches to keyboard modality, focus ring appears
-    page.send_keys_to_active(Key::Down).await?;
-    page.wait_for_text("test-fr-is-focus-visible", "true")
+    page.send_keys(Key::Down).await?;
+    is_focus_visible.wait_for_inner_text("true").await?;
+    target
+        .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
-    page.wait_for_target_focus_visible_attr(Some("true"))
-        .await?;
-
     Ok(())
 }
 
-/// Disabled focus ring: click and tab both leave is_focused=false, is_focus_visible=false.
-async fn test_disabled_focus_ring(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: disabled focus ring suppresses focus signals");
-    page.goto().await?;
+/// Disabled: neither a click nor Tab makes the element focused or its focus visible.
+async fn disabled_focus_ring(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let is_focused = page.element("#test-fr-disabled-is-focused").await?;
+    let is_focus_visible = page.element("#test-fr-disabled-is-focus-visible").await?;
 
-    // Click the disabled target: is_focused and is_focus_visible stay false
-    page.click_disabled_target().await?;
-    // Negative checks: give a wrong update time to happen.
-    stays!(
-        "whether the disabled element is focused",
-        false,
-        page.read_disabled_is_focused().await?
-    );
-    assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
+    page.element("#test-fr-disabled-target")
+        .await?
+        .click()
+        .await?;
+    is_focused.inner_text_stays("false").await?;
+    is_focus_visible.inner_text_stays("false").await?;
 
-    // Tab to disabled target: still false
-    // (We click "before" first to set up a known position, then tab forward)
-    page.click_before().await?;
-    let active = page.driver.active_element().await?;
-    active.send_keys(Key::Tab).await?;
-    stays!(
-        "whether the disabled element is focused",
-        false,
-        page.read_disabled_is_focused().await?
-    );
-    assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
-
+    tab_after(page, "#test-fr-before").await?;
+    is_focused.inner_text_stays("false").await?;
+    is_focus_visible.inner_text_stays("false").await?;
     Ok(())
 }
 
 /// The `FocusRing` atom: `data-focused` follows focus. Typing after a click makes focus visible,
 /// but not on a text input (only Tab and Escape do there; upstream's "emits on modality change
 /// (text input)").
-async fn test_atom_text_input(page: &FocusRingPage<'_>) -> Result<(), Report> {
-    page.goto().await?;
-    for (id, is_text_input) in [("test-fr-atom", false), ("test-fr-atom-text", true)] {
-        let el = page.element(id).await?;
-        el.click().await?;
-        page.wait_for_attr(&el, "data-focused", Some("true"))
-            .await?;
-        assert_that!(el.attr("data-focus-visible").await?).is_none();
+async fn atom_text_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    for (selector, is_text_input) in [("#test-fr-atom", false), ("#test-fr-atom-text", true)] {
+        let element = page.element(selector).await?;
+        element.click().await?;
+        element.wait_for_attr("data-focused", Some("true")).await?;
+        assert_that!(element.attr("data-focus-visible").await?)
+            .with_detail_message(selector)
+            .is_none();
 
-        page.send_keys_to_active("a").await?;
+        page.send_keys("a").await?;
         if is_text_input {
-            // Give a wrong `data-focus-visible` the chance to appear.
-            stays!(
-                "data-focus-visible of the element",
-                None,
-                el.attr("data-focus-visible").await?
-            );
-            page.send_keys_to_active(Key::Escape).await?;
+            element.attr_stays("data-focus-visible", None).await?;
+            page.send_keys(Key::Escape).await?;
         }
-        page.wait_for_attr(&el, "data-focus-visible", Some("true"))
+        element
+            .wait_for_attr("data-focus-visible", Some("true"))
             .await?;
     }
-    page.click_elsewhere().await?;
-    let el = page.element("test-fr-atom-text").await?;
-    page.wait_for_attr(&el, "data-focused", None).await?;
+    page.element("#test-fr-elsewhere").await?.click().await?;
+    page.element("#test-fr-atom-text")
+        .await?
+        .wait_for_attr("data-focused", None)
+        .await?;
 
     // Disabled while focused: no longer focused.
-    let el = page.element("test-fr-atom-disable").await?;
-    el.click().await?;
-    page.wait_for_attr(&el, "data-focused", Some("true"))
+    let element = page.element("#test-fr-atom-disable").await?;
+    element.click().await?;
+    element.wait_for_attr("data-focused", Some("true")).await?;
+    // A virtual click keeps focus on the element.
+    page.element("#test-fr-atom-disable-toggle")
+        .await?
+        .virtual_click()
         .await?;
-    page.driver
-        .execute(
-            "document.getElementById('test-fr-atom-disable-toggle').click();",
-            vec![],
-        )
-        .await?;
-    page.wait_for_attr(&el, "data-focused", None).await?;
-    page.wait_for_active_id("test-fr-atom-disable").await?;
+    element.wait_for_attr("data-focused", None).await?;
+    page.focus_stays(&element).await?;
     Ok(())
 }

@@ -3,16 +3,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use super::test_text_field_atoms::{
-    check_validity, expect_focused, field_of, is_valid, referenced_texts, wait_for_referenced_texts,
+use crate::{
+    pages::{ElementActions, Page, PageActions},
+    polling::wait_for,
 };
-use crate::pages::{BaseActions, Page};
 
 /// The SearchField atom and `use_search_field`: slots, Enter/Escape, the clear button,
 /// validation and states.
@@ -27,138 +24,170 @@ impl BrowserTest<str> for SearchFieldTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/search-field").await?;
-
-        provides_slots(&page).await?;
-        enter_submits(&page).await?;
-        escape_clears_once(&page).await?;
-        clear_button_clears_and_focuses_the_input(&page).await?;
-        enter_without_on_submit_submits_the_form(&page).await?;
-        validation_errors(&page).await?;
-        read_only(&page).await?;
-        form_attribute(&page).await?;
-        input_type(&page).await?;
-
+        cases!(
+            provides_slots(&page),
+            enter_submits(&page),
+            escape_clears_once(&page),
+            clear_button_clears_and_focuses_the_input(&page),
+            enter_without_on_submit_submits_the_form(&page),
+            validation_errors(&page),
+            read_only(&page),
+            form_attribute(&page),
+            input_type(&page),
+        );
         Ok(())
     }
+}
+
+/// The `SearchField` in the fixture section matching `section`.
+async fn field_in(page: &Page<'_>, section: &str) -> Result<WebElement, Report> {
+    page.element(format!("{section} .leptonic-SearchField"))
+        .await
 }
 
 /// "provides slots": a searchbox with value, label, description and error message, and a clear
 /// button named "Clear search" that is not tabbable.
 async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-slots input").await?;
-    assert_that!(input.attr("type").await?).is_equal_to(Some("search".to_owned()));
-    assert_that!(input.prop("value").await?).is_equal_to(Some("test".to_owned()));
-    assert_that!(field_of(page, "#sf-slots").await?.attr("data-foo").await?)
-        .is_equal_to(Some("bar".to_owned()));
-    assert_that!(referenced_texts(page, &input, "aria-labelledby").await?)
-        .is_equal_to("Test".to_owned());
-    wait_for_referenced_texts(page, &input, "aria-describedby", "Description Error").await?;
+    let input = page.element("#sf-slots input").await?;
+    assert_that!(input.attr("type").await?)
+        .get_some()
+        .is_equal_to("search");
+    assert_that!(input.value().await?)
+        .get_some()
+        .is_equal_to("test");
+    assert_that!(field_in(page, "#sf-slots").await?.attr("data-foo").await?)
+        .get_some()
+        .is_equal_to("bar");
+    assert_that!(input.referenced_text("aria-labelledby").await?).is_equal_to("Test");
+    wait_for("the description")
+        .observing(|| input.referenced_text("aria-describedby"))
+        .to_be_equal_to("Description Error")
+        .await?;
 
-    let button = page.css("#sf-slots button").await?;
-    assert_that!(button.attr("aria-label").await?).is_equal_to(Some("Clear search".to_owned()));
-    assert_that!(button.attr("tabindex").await?).is_equal_to(Some("-1".to_owned()));
+    let button = page.element("#sf-slots button").await?;
+    assert_that!(button.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Clear search");
+    assert_that!(button.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("-1");
     Ok(())
 }
 
 /// "preventDefault and onSubmit are called for Enter if submit is provided".
 async fn enter_submits(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-keys input").await?;
+    let input = page.element("#sf-keys input").await?;
     input.click().await?;
     input.send_keys("query").await?;
     input.send_keys(Key::Enter).await?;
-    page.wait_for_text("sf-submitted", "query").await
+    page.element("#sf-submitted")
+        .await?
+        .wait_for_inner_text("query")
+        .await?;
+    Ok(())
 }
 
 /// "pressing the Escape key sets the state value to "", if state.value is not empty, and calls
 /// onClear ... and will not call onClear if escape pressed again"; an unhandled Escape keeps
 /// propagating ("preventDefault and stopPropagation are not called for Escape").
 async fn escape_clears_once(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-keys input").await?;
-    page.wait_for_selector("#sf-keys > div:not([data-empty])")
-        .await?;
+    let input = page.element("#sf-keys input").await?;
+    let clears = page.element("#sf-clears").await?;
+    let escapes_bubbled = page.element("#sf-escapes-bubbled").await?;
+    page.element("#sf-keys > div:not([data-empty])").await?;
     input.send_keys(Key::Escape).await?;
-    page.wait_for_text("sf-clears", "1").await?;
-    assert_that!(input.prop("value").await?).is_equal_to(Some(String::new()));
-    page.wait_for_selector("#sf-keys > div[data-empty]").await?;
-    assert_that!(page.read_text_of("sf-escapes-bubbled").await?).is_equal_to("0".to_owned());
+    clears.wait_for_inner_text("1").await?;
+    assert_that!(input.value().await?).get_some().is_empty();
+    page.element("#sf-keys > div[data-empty]").await?;
+    escapes_bubbled.inner_text_stays("0").await?;
 
     input.send_keys(Key::Escape).await?;
-    page.wait_for_text("sf-escapes-bubbled", "1").await?;
-    assert_that!(page.read_text_of("sf-clears").await?).is_equal_to("1".to_owned());
+    escapes_bubbled.wait_for_inner_text("1").await?;
+    clears.inner_text_stays("1").await?;
     Ok(())
 }
 
 /// "sets the state to "" and focuses the search field" / "calls the user provided onClear".
 async fn clear_button_clears_and_focuses_the_input(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-keys input").await?;
+    let input = page.element("#sf-keys input").await?;
     input.send_keys("abc").await?;
-    page.driver
-        .find(browser_test::thirtyfour::By::Css("h1"))
+    page.element("h1").await?.click().await?;
+    page.element("#sf-keys button").await?.click().await?;
+    page.element("#sf-clears")
         .await?
-        .click()
+        .wait_for_inner_text("2")
         .await?;
-    page.css("#sf-keys button").await?.click().await?;
-    page.wait_for_text("sf-clears", "2").await?;
-    assert_that!(input.prop("value").await?).is_equal_to(Some(String::new()));
-    expect_focused(page, &input).await
+    assert_that!(input.value().await?).get_some().is_empty();
+    page.wait_for_focus(&input).await?;
+    Ok(())
 }
 
 /// "preventDefault is not called for Enter if onSubmit is not provided".
 async fn enter_without_on_submit_submits_the_form(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-form input").await?;
+    let input = page.element("#sf-form input").await?;
     input.click().await?;
     input.send_keys("q").await?;
     input.send_keys(Key::Enter).await?;
-    page.wait_for_text("sf-form-submits", "1").await
+    page.element("#sf-form-submits")
+        .await?
+        .wait_for_inner_text("1")
+        .await?;
+    Ok(())
 }
 
-/// "supports validation errors".
+/// "supports validation errors": the native error shows once the form is validated (focusing the
+/// field), and stays until the value is committed (focus leaves).
 async fn validation_errors(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-native input").await?;
+    let input = page.element("#sf-native input").await?;
+    let field = field_in(page, "#sf-native").await?;
     assert_that!(input.attr("required").await?).is_some();
     assert_that!(input.attr("aria-required").await?).is_none();
     assert_that!(input.attr("aria-describedby").await?).is_none();
-    assert_that!(is_valid(page, &input).await?).is_false();
+    assert_that!(input.is_valid().await?).is_false();
 
-    check_validity(page, "sf-native").await?;
-    page.wait_for_selector("#sf-native input[aria-describedby]")
-        .await?;
-    expect_focused(page, &input).await?;
-    let field = field_of(page, "#sf-native").await?;
-    assert_that!(field.attr("data-invalid").await?).is_some();
-    assert_that!(field.attr("data-required").await?).is_some();
+    assert_that!(page.element("#sf-native").await?.check_validity().await?).is_false();
+    page.wait_for_focus(&input).await?;
+    field.wait_for_attr("data-invalid", Some("true")).await?;
+    assert_that!(field.attr("data-required").await?)
+        .get_some()
+        .is_equal_to("true");
+    // The browser's validation message.
+    assert_that!(input.referenced_text("aria-describedby").await?).is_not_blank();
 
-    page.send_keys_to_active("Devon").await?;
+    page.send_keys("Devon").await?;
+    assert_that!(input.is_valid().await?).is_true();
     assert_that!(input.attr("aria-describedby").await?).is_some();
-    assert_that!(is_valid(page, &input).await?).is_true();
-    page.press_tab().await?;
-    page.wait_for_no_selector("#sf-native input[aria-describedby]")
-        .await
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("aria-describedby", None).await?;
+    field.wait_for_attr("data-invalid", None).await?;
+    Ok(())
 }
 
 /// "supports readonly"; the clear button is disabled while read-only.
 async fn read_only(page: &Page<'_>) -> Result<(), Report> {
-    assert_that!(
-        field_of(page, "#sf-read-only")
-            .await?
-            .attr("data-readonly")
-            .await?
-    )
-    .is_some();
-    let button = page.css("#sf-read-only button").await?;
-    assert_that!(button.attr("disabled").await?).is_some();
+    let field = field_in(page, "#sf-read-only").await?;
+    assert_that!(field.attr("data-readonly").await?)
+        .get_some()
+        .is_equal_to("true");
+    let button = page.element("#sf-read-only button").await?;
+    assert_that!(button.is_enabled().await?).is_false();
     Ok(())
 }
 
+/// The `form` attribute reaches the input.
 async fn form_attribute(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-form-attribute input").await?;
-    assert_that!(input.attr("form").await?).is_equal_to(Some("test".to_owned()));
+    let input = page.element("#sf-form-attribute input").await?;
+    assert_that!(input.attr("form").await?)
+        .get_some()
+        .is_equal_to("test");
     Ok(())
 }
 
 /// "with base props": the input is a `search` input unless another type is given.
 async fn input_type(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.css("#sf-type input").await?;
-    assert_that!(input.attr("type").await?).is_equal_to(Some("text".to_owned()));
+    let input = page.element("#sf-type input").await?;
+    assert_that!(input.attr("type").await?)
+        .get_some()
+        .is_equal_to("text");
     Ok(())
 }

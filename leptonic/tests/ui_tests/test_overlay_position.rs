@@ -2,24 +2,15 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// Positioning with `use_overlay_position` (through the `Popover` atom): a popover placed above its
 /// trigger sits `offset` above it, centered, with its arrow at the trigger's center (hidden from
 /// assistive technology) and `--trigger-width` set; a popover without room above flips below.
 pub struct OverlayPositionTests {}
-
-/// The bounding rectangle of the first element matching `selector`: `[left, top, right, bottom]`.
-async fn rect(page: &Page<'_>, selector: &str) -> Result<[f64; 4], Report> {
-    let script = format!(
-        "const r = document.querySelector('{selector}').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom];"
-    );
-    let values: Vec<f64> = page.driver.execute(&script, vec![]).await?.convert()?;
-    Ok([values[0], values[1], values[2], values[3]])
-}
 
 #[async_trait]
 impl BrowserTest<str> for OverlayPositionTests {
@@ -31,108 +22,138 @@ impl BrowserTest<str> for OverlayPositionTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/overlay-position").await?;
 
-        // Above the trigger, `offset` (10px) away, centered, the arrow at the trigger's center.
-        page.click_element_with_id("test-op-above-trigger").await?;
-        page.wait_for_selector(".test-op-above-popover[data-placement=top]")
-            .await?;
-        // Measured once its entry animation (a slide) ran.
-        page.wait_for_no_selector(".test-op-above-popover[data-entering]")
-            .await?;
-        let trigger = rect(&page, "#test-op-above-trigger").await?;
-        let popover = rect(&page, ".test-op-above-popover").await?;
-        let arrow = rect(&page, ".test-op-arrow").await?;
-        assert_that!(popover[3])
-            .with_detail_message("the popover's bottom is 10px above the trigger")
-            .is_close_to(trigger[1] - 10.0, 1.0);
-        let trigger_center = f64::midpoint(trigger[0], trigger[2]);
-        assert_that!(f64::midpoint(popover[0], popover[2]))
-            .with_detail_message("the popover is centered on the trigger")
-            .is_close_to(trigger_center, 1.0);
-        assert_that!(f64::midpoint(arrow[0], arrow[2]))
-            .with_detail_message("the arrow points at the trigger's center")
-            .is_close_to(trigger_center, 1.0);
-        assert_that!(arrow[1])
-            .with_detail_message("the arrow hangs below the popover's bottom edge")
-            .is_close_to(popover[3], 1.0);
-        let arrow_el = page.css(".test-op-arrow").await?;
-        assert_that!(arrow_el.attr("aria-hidden").await?).is_equal_to(Some("true".to_owned()));
-        assert_that!(arrow_el.attr("data-placement").await?).is_equal_to(Some("top".to_owned()));
-        let trigger_width: String = page
-            .driver
-            .execute(
-                "return document.querySelector('.test-op-above-popover').style.getPropertyValue('--trigger-width');",
-                vec![],
-            )
-            .await?
-            .convert()?;
-        assert_that!(trigger_width).is_equal_to(format!("{}px", trigger[2] - trigger[0]));
-        // Non-modal: focus stayed on the trigger, which toggles the popover.
-        page.click_element_with_id("test-op-above-trigger").await?;
-        page.wait_for_no_selector(".test-op-above-popover").await?;
-        // Reopened, the popover has its arrow again.
-        page.click_element_with_id("test-op-above-trigger").await?;
-        page.wait_for_selector(".test-op-above-popover .test-op-arrow[data-placement=top]")
-            .await?;
-        page.click_element_with_id("test-op-above-trigger").await?;
-        page.wait_for_no_selector(".test-op-above-popover").await?;
+        cases!(
+            placed_above(&page),
+            reopened_with_arrow(&page),
+            flips_below(&page),
+            reopened_unplaced(&page),
+        );
 
-        // No room above the trigger at the top of the page: the popover flips below.
-        page.driver
-            .execute("window.scrollTo(0, 0);", vec![])
-            .await?;
-        page.click_element_with_id("test-op-flip-trigger").await?;
-        // In two steps, so that a failure tells whether it opened and where it was placed.
-        page.wait_for_selector(".test-op-flip-popover").await?;
-        let flipped = page.css(".test-op-flip-popover").await?;
-        page.wait_for_attr(&flipped, "data-placement", Some("bottom"))
-            .await?;
-        page.wait_for_no_selector(".test-op-flip-popover[data-entering]")
-            .await?;
-        let trigger = rect(&page, "#test-op-flip-trigger").await?;
-        let popover = rect(&page, ".test-op-flip-popover").await?;
-        assert_that!(popover[1])
-            .with_detail_message(
-                "the flipped popover starts below the trigger (default offset 8px)",
-            )
-            .is_close_to(trigger[3] + 8.0, 1.0);
-        page.click_element_with_id("test-op-flip-trigger").await?;
-        page.wait_for_no_selector(".test-op-flip-popover").await?;
-
-        // Reopened where it fits above, the popover doesn't start from the previous opening's
-        // position (below): it is inserted unplaced, then placed above.
-        page.click_element_with_id("test-op-shift").await?;
-        page.driver
-            .execute(
-                "window.scrollTo(0, 0);
-                window.__placements = [];
-                new MutationObserver(records => {
-                    for (const record of records) {
-                        if (record.target.matches?.('.test-op-flip-popover')) {
-                            window.__placements.push(record.oldValue ?? 'none');
-                        }
-                    }
-                }).observe(document.body, {
-                    subtree: true,
-                    attributes: true,
-                    attributeOldValue: true,
-                    attributeFilter: ['data-placement'],
-                });",
-                vec![],
-            )
-            .await?;
-        page.click_element_with_id("test-op-flip-trigger").await?;
-        page.wait_for_selector(".test-op-flip-popover[data-placement=top]")
-            .await?;
-        let placements: Vec<String> = page
-            .driver
-            .execute("return window.__placements;", vec![])
-            .await?
-            .convert()?;
-        assert_that!(placements)
-            .with_detail_message("the data-placement values the reopened popover had before")
-            .is_equal_to(vec!["none".to_owned()]);
-        page.click_element_with_id("test-op-flip-trigger").await?;
-        page.wait_for_no_selector(".test-op-flip-popover").await?;
-        page.expect_no_page_errors().await
+        Ok(())
     }
+}
+
+const ABOVE: &str = ".test-op-above-popover";
+const FLIP: &str = ".test-op-flip-popover";
+
+/// Scroll the page to its top, where the flip trigger has no room above.
+async fn scroll_to_page_top(page: &Page<'_>) -> Result<(), Report> {
+    page.eval::<()>("window.scrollTo(0, 0);", vec![]).await
+}
+
+/// Above the trigger, `offset` (10px) away, centered, the arrow (hidden from assistive technology)
+/// at the trigger's center, `--trigger-width` set. Non-modal: focus stays on the trigger, which
+/// toggles the popover.
+async fn placed_above(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-op-above-trigger").await?;
+    trigger.click().await?;
+    let popover = page.element(format!("{ABOVE}[data-placement=top]")).await?;
+    // Measured once its entry animation (a slide) ran.
+    page.wait_for_count(format!("{ABOVE}[data-entering]"), 0)
+        .await?;
+    let arrow = page.element(".test-op-arrow").await?;
+    let trigger_rect = trigger.client_rect().await?;
+    let popover_rect = popover.client_rect().await?;
+    let arrow_rect = arrow.client_rect().await?;
+    let trigger_center = f64::midpoint(trigger_rect.left, trigger_rect.right);
+    assert_that!(popover_rect.bottom)
+        .with_detail_message("the popover's bottom is 10px above the trigger")
+        .is_close_to(trigger_rect.top - 10.0, 1.0);
+    assert_that!(f64::midpoint(popover_rect.left, popover_rect.right))
+        .with_detail_message("the popover is centered on the trigger")
+        .is_close_to(trigger_center, 1.0);
+    assert_that!(f64::midpoint(arrow_rect.left, arrow_rect.right))
+        .with_detail_message("the arrow points at the trigger's center")
+        .is_close_to(trigger_center, 1.0);
+    assert_that!(arrow_rect.top)
+        .with_detail_message("the arrow hangs below the popover's bottom edge")
+        .is_close_to(popover_rect.bottom, 1.0);
+    assert_that!(arrow.attr("aria-hidden").await?)
+        .get_some()
+        .is_equal_to("true");
+    assert_that!(arrow.attr("data-placement").await?)
+        .get_some()
+        .is_equal_to("top");
+    // From script: WebDriver's CSS value command doesn't read custom properties.
+    let trigger_width: String = page
+        .eval(
+            "return arguments[0].style.getPropertyValue('--trigger-width');",
+            vec![popover.to_json()?],
+        )
+        .await?;
+    assert_that!(trigger_width).is_equal_to(format!("{}px", trigger_rect.width));
+
+    trigger.click().await?;
+    page.wait_for_count(ABOVE, 0).await?;
+    Ok(())
+}
+
+/// Reopened, the popover has its arrow again.
+async fn reopened_with_arrow(page: &Page<'_>) -> Result<(), Report> {
+    let trigger = page.element("#test-op-above-trigger").await?;
+    trigger.click().await?;
+    page.element(format!("{ABOVE} .test-op-arrow[data-placement=top]"))
+        .await?;
+    trigger.click().await?;
+    page.wait_for_count(ABOVE, 0).await?;
+    Ok(())
+}
+
+/// No room above the trigger at the top of the page: the popover flips below, at the default
+/// offset (8px).
+async fn flips_below(page: &Page<'_>) -> Result<(), Report> {
+    scroll_to_page_top(page).await?;
+    let trigger = page.element("#test-op-flip-trigger").await?;
+    trigger.click().await?;
+    // In two steps, so that a failure tells whether it opened and where it was placed.
+    let popover = page.element(FLIP).await?;
+    popover
+        .wait_for_attr("data-placement", Some("bottom"))
+        .await?;
+    page.wait_for_count(format!("{FLIP}[data-entering]"), 0)
+        .await?;
+    let trigger_rect = trigger.client_rect().await?;
+    let popover_rect = popover.client_rect().await?;
+    assert_that!(popover_rect.top)
+        .with_detail_message("the flipped popover starts below the trigger (default offset 8px)")
+        .is_close_to(trigger_rect.bottom + 8.0, 1.0);
+    trigger.click().await?;
+    page.wait_for_count(FLIP, 0).await?;
+    Ok(())
+}
+
+/// Reopened where it fits above, the popover doesn't start from the previous opening's position
+/// (below): it is inserted unplaced, then placed above.
+async fn reopened_unplaced(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-op-shift").await?.click().await?;
+    scroll_to_page_top(page).await?;
+    // Records the placement each change of `data-placement` replaced.
+    page.eval::<()>(
+        "const popover = arguments[0];
+         window.__placements = [];
+         new MutationObserver(records => {
+             for (const record of records) {
+                 if (record.target.matches?.(popover)) {
+                     window.__placements.push(record.oldValue ?? 'none');
+                 }
+             }
+         }).observe(document.body, {
+             subtree: true,
+             attributes: true,
+             attributeOldValue: true,
+             attributeFilter: ['data-placement'],
+         });",
+        vec![FLIP.into()],
+    )
+    .await?;
+    let trigger = page.element("#test-op-flip-trigger").await?;
+    trigger.click().await?;
+    page.element(format!("{FLIP}[data-placement=top]")).await?;
+    let placements: Vec<String> = page.eval("return window.__placements;", vec![]).await?;
+    assert_that!(placements)
+        .with_detail_message("the data-placement values the reopened popover had before")
+        .contains_exactly(["none"]);
+    trigger.click().await?;
+    page.wait_for_count(FLIP, 0).await?;
+    Ok(())
 }

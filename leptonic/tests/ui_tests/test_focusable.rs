@@ -2,16 +2,14 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, focusable::FocusablePage};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// `use_focusable`: tab index for disabled and excluded elements, auto focus, keyboard events and
 /// the focus handle ("supports isDisabled", "supports excludeFromTabOrder", "supports autoFocus").
+/// Every case starts on a fresh page.
 pub struct FocusableTests {}
 
 #[async_trait]
@@ -21,104 +19,93 @@ impl BrowserTest<str> for FocusableTests {
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = FocusablePage { driver, base_url };
-
-        test_tabindex_attributes(&page).await?;
-        test_keyboard_events(&page).await?;
-        test_tab_skip(&page).await?;
-        test_focus_handle(&page).await?;
-        test_dynamic_disabled_transition(&page).await?;
-
+        let page = Page { driver, base_url };
+        cases!(
+            tabindex_attributes(&page),
+            keyboard_events(&page),
+            tab_skip(&page),
+            focus_handle(&page),
+            dynamic_disabled_transition(&page),
+        );
         Ok(())
     }
 }
 
-/// Tab index attributes: normal=0, disabled=none, excluded=-1. Auto-focus on load.
-async fn test_tabindex_attributes(page: &FocusablePage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: tabindex attributes and auto-focus");
-    page.goto().await?;
+const PATH: &str = "/hooks/focusable";
+const NORMAL: &str = "#test-fcbl-normal";
 
-    // Normal element has tabindex="0"
-    assert_that!(page.read_normal_tabindex().await?).is_equal_to(Some("0".to_string()));
+/// Tab index: normal 0, disabled none, excluded -1. The auto focus element is focused on load.
+async fn tabindex_attributes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let normal = page.element(NORMAL).await?;
+    let disabled = page.element("#test-fcbl-disabled").await?;
+    let excluded = page.element("#test-fcbl-excluded").await?;
+    assert_that!(normal.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("0");
+    assert_that!(disabled.attr("tabindex").await?).is_none();
+    assert_that!(excluded.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("-1");
 
-    // Disabled element has no tabindex attribute
-    assert_that!(page.read_disabled_tabindex().await?).is_equal_to(None);
-
-    // Excluded element has tabindex="-1"
-    assert_that!(page.read_excluded_tabindex().await?).is_equal_to(Some("-1".to_string()));
-
-    // Auto-focus element is focused on page load
-    page.wait_for_active_id("test-fcbl-autofocus").await?;
-
+    page.wait_for_focus(&page.element("#test-fcbl-autofocus").await?)
+        .await?;
     Ok(())
 }
 
-/// Keyboard events: keydown/keyup counters increment.
-async fn test_keyboard_events(page: &FocusablePage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: keyboard events on focusable element");
-    page.goto().await?;
+/// Keyboard events reach the element's handlers.
+async fn keyboard_events(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let normal = page.element(NORMAL).await?;
+    let keydown_count = page.element("#test-fcbl-keydown-count").await?;
+    let keyup_count = page.element("#test-fcbl-keyup-count").await?;
 
-    // Click the normal element and press a key: keydown/keyup counters increment
-    page.click_normal().await?;
-    assert_that!(page.read_keydown_count().await?).is_equal_to(0);
-    assert_that!(page.read_keyup_count().await?).is_equal_to(0);
+    normal.click().await?;
+    page.wait_for_focus(&normal).await?;
+    assert_that!(keydown_count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
+    assert_that!(keyup_count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
 
-    page.send_keys_to_active("a").await?;
-    page.wait_for_text("test-fcbl-keydown-count", "1").await?;
-    page.wait_for_text("test-fcbl-keyup-count", "1").await?;
-
+    page.send_keys("a").await?;
+    keydown_count.wait_for_inner_text("1").await?;
+    keyup_count.wait_for_inner_text("1").await?;
     Ok(())
 }
 
-/// Tab-key skip: Tab from normal element skips disabled and excluded, lands on
-/// the next tabbable element (test-fcbl-tab-target).
-async fn test_tab_skip(page: &FocusablePage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: Tab skips disabled and excluded elements");
-    page.goto().await?;
+/// Tab from the normal element skips the disabled (no tabindex) and the excluded (tabindex -1)
+/// one.
+async fn tab_skip(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let normal = page.element(NORMAL).await?;
+    normal.click().await?;
+    page.wait_for_focus(&normal).await?;
 
-    // Focus the normal element
-    page.click_normal().await?;
-    page.wait_for_active_id("test-fcbl-normal").await?;
-
-    // Tab: should skip disabled (no tabindex) and excluded (tabindex=-1),
-    // landing on the next tabbable element
-    page.press_tab().await?;
-    page.wait_for_active_id("test-fcbl-tab-target").await?;
-
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-fcbl-tab-target").await?)
+        .await?;
     Ok(())
 }
 
-/// Programmatic focus via FocusHandle.
-async fn test_focus_handle(page: &FocusablePage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: FocusHandle programmatic focus");
-    page.goto().await?;
-
-    // Click the programmatic focus button
-    page.click_focus_btn().await?;
-
-    // The normal focusable element should now be focused
-    page.wait_for_active_id("test-fcbl-normal").await?;
-
+/// Programmatic focus through the `FocusHandle`.
+async fn focus_handle(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-fcbl-focus-btn").await?.click().await?;
+    page.wait_for_focus(&page.element(NORMAL).await?).await?;
     Ok(())
 }
 
-/// Dynamic disabled transition: toggling disabled reactively updates tabindex.
-async fn test_dynamic_disabled_transition(page: &FocusablePage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: dynamic disabled transition updates tabindex");
-    page.goto().await?;
+/// Toggling `disabled` updates the tab index.
+async fn dynamic_disabled_transition(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let dynamic = page.element("#test-fcbl-dynamic").await?;
+    let toggle = page.element("#test-fcbl-dynamic-toggle").await?;
+    assert_that!(dynamic.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("0");
 
-    // Initial: enabled, tabindex="0"
-    assert_that!(page.read_dynamic_tabindex().await?).is_equal_to(Some("0".to_string()));
+    toggle.click().await?;
+    dynamic.wait_for_attr("tabindex", None).await?;
 
-    let dynamic = page.driver.find(By::Id("test-fcbl-dynamic")).await?;
-
-    // Toggle to disabled: tabindex becomes None
-    page.click_dynamic_toggle().await?;
-    page.wait_for_attr(&dynamic, "tabindex", None).await?;
-
-    // Toggle back to enabled: tabindex="0"
-    page.click_dynamic_toggle().await?;
-    page.wait_for_attr(&dynamic, "tabindex", Some("0")).await?;
-
+    toggle.click().await?;
+    dynamic.wait_for_attr("tabindex", Some("0")).await?;
     Ok(())
 }

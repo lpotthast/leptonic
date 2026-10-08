@@ -2,13 +2,14 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
-use serde_json::Value;
+use serde::Deserialize;
 
-use crate::pages::{BaseActions, Page};
-
-const LOG: &str = "test-clipboard-log";
+use crate::{
+    pages::{Page, PageActions, role},
+    polling::{expect, wait_for},
+};
 
 /// `use_clipboard`: cut, copy and paste while the element has focus, with synthesized
 /// `ClipboardEvent`s carrying a `DataTransfer`. Fixture: `/hooks/clipboard`.
@@ -22,28 +23,30 @@ impl BrowserTest<str> for ClipboardTests {
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
-        copies(&page).await?;
-        copies_only_when_focused(&page).await?;
-        no_copy_without_items(&page).await?;
-        cuts(&page).await?;
-        cuts_only_when_focused(&page).await?;
-        no_cut_without_items(&page).await?;
-        no_cut_without_on_cut(&page).await?;
-        pastes(&page).await?;
-        pastes_only_when_focused(&page).await?;
-        no_paste_without_on_paste(&page).await?;
-        custom_types(&page).await?;
-        multiple_items_of_a_custom_type(&page).await?;
-        items_of_multiple_types(&page).await?;
-        multiple_items_of_multiple_types(&page).await?;
-        the_action_of_a_cut(&page).await?;
-        the_action_of_a_copy(&page).await?;
-        page.expect_no_page_errors().await
+        cases!(
+            copies(&page),
+            copies_only_when_focused(&page),
+            no_copy_without_items(&page),
+            cuts(&page),
+            cuts_only_when_focused(&page),
+            no_cut_without_items(&page),
+            no_cut_without_on_cut(&page),
+            pastes(&page),
+            pastes_only_when_focused(&page),
+            no_paste_without_on_paste(&page),
+            custom_types(&page),
+            multiple_items_of_a_custom_type(&page),
+            items_of_multiple_types(&page),
+            multiple_items_of_multiple_types(&page),
+            the_action_of_a_cut(&page),
+            the_action_of_a_copy(&page),
+        );
+        Ok(())
     }
 }
 
 /// What dispatching a clipboard event did.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 struct Fired {
     /// Whether its default was prevented (the browser's menu item enabled).
     prevented: bool,
@@ -52,54 +55,39 @@ struct Fired {
 }
 
 /// Dispatches the clipboard event `kind` at the "Copy" button, with the page's clipboard data
-/// (`window.__clipboard`; `reset` starts with an empty one, `data` is added first).
+/// (`window.__clipboard`; `reset` starts with an empty one, `data` is added first). A script: a
+/// `ClipboardEvent` carries a `DataTransfer`, which no event init from WebDriver can.
 async fn fire(
     page: &Page<'_>,
     kind: &str,
     reset: bool,
     data: &[(&str, &str)],
 ) -> Result<Fired, Report> {
-    let data: Vec<Value> = data
-        .iter()
-        .map(|(t, d)| Value::Array(vec![(*t).into(), (*d).into()]))
-        .collect();
-    let result = page
-        .driver
-        .execute(
-            "const [kind, reset, data] = arguments;
-             if (reset || !window.__clipboard) { window.__clipboard = new DataTransfer(); }
-             const clipboardData = window.__clipboard;
-             for (const [type, value] of data) { clipboardData.items.add(value, type); }
-             const button = [...document.querySelectorAll('[role=button]')].find(b => b.textContent.trim() === 'Copy');
-             const event = new ClipboardEvent(kind, {clipboardData, bubbles: true, cancelable: true});
-             button.dispatchEvent(event);
-             return {
-                 prevented: event.defaultPrevented,
-                 items: [...clipboardData.items].filter(i => i.kind === 'string').map(i => [i.type, clipboardData.getData(i.type)]),
-             };",
-            vec![kind.into(), reset.into(), Value::Array(data)],
-        )
-        .await?;
-    let json = result.json();
-    Ok(Fired {
-        prevented: json["prevented"].as_bool().unwrap_or(false),
-        items: json["items"]
-            .as_array()
-            .map(|items| {
-                items
-                    .iter()
-                    .map(|i| {
-                        (
-                            i[0].as_str().unwrap_or_default().to_owned(),
-                            i[1].as_str().unwrap_or_default().to_owned(),
-                        )
-                    })
-                    .collect()
-            })
-            .unwrap_or_default(),
-    })
+    let button = page.element(role("button").text("Copy")).await?;
+    page.eval(
+        "const [button, kind, reset, data] = arguments;
+         if (reset || !window.__clipboard) { window.__clipboard = new DataTransfer(); }
+         const clipboardData = window.__clipboard;
+         for (const [type, value] of data) { clipboardData.items.add(value, type); }
+         const event = new ClipboardEvent(kind, {clipboardData, bubbles: true, cancelable: true});
+         button.dispatchEvent(event);
+         return {
+             prevented: event.defaultPrevented,
+             items: [...clipboardData.items]
+                 .filter(i => i.kind === 'string')
+                 .map(i => [i.type, clipboardData.getData(i.type)]),
+         };",
+        vec![
+            button.to_json()?,
+            kind.into(),
+            reset.into(),
+            serde_json::to_value(data)?,
+        ],
+    )
+    .await
 }
 
+/// `(type, data)` pairs as owned strings.
 fn pairs(expected: &[(&str, &str)]) -> Vec<(String, String)> {
     expected
         .iter()
@@ -111,41 +99,28 @@ fn pairs(expected: &[(&str, &str)]) -> Vec<(String, String)> {
 async fn open(page: &Page<'_>, query: &str, focus: bool) -> Result<(), Report> {
     page.goto_path(&format!("/hooks/clipboard{query}")).await?;
     if focus {
-        page.by_role_and_text("button", "Before")
+        page.element(role("button").text("Before"))
             .await?
             .click()
             .await?;
-        page.press_tab().await?;
-        page.wait_for_active_text("Copy").await?;
+        page.send_keys(Key::Tab).await?;
+        page.wait_for_focus(&page.element(role("button").text("Copy")).await?)
+            .await?;
     }
     Ok(())
 }
 
+/// Waits until the log is `expected`, and checks that nothing more is logged.
 async fn expect_log(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    let expected: Vec<String> = expected.iter().map(|e| (*e).to_owned()).collect();
-    wait_for!("the log", expected.clone(), log(page).await?);
-    // Nothing more is logged.
-    stays!("the log", expected, log(page).await?);
-    Ok(())
-}
-
-async fn log(page: &Page<'_>) -> Result<Vec<String>, Report> {
-    let entries = page
-        .driver
-        .execute(
-            "return [...document.getElementById(arguments[0]).querySelectorAll('li')].map(li => li.textContent);",
-            vec![LOG.into()],
-        )
+    wait_for("the clipboard log")
+        .observing(|| page.inner_texts("#test-clipboard-log li"))
+        .to_be_equal_to(expected)
         .await?;
-    Ok(entries
-        .json()
-        .as_array()
-        .map(|e| {
-            e.iter()
-                .map(|e| e.as_str().unwrap_or_default().to_owned())
-                .collect()
-        })
-        .unwrap_or_default())
+    expect("the clipboard log")
+        .observing(|| page.inner_texts("#test-clipboard-log li"))
+        .to_stay_equal_to(expected)
+        .await?;
+    Ok(())
 }
 
 /// "should copy items to the clipboard".
@@ -154,7 +129,8 @@ async fn copies(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(fire(page, "beforecopy", true, &[]).await?.prevented).is_true();
     let copied = fire(page, "copy", true, &[]).await?;
     assert_that!(copied.items).is_equal_to(pairs(&[("text/plain", "hello world")]));
-    expect_log(page, &["copy"]).await
+    expect_log(page, &["copy"]).await?;
+    Ok(())
 }
 
 /// "should only enable copying when focused".
@@ -162,7 +138,8 @@ async fn copies_only_when_focused(page: &Page<'_>) -> Result<(), Report> {
     open(page, "", false).await?;
     assert_that!(fire(page, "beforecopy", true, &[]).await?.prevented).is_false();
     assert_that!(fire(page, "copy", true, &[]).await?.items).is_empty();
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// "should not enable copying when there is no getItems option".
@@ -170,7 +147,8 @@ async fn no_copy_without_items(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?items=none", true).await?;
     assert_that!(fire(page, "beforecopy", true, &[]).await?.prevented).is_false();
     assert_that!(fire(page, "copy", true, &[]).await?.items).is_empty();
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// "should cut items to the clipboard".
@@ -179,7 +157,8 @@ async fn cuts(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(fire(page, "beforecut", true, &[]).await?.prevented).is_true();
     let cut = fire(page, "cut", true, &[]).await?;
     assert_that!(cut.items).is_equal_to(pairs(&[("text/plain", "hello world")]));
-    expect_log(page, &["cut"]).await
+    expect_log(page, &["cut"]).await?;
+    Ok(())
 }
 
 /// "should only enable cutting when focused".
@@ -187,7 +166,8 @@ async fn cuts_only_when_focused(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?cut", false).await?;
     assert_that!(fire(page, "beforecut", true, &[]).await?.prevented).is_false();
     assert_that!(fire(page, "cut", true, &[]).await?.items).is_empty();
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// "should not enable cutting when there is no getItems option".
@@ -195,7 +175,8 @@ async fn no_cut_without_items(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?cut&items=none", true).await?;
     assert_that!(fire(page, "beforecut", true, &[]).await?.prevented).is_false();
     assert_that!(fire(page, "cut", true, &[]).await?.items).is_empty();
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// "should not enable cutting when there is no onCut option".
@@ -203,7 +184,8 @@ async fn no_cut_without_on_cut(page: &Page<'_>) -> Result<(), Report> {
     open(page, "", true).await?;
     assert_that!(fire(page, "beforecut", true, &[]).await?.prevented).is_false();
     assert_that!(fire(page, "cut", true, &[]).await?.items).is_empty();
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// "should paste items from the clipboard".
@@ -211,7 +193,8 @@ async fn pastes(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?paste", true).await?;
     assert_that!(fire(page, "beforepaste", true, &[]).await?.prevented).is_true();
     fire(page, "paste", true, &[("text/plain", "hello world")]).await?;
-    expect_log(page, &["paste text/plain=hello world"]).await
+    expect_log(page, &["paste text/plain=hello world"]).await?;
+    Ok(())
 }
 
 /// "should only enable pasting when focused".
@@ -219,7 +202,8 @@ async fn pastes_only_when_focused(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?paste", false).await?;
     assert_that!(fire(page, "beforepaste", true, &[]).await?.prevented).is_false();
     fire(page, "paste", true, &[("text/plain", "hello world")]).await?;
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// "should not enable pasting when there is no onPaste option".
@@ -227,7 +211,8 @@ async fn no_paste_without_on_paste(page: &Page<'_>) -> Result<(), Report> {
     open(page, "", true).await?;
     assert_that!(fire(page, "beforepaste", true, &[]).await?.prevented).is_false();
     fire(page, "paste", true, &[("text/plain", "hello world")]).await?;
-    expect_log(page, &[]).await
+    expect_log(page, &[]).await?;
+    Ok(())
 }
 
 /// Copies, then pastes the same clipboard data.
@@ -242,7 +227,8 @@ async fn copy_and_paste(page: &Page<'_>, query: &str) -> Result<Vec<(String, Str
 async fn custom_types(page: &Page<'_>) -> Result<(), Report> {
     let copied = copy_and_paste(page, "?items=custom&paste").await?;
     assert_that!(copied).is_equal_to(pairs(&[("test", "test data")]));
-    expect_log(page, &["copy", "paste test=test data"]).await
+    expect_log(page, &["copy", "paste test=test data"]).await?;
+    Ok(())
 }
 
 /// "should work with multiple items of the same custom type": only the first item's data under
@@ -256,7 +242,8 @@ async fn multiple_items_of_a_custom_type(page: &Page<'_>) -> Result<(), Report> 
             r#"[{"test":"item 1"},{"test":"item 2"}]"#,
         ),
     ]));
-    expect_log(page, &["copy", "paste test=item 1 | test=item 2"]).await
+    expect_log(page, &["copy", "paste test=item 1 | test=item 2"]).await?;
+    Ok(())
 }
 
 /// "should work with items of multiple types".
@@ -270,7 +257,8 @@ async fn items_of_multiple_types(page: &Page<'_>) -> Result<(), Report> {
             r#"[{"test":"test data","text/plain":"test data"}]"#,
         ),
     ]));
-    expect_log(page, &["copy", "paste test=test data text/plain=test data"]).await
+    expect_log(page, &["copy", "paste test=test data text/plain=test data"]).await?;
+    Ok(())
 }
 
 /// "should work with multiple items of multiple types": native types join the items' data.
@@ -291,7 +279,8 @@ async fn multiple_items_of_multiple_types(page: &Page<'_>) -> Result<(), Report>
             "paste test=item 1 text/plain=item 1 | test=item 2 text/plain=item 2",
         ],
     )
-    .await
+    .await?;
+    Ok(())
 }
 
 /// "should show the action type of the clipboard event if cutting".
@@ -299,7 +288,8 @@ async fn the_action_of_a_cut(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?items=action&cut", true).await?;
     let cut = fire(page, "cut", true, &[]).await?;
     assert_that!(cut.items).is_equal_to(pairs(&[("cut", "test data")]));
-    expect_log(page, &["cut"]).await
+    expect_log(page, &["cut"]).await?;
+    Ok(())
 }
 
 /// "should show the action type of the clipboard event if copying".
@@ -307,5 +297,6 @@ async fn the_action_of_a_copy(page: &Page<'_>) -> Result<(), Report> {
     open(page, "?items=action", true).await?;
     let copied = fire(page, "copy", true, &[]).await?;
     assert_that!(copied.items).is_equal_to(pairs(&[("copy", "test data")]));
-    expect_log(page, &["copy"]).await
+    expect_log(page, &["copy"]).await?;
+    Ok(())
 }

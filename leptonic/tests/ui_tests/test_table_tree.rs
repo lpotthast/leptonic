@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// Tree tables (react-aria-components' `Treeble.test.js`): the treegrid structure, expanding and
 /// collapsing rows by mouse and keyboard (also right to left), default and controlled expanded
@@ -27,36 +24,30 @@ impl BrowserTest<str> for TableTreeTests {
         let page = Page { driver, base_url };
         page.goto_path(PATH).await?;
 
-        renders_a_treegrid(&page).await?;
-        expands_a_row_with_the_mouse(&page).await?;
-        expands_a_row_with_the_keyboard(&page, "files", Key::Right, Key::Left).await?;
-        expands_a_row_with_the_keyboard(&page, "rtl", Key::Left, Key::Right).await?;
-        default_expanded_keys(&page).await?;
-        controlled_expanded_keys(&page).await?;
-        keyboard_navigation_of_flattened_rows(&page).await?;
-        keyboard_navigation_of_cells(&page).await?;
-        selection(&page).await?;
-        type_ahead_searches_the_rows_shown(&page).await?;
-        arrow_left_moves_from_a_child_row_to_its_parent(&page).await?;
-        collapsing_from_outside_moves_focus_to_the_parent(&page).await?;
-        leaf_rows_are_never_expanded(&page).await?;
+        cases!(
+            renders_a_treegrid(&page),
+            expands_a_row_with_the_mouse(&page),
+            expands_a_row_with_the_keyboard(&page, "files", Key::Right, Key::Left),
+            expands_a_row_with_the_keyboard(&page, "rtl", Key::Left, Key::Right),
+            default_expanded_keys(&page),
+            controlled_expanded_keys(&page),
+            keyboard_navigation_of_flattened_rows(&page),
+            keyboard_navigation_of_cells(&page),
+            selection(&page),
+            type_ahead_searches_the_rows_shown(&page),
+            arrow_left_moves_from_a_child_row_to_its_parent(&page),
+            collapsing_from_outside_moves_focus_to_the_parent(&page),
+            leaf_rows_are_never_expanded(&page),
+        );
 
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
-/// The visible body rows of the table `id`.
+/// The visible body rows of the table `id` (at least one).
 async fn rows(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
-    Ok(page
-        .driver
-        .find_all(By::Css(format!(
-            "#test-tt-{id} tbody [role=row]:not([hidden])"
-        )))
-        .await?)
-}
-
-async fn attr(element: &WebElement, name: &str) -> Result<Option<String>, Report> {
-    Ok(element.attr(name).await?)
+    page.elements(format!("#test-tt-{id} tbody [role=row]:not([hidden])"))
+        .await
 }
 
 /// The row header's text of each visible row.
@@ -64,9 +55,9 @@ async fn row_names(page: &Page<'_>, id: &str) -> Result<Vec<String>, Report> {
     let mut names = Vec::new();
     for row in rows(page, id).await? {
         names.push(
-            row.find(By::Css("[role=rowheader]"))
+            row.element("[role=rowheader]")
                 .await?
-                .text()
+                .inner_text()
                 .await?
                 .trim_start_matches('>')
                 .trim()
@@ -79,88 +70,101 @@ async fn row_names(page: &Page<'_>, id: &str) -> Result<Vec<String>, Report> {
 /// Checks a visible row's tree attributes: `aria-expanded` (`None`: none), level, position and
 /// set size.
 async fn expect_row(
+    page: &Page<'_>,
     row: &WebElement,
     expanded: Option<&str>,
     level: usize,
     position: usize,
     set_size: usize,
 ) -> Result<(), Report> {
-    let name = row.text().await?;
-    assert_that!(attr(row, "aria-expanded").await?)
+    let name = row.inner_text().await?;
+    assert_that!(row.attr("aria-expanded").await?.as_deref())
         .with_detail_message(format!("aria-expanded of {name}"))
-        .is_equal_to(expanded.map(str::to_owned));
-    assert_that!(attr(row, "aria-level").await?)
+        .is_equal_to(expanded);
+    assert_that!(row.attr("aria-level").await?)
         .with_detail_message(format!("aria-level of {name}"))
-        .is_equal_to(Some(level.to_string()));
-    assert_that!(attr(row, "aria-posinset").await?)
+        .get_some()
+        .is_equal_to(level.to_string());
+    assert_that!(row.attr("aria-posinset").await?)
         .with_detail_message(format!("aria-posinset of {name}"))
-        .is_equal_to(Some(position.to_string()));
-    assert_that!(attr(row, "aria-setsize").await?)
+        .get_some()
+        .is_equal_to(position.to_string());
+    assert_that!(row.attr("aria-setsize").await?)
         .with_detail_message(format!("aria-setsize of {name}"))
-        .is_equal_to(Some(set_size.to_string()));
-    assert_that!(
-        attr(row, "style")
-            .await?
-            .unwrap_or_default()
-            .replace(' ', "")
-    )
-    .with_detail_message(format!("style of {name}"))
-    .contains(format!("--table-row-level:{level}"));
+        .get_some()
+        .is_equal_to(set_size.to_string());
+    let row_level: String = page
+        .eval(
+            "return arguments[0].style.getPropertyValue('--table-row-level');",
+            vec![row.to_json()?],
+        )
+        .await?;
+    assert_that!(row_level)
+        .with_detail_message(format!("--table-row-level of {name}"))
+        .is_equal_to(level.to_string());
     Ok(())
 }
 
 /// The visible rows of the table `id` once there are `count` of them.
-async fn wait_for_rows(page: &Page<'_>, id: &str, count: u64) -> Result<(), Report> {
+async fn wait_for_rows(page: &Page<'_>, id: &str, count: usize) -> Result<(), Report> {
     page.wait_for_count(
         &format!("#test-tt-{id} tbody [role=row]:not([hidden])"),
         count,
     )
-    .await
+    .await?;
+    Ok(())
 }
 
 /// "renders a treegrid".
 async fn renders_a_treegrid(page: &Page<'_>) -> Result<(), Report> {
-    let table = page.css("#test-tt-files table").await?;
-    assert_that!(attr(&table, "role").await?).is_equal_to(Some("treegrid".to_owned()));
+    let table = page.element("#test-tt-files table").await?;
+    assert_that!(table.attr("role").await?)
+        .get_some()
+        .is_equal_to("treegrid");
     wait_for_rows(page, "files", 4).await?;
     let rows = rows(page, "files").await?;
-    expect_row(&rows[0], Some("false"), 1, 1, 4).await?;
-    assert_that!(attr(&rows[0], "data-expanded").await?).is_none();
-    assert_that!(attr(&rows[0], "data-has-child-items").await?).is_some();
-    assert_that!(attr(&rows[0], "data-level").await?).is_equal_to(Some("1".to_owned()));
-    expect_row(&rows[1], Some("false"), 1, 2, 4).await?;
-    expect_row(&rows[2], None, 1, 3, 4).await?;
-    assert_that!(attr(&rows[2], "data-has-child-items").await?).is_none();
-    expect_row(&rows[3], None, 1, 4, 4).await?;
-    assert_that!(row_names(page, "files").await?).is_equal_to(
-        [
-            "Games",
-            "Applications",
-            "2024 Financial Report",
-            "Job Posting",
-        ]
-        .map(str::to_owned)
-        .to_vec(),
-    );
+    expect_row(page, &rows[0], Some("false"), 1, 1, 4).await?;
+    assert_that!(rows[0].attr("data-expanded").await?).is_none();
+    assert_that!(rows[0].attr("data-has-child-items").await?).is_some();
+    assert_that!(rows[0].attr("data-level").await?)
+        .get_some()
+        .is_equal_to("1");
+    expect_row(page, &rows[1], Some("false"), 1, 2, 4).await?;
+    expect_row(page, &rows[2], None, 1, 3, 4).await?;
+    assert_that!(rows[2].attr("data-has-child-items").await?).is_none();
+    expect_row(page, &rows[3], None, 1, 4, 4).await?;
+    assert_that!(row_names(page, "files").await?).contains_exactly([
+        "Games",
+        "Applications",
+        "2024 Financial Report",
+        "Job Posting",
+    ]);
 
     // The tree column's cells are marked; the row's cells share its state.
-    let row_header = rows[0].find(By::Css("[role=rowheader]")).await?;
-    assert_that!(attr(&row_header, "data-tree-column").await?).is_some();
-    for cell in rows[0].find_all(By::Css("[role=gridcell]")).await? {
-        assert_that!(attr(&cell, "data-tree-column").await?).is_none();
-        assert_that!(attr(&cell, "data-has-child-items").await?).is_some();
-        assert_that!(attr(&cell, "data-level").await?).is_equal_to(Some("1".to_owned()));
+    let row_header = rows[0].element("[role=rowheader]").await?;
+    assert_that!(row_header.attr("data-tree-column").await?).is_some();
+    for cell in rows[0].elements("[role=gridcell]").await? {
+        assert_that!(cell.attr("data-tree-column").await?).is_none();
+        assert_that!(cell.attr("data-has-child-items").await?).is_some();
+        assert_that!(cell.attr("data-level").await?)
+            .get_some()
+            .is_equal_to("1");
     }
 
     // The expand button: "Expand" plus the row, out of the tab order; none on leaf rows.
-    let button = row_header.find(By::Css("button")).await?;
-    assert_that!(attr(&button, "aria-label").await?).is_equal_to(Some("Expand".to_owned()));
-    let button_id = attr(&button, "id").await?.unwrap_or_default();
-    let row_header_id = attr(&row_header, "id").await?.unwrap_or_default();
-    assert_that!(attr(&button, "aria-labelledby").await?)
-        .is_equal_to(Some(format!("{button_id} {row_header_id}")));
-    assert_that!(attr(&button, "tabindex").await?).is_equal_to(Some("-1".to_owned()));
-    let leaf_button = rows[2].find(By::Css("button")).await?;
+    let button = row_header.element("button").await?;
+    assert_that!(button.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Expand");
+    let button_id = button.attr("id").await?.unwrap_or_default();
+    let row_header_id = row_header.attr("id").await?.unwrap_or_default();
+    assert_that!(button.attr("aria-labelledby").await?)
+        .get_some()
+        .is_equal_to(format!("{button_id} {row_header_id}"));
+    assert_that!(button.attr("tabindex").await?)
+        .get_some()
+        .is_equal_to("-1");
+    let leaf_button = rows[2].element("button").await?;
     assert_that!(leaf_button.is_displayed().await?).is_false();
     Ok(())
 }
@@ -169,34 +173,34 @@ async fn renders_a_treegrid(page: &Page<'_>) -> Result<(), Report> {
 async fn expect_games_expanded(page: &Page<'_>, id: &str) -> Result<(), Report> {
     wait_for_rows(page, id, 7).await?;
     let rows = rows(page, id).await?;
-    page.wait_for_attr(&rows[0], "aria-expanded", Some("true"))
-        .await?;
-    expect_row(&rows[0], Some("true"), 1, 1, 4).await?;
-    assert_that!(attr(&rows[0], "data-expanded").await?).is_some();
-    expect_row(&rows[1], None, 2, 1, 3).await?;
-    expect_row(&rows[2], None, 2, 2, 3).await?;
-    expect_row(&rows[3], None, 2, 3, 3).await?;
-    expect_row(&rows[4], Some("false"), 1, 2, 4).await?;
-    expect_row(&rows[5], None, 1, 3, 4).await?;
-    assert_that!(row_names(page, id).await?[1..4].to_vec()).is_equal_to(
-        ["Mario Kart", "Tetris", "Pac-Man"]
-            .map(str::to_owned)
-            .to_vec(),
-    );
+    rows[0].wait_for_attr("aria-expanded", Some("true")).await?;
+    expect_row(page, &rows[0], Some("true"), 1, 1, 4).await?;
+    assert_that!(rows[0].attr("data-expanded").await?).is_some();
+    expect_row(page, &rows[1], None, 2, 1, 3).await?;
+    expect_row(page, &rows[2], None, 2, 2, 3).await?;
+    expect_row(page, &rows[3], None, 2, 3, 3).await?;
+    expect_row(page, &rows[4], Some("false"), 1, 2, 4).await?;
+    expect_row(page, &rows[5], None, 1, 3, 4).await?;
+    assert_that!(row_names(page, id).await?[1..4].to_vec()).contains_exactly([
+        "Mario Kart",
+        "Tetris",
+        "Pac-Man",
+    ]);
     Ok(())
 }
 
 /// "should expand a row with mouse": the expand button toggles the row.
 async fn expands_a_row_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    let button = rows(page, "files").await?[0]
-        .find(By::Css("button"))
-        .await?;
+    let button = rows(page, "files").await?[0].element("button").await?;
     button.click().await?;
     expect_games_expanded(page, "files").await?;
-    assert_that!(attr(&button, "aria-label").await?).is_equal_to(Some("Collapse".to_owned()));
+    assert_that!(button.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Collapse");
     button.click().await?;
-    wait_for_rows(page, "files", 4).await
+    wait_for_rows(page, "files", 4).await?;
+    Ok(())
 }
 
 /// "should expand a row with keyboard" (`ltr`, `rtl`): the expand key on the focused row
@@ -208,16 +212,19 @@ async fn expands_a_row_with_the_keyboard(
     collapse: Key,
 ) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    page.click_element_with_id(&format!("test-tt-before-{id}"))
+    page.element(format!("#test-tt-before-{id}"))
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
+    page.send_keys(Key::Tab).await?;
     let first = rows(page, id).await?[0].clone();
-    page.wait_for_focus_on(&first, "the first row").await?;
-    page.send_keys_to_active(expand).await?;
+    page.wait_for_focus(&first).await?;
+    page.send_keys(expand).await?;
     expect_games_expanded(page, id).await?;
-    page.wait_for_focus_on(&first, "the first row").await?;
-    page.send_keys_to_active(collapse).await?;
-    wait_for_rows(page, id, 4).await
+    page.wait_for_focus(&first).await?;
+    page.send_keys(collapse).await?;
+    wait_for_rows(page, id, 4).await?;
+    Ok(())
 }
 
 /// "should support defaultExpandedKeys": Games starts expanded; expanding and collapsing
@@ -226,19 +233,19 @@ async fn default_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     expect_games_expanded(page, "default").await?;
     let apps = rows(page, "default").await?[4].clone();
-    apps.find(By::Css("button")).await?.click().await?;
-    page.wait_for_text("test-tt-default-expanded", "apps,games")
-        .await?;
+    let expanded = page.element("#test-tt-default-expanded").await?;
+    apps.element("button").await?.click().await?;
+    expanded.wait_for_inner_text("apps,games").await?;
     wait_for_rows(page, "default", 10).await?;
     let rows_now = rows(page, "default").await?;
-    expect_row(&rows_now[4], Some("true"), 1, 2, 4).await?;
-    expect_row(&rows_now[5], None, 2, 1, 3).await?;
-    expect_row(&rows_now[7], None, 2, 3, 3).await?;
-    expect_row(&rows_now[8], None, 1, 3, 4).await?;
-    apps.find(By::Css("button")).await?.click().await?;
-    page.wait_for_text("test-tt-default-expanded", "games")
-        .await?;
-    wait_for_rows(page, "default", 7).await
+    expect_row(page, &rows_now[4], Some("true"), 1, 2, 4).await?;
+    expect_row(page, &rows_now[5], None, 2, 1, 3).await?;
+    expect_row(page, &rows_now[7], None, 2, 3, 3).await?;
+    expect_row(page, &rows_now[8], None, 1, 3, 4).await?;
+    apps.element("button").await?.click().await?;
+    expanded.wait_for_inner_text("games").await?;
+    wait_for_rows(page, "default", 7).await?;
+    Ok(())
 }
 
 /// "should support expandedKeys": controlled without a setter, a press reports the change but
@@ -247,17 +254,16 @@ async fn controlled_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     expect_games_expanded(page, "controlled").await?;
     rows(page, "controlled").await?[4]
-        .find(By::Css("button"))
+        .element("button")
         .await?
         .click()
         .await?;
-    page.wait_for_text("test-tt-controlled-expanded", "apps,games")
+    page.element("#test-tt-controlled-expanded")
+        .await?
+        .wait_for_inner_text("apps,games")
         .await?;
-    stays!(
-        "the controlled table's visible rows",
-        7,
-        rows(page, "controlled").await?.len()
-    );
+    page.count_stays("#test-tt-controlled tbody [role=row]:not([hidden])", 7)
+        .await?;
     Ok(())
 }
 
@@ -265,64 +271,62 @@ async fn controlled_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
 /// and End reach the first and the last.
 async fn keyboard_navigation_of_flattened_rows(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    page.click_element_with_id("test-tt-before-default").await?;
-    page.press_tab().await?;
+    page.element("#test-tt-before-default")
+        .await?
+        .click()
+        .await?;
+    page.send_keys(Key::Tab).await?;
     let visible = rows(page, "default").await?;
-    for (index, row) in visible.iter().enumerate() {
-        page.wait_for_focus_on(row, &format!("row {index}")).await?;
-        page.send_keys_to_active(Key::Down).await?;
+    for row in &visible {
+        page.wait_for_focus(row).await?;
+        page.send_keys(Key::Down).await?;
     }
-    page.send_keys_to_active(Key::Home).await?;
-    page.wait_for_focus_on(&visible[0], "the first row").await?;
-    page.send_keys_to_active(Key::End).await?;
-    page.wait_for_focus_on(&visible[visible.len() - 1], "the last row")
-        .await
+    page.send_keys(Key::Home).await?;
+    page.wait_for_focus(&visible[0]).await?;
+    page.send_keys(Key::End).await?;
+    page.wait_for_focus(&visible[visible.len() - 1]).await?;
+    Ok(())
 }
 
 /// "supports keyboard navigation of cells": ArrowRight first expands the row, then walks its
 /// cells and back to the row; ArrowLeft first collapses it, then walks the cells backwards.
 async fn keyboard_navigation_of_cells(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    page.click_element_with_id("test-tt-before-files").await?;
-    page.press_tab().await?;
+    page.element("#test-tt-before-files").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
     let first = rows(page, "files").await?[0].clone();
-    page.wait_for_focus_on(&first, "the first row").await?;
-    page.send_keys_to_active(Key::Right).await?;
-    page.wait_for_attr(&first, "aria-expanded", Some("true"))
-        .await?;
-    page.wait_for_focus_on(&first, "the first row").await?;
-    let mut cells = vec![first.find(By::Css("[role=rowheader]")).await?];
-    cells.extend(first.find_all(By::Css("[role=gridcell]")).await?);
+    page.wait_for_focus(&first).await?;
+    page.send_keys(Key::Right).await?;
+    first.wait_for_attr("aria-expanded", Some("true")).await?;
+    page.wait_for_focus(&first).await?;
+    let mut cells = vec![first.element("[role=rowheader]").await?];
+    cells.extend(first.elements("[role=gridcell]").await?);
     for cell in &cells {
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_focus_on(cell, "the next cell").await?;
+        page.send_keys(Key::Right).await?;
+        page.wait_for_focus(cell).await?;
     }
-    page.send_keys_to_active(Key::Right).await?;
-    page.wait_for_focus_on(&first, "the row").await?;
-    page.send_keys_to_active(Key::Left).await?;
-    page.wait_for_attr(&first, "aria-expanded", Some("false"))
-        .await?;
-    page.wait_for_focus_on(&first, "the row").await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&first).await?;
+    page.send_keys(Key::Left).await?;
+    first.wait_for_attr("aria-expanded", Some("false")).await?;
+    page.wait_for_focus(&first).await?;
     for cell in cells.iter().rev() {
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_focus_on(cell, "the previous cell").await?;
+        page.send_keys(Key::Left).await?;
+        page.wait_for_focus(cell).await?;
     }
-    page.send_keys_to_active(Key::Left).await?;
-    page.wait_for_focus_on(&first, "the row").await
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&first).await?;
+    Ok(())
 }
 
 /// "supports selection": a row and a range across levels.
 async fn selection(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let visible = rows(page, "default").await?;
-    visible[0]
-        .find(By::Css("[role=gridcell]"))
-        .await?
-        .click()
-        .await?;
-    page.wait_for_text("test-tt-default-selection", "games")
-        .await?;
-    let target = visible[2].find(By::Css("[role=gridcell]")).await?;
+    visible[0].element("[role=gridcell]").await?.click().await?;
+    let selection = page.element("#test-tt-default-selection").await?;
+    selection.wait_for_inner_text("games").await?;
+    let target = visible[2].element("[role=gridcell]").await?;
     page.driver
         .action_chain()
         .key_down(Key::Shift)
@@ -330,18 +334,20 @@ async fn selection(page: &Page<'_>) -> Result<(), Report> {
         .key_up(Key::Shift)
         .perform()
         .await?;
-    page.wait_for_text("test-tt-default-selection", "games,mario,tetris")
-        .await
+    selection.wait_for_inner_text("games,mario,tetris").await?;
+    Ok(())
 }
 
 /// Tabs from the "Before" button into the table `id`, onto its first row.
 async fn enter(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
     page.goto_path(PATH).await?;
-    page.click_element_with_id(&format!("test-tt-before-{id}"))
+    page.element(format!("#test-tt-before-{id}"))
+        .await?
+        .click()
         .await?;
-    page.press_tab().await?;
+    page.send_keys(Key::Tab).await?;
     let visible = rows(page, id).await?;
-    page.wait_for_focus_on(&visible[0], "the first row").await?;
+    page.wait_for_focus(&visible[0]).await?;
     Ok(visible)
 }
 
@@ -349,36 +355,34 @@ async fn enter(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
 /// `getKeyBelow`) walks the rows shown: child rows of expanded rows, not those of collapsed ones.
 async fn type_ahead_searches_the_rows_shown(page: &Page<'_>) -> Result<(), Report> {
     let visible = enter(page, "default").await?;
-    page.send_keys_to_active("te").await?;
-    page.wait_for_focus_on(&visible[2], "Tetris").await?;
+    page.send_keys("te").await?;
+    page.wait_for_focus(&visible[2]).await?;
 
     // From a child row, on to a later child row.
     let visible = enter(page, "default").await?;
-    page.send_keys_to_active(Key::Down).await?;
-    page.wait_for_focus_on(&visible[1], "Mario Kart").await?;
-    page.send_keys_to_active("p").await?;
-    page.wait_for_focus_on(&visible[3], "Pac-Man").await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&visible[1]).await?;
+    page.send_keys("p").await?;
+    page.wait_for_focus(&visible[3]).await?;
 
     // Lightroom is under the collapsed Applications; no row shown starts with "l".
     let visible = enter(page, "default").await?;
-    page.send_keys_to_active("l").await?;
-    stays!(
-        "focus on Games",
-        true,
-        page.driver.active_element().await? == visible[0]
-    );
+    page.send_keys("l").await?;
+    page.focus_stays(&visible[0]).await?;
     Ok(())
 }
 
 /// ArrowLeft on a child row (a leaf) moves focus to its parent row, which stays expanded.
 async fn arrow_left_moves_from_a_child_row_to_its_parent(page: &Page<'_>) -> Result<(), Report> {
     let visible = enter(page, "default").await?;
-    page.send_keys_to_active(Key::Down).await?;
-    page.send_keys_to_active(Key::Down).await?;
-    page.wait_for_focus_on(&visible[2], "Tetris").await?;
-    page.send_keys_to_active(Key::Left).await?;
-    page.wait_for_focus_on(&visible[0], "Games").await?;
-    assert_that!(attr(&visible[0], "aria-expanded").await?).is_equal_to(Some("true".to_owned()));
+    page.send_keys(Key::Down).await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&visible[2]).await?;
+    page.send_keys(Key::Left).await?;
+    page.wait_for_focus(&visible[0]).await?;
+    assert_that!(visible[0].attr("aria-expanded").await?)
+        .get_some()
+        .is_equal_to("true");
     Ok(())
 }
 
@@ -388,14 +392,15 @@ async fn arrow_left_moves_from_a_child_row_to_its_parent(page: &Page<'_>) -> Res
 async fn collapsing_from_outside_moves_focus_to_the_parent(page: &Page<'_>) -> Result<(), Report> {
     let visible = enter(page, "bound").await?;
     for _ in 0..3 {
-        page.send_keys_to_active(Key::Down).await?;
+        page.send_keys(Key::Down).await?;
     }
-    page.wait_for_focus_on(&visible[3], "Pac-Man").await?;
-    page.click_element_with_id("test-tt-collapse-all").await?;
+    page.wait_for_focus(&visible[3]).await?;
+    page.element("#test-tt-collapse-all").await?.click().await?;
     wait_for_rows(page, "bound", 4).await?;
-    page.press_tab().await?;
-    page.press_tab().await?;
-    page.wait_for_focus_on(&visible[0], "Games").await
+    page.send_keys(Key::Tab).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&visible[0]).await?;
+    Ok(())
 }
 
 /// A leaf row whose key is among the expanded keys is not expanded (react-aria-components:
@@ -404,9 +409,10 @@ async fn leaf_rows_are_never_expanded(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     wait_for_rows(page, "bound", 7).await?;
     let report = rows(page, "bound").await?[5].clone();
-    assert_that!(row_names(page, "bound").await?[5].clone())
-        .is_equal_to("2024 Financial Report".to_owned());
-    expect_row(&report, None, 1, 3, 4).await?;
-    assert_that!(attr(&report, "data-expanded").await?).is_none();
+    assert_that!(row_names(page, "bound").await?.get(5))
+        .get_some()
+        .is_equal_to("2024 Financial Report");
+    expect_row(page, &report, None, 1, 3, 4).await?;
+    assert_that!(report.attr("data-expanded").await?).is_none();
     Ok(())
 }

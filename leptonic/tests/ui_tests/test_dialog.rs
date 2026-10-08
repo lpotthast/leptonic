@@ -2,13 +2,10 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{Key, WebDriver},
-};
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{BaseActions, Page};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// Behavior of the dialog hook (through the `Dialog` atom in a modal): `role="dialog"` named by
 /// `aria_label`, focused when the modal opens (the first button with `auto_focus`), closing with
@@ -28,151 +25,177 @@ impl BrowserTest<str> for DialogTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/dialog").await?;
 
-        page.click_element_with_id("test-dialog-open").await?;
-        page.wait_for_selector("[role=dialog]").await?;
-        let dialog = page.css("[role=dialog]").await?;
-        assert_that!(dialog.attr("aria-label").await?).is_equal_to(Some("Settings".to_owned()));
-        assert_that!(dialog.attr("aria-labelledby").await?).is_none();
+        cases!(
+            dismiss_button_closes(&page),
+            escape_closes(&page),
+            alert_dialog(&page),
+            keyboard_open_and_close_from_inside(&page),
+            keyboard_open_and_escape(&page),
+            nested_modals(&page),
+            animated_modal(&page),
+            auto_focus(&page),
+        );
 
-        // As react-aria-components' `useDialog`: the dialog itself takes the focus ("Dialog.test.js
-        // should be focused when opened").
-        page.wait_for_focus_on(&dialog, "the dialog").await?;
-        // No `aria-modal` on the modal (WebKit bug 211934).
-        assert_that!(
-            page.count_matching(".leptonic-ModalContent[aria-modal]")
-                .await?
-        )
-        .is_equal_to(0);
-        // A dismissable modal starts with a (visually hidden) dismiss button for screen reader
-        // users (react-aria-components' `Modal`).
-        assert_that!(
-            page.count_matching(".leptonic-ModalContent button[aria-label=Dismiss]")
-                .await?
-        )
-        .is_equal_to(1);
-        page.driver
-            .execute(
-                "document.querySelector('.leptonic-ModalContent button[aria-label=Dismiss]').click()",
-                vec![],
-            )
-            .await?;
-        page.wait_for_no_selector("[role=dialog]").await?;
-        page.wait_for_text("test-dialog-is-open", "false").await?;
-        page.wait_for_active_id("test-dialog-open").await?;
-
-        // Escape closes it and focus returns to the opener.
-        page.click_element_with_id("test-dialog-open").await?;
-        let dialog = page.css("[role=dialog]").await?;
-        page.wait_for_focus_on(&dialog, "the dialog").await?;
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=dialog]").await?;
-        page.wait_for_text("test-dialog-is-open", "false").await?;
-        page.wait_for_active_id("test-dialog-open").await?;
-
-        // A second modal in the same owner (an alert dialog with `Button` atoms, opened by a
-        // `Button` atom) gets its own backdrop's props: it is the topmost overlay, so Escape
-        // closes it.
-        page.click_element_with_id("test-dialog-open-other").await?;
-        page.wait_for_selector("[role=alertdialog]").await?;
-        // The alert dialog takes the focus, not its first (maybe destructive) button.
-        page.wait_for_focus("alertdialog", None).await?;
-        // Not dismissable: no dismiss button.
-        assert_that!(
-            page.count_matching("[role=alertdialog] button[aria-label=Dismiss]")
-                .await?
-        )
-        .is_equal_to(0);
-        // Named by its `DialogTitle` (an `<h2>`) and, as an alert dialog, described by its
-        // `DialogDescription`.
-        let alert = page.css("[role=alertdialog]").await?;
-        let title = page.css("[role=alertdialog] h2").await?;
-        let labelled_by = alert.attr("aria-labelledby").await?;
-        let title_id = title.attr("id").await?;
-        assert_that!(labelled_by).is_equal_to(title_id);
-        assert_that!(title.text().await?).is_equal_to("Other".to_owned());
-        let description_id = alert.attr("aria-describedby").await?.unwrap_or_default();
-        let description = page.css(&format!("[id='{description_id}']")).await?;
-        assert_that!(description.text().await?).is_equal_to("Leave this page?".to_owned());
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=alertdialog]").await?;
-        page.wait_for_active_id("test-dialog-open-other").await?;
-
-        // Opened with the keyboard, closed from inside (a button calling `on_close`).
-        page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_focus("alertdialog", None).await?;
-        page.press_tab().await?;
-        page.wait_for_active_id("test-dialog-other-close").await?;
-        page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_no_selector("[role=alertdialog]").await?;
-        page.wait_for_active_id("test-dialog-open-other").await?;
-
-        // Opened and closed with the keyboard.
-        page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_focus("alertdialog", None).await?;
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=alertdialog]").await?;
-        page.wait_for_active_id("test-dialog-open-other").await?;
-
-        // A button inside a modal opened by a `DialogTrigger` doesn't press through the trigger's
-        // responder: it counts, the modal stays open.
-        page.click_element_with_id("test-dialog-trigger").await?;
-        page.wait_for_selector("[role=dialog][aria-label=Triggered]")
-            .await?;
-        page.click_element_with_id("test-dialog-count").await?;
-        page.wait_for_text("test-dialog-count", "Count 1").await?;
-        assert_that!(
-            page.count_matching("[role=dialog][aria-label=Triggered]")
-                .await?
-        )
-        .is_equal_to(1);
-        // A modal nested in its markup: Escape closes only the nested one, focus returns to its
-        // trigger inside the outer modal.
-        page.click_element_with_id("test-dialog-nested-trigger")
-            .await?;
-        page.wait_for_focus("dialog", Some("Inside nested")).await?;
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=dialog][aria-label=Nested]")
-            .await?;
-        page.wait_for_active_id("test-dialog-nested-trigger")
-            .await?;
-        assert_that!(
-            page.count_matching("[role=dialog][aria-label=Triggered]")
-                .await?
-        )
-        .is_equal_to(1);
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=dialog][aria-label=Triggered]")
-            .await?;
-        page.wait_for_active_id("test-dialog-trigger").await?;
-        // Backdrop and modal animate in and out; they stay rendered until the exit animations ended,
-        // then focus returns to the opener.
-        page.click_element_with_id("test-dialog-open-animated")
-            .await?;
-        page.wait_for_selector(".test-animated-modal[data-entering]")
-            .await?;
-        page.wait_for_selector(".test-animated-modal:not([data-entering])")
-            .await?;
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_selector(".test-animated-backdrop[data-exiting]")
-            .await?;
-        page.wait_for_selector(".test-animated-modal[data-exiting]")
-            .await?;
-        page.wait_for_no_selector(".test-animated-backdrop").await?;
-        page.wait_for_active_id("test-dialog-open-animated").await?;
-
-        // Opting into `auto_focus`: the first button takes the focus instead of the dialog.
-        page.click_element_with_id("test-dialog-open-autofocus")
-            .await?;
-        page.wait_for_selector("[role=dialog][aria-label='Auto focus']")
-            .await?;
-        page.wait_for_active_id("test-dialog-autofocus-first")
-            .await?;
-        page.send_keys_to_active(Key::Escape).await?;
-        page.wait_for_no_selector("[role=dialog][aria-label='Auto focus']")
-            .await?;
-        page.wait_for_active_id("test-dialog-open-autofocus")
-            .await?;
-
-        page.expect_no_page_errors().await
+        Ok(())
     }
+}
+
+/// "should be focused when opened": the dialog itself takes the focus. A dismissable modal has no
+/// `aria-modal` (WebKit bug 211934) and starts with a visually hidden dismiss button for screen
+/// reader users (react-aria-components' `Modal`), which closes it and restores focus.
+async fn dismiss_button_closes(page: &Page<'_>) -> Result<(), Report> {
+    let opener = page.element("#test-dialog-open").await?;
+    let is_open = page.element("#test-dialog-is-open").await?;
+    opener.click().await?;
+    let dialog = page.element("[role=dialog]").await?;
+    assert_that!(dialog.attr("aria-label").await?)
+        .get_some()
+        .is_equal_to("Settings");
+    assert_that!(dialog.attr("aria-labelledby").await?).is_none();
+    page.wait_for_focus(&dialog).await?;
+    assert_that!(page.count(".leptonic-ModalContent[aria-modal]").await?).is_equal_to(0);
+    assert_that!(
+        page.count(".leptonic-ModalContent button[aria-label=Dismiss]")
+            .await?
+    )
+    .is_equal_to(1);
+
+    page.element(".leptonic-ModalContent button[aria-label=Dismiss]")
+        .await?
+        .virtual_click()
+        .await?;
+    page.wait_for_count("[role=dialog]", 0).await?;
+    is_open.wait_for_inner_text("false").await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
+}
+
+/// Escape closes the dialog and focus returns to the opener.
+async fn escape_closes(page: &Page<'_>) -> Result<(), Report> {
+    let opener = page.element("#test-dialog-open").await?;
+    opener.click().await?;
+    let dialog = page.element("[role=dialog]").await?;
+    page.wait_for_focus(&dialog).await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count("[role=dialog]", 0).await?;
+    page.element("#test-dialog-is-open")
+        .await?
+        .wait_for_inner_text("false")
+        .await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
+}
+
+/// A second modal in the same owner (an alert dialog with `Button` atoms, opened by a `Button`
+/// atom) gets its own backdrop's props: it is the topmost overlay, so Escape closes it. The alert
+/// dialog takes the focus, not its first (maybe destructive) button; it is not dismissable, named
+/// by its `DialogTitle` and described by its `DialogDescription`.
+async fn alert_dialog(page: &Page<'_>) -> Result<(), Report> {
+    let opener = page.element("#test-dialog-open-other").await?;
+    opener.click().await?;
+    let alert = page.element("[role=alertdialog]").await?;
+    page.wait_for_focus(&alert).await?;
+    assert_that!(
+        page.count("[role=alertdialog] button[aria-label=Dismiss]")
+            .await?
+    )
+    .is_equal_to(0);
+    let title = alert.element("h2").await?;
+    let title_id = title.id().await?;
+    assert_that!(alert.attr("aria-labelledby").await?).is_equal_to(title_id);
+    assert_that!(title.inner_text().await?).is_equal_to("Other");
+    assert_that!(alert.referenced_text("aria-describedby").await?).is_equal_to("Leave this page?");
+
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count("[role=alertdialog]", 0).await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
+}
+
+/// Opened with the keyboard, closed from inside (a button calling `on_close`).
+async fn keyboard_open_and_close_from_inside(page: &Page<'_>) -> Result<(), Report> {
+    let opener = page.element("#test-dialog-open-other").await?;
+    page.wait_for_focus(&opener).await?;
+    page.send_keys(Key::Enter).await?;
+    page.wait_for_focus(&page.element("[role=alertdialog]").await?)
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&page.element("#test-dialog-other-close").await?)
+        .await?;
+    page.send_keys(Key::Enter).await?;
+    page.wait_for_count("[role=alertdialog]", 0).await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
+}
+
+/// Opened and closed with the keyboard.
+async fn keyboard_open_and_escape(page: &Page<'_>) -> Result<(), Report> {
+    let opener = page.element("#test-dialog-open-other").await?;
+    page.wait_for_focus(&opener).await?;
+    page.send_keys(Key::Enter).await?;
+    page.wait_for_focus(&page.element("[role=alertdialog]").await?)
+        .await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count("[role=alertdialog]", 0).await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
+}
+
+/// A button inside a modal opened by a `DialogTrigger` doesn't press through the trigger's
+/// responder: it counts, the modal stays open. A modal nested in its markup: Escape closes only
+/// the nested one, focus returns to its trigger inside the outer modal.
+async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
+    const TRIGGERED: &str = "[role=dialog][aria-label=Triggered]";
+    const NESTED: &str = "[role=dialog][aria-label=Nested]";
+    let trigger = page.element("#test-dialog-trigger").await?;
+    trigger.click().await?;
+    page.element(TRIGGERED).await?;
+    let count = page.element("#test-dialog-count").await?;
+    count.click().await?;
+    count.wait_for_inner_text("Count 1").await?;
+    assert_that!(page.count(TRIGGERED).await?).is_equal_to(1);
+
+    let nested_trigger = page.element("#test-dialog-nested-trigger").await?;
+    nested_trigger.click().await?;
+    page.wait_for_focus(&page.element(NESTED).await?).await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count(NESTED, 0).await?;
+    page.wait_for_focus(&nested_trigger).await?;
+    assert_that!(page.count(TRIGGERED).await?).is_equal_to(1);
+
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count(TRIGGERED, 0).await?;
+    page.wait_for_focus(&trigger).await?;
+    Ok(())
+}
+
+/// Backdrop and modal animate in and out; they stay rendered until the exit animations ended,
+/// then focus returns to the opener.
+async fn animated_modal(page: &Page<'_>) -> Result<(), Report> {
+    let opener = page.element("#test-dialog-open-animated").await?;
+    opener.click().await?;
+    page.element(".test-animated-modal[data-entering]").await?;
+    page.element(".test-animated-modal:not([data-entering])")
+        .await?;
+    page.send_keys(Key::Escape).await?;
+    page.element(".test-animated-backdrop[data-exiting]")
+        .await?;
+    page.element(".test-animated-modal[data-exiting]").await?;
+    page.wait_for_count(".test-animated-backdrop", 0).await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
+}
+
+/// Opting into `auto_focus`: the first button takes the focus instead of the dialog.
+async fn auto_focus(page: &Page<'_>) -> Result<(), Report> {
+    const DIALOG: &str = "[role=dialog][aria-label='Auto focus']";
+    let opener = page.element("#test-dialog-open-autofocus").await?;
+    opener.click().await?;
+    page.element(DIALOG).await?;
+    page.wait_for_focus(&page.element("#test-dialog-autofocus-first").await?)
+        .await?;
+    page.send_keys(Key::Escape).await?;
+    page.wait_for_count(DIALOG, 0).await?;
+    page.wait_for_focus(&opener).await?;
+    Ok(())
 }

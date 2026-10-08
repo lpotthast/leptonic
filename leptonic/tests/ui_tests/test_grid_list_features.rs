@@ -2,13 +2,13 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver, WebElement},
-};
-use rootcause::Report;
+use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{BaseActions, Page};
+use crate::{
+    pages::{ElementActions, Page, PageActions, xpath},
+    polling::wait_for,
+};
 
 /// Keyboard navigation into rows' children: "ArrowLeft/Right cycles through children and row
 /// element" (`focusMode="child"`), "ArrowDown from child navigates to first child of next item",
@@ -27,95 +27,15 @@ impl BrowserTest<str> for GridListChildNavigationTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/grid-list-features").await?;
 
-        // Arrow navigation, rows whose first child takes focus.
-        focus_before(&page, "#glf-children").await?;
-        page.press_tab().await?;
-        expect_focus_on_button(&page, "Item 1 first").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        expect_focus_on_button(&page, "Item 1 last").await?;
-        page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_focus("row", None).await?;
-        page.send_keys_to_active(Key::Left).await?;
-        expect_focus_on_button(&page, "Item 1 last").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        expect_focus_on_button(&page, "Item 1 first").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_focus("row", None).await?;
-        page.send_keys_to_active(Key::Right).await?;
-        expect_focus_on_button(&page, "Item 1 first").await?;
-        page.send_keys_to_active(Key::Down).await?;
-        expect_focus_on_button(&page, "Item 2 first").await?;
-        page.send_keys_to_active(Key::Up).await?;
-        expect_focus_on_button(&page, "Item 1 first").await?;
-
-        // Right to left ("ArrowLeft/Right RTL cycle"): ArrowLeft moves forward, ArrowRight back.
-        focus_before(&page, "#glf-children-rtl").await?;
-        page.press_tab().await?;
-        expect_focus_on_button(&page, "RTL first").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        expect_focus_on_button(&page, "RTL last").await?;
-        page.send_keys_to_active(Key::Left).await?;
-        page.wait_for_focus("row", None).await?;
-        page.send_keys_to_active(Key::Right).await?;
-        expect_focus_on_button(&page, "RTL last").await?;
-
-        // Tab navigation: Tab enters and walks the row's children, Shift+Tab goes back.
-        focus_before(&page, "#glf-tab").await?;
-        page.press_tab().await?;
-        page.wait_for_focus("row", None).await?;
-        page.press_tab().await?;
-        expect_focus_on_button(&page, "Tab first").await?;
-        page.press_tab().await?;
-        expect_focus_on_button(&page, "Tab last").await?;
-        page.press_shift_tab().await?;
-        expect_focus_on_button(&page, "Tab first").await?;
-        page.press_shift_tab().await?;
-        page.wait_for_focus("row", None).await?;
-
-        // Tab navigation, rows whose child takes focus and that allow arrow navigation: the rows
-        // are no tab stops, arrows move between the rows' children.
-        let rows = page
-            .driver
-            .find_all(By::Css("#glf-child-arrows [role=row]"))
-            .await?;
-        for row in &rows {
-            assert_that!(row.attr("tabindex").await?).is_equal_to(Some("-1".to_owned()));
-        }
-        focus_before(&page, "#glf-child-arrows").await?;
-        page.press_tab().await?;
-        expect_focus_on_button(&page, "Arrow 1").await?;
-        page.send_keys_to_active(Key::Down).await?;
-        expect_focus_on_button(&page, "Arrow 2").await?;
-
-        // A text input in a row keeps its arrow keys, typed text and Space.
-        focus_before(&page, "#glf-input").await?;
-        page.press_tab().await?;
-        page.wait_for_focus("row", Some("Apple")).await?;
-        page.press_tab().await?;
-        let input = page.css("#glf-input input").await?;
-        page.wait_for_focus_on(&input, "the row's text input")
-            .await?;
-        for key in [Key::Down, Key::Up, Key::Right, Key::Left] {
-            page.send_keys_to_active(key).await?;
-        }
-        page.send_keys_to_active("b ").await?;
-        stays!(
-            "the focus on the input",
-            true,
-            page.driver.active_element().await? == input
+        cases!(
+            arrows_cycle_through_children_and_row(&page),
+            arrows_are_mirrored_right_to_left(&page),
+            tab_walks_the_children(&page),
+            arrows_move_between_children_of_rows(&page),
+            text_input_keeps_its_keys(&page),
         );
-        wait_for!(
-            "the input value",
-            "b ".to_owned(),
-            input_value(&input).await?
-        );
-        page.send_keys_to_active(Key::Enter).await?;
-        stays!(
-            "the selection",
-            String::new(),
-            page.read_text_of("glf-input-selection").await?
-        );
-        page.expect_no_page_errors().await
+
+        Ok(())
     }
 }
 
@@ -133,142 +53,265 @@ impl BrowserTest<str> for GridListActionsTests {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/grid-list-features").await?;
 
-        // Hover on rows with an action, none on rows without selection or action.
-        let apple = row(&page, "#glf-action", "Apple").await?;
-        hover(&page, &apple).await?;
-        page.wait_for_attr(&apple, "data-hovered", Some("true"))
-            .await?;
-        let plain = page.css("#glf-children [role=row]").await?;
-        hover(&page, &plain).await?;
-        page.wait_for_attr(&apple, "data-hovered", None).await?;
-        stays!("data-hovered", None, plain.attr("data-hovered").await?);
-
-        // Actions without selection: press and Enter.
-        row(&page, "#glf-action", "Apple").await?.click().await?;
-        page.wait_for_text("glf-action-actions", "Apple").await?;
-        page.wait_for_focus("row", Some("Apple")).await?;
-        // Type-ahead.
-        page.send_keys_to_active("c").await?;
-        page.wait_for_focus("row", Some("Cherry")).await?;
-        page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_text("glf-action-actions", "Apple,Cherry")
-            .await?;
-
-        // Replace selection behavior.
-        let selection = "glf-replace-selection";
-        row(&page, "#glf-replace", "Apple").await?.click().await?;
-        page.wait_for_text(selection, "Apple").await?;
-        row(&page, "#glf-replace", "Banana").await?.click().await?;
-        page.wait_for_text(selection, "Banana").await?;
-        let cherry = row(&page, "#glf-replace", "Cherry").await?;
-        page.driver
-            .action_chain()
-            .key_down(Key::Control)
-            .click_element(&cherry)
-            .key_up(Key::Control)
-            .perform()
-            .await?;
-        page.wait_for_text(selection, "Banana,Cherry").await?;
-        page.driver
-            .action_chain()
-            .double_click_element(&row(&page, "#glf-replace", "Apple").await?)
-            .perform()
-            .await?;
-        page.wait_for_text("glf-replace-actions", "Apple").await?;
-        page.wait_for_text(selection, "Apple").await?;
-
-        // Links open on press.
-        row(&page, "#glf-links", "One").await?.click().await?;
-        wait_for!(
-            "the location hash",
-            "#glf-one".to_owned(),
-            hash(&page).await?
+        cases!(
+            hover_on_rows_with_an_action(&page),
+            actions_without_selection(&page),
+            replace_selection_behavior(&page),
+            links_open_on_press(&page),
+            sections_and_descriptions(&page),
         );
 
-        // Sections: row groups labelled by their header rows.
-        let groups = page
-            .driver
-            .find_all(By::Css("#glf-sections [role=rowgroup]"))
-            .await?;
-        assert_that!(groups.len()).is_equal_to(2);
-        let header_id = groups[0].attr("aria-labelledby").await?.unwrap_or_default();
-        let header = page.element(&header_id).await?;
-        assert_that!(header.attr("role").await?).is_equal_to(Some("rowheader".to_owned()));
-        assert_that!(header.text().await?).is_equal_to("Fruit".to_owned());
-        // Arrow keys skip the header rows.
-        let banana = page
-            .css("#glf-sections [role=row][aria-label=Banana]")
-            .await?;
-        banana.click().await?;
-        page.wait_for_focus_on(&banana, "Banana").await?;
-        page.send_keys_to_active(Key::Down).await?;
-        page.wait_for_focus("row", Some("Carrot")).await?;
-        // A description: the row is labelled by its text and the description.
-        let labelledby = banana.attr("aria-labelledby").await?.unwrap_or_default();
-        let mut texts = Vec::new();
-        for id in labelledby.split_whitespace() {
-            texts.push(
-                page.element(id)
-                    .await?
-                    .prop("textContent")
-                    .await?
-                    .unwrap_or_default(),
-            );
-        }
-        assert_that!(texts.last().cloned()).is_equal_to(Some("Yellow".to_owned()));
-        page.expect_no_page_errors().await
+        Ok(())
     }
 }
 
 /// Focuses a fresh focusable element right before the grid list in `container` (so Tab enters
 /// the grid list).
 async fn focus_before(page: &Page<'_>, container: &str) -> Result<(), Report> {
-    page.driver
-        .execute(
-            "let container = document.querySelector(arguments[0]); \
-             let before = document.createElement('button'); \
-             before.textContent = 'Before'; \
-             container.prepend(before); \
-             before.focus();",
-            vec![serde_json::Value::from(container)],
-        )
-        .await?;
-    Ok(())
+    page.eval::<()>(
+        "const container = document.querySelector(arguments[0]);
+         const before = document.createElement('button');
+         before.textContent = 'Before';
+         container.prepend(before);
+         before.focus();",
+        vec![container.into()],
+    )
+    .await
 }
 
-async fn expect_focus_on_button(page: &Page<'_>, name: &str) -> Result<(), Report> {
-    let button = page.css(&format!("button[aria-label='{name}']")).await?;
-    page.wait_for_focus_on(&button, name).await
+/// The button labelled `name`.
+async fn button(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
+    page.element(format!("button[aria-label='{name}']")).await
+}
+
+/// The row labelled `label` (its text value) in the grid list inside `container`.
+async fn row_labelled(page: &Page<'_>, container: &str, label: &str) -> Result<WebElement, Report> {
+    page.element(format!("{container} [role=row][aria-label='{label}']"))
+        .await
 }
 
 /// The row with the text `text` in the grid list inside `container`.
 async fn row(page: &Page<'_>, container: &str, text: &str) -> Result<WebElement, Report> {
-    let container = page.css(container).await?;
-    Ok(container
-        .find(By::XPath(format!(
+    let container = page.element(container).await?;
+    container
+        .element(xpath(format!(
             ".//*[@role='row'][normalize-space(.)='{text}']"
         )))
-        .await?)
+        .await
 }
 
-async fn input_value(input: &WebElement) -> Result<String, Report> {
-    Ok(input.prop("value").await?.unwrap_or_default())
+/// Rows whose first child takes focus: ArrowRight walks the children, then the row; ArrowLeft
+/// back; ArrowDown/Up move to the first child of the next/previous row.
+async fn arrows_cycle_through_children_and_row(page: &Page<'_>) -> Result<(), Report> {
+    let item_1 = row_labelled(page, "#glf-children", "Item 1").await?;
+    let first = button(page, "Item 1 first").await?;
+    let last = button(page, "Item 1 last").await?;
+    focus_before(page, "#glf-children").await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&first).await?;
+    for (key, target) in [
+        (Key::Right, &last),
+        (Key::Right, &item_1),
+        (Key::Left, &last),
+        (Key::Left, &first),
+        (Key::Left, &item_1),
+        (Key::Right, &first),
+    ] {
+        page.send_keys(key.clone()).await?;
+        page.wait_for_focus(target)
+            .await
+            .context_with(|| format!("after pressing {key:?}"))?;
+    }
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&button(page, "Item 2 first").await?)
+        .await?;
+    page.send_keys(Key::Up).await?;
+    page.wait_for_focus(&first).await?;
+    Ok(())
 }
 
-async fn hash(page: &Page<'_>) -> Result<String, Report> {
-    Ok(page
-        .driver
-        .execute("return window.location.hash;", vec![])
+/// Right to left ("ArrowLeft/Right RTL cycle"): ArrowLeft moves forward, ArrowRight back.
+async fn arrows_are_mirrored_right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    let row = row_labelled(page, "#glf-children-rtl", "RTL 1").await?;
+    let first = button(page, "RTL first").await?;
+    let last = button(page, "RTL last").await?;
+    focus_before(page, "#glf-children-rtl").await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&first).await?;
+    for (key, target) in [(Key::Left, &last), (Key::Left, &row), (Key::Right, &last)] {
+        page.send_keys(key.clone()).await?;
+        page.wait_for_focus(target)
+            .await
+            .context_with(|| format!("after pressing {key:?}"))?;
+    }
+    Ok(())
+}
+
+/// Tab enters the row, then walks the row's children; Shift+Tab goes back to the row.
+async fn tab_walks_the_children(page: &Page<'_>) -> Result<(), Report> {
+    let row = row_labelled(page, "#glf-tab", "Tab 1").await?;
+    let first = button(page, "Tab first").await?;
+    let last = button(page, "Tab last").await?;
+    focus_before(page, "#glf-tab").await?;
+    for (keys, target) in [
+        (TypingData::from(Key::Tab), &row),
+        (TypingData::from(Key::Tab), &first),
+        (TypingData::from(Key::Tab), &last),
+        (Key::Shift + Key::Tab, &first),
+        (Key::Shift + Key::Tab, &row),
+    ] {
+        let description = format!("after pressing {keys:?}");
+        page.send_keys(keys).await?;
+        page.wait_for_focus(target)
+            .await
+            .context_with(|| description.clone())?;
+    }
+    Ok(())
+}
+
+/// Rows whose child takes focus and that allow arrow navigation are no tab stops; arrows move
+/// between the rows' children.
+async fn arrows_move_between_children_of_rows(page: &Page<'_>) -> Result<(), Report> {
+    let rows = page.elements("#glf-child-arrows [role=row]").await?;
+    assert_that!(&rows).has_length(3);
+    for row in &rows {
+        assert_that!(row.attr("tabindex").await?)
+            .get_some()
+            .is_equal_to("-1");
+    }
+    focus_before(page, "#glf-child-arrows").await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&button(page, "Arrow 1").await?).await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&button(page, "Arrow 2").await?).await?;
+    Ok(())
+}
+
+/// A text input in a row keeps its arrow keys, typed text, Space and Enter.
+async fn text_input_keeps_its_keys(page: &Page<'_>) -> Result<(), Report> {
+    let apple = row_labelled(page, "#glf-input", "Apple").await?;
+    let input = page.element("#glf-input input").await?;
+    focus_before(page, "#glf-input").await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&apple).await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&input).await?;
+    for key in [Key::Down, Key::Up, Key::Right, Key::Left] {
+        page.send_keys(key).await?;
+    }
+    page.send_keys("b ").await?;
+    page.focus_stays(&input).await?;
+    input.wait_for_prop("value", "b ").await?;
+    page.send_keys(Key::Enter).await?;
+    page.element("#glf-input-selection")
         .await?
-        .convert::<String>()?)
+        .inner_text_stays("")
+        .await?;
+    Ok(())
 }
 
-/// Moves the pointer over `element`.
-async fn hover(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
+/// Rows with an action show hover; rows without selection or action don't.
+async fn hover_on_rows_with_an_action(page: &Page<'_>) -> Result<(), Report> {
+    let apple = row(page, "#glf-action", "Apple").await?;
+    apple.hover().await?;
+    apple.wait_for_attr("data-hovered", Some("true")).await?;
+    let plain = page.element("#glf-children [role=row]").await?;
+    plain.hover().await?;
+    apple.wait_for_attr("data-hovered", None).await?;
+    plain.attr_stays("data-hovered", None).await?;
+    Ok(())
+}
+
+/// Actions without selection: by press and by Enter; type-ahead moves focus.
+async fn actions_without_selection(page: &Page<'_>) -> Result<(), Report> {
+    let actions = page.element("#glf-action-actions").await?;
+    let apple = row(page, "#glf-action", "Apple").await?;
+    apple.click().await?;
+    actions.wait_for_inner_text("Apple").await?;
+    page.wait_for_focus(&apple).await?;
+    // Type-ahead.
+    page.send_keys("c").await?;
+    page.wait_for_focus(&row(page, "#glf-action", "Cherry").await?)
+        .await?;
+    page.send_keys(Key::Enter).await?;
+    actions.wait_for_inner_text("Apple,Cherry").await?;
+    Ok(())
+}
+
+/// Replace selection behavior: a press replaces the selection, Ctrl+press toggles, a double
+/// click runs the action (and selects the row).
+async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
+    let selection = page.element("#glf-replace-selection").await?;
+    row(page, "#glf-replace", "Apple").await?.click().await?;
+    selection.wait_for_inner_text("Apple").await?;
+    row(page, "#glf-replace", "Banana").await?.click().await?;
+    selection.wait_for_inner_text("Banana").await?;
+    let cherry = row(page, "#glf-replace", "Cherry").await?;
     page.driver
         .action_chain()
-        .move_to_element_center(element)
+        .key_down(Key::Control)
+        .click_element(&cherry)
+        .key_up(Key::Control)
         .perform()
         .await?;
+    selection.wait_for_inner_text("Banana,Cherry").await?;
+    let apple = row(page, "#glf-replace", "Apple").await?;
+    page.driver
+        .action_chain()
+        .double_click_element(&apple)
+        .perform()
+        .await?;
+    page.element("#glf-replace-actions")
+        .await?
+        .wait_for_inner_text("Apple")
+        .await?;
+    selection.wait_for_inner_text("Apple").await?;
+    Ok(())
+}
+
+/// Link rows navigate on press.
+async fn links_open_on_press(page: &Page<'_>) -> Result<(), Report> {
+    row(page, "#glf-links", "One").await?.click().await?;
+    wait_for("the URL's fragment")
+        .observing(|| async {
+            Ok(page
+                .driver
+                .current_url()
+                .await?
+                .fragment()
+                .map(str::to_owned))
+        })
+        .to_be_equal_to(Some("glf-one".to_owned()))
+        .await?;
+    Ok(())
+}
+
+/// Sections are row groups labelled by their header rows, which arrow keys skip; a row with a
+/// description is labelled by its text and the description.
+async fn sections_and_descriptions(page: &Page<'_>) -> Result<(), Report> {
+    let groups = page.elements("#glf-sections [role=rowgroup]").await?;
+    assert_that!(&groups).has_length(2);
+    assert_that!(groups[0].referenced_text("aria-labelledby").await?).is_equal_to("Fruit");
+    let header_id = groups[0].attr("aria-labelledby").await?.unwrap_or_default();
+    let header = page.element(format!("#{header_id}")).await?;
+    assert_that!(header.attr("role").await?)
+        .get_some()
+        .is_equal_to("rowheader");
+
+    let banana = row_labelled(page, "#glf-sections", "Banana").await?;
+    banana.click().await?;
+    page.wait_for_focus(&banana).await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&row_labelled(page, "#glf-sections", "Carrot").await?)
+        .await?;
+    // The description labels the row, after its text.
+    let description = banana
+        .element(xpath(".//*[normalize-space(.)='Yellow']"))
+        .await?;
+    let description_id = description.id().await?.unwrap_or_default();
+    let labelledby = banana.attr("aria-labelledby").await?.unwrap_or_default();
+    assert_that!(labelledby.split_whitespace().last())
+        .get_some()
+        .is_equal_to(description_id.as_str());
     Ok(())
 }
