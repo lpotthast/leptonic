@@ -36,7 +36,7 @@ mod rgb;
 #[cfg(test)]
 mod tests;
 
-use std::{fmt, hash::Hash};
+use std::{cell::RefCell, fmt, hash::Hash};
 
 pub use alpha::{Alpha, AlphaChannel, Color, ColorProp, OpaqueColor};
 pub use hsl::{HSL, HslChannel};
@@ -45,8 +45,7 @@ pub use parse::ParseColorError;
 pub use rgb::{RGB8, RgbChannel};
 
 use crate::utils::{
-    i18n::Locale,
-    locale::WritingDirection,
+    i18n::{Locale, WritingDirection},
     math::to_fixed_number,
     number_formatter::{NumberFormatOptions, NumberFormatter},
 };
@@ -58,10 +57,6 @@ pub struct ColorChannelRange {
     pub max_value: f64,
     pub step: f64,
     pub page_size: f64,
-    /// Fixed gradient stop values for this channel. When `Some`, these specific
-    /// values should be used as gradient stops (e.g., hue at 60-degree boundaries).
-    /// When `None`, the gradient should use just min and max as stops.
-    pub gradient_stops: Option<&'static [f64]>,
 }
 
 /// The channels of a color space on the axes of a 2D color area (react-aria's
@@ -146,7 +141,7 @@ pub trait ColorValue:
     fn channel_range(channel: Self::Channel) -> ColorChannelRange;
 
     /// The channels of this color space (without alpha), in react-aria's order.
-    fn channels() -> Vec<Self::Channel>;
+    fn channels() -> [Self::Channel; 3];
 
     /// The axes of a 2D color area for the preferred x and y channels: the space's first
     /// channels by default (react-aria's `getColorSpaceAxes`), and the remaining one as z.
@@ -179,7 +174,7 @@ pub trait ColorValue:
     /// The value of `channel` formatted for `locale` (react-aria's `formatChannelValue`), e.g.
     /// "128", "50%" or "120°".
     fn format_channel_value(&self, channel: Self::Channel, locale: &Locale) -> String {
-        NumberFormatter::new(locale, Self::channel_format_options(channel))
+        channel_formatter(locale, &Self::channel_format_options(channel))
             .format(self.channel_value(channel))
     }
 
@@ -216,6 +211,11 @@ pub trait ColorValue:
     fn hue_name(&self, locale: &Locale) -> String {
         naming::hue_name(self.to_rgb8(), locale)
     }
+
+    /// The values of `channel` at which a slider's gradient has its stops (react-aria's
+    /// `useColorSlider`): every 60° of a hue, the middle too of a lightness (its color shows only
+    /// there), else the channel's ends.
+    fn gradient_stops(channel: Self::Channel) -> &'static [f64];
 
     /// The CSS background of a 2D color area showing `x_channel` × `y_channel`
     /// (react-aria's `useColorAreaGradient`).
@@ -277,6 +277,37 @@ impl BlendMode {
     }
 }
 
+thread_local! {
+    /// The channel formatters built so far, per locale and format: ICU4X formatters are costly
+    /// to build, and a drag formats channel values on every change.
+    static CHANNEL_FORMATTERS: RefCell<Vec<(Locale, NumberFormatOptions, NumberFormatter)>> =
+        const { RefCell::new(Vec::new()) };
+}
+
+/// Formatters kept at most (a few channel formats per locale in use).
+const MAX_CHANNEL_FORMATTERS: usize = 16;
+
+/// A formatter for `locale` and `options`, built once (react-aria builds one per value).
+pub(crate) fn channel_formatter(locale: &Locale, options: &NumberFormatOptions) -> NumberFormatter {
+    CHANNEL_FORMATTERS.with_borrow_mut(|formatters| {
+        if let Some((.., formatter)) =
+            formatters
+                .iter()
+                .find(|(cached_locale, cached_options, _)| {
+                    cached_locale == locale && cached_options == options
+                })
+        {
+            return formatter.clone();
+        }
+        let formatter = NumberFormatter::new(locale, options.clone());
+        if formatters.len() == MAX_CHANNEL_FORMATTERS {
+            formatters.remove(0);
+        }
+        formatters.push((locale.clone(), options.clone(), formatter.clone()));
+        formatter
+    })
+}
+
 /// A fraction (0 to 1) as a percentage with up to two decimals (react-aria's
 /// `toFixedNumber(value, 2)` of its 0 to 100 values).
 fn to_fixed_percent(fraction: f64) -> f64 {
@@ -303,9 +334,12 @@ const fn line_end(direction: WritingDirection) -> &'static str {
     }
 }
 
+/// The hues a gradient of hues has its stops at (react-aria: every 60°).
+const HUE_STOPS: [f64; 7] = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0];
+
 /// The hue stops of a gradient: `color` at the hues 0, 60, ..., 360 (react-aria's `hue`).
 fn hue_stops<C: ColorValue>(color: C, hue: C::Channel) -> String {
-    [0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0]
+    HUE_STOPS
         .iter()
         .map(|&degrees| color.with_channel_value(hue, degrees).to_css_string())
         .collect::<Vec<_>>()

@@ -1,15 +1,15 @@
 use leptonic::{
+    IntoAttrs,
     atoms::focus_ring::FocusRing,
-    hooks::{IntoAttrs, UseFocusRingInput, use_focus_ring},
+    hooks::focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn PageHookFocusRing() -> impl IntoView {
     let focus_ring = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Element,
         is_disabled: Signal::derive(|| false),
-        within: false,
-        auto_focus: false,
         is_text_input: false,
         on_focus: None,
         on_blur: None,
@@ -21,8 +21,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
 
     let focus_ring_within = use_focus_ring(UseFocusRingInput {
         is_disabled: Signal::derive(|| false),
-        within: true,
-        auto_focus: false,
+        target: FocusRingTarget::Within,
         is_text_input: false,
         on_focus: None,
         on_blur: None,
@@ -33,9 +32,8 @@ pub fn PageHookFocusRing() -> impl IntoView {
     let within_is_focused = focus_ring_within.is_focused;
 
     let disabled_focus_ring = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Element,
         is_disabled: Signal::derive(|| true),
-        within: false,
-        auto_focus: false,
         is_text_input: false,
         on_focus: None,
         on_blur: None,

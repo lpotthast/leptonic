@@ -1,3 +1,6 @@
+#[cfg(feature = "ssr")]
+mod assets;
+
 /// Lets browsers cache the files under `/pkg/` for good: their names carry their content's hash
 /// (`hash-files` in `Cargo.toml`), so a changed file has a new name.
 #[cfg(feature = "ssr")]
@@ -54,6 +57,12 @@ async fn main() {
             get_configuration(None).expect("Leptos configuration in Cargo.toml or the environment");
         let addr = conf.leptos_options.site_addr;
         let leptos_options = conf.leptos_options;
+        let pkg_dir =
+            std::path::Path::new(&*leptos_options.site_root).join(&*leptos_options.site_pkg_dir);
+        tokio::task::spawn_blocking(move || assets::precompress_wasm(&pkg_dir))
+            .await
+            .expect("WASM compression task to finish")
+            .expect("WASM bundles to be precompressed before serving");
         // Generate the list of routes in your Leptos App
         let routes = generate_route_list(App);
 
@@ -95,10 +104,9 @@ async fn main() {
                     .br(true)
                     .deflate(true)
                     .quality(tower_http::CompressionLevel::Default)
-                    // Not the WebAssembly bundle: compressing the 43 MB development bundle takes 3.4 s of CPU per
-                    // request (seconds before the page hydrates, on every reload, and longer when browser tests load
-                    // pages in parallel). A release build serves it precompressed (`precompress.sh`), which this layer
-                    // leaves alone.
+                    // WASM is precompressed at startup in every profile (`assets::precompress_wasm`), including
+                    // `just serve`'s wasm-dev/server-dev builds. The file handler negotiates its .br/.gz sidecars;
+                    // avoid repeating compression per request for clients that request an uncompressed response.
                     .compress_when(
                         DefaultPredicate::new()
                             .and(NotForContentType::const_new("application/wasm")),

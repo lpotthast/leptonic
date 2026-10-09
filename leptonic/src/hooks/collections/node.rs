@@ -2,7 +2,10 @@
 use std::sync::Arc;
 
 use super::Key;
-use crate::utils::{Modifiers, dom_ext::ElementExt, open_link::open_link};
+use crate::{
+    Modifiers,
+    utils::{dom_ext::ElementExt, open_link::open_link},
+};
 
 /// What a [`Node`] represents.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

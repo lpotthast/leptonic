@@ -1,6 +1,6 @@
 use leptonic::{
-    atoms::prelude::{PressResponder, Pressable},
-    hooks::PressEvent,
+    atoms::press::{PressResponder, Pressable},
+    hooks::interactions::PressEvent,
 };
 use leptos::prelude::*;
 
@@ -11,6 +11,7 @@ use leptos::prelude::*;
 pub fn PageAtomPressable() -> impl IntoView {
     let log = RwSignal::new(Vec::<String>::new());
     let responders = RwSignal::new(false);
+    let without_roles = RwSignal::new(false);
     let entry =
         move |name: &'static str| move |_: PressEvent| log.update(|l| l.push(name.to_owned()));
 
@@ -25,14 +26,20 @@ pub fn PageAtomPressable() -> impl IntoView {
             </button>
         </Pressable>
         <Pressable on_press=entry("span press")>
-            <span id="test-pressable-span" role="button">"Span"</span>
+            <span id="test-pressable-span" role="button">
+                "Span"
+            </span>
         </Pressable>
         <Pressable is_disabled=true on_press=entry("disabled press")>
-            <span id="test-pressable-disabled" role="button">"Disabled"</span>
+            <span id="test-pressable-disabled" role="button">
+                "Disabled"
+            </span>
         </Pressable>
         <PressResponder on_press=entry("responder press")>
             <Pressable on_press=entry("inner press")>
-                <span id="test-pressable-responder" role="button">"In a responder"</span>
+                <span id="test-pressable-responder" role="button">
+                    "In a responder"
+                </span>
             </Pressable>
         </PressResponder>
         <div>"Log: " <span id="test-pressable-log">{move || log.get().join(", ")}</span></div>
@@ -54,6 +61,21 @@ pub fn PageAtomPressable() -> impl IntoView {
                     </Pressable>
                 </div>
             </PressResponder>
+        </Show>
+        // Mounted on demand too (Pressable.test.js "should warn if child does not have a role",
+        // "should warn if child does not have an interactive role").
+        <button id="test-pressable-mount-roles" on:click=move |_| without_roles.set(true)>
+            "Mount children without interactive roles"
+        </button>
+        <Show when=move || without_roles.get()>
+            <Pressable>
+                <span id="test-pressable-no-role">"No role"</span>
+            </Pressable>
+            <Pressable>
+                <span id="test-pressable-presentation" role="presentation">
+                    "Presentation"
+                </span>
+            </Pressable>
         </Show>
     }
 }

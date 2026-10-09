@@ -1,4 +1,8 @@
-use leptonic::atoms::prelude::{Button, CheckboxButton, CheckboxField, Disclosure, DisclosurePanel, DisclosureTrigger};
+use leptonic::atoms::{
+    button::Button,
+    checkbox::{CheckboxButton, CheckboxField},
+    disclosure::{Disclosure, DisclosurePanel, DisclosureTrigger},
+};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 

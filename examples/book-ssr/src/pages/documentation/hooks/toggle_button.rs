@@ -38,7 +38,17 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                button::{
+                                    UseButtonInput,
+                                    UseToggleButtonInput,
+                                    use_button,
+                                    use_toggle_button,
+                                },
+                                form::{UseToggleStateInput, use_toggle_state},
+                            },
+                        };
                         use leptos::prelude::*;
 
                         let state = use_toggle_state(UseToggleStateInput::default());
@@ -117,7 +127,7 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                             <Code inline=true>"Single"</Code>": at most one button is selected; selecting one deselects the other. "
                             <Code inline=true>"Multiple"</Code>": any number."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">
                             "Keeps at least one button selected: the last selected button can\u{2019}t be deselected."
                         </ApiRow>
                         <ApiRow name="default_selected_keys" ty="HashSet<Key>" default="HashSet::new()">

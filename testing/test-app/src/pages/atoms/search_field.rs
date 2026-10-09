@@ -4,7 +4,7 @@ use leptonic::{
         input::Input,
         search_field::{SearchField, SearchFieldClearButton},
     },
-    hooks::InputType,
+    hooks::form::InputType,
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -15,6 +15,7 @@ pub fn PageAtomSearchField() -> impl IntoView {
     let submitted = RwSignal::new(String::new());
     let escapes_bubbled = RwSignal::new(0);
     let form_submits = RwSignal::new(0);
+    let disabled_events = RwSignal::new(0);
 
     view! {
         <div id="test-page-atom-search-field">
@@ -76,6 +77,20 @@ pub fn PageAtomSearchField() -> impl IntoView {
                 </SearchField>
             </form>
 
+            <div id="sf-disabled">
+                <SearchField
+                    is_disabled=true
+                    default_value="test"
+                    on_submit=move |_| disabled_events.update(|n| *n += 1)
+                    on_clear=move |()| disabled_events.update(|n| *n += 1)
+                >
+                    <Label>"Disabled"</Label>
+                    <Input />
+                    <SearchFieldClearButton>"x"</SearchFieldClearButton>
+                </SearchField>
+            </div>
+            <div>"Disabled events: " <span id="sf-disabled-events">{move || disabled_events.get()}</span></div>
+
             <div id="sf-read-only">
                 <SearchField is_read_only=true default_value="test">
                     <Label>"Test"</Label>
@@ -92,8 +107,10 @@ pub fn PageAtomSearchField() -> impl IntoView {
                 </SearchField>
             </div>
 
+            // The field outside the form it belongs to.
+            <form id="sf-attribute-form"></form>
             <div id="sf-form-attribute">
-                <SearchField form="test">
+                <SearchField form="sf-attribute-form">
                     <Label>"Test"</Label>
                     <Input />
                 </SearchField>

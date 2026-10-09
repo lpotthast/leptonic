@@ -1,15 +1,18 @@
 // Upstream: react-aria/src/menu/useMenuTrigger.ts @ 99e6102368
+// Upstream: react-aria/test/menu/useMenuTrigger.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/MenuTrigger.test.js @ 99e6102368
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 use super::use_menu_trigger_state::MenuTriggerStateApi;
 use crate::{
     hooks::{
-        UseButtonInput,
+        button::UseButtonInput,
         collections::{AutoFocus, FocusStrategy},
         interactions::{
             use_context_menu::ContextMenuEvent,
-            use_press::{LongPressEvent, PressEvent},
+            use_press::{LongPress, LongPressEvent, PressEvent},
         },
         overlay::use_overlay_trigger::{
             OverlayTriggerType, UseOverlayTriggerInput, use_overlay_trigger,
@@ -19,13 +22,12 @@ use crate::{
         focus::focus_event_target,
         id::use_id,
         intl_strings::{MenuStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         point::Point,
         pointer_type::PointerType,
     },
 };
-
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenuTrigger.ts
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -72,7 +74,7 @@ pub struct UseMenuTriggerInput<S: MenuTriggerStateApi> {
 /// The return value of the `use_menu_trigger` hook.
 #[derive(Debug)]
 pub struct UseMenuTriggerReturn {
-    /// Configuration for the trigger button. Pass it to [`use_button`](fn@crate::hooks::use_button),
+    /// Configuration for the trigger button. Pass it to [`use_button`](fn@crate::hooks::button::use_button),
     /// adding your own settings with struct update syntax:
     /// `use_button(UseButtonInput { on_hover_start: .., ..menu_trigger.button })`.
     pub button: UseButtonInput,
@@ -160,36 +162,36 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
     let press = trigger == MenuTriggerType::Press;
     let long_press = trigger == MenuTriggerType::LongPress;
     let shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("Enter"), move |e| {
+        .on(Shortcut::new(KeyboardKey::Enter), move |e| {
             open(press, e, FocusStrategy::First)
         })
-        .on(Shortcut::key(" "), move |e| {
+        .on(Shortcut::new(KeyboardKey::Space), move |e| {
             open(press, e, FocusStrategy::First)
         })
-        .on(Shortcut::key("ArrowDown"), move |e| {
+        .on(Shortcut::new(KeyboardKey::ArrowDown), move |e| {
             open(press, e, FocusStrategy::First)
         })
-        .on(Shortcut::key("ArrowUp"), move |e| {
+        .on(Shortcut::new(KeyboardKey::ArrowUp), move |e| {
             open(press, e, FocusStrategy::Last)
         })
-        .on(Shortcut::key("Enter").alt(), move |e| {
+        .on(Shortcut::new(KeyboardKey::Enter).alt(), move |e| {
             open(long_press, e, FocusStrategy::First)
         })
-        .on(Shortcut::key(" ").alt(), move |e| {
+        .on(Shortcut::new(KeyboardKey::Space).alt(), move |e| {
             open(long_press, e, FocusStrategy::First)
         })
         // Alt+Arrow opens the menu in both modes. For long press triggers, it is the only way to
         // open the menu with the keyboard.
-        .on(Shortcut::key("ArrowDown").alt(), move |e| {
+        .on(Shortcut::new(KeyboardKey::ArrowDown).alt(), move |e| {
             open(true, e, FocusStrategy::First)
         })
-        .on(Shortcut::key("ArrowUp").alt(), move |e| {
+        .on(Shortcut::new(KeyboardKey::ArrowUp).alt(), move |e| {
             open(true, e, FocusStrategy::Last)
         });
 
     let button = match trigger {
         MenuTriggerType::Press => UseButtonInput {
-            prevent_focus_on_press: true,
+            prevent_focus_on_press: true.into(),
             // For consistency with native menus, open on mouse down / key down, but on touch up.
             on_press_start: Some(Callback::new(move |e: PressEvent| {
                 if e.pointer_type != PointerType::Touch
@@ -216,24 +218,27 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
             on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
                 let rect = e.target.get_bounding_client_rect();
                 state.set_point(Some(Point {
-                    x: rect.x() + e.x,
-                    y: rect.y() + e.y,
+                    x: rect.x() + e.point.x,
+                    y: rect.y() + e.point.y,
                 }));
                 state.open(None);
             })),
             ..UseButtonInput::default()
         },
         MenuTriggerType::LongPress => UseButtonInput {
-            on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
-                state.close();
-            })),
-            on_long_press: Some(Callback::new(move |_: LongPressEvent| {
-                state.open(Some(FocusStrategy::First));
-            })),
-            long_press_accessibility_description: {
-                let strings = use_localized_strings::<MenuStrings>();
-                Signal::derive(move || Some(strings.read().long_press_message())).into()
-            },
+            long_press: Some(LongPress {
+                on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
+                    state.close();
+                })),
+                on_long_press: Some(Callback::new(move |_: LongPressEvent| {
+                    state.open(Some(FocusStrategy::First));
+                })),
+                accessibility_description: {
+                    let strings = use_localized_strings::<MenuStrings>();
+                    Signal::derive(move || Some(strings.read().long_press_message())).into()
+                },
+                ..LongPress::default()
+            }),
             ..UseButtonInput::default()
         },
     };
@@ -291,7 +296,10 @@ pub(crate) fn close_context_menu_on_outside_right_click<S: MenuTriggerStateApi>(
         use leptos_use::use_document;
         use send_wrapper::SendWrapper;
 
-        use crate::utils::event_listeners::{Listener, listen_to};
+        use crate::utils::{
+            dom_ext::EventAccessors,
+            event_listeners::{Listener, listen_to},
+        };
 
         let listener: StoredValue<Option<SendWrapper<Listener>>> = StoredValue::new(None);
         Effect::new(move || {
@@ -309,9 +317,10 @@ pub(crate) fn close_context_menu_on_outside_right_click<S: MenuTriggerStateApi>(
                 false,
                 move |e: web_sys::MouseEvent| {
                     let is_context_click = e.button() == 2 || (e.button() == 0 && e.ctrl_key());
-                    let on_body = body.as_ref().is_some_and(|body| {
-                        e.target().as_ref() == Some(AsRef::<web_sys::EventTarget>::as_ref(body))
-                    });
+                    let target = e.expect_target();
+                    let on_body = body
+                        .as_ref()
+                        .is_some_and(|body| target == *AsRef::<web_sys::EventTarget>::as_ref(body));
                     if is_context_click && on_body {
                         state.close();
                     }

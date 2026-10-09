@@ -57,7 +57,7 @@ pub fn PageAtomButton() -> impl IntoView {
                         "Whether an action the button started is in progress: the button stays focusable but can\u{2019}t be pressed."
                     </ApiRow>
                     <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the button when it mounts."</ApiRow>
-                    <ApiRow name="prevent_focus_on_press" ty="bool" default="false">
+                    <ApiRow name="prevent_focus_on_press" ty="Signal<bool>" default="false">
                         "Doesn\u{2019}t move focus to the button when it is pressed."
                     </ApiRow>
                     <ApiRow name="button_type" ty="ButtonType" default="Button">
@@ -103,6 +103,7 @@ pub fn PageAtomButton() -> impl IntoView {
                         "Classes and styles of the "<Code inline=true>"<button>"</Code>"."
                     </ApiRow>
                     <ApiRow name="children" ty="Children">"The button content. Required."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element id; generated when omitted."</ApiRow>
                 </ApiTable>
 
                 <Section title="ARIA Props">
@@ -114,10 +115,7 @@ pub fn PageAtomButton() -> impl IntoView {
                     </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{
-                                atoms::prelude as atoms,
-                                utils::aria::{AriaCurrent, AriaExpanded},
-                            };
+                            use leptonic::{AriaCurrent, AriaExpanded, atoms};
                             use leptos::prelude::*;
                             use leptos_icons::Icon;
 
@@ -126,22 +124,22 @@ pub fn PageAtomButton() -> impl IntoView {
 
                             view! {
                                 // An icon-only button is named by `aria_label`.
-                                <atoms::Button aria_label="Close" on_press=move |_| is_closed.set(true)>
+                                <atoms::button::Button aria_label="Close" on_press=move |_| is_closed.set(true)>
                                     <Icon icon=icondata::BsXLg/>
-                                </atoms::Button>
+                                </atoms::button::Button>
 
                                 // A disclosure button: what it controls, and whether that is expanded.
-                                <atoms::Button
+                                <atoms::button::Button
                                     aria_controls=Some("details".to_owned())
                                     aria_expanded=Signal::derive(move || Some(AriaExpanded::from(is_open.get())))
                                     on_press=move |_| is_open.update(|open| *open = !*open)
                                 >
                                     "Details"
-                                </atoms::Button>
+                                </atoms::button::Button>
                                 <div id="details" hidden=move || !is_open.get()>"The details."</div>
 
                                 // The current page of a pagination.
-                                <atoms::Button aria_current=Some(AriaCurrent::Page)>"3"</atoms::Button>
+                                <atoms::button::Button aria_current=Some(AriaCurrent::Page)>"3"</atoms::button::Button>
                             }
                         "#)}
                     </Code>
@@ -157,13 +155,13 @@ pub fn PageAtomButton() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude as atoms;
+                        use leptonic::atoms;
                         use leptos::{logging::log, prelude::*};
 
                         view! {
-                            <atoms::Button classes="my-button" on_press=move |_| log!("pressed")>
+                            <atoms::button::Button classes="my-button" on_press=move |_| log!("pressed")>
                                 "Press me"
-                            </atoms::Button>
+                            </atoms::button::Button>
                         }
                     "#)}
                 </Code>

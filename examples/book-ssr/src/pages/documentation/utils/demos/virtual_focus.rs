@@ -1,10 +1,10 @@
 use leptonic::{
-    hooks::*,
-    utils::{
-        id::use_id,
-        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        virtual_focus::move_virtual_focus,
+    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    hooks::{
+        focus::{UseFocusInput, UseFocusReturn, use_focus},
+        interactions::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
     },
+    move_virtual_focus, use_id,
 };
 use leptos::{html, prelude::*};
 
@@ -66,10 +66,10 @@ pub fn VirtualFocusDemo() -> impl IntoView {
 
     let count = FRUITS.len();
     let shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("ArrowDown"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowDown), move |_| {
             move_to(Some(focused.get_untracked().map_or(0, |i| (i + 1) % count)));
         })
-        .on(Shortcut::key("ArrowUp"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowUp), move |_| {
             move_to(Some(
                 focused
                     .get_untracked()
@@ -77,7 +77,7 @@ pub fn VirtualFocusDemo() -> impl IntoView {
             ));
         })
         // Back to the input: it gets a synthetic `focus` event and shows its focus ring again.
-        .on(Shortcut::key("Escape"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Escape), move |_| {
             if focused.get_untracked().is_none() {
                 return false;
             }

@@ -41,7 +41,7 @@ pub fn PageFocus() -> impl IntoView {
                         </li>
                         <li>
                             <strong>"Control: "</strong>
-                            <Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link>" moves "
+                            <Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link>" moves "
                             "the focus between the elements of a container, "
                             <Link href=routes::doc::focus::FocusManagerProvider.materialize()>"FocusManagerProvider"</Link>
                             " renders such a container and hands the manager to its children, and "
@@ -105,9 +105,8 @@ pub fn PageFocus() -> impl IntoView {
                             <Code inline=true>"use_has_tabbable_child"</Code>"."
                         </li>
                         <li>
-                            "The merged props types of "<Link href=routes::doc::Interactions.materialize()>"Interactions"</Link>
-                            " (e.g. "<Code inline=true>"MergedPressHoverFocusRingProps"</Code>
-                            ") combine interaction and focus hooks on one element."
+                            "Combine "<Link href=routes::doc::Interactions.materialize()>"interaction hooks"</Link>
+                            " and focus hooks by spreading each hook\u{2019}s props onto the same element."
                         </li>
                     </ul>
                 </Section>
@@ -141,7 +140,7 @@ pub fn PageFocus() -> impl IntoView {
                         <TableCell>"Move focus with arrow keys in your own composite control"</TableCell>
                         <TableCell>
                             <Link href=routes::doc::focus::FocusManagerProvider.materialize()>"FocusManagerProvider"</Link>", or "
-                            <Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link>
+                            <Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link>
                         </TableCell>
                     </TableRow>
                     <TableRow>

@@ -101,7 +101,7 @@ pub fn PageColor() -> impl IntoView {
 
             <Section title="Color Values">
                 <p>
-                    "The color types and traits live in "<Code inline=true>"leptonic::utils::color"</Code>"."
+                    "The color types and traits live in "<Code inline=true>"leptonic"</Code>"."
                 </p>
 
                 <Section title="Color Types">
@@ -165,9 +165,10 @@ pub fn PageColor() -> impl IntoView {
 
                                 fn channel_value(&self, channel: Self::Channel) -> f64;
                                 fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self;
-                                fn channels() -> Vec<Self::Channel>;
+                                fn channels() -> [Self::Channel; 3];
                                 fn channel_range(channel: Self::Channel) -> ColorChannelRange;
-                                fn channel_name(channel: Self::Channel) -> &'static str;
+                                fn channel_name(channel: Self::Channel, locale: &Locale) -> String;
+                                fn gradient_stops(channel: Self::Channel) -> &'static [f64];
                                 fn is_alpha_channel(channel: Self::Channel) -> bool;
                                 fn channel_format_options(channel: Self::Channel) -> NumberFormatOptions;
                                 fn format_channel_value(&self, channel: Self::Channel, locale: &Locale) -> String;
@@ -175,8 +176,8 @@ pub fn PageColor() -> impl IntoView {
                                 fn to_css_string_with_alpha(&self, alpha: f64) -> String;
                                 fn to_rgb8(&self) -> RGB8;
                                 fn hue_channel() -> Option<Self::Channel>;
-                                fn color_name(&self) -> String;
-                                fn hue_name(&self) -> String;
+                                fn color_name(&self, locale: &Locale) -> String;
+                                fn hue_name(&self, locale: &Locale) -> String;
                                 // ... plus `color_space_axes`, `display_color`, `opaque` and `area_gradient`,
                                 // which the hooks use.
                             }
@@ -201,7 +202,7 @@ pub fn PageColor() -> impl IntoView {
                     </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::utils::color::{Color, HSV, RGB8};
+                            use leptonic::{Color, HSV, RGB8};
 
                             let color = Color::from(HSV { hue: 210.0, saturation: 0.6, brightness: 0.8 });
                             let rgb: RGB8 = color.to::<RGB8>();

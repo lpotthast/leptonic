@@ -1,49 +1,51 @@
 // Upstream: react-aria/src/interactions/usePress.ts @ 99e6102368
+// Upstream: react-aria/src/interactions/useLongPress.ts @ 99e6102368
+// Upstream: react-aria/src/interactions/context.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/usePress.test.js @ 99e6102368
+// Upstream: react-aria/test/interactions/useLongPress.test.js @ 99e6102368
 
-#[cfg(not(feature = "ssr"))]
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{attr, attr::Attr, ev, prelude::*};
 use send_wrapper::SendWrapper;
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
-use web_sys::{DragEvent, EventTarget, KeyboardEvent, MouseEvent, PointerEvent};
+use web_sys::{DragEvent, KeyboardEvent, MouseEvent, PointerEvent};
 #[cfg(not(feature = "ssr"))]
-use web_sys::{HtmlElement, HtmlInputElement, HtmlTextAreaElement};
+use web_sys::{HtmlButtonElement, HtmlElement, HtmlInputElement, HtmlTextAreaElement};
 
-#[cfg(not(feature = "ssr"))]
-use crate::utils::{
-    ContainsTarget, ElementExt, EventAccessors, EventModifiers, EventTargetExt,
-    event_listeners::{Listener, listen_to},
-    focus::focus_element,
-    key::KeyboardEventKey,
-    node_contains,
-    open_link::{is_opening_link, open_link},
-    platform::device,
-    prevent_focus::prevent_focus,
-    shadow_dom,
-    use_description::use_description,
-    virtual_click::{is_virtual_click, is_virtual_pointer_event},
-};
 use crate::{
-    hooks::{IntoAttrs, PropsWithStyles},
+    CapturedElement, EventHandler, IntoAttrs, Modifiers, OnEvent, Propagation, PropsWithStyles,
     utils::{
-        CapturedElement, EventHandler, Modifiers, Propagation,
-        aria::{AriaDescribedby, AriaExpanded, AriaHasPopup},
-        css::{TouchAction, TouchActionGestures, TouchActionHorizontalPan, TouchActionVerticalPan},
+        aria::{AriaExpanded, AriaHasPopup},
         key::KeyboardKey,
         keyboard_shortcut::KeyboardShortcuts,
+        point::Point,
         pointer_type::PointerType,
         propagation_control::{PropagationControl, Sealed},
-        style::TouchActionProperty,
-        styles::Styles,
+        styles::{
+            Styles,
+            css::{
+                TouchAction, TouchActionGestures, TouchActionHorizontalPan, TouchActionVerticalPan,
+            },
+            property::TouchActionProperty,
+        },
+    },
+};
+#[cfg(not(feature = "ssr"))]
+use crate::{
+    ContainsTarget, EventModifiers,
+    utils::{
+        dom_ext::{ElementExt, EventAccessors, EventTargetExt, node_contains},
+        event_listeners::{Listener, listen_to},
+        focus::focus_element,
+        key::KeyboardEventKey,
+        open_link::{is_opening_link, open_link},
+        platform::device,
+        prevent_focus::{FocusPrevention, prevent_focus},
+        shadow_dom,
+        use_description::use_description,
+        virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
 
@@ -60,11 +62,13 @@ use crate::{
 // - A `PressResponder`'s flags (`is_disabled`, `prevent_focus_on_press`, ...) are OR-ed with the
 //   element's: either can switch them on. react-aria merges them (the element's own value wins), so
 //   only an element explicitly passing `false` under a responder's `true` behaves differently;
-//   a flag can't tell "unset" from `false` here.
-// - Long presses are part of `use_press` (`on_long_press*`, `long_press_threshold`,
-//   `long_press_accessibility_description`): an element has one press handler, and react-aria's
-//   `useLongPress` only wraps `usePress`. As upstream, `LongPressEvent` has no
-//   `continuePropagation` (no `Propagation`).
+//   a flag can't tell "unset" from `false` here (and the atoms above `use_press` take plain flags).
+// - Long presses are part of `use_press`, as one optional group (`long_press: Option<LongPress>`:
+//   callbacks, threshold, description, `is_disabled`): an element has one press handler, and
+//   react-aria's `useLongPress` only wraps `usePress`. Without the group, no long press machinery
+//   is set up. As upstream, `LongPressEvent` has no `continuePropagation` (no `Propagation`).
+// - Press events carry their kind (`PressEventKind`, react-aria's `type`), the pressed element as
+//   an `Element` and the position as a `Point` relative to it (react-aria: `x`, `y`).
 //
 // ## DIFFERENT BEHAVIOR
 // - `touch-action: pan-x pan-y pinch-zoom` is an inline style of the pressable element, rendered
@@ -73,6 +77,11 @@ use crate::{
 // - Dragging out of and back into the element is tracked with `pointerenter`/`pointerleave`
 //   listeners added to the element while pressed (react-aria: the element's `onPointerEnter`/
 //   `onPointerLeave` props), so the props carry no handlers for them.
+// - A press of a disabled element starts no press state (react-aria records one that triggers
+//   nothing).
+// - A native click following Space's keyup on an input or submit/reset button completes the
+//   keyboard activation without firing a second virtual press. The default action still runs
+//   (e.g. toggling a checkbox); upstream's synthetic keyboard tests do not send this native click.
 //
 // ## ADDITIONS
 // - `on_double_press` (the native `dblclick`): any pressable can take double presses without a
@@ -83,15 +92,32 @@ use crate::{
 //   `onPress`): leptonic's press callbacks are the only interface.
 // - The mouse and touch event fallbacks for environments without `PointerEvent` (react-aria uses
 //   them in tests only): every supported browser has pointer events.
+// - `useLongPress`'s `pointerType` option (long presses of one pointer type only): no caller
+//   needs it; long presses are those of a mouse or touch, as upstream's default.
 //
 // =============================================================================
 
 /// The default long press threshold.
 pub const DEFAULT_LONG_PRESS_THRESHOLD: Duration = Duration::from_millis(500);
 
-/// The type of long press event.
+/// Which press callback an event is for (react-aria's `PressEvent.type`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LongPressEventType {
+pub enum PressEventKind {
+    /// The press started (`on_press_start`).
+    PressStart,
+    /// The press ended, pressed or not (`on_press_end`).
+    PressEnd,
+    /// The pointer or key was released over the element (`on_press_up`).
+    PressUp,
+    /// The element was pressed (`on_press`).
+    Press,
+    /// The element was double-clicked (`on_double_press`).
+    DoublePress,
+}
+
+/// Which long press callback an event is for (react-aria's `LongPressEvent.type`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LongPressEventKind {
     /// The long press interaction has started.
     LongPressStart,
     /// The long press threshold time was met.
@@ -103,45 +129,40 @@ pub enum LongPressEventType {
 /// Event fired during long press interactions.
 #[derive(Debug, Clone)]
 pub struct LongPressEvent {
-    /// The type of long press event.
-    pub event_type: LongPressEventType,
+    /// Which long press callback the event is for.
+    pub kind: LongPressEventKind,
 
-    /// The pointer type that triggered the long press event.
+    /// The pointer type that triggered the long press event (`Mouse` or `Touch`).
     pub pointer_type: PointerType,
 
-    /// The target element of the long press event.
-    pub target: SendWrapper<EventTarget>,
+    /// The long-pressed element.
+    pub target: SendWrapper<web_sys::Element>,
 
     /// States which modifier keys were held during the long press event.
     pub modifiers: Modifiers,
 
-    /// The X coordinate of the pointer at the time of the event.
-    /// `None` for keyboard events.
-    pub x: Option<f64>,
-
-    /// The Y coordinate of the pointer at the time of the event.
-    /// `None` for keyboard events.
-    pub y: Option<f64>,
+    /// Where the long press started, relative to the target's top left corner, in CSS pixels.
+    pub point: Point,
 }
 
+/// A press interaction (react-aria's `PressEvent`).
 #[derive(Debug, Clone)]
 pub struct PressEvent {
+    /// Which press callback the event is for.
+    pub kind: PressEventKind,
+
     /// The pointer type that triggered the press event.
     pub pointer_type: PointerType,
 
-    /// The target element of the press event.
-    pub target: SendWrapper<EventTarget>,
+    /// The pressed element.
+    pub target: SendWrapper<web_sys::Element>,
 
     /// States which modifier keys were held during the press event.
     pub modifiers: Modifiers,
 
-    /// The X coordinate of the pointer relative to the target element.
-    /// `None` for keyboard events.
-    pub x: Option<f64>,
-
-    /// The Y coordinate of the pointer relative to the target element.
-    /// `None` for keyboard events.
-    pub y: Option<f64>,
+    /// The position relative to the target's top left corner, in CSS pixels: the pointer's, or the
+    /// target's center for keyboard and other presses without a pointer position.
+    pub point: Point,
 
     /// The keyboard key that triggered this press event.
     /// `None` for pointer/mouse/virtual events.
@@ -168,6 +189,74 @@ pub enum PressPropagation {
     Continue,
 }
 
+/// Long press handling of a pressable element (react-aria's `useLongPress`): a mouse or touch press
+/// held for `threshold` fires `on_long_press` and cancels the element's press (no `on_press`, and
+/// the click after the release is prevented, so a long-pressed link doesn't navigate).
+#[derive(Debug, Clone, Copy)]
+pub struct LongPress {
+    /// Called when a long press interaction starts (a mouse or touch press starts).
+    pub on_long_press_start: Option<Callback<LongPressEvent>>,
+    /// Called when the press was held for `threshold`.
+    pub on_long_press: Option<Callback<LongPressEvent>>,
+    /// Called when a long press interaction ends, long-pressed or not.
+    pub on_long_press_end: Option<Callback<LongPressEvent>>,
+    /// How long a press must be held. Default: [`DEFAULT_LONG_PRESS_THRESHOLD`] (500 ms).
+    pub threshold: Signal<Duration>,
+    /// Describes the long press action to assistive technology, e.g. "Long press to open menu".
+    /// Only applied with an `on_long_press` handler.
+    pub accessibility_description: MaybeProp<String>,
+    /// Turns long presses off while `true` (e.g. while a collection item has no long press
+    /// action), so presses aren't cancelled after the threshold.
+    pub is_disabled: Signal<bool>,
+}
+
+impl Default for LongPress {
+    /// No callbacks, the default threshold, no description, enabled.
+    fn default() -> Self {
+        Self {
+            on_long_press_start: None,
+            on_long_press: None,
+            on_long_press_end: None,
+            threshold: Signal::stored(DEFAULT_LONG_PRESS_THRESHOLD),
+            accessibility_description: MaybeProp::default(),
+            is_disabled: Signal::stored(false),
+        }
+    }
+}
+
+/// Merges two long press groups on one element (e.g. a responder's and the element's own):
+/// callbacks chained (`first`'s first), `second`'s threshold, `second`'s description (else
+/// `first`'s), disabled while both are.
+pub(crate) fn merge_long_press(
+    first: Option<LongPress>,
+    second: Option<LongPress>,
+) -> Option<LongPress> {
+    match (first, second) {
+        (Some(first), Some(second)) => Some(LongPress {
+            on_long_press_start: chain_optional_callbacks(
+                first.on_long_press_start,
+                second.on_long_press_start,
+            ),
+            on_long_press: chain_optional_callbacks(first.on_long_press, second.on_long_press),
+            on_long_press_end: chain_optional_callbacks(
+                first.on_long_press_end,
+                second.on_long_press_end,
+            ),
+            threshold: second.threshold,
+            accessibility_description: MaybeProp::derive(move || {
+                second
+                    .accessibility_description
+                    .get()
+                    .or_else(|| first.accessibility_description.get())
+            }),
+            is_disabled: Signal::derive(move || {
+                first.is_disabled.get() && second.is_disabled.get()
+            }),
+        }),
+        (first, second) => first.or(second),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct UsePressInput {
     /// Whether the targeted element is currently disabled.
@@ -191,13 +280,9 @@ pub struct UsePressInput {
     /// Useful for toolbar buttons near text editors where focus should remain in the editor.
     pub prevent_focus_on_press: Signal<bool>,
 
-    /// When provided, the returned `is_pressed` signal will be `true` when either the
-    /// internal pressed state or this signal is `true`, forcing the pressed visual state.
-    /// This allows parent components (e.g., overlays) to force the pressed appearance.
-    ///
-    /// **Deviation from react-aria**: react-aria calls this `isPressed: boolean`. Renamed to
-    /// `force_is_pressed` to avoid ambiguity with the returned `is_pressed` signal.
-    pub force_is_pressed: Option<Signal<bool>>,
+    /// While `true`, the returned `is_pressed` is `true` too: the pressed appearance forced from
+    /// outside (e.g. while the overlay the element triggers is open). react-aria's `isPressed`.
+    pub force_is_pressed: Signal<bool>,
 
     pub on_press: Option<Callback<PressEvent>>,
     pub on_press_up: Option<Callback<PressEvent>>,
@@ -211,28 +296,8 @@ pub struct UsePressInput {
     /// Called when the element receives a native `dblclick` event.
     pub on_double_press: Option<Callback<PressEvent>>,
 
-    // Long press fields (all optional — when all are None, behavior is identical to press-only).
-    /// Handler called when a long press interaction starts (mouse/touch only).
-    pub on_long_press_start: Option<Callback<LongPressEvent>>,
-
-    /// Handler called when the long press threshold time is met.
-    pub on_long_press: Option<Callback<LongPressEvent>>,
-
-    /// Handler called when a long press interaction ends.
-    pub on_long_press_end: Option<Callback<LongPressEvent>>,
-
-    /// The amount of time in milliseconds to wait before triggering a long press.
-    /// Default is 500ms. Only used when at least one long press callback is set.
-    pub long_press_threshold: Option<Signal<Duration>>,
-
-    /// A description for assistive technology users indicating that a long press
-    /// action is available, e.g. "Long press to open menu".
-    /// Only applied when `on_long_press` is `Some`.
-    pub long_press_accessibility_description: MaybeProp<String>,
-
-    /// Turns long press off while `true` (e.g. while a collection item has no action), so presses
-    /// aren't cancelled after the long press threshold.
-    pub long_press_disabled: Signal<bool>,
+    /// Long press handling. `None`: no long presses (and none of their machinery).
+    pub long_press: Option<LongPress>,
 }
 
 impl Default for UsePressInput {
@@ -244,19 +309,14 @@ impl Default for UsePressInput {
             allow_text_selection_on_press: Signal::stored(false),
             should_cancel_on_pointer_exit: Signal::stored(false),
             prevent_focus_on_press: Signal::stored(false),
-            force_is_pressed: None,
+            force_is_pressed: Signal::stored(false),
             on_press: None,
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,
             on_press_change: None,
             on_double_press: None,
-            on_long_press_start: None,
-            on_long_press: None,
-            on_long_press_end: None,
-            long_press_threshold: None,
-            long_press_accessibility_description: MaybeProp::default(),
-            long_press_disabled: Signal::stored(false),
+            long_press: None,
         }
     }
 }
@@ -289,13 +349,9 @@ pub struct PressResponderContext {
     pub on_press_up: Option<Callback<PressEvent>>,
     /// Called when the pressed state changes.
     pub on_press_change: Option<Callback<bool>>,
-    /// Called when a long press starts, completes or ends (a `MenuTrigger` with long-press
-    /// opening).
-    pub on_long_press_start: Option<Callback<LongPressEvent>>,
-    pub on_long_press: Option<Callback<LongPressEvent>>,
-    pub on_long_press_end: Option<Callback<LongPressEvent>>,
-    /// Describes the long-press action to assistive technology.
-    pub long_press_accessibility_description: MaybeProp<String>,
+    /// Long press handling for the pressable element (a `MenuTrigger` opening on a long press),
+    /// merged with the element's own.
+    pub long_press: Option<LongPress>,
     /// Whether the target is disabled.
     pub is_disabled: Option<Signal<bool>>,
     /// Controlled pressed state from parent (e.g., overlay trigger is open).
@@ -328,16 +384,42 @@ pub struct PressResponderTrigger {
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_controls: Signal<Option<String>>,
     pub element: CapturedElement,
+    /// The trigger element's id, known while rendering: generated by the trigger, which the
+    /// element takes unless it has its own; an element with its own id writes it here
+    /// (react-aria merges both ids, `mergeIds`). References to the trigger (a disclosure panel's
+    /// `aria-labelledby`, an untitled dialog's) read it. `use_button` takes or writes it while
+    /// rendering; other pressables (`Pressable`, `use_link`) synchronize it once mounted.
+    pub id: RwSignal<String>,
 }
 
 impl PressResponderTrigger {
-    /// No trigger: no ARIA attributes, and an element nothing reads.
-    pub fn empty() -> Self {
-        Self {
-            aria_haspopup: Signal::stored(None),
-            aria_expanded: Signal::stored(None),
-            aria_controls: Signal::stored(None),
-            element: CapturedElement::new(),
+    /// For a pressable that doesn't render its id (`Pressable`, `use_link`): once its element is
+    /// mounted, it gets the trigger's id unless it has its own, which then becomes the trigger's.
+    pub(crate) fn sync_id_once_mounted(self, element: CapturedElement) {
+        let id = self.id;
+        Effect::new(move || {
+            if let Some(el) = element.get() {
+                let own = el.id();
+                if own.is_empty() {
+                    el.set_id(&id.get_untracked());
+                } else if id.with_untracked(|id| *id != own) {
+                    id.set(own);
+                }
+            }
+        });
+    }
+
+    /// The element's id for a pressable rendering its id (`use_button`): its own (which becomes
+    /// the trigger's), else the trigger's.
+    pub(crate) fn element_id(self, own: Option<String>) -> String {
+        match own {
+            Some(own) => {
+                if self.id.with_untracked(|id| *id != own) {
+                    self.id.set(own.clone());
+                }
+                own
+            }
+            None => self.id.get_untracked(),
         }
     }
 }
@@ -353,10 +435,7 @@ impl PressResponderContext {
             on_press_end: None,
             on_press_up: None,
             on_press_change: None,
-            on_long_press_start: None,
-            on_long_press: None,
-            on_long_press_end: None,
-            long_press_accessibility_description: MaybeProp::default(),
+            long_press: None,
             is_disabled: None,
             force_is_pressed: None,
             prevent_focus_on_press: None,
@@ -372,7 +451,7 @@ impl PressResponderContext {
 
 /// Chain two optional callbacks. Context fires first, then local.
 /// Returns `None` only if both are `None`.
-pub fn chain_optional_callbacks<T: Clone + Send + Sync + 'static>(
+pub(crate) fn chain_optional_callbacks<T: Clone + Send + Sync + 'static>(
     ctx_cb: Option<Callback<T>>,
     local_cb: Option<Callback<T>>,
 ) -> Option<Callback<T>> {
@@ -419,9 +498,9 @@ pub struct UsePressProps {
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
-    /// Set when `on_long_press` and `long_press_accessibility_description` are provided.
-    /// `None` otherwise.
-    pub aria_describedby: Signal<Option<AriaDescribedby>>,
+    /// The long press description's id, with a long press group having an `on_long_press`
+    /// handler and a description (once mounted). `None` otherwise.
+    pub aria_describedby: Signal<Option<String>>,
 }
 
 impl IntoAttrs for UsePressProps {
@@ -443,78 +522,54 @@ impl IntoAttrs for UsePressProps {
 
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UsePressAttrs = (
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    On<ev::dragstart, SharedEventCallback<DragEvent>>,
-    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
-    Attr<attr::AriaDescribedby, Signal<Option<AriaDescribedby>>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::click>,
+    OnEvent<ev::pointerdown>,
+    OnEvent<ev::mousedown>,
+    OnEvent<ev::pointerup>,
+    OnEvent<ev::dragstart>,
+    OnEvent<ev::dblclick>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
 );
 
+/// The press in progress (react-aria's `PressState` while `isPressed`).
 #[cfg(not(feature = "ssr"))]
 struct PressState {
     pointer_id: i32,
     pointer_type: PointerType,
 
-    /// The element this press hook was bound to.
-    current_target: EventTarget,
+    /// The pressed element (the element this press hook was bound to).
+    target: web_sys::Element,
 
     is_over_target: bool,
 
-    /// Tracks whether `trigger_press_start` was actually fired, to prevent
-    /// firing `press_end` without a corresponding `press_start`.
+    /// Whether `trigger_press_start` fired (so `trigger_press_end` fires once per start).
     did_fire_press_start: bool,
+
+    /// Whether the press start was a long press start (so its end fires `on_long_press_end`).
+    is_long_press: bool,
 
     /// Handle for the 80ms fallback timeout that triggers `target.click()`
     /// when iOS long press doesn't naturally fire a click event.
     click_timeout_handle: Option<TimeoutHandle>,
 
+    /// The long press threshold timer.
+    long_press_timeout_handle: Option<TimeoutHandle>,
+
     /// The press's listeners (on the document, and `pointerenter`/`pointerleave` on the element),
     /// removed when dropped.
-    global_listeners: Vec<Listener>,
-
-    // Long press tracking
-    /// Timeout handle for the long press threshold timer.
-    long_press_timeout_handle: Option<TimeoutHandle>,
-    /// Whether the long press threshold was met during this interaction.
-    long_press_triggered: bool,
+    listeners: Vec<Listener>,
 }
 
-#[cfg(not(feature = "ssr"))]
-impl PressState {
-    fn cleanup_event_handlers(&mut self) {
-        self.global_listeners.clear();
-    }
-
-    fn clear_click_timeout(&mut self) {
-        if let Some(handle) = self.click_timeout_handle.take() {
-            handle.clear();
-        }
-    }
-
-    fn clear_long_press_timeout(&mut self) {
-        if let Some(handle) = self.long_press_timeout_handle.take() {
-            handle.clear();
-        }
-    }
-
-    fn restore_text_selection_if_needed(&self, allow_text_selection_on_press: bool) {
-        if !allow_text_selection_on_press && let Some(element) = self.current_target.to_element() {
-            element.restore_text_selection();
-        }
-    }
-}
-
+/// The DOM event behind a press callback.
 #[cfg(not(feature = "ssr"))]
 enum EventRef<'a> {
     Pointer(&'a PointerEvent),
     Keyboard(&'a KeyboardEvent),
     Mouse(&'a MouseEvent),
     /// A press that ends without a DOM event, e.g. because the element became disabled while
-    /// pressed. Carries the press target; it has no modifiers, coordinates or key.
-    Synthetic(&'a EventTarget),
+    /// pressed. It has no modifiers, pointer position or key.
+    Synthetic,
 }
 
 #[cfg(not(feature = "ssr"))]
@@ -524,12 +579,7 @@ impl EventRef<'_> {
             EventRef::Pointer(e) => e.modifiers(),
             EventRef::Keyboard(e) => e.modifiers(),
             EventRef::Mouse(e) => e.modifiers(),
-            EventRef::Synthetic(_) => Modifiers {
-                shift_key: false,
-                ctrl_key: false,
-                meta_key: false,
-                alt_key: false,
-            },
+            EventRef::Synthetic => Modifiers::default(),
         }
     }
 
@@ -538,93 +588,44 @@ impl EventRef<'_> {
             EventRef::Pointer(e) => e.stop_propagation(),
             EventRef::Keyboard(e) => e.stop_propagation(),
             EventRef::Mouse(e) => e.stop_propagation(),
-            EventRef::Synthetic(_) => {}
+            EventRef::Synthetic => {}
         }
     }
 
-    fn current_target(&self) -> EventTarget {
-        match self {
-            EventRef::Pointer(e) => e.expect_current_target(),
-            EventRef::Keyboard(e) => e.expect_current_target(),
-            EventRef::Mouse(e) => e.expect_current_target(),
-            EventRef::Synthetic(target) => (*target).clone(),
-        }
-    }
-
-    /// Returns the keyboard key that triggered this event, if any.
+    /// The keyboard key that triggered this event, if any.
     fn key(&self) -> Option<KeyboardKey> {
         match self {
             EventRef::Keyboard(e) => Some(e.typed_key()),
-            EventRef::Pointer(_) | EventRef::Mouse(_) | EventRef::Synthetic(_) => None,
+            EventRef::Pointer(_) | EventRef::Mouse(_) | EventRef::Synthetic => None,
         }
     }
 
-    /// Returns coordinates relative to the target element's bounding rect.
-    /// For pointer/mouse events, returns the event position relative to the element.
-    /// For keyboard events, returns the element's center point (`width/2`, `height/2`),
-    /// matching react-aria behavior. This is useful for consumers that position UI relative
-    /// to the press point (e.g., ripple effects).
-    /// Returns `None` if the target has no client bounding rect.
-    fn coordinates(&self) -> (Option<f64>, Option<f64>) {
+    /// The pointer position in the viewport, if the event has one.
+    fn client_point(&self) -> Option<Point> {
         match self {
-            EventRef::Pointer(e) => {
-                let (client_x, client_y) = (e.client_x(), e.client_y());
-                self.current_target()
-                    .to_element()
-                    .map(|el| el.get_bounding_client_rect())
-                    .map_or((None, None), |rect| {
-                        (Some(client_x - rect.left()), Some(client_y - rect.top()))
-                    })
-            }
-            EventRef::Mouse(e) => {
-                let (client_x, client_y) = (e.client_x(), e.client_y());
-                self.current_target()
-                    .to_element()
-                    .map(|el| el.get_bounding_client_rect())
-                    .map_or((None, None), |rect| {
-                        (Some(client_x - rect.left()), Some(client_y - rect.top()))
-                    })
-            }
-            EventRef::Keyboard(_) => self
-                .current_target()
-                .to_element()
-                .map(|el| el.get_bounding_client_rect())
-                .map_or((None, None), |rect| {
-                    (Some(rect.width() / 2.0), Some(rect.height() / 2.0))
-                }),
-            EventRef::Synthetic(_) => (None, None),
+            EventRef::Pointer(e) => Some(Point::new(e.client_x(), e.client_y())),
+            EventRef::Mouse(e) => Some(Point::new(e.client_x(), e.client_y())),
+            EventRef::Keyboard(_) | EventRef::Synthetic => None,
+        }
+    }
+
+    /// The press position relative to `target` (react-aria's `PressEvent` `x`/`y`): the pointer's,
+    /// or the target's center without one (keyboard and synthetic events).
+    fn point_in(&self, target: &web_sys::Element) -> Point {
+        let rect = target.get_bounding_client_rect();
+        match self.client_point() {
+            Some(client) => Point::new(client.x - rect.left(), client.y - rect.top()),
+            None => Point::new(rect.width() / 2.0, rect.height() / 2.0),
         }
     }
 }
 
 #[cfg(not(feature = "ssr"))]
-/// Runs a press callback, if any. Returns whether the event should stop propagating: press events
-/// stop propagation unless the callback calls `continue_propagation()` (react-aria's
-/// `shouldStopPropagation`, which defaults to `true`, also without a callback).
-fn fire_press_callback(
-    callback: Option<Callback<PressEvent>>,
-    state: &PressState,
-    event: &EventRef<'_>,
-    is_triggering_event: StoredValue<bool, LocalStorage>,
-) -> bool {
-    let Some(callback) = callback else {
-        return true;
-    };
-    let (propagation, propagation_state) = PropagationControl::new();
-    let (x, y) = event.coordinates();
-    let key = event.key();
-    is_triggering_event.set_value(true);
-    callback.run(PressEvent {
-        pointer_type: state.pointer_type.clone(),
-        target: SendWrapper::new(state.current_target.clone()),
-        modifiers: event.modifiers(),
-        x,
-        y,
-        key,
-        propagation,
-    });
-    is_triggering_event.set_value(false);
-    !propagation_state.load(Ordering::Acquire)
+thread_local! {
+    /// The last key up that opened a link: several press hooks on one link (react-aria's
+    /// `LINK_CLICKED` marker) open it once.
+    static LINK_OPENING_KEY_UP: std::cell::RefCell<Option<KeyboardEvent>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 /// The pressable element's style: `touch-action: pan-x pan-y pinch-zoom` (react-aria's
@@ -641,20 +642,16 @@ fn press_styles() -> Styles {
 
 /// Merges a responder's and the element's `force_is_pressed`: either forces the pressed
 /// appearance.
-fn merge_force_is_pressed(
-    responder: Option<Signal<bool>>,
-    own: Option<Signal<bool>>,
-) -> Option<Signal<bool>> {
-    match (responder, own) {
-        (Some(responder), Some(own)) => Some(Signal::derive(move || responder.get() || own.get())),
-        (responder, own) => responder.or(own),
+fn merge_force_is_pressed(responder: Option<Signal<bool>>, own: Signal<bool>) -> Signal<bool> {
+    match responder {
+        Some(responder) => Signal::derive(move || responder.get() || own.get()),
+        None => own,
     }
 }
 
-/// # Panics
-///
-/// Panics if the press state is initialized while already active (debug assertion),
-/// or if the current target of the pointer event is not available.
+/// Handles press interactions across mouse, touch, keyboard and screen readers (react-aria's
+/// `usePress`), and long presses (react-aria's `useLongPress`, with
+/// [`long_press`](UsePressInput::long_press)).
 #[allow(clippy::too_many_lines)]
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
     #[cfg(feature = "ssr")]
@@ -663,18 +660,17 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         let is_pressed = merge_force_is_pressed(
             use_context::<PressResponderContext>().and_then(|c| c.force_is_pressed),
             input.force_is_pressed,
-        )
-        .unwrap_or_else(|| Signal::stored(false));
+        );
         UsePressReturn {
             props: PropsWithStyles::new(
                 UsePressProps {
-                    on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
-                    on_click: EventHandler::new(|_: MouseEvent| {}),
-                    on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
-                    on_pointerup: EventHandler::new(|_: PointerEvent| {}),
-                    on_mousedown: EventHandler::new(|_: MouseEvent| {}),
-                    on_dragstart: EventHandler::new(|_: DragEvent| {}),
-                    on_dblclick: EventHandler::new(|_: MouseEvent| {}),
+                    on_keydown: EventHandler::empty(),
+                    on_click: EventHandler::empty(),
+                    on_pointerdown: EventHandler::empty(),
+                    on_pointerup: EventHandler::empty(),
+                    on_mousedown: EventHandler::empty(),
+                    on_dragstart: EventHandler::empty(),
+                    on_dblclick: EventHandler::empty(),
                     // Set after mount on the client, as on the client before hydration.
                     aria_describedby: Signal::stored(None),
                 },
@@ -699,12 +695,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             on_press_end,
             on_press_change,
             on_double_press,
-            on_long_press_start,
-            on_long_press,
-            on_long_press_end,
-            long_press_threshold,
-            long_press_accessibility_description,
-            long_press_disabled,
+            long_press,
         } = input;
 
         // --- PressResponderContext merging ---
@@ -716,18 +707,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             ctx.registered.set_value(true);
         }
 
-        // Merge disabled: OR semantics (if either parent or local says disabled, element is disabled).
-        let disabled = match ctx.as_ref().and_then(|c| c.is_disabled) {
-            Some(ctx_disabled) => Signal::derive(move || disabled.get() || ctx_disabled.get()),
-            None => disabled,
-        };
-
         // Merge boolean config fields: OR semantics, so either the context or the input can turn
         // them on.
         let or = |own: Signal<bool>, ctx: Option<Signal<bool>>| match ctx {
             Some(ctx) => Signal::derive(move || own.get() || ctx.get()),
             None => own,
         };
+        let disabled = or(disabled, ctx.as_ref().and_then(|c| c.is_disabled));
         let prevent_focus_on_press = or(
             prevent_focus_on_press,
             ctx.as_ref().and_then(|c| c.prevent_focus_on_press),
@@ -759,36 +745,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             ctx.as_ref().and_then(|c| c.on_press_change),
             on_press_change,
         );
-        let on_long_press_start = chain_optional_callbacks(
-            ctx.as_ref().and_then(|c| c.on_long_press_start),
-            on_long_press_start,
-        );
-        let on_long_press =
-            chain_optional_callbacks(ctx.as_ref().and_then(|c| c.on_long_press), on_long_press);
-        let on_long_press_end = chain_optional_callbacks(
-            ctx.as_ref().and_then(|c| c.on_long_press_end),
-            on_long_press_end,
-        );
-        let ctx_description = ctx
-            .as_ref()
-            .map(|c| c.long_press_accessibility_description)
-            .unwrap_or_default();
-        let long_press_accessibility_description = MaybeProp::derive(move || {
-            long_press_accessibility_description
-                .get()
-                .or_else(|| ctx_description.get())
-        });
+        let long_press = merge_long_press(ctx.as_ref().and_then(|c| c.long_press), long_press);
         // --- End PressResponderContext merging ---
 
         let (is_pressed, set_is_pressed) = signal(false);
 
-        let has_long_press_handlers =
-            on_long_press.is_some() || on_long_press_start.is_some() || on_long_press_end.is_some();
-        let supports_long_press =
-            move || has_long_press_handlers && !long_press_disabled.get_untracked();
-        let long_press_threshold =
-            long_press_threshold.unwrap_or_else(|| Signal::stored(DEFAULT_LONG_PRESS_THRESHOLD));
-
+        // The press in progress (react-aria's `state` while `isPressed`). Never borrowed while a
+        // user callback runs: callbacks may start or end presses themselves.
         let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
 
         // Tracks the pointer type from the most recently completed press,
@@ -800,10 +763,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // synchronously triggers a click event on the same element.
         let is_triggering_event: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
 
-        // Tracks whether a virtual pointer event (e.g. VoiceOver on iOS) was seen in pointerdown,
-        // so that the click handler can detect it and fire a full virtual press cycle.
+        // Whether the last pointer down was a virtual one (e.g. VoiceOver on iOS, react-aria's
+        // `state.pointerType === 'virtual'`): its click presses, its pointer up doesn't.
         let saw_virtual_pointer_event: StoredValue<bool, LocalStorage> =
             StoredValue::new_local(false);
+
+        // A native activation click can follow Space's keyup, after its press state ended.
+        // Its propagation follows the completed keyboard press instead of starting a virtual one.
+        let keyboard_click_stop: StoredValue<Option<bool>, LocalStorage> =
+            StoredValue::new_local(None);
 
         // Tracks meta key events for macOS workaround
         let meta_key_events: StoredValue<
@@ -811,164 +779,342 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             LocalStorage,
         > = StoredValue::new_local(None);
 
-        let initialize_press_state = move |e: EventRef<'_>, global_listeners: Vec<Listener>| {
-            // If a press is already active, ignore this initialization request.
-            // This can happen when a second pointerdown fires before the first press's
-            // click event completes the cycle (the window between pointerup and click).
-            // We follow React Aria's approach of ignoring the second press rather than
-            // cancelling + re-initializing, because cancel+re-init causes click event
-            // cross-pollination: click#1 (from interaction 1) would complete press#2
-            // (from interaction 2), since the click handler cannot distinguish which
-            // press a click belongs to.
-            if state.with_value(Option::is_some) {
-                return;
-            }
+        // The long press listeners (react-aria's `useLongPress` global listeners): blocking the
+        // touch context menu and the click after a long press, kept until 100 ms after the
+        // pointer up, as the menu or the click may come after it.
+        let long_press_listeners: StoredValue<Vec<Listener>, LocalStorage> =
+            StoredValue::new_local(Vec::new());
 
-            state.set_value(Some(PressState {
-                pointer_id: match e {
-                    EventRef::Pointer(e) => e.pointer_id(),
-                    EventRef::Keyboard(_) | EventRef::Mouse(_) | EventRef::Synthetic(_) => 0,
+        // `prevent_focus_on_press`' focus preventions of the press, disposed when it ends
+        // (react-aria's `state.disposables`).
+        let focus_preventions: StoredValue<Vec<FocusPrevention>, LocalStorage> =
+            StoredValue::new_local(Vec::new());
+
+        let fire = move |callback: Option<Callback<PressEvent>>,
+                         kind: PressEventKind,
+                         pointer_type: PointerType,
+                         target: &web_sys::Element,
+                         e: &EventRef<'_>|
+              -> bool {
+            // Without a callback, the event stops (react-aria's `shouldStopPropagation` defaults
+            // to `true`).
+            let Some(callback) = callback else {
+                return true;
+            };
+            let propagation = PropagationControl::new();
+            is_triggering_event.set_value(true);
+            callback.run(PressEvent {
+                kind,
+                pointer_type,
+                target: SendWrapper::new(target.clone()),
+                modifiers: e.modifiers(),
+                point: e.point_in(target),
+                key: e.key(),
+                propagation: propagation.clone(),
+            });
+            is_triggering_event.set_value(false);
+            propagation.is_propagation_stopped()
+        };
+        let fire_long = move |callback: Option<Callback<LongPressEvent>>,
+                              kind: LongPressEventKind,
+                              pointer_type: PointerType,
+                              target: &web_sys::Element,
+                              modifiers: Modifiers,
+                              point: Point| {
+            if let Some(callback) = callback {
+                is_triggering_event.set_value(true);
+                callback.run(LongPressEvent {
+                    kind,
+                    pointer_type,
+                    target: SendWrapper::new(target.clone()),
+                    modifiers,
+                    point,
+                });
+                is_triggering_event.set_value(false);
+            }
+        };
+
+        // Listens on `target` for the next `event` only (react-aria: `{once: true}`), preventing
+        // its default, until the long press listeners are cleared.
+        let prevent_next = move |target: &web_sys::Element, event: &'static str| {
+            let prevented = std::cell::Cell::new(false);
+            let listener = crate::utils::event_listeners::listen(
+                target,
+                event,
+                false,
+                move |e: web_sys::Event| {
+                    if !prevented.replace(true) {
+                        e.prevent_default();
+                    }
                 },
-                pointer_type: match e {
-                    EventRef::Pointer(e) => PointerType::from(e.pointer_type()),
-                    EventRef::Keyboard(_e) => PointerType::Keyboard,
-                    EventRef::Mouse(_) | EventRef::Synthetic(_) => PointerType::Virtual,
-                },
-                current_target: e.current_target(),
-                is_over_target: match e {
-                    // The pointer event fired on this element, so the pointer is definitionally
-                    // over it. react-aria also sets `isOverTarget = true` unconditionally here.
-                    // Using `is_over()` breaks for `display: contents` (zero-sized bounding rect).
-                    EventRef::Pointer(_) => true,
-                    EventRef::Keyboard(_) | EventRef::Mouse(_) | EventRef::Synthetic(_) => false,
-                },
-                did_fire_press_start: false,
-                click_timeout_handle: None,
-                global_listeners,
-                long_press_timeout_handle: None,
-                long_press_triggered: false,
-            }));
+            );
+            long_press_listeners.update_value(|listeners| listeners.push(listener));
+        };
+
+        // The long press threshold passed (react-aria's `useLongPress` timeout).
+        let long_press_reached = move |pointer_type: PointerType,
+                                       target: web_sys::Element,
+                                       modifiers: Modifiers,
+                                       point: Point| {
+            // Cancel this and every other press of the element (they listen on the document).
+            let init = web_sys::PointerEventInit::new();
+            init.set_bubbles(true);
+            if let Ok(cancel) = PointerEvent::new_with_event_init_dict("pointercancel", &init) {
+                let _ = target.dispatch_event(&cancel);
+            }
+            // Prevent the click after the release (a long-pressed link mustn't navigate).
+            prevent_next(&target, "click");
+            // Touch devices focus on the pointer up, which a long press has none of.
+            let is_focused = target
+                .owner_document()
+                .and_then(|document| shadow_dom::get_active_element(&document))
+                .is_some_and(|active| active == target);
+            if !is_focused {
+                focus_element(&target, true);
+            }
+            if let Some(long_press) = long_press {
+                fire_long(
+                    long_press.on_long_press,
+                    LongPressEventKind::LongPress,
+                    pointer_type,
+                    &target,
+                    modifiers,
+                    point,
+                );
+            }
+        };
+
+        let long_press_accepts = move |pointer_type: PointerType| {
+            long_press.is_some_and(|long_press| !long_press.is_disabled.get_untracked())
+                && matches!(pointer_type, PointerType::Mouse | PointerType::Touch)
         };
 
         // The triggers return whether the event should stop propagating (react-aria's
         // `shouldStopPropagation`): unless a callback continued it. The handlers stop it.
 
-        // Has no effect if press is already started. Calling this multiple times only executes the effect once.
-        let trigger_press_start = move |s: &mut PressState, e: EventRef<'_>| -> bool {
-            if s.did_fire_press_start {
+        // Starts the press of the press state (once per start: again only after its end).
+        let trigger_press_start = move |e: &EventRef<'_>| -> bool {
+            if disabled.get_untracked() {
                 return false;
             }
-            s.did_fire_press_start = true;
+            let Some((pointer_type, target)) = state
+                .try_update_value(|s| {
+                    s.as_mut().filter(|s| !s.did_fire_press_start).map(|s| {
+                        s.did_fire_press_start = true;
+                        (s.pointer_type, s.target.clone())
+                    })
+                })
+                .flatten()
+            else {
+                return false;
+            };
 
-            let should_stop = fire_press_callback(on_press_start, s, &e, is_triggering_event);
+            // Long press start first: react-aria's `useLongPress` handlers precede `usePress`'.
+            if let Some(long_press) = long_press
+                && long_press_accepts(pointer_type)
+            {
+                let modifiers = e.modifiers();
+                let point = e.point_in(&target);
+                fire_long(
+                    long_press.on_long_press_start,
+                    LongPressEventKind::LongPressStart,
+                    pointer_type,
+                    &target,
+                    modifiers,
+                    point,
+                );
+                let timeout_target = target.clone();
+                let handle = set_timeout_with_handle(
+                    move || long_press_reached(pointer_type, timeout_target, modifiers, point),
+                    long_press.threshold.get_untracked(),
+                )
+                .ok();
+                state.update_value(|s| {
+                    if let Some(s) = s.as_mut() {
+                        s.is_long_press = true;
+                        s.long_press_timeout_handle = handle;
+                    }
+                });
+                // Touch devices may open a context menu on a long press.
+                if pointer_type == PointerType::Touch {
+                    prevent_next(&target, "contextmenu");
+                }
+                // The blockers stay until 100 ms after the pointer up: the context menu or click
+                // may come after it.
+                if let Some(window) = target.owner_document().and_then(|d| d.default_view()) {
+                    let done = std::cell::Cell::new(false);
+                    let listener =
+                        listen_to(&window, ev::pointerup, false, move |_: PointerEvent| {
+                            if !done.replace(true) {
+                                set_timeout(
+                                    move || {
+                                        long_press_listeners.try_update_value(Vec::clear);
+                                    },
+                                    Duration::from_millis(100),
+                                );
+                            }
+                        });
+                    long_press_listeners.update_value(|listeners| listeners.push(listener));
+                }
+            }
 
+            let should_stop = fire(
+                on_press_start,
+                PressEventKind::PressStart,
+                pointer_type,
+                &target,
+                e,
+            );
             if let Some(on_press_change) = on_press_change {
                 is_triggering_event.set_value(true);
                 on_press_change.run(true);
                 is_triggering_event.set_value(false);
             }
-
             set_is_pressed.set(true);
             should_stop
         };
 
-        // Has no effect if press was not started. Calling this multiple times only executes the effect once.
-        // When `was_pressed` is true, also fires the `on_press` callback.
-        let trigger_press_end =
-            move |s: &mut PressState, e: EventRef<'_>, was_pressed: bool| -> bool {
-                if !s.did_fire_press_start {
-                    return false;
-                }
-                s.did_fire_press_start = false;
-
-                // Clear long press timeout on press end.
-                s.clear_long_press_timeout();
-
-                // Long press end first: react-aria's `useLongPress` handlers precede `usePress`'.
-                // Fire long press end for mouse/touch when long press is configured.
-                if supports_long_press()
-                    && (s.pointer_type == PointerType::Mouse
-                        || s.pointer_type == PointerType::Touch)
-                    && let Some(on_long_press_end) = on_long_press_end
-                {
-                    let (x, y) = e.coordinates();
-                    is_triggering_event.set_value(true);
-                    on_long_press_end.run(LongPressEvent {
-                        event_type: LongPressEventType::LongPressEnd,
-                        pointer_type: s.pointer_type.clone(),
-                        target: SendWrapper::new(s.current_target.clone()),
-                        modifiers: e.modifiers(),
-                        x,
-                        y,
-                    });
-                    is_triggering_event.set_value(false);
-                }
-
-                let mut should_stop_propagation =
-                    fire_press_callback(on_press_end, s, &e, is_triggering_event);
-
-                if let Some(on_press_change) = on_press_change {
-                    is_triggering_event.set_value(true);
-                    on_press_change.run(false);
-                    is_triggering_event.set_value(false);
-                }
-
-                set_is_pressed.set(false);
-
-                // Do NOT fire on_press if the long press threshold was met.
-                // The short press was consumed by the long press interaction.
-                if was_pressed && !s.long_press_triggered {
-                    should_stop_propagation &=
-                        fire_press_callback(on_press, s, &e, is_triggering_event);
-                }
-                should_stop_propagation
+        // Ends the press of the press state (if it started), pressing it if `was_pressed`.
+        let trigger_press_end = move |e: &EventRef<'_>, was_pressed: bool| -> bool {
+            let Some((pointer_type, target, was_long_press, long_press_timeout)) = state
+                .try_update_value(|s| {
+                    s.as_mut().filter(|s| s.did_fire_press_start).map(|s| {
+                        s.did_fire_press_start = false;
+                        (
+                            s.pointer_type,
+                            s.target.clone(),
+                            std::mem::take(&mut s.is_long_press),
+                            s.long_press_timeout_handle.take(),
+                        )
+                    })
+                })
+                .flatten()
+            else {
+                return false;
             };
+            if let Some(timeout) = long_press_timeout {
+                timeout.clear();
+            }
 
-        let trigger_press_up = move |s: &PressState, e: EventRef<'_>| -> bool {
-            fire_press_callback(on_press_up, s, &e, is_triggering_event)
+            // Long press end first: react-aria's `useLongPress` handlers precede `usePress`'.
+            if was_long_press && let Some(long_press) = long_press {
+                fire_long(
+                    long_press.on_long_press_end,
+                    LongPressEventKind::LongPressEnd,
+                    pointer_type,
+                    &target,
+                    e.modifiers(),
+                    e.point_in(&target),
+                );
+            }
+
+            let mut should_stop = fire(
+                on_press_end,
+                PressEventKind::PressEnd,
+                pointer_type,
+                &target,
+                e,
+            );
+            if let Some(on_press_change) = on_press_change {
+                is_triggering_event.set_value(true);
+                on_press_change.run(false);
+                is_triggering_event.set_value(false);
+            }
+            set_is_pressed.set(false);
+
+            if was_pressed && !disabled.get_untracked() {
+                should_stop &= fire(on_press, PressEventKind::Press, pointer_type, &target, e);
+            }
+            should_stop
         };
-        let stop_unless_forced = move |should_stop: bool, e: EventRef<'_>| {
+
+        let trigger_press_up = move |e: &EventRef<'_>| -> bool {
+            if disabled.get_untracked() {
+                return false;
+            }
+            let Some((pointer_type, target)) =
+                state.with_value(|s| s.as_ref().map(|s| (s.pointer_type, s.target.clone())))
+            else {
+                return false;
+            };
+            fire(
+                on_press_up,
+                PressEventKind::PressUp,
+                pointer_type,
+                &target,
+                e,
+            )
+        };
+
+        let stop_unless_forced = move |should_stop: bool, e: &EventRef<'_>| {
             if should_stop && !force_propagation {
                 e.stop_propagation();
             }
         };
 
-        let cancel_active_press = move |e: EventRef<'_>| {
-            state.update_value(|s| {
-                if let Some(s) = s {
-                    s.clear_click_timeout();
-                    s.clear_long_press_timeout();
-                    trigger_press_end(s, e, false);
-                    s.restore_text_selection_if_needed(
-                        allow_text_selection_on_press.get_untracked(),
-                    );
-                    s.cleanup_event_handlers();
-                }
-            });
-            state.set_value(None);
+        // Starts a press state (react-aria's `state.isPressed = true` with its target).
+        let initialize_press_state =
+            move |pointer_id: i32,
+                  pointer_type: PointerType,
+                  target: web_sys::Element,
+                  is_over_target: bool,
+                  listeners: Vec<Listener>| {
+                state.set_value(Some(PressState {
+                    pointer_id,
+                    pointer_type,
+                    target,
+                    is_over_target,
+                    did_fire_press_start: false,
+                    is_long_press: false,
+                    click_timeout_handle: None,
+                    long_press_timeout_handle: None,
+                    listeners,
+                }));
+            };
+
+        // Ends the press state without pressing (react-aria's `cancel`), also cleaning up after
+        // a press the click completed.
+        let cancel = move |e: &EventRef<'_>| {
+            trigger_press_end(e, false);
+            let Some(s) = state.try_update_value(Option::take).flatten() else {
+                return;
+            };
+            if let Some(handle) = s.click_timeout_handle {
+                handle.clear();
+            }
+            if let Some(handle) = s.long_press_timeout_handle {
+                handle.clear();
+            }
+            if !allow_text_selection_on_press.get_untracked() {
+                s.target.restore_text_selection();
+            }
+            // Dropping the state removes its listeners.
+            drop(s.listeners);
+            for prevention in focus_preventions
+                .try_update_value(std::mem::take)
+                .unwrap_or_default()
+            {
+                prevention.dispose();
+            }
         };
 
         // Cancel an active press when the element becomes disabled. The events that would
         // normally end the press are ignored while disabled, so without this, e.g. a spin button
         // whose first step disables it would keep spinning.
         Effect::new(move |_| {
-            if disabled.get() {
-                let target = state.with_value(|s| s.as_ref().map(|s| s.current_target.clone()));
-                if let Some(target) = target {
-                    cancel_active_press(EventRef::Synthetic(&target));
-                }
+            if disabled.get() && state.with_value(Option::is_some) {
+                cancel(&EventRef::Synthetic);
             }
         });
 
         let handle_key_up = move |e: KeyboardEvent| {
             let key = e.typed_key();
             // The pressed element (the listener is on the document).
-            let Some(press_target) =
-                state.with_value(|s| s.as_ref().map(|s| s.current_target.clone()))
+            let Some(press_target) = state.with_value(|s| s.as_ref().map(|s| s.target.clone()))
             else {
                 return;
             };
-            if disabled.get_untracked() || !is_valid_keyboard_event(&e, press_target.clone()) {
+            if disabled.get_untracked() || !is_valid_keyboard_event(&e, &press_target) {
                 // macOS fires no key up for keys released while Meta is held: when Meta itself is
                 // released, act as if the keys pressed meanwhile were released too, with key ups
                 // on the pressed element. Dispatched after this key up's dispatch (dispatching a
@@ -999,30 +1145,42 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
 
             // Whether the key up happened on the pressed element (focus may have moved since the
-            // key down): only then press up and press.
-            let was_pressed =
-                node_contains(press_target.as_node().as_ref(), target.as_node().as_ref())
-                    .unwrap_or(false);
-            state.update_value(|s| {
-                if let Some(s) = s.as_mut() {
-                    // A document listener: nothing to stop (react-aria).
-                    if was_pressed && !e.repeat() {
-                        trigger_press_up(s, EventRef::Keyboard(&e));
-                    }
-                    trigger_press_end(s, EventRef::Keyboard(&e), was_pressed);
-                    s.cleanup_event_handlers();
-                }
-            });
-            state.set_value(None);
+            // key down): only then press up and press. A document listener: nothing to stop
+            // (react-aria).
+            let was_pressed = node_contains(Some(press_target.as_ref()), target.as_node().as_ref())
+                .unwrap_or(false);
+            let stop_up = !was_pressed || e.repeat() || trigger_press_up(&EventRef::Keyboard(&e));
+            let stop_end = trigger_press_end(&EventRef::Keyboard(&e), was_pressed);
+            // Dropping the state removes the key up listener.
+            state.try_update_value(Option::take);
+
+            if was_pressed && e.is_trusted() && key == KeyboardKey::Space && !e.default_prevented()
+            {
+                keyboard_click_stop.set_value(Some(stop_up && stop_end));
+                // The default activation belongs to this event's task. A later listener may
+                // prevent it, so do not leave a flag that could swallow a screen reader click.
+                set_timeout(
+                    move || {
+                        keyboard_click_stop.try_update_value(Option::take);
+                    },
+                    Duration::ZERO,
+                );
+            }
 
             // A link pressed with a key other than Enter has a role override (only Enter follows a
-            // link natively): open it ourselves.
-            if key != KeyboardKey::Enter
-                && was_pressed
-                && let Some(el) = press_target.as_element()
-                && el.is_anchor_link()
-            {
-                open_link(el, e.modifiers());
+            // link natively): open it ourselves, once for all press hooks on the link.
+            if key != KeyboardKey::Enter && was_pressed && press_target.is_anchor_link() {
+                let first = LINK_OPENING_KEY_UP.with_borrow_mut(|opened| {
+                    if opened.as_ref() == Some(&e) {
+                        false
+                    } else {
+                        *opened = Some(e.clone());
+                        true
+                    }
+                });
+                if first {
+                    open_link(&press_target, e.modifiers());
+                }
             }
             meta_key_events.update_value(|events| {
                 if let Some(events) = events {
@@ -1032,21 +1190,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         };
 
         let handle_key_down = move |e: KeyboardEvent| {
-            if !node_contains(
-                e.expect_current_target().as_node().as_ref(),
-                e.expect_target().as_node().as_ref(),
-            )
-            .unwrap_or(true)
-            {
-                tracing::debug!(
-                    "Aborting handle_key_down, as current_target did not contain target."
-                );
+            if !e.current_target_contains_target() {
                 return;
             }
-
+            let Some(current_target) = e.expect_current_target().to_element() else {
+                return;
+            };
             let key = e.typed_key();
 
-            if is_valid_keyboard_event(&e, e.expect_current_target()) {
+            if is_valid_keyboard_event(&e, &current_target) {
                 if e.expect_target()
                     .as_element()
                     .is_some_and(|el| should_prevent_default_keyboard(el, &key))
@@ -1054,42 +1206,35 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     e.prevent_default();
                 }
 
-                // Read meta_key before the closure moves `e`.
-                let is_meta_held = device::is_mac() && e.meta_key() && key != KeyboardKey::Meta;
-                let e_for_meta = if is_meta_held { Some(e.clone()) } else { None };
-
-                // Only initialize press on the first keydown, not on repeats. Repeats and keys of
-                // an active press stop (react-aria); a disabled element lets them propagate.
+                // Only the first key down starts a press, not repeats (the press may have started
+                // on another element before focus moved here). Repeats and keys of an active
+                // press stop (react-aria); a disabled element lets them propagate.
                 let mut should_stop = !disabled.get_untracked();
                 if state.with_value(Option::is_none) && !disabled.get_untracked() && !e.repeat() {
+                    // Capturing (as react-aria): a keyup handler that stops propagation (e.g.
+                    // `use_keyboard` on this element or a child) must not leave the press stuck.
+                    let listeners = current_target
+                        .owner_document()
+                        .map(|doc| listen_to(&doc, ev::keyup, true, handle_key_up))
+                        .into_iter()
+                        .collect();
                     initialize_press_state(
-                        EventRef::Keyboard(&e),
-                        e.expect_current_target()
-                            .get_owner_document()
-                            // Capturing (as react-aria): a keyup handler that stops propagation
-                            // (e.g. `use_keyboard` on this element or a child) must not leave the
-                            // press stuck.
-                            .map(|doc| listen_to(&doc, ev::keyup, true, handle_key_up))
-                            .into_iter()
-                            .collect(),
+                        0,
+                        PointerType::Keyboard,
+                        current_target,
+                        false,
+                        listeners,
                     );
-
-                    state.update_value(|s| {
-                        if let Some(s) = s {
-                            should_stop = trigger_press_start(s, EventRef::Keyboard(&e));
-                        }
-                    });
+                    should_stop = trigger_press_start(&EventRef::Keyboard(&e));
                 }
-                stop_unless_forced(should_stop, EventRef::Keyboard(&e));
+                stop_unless_forced(should_stop, &EventRef::Keyboard(&e));
 
-                // macOS Meta key workaround: store events pressed while Meta is held
-                // because macOS doesn't fire keyup for non-Meta keys while Meta is down.
-                // This must be OUTSIDE the state.is_none() check so it captures keys
-                // pressed while Meta is held even during an active press.
-                if let Some(e) = e_for_meta {
+                // Keys pressed while Meta is held on macOS, which fires no key up for them (also
+                // during an active press).
+                if device::is_mac() && e.meta_key() && key != KeyboardKey::Meta {
                     meta_key_events.update_value(|map| {
                         if let Some(map) = map {
-                            map.insert(key.clone(), e.clone());
+                            map.insert(key, e.clone());
                         }
                     });
                 }
@@ -1100,19 +1245,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         };
 
         let handle_click = move |e: MouseEvent| {
-            // Re-entrancy guard: if we are currently inside a press callback that
-            // synchronously triggered a click, skip this handler to prevent infinite loops.
-            if is_triggering_event.get_value() {
-                return;
-            }
-
-            if !node_contains(
-                e.expect_current_target().as_node().as_ref(),
-                e.expect_target().as_node().as_ref(),
-            )
-            .unwrap_or(true)
-            {
-                tracing::debug!("Aborting handle_click, as current_target did not contain target.");
+            // Re-entrancy guard: a press callback that clicks the element synchronously doesn't
+            // press it again.
+            if is_triggering_event.get_value() || !e.current_target_contains_target() {
                 return;
             }
 
@@ -1125,65 +1260,53 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             if disabled.get_untracked() {
                 e.prevent_default();
                 // Nothing triggered: stopped, as react-aria's clicks that start no press.
-                stop_unless_forced(true, EventRef::Mouse(&e));
+                stop_unless_forced(true, &EventRef::Mouse(&e));
                 return;
             }
 
-            // Check if this is the completion of a pointer-initiated press.
-            // After pointerup, we defer press completion to onClick for DOM mutation safety.
-            let was_pointer_press = state.with_value(|s| {
-                s.as_ref().is_some_and(|s| {
-                    s.pointer_type != PointerType::Keyboard
-                        && s.pointer_type != PointerType::Virtual
-                        && is_pressed.get_untracked()
-                })
-            });
+            if e.is_trusted()
+                && is_virtual_click(&e)
+                && let Some(should_stop) =
+                    keyboard_click_stop.try_update_value(Option::take).flatten()
+            {
+                stop_unless_forced(should_stop, &EventRef::Mouse(&e));
+                return;
+            }
 
+            let active_pointer_type = state.with_value(|s| s.as_ref().map(|s| s.pointer_type));
             // As react-aria: stopped unless the triggered press callbacks continued it.
             let mut should_stop = true;
-            if was_pointer_press {
-                state.update_value(|s| {
-                    if let Some(s) = s {
-                        last_pointer_type.set_value(Some(s.pointer_type.clone()));
-                        s.clear_click_timeout();
-                        let stop_up = trigger_press_up(s, EventRef::Mouse(&e));
-                        let stop_end = trigger_press_end(s, EventRef::Mouse(&e), true);
-                        should_stop = stop_up && stop_end;
-                        s.restore_text_selection_if_needed(
-                            allow_text_selection_on_press.get_untracked(),
-                        );
-                        s.cleanup_event_handlers();
-                    }
-                });
-                state.set_value(None);
-                stop_unless_forced(should_stop, EventRef::Mouse(&e));
-                return;
-            }
-
-            // Handle virtual click (screen reader / assistive technology).
-            // Also handle deferred virtual pointer events from VoiceOver on iOS.
-            if !is_pressed.get_untracked()
-                && (saw_virtual_pointer_event.get_value() || is_virtual_click(&e))
-            {
-                saw_virtual_pointer_event.set_value(false);
-                // Fire full virtual press cycle
-                initialize_press_state(
-                    EventRef::Mouse(&e),
-                    // No global listener needed for virtual clicks: they complete immediately.
-                    Vec::new(),
-                );
-
-                state.update_value(|s| {
-                    if let Some(s) = s {
-                        let stop_start = trigger_press_start(s, EventRef::Mouse(&e));
-                        let stop_up = trigger_press_up(s, EventRef::Mouse(&e));
-                        let stop_end = trigger_press_end(s, EventRef::Mouse(&e), true);
+            match active_pointer_type {
+                // A pointer press completes with its click (after the pointer up, for DOM
+                // mutation safety).
+                Some(pointer_type)
+                    if pointer_type != PointerType::Keyboard
+                        && pointer_type != PointerType::Virtual =>
+                {
+                    last_pointer_type.set_value(Some(pointer_type));
+                    let stop_up = trigger_press_up(&EventRef::Mouse(&e));
+                    let stop_end = trigger_press_end(&EventRef::Mouse(&e), true);
+                    should_stop = stop_up && stop_end;
+                    cancel(&EventRef::Mouse(&e));
+                }
+                // A click from a screen reader or `element.click()` (also after a virtual pointer
+                // down, e.g. VoiceOver on iOS): a whole press, as a keyboard click. Not while
+                // another press is active.
+                None if saw_virtual_pointer_event.get_value() || is_virtual_click(&e) => {
+                    saw_virtual_pointer_event.set_value(false);
+                    if let Some(target) = e.expect_current_target().to_element() {
+                        last_pointer_type.set_value(Some(PointerType::Virtual));
+                        initialize_press_state(0, PointerType::Virtual, target, false, Vec::new());
+                        let stop_start = trigger_press_start(&EventRef::Mouse(&e));
+                        let stop_up = trigger_press_up(&EventRef::Mouse(&e));
+                        let stop_end = trigger_press_end(&EventRef::Mouse(&e), true);
                         should_stop = stop_start && stop_up && stop_end;
+                        state.try_update_value(Option::take);
                     }
-                });
-                state.set_value(None);
+                }
+                _ => {}
             }
-            stop_unless_forced(should_stop, EventRef::Mouse(&e));
+            stop_unless_forced(should_stop, &EventRef::Mouse(&e));
         };
 
         // Dragging out of and back into the element (react-aria's `onPointerEnter`/
@@ -1191,198 +1314,142 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // without pressing (or cancels it for good with `should_cancel_on_pointer_exit`),
         // re-entering starts it again. Stops nothing (react-aria).
         let handle_pointer_enter = move |e: PointerEvent| {
-            state.update_value(|s| {
-                if let Some(s) = s.as_mut()
-                    && e.pointer_id() == s.pointer_id
-                    && !s.is_over_target
-                {
-                    s.is_over_target = true;
-                    trigger_press_start(s, EventRef::Pointer(&e));
-                }
-            });
+            let entered = state
+                .try_update_value(|s| match s.as_mut() {
+                    Some(s) if e.pointer_id() == s.pointer_id && !s.is_over_target => {
+                        s.is_over_target = true;
+                        true
+                    }
+                    _ => false,
+                })
+                .unwrap_or(false);
+            if entered {
+                trigger_press_start(&EventRef::Pointer(&e));
+            }
         };
         let handle_pointer_leave = move |e: PointerEvent| {
-            let mut left = false;
-            state.update_value(|s| {
-                if let Some(s) = s.as_mut()
-                    && e.pointer_id() == s.pointer_id
-                    && s.is_over_target
-                {
-                    s.is_over_target = false;
-                    trigger_press_end(s, EventRef::Pointer(&e), false);
-                    left = true;
+            let left = state
+                .try_update_value(|s| match s.as_mut() {
+                    Some(s) if e.pointer_id() == s.pointer_id && s.is_over_target => {
+                        s.is_over_target = false;
+                        true
+                    }
+                    _ => false,
+                })
+                .unwrap_or(false);
+            if left {
+                trigger_press_end(&EventRef::Pointer(&e), false);
+                if should_cancel_on_pointer_exit.get_untracked() {
+                    cancel(&EventRef::Pointer(&e));
                 }
-            });
-            if left && should_cancel_on_pointer_exit.get_untracked() {
-                cancel_active_press(EventRef::Pointer(&e));
             }
         };
 
-        // Pointer up: defer press completion to onClick for DOM mutation safety.
+        // Pointer up (on the document): over the element, the click completes the press.
         let handle_pointer_up = move |e: PointerEvent| {
-            // Only handle primary button releases.
             if e.button() != 0 {
                 return;
             }
+            // Only the pointer that started the press.
+            let Some(target) = state.with_value(|s| {
+                s.as_ref()
+                    .filter(|s| e.pointer_id() == s.pointer_id)
+                    .map(|s| s.target.clone())
+            }) else {
+                return;
+            };
 
-            // Only handle the pointer that started the press.
-            let should_handle =
-                state.with_value(|s| s.as_ref().is_some_and(|s| e.pointer_id() == s.pointer_id));
-            if !should_handle {
+            // DOM containment (like react-aria), not the bounding rect, which is zero-sized for
+            // `display: contents` elements.
+            let over_target = node_contains(
+                Some(target.as_ref()),
+                e.target()
+                    .as_ref()
+                    .and_then(|t| t.dyn_ref::<web_sys::Node>()),
+            )
+            .unwrap_or(false);
+            if !over_target {
+                cancel(&EventRef::Pointer(&e));
                 return;
             }
 
-            let should_clear = state.with_value(|s| {
-                let Some(s) = s.as_ref() else {
-                    return false;
-                };
-
-                // Use DOM containment (like react-aria) instead of bounding-rect overlap.
-                // `is_over()` compares pointer coordinates against `getBoundingClientRect()`,
-                // which returns a zero-sized rect for `display: contents` elements, causing
-                // every press to be incorrectly cancelled.
-                !node_contains(
-                    s.current_target.as_node().as_ref(),
-                    e.target()
-                        .as_ref()
-                        .and_then(|t| t.dyn_ref::<web_sys::Node>()),
-                )
-                .unwrap_or(false)
-            });
-
-            if should_clear {
-                cancel_active_press(EventRef::Pointer(&e));
-                return;
-            }
-
-            // Pointer is over the target: the click completes the press (`handle_click`), which
-            // avoids browser issues when the DOM changes between pointer up and click. iOS and
-            // Android fire no click after a long press: then click ourselves after 80 ms, unless a
-            // click happened that didn't reach us (a child stopped it), which cancels the press. A
-            // capture listener sees every click.
+            // The click completes the press (`handle_click`), which avoids browser issues when the
+            // DOM changes between pointer up and click. iOS and Android fire no click after a long
+            // press: then click ourselves after 80 ms, unless a click happened that didn't reach
+            // us (a child stopped it), which cancels the press. A capture listener sees every
+            // click.
             let clicked = std::rc::Rc::new(std::cell::Cell::new(false));
-            let click_listener = e.expect_current_target().get_owner_document().map(|doc| {
+            let click_listener = target.owner_document().map(|doc| {
                 let clicked = std::rc::Rc::clone(&clicked);
                 listen_to(&doc, ev::click, true, move |_: MouseEvent| {
                     clicked.set(true);
                 })
             });
+            let pointer_up = e.clone();
+            let click_timeout_handle = set_timeout_with_handle(
+                move || {
+                    if state.try_with_value(Option::is_none).unwrap_or(true) {
+                        return;
+                    }
+                    if clicked.get() {
+                        cancel(&EventRef::Pointer(&pointer_up));
+                        return;
+                    }
+                    // Focus without scrolling, then click (react-aria).
+                    focus_element(&target, true);
+                    if let Some(html_el) = target.dyn_ref::<HtmlElement>() {
+                        html_el.click();
+                    }
+                },
+                Duration::from_millis(80),
+            )
+            .ok();
             state.update_value(|s| {
                 if let Some(s) = s {
                     // Ignore the pointer leave touch devices fire before the click.
                     s.is_over_target = false;
-                    s.global_listeners.extend(click_listener);
-
-                    let current_target = s.current_target.clone();
-                    s.click_timeout_handle = set_timeout_with_handle(
-                        move || {
-                            if state.with_value(Option::is_none) {
-                                return;
-                            }
-                            if clicked.get() {
-                                cancel_active_press(EventRef::Synthetic(&current_target));
-                                return;
-                            }
-                            // Focus without scrolling, then click (react-aria).
-                            if let Some(el) = current_target.as_element() {
-                                focus_element(el, true);
-                            }
-                            if let Some(html_el) = current_target.as_html_element() {
-                                html_el.click();
-                            }
-                        },
-                        Duration::from_millis(80),
-                    )
-                    .ok();
+                    s.listeners.extend(click_listener);
+                    s.click_timeout_handle = click_timeout_handle;
                 }
             });
         };
 
-        // Cancel the ongoing press.
-        let handle_pointer_cancel = move |e: PointerEvent| {
-            cancel_active_press(EventRef::Pointer(&e));
-        };
-
-        // The listeners preventing the context menu during a touch long press (react-aria's
-        // `useLongPress`): kept until 100 ms after the pointer up, as the menu may open after it.
-        let context_menu_blocker: StoredValue<Vec<Listener>, LocalStorage> =
-            StoredValue::new_local(Vec::new());
-        let block_context_menu = move |target: &EventTarget| {
-            // The next context menu only (react-aria: `{once: true}`).
-            let blocked = std::cell::Cell::new(false);
-            let mut listeners = vec![listen_to(
-                target,
-                ev::contextmenu,
-                false,
-                move |e: MouseEvent| {
-                    if !blocked.replace(true) {
-                        e.prevent_default();
-                    }
-                },
-            )];
-            if let Some(window) = leptos_use::use_window().as_ref() {
-                listeners.push(listen_to(
-                    window,
-                    ev::pointerup,
-                    false,
-                    move |_: PointerEvent| {
-                        set_timeout(
-                            move || {
-                                context_menu_blocker.try_update_value(Vec::clear);
-                            },
-                            Duration::from_millis(100),
-                        );
-                    },
-                ));
-            }
-            context_menu_blocker.set_value(listeners);
-        };
-
         // Start a press.
         let handle_pointer_down = move |e: PointerEvent| {
-            if e.button() != 0 {
+            if e.button() != 0 || !e.current_target_contains_target() {
                 return;
             }
 
-            if !e.current_target_contains_target() {
-                tracing::trace!(
-                    "Aborting handle_pointer_down, as current_target did not contain target."
-                );
-                return;
-            }
-
-            // Handle virtual pointer events (e.g., VoiceOver on iOS).
-            // These are deferred to the onClick handler.
+            // iOS Safari fires VoiceOver's pointer events with wrong coordinates and targets: the
+            // click presses (`handle_click`).
             if is_virtual_pointer_event(&e) {
-                // Store that we saw a virtual event; onClick will handle the full press cycle.
                 saw_virtual_pointer_event.set_value(true);
                 return;
             }
-
-            let target = e.expect_target();
+            saw_virtual_pointer_event.set_value(false);
 
             // As react-aria: a press that is already active keeps its listeners (it ends with its
             // own pointer up or click) and stops the event; a disabled element lets it propagate.
             let mut should_stop = !disabled.get_untracked();
-            if !disabled.get_untracked() && state.with_value(Option::is_none) {
+            if !disabled.get_untracked()
+                && state.with_value(Option::is_none)
+                && let Some(current_target) = e.expect_current_target().to_element()
+            {
                 // On the pressed element (react-aria's `state.target`), which the press restores.
-                if !allow_text_selection_on_press.get_untracked()
-                    && let Some(element) = e.expect_current_target().as_element()
-                {
-                    element.disable_text_selection();
+                if !allow_text_selection_on_press.get_untracked() {
+                    current_target.disable_text_selection();
                 }
 
                 // Release pointer capture to enable pointerleave/pointerenter on touch.
                 // By default, the browser captures pointer events to the original target,
                 // which prevents these events from firing correctly.
-                if let Some(element) = target.dyn_ref::<web_sys::Element>()
+                if let Some(element) = e.expect_target().dyn_ref::<web_sys::Element>()
                     && element.has_pointer_capture(e.pointer_id())
                 {
                     let _ = element.release_pointer_capture(e.pointer_id());
                 }
 
-                let current_target = e.expect_current_target();
-                let mut global_listeners = vec![
+                let mut listeners = vec![
                     listen_to(
                         &current_target,
                         ev::pointerenter,
@@ -1396,152 +1463,54 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                         handle_pointer_leave,
                     ),
                 ];
-                if let Some(doc) = current_target.get_owner_document() {
-                    global_listeners.extend([
+                if let Some(doc) = current_target.owner_document() {
+                    listeners.extend([
                         listen_to(&doc, ev::pointerup, false, handle_pointer_up),
-                        listen_to(&doc, ev::pointercancel, false, handle_pointer_cancel),
+                        listen_to(&doc, ev::pointercancel, false, move |e: PointerEvent| {
+                            cancel(&EventRef::Pointer(&e));
+                        }),
                     ]);
                 }
-                initialize_press_state(EventRef::Pointer(&e), global_listeners);
-
-                state.update_value(|s| {
-                    if let Some(s) = s {
-                        // Long presses for mouse/touch when configured. Their start comes first:
-                        // react-aria's `useLongPress` handlers precede `usePress`'.
-                        let long_press = supports_long_press()
-                            && (s.pointer_type == PointerType::Mouse
-                                || s.pointer_type == PointerType::Touch);
-                        if long_press && let Some(on_long_press_start) = on_long_press_start {
-                            let (x, y) = EventRef::Pointer(&e).coordinates();
-                            is_triggering_event.set_value(true);
-                            on_long_press_start.run(LongPressEvent {
-                                event_type: LongPressEventType::LongPressStart,
-                                pointer_type: s.pointer_type.clone(),
-                                target: SendWrapper::new(s.current_target.clone()),
-                                modifiers: EventRef::Pointer(&e).modifiers(),
-                                x,
-                                y,
-                            });
-                            is_triggering_event.set_value(false);
-                        }
-
-                        should_stop = trigger_press_start(s, EventRef::Pointer(&e));
-
-                        // Start the long press timer.
-                        if long_press {
-                            // Capture values for the timeout closure
-                            let pointer_type = s.pointer_type.clone();
-                            let modifiers = EventRef::Pointer(&e).modifiers();
-                            let current_target = s.current_target.clone();
-                            let (x, y) = EventRef::Pointer(&e).coordinates();
-
-                            s.long_press_timeout_handle = set_timeout_with_handle(
-                                move || {
-                                    // Dispatch pointercancel on the target to cancel the press
-                                    // interaction. This is synchronous — the pointercancel handler
-                                    // (and thus trigger_press_end / on_long_press_end) will fire
-                                    // before the code after dispatch_event.
-                                    if let Some(el) = current_target.as_element() {
-                                        // Bubbling, as react-aria's: the press listens for it
-                                        // on the document.
-                                        let init = web_sys::PointerEventInit::new();
-                                        init.set_bubbles(true);
-                                        let cancel_event = PointerEvent::new_with_event_init_dict(
-                                            "pointercancel",
-                                            &init,
-                                        )
-                                        .expect("should create pointercancel event");
-                                        let _ = el.dispatch_event(&cancel_event);
-
-                                        // Focus the element without scrolling.
-                                        focus_element(el, true);
-                                    }
-
-                                    // Mark long press as triggered so on_press is suppressed.
-                                    state.update_value(|s| {
-                                        if let Some(s) = s.as_mut() {
-                                            s.long_press_triggered = true;
-                                            s.long_press_timeout_handle = None;
-                                        }
-                                    });
-
-                                    // Fire the long press callback.
-                                    if let Some(on_long_press) = on_long_press {
-                                        on_long_press.run(LongPressEvent {
-                                            event_type: LongPressEventType::LongPress,
-                                            pointer_type: pointer_type.clone(),
-                                            target: SendWrapper::new(current_target),
-                                            modifiers,
-                                            x,
-                                            y,
-                                        });
-                                    }
-                                },
-                                long_press_threshold.get_untracked(),
-                            )
-                            .ok();
-
-                            // Touch devices may open a context menu on a long press: prevent
-                            // the next one, until 100 ms after the pointer up (react-aria).
-                            if s.pointer_type == PointerType::Touch {
-                                block_context_menu(&e.expect_target());
-                            }
-                        }
-                    }
-                });
+                initialize_press_state(
+                    e.pointer_id(),
+                    PointerType::of(&e),
+                    current_target,
+                    true,
+                    listeners,
+                );
+                should_stop = trigger_press_start(&EventRef::Pointer(&e));
             }
-            stop_unless_forced(should_stop, EventRef::Pointer(&e));
+            stop_unless_forced(should_stop, &EventRef::Pointer(&e));
         };
 
-        // Safari doesn't fire pointercancel on drag. Handle dragstart to cancel the press.
         // Safari doesn't fire pointercancel when a drag starts, Chrome and Firefox do (react-aria).
-        // Cancelled with the drag event itself: it is dispatched, its current target is the
-        // element (a constructed, undispatched event has none).
         let handle_dragstart = move |e: DragEvent| {
-            let inside = node_contains(
-                e.expect_current_target().as_node().as_ref(),
-                e.expect_target().as_node().as_ref(),
-            );
-            if inside != Some(true) {
-                return;
+            if e.current_target_contains_target() {
+                cancel(&EventRef::Mouse(&e));
             }
-            cancel_active_press(EventRef::Mouse(&e));
         };
 
         // Handle native dblclick for on_double_press.
         // By the time dblclick fires, the press state has already been cleared by the second click
         // handler. We use `last_pointer_type` (saved before clearing state) to construct the event.
         let handle_dblclick = move |e: MouseEvent| {
-            let Some(on_double_press) = on_double_press else {
-                return;
-            };
-            if disabled.get_untracked() {
+            if on_double_press.is_none() || disabled.get_untracked() {
                 return;
             }
-
             let Some(pointer_type) = last_pointer_type.get_value() else {
-                tracing::warn!("no pointer type saved for dblclick");
                 return;
             };
-
-            let e = EventRef::Mouse(&e);
-            let (propagation, propagation_state) = PropagationControl::new();
-            let (x, y) = e.coordinates();
-            let key = e.key();
-            is_triggering_event.set_value(true);
-            on_double_press.run(PressEvent {
+            let Some(target) = e.expect_current_target().to_element() else {
+                return;
+            };
+            let should_stop = fire(
+                on_double_press,
+                PressEventKind::DoublePress,
                 pointer_type,
-                target: SendWrapper::new(e.current_target()),
-                modifiers: e.modifiers(),
-                x,
-                y,
-                key,
-                propagation,
-            });
-            is_triggering_event.set_value(false);
-            if !force_propagation && !propagation_state.load(Ordering::Acquire) {
-                e.stop_propagation();
-            }
+                &target,
+                &EventRef::Mouse(&e),
+            );
+            stop_unless_forced(should_stop, &EventRef::Mouse(&e));
         };
 
         // Prevent focus on mousedown when prevent_focus_on_press is enabled.
@@ -1550,79 +1519,75 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 return;
             }
             // Keep the focus where it is (react-aria's `preventFocus`, which, unlike
-            // `preventDefault`, leaves text selection and dragging alone).
-            if prevent_focus_on_press.get_untracked() {
-                prevent_focus(e.target().and_then(|target| target.dyn_into().ok()));
+            // `preventDefault`, leaves text selection and dragging alone), until the press ends.
+            if prevent_focus_on_press.get_untracked()
+                && let Some(prevention) =
+                    prevent_focus(e.target().and_then(|target| target.dyn_into().ok()))
+            {
+                focus_preventions.update_value(|preventions| preventions.push(prevention));
             }
             if !force_propagation {
                 e.stop_propagation();
             }
         };
 
-        // Element-level pointerup handler: fires on_press_up for pointer-up events
-        // over the element that didn't have a corresponding press-down (no active press state).
+        // A pointer up over the element without a press of its own (react-aria's element
+        // `onPointerUp`), e.g. a drag ending here: press up only.
         let handle_element_pointer_up = move |e: PointerEvent| {
-            let ev = e;
-            let e = EventRef::Pointer(&ev);
-
-            if !ev.current_target_contains_target() || saw_virtual_pointer_event.get_value() {
+            if !e.current_target_contains_target()
+                || saw_virtual_pointer_event.get_value()
+                || e.button() != 0
+                || disabled.get_untracked()
+                || state.with_value(Option::is_some)
+            {
                 return;
             }
-            if ev.button() != 0 {
+            let Some(target) = e.expect_current_target().to_element() else {
                 return;
-            }
-            if disabled.get_untracked() {
-                return;
-            }
-            // Only fire when there is no active press (the global pointerup handles active presses).
-            if state.with_value(Option::is_some) {
-                return;
-            }
-            if let Some(on_press_up) = on_press_up {
-                let (x, y) = e.coordinates();
-                // Not stopped: react-aria ignores whether this press up continued.
-                let (propagation, _) = PropagationControl::new();
-                is_triggering_event.set_value(true);
-                on_press_up.run(PressEvent {
-                    pointer_type: PointerType::from(ev.pointer_type()),
-                    target: SendWrapper::new(e.current_target()),
-                    modifiers: e.modifiers(),
-                    x,
-                    y,
-                    key: None,
-                    propagation,
-                });
-                is_triggering_event.set_value(false);
-            }
+            };
+            // Not stopped: react-aria ignores whether this press up continued.
+            fire(
+                on_press_up,
+                PressEventKind::PressUp,
+                PointerType::of(&e),
+                &target,
+                &EventRef::Pointer(&e),
+            );
         };
 
-        // Only set aria-describedby when on_long_press is provided and a description is given.
-        // Creates a hidden element and references it by ID, once mounted (react-aria's
-        // `useDescription` uses a layout effect): the server renders none, so hydration agrees.
-        // Disabled, the element can't be long-pressed: no description (as upstream's `useLongPress`).
-        let has_long_press = on_long_press.is_some();
-        let description_id = use_description(Signal::derive(move || {
-            long_press_accessibility_description
-                .get()
-                .filter(|_| has_long_press && !disabled.get())
-        }));
-        let aria_describedby =
-            Signal::derive(move || description_id.get().map(AriaDescribedby::element_with_id));
+        // The long press description (react-aria's `useDescription` in `useLongPress`): a hidden
+        // element referenced by id once mounted (the server renders none, so hydration agrees),
+        // only with an `on_long_press` handler, and not while disabled.
+        let aria_describedby = match long_press.filter(|lp| lp.on_long_press.is_some()) {
+            Some(long_press) => use_description(Signal::derive(move || {
+                long_press
+                    .accessibility_description
+                    .get()
+                    .filter(|_| !disabled.get() && !long_press.is_disabled.get())
+            })),
+            None => Signal::stored(None),
+        };
 
-        // Cleanup on unmount: restore text selection, remove global listeners, and clear timeouts.
+        // Cleanup on unmount: restore text selection, remove listeners, and clear timeouts.
         on_cleanup(move || {
-            context_menu_blocker.try_update_value(Vec::clear);
-            state.update_value(|s| {
-                if let Some(s) = s.as_mut() {
-                    s.restore_text_selection_if_needed(
-                        allow_text_selection_on_press.get_untracked(),
-                    );
-                    s.cleanup_event_handlers();
-                    s.clear_click_timeout();
-                    s.clear_long_press_timeout();
+            long_press_listeners.try_update_value(Vec::clear);
+            if let Some(Some(s)) = state.try_update_value(Option::take) {
+                if let Some(handle) = s.click_timeout_handle {
+                    handle.clear();
                 }
-            });
-            state.set_value(None);
+                if let Some(handle) = s.long_press_timeout_handle {
+                    handle.clear();
+                }
+                if !allow_text_selection_on_press.get_untracked() {
+                    s.target.restore_text_selection();
+                }
+            }
+            for prevention in focus_preventions
+                .try_update_value(std::mem::take)
+                .unwrap_or_default()
+            {
+                prevention.dispose();
+            }
         });
 
         UsePressReturn {
@@ -1634,15 +1599,16 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     on_pointerup: EventHandler::new(handle_element_pointer_up),
                     on_mousedown: EventHandler::new(handle_mousedown),
                     on_dragstart: EventHandler::new(handle_dragstart),
-                    on_dblclick: EventHandler::new(handle_dblclick),
+                    on_dblclick: if on_double_press.is_some() {
+                        EventHandler::new(handle_dblclick)
+                    } else {
+                        EventHandler::empty()
+                    },
                     aria_describedby,
                 },
                 press_styles(),
             ),
-            is_pressed: match force_is_pressed {
-                Some(prop) => Signal::derive(move || is_pressed.get() || prop.get()),
-                None => is_pressed.into(),
-            },
+            is_pressed: Signal::derive(move || is_pressed.get() || force_is_pressed.get()),
         }
     }
 }
@@ -1682,11 +1648,9 @@ fn should_prevent_default_keyboard(element: &web_sys::Element, key: &KeyboardKey
         return !is_valid_input_key(input, key);
     }
 
-    if element.is_instance_of::<web_sys::HtmlButtonElement>() {
-        return match element.get_attribute("type") {
-            Some(ty) => ty != "submit" && ty != "reset",
-            None => false,
-        };
+    // The `type` property: the attribute normalized (lowercase, missing or invalid: `submit`).
+    if let Some(button) = element.dyn_ref::<HtmlButtonElement>() {
+        return !matches!(button.type_().as_str(), "submit" | "reset");
     }
 
     !element.is_anchor_link()
@@ -1697,52 +1661,42 @@ const NON_TEXT_INPUT_TYPES: [&str; 9] = [
     "checkbox", "radio", "range", "color", "file", "image", "button", "submit", "reset",
 ];
 
+/// Whether `key` presses the input: Space a checkbox or radio, Enter and Space other non-text
+/// inputs; never a text input (whose keys type). The `type` property: the attribute normalized
+/// (lowercase, missing or invalid: `text`).
 #[cfg(not(feature = "ssr"))]
 fn is_valid_input_key(element: &HtmlInputElement, key: &KeyboardKey) -> bool {
-    // Checkboxes and radio-buttons should only toggle with space, not enter.
-    match element.get_attribute("type") {
-        Some(ty) => match ty.as_str() {
-            "checkbox" | "radio" => *key == KeyboardKey::Space,
-            other => NON_TEXT_INPUT_TYPES.contains(&other),
-        },
-        None => true,
+    match element.type_().as_str() {
+        "checkbox" | "radio" => *key == KeyboardKey::Space,
+        other => NON_TEXT_INPUT_TYPES.contains(&other),
     }
 }
 
 /// Accessibility for keyboards. Space and Enter only.
 #[cfg(not(feature = "ssr"))]
-#[allow(clippy::needless_pass_by_value)]
-fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: EventTarget) -> bool {
+fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: &web_sys::Element) -> bool {
     let key = e.typed_key();
-    let code = e.code();
-    let resembles_press = matches!(key, KeyboardKey::Enter | KeyboardKey::Space) || code == "Space";
-
+    let resembles_press =
+        matches!(key, KeyboardKey::Enter | KeyboardKey::Space) || e.code() == "Space";
     if !resembles_press {
         return false;
     }
 
-    match current_target.as_element() {
-        Some(element) => {
-            let is_input = element.is_instance_of::<HtmlInputElement>();
-            let is_text_area = element.is_instance_of::<HtmlTextAreaElement>();
-            let is_content_editable = element
-                .dyn_ref::<HtmlElement>()
-                .is_some_and(HtmlElement::is_content_editable);
-            // Role-aware link detection: respect role overrides on anchors.
-            // An `<a href role="button">` should be treated as a button, not a link.
-            // React-aria checks: role === 'link' || (!role && isHTMLAnchorLink(element)).
-            // We do NOT use element.is_link() here because it ignores role overrides.
-            let role = element.get_attribute("role");
-            let is_link =
-                role.as_deref() == Some("link") || (role.is_none() && element.is_anchor_link());
+    let is_input = current_target.is_instance_of::<HtmlInputElement>();
+    let is_text_area = current_target.is_instance_of::<HtmlTextAreaElement>();
+    let is_content_editable = current_target
+        .dyn_ref::<HtmlElement>()
+        .is_some_and(HtmlElement::is_content_editable);
+    // Role-aware link detection: an `<a href role="button">` is a button, not a link (react-aria:
+    // `role === 'link' || (!role && isHTMLAnchorLink(element))`).
+    let role = current_target.get_attribute("role");
+    let is_link =
+        role.as_deref() == Some("link") || (role.is_none() && current_target.is_anchor_link());
 
-            // Links should only trigger with Enter key
-            !(is_text_area
-                || is_content_editable
-                || is_input
-                    && !is_valid_input_key(element.unchecked_ref::<HtmlInputElement>(), &key)
-                || is_link && key != KeyboardKey::Enter)
-        }
-        None => true,
-    }
+    // Links should only trigger with Enter key
+    !(is_text_area
+        || is_content_editable
+        || is_input
+            && !is_valid_input_key(current_target.unchecked_ref::<HtmlInputElement>(), &key)
+        || is_link && key != KeyboardKey::Enter)
 }

@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/form/useFormValidationState.ts @ 99e6102368
+// Upstream: react-aria-components/test/FieldError.test.js @ 99e6102368
 //! Form validation state management hook.
 //!
 //! This module provides [`use_form_validation_state`], the state layer for form validation.
@@ -22,13 +23,19 @@ use leptos::prelude::*;
 //   other validation sources in charge while `false` (C4). React-aria's `isInvalid` is a
 //   controlled prop: `false` forces the field valid, overriding `validate` and native validity;
 //   a controlled valid state is not a hook-owned-state shape.
-// - `name` is one field name (react-aria: also a list, whose server errors are joined); no
-//   leptonic field submits several names.
+// - `names` is a list of field names (react-aria: `name`, a name or a list); a field shows the
+//   server errors of all of them (a date range picker: its start's and end's).
 // - The commit runs in an `Effect` triggered by `commit_validation` (react-aria: a `useEffect`
 //   after the next render), and re-reads the inputs' native validity first
 //   (`NativeValidityReaders`; react-aria re-reads it after every render).
 // - Server errors show again whenever the `FormValidationContext`'s signal changes (react-aria:
 //   for every new errors object).
+//
+// ## DIFFERENT BEHAVIOR
+// - `validate` also runs for empty values (`None` of an `Option` value): react-aria skips
+//   `null`/`undefined` values, which a generic `T` can't tell apart. A validator of an optional
+//   value decides itself whether an empty value is an error (`is_required` reports a missing
+//   value).
 //
 // ## OMITTED FEATURES
 // - `privateValidationStateProp`: a parent shares its state by passing it in the child hook's
@@ -171,9 +178,9 @@ pub struct UseFormValidationStateInput<T: Send + Sync + 'static> {
     /// Validation behavior mode.
     pub validation_behavior: ValidationBehavior,
 
-    /// The field's `name` attribute, used to match server errors
-    /// from [`FormValidationContext`].
-    pub name: Option<String>,
+    /// The names of the field's form values (usually its `name`; a range field: its start's and
+    /// end's): it shows the server errors of a [`FormValidationContext`] under any of them.
+    pub names: Vec<String>,
 }
 
 /// The readers of the native validity of the inputs validated with a state (registered by
@@ -257,8 +264,11 @@ impl FormValidationState {
         Self {
             realtime_validation,
             display_validation,
-            is_invalid: Signal::derive(move || display_validation.get().is_invalid),
-            validation_errors: Signal::derive(move || display_validation.get().validation_errors),
+            is_invalid: Memo::new(move |_| display_validation.with(|v| v.is_invalid)).into(),
+            validation_errors: Memo::new(move |_| {
+                display_validation.with(|v| v.validation_errors.clone())
+            })
+            .into(),
             update_validation,
             reset_validation: group.reset_validation,
             commit_validation: group.commit_validation,
@@ -295,7 +305,7 @@ impl FormValidationState {
 /// # Validation Sources (in priority order)
 ///
 /// 1. **Explicit** — `is_invalid` while `true`
-/// 2. **Server** — errors from [`FormValidationContext`] matched by field `name`
+/// 2. **Server** — errors from [`FormValidationContext`] under the field's `names`
 /// 3. **Client** — custom `validate` function
 /// 4. **Committed** — native validity read via
 ///    [`update_validation`](FormValidationState::update_validation)
@@ -316,19 +326,19 @@ where
         validate,
         builtin_validation,
         validation_behavior,
-        name,
+        names,
     } = input;
     // A valid result is no error.
     let builtin_validation =
-        Signal::derive(move || builtin_validation.get().filter(|result| result.is_invalid));
+        Memo::new(move |_| builtin_validation.get().filter(|result| result.is_invalid));
 
     // Store validate function for closure capture.
     let validate = StoredValue::new(validate);
-    let name = StoredValue::new(name);
+    let names = StoredValue::new(names);
 
     // ---- Explicit error ----
     // `is_invalid` marks the field invalid, taking precedence over the other sources.
-    let controlled_error: Signal<Option<ValidationResult>> = Signal::derive(move || {
+    let controlled_error: Memo<Option<ValidationResult>> = Memo::new(move |_| {
         is_invalid.get().then(|| ValidationResult {
             is_invalid: true,
             validation_errors: vec![],
@@ -372,16 +382,19 @@ where
             return None;
         }
         let ctx = server_context?;
-        let name_val = name.get_value();
-        let name_str = name_val.as_deref()?;
-        let errors_map = ctx.errors.get();
-        let field_errors = errors_map.get(name_str)?;
-        if field_errors.is_empty() {
-            return None;
-        }
-        Some(ValidationResult {
+        let field_errors: Vec<String> = ctx.errors.with(|errors| {
+            names.with_value(|names| {
+                names
+                    .iter()
+                    .filter_map(|name| errors.get(name))
+                    .flatten()
+                    .cloned()
+                    .collect()
+            })
+        });
+        (!field_errors.is_empty()).then_some(ValidationResult {
             is_invalid: true,
-            validation_errors: field_errors.clone(),
+            validation_errors: field_errors,
             validation_details: CUSTOM_VALIDITY_STATE,
         })
     });
@@ -400,23 +413,31 @@ where
         if !commit_queued.get_untracked() {
             return;
         }
-        set_commit_queued.set(false);
-        // The inputs' native validity may have changed since it was last read (a checked
-        // checkbox, a removed `required`): react-aria re-reads it after every render.
-        native_validity_readers.read_all();
-        let error = client_error
-            .get_untracked()
-            .or_else(|| builtin_validation.get_untracked())
-            .unwrap_or_else(|| next_validation.get_value());
-        if error != last_error.get_value() {
-            last_error.set_value(error.clone());
-            set_current_validity.set(error);
-        }
+        // This effect can run before the input's property render effect, especially when the
+        // field's state is composed from other states. Read native validity after the complete
+        // render turn, as react-aria does in its post-render validation effect.
+        leptos::task::spawn_local_scoped_with_cancellation(async move {
+            leptos::task::tick().await;
+            if !commit_queued.get_untracked() {
+                return;
+            }
+            set_commit_queued.set(false);
+            native_validity_readers.read_all();
+            let error = client_error
+                .get_untracked()
+                .or_else(|| builtin_validation.get_untracked())
+                .unwrap_or_else(|| next_validation.get_value());
+            if error != last_error.get_value() {
+                last_error.set_value(error.clone());
+                set_current_validity.set(error);
+            }
+        });
     });
 
     // ---- Realtime validation ----
-    // Priority: controlled > server > client > default.
-    let realtime_validation = Signal::derive(move || {
+    // Priority: controlled > server > client > default. Memos: every field reads them several
+    // times (ARIA attributes, error message, native validity).
+    let realtime_validation = Memo::new(move |_| {
         controlled_error
             .get()
             .or_else(|| server_error.get())
@@ -428,7 +449,7 @@ where
     // ---- Display validation ----
     // Aria: all errors shown in realtime.
     // Native: client/native errors deferred until commit.
-    let display_validation = Signal::derive(move || match validation_behavior {
+    let display_validation = Memo::new(move |_| match validation_behavior {
         ValidationBehavior::Native => controlled_error
             .get()
             .or_else(|| server_error.get())
@@ -442,15 +463,15 @@ where
     });
 
     // ---- Convenience derived signals ----
-    let result_is_invalid = Signal::derive(move || display_validation.get().is_invalid);
+    let result_is_invalid = Memo::new(move |_| display_validation.with(|v| v.is_invalid));
     let result_validation_errors =
-        Signal::derive(move || display_validation.get().validation_errors);
+        Memo::new(move |_| display_validation.with(|v| v.validation_errors.clone()));
 
     FormValidationState {
-        realtime_validation,
-        display_validation,
-        is_invalid: result_is_invalid,
-        validation_errors: result_validation_errors,
+        realtime_validation: realtime_validation.into(),
+        display_validation: display_validation.into(),
+        is_invalid: result_is_invalid.into(),
+        validation_errors: result_validation_errors.into(),
         update_validation: Callback::new(move |result: ValidationResult| {
             // In Aria mode, update displayed validation immediately.
             // In Native mode, queue for next commit.
@@ -543,7 +564,7 @@ mod tests {
             validate: None,
             builtin_validation: Signal::default(),
             validation_behavior,
-            name: None,
+            names: Vec::new(),
         }
     }
 
@@ -633,6 +654,39 @@ mod tests {
             flush_effects();
             assert_that!(state.display_validation.get_untracked())
                 .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+    }
+
+    #[test]
+    fn native_commit_reads_validity_after_the_render_turn() {
+        with_owner(|| {
+            let value = RwSignal::new(String::new());
+            let rendered = StoredValue::new(String::new());
+            let state = use_form_validation_state(input::<String>(
+                value.into(),
+                ValidationBehavior::Native,
+            ));
+            Effect::new(move |_| rendered.set_value(value.get()));
+            state
+                .native_validity_readers
+                .register(Callback::new(move |()| {
+                    state.update_validation(if rendered.with_value(String::is_empty) {
+                        invalid(&["Required"])
+                    } else {
+                        DEFAULT_VALIDATION_RESULT
+                    });
+                }));
+            flush_effects();
+            state.commit_validation();
+            flush_effects();
+            assert_that!(state.is_invalid.get_untracked()).is_true();
+
+            // Even when the commit effect is queued first, it must observe the property update
+            // from the same event, not the input's previous native validity.
+            state.commit_validation();
+            value.set("present".to_owned());
+            flush_effects();
+            assert_that!(state.is_invalid.get_untracked()).is_false();
         });
     }
 
@@ -790,7 +844,7 @@ mod tests {
             let field = |name: Option<&str>| {
                 use_form_validation_state(UseFormValidationStateInput {
                     validate: Some(required()),
-                    name: name.map(str::to_owned),
+                    names: name.map(str::to_owned).into_iter().collect(),
                     ..input(Signal::stored(String::new()), ValidationBehavior::Native)
                 })
             };
@@ -822,6 +876,27 @@ mod tests {
             state.reset_validation();
             assert_that!(state.display_validation.get_untracked())
                 .is_equal_to(DEFAULT_VALIDATION_RESULT);
+        });
+    }
+
+    // react-aria's `name` list (a date range picker's start and end names): the errors under
+    // every name, in the order of the names.
+    #[test]
+    fn server_errors_of_several_names_are_joined() {
+        with_owner(|| {
+            provide_context(FormValidationContext {
+                errors: Signal::stored(HashMap::from([
+                    ("end".to_owned(), vec!["End too late".to_owned()]),
+                    ("start".to_owned(), vec!["Start too early".to_owned()]),
+                ])),
+            });
+            let state = use_form_validation_state(UseFormValidationStateInput {
+                names: vec!["start".to_owned(), "end".to_owned()],
+                ..input(Signal::stored(String::new()), ValidationBehavior::Aria)
+            });
+            flush_effects();
+            assert_that!(state.display_validation.get_untracked())
+                .is_equal_to(invalid(&["Start too early", "End too late"]));
         });
     }
 

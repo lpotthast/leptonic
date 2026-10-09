@@ -1,20 +1,27 @@
-//! Headless toast atoms.
 // Upstream: react-aria-components/src/Toast.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Toast.test.js @ 99e6102368
+//! Headless toast atoms.
 use std::sync::Arc;
 
 use leptos::{context::Provider, portal::Portal, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
+    CapturedElement, IntoAttrs,
     hooks::{
-        IntoAttrs, QueuedToast, ToastQueue, UseButtonInput, UseButtonReturn, UseFocusRingInput,
-        UseFocusRingReturn, UseToastContentProps, UseToastInput, UseToastRegionInput,
-        UseToastRegionReturn, UseToastReturn, use_button, use_focus_ring, use_toast,
-        use_toast_region,
+        button::{UseButtonInput, UseButtonReturn, use_button},
+        focus::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        toast::{
+            QueuedToast, ToastQueue, UseToastContentProps, UseToastInput, UseToastRegionInput,
+            UseToastRegionReturn, UseToastReturn, use_toast, use_toast_region,
+        },
     },
     utils::{
-        CapturedElement, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, i18n::use_direction, locale::WritingDirection,
-        slot_id::SlotProps, styles::Styles,
+        data_attributes::flag,
+        default_class::with_default_class,
+        i18n::{WritingDirection, use_direction},
+        slot_id::SlotProps,
+        styles::Styles,
     },
 };
 
@@ -121,7 +128,7 @@ where
                     <ol style="display: contents">
                         <For
                             each=move || queue.visible_toasts.get()
-                            key=|toast| toast.key.clone()
+                            key=|toast| toast.key
                             children=move |toast| {
                                 let children = children.get_value();
                                 view! { <li style="display: contents">{children(toast)}</li> }
@@ -241,7 +248,12 @@ pub fn ToastTitle(
     let Some(context) = expect_toast("ToastTitle") else {
         return ().into_any();
     };
-    view! { <div id=context.title_id class=classes style=styles>{children()}</div> }.into_any()
+    view! {
+        <div id=context.title_id class=classes style=styles>
+            {children()}
+        </div>
+    }
+    .into_any()
 }
 
 /// The description of the toast around it, describing it.
@@ -259,7 +271,12 @@ pub fn ToastDescription(
     else {
         return ().into_any();
     };
-    view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> }.into_any()
+    view! {
+        <div {..props.into_attrs()} class=classes style=styles>
+            {children()}
+        </div>
+    }
+    .into_any()
 }
 
 /// The button closing the toast around it ("Close").

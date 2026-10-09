@@ -2,10 +2,10 @@
 //! The `ColorPicker` atom: a swatch, an HSV area, a hue slider and a hex field without their
 //! own values share the picker's color, each in its own color space.
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions};
+use crate::pages::{ElementActions, Page};
 
 const PATH: &str = "/atoms/color-picker";
 
@@ -34,21 +34,32 @@ async fn enter_hex(page: &Page<'_>, hex: &str) -> Result<(), Report> {
     Ok(())
 }
 
-/// "renders"; the parts follow a color typed into the field.
+/// The swatch, area, hue slider and hex field show the picker's color, and all follow a color
+/// typed into the field ("renders").
+#[browser_test]
 pub async fn shared_color(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let swatch = swatch(page).await?;
-    assert_that!(swatch.attr("aria-label").await?)
-        .get_some()
+    assert_that!(swatch)
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("vibrant red");
     let saturation = saturation(page).await?;
     let hue = hue(page).await?;
-    assert_that!(saturation.value().await?)
+    assert_that!(saturation)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("1");
-    assert_that!(hue.value().await?).get_some().is_equal_to("0");
+    assert_that!(hue)
+        .property("value")
+        .await
+        .get_some()
+        .is_equal_to("0");
     let field = page.element("#test-cp-field input").await?;
-    assert_that!(field.value().await?)
+    assert_that!(field)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("#FF0000");
 
@@ -56,16 +67,10 @@ pub async fn shared_color(page: &Page<'_>) -> Result<(), Report> {
     swatch
         .wait_for_attr("aria-label", Some("dark vibrant blue"))
         .await?;
-    // The swatch changed: the other parts did in the same update.
-    assert_that!(hue.value().await?)
-        .get_some()
-        .is_equal_to("240");
-    assert_that!(saturation.value().await?)
-        .get_some()
-        .is_equal_to("1");
-    assert_that!(field.value().await?)
-        .get_some()
-        .is_equal_to("#0000FF");
+    // Each part follows (they may update in separate effects).
+    hue.wait_for_prop("value", "240").await?;
+    saturation.wait_for_prop("value", "1").await?;
+    field.wait_for_prop("value", "#0000FF").await?;
     page.element("#test-cp-log")
         .await?
         .wait_for_inner_text("0000FF")
@@ -73,8 +78,9 @@ pub async fn shared_color(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Alpha (react-aria's colors all have one): an alpha slider's value text names no color, the
-/// swatch says how transparent the color is, and opaque parts keep the alpha.
+/// The alpha slider's value text is a bare percentage, lowering it makes the swatch say how
+/// transparent the color is, and changing the hue keeps the alpha.
+#[browser_test]
 pub async fn alpha(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     // A color whose hue isn't the hue slider's minimum.
@@ -84,8 +90,9 @@ pub async fn alpha(page: &Page<'_>) -> Result<(), Report> {
         .wait_for_attr("aria-label", Some("dark vibrant blue"))
         .await?;
     let alpha = page.element("#test-cp-alpha input[type=range]").await?;
-    assert_that!(alpha.attr("aria-valuetext").await?)
-        .get_some()
+    assert_that!(alpha)
+        .has_attribute("aria-valuetext")
+        .await
         .is_equal_to("100%");
     alpha.focus().await?;
     page.send_keys(Key::PageDown).await?;
@@ -98,8 +105,12 @@ pub async fn alpha(page: &Page<'_>) -> Result<(), Report> {
     swatch
         .wait_for_attr("aria-label", Some("vibrant red, 10% transparent"))
         .await?;
-    assert_that!(alpha.attr("aria-valuetext").await?)
-        .get_some()
-        .is_equal_to("90%");
+    alpha
+        .attr_stays(
+            "aria-valuetext",
+            Some("90%"),
+            std::time::Duration::from_millis(100),
+        )
+        .await?;
     Ok(())
 }

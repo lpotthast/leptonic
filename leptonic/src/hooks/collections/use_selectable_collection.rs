@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/selection/useSelectableCollection.ts @ 99e6102368
 // Upstream: react-aria/src/selection/useSelectableList.ts @ 99e6102368
+// Upstream: react-aria/test/selection/useSelectableCollection.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
@@ -9,7 +11,6 @@ use leptos::{
         custom::{CustomAttr, custom_attribute},
     },
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
@@ -23,21 +24,20 @@ use super::{
     use_type_select::{UseTypeSelectInput, UseTypeSelectProps, use_type_select},
 };
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
     hooks::{
-        IntoAttrs,
         focus::use_focus_visible::{Modality, get_modality},
         interactions::use_keyboard::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
+        dom_ext::{EventAccessors, node_contains},
         focus::{focus_element, focus_safely},
-        focusability::is_tabbable,
+        focusability::{Focusability, is_tabbable},
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
-        locale::WritingDirection,
         modifiers::EventModifiers,
-        node_contains,
         platform::device,
         scroll::{
             ScrollIntoViewOpts, ScrollIntoViewportOpts, scroll_into_view, scroll_into_viewport,
@@ -57,6 +57,8 @@ use crate::{
 // - Item elements are looked up in the `ItemElements` registry instead of `[data-key]` queries.
 //
 // ## DIFFERENT BEHAVIOR
+// - Auto focus goes to the selected item that comes first in the collection (react-aria: the
+//   first key of the selection set, in the order the keys were selected).
 // - Escape with a selection the state doesn't allow to empty (`disallow_empty_selection` of the
 //   selection manager) is not handled, so it propagates (e.g. to close a popover). react-aria
 //   handles it with a `clearSelection` that does nothing, which swallows it.
@@ -117,7 +119,7 @@ pub struct CollectionOptions {
     /// through `aria-activedescendant`.
     pub should_use_virtual_focus: bool,
     /// How link items behave (see `use_selectable_item`).
-    pub link_behavior: LinkBehavior,
+    pub link_behavior: Signal<LinkBehavior>,
 }
 
 /// Input of [`use_selectable_collection`].
@@ -162,13 +164,13 @@ pub type UseSelectableCollectionAttrs = (
     Attr<attr::Tabindex, Signal<Option<i32>>>,
     CustomAttr<&'static str, String>,
     ElementCaptureAttr,
-    On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-    On<ev::scroll, SharedEventCallback<Event>>,
+    OnEvent<ev::Capture<ev::keydown>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::keyup>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
+    OnEvent<ev::mousedown>,
+    OnEvent<ev::scroll>,
 );
 
 impl IntoAttrs for UseSelectableCollectionProps {
@@ -194,8 +196,8 @@ impl IntoAttrs for UseSelectableCollectionProps {
 
 /// Shortcuts for `key` alone and with the selection modifiers: Shift (extend), Ctrl/Option
 /// (move focus without selecting), and both.
-fn with_selection_modifiers(key: &'static str) -> [Shortcut; 4] {
-    let base = Shortcut::key(key);
+fn with_selection_modifiers(key: KeyboardKey) -> [Shortcut; 4] {
+    let base = Shortcut::new(key);
     let modifier = |s: Shortcut| if device::is_mac() { s.alt() } else { s.ctrl() };
     [
         base.clone(),
@@ -212,7 +214,7 @@ fn with_selection_modifiers(key: &'static str) -> [Shortcut; 4] {
 pub fn use_selectable_collection(
     input: UseSelectableCollectionInput,
 ) -> UseSelectableCollectionReturn {
-    crate::hooks::track_interaction_modality();
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseSelectableCollectionInput {
         selection,
         item_elements,
@@ -253,7 +255,7 @@ pub fn use_selectable_collection(
             let is_link = untrack(|| selection.is_link(&key));
             // Selecting a link item opens it: moving focus onto it navigates.
             if is_link
-                && link_behavior == LinkBehavior::Selection
+                && link_behavior.get_untracked() == LinkBehavior::Selection
                 && select_on_focus()
                 && !is_non_contiguous_selection_modifier_keyboard(e)
             {
@@ -269,7 +271,7 @@ pub fn use_selectable_collection(
                 return true;
             }
             selection.set_focused_key(Some(key.clone()), child);
-            if is_link && link_behavior == LinkBehavior::Override {
+            if is_link && link_behavior.get_untracked() == LinkBehavior::Override {
                 return true;
             }
             if e.shift_key() && untrack(|| selection.selection_mode()) == SelectionMode::Multiple {
@@ -282,59 +284,48 @@ pub fn use_selectable_collection(
 
     let nav = NavigationOptions::default();
     let arrow = {
-        move |e: &KeyboardEvent, key_name: &str| {
+        move |e: &KeyboardEvent, key: &KeyboardKey| {
             let rtl = direction.get_untracked() == WritingDirection::Rtl;
-            let (next, wrap, child) = match key_name {
-                "ArrowDown" => (
-                    focused().map_or_else(
-                        || delegate().first_key(None, false),
-                        |k| delegate().key_below(&k, nav),
-                    ),
-                    delegate().first_key(focused().as_ref(), false),
-                    None,
-                ),
-                "ArrowUp" => (
-                    focused().map_or_else(
-                        || delegate().last_key(None, false),
-                        |k| delegate().key_above(&k, nav),
-                    ),
-                    delegate().last_key(focused().as_ref(), false),
-                    None,
-                ),
-                "ArrowLeft" => (
-                    focused().map_or_else(
-                        || delegate().first_key(None, false),
-                        |k| delegate().key_left_of(&k, nav),
-                    ),
-                    if rtl {
-                        delegate().first_key(focused().as_ref(), false)
-                    } else {
-                        delegate().last_key(focused().as_ref(), false)
-                    },
-                    Some(if rtl {
-                        FocusStrategy::First
-                    } else {
-                        FocusStrategy::Last
-                    }),
-                ),
-                _ => (
-                    focused().map_or_else(
-                        || delegate().first_key(None, false),
-                        |k| delegate().key_right_of(&k, nav),
-                    ),
-                    if rtl {
-                        delegate().last_key(focused().as_ref(), false)
-                    } else {
-                        delegate().first_key(focused().as_ref(), false)
-                    },
-                    Some(if rtl {
-                        FocusStrategy::Last
-                    } else {
-                        FocusStrategy::First
-                    }),
-                ),
+            let delegate = delegate();
+            let focused = focused();
+            let next = match (key, &focused) {
+                (KeyboardKey::ArrowDown, Some(k)) => delegate.key_below(k, nav),
+                (KeyboardKey::ArrowUp, Some(k)) => delegate.key_above(k, nav),
+                (KeyboardKey::ArrowLeft, Some(k)) => delegate.key_left_of(k, nav),
+                (_, Some(k)) => delegate.key_right_of(k, nav),
+                (KeyboardKey::ArrowUp, None) => delegate.last_key(None, false),
+                (_, None) => delegate.first_key(None, false),
             };
-            let next = next.or_else(|| should_focus_wrap.then_some(wrap).flatten());
+            // Entering a row from the left or right focuses its last or first child.
+            let child = match key {
+                KeyboardKey::ArrowLeft => Some(if rtl {
+                    FocusStrategy::First
+                } else {
+                    FocusStrategy::Last
+                }),
+                KeyboardKey::ArrowRight => Some(if rtl {
+                    FocusStrategy::Last
+                } else {
+                    FocusStrategy::First
+                }),
+                _ => None,
+            };
+            let wraps_to_first = match key {
+                KeyboardKey::ArrowDown => true,
+                KeyboardKey::ArrowUp => false,
+                KeyboardKey::ArrowLeft => rtl,
+                _ => !rtl,
+            };
+            let next = next.or_else(|| {
+                if !should_focus_wrap {
+                    return None;
+                }
+                if wraps_to_first {
+                    delegate.first_key(focused.as_ref(), false)
+                } else {
+                    delegate.last_key(focused.as_ref(), false)
+                }
+            });
             navigate_to_key(e, next, child)
         }
     };
@@ -382,26 +373,32 @@ pub fn use_selectable_collection(
     };
 
     let mut repeatable = KeyboardShortcuts::new();
-    for key in ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"] {
-        for shortcut in with_selection_modifiers(key) {
-            repeatable = repeatable.on(shortcut, move |e| arrow(e, key));
+    for key in [
+        KeyboardKey::ArrowDown,
+        KeyboardKey::ArrowUp,
+        KeyboardKey::ArrowLeft,
+        KeyboardKey::ArrowRight,
+    ] {
+        for shortcut in with_selection_modifiers(key.clone()) {
+            let key = key.clone();
+            repeatable = repeatable.on(shortcut, move |e| arrow(e, &key));
         }
     }
-    for (key, down) in [("PageDown", true), ("PageUp", false)] {
+    for (key, down) in [(KeyboardKey::PageDown, true), (KeyboardKey::PageUp, false)] {
         for shortcut in with_selection_modifiers(key) {
             repeatable = repeatable.on(shortcut, move |e| page(e, down));
         }
     }
 
     let mut once = KeyboardShortcuts::new();
-    for (key, home) in [("Home", true), ("End", false)] {
+    for (key, home) in [(KeyboardKey::Home, true), (KeyboardKey::End, false)] {
         // Upstream also takes Cmd (+ Shift) on macOS: its `isCtrlKeyPressed` is Meta there,
         // which goes to the collection's first/last item (and extends the selection).
         let cmd = device::is_mac()
             .then(|| {
                 [
-                    Shortcut::key(key).primary(),
-                    Shortcut::key(key).primary().shift(),
+                    Shortcut::new(key.clone()).primary(),
+                    Shortcut::new(key.clone()).primary().shift(),
                 ]
             })
             .into_iter()
@@ -411,7 +408,7 @@ pub fn use_selectable_collection(
         }
     }
     once = once
-        .on(Shortcut::key("a").primary(), move |_| {
+        .on(Shortcut::new(KeyboardKey::A).primary(), move |_| {
             if untrack(|| selection.selection_mode()) == SelectionMode::Multiple
                 && !disallow_select_all
             {
@@ -421,7 +418,7 @@ pub fn use_selectable_collection(
                 false
             }
         })
-        .on(Shortcut::key("Escape"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Escape), move |_| {
             if escape_key_behavior == EscapeKeyBehavior::ClearSelection
                 && !disallow_empty_selection
                 && !untrack(|| selection.disallow_empty_selection() || selection.is_empty())
@@ -434,14 +431,14 @@ pub fn use_selectable_collection(
         })
         // Tab leaves the collection (it is a single tab stop): focus the last tabbable element
         // inside, so the browser's default Tab moves past the collection.
-        .on(Shortcut::key("Tab"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Tab), move |_| {
             if !allows_tab_navigation && let Some(container) = element.get_untracked() {
                 focus_last_tabbable(&container);
             }
             ShortcutOutcome::Ignored
         })
         // Shift+Tab: focus the collection itself, so the browser moves before it.
-        .on(Shortcut::key("Tab").shift(), move |_| {
+        .on(Shortcut::new(KeyboardKey::Tab).shift(), move |_| {
             if !allows_tab_navigation && let Some(container) = element.get_untracked() {
                 focus_element(&container, true);
             }
@@ -545,7 +542,7 @@ pub fn use_selectable_collection(
                     }
                 });
             }
-            if modality == Modality::Keyboard {
+            if modality == Some(Modality::Keyboard) {
                 scroll_into_viewport(
                     Some(&item),
                     &ScrollIntoViewportOpts {
@@ -604,14 +601,14 @@ pub fn use_selectable_collection(
                 Some(AutoFocus::Last) => delegate().last_key(None, false),
                 Some(AutoFocus::Selected) | None => None,
             };
+            // The selected item that comes first in the collection.
             if let Some(first_selectable) = untrack(|| {
                 selection
                     .collection()
-                    .with(|c| c.items().map(|n| n.key.clone()).collect::<Vec<_>>())
-            })
-            .into_iter()
-            .find(|k| selected.contains(k) && untrack(|| selection.can_select_item(k)))
-            {
+                    .with(|c| c.sorted_keys(selected.iter().cloned()))
+                    .into_iter()
+                    .find(|k| selection.can_select_item(k))
+            }) {
                 key = Some(first_selectable);
             }
             selection.set_focused(true);
@@ -639,8 +636,25 @@ pub fn use_selectable_collection(
     // -- Scroll the focused item into view (keyboard navigation and auto focus) --
     {
         let last_focused: StoredValue<Option<Key>> = StoredValue::new(None);
+        // The frame that scrolls to a key: cancelled when the focused key changes before it runs,
+        // and on unmount (as react-aria's effect cleanup).
+        let pending_scroll: StoredValue<Option<(Key, AnimationFrameRequestHandle)>> =
+            StoredValue::new(None);
+        on_cleanup(move || {
+            if let Some((_, frame)) = pending_scroll.try_update_value(Option::take).flatten() {
+                frame.cancel();
+            }
+        });
         Effect::new(move |_| {
             let current = selection.focused_key();
+            if let Some((_, frame)) = pending_scroll
+                .try_update_value(|pending| {
+                    pending.take_if(|(key, _)| current.as_ref() != Some(&*key))
+                })
+                .flatten()
+            {
+                frame.cancel();
+            }
             let is_focused = untrack(|| selection.is_focused());
             if is_focused
                 && let Some(key) = &current
@@ -652,10 +666,10 @@ pub fn use_selectable_collection(
                 let Some(item) = item_elements.get_tracked(key) else {
                     return;
                 };
-                if get_modality() == Modality::Keyboard || did_auto_focus.get_value() {
+                if get_modality() == Some(Modality::Keyboard) || did_auto_focus.get_value() {
                     let item = (*item).clone();
                     let container = (*container).clone();
-                    request_animation_frame(move || {
+                    let frame = request_animation_frame_with_handle(move || {
                         if let (Some(container_html), Some(item_html)) = (
                             container.dyn_ref::<web_sys::HtmlElement>(),
                             item.dyn_ref::<web_sys::HtmlElement>(),
@@ -666,7 +680,7 @@ pub fn use_selectable_collection(
                                 ScrollIntoViewOpts::default(),
                             );
                         }
-                        if get_modality() != Modality::Virtual {
+                        if get_modality() != Some(Modality::Virtual) {
                             scroll_into_viewport(
                                 Some(&item),
                                 &ScrollIntoViewportOpts {
@@ -675,6 +689,9 @@ pub fn use_selectable_collection(
                             );
                         }
                     });
+                    if let Ok(frame) = frame {
+                        pending_scroll.set_value(Some((key.clone(), frame)));
+                    }
                 }
             }
             // The focused item disappeared while focus was inside: keep focus in the collection.
@@ -740,7 +757,7 @@ fn focus_last_tabbable(container: &web_sys::Element) {
     let Some(mut walker) = get_focusable_tree_walker(
         container,
         FocusableTreeWalkerOptions {
-            tabbable: true,
+            focusability: Focusability::Tabbable,
             ..FocusableTreeWalkerOptions::default()
         },
     ) else {

@@ -86,9 +86,8 @@ pub fn PageOptimizingBuilds() -> impl IntoView {
 
             <Section title="Features">
                 <p>
-                    "Leptonic\u{2019}s default features are "<Code inline=true>"hooks"</Code>" and "
-                    <Code inline=true>"intl-strings"</Code>". Most apps want the "<Code inline=true>"atoms"</Code>
-                    ", which include the hooks (see "
+                    "Leptonic enables "<Code inline=true>"intl-strings"</Code>" by default; hooks are always available. "
+                    "Most apps also want the "<Code inline=true>"atoms"</Code>" feature (see "
                     <Link href=format!("{}#feature-flags", routes::doc::Installation.materialize())>"Feature Flags"</Link>
                     "). Declare leptonic without its default features and name the ones you use:"
                 </p>
@@ -302,6 +301,14 @@ pub fn PageOptimizingBuilds() -> impl IntoView {
                         "("<Code inline=true>"file_and_error_handler"</Code>", "<Code inline=true>"site_pkg_dir_service"</Code>
                         ") serves them to the browsers that accept them. Costs: about 20 s per build for a 13 MB bundle "
                         "(brotli at quality 11), which is why it belongs in the production build."
+                    </p>
+                    <p>
+                        "Development builds benefit from compression too. cargo-leptos only runs "
+                        <Code inline=true>"--precompress"</Code>" with "<Code inline=true>"--release"</Code>
+                        ". This book prepares missing or stale compressed WASM files before its server accepts requests, "
+                        "including with "<Code inline=true>"just serve"</Code>" and its development profiles: gzip at level 6 "
+                        "and brotli at quality 4. Fresh files are reused, including the production build\u{2019}s more tightly "
+                        "compressed files. Each bundle is compressed once, so reloads do not repeat that work."
                     </p>
                     <p>
                         "Compress the rest (pages, server function responses) per request with tower-http\u{2019}s "

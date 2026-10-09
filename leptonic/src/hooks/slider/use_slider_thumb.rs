@@ -3,36 +3,37 @@ use leptos::{
     attr,
     attr::Attr,
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
     tachys::html::property::{Property, prop},
 };
+use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use send_wrapper::SendWrapper;
 use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use crate::{
+    EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        FocusableContextAttr, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
-        UseFocusableInput, UseFocusableReturn, UseFormResetInput, UseLabelInput, UseLabelProps,
-        UseLabelReturn, UseMoveInput,
+        focus::{FocusableContextAttr, UseFocusableInput, UseFocusableReturn, use_focusable},
+        form::{
+            UseFormResetInput, UseLabelInput, UseLabelProps, UseLabelReturn, use_form_reset,
+            use_label,
+        },
+        interactions::{MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move},
         slider::{SliderData, SliderState},
-        use_focusable, use_form_reset, use_label, use_move,
     },
     utils::{
-        EventAccessors, EventHandler, EventTargetExt,
         aria::{AriaInvalid, AriaOrientation, AriaRequired},
-        css::TouchAction,
-        element_capture::{CapturedElement, ElementCaptureAttr},
+        dom_ext::{EventAccessors, EventTargetExt},
         event_listeners::{Listener, listen_to},
         focus::focus_safely,
-        i18n::use_direction,
+        fraction::Fraction,
+        i18n::{WritingDirection, use_direction},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        locale::WritingDirection,
         number_value::NumberValue,
         orientation::Orientation,
         pointer_type::PointerType,
-        style::TouchActionProperty,
-        styles::Styles,
+        styles::{Styles, css::TouchAction, property::TouchActionProperty},
     },
 };
 
@@ -102,14 +103,9 @@ pub struct UseSliderThumbReturn {
 pub struct UseSliderThumbProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
-    pub element_capture: ElementCaptureAttr,
 }
 
-pub type UseSliderThumbAttrs = (
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    ElementCaptureAttr,
-);
+pub type UseSliderThumbAttrs = (OnEvent<ev::pointerdown>, OnEvent<ev::keydown>);
 
 impl IntoAttrs for UseSliderThumbProps {
     type Attrs = UseSliderThumbAttrs;
@@ -118,7 +114,6 @@ impl IntoAttrs for UseSliderThumbProps {
         (
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown.into_on(ev::keydown),
-            self.element_capture,
         )
     }
 }
@@ -179,11 +174,11 @@ pub type UseSliderThumbInputAttrs = (
         ElementCaptureAttr,
     ),
     (
-        On<ev::input, SharedEventCallback<Event>>,
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
+        OnEvent<ev::input>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
         FocusableContextAttr,
     ),
 );
@@ -292,22 +287,16 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         let (thumb_label_id, thumb_id) = (label_props.id.clone(), field_props.id.clone());
         let slider_labelled_by = slider.labelled_by;
         Signal::derive(move || {
-            let mut ids = Vec::new();
+            let mut ids = IdRefs::default();
             if aria_label.with(Option::is_some) {
-                ids.push(thumb_id.clone());
+                ids.push(&thumb_id);
             }
             if has_label.get() {
-                ids.push(thumb_label_id.clone());
+                ids.push(&thumb_label_id);
             }
-            ids.push(slider_labelled_by.get());
-            ids.extend(
-                aria_labelledby
-                    .iter()
-                    .flat_map(|ids| ids.split_whitespace())
-                    .map(str::to_owned),
-            );
-            crate::hooks::form::use_label::dedup_ids(&mut ids);
-            Some(ids.join(" "))
+            slider_labelled_by.with(|labelled_by| ids.push(labelled_by));
+            ids.extend(aria_labelledby.as_deref());
+            ids.into_value()
         })
     };
 
@@ -331,18 +320,18 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         state.set_thumb_dragging(index, false);
     };
     let shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("PageUp"), move |_| {
+        .on(Shortcut::new(KeyboardKey::PageUp), move |_| {
             keyboard_update(&|| state.increment_thumb(index, Some(untrack(|| state.page_size()))));
         })
-        .on(Shortcut::key("PageDown"), move |_| {
+        .on(Shortcut::new(KeyboardKey::PageDown), move |_| {
             keyboard_update(&|| state.decrement_thumb(index, Some(untrack(|| state.page_size()))));
         })
-        .on(Shortcut::key("Home"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Home), move |_| {
             keyboard_update(&|| {
                 state.set_thumb_value(index, untrack(|| state.thumb_min_value(index)));
             });
         })
-        .on(Shortcut::key("End"), move |_| {
+        .on(Shortcut::new(KeyboardKey::End), move |_| {
             keyboard_update(&|| {
                 state.set_thumb_value(index, untrack(|| state.thumb_max_value(index)));
             });
@@ -385,14 +374,14 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             }
             let current = position
                 .get_value()
-                .unwrap_or_else(|| untrack(|| state.thumb_percent(index)) * size);
+                .unwrap_or_else(|| untrack(|| state.thumb_percent(index)).get() * size);
             let mut delta = if is_vertical() { e.delta_y } else { e.delta_x };
             if is_vertical() || reverse_x() {
                 delta = -delta;
             }
             let current = current + delta;
             position.set_value(Some(current));
-            state.set_thumb_percent(index, (current / size).clamp(0.0, 1.0));
+            state.set_thumb_percent(index, Fraction::new(current / size));
         })),
         on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
             state.set_thumb_dragging(index, false);
@@ -455,7 +444,7 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
     });
 
     let percent = Signal::derive(move || {
-        let percent = state.thumb_percent(index);
+        let percent = state.thumb_percent(index).get();
         if orientation.get() == Orientation::Vertical || direction.get() == WritingDirection::Rtl {
             1.0 - percent
         } else {
@@ -491,7 +480,6 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             UseSliderThumbProps {
                 on_pointerdown: EventHandler::new(on_down).chain(thumb_move.props.on_pointerdown),
                 on_keydown: thumb_move.props.on_keydown,
-                element_capture: thumb_move.props.element_capture,
             },
             thumb_styles,
         ),
@@ -511,26 +499,16 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
             aria_label: field_props.aria_label,
             aria_labelledby: thumb_labelled_by,
-            aria_describedby: {
-                let slider_describedby = slider.aria_describedby;
-                Signal::derive(move || {
-                    let ids: Vec<String> = slider_describedby
-                        .get()
-                        .into_iter()
-                        .chain(aria_describedby.clone())
-                        .collect();
-                    (!ids.is_empty()).then(|| ids.join(" "))
-                })
-            },
+            aria_describedby: IdRefs::derive([
+                slider.aria_describedby,
+                Signal::stored(aria_describedby),
+            ]),
             aria_errormessage,
-            aria_details: {
-                let ids: Vec<String> = slider
-                    .aria_details
-                    .into_iter()
-                    .chain(aria_details)
-                    .collect();
-                (!ids.is_empty()).then(|| ids.join(" "))
-            },
+            aria_details: [slider.aria_details, aria_details]
+                .into_iter()
+                .flatten()
+                .collect::<IdRefs>()
+                .into_value(),
             element_capture: focusable_props.element_capture.chain(input_element.attr()),
             on_input: EventHandler::new(move |e: Event| {
                 if let Some(value) = parse_value::<T>(&event_target_value(&e)) {

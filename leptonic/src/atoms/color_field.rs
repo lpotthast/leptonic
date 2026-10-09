@@ -2,6 +2,7 @@
 // Upstream: react-aria-components/src/ColorField.tsx @ 99e6102368
 
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
@@ -10,16 +11,16 @@ use super::{
     input::{InputContext, InputState},
 };
 use crate::{
-    Out,
+    IntoAttrs, Out, ValueBinding,
     hooks::{
-        IntoAttrs, UseColorChannelFieldInput, UseColorChannelFieldStateInput, UseColorFieldInput,
-        UseColorFieldReturn, UseColorFieldStateInput, UseNumberFieldInput, UseNumberFieldReturn,
-        ValidateFn, ValidationBehavior, use_color_channel_field, use_color_channel_field_state,
-        use_color_field, use_color_field_state,
+        color::{
+            UseColorChannelFieldInput, UseColorChannelFieldStateInput, UseColorFieldInput,
+            UseColorFieldReturn, UseColorFieldStateInput, use_color_channel_field,
+            use_color_channel_field_state, use_color_field, use_color_field_state,
+        },
+        form::{UseNumberFieldReturn, ValidateFn, ValidationBehavior},
     },
     utils::{
-        ValueBinding,
-        classes::Classes,
         color::{ColorChannel, RGB8},
         data_attributes::flag,
         default_class::with_default_class,
@@ -247,25 +248,22 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     let input = UseColorChannelFieldInput {
         state,
-        field: UseNumberFieldInput {
-            state: state.number,
-            id,
-            has_label: label_presence.has_label,
-            aria_label,
-            aria_labelledby,
-            aria_describedby,
-            is_required,
-            placeholder,
-            auto_focus: false,
-            is_wheel_disabled: false,
-            increment_aria_label: MaybeProp::default(),
-            decrement_aria_label: MaybeProp::default(),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            on_key_down: None,
-            on_key_up: None,
-        },
+        id,
+        has_label: label_presence.has_label,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        is_required,
+        placeholder,
+        auto_focus: false,
+        is_wheel_disabled: false,
+        increment_aria_label: MaybeProp::default(),
+        decrement_aria_label: MaybeProp::default(),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
     };
     let UseNumberFieldReturn {
         label_props,

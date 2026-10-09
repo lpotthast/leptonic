@@ -1,4 +1,7 @@
-use leptonic::hooks::{FocusWithinEvent, IntoAttrs, UseFocusWithinInput, use_focus_within};
+use leptonic::{
+    IntoAttrs,
+    hooks::focus::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
+};
 use leptos::{prelude::*, web_sys};
 use wasm_bindgen::JsCast;
 

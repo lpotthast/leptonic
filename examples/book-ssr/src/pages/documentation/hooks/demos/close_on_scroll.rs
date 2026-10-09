@@ -1,4 +1,7 @@
-use leptonic::{atoms::button::Button, hooks::*};
+use leptonic::{
+    atoms::button::Button,
+    hooks::overlay::{UseCloseOnScrollInput, use_close_on_scroll},
+};
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
 

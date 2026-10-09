@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/utils/useControlledState.ts @ 99e6102368
+// Upstream: react-stately/test/utils/useControlledState.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
 // =============================================================================
@@ -7,7 +8,8 @@ use leptos::prelude::*;
 //
 // ## API DIFFERENCES
 // - Hook-owned state (C4): `default_value` + `on_change`, or `value` bound to app state (the atoms'
-//   `value` + `set_value`); every change goes through `set_value`.
+//   `value` + `set_value`; a `ValueBinding` is the one way to bind it, also for a value living in
+//   another state, e.g. a combo box's); every change goes through `set_value`.
 //
 // =============================================================================
 
@@ -19,42 +21,8 @@ pub struct TextFieldState {
 }
 
 impl TextFieldState {
-    /// A state whose value lives elsewhere (e.g. in a combo box state).
-    pub fn new(value: Signal<String>, set_value: Callback<String>) -> Self {
-        Self { value, set_value }
-    }
-
     pub fn set_value(&self, value: String) {
         self.set_value.run(value);
-    }
-
-    /// This state, also calling `on_change` when the value changes.
-    #[must_use]
-    pub fn with_on_change(self, on_change: Callback<String>) -> Self {
-        Self::new(
-            self.value,
-            Callback::new(move |value: String| {
-                if self.value.with_untracked(|v| *v == value) {
-                    return;
-                }
-                self.set_value(value.clone());
-                on_change.run(value);
-            }),
-        )
-    }
-}
-
-/// Binds the field to a signal (as Leptos' `bind:value` does).
-impl From<RwSignal<String>> for TextFieldState {
-    fn from(signal: RwSignal<String>) -> Self {
-        Self::new(signal.into(), Callback::new(move |value| signal.set(value)))
-    }
-}
-
-/// Binds the field to a signal pair (as Leptos' `bind:value` does).
-impl From<(ReadSignal<String>, WriteSignal<String>)> for TextFieldState {
-    fn from((read, write): (ReadSignal<String>, WriteSignal<String>)) -> Self {
-        Self::new(read.into(), Callback::new(move |value| write.set(value)))
     }
 }
 
@@ -64,7 +32,7 @@ pub struct UseTextFieldStateInput {
     /// The initial value. Ignored when `value` is bound.
     pub default_value: String,
     /// The value as app state, replacing `default_value`.
-    pub value: Option<crate::utils::ValueBinding<String>>,
+    pub value: Option<crate::ValueBinding<String>>,
     /// Called when the value changes.
     pub on_change: Option<Callback<String>>,
 }
@@ -76,8 +44,7 @@ pub fn use_text_field_state(input: UseTextFieldStateInput) -> TextFieldState {
         value,
         on_change,
     } = input;
-    let binding =
-        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_value)));
+    let binding = value.unwrap_or_else(|| crate::ValueBinding::from(RwSignal::new(default_value)));
     let value = binding.value;
     TextFieldState {
         value,
@@ -94,11 +61,10 @@ pub fn use_text_field_state(input: UseTextFieldStateInput) -> TextFieldState {
 
 #[cfg(test)]
 mod tests {
-    // Upstream: react-stately/test/utils/useControlledState.test.tsx.
     use assertr::prelude::*;
 
     use super::*;
-    use crate::{testing::with_owner, utils::ValueBinding};
+    use crate::{ValueBinding, testing::with_owner};
 
     /// The values `on_change` was called with.
     fn recorder() -> (RwSignal<Vec<String>>, Callback<String>) {
@@ -186,20 +152,6 @@ mod tests {
             state.set_value("b".to_owned());
             assert_that!(app.get_untracked()).is_equal_to("b".to_owned());
             state.set_value("b".to_owned());
-            assert_that!(changes.get_untracked()).is_equal_to(vec!["b".to_owned()]);
-        });
-    }
-
-    #[test]
-    fn a_signal_state_with_on_change_reports_only_changes() {
-        with_owner(|| {
-            let (changes, on_change) = recorder();
-            let app = RwSignal::new("a".to_owned());
-            let state = TextFieldState::from(app).with_on_change(on_change);
-            state.set_value("a".to_owned());
-            state.set_value("b".to_owned());
-            state.set_value("b".to_owned());
-            assert_that!(app.get_untracked()).is_equal_to("b".to_owned());
             assert_that!(changes.get_untracked()).is_equal_to(vec!["b".to_owned()]);
         });
     }

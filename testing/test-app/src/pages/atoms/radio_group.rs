@@ -1,9 +1,10 @@
 use leptonic::{
+    Orientation,
     atoms::{
         field::{Description, FieldError, Label},
         radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::{Orientation, ValidationBehavior, collections::Key},
+    hooks::{collections::Key, form::ValidationBehavior},
 };
 use leptos::prelude::*;
 
@@ -95,6 +96,14 @@ pub fn PageAtomRadioGroup() -> impl IntoView {
                 <Label>"Required"</Label>
                 <RadioField value="a"><RadioButton>"Required A"</RadioButton></RadioField>
                 <RadioField value="b" is_disabled=true><RadioButton>"Required B"</RadioButton></RadioField>
+                <FieldError />
+            </RadioGroup<Key>>
+        </form>
+        <form id="test-rg-keyboard-form">
+            <RadioGroup<Key> aria_label="Keyboard pets" is_required=true validation_behavior=ValidationBehavior::Native>
+                <RadioField value="dogs"><RadioButton>"Keyboard dogs"</RadioButton></RadioField>
+                <RadioField value="cats"><RadioButton>"Keyboard cats"</RadioButton></RadioField>
+                <RadioField value="dragons"><RadioButton>"Keyboard dragons"</RadioButton></RadioField>
                 <FieldError />
             </RadioGroup<Key>>
         </form>

@@ -1,6 +1,7 @@
 use leptonic::{
+    IntoAttrs,
     atoms::{button::Button, link::AnchorLink},
-    hooks::{IntoAttrs, UseVisuallyHiddenInput, use_visually_hidden},
+    hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden},
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;
@@ -10,7 +11,9 @@ pub fn VisuallyHiddenDemo() -> impl IntoView {
     let archived = RwSignal::new(0u32);
 
     // Shown while focus is within it: a skip link.
-    let skip_link = use_visually_hidden(UseVisuallyHiddenInput { is_focusable: true.into() });
+    let skip_link = use_visually_hidden(UseVisuallyHiddenInput {
+        is_focusable: true.into(),
+    });
     // Never shown: names the icon-only button for screen readers.
     let button_label = use_visually_hidden(UseVisuallyHiddenInput::default());
 

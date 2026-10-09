@@ -1,8 +1,9 @@
 // Upstream: react-stately/src/table/TableColumnLayout.ts @ 99e6102368
+// Upstream: react-stately/test/table/TableUtils.test.js @ 99e6102368
 use std::collections::HashMap;
 
 use super::{
-    table_collection::{Column, TableCollection},
+    table_collection::{Column, ColumnKind},
     table_utils::{
         ColumnBound, ColumnSize, ColumnSizing, calculate_column_sizes, max_width, min_width,
     },
@@ -69,16 +70,21 @@ pub(crate) fn initial_width(column: &Column, default_width: &DefaultWidth) -> Co
         .unwrap_or_default()
 }
 
-/// The pixel widths of the data columns of `table` in a table `table_width` wide, for the column
-/// sizes `widths`.
+/// The data columns of `columns` (no groups), in order.
+fn data_columns(columns: &[Column]) -> impl Iterator<Item = &Column> {
+    columns.iter().filter(|c| c.kind != ColumnKind::Group)
+}
+
+/// The pixel widths of the data columns of `columns` (a table's, see `TableState::columns`) in a
+/// table `table_width` wide, for the column sizes `widths`.
 pub(crate) fn build_column_widths(
     table_width: f64,
-    table: &TableCollection,
+    columns: &[Column],
     widths: &HashMap<Key, ColumnSize>,
     default_width: &DefaultWidth,
     default_min_width: &DefaultMinWidth,
 ) -> ColumnWidths {
-    let columns: Vec<&Column> = table.columns().collect();
+    let columns: Vec<&Column> = data_columns(columns).collect();
     let sizing: Vec<ColumnSizing> = columns
         .iter()
         .map(|column| ColumnSizing {
@@ -118,7 +124,7 @@ pub(crate) fn build_column_widths(
 /// keep their current pixel widths, the columns after it keep their sizes from `widths` (so
 /// fractional columns share what is left).
 pub(crate) fn resize_column_width(
-    table: &TableCollection,
+    columns: &[Column],
     current: &ColumnWidths,
     widths: &HashMap<Key, ColumnSize>,
     column: &Key,
@@ -128,8 +134,7 @@ pub(crate) fn resize_column_width(
         .min_width(column)
         .max(current.max_width(column).min(width.floor()));
     let mut freeze = true;
-    table
-        .columns()
+    data_columns(columns)
         .map(|c| {
             let size = if c.key == *column {
                 freeze = false;
@@ -150,8 +155,8 @@ mod tests {
 
     use super::*;
 
-    fn table(columns: &[(&str, Option<ColumnSize>)]) -> TableCollection {
-        TableCollection::build(|t| {
+    fn table(columns: &[(&str, Option<ColumnSize>)]) -> Vec<Column> {
+        super::super::TableCollection::build(|t| {
             for (key, width) in columns {
                 let column = t.column(*key, *key);
                 if let Some(width) = width {
@@ -159,6 +164,9 @@ mod tests {
                 }
             }
         })
+        .columns()
+        .cloned()
+        .collect()
     }
 
     fn sizes(widths: &[(&str, ColumnSize)]) -> HashMap<Key, ColumnSize> {
@@ -257,5 +265,42 @@ mod tests {
         let widths =
             build_column_widths(1000.0, &table, &state, &default_width, &default_min_width);
         assert_that!(pixels(&widths, &KEYS)).is_equal_to(vec![100.0, 100.0, 1000.0, 150.0, 50.0]);
+    }
+    /// TableUtils.test.js: "can resize a later column smaller".
+    #[test]
+    fn can_resize_a_later_column_smaller() {
+        let px = ColumnSize::Px;
+        let fr = ColumnSize::Fr;
+        let table = table(&[
+            ("name", Some(fr(1.0))),
+            ("type", Some(fr(1.0))),
+            ("height", None),
+            ("weight", None),
+            ("level", Some(fr(5.0))),
+        ]);
+        let default_width = |_: &Column| Some(ColumnSize::Px(150.0));
+        let default_min_width = |_: &Column| Some(ColumnBound::Px(50.0));
+        let state = sizes(&[
+            ("name", fr(1.0)),
+            ("type", fr(1.0)),
+            ("height", px(150.0)),
+            ("weight", px(150.0)),
+            ("level", fr(5.0)),
+        ]);
+        let widths =
+            build_column_widths(1000.0, &table, &state, &default_width, &default_min_width);
+        assert_that!(pixels(&widths, &KEYS)).is_equal_to(vec![100.0, 100.0, 150.0, 150.0, 500.0]);
+
+        let state = resize_column_width(&table, &widths, &state, &Key::from("level"), 400.0);
+        assert_that!(state.clone()).is_equal_to(sizes(&[
+            ("name", px(100.0)),
+            ("type", px(100.0)),
+            ("height", px(150.0)),
+            ("weight", px(150.0)),
+            ("level", px(400.0)),
+        ]));
+        let widths =
+            build_column_widths(1000.0, &table, &state, &default_width, &default_min_width);
+        assert_that!(pixels(&widths, &KEYS)).is_equal_to(vec![100.0, 100.0, 150.0, 150.0, 400.0]);
     }
 }

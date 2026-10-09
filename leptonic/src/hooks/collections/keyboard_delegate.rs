@@ -1,10 +1,10 @@
 // Upstream: react-aria/src/selection/ListKeyboardDelegate.ts @ 99e6102368
 use std::sync::Arc;
 
-use leptos::prelude::WithUntracked;
+use leptos::prelude::{Memo, Signal, WithUntracked};
 
 use super::{CollectionMemo, Key, LayoutDelegate, Rect, SelectionManager};
-use crate::utils::{filter::Collator, locale::WritingDirection, orientation::Orientation};
+use crate::utils::{filter::Collator, i18n::WritingDirection, orientation::Orientation};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -68,6 +68,15 @@ pub trait KeyboardDelegate: Send + Sync {
     fn key_for_search(&self, _search: &str, _from: Option<&Key>) -> Option<Key> {
         None
     }
+}
+
+/// A keyboard delegate as collection hooks take it: `build` runs again only when a signal it reads
+/// (the locale's reading direction, an orientation, ...) changes, not on every read.
+pub fn keyboard_delegate_memo(
+    build: impl Fn() -> Arc<dyn KeyboardDelegate> + Send + Sync + 'static,
+) -> Signal<Arc<dyn KeyboardDelegate>> {
+    // A rebuilt delegate always counts as changed (delegates can't be compared).
+    Memo::new_with_compare(move |_| build(), |_, _| true).into()
 }
 
 /// How the items of a list are laid out.
@@ -421,7 +430,6 @@ mod tests {
     use std::collections::HashMap;
 
     use assertr::prelude::*;
-    use leptos::prelude::*;
 
     use super::*;
     use crate::{
@@ -486,6 +494,23 @@ mod tests {
 
     const KEYS: [&str; 6] = ["apple", "banana", "cherry", "durian", "elderberry", "fig"];
 
+    /// Items flowing top to bottom, then into the next column (a horizontal grid), `rows` per
+    /// column.
+    fn column_layout(keys: &[&str], rows: usize) -> FakeLayout {
+        let mut layout = FakeLayout::grid(keys, 1, 200.0);
+        for (i, key) in keys.iter().enumerate() {
+            #[allow(clippy::cast_precision_loss)]
+            let rect = Rect {
+                x: (i / rows) as f64 * 100.0,
+                y: (i % rows) as f64 * 20.0,
+                width: 100.0,
+                height: 20.0,
+            };
+            layout.rects.insert(Key::from(*key), rect);
+        }
+        layout
+    }
+
     fn delegate(columns: usize, viewport_height: f64, disabled: &[&str]) -> ListKeyboardDelegate {
         let collection: CollectionMemo = Memo::new(|_| {
             Arc::new(Collection::build(|b| {
@@ -522,7 +547,7 @@ mod tests {
 
     #[test]
     fn vertical_stack_skips_disabled_items_and_has_no_horizontal_navigation() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(1, 200.0, &["banana"]);
             assert_that!(d.key_below(&k("apple"), NAV)).is_equal_to(Some(k("cherry")));
             assert_that!(d.key_above(&k("cherry"), NAV)).is_equal_to(Some(k("apple")));
@@ -537,16 +562,58 @@ mod tests {
 
     #[test]
     fn first_and_last_skip_disabled_items() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(1, 200.0, &["apple", "fig"]);
             assert_that!(d.first_key(None, false)).is_equal_to(Some(k("banana")));
             assert_that!(d.last_key(None, false)).is_equal_to(Some(k("elderberry")));
         });
     }
 
+    // Upstream: ListBox.test.js "should not throw TypeError at boundaries of vertical grid
+    // layout when keyboard navigating (up/down)".
+    #[test]
+    fn grid_layout_stops_at_its_edges() {
+        crate::testing::with_owner(|| {
+            // apple  banana     cherry
+            // durian elderberry fig
+            let d = delegate(3, 200.0, &[]).with_layout(ListLayout::Grid);
+            assert_that!(d.key_above(&k("banana"), NAV)).is_none();
+            assert_that!(d.key_below(&k("elderberry"), NAV)).is_none();
+            assert_that!(d.key_below(&k("fig"), NAV)).is_none();
+        });
+    }
+
+    // Upstream: ListBox.test.js "should support horizontal grid layout", "should not throw
+    // TypeError at boundaries of horizontal grid layout when keyboard navigating (left/right)".
+    #[test]
+    fn horizontal_grid_layout_moves_by_row_and_column() {
+        crate::testing::with_owner(|| {
+            // apple  cherry elderberry
+            // banana durian fig
+            let base = delegate(1, 200.0, &[]);
+            let d = ListKeyboardDelegate::new(
+                base.collection,
+                base.selection,
+                Arc::new(column_layout(&KEYS, 2)),
+            )
+            .with_layout(ListLayout::Grid)
+            .with_orientation(Orientation::Horizontal);
+            assert_that!(d.key_right_of(&k("apple"), NAV)).is_equal_to(Some(k("cherry")));
+            assert_that!(d.key_right_of(&k("durian"), NAV)).is_equal_to(Some(k("fig")));
+            assert_that!(d.key_left_of(&k("durian"), NAV)).is_equal_to(Some(k("banana")));
+            assert_that!(d.key_below(&k("apple"), NAV)).is_equal_to(Some(k("banana")));
+            assert_that!(d.key_above(&k("cherry"), NAV)).is_equal_to(Some(k("banana")));
+            // The edges.
+            assert_that!(d.key_right_of(&k("elderberry"), NAV)).is_none();
+            assert_that!(d.key_left_of(&k("banana"), NAV)).is_none();
+            assert_that!(d.key_above(&k("apple"), NAV)).is_none();
+            assert_that!(d.key_below(&k("fig"), NAV)).is_none();
+        });
+    }
+
     #[test]
     fn grid_layout_moves_by_column_and_row() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             // apple  banana     cherry
             // durian elderberry fig
             let d = delegate(3, 200.0, &[]).with_layout(ListLayout::Grid);
@@ -561,7 +628,7 @@ mod tests {
 
     #[test]
     fn horizontal_stack_uses_left_and_right() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(6, 200.0, &[]).with_orientation(Orientation::Horizontal);
             assert_that!(d.key_right_of(&k("apple"), NAV)).is_equal_to(Some(k("banana")));
             assert_that!(d.key_left_of(&k("banana"), NAV)).is_equal_to(Some(k("apple")));
@@ -570,7 +637,7 @@ mod tests {
 
     #[test]
     fn page_up_and_down_move_by_a_viewport() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             // 6 rows of 20px in a 50px viewport: a page is about two items.
             let d = delegate(1, 50.0, &[]);
             assert_that!(d.key_page_below(&k("apple"))).is_equal_to(Some(k("cherry")));
@@ -584,7 +651,7 @@ mod tests {
 
     #[test]
     fn type_ahead_matches_prefixes_ignoring_case_and_skips_disabled_items() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(1, 200.0, &["durian"]);
             assert_that!(d.key_for_search("ch", None)).is_equal_to(Some(k("cherry")));
             assert_that!(d.key_for_search("E", None)).is_equal_to(Some(k("elderberry")));

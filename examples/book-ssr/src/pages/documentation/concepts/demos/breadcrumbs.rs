@@ -1,4 +1,7 @@
-use leptonic::atoms::prelude::{Breadcrumb, Breadcrumbs, Link};
+use leptonic::atoms::{
+    breadcrumbs::{Breadcrumb, Breadcrumbs},
+    link::Link,
+};
 use leptos::prelude::*;
 
 #[component]

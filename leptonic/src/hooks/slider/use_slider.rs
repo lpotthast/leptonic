@@ -1,34 +1,28 @@
 // Upstream: react-aria/src/slider/useSlider.ts @ 99e6102368
 // Upstream: react-aria/src/slider/utils.ts @ 99e6102368
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use send_wrapper::SendWrapper;
 use web_sys::{MouseEvent, PointerEvent};
 
 use crate::{
+    EventHandler, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
     hooks::{
-        IntoAttrs, LabelElementType, Modality, MoveEndEvent, MoveEvent, MoveStartEvent,
-        PropsWithStyles, UseFieldInput, UseFieldReturn, UseMoveInput, set_modality,
-        slider::SliderState, use_field, use_move,
+        focus::{Modality, set_modality},
+        form::{LabelElementType, UseFieldInput, UseFieldReturn, use_field},
+        interactions::{MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move},
+        slider::SliderState,
     },
     utils::{
-        EventAccessors, EventHandler, EventTargetExt, SlotProps,
         aria::{AriaLive, AriaRole},
-        css::TouchAction,
-        element_capture::{CapturedElement, ElementCaptureAttr},
+        dom_ext::{EventAccessors, EventTargetExt},
         event_listeners::{Listener, listen_to},
-        i18n::use_direction,
-        locale::WritingDirection,
+        fraction::Fraction,
+        i18n::{WritingDirection, use_direction},
         number_value::NumberValue,
         orientation::Orientation,
         pointer_type::PointerType,
-        style::TouchActionProperty,
-        styles::Styles,
+        styles::{Styles, css::TouchAction, property::TouchActionProperty},
     },
 };
 
@@ -75,7 +69,7 @@ pub struct SliderData {
     /// The slider group's id. Thumb ids derive from it (stable, unlike react-aria's, which derive
     /// from the label's id when there is one).
     pub id: String,
-    /// The id the thumbs are labelled by: the label's while it is rendered, else the group's.
+    /// The label ids the thumbs reference, or the group's id when it has an `aria-label`.
     pub labelled_by: Signal<String>,
     /// What describes every thumb: the description while rendered, and `aria_describedby`.
     pub aria_describedby: Signal<Option<String>>,
@@ -119,10 +113,7 @@ pub struct UseSliderLabelProps {
     pub on_click: EventHandler<MouseEvent>,
 }
 
-pub type UseSliderLabelAttrs = (
-    Attr<attr::Id, String>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-);
+pub type UseSliderLabelAttrs = (Attr<attr::Id, String>, OnEvent<ev::click>);
 
 impl IntoAttrs for UseSliderLabelProps {
     type Attrs = UseSliderLabelAttrs;
@@ -165,10 +156,7 @@ pub struct UseSliderTrackProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-pub type UseSliderTrackAttrs = (
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    ElementCaptureAttr,
-);
+pub type UseSliderTrackAttrs = (OnEvent<ev::pointerdown>, ElementCaptureAttr);
 
 impl IntoAttrs for UseSliderTrackProps {
     type Attrs = UseSliderTrackAttrs;
@@ -254,14 +242,11 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     let data = SliderData {
         id: field_props.id.clone(),
         labelled_by: {
-            let (label_id, field_id) = (label_props.id.clone(), field_props.id.clone());
-            Signal::derive(move || {
-                if has_label.get() {
-                    label_id.clone()
-                } else {
-                    field_id.clone()
-                }
-            })
+            let field_id = field_props.id.clone();
+            let labelled_by = field_props.aria_labelledby;
+            // A thumb must reference the actual labels: accessible-name computation does not
+            // follow an aria-labelledby chain through the slider group.
+            Signal::derive(move || labelled_by.get().unwrap_or_else(|| field_id.clone()))
         },
         aria_describedby: field_props.aria_describedby,
         aria_details,
@@ -287,7 +272,7 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     };
 
     let on_track_down = move |e: PointerEvent| {
-        if PointerType::from(e.pointer_type()) == PointerType::Mouse
+        if PointerType::of(&e) == PointerType::Mouse
             && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
         {
             return;
@@ -311,7 +296,7 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
         if reversed() {
             percent = 1.0 - percent;
         }
-        let Some(value) = untrack(|| state.percent_value(percent)) else {
+        let Some(value) = untrack(|| state.percent_value(Fraction::new(percent))) else {
             return;
         };
         let values: Vec<f64> = thumbs.iter().map(|v| v.to_f64()).collect();
@@ -359,14 +344,14 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
             };
             let current = position
                 .get_value()
-                .unwrap_or_else(|| untrack(|| state.thumb_percent(index)) * size);
+                .unwrap_or_else(|| untrack(|| state.thumb_percent(index)).get() * size);
             let mut delta = if is_vertical() { e.delta_y } else { e.delta_x };
             if reversed() {
                 delta = -delta;
             }
             let current = current + delta;
             position.set_value(Some(current));
-            state.set_thumb_percent(index, (current / size).clamp(0.0, 1.0));
+            state.set_thumb_percent(index, Fraction::new(current / size));
         })),
         on_move_end: Some(Callback::new(move |_: MoveEndEvent| end_drag())),
     });

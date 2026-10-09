@@ -1,6 +1,10 @@
 use leptonic::{
+    Orientation,
     atoms::tabs::{Tab, TabList, TabPanel, Tabs},
-    hooks::{Key, KeyboardActivation, Orientation, use_collection},
+    hooks::{
+        collections::{Key, use_collection},
+        tabs::KeyboardActivation,
+    },
 };
 use leptos::prelude::*;
 

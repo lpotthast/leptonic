@@ -10,18 +10,17 @@ pub fn PageUseModalHook() -> impl IntoView {
     view! {
         <DocPage title="Modal Hooks">
             <p>
-                <AnchorLink href="#use-modal-backdrop"><Code inline=true>"use_modal_backdrop"</Code></AnchorLink>" and "
-                <AnchorLink href="#use-modal"><Code inline=true>"use_modal"</Code></AnchorLink>" make an element you "
-                "render a modal: dismissable, blocking the page and marked for assistive technology. See the "
+                <AnchorLink href="#use-modal-backdrop"><Code inline=true>"use_modal_backdrop"</Code></AnchorLink>
+                " makes an element you render a modal: dismissable and blocking interaction with the page. See the "
                 <Link href=routes::doc::Modal.materialize()>"Modal overview"</Link>" for concept guidance."
             </p>
 
             <Section title="Example">
                 <p>
-                    "A complete modal dialog. Five pieces work together: "
+                    "A complete modal dialog. Four pieces work together: "
                     <Link href=routes::doc::overlay_behavior::UseOverlayTriggerState.materialize()><Code inline=true>"use_overlay_trigger_state"</Code></Link>
                     " owns the open state, "<Code inline=true>"use_modal_backdrop"</Code>" closes the modal and locks the "
-                    "page, "<Code inline=true>"use_modal"</Code>" sets "<Code inline=true>"aria-modal"</Code>", "
+                    "page, "
                     <Link href=routes::doc::dialog::Hook.materialize()>"use_dialog"</Link>" gives the content its role and "
                     "name, and a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>" keeps focus "
                     "inside and returns it to the button. The modal is rendered in a "<Code inline=true>"Portal"</Code>
@@ -104,7 +103,19 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <Section title="Example" id="use-modal-backdrop-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::*;
+                            use leptonic::{
+                                hooks::{
+                                    modal::{
+                                        UseModalBackdropInput,
+                                        UseModalBackdropReturn,
+                                        use_modal_backdrop,
+                                    },
+                                    overlay::{
+                                        UseOverlayTriggerStateInput,
+                                        use_overlay_trigger_state,
+                                    },
+                                },
+                            };
 
                             let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
                             let UseModalBackdropReturn { modal_props, .. } =
@@ -127,41 +138,6 @@ pub fn PageUseModalHook() -> impl IntoView {
                                     </div>
                                 </Show>
                             }
-                        "#)}
-                    </Code>
-                </Section>
-            </Section>
-
-            <Section title="use_modal">
-                <ReactAriaSource path="overlays/useModal.tsx"/>
-
-                <p>
-                    "Sets "<Code inline=true>"aria-modal=\"true\""</Code>" on the modal element, which tells assistive "
-                    "technology that the content outside is unavailable."
-                </p>
-
-                <Section title="Input" id="use-modal-input">
-                    <ApiTable kind=ApiKind::Input of="UseModalInput">
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                            "Leave out "<Code inline=true>"aria-modal"</Code>" while "<Code inline=true>"true"</Code>"."
-                        </ApiRow>
-                    </ApiTable>
-                </Section>
-
-                <Section title="Return" id="use-modal-return">
-                    <ApiTable kind=ApiKind::Return of="UseModalReturn">
-                        <ApiRow name="modal_props" ty="UseModalProps">
-                            "Spread "<Code inline=true>"{..modal_props.into_attrs()}"</Code>" onto the modal element."
-                        </ApiRow>
-                    </ApiTable>
-                </Section>
-
-                <Section title="Example" id="use-modal-example">
-                    <Code language=Language::Rust>
-                        {indoc!(r#"
-                            let UseModalReturn { modal_props } = use_modal(UseModalInput::default());
-
-                            view! { <div {..modal_props.into_attrs()}>"Modal content"</div> }
                         "#)}
                     </Code>
                 </Section>

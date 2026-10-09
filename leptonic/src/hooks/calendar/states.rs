@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/calendar/utils.ts @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/Calendar.test.js @ 99e6102368
 //! What the calendar hooks share: either calendar state, the calendar's data for its grids and
 //! cells, and the descriptions of dates and ranges.
 
@@ -266,6 +268,7 @@ mod tests {
     use jiff::civil::date;
 
     use super::*;
+    use crate::testing::with_owner;
 
     fn locale(tag: &str) -> Locale {
         tag.parse().expect("a locale")
@@ -306,7 +309,7 @@ mod tests {
             end: date(-1, 3, 31),
         };
         assert_that!(visible_range_description(month, &en)).is_equal_to("March 2 BC".to_owned());
-        Owner::new().with(|| {
+        with_owner(|| {
             let formatters = CalendarFormatters::new();
             assert_that!(formatters.full_date(date(-1, 3, 5)))
                 .is_equal_to("Friday, March 5, 2 BC".to_owned());

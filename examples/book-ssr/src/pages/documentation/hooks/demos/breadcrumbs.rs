@@ -1,4 +1,13 @@
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::{
+        breadcrumbs::{
+            UseBreadcrumbItemInput, UseBreadcrumbsInput, use_breadcrumb_item, use_breadcrumbs,
+        },
+        link::UseLinkInput,
+    },
+};
 use leptos::prelude::*;
 
 /// One item of the trail: a link, or the current page.

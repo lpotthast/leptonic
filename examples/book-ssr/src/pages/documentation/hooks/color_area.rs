@@ -28,8 +28,9 @@ pub fn PageUseColorArea() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::color::{HSV, HsvChannel},
+                            HSV,
+                            HsvChannel,
+                            hooks::color::{UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state},
                         };
                         use leptos::prelude::*;
 
@@ -107,10 +108,10 @@ pub fn PageUseColorArea() -> impl IntoView {
                             <Code inline=true>"ValueBinding::from(rw_signal)"</Code>" or "
                             <Code inline=true>"ValueBinding::new(signal, callback)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="x_channel" ty="Option<C::Channel>" default="None">
+                        <ApiRow name="x_channel" ty="Option<Channel>" default="None">
                             "The channel on the horizontal axis. "<Code inline=true>"None"</Code>": the color space\u{2019}s first axis."
                         </ApiRow>
-                        <ApiRow name="y_channel" ty="Option<C::Channel>" default="None">
+                        <ApiRow name="y_channel" ty="Option<Channel>" default="None">
                             "The channel on the vertical axis. "<Code inline=true>"None"</Code>": the color space\u{2019}s second axis."
                         </ApiRow>
                         <ApiRow name="x_channel_step, y_channel_step" ty="Option<f64>" default="None">
@@ -126,7 +127,7 @@ pub fn PageUseColorArea() -> impl IntoView {
                     <ApiTable kind=ApiKind::Return of="ColorAreaState">
                         <ApiRow name="value" ty="Signal<C>">"The color."</ApiRow>
                         <ApiRow name="x_value, y_value" ty="Signal<f64>">"The values of the axis channels."</ApiRow>
-                        <ApiRow name="x_channel, y_channel, z_channel" ty="C::Channel">"The axis channels and the remaining one."</ApiRow>
+                        <ApiRow name="x_channel, y_channel, z_channel" ty="Channel">"The axis channels and the remaining one."</ApiRow>
                         <ApiRow name="x_channel_step, y_channel_step" ty="f64">"The steps of the axis channels (arrow keys)."</ApiRow>
                         <ApiRow name="x_channel_page_step, y_channel_page_step" ty="f64">
                             "The page steps of the axis channels ("<Keys keys="Shift"/>" with the arrow keys, page keys, "
@@ -150,12 +151,12 @@ pub fn PageUseColorArea() -> impl IntoView {
                             <TableCell>"Change an axis channel by "<Code inline=true>"step"</Code>", snapped to the channel\u{2019}s step and range."</TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"set_color_from_point(x, y)"</Code></TableCell>
-                            <TableCell>"Sets both channels from a point of the area, each coordinate from 0 to 1 ("<Code inline=true>"y"</Code>" from the top)."</TableCell>
+                            <TableCell><Code inline=true>"set_color_from_point(point)"</Code></TableCell>
+                            <TableCell>"Sets both channels from a "<Code inline=true>"Point"</Code>" of the area, each coordinate from 0 to 1 ("<Code inline=true>"y"</Code>" from the top)."</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"thumb_position()"</Code></TableCell>
-                            <TableCell>"The color\u{2019}s point in the area, as "<Code inline=true>"(x, y)"</Code>" from 0 to 1 (tracked)."</TableCell>
+                            <TableCell>"The color\u{2019}s "<Code inline=true>"Point"</Code>" in the area, each coordinate from 0 to 1 (tracked)."</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"set_dragging(dragging)"</Code></TableCell>
@@ -196,7 +197,7 @@ pub fn PageUseColorArea() -> impl IntoView {
                 <Section title="Return" id="use-color-area-return">
                     <ApiTable kind=ApiKind::Return of="UseColorAreaReturn">
                         <ApiRow name="color_area_props" ty="PropsWithStyles<UseColorAreaProps>">
-                            <Code inline=true>"role=\"group\""</Code>", its name, "<Code inline=true>"aria-disabled"</Code>", the "
+                            <Code inline=true>"role=\"group\""</Code>", its name, the "
                             "pointer handling that moves the thumb to a pressed point, and the gradient as styles."
                         </ApiRow>
                         <ApiRow name="thumb_props" ty="PropsWithStyles<UseColorAreaThumbProps>">

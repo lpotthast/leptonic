@@ -1,9 +1,11 @@
 use leptonic::{
-    atoms::prelude::{ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorThumb, Label},
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        i18n::use_locale,
+    ColorValue, HSV, HsvChannel,
+    atoms::{
+        color_slider::{ColorSlider, ColorSliderOutput, ColorSliderTrack},
+        color_thumb::ColorThumb,
+        field::Label,
     },
+    use_locale,
 };
 use leptos::prelude::*;
 

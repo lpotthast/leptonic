@@ -1,14 +1,12 @@
 use leptonic::{
+    Alpha, AlphaChannel, HSL, HSV, HslChannel, HsvChannel, I18nProvider, Locale, Orientation, RGB8,
+    RgbChannel,
     atoms::{
         color_slider::{ColorSlider, ColorSliderOutput, ColorSliderTrack},
         color_thumb::ColorThumb,
         field::Label,
     },
-    utils::{
-        color::{HSL, HslChannel, RGB8, RgbChannel},
-        orientation::Orientation,
-        styles::Styles,
-    },
+    leptos_styles::Styles,
 };
 use leptos::prelude::*;
 
@@ -17,12 +15,17 @@ use leptos::prelude::*;
 /// starting at `hsl(0, 100%, 50%)` ("drag": horizontal, "vertical": a 200-pixel tall track) log
 /// `change:<hue>`/`end:<hue>` to `#test-cs-hue-log`. "label": a `Label` without children.
 /// "show": a slider whose output, track and thumb are inside a `<Show>` toggled by
-/// `#test-cs-toggle`.
+/// `#test-cs-toggle`. "gray-hue": an HSV hue slider on a gray (200°, saturation 0); "alpha": the
+/// red channel of a half transparent red. "aria-label" (and "aria-label-vertical"): named "Test";
+/// "labelledby": labelled by `#test-cs-label-id`; "props": a custom class, `data-foo` attributes
+/// on every part and the form `test-cs-other-form`; "lightness": the lightness of
+/// `hsl(0, 100%, 50%)`; "rtl": a red channel slider in Hebrew.
 #[component]
 pub fn PageAtomColorSlider() -> impl IntoView {
     let log = RwSignal::new(Vec::<String>::new());
     let hue_log = RwSignal::new(Vec::<String>::new());
     let shown = RwSignal::new(true);
+    let hebrew: Locale = "he".parse().expect("a valid locale");
     let red = HSL {
         hue: 0.0,
         saturation: 1.0,
@@ -127,6 +130,88 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                         <ColorThumb styles=thumb() />
                     </ColorSliderTrack>
                 </ColorSlider>
+            </div>
+            <div id="test-cs-gray-hue">
+                <ColorSlider
+                    channel=HsvChannel::Hue
+                    default_value=HSV { hue: 200.0, saturation: 0.0, brightness: 0.5 }
+                >
+                    <ColorSliderTrack styles=track()>
+                        <ColorThumb styles=thumb() />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <div id="test-cs-alpha">
+                <ColorSlider
+                    channel={AlphaChannel::Color(RgbChannel::Red)}
+                    default_value={Alpha { color: RGB8 { r: 255, g: 0, b: 0 }, alpha: 0.5 }}
+                >
+                    <ColorSliderTrack styles=track()>
+                        <ColorThumb styles=thumb() />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <div id="test-cs-aria-label">
+                <ColorSlider channel=RgbChannel::Red default_value=RGB8::default() aria_label="Test">
+                    <ColorSliderTrack styles=track()>
+                        <ColorThumb styles=thumb() />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <div id="test-cs-aria-label-vertical">
+                <ColorSlider
+                    channel=RgbChannel::Red
+                    default_value=RGB8::default()
+                    aria_label="Test"
+                    orientation=Orientation::Vertical
+                >
+                    <ColorSliderTrack styles=vertical_track()>
+                        <ColorThumb styles=vertical_thumb() />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <span id="test-cs-label-id">"Shade"</span>
+            <div id="test-cs-labelledby">
+                <ColorSlider
+                    channel=RgbChannel::Red
+                    default_value=RGB8::default()
+                    aria_labelledby="test-cs-label-id"
+                >
+                    <ColorSliderTrack styles=track()>
+                        <ColorThumb styles=thumb() />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <form id="test-cs-other-form"></form>
+            <div id="test-cs-props">
+                <ColorSlider
+                    channel=RgbChannel::Red
+                    default_value=RGB8::default()
+                    classes="custom-slider"
+                    form="test-cs-other-form"
+                    attr:data-foo="slider"
+                >
+                    <ColorSliderOutput attr:data-foo="output" />
+                    <ColorSliderTrack styles=track() attr:data-foo="track">
+                        <ColorThumb styles=thumb() attr:data-foo="thumb" />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <div id="test-cs-lightness">
+                <ColorSlider channel=HslChannel::Lightness default_value=red>
+                    <ColorSliderTrack styles=track()>
+                        <ColorThumb styles=thumb() />
+                    </ColorSliderTrack>
+                </ColorSlider>
+            </div>
+            <div id="test-cs-rtl">
+                <I18nProvider locale=hebrew>
+                    <ColorSlider channel=RgbChannel::Red default_value=RGB8::default()>
+                        <ColorSliderTrack styles=track()>
+                            <ColorThumb styles=thumb() />
+                        </ColorSliderTrack>
+                    </ColorSlider>
+                </I18nProvider>
             </div>
             <button id="test-cs-toggle" on:click=move |_| shown.update(|s| *s = !*s)>"Toggle"</button>
             <div id="test-cs-show">

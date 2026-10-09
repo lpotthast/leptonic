@@ -1,9 +1,9 @@
 // Upstream: react-aria/src/toggle/useToggle.ts @ 99e6102368
+// Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
     tachys::html::property::{Property, prop},
 };
@@ -20,18 +20,20 @@ use super::{
     use_toggle_state::ToggleState,
 };
 use crate::{
+    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
     hooks::{
-        FocusableContextAttr, FocusableContextAttrs, IntoAttrs, PressEvent, PropsWithStyles,
-        UseFocusRingInput, UseFocusableInput, UsePressInput, use_focus_ring, use_focusable,
-        use_press,
+        focus::{
+            FocusRingTarget, FocusableContextAttr, FocusableContextAttrs, UseFocusRingInput,
+            UseFocusableInput, use_focus_ring, use_focusable,
+        },
+        interactions::{PressEvent, UsePressInput, use_press},
     },
+    use_slot,
     utils::{
-        ElementCaptureAttr, EventAccessors, EventHandler, SlotProps,
         aria::{AriaInvalid, AriaReadonly, AriaRequired, AriaRole},
-        join_slot_ids,
+        dom_ext::EventAccessors,
         pointer_type::PointerType,
         propagation_control::Propagation,
-        use_slot,
     },
 };
 
@@ -183,13 +185,13 @@ pub struct UseToggleLabelProps {
 }
 
 pub type UseToggleLabelAttrs = (
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-    On<ev::dragstart, SharedEventCallback<DragEvent>>,
-    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::click>,
+    OnEvent<ev::pointerdown>,
+    OnEvent<ev::pointerup>,
+    OnEvent<ev::mousedown>,
+    OnEvent<ev::dragstart>,
+    OnEvent<ev::dblclick>,
 );
 
 impl IntoAttrs for UseToggleLabelProps {
@@ -275,19 +277,19 @@ pub type UseToggleInputAttrs = (
         ElementCaptureAttr,
     ),
     (
-        On<ev::change, SharedEventCallback<Event>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
-        On<ev::focusin, SharedEventCallback<FocusEvent>>,
-        On<ev::focusout, SharedEventCallback<FocusEvent>>,
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::click, SharedEventCallback<MouseEvent>>,
-        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-        On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-        On<ev::dragstart, SharedEventCallback<DragEvent>>,
-        On<ev::dblclick, SharedEventCallback<MouseEvent>>,
+        OnEvent<ev::change>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
+        OnEvent<ev::focusin>,
+        OnEvent<ev::focusout>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::click>,
+        OnEvent<ev::pointerdown>,
+        OnEvent<ev::pointerup>,
+        OnEvent<ev::mousedown>,
+        OnEvent<ev::dragstart>,
+        OnEvent<ev::dblclick>,
     ),
     FocusableContextAttr,
 );
@@ -396,9 +398,8 @@ pub(crate) fn use_toggle_with(
     let focus_handle = focusable.focus_handle;
     let mut focusable_props = focusable.props;
     let focus_ring = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Element,
         is_disabled,
-        within: false,
-        auto_focus,
         is_text_input: false,
         on_focus: None,
         on_blur: None,
@@ -415,7 +416,7 @@ pub(crate) fn use_toggle_with(
             value: state.is_selected,
             validate,
             validation_behavior,
-            name: name.clone(),
+            names: name.clone().into_iter().collect(),
         })
     });
     use_form_validation(UseFormValidationInput {
@@ -519,7 +520,7 @@ pub(crate) fn use_toggle_with(
     let description = use_slot("description");
     let error_message = use_slot("error-message");
     let user_describedby = Signal::stored(aria_describedby);
-    let aria_describedby = join_slot_ids(&[
+    let aria_describedby = IdRefs::derive([
         description.referenced_id,
         error_message.referenced_id,
         user_describedby,

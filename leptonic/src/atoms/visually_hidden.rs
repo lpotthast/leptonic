@@ -1,10 +1,12 @@
 // Upstream: react-aria/src/visually-hidden/VisuallyHidden.tsx @ 99e6102368
 use leptos::{either::Either, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
+    IntoAttrs,
     atoms::field::TextElement,
-    hooks::{IntoAttrs, UseVisuallyHiddenInput, use_visually_hidden},
-    utils::{classes::Classes, default_class::with_default_class},
+    hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden},
+    utils::default_class::with_default_class,
 };
 
 /// Hides its children visually while keeping them available to assistive technology. With

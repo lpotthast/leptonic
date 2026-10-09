@@ -5,10 +5,7 @@ use leptos::{
 };
 
 use super::TableData;
-use crate::{
-    hooks::{IntoAttrs, collections::Key},
-    utils::aria::AriaRole,
-};
+use crate::{IntoAttrs, hooks::collections::Key, utils::aria::AriaRole};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

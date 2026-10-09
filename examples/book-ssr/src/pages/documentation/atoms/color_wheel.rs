@@ -33,8 +33,11 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            utils::color::HSV,
+                            HSV,
+                            atoms::{
+                                color_thumb::ColorThumb,
+                                color_wheel::{ColorWheel, ColorWheelTrack},
+                            },
                         };
                         use leptos::prelude::*;
 
@@ -90,11 +93,11 @@ pub fn PageAtomColorWheel() -> impl IntoView {
 
                 <Section title="Props" id="color-wheel-props">
                     <ApiTable kind=ApiKind::Props of="ColorWheel">
-                        <ApiRow name="outer_radius" ty="f64">"The ring\u{2019}s outer radius, in pixels. Required."</ApiRow>
-                        <ApiRow name="inner_radius" ty="f64">"The ring\u{2019}s inner radius, in pixels. Required."</ApiRow>
+                        <ApiRow name="outer_radius" ty="Signal<f64>">"The ring\u{2019}s outer radius, in pixels. Required."</ApiRow>
+                        <ApiRow name="inner_radius" ty="Signal<f64>">"The ring\u{2019}s inner radius, in pixels. Required."</ApiRow>
                         <ApiRow name="value" ty="Option<Signal<C>>" default="None">"The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "<Code inline=true>"ColorPicker"</Code>" around it, if any."</ApiRow>
                         <ApiRow name="set_value" ty="Option<Out<C>>" default="None">"Receives the new color: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"</ApiRow>
-                        <ApiRow name="default_value" ty="Option<C>" default="C::default()">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
+                        <ApiRow name="default_value" ty="Option<C>" default="red">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<C>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
                         <ApiRow name="on_change_end" ty="Option<Callback<C>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables pointer and keyboard interaction and the input."</ApiRow>
@@ -106,6 +109,9 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the input belongs to."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the wrapper."</ApiRow>
                         <ApiRow name="children" ty="Children">"The "<Code inline=true>"ColorWheelTrack"</Code>" and the "<Code inline=true>"ColorThumb"</Code>". Required."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing this control."</ApiRow>
+                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements providing additional details."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"Id of the element describing a validation error."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

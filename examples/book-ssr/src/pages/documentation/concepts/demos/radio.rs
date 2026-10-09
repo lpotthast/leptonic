@@ -4,7 +4,7 @@ use leptonic::{
         field::Label,
         radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::Key,
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 

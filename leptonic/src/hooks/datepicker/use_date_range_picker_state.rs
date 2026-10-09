@@ -1,28 +1,29 @@
 // Upstream: react-stately/src/datepicker/useDateRangePickerState.ts @ 99e6102368
+// Upstream: react-aria-components/test/DateRangePicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DateRangePicker.test.js @ 99e6102368
 use std::sync::Arc;
 
 use jiff::civil::{Date, Time};
 use leptos::prelude::*;
 
 use super::{
-    format::{DateFormatter, FormatOptions},
+    format::{FormatOptions, Formatters},
     types::{DateValue, Era, Granularity, HourCycle, MaxGranularity, RangeValue},
     use_date_field_state::{resolve_granularity, validation_result},
 };
 use crate::{
+    ValueBinding,
     hooks::{
-        OverlayTriggerState, UseOverlayTriggerStateInput,
         form::{
             FormValidationState, UseFormValidationStateInput, VALID_VALIDITY_STATE, ValidateFn,
             ValidationBehavior, ValidationResult, ValidityStateSnapshot, merge_validation,
             use_form_validation_state,
         },
-        use_overlay_trigger_state,
+        overlay::{OverlayTriggerState, UseOverlayTriggerStateInput, use_overlay_trigger_state},
     },
     utils::{
-        ValueBinding,
         date::DateRange,
-        i18n::{Locale, use_locale},
+        i18n::use_locale,
         intl_strings::{DateValidationStrings, use_localized_strings},
     },
 };
@@ -123,6 +124,11 @@ pub struct DateRangePickerState<V: DateValue> {
     /// The calendar's range: the value's, else the one selected in the popover (react-aria: a
     /// complete value replaces the selection).
     pub date_range: Signal<Option<DateRange>>,
+    /// The start's time: a complete value's, else the one selected in the popover (react-aria's
+    /// `timeRange.start`).
+    pub start_time: Signal<Option<Time>>,
+    /// The end's time: a complete value's, else the one selected in the popover.
+    pub end_time: Signal<Option<Time>>,
     pub granularity: Signal<Granularity>,
     pub has_time: Signal<bool>,
     pub overlay: OverlayTriggerState,
@@ -135,8 +141,7 @@ pub struct DateRangePickerState<V: DateValue> {
     placeholder: Memo<V>,
     placeholder_time: Signal<Time>,
     should_close_on_select: Signal<bool>,
-    format_options: Memo<FormatOptions>,
-    locale: Signal<Locale>,
+    formatters: Memo<Formatters>,
 }
 
 // Derived, it would require a `Copy` value type.
@@ -206,12 +211,10 @@ impl<V: DateValue> DateRangePickerState<V> {
     /// The times: a complete value's, else the ones selected in the popover (react-aria: a
     /// complete value replaces the selection).
     fn times(&self) -> (Option<Time>, Option<Time>) {
-        if V::HAS_TIME
-            && let Some(RangeValue { start, end }) = self.value.get_untracked()
-        {
-            return (Some(start.time()), Some(end.time()));
-        }
-        self.selected_times.get_untracked()
+        (
+            self.start_time.get_untracked(),
+            self.end_time.get_untracked(),
+        )
     }
 
     /// Selects a time of one end (committed with a selected range).
@@ -243,8 +246,10 @@ impl<V: DateValue> DateRangePickerState<V> {
     /// The start and end formatted for descriptions ("June 1, 2024", "June 15, 2024").
     pub fn format_value(&self) -> Option<(String, String)> {
         let RangeValue { start, end } = self.value.get()?;
-        let formatter = DateFormatter::long(&self.locale.get(), &self.format_options.get());
-        Some((formatter.format(&start), formatter.format(&end)))
+        self.formatters.with(|formatters| {
+            let formatter = formatters.long();
+            Some((formatter.format(&start), formatter.format(&end)))
+        })
     }
 }
 
@@ -256,11 +261,11 @@ fn range_validation<V: DateValue>(
     min: Option<&V>,
     max: Option<&V>,
     is_date_unavailable: Option<Callback<V, bool>>,
-    formatter: &DateFormatter,
+    format: &dyn Fn(&V) -> String,
     strings: &DateValidationStrings,
 ) -> ValidationResult {
-    let start_result = validation_result(start, min, max, is_date_unavailable, formatter, strings);
-    let end_result = validation_result(end, min, max, is_date_unavailable, formatter, strings);
+    let start_result = validation_result(start, min, max, is_date_unavailable, format, strings);
+    let end_result = validation_result(end, min, max, is_date_unavailable, format, strings);
     let mut result = merge_validation(&[start_result, end_result]);
     if let (Some(start), Some(end)) = (start, end)
         && end.compare(start).is_lt()
@@ -331,38 +336,37 @@ pub fn use_date_range_picker_state<V: DateValue>(
             }
         }),
     );
-    // The ends of an incomplete range (react-aria's placeholder value): reset when the value
-    // becomes empty from outside.
+    // The ends of an incomplete range (react-aria's placeholder value). Both ends without a
+    // value: the value was emptied from outside, which resets them (react-aria resets them while
+    // rendering, so derived here, not reset an update later).
     let partial = RwSignal::new(
         binding
             .value
             .get_untracked()
             .map_or((None, None), |range| (Some(range.start), Some(range.end))),
     );
-    Effect::watch(
-        move || binding.value.get(),
-        move |value, _, _| {
-            if value.is_none()
-                && partial.with_untracked(|(start, end)| start.is_some() && end.is_some())
-            {
-                partial.set((None, None));
+    let partial_end = move |end: fn(&(Option<V>, Option<V>)) -> &Option<V>| {
+        partial.with(|ends| {
+            if ends.0.is_some() && ends.1.is_some() {
+                None
+            } else {
+                end(ends).clone()
             }
-        },
-        false,
-    );
+        })
+    };
     let start = Signal::derive(move || {
         binding
             .value
             .get()
             .map(|range| range.start)
-            .or_else(|| partial.with(|(start, _)| start.clone()))
+            .or_else(|| partial_end(|(start, _)| start))
     });
     let end = Signal::derive(move || {
         binding
             .value
             .get()
             .map(|range| range.end)
-            .or_else(|| partial.with(|(_, end)| end.clone()))
+            .or_else(|| partial_end(|(_, end)| end))
     });
 
     let granularity = Signal::derive(move || resolve_granularity::<V>(granularity.get()));
@@ -402,6 +406,14 @@ pub fn use_date_range_picker_state<V: DateValue>(
             })
             .or_else(|| selected_range.get())
     });
+    let times = Memo::new(move |_| {
+        if V::HAS_TIME
+            && let Some(RangeValue { start, end }) = binding.value.get()
+        {
+            return (Some(start.time()), Some(end.time()));
+        }
+        selected_times.get()
+    });
 
     let format_options = Memo::new(move |_| FormatOptions {
         granularity: granularity.get(),
@@ -417,17 +429,17 @@ pub fn use_date_range_picker_state<V: DateValue>(
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let strings = use_localized_strings::<DateValidationStrings>();
-    let builtin_validation = Signal::derive(move || {
+    let formatters = Memo::new(move |_| Formatters::new(locale.get(), format_options.get()));
+    let builtin_validation = Memo::new(move |_| {
         let (start, end) = (start.get(), end.get());
         let (min, max) = (min_value.get(), max_value.get());
-        let formatter = DateFormatter::new(&locale.get(), &format_options.get());
         Some(range_validation(
             start.as_ref(),
             end.as_ref(),
             min.as_ref(),
             max.as_ref(),
             is_date_unavailable.get_value(),
-            &formatter,
+            &|limit| formatters.with(|formatters| formatters.short().format(limit)),
             &strings.read(),
         ))
     });
@@ -435,10 +447,10 @@ pub fn use_date_range_picker_state<V: DateValue>(
         is_invalid,
         value: binding.value,
         validate,
-        builtin_validation,
+        builtin_validation: builtin_validation.into(),
         validation_behavior,
-        // One name per validation state: the start's (react-aria: both).
-        name: start_name.or(end_name),
+        // Server errors under either name (react-aria too).
+        names: start_name.into_iter().chain(end_name).collect(),
     });
 
     // Closing commits a range selected without times, with the placeholder time.
@@ -477,6 +489,8 @@ pub fn use_date_range_picker_state<V: DateValue>(
         start,
         end,
         date_range,
+        start_time: Signal::derive(move || times.get().0),
+        end_time: Signal::derive(move || times.get().1),
         granularity,
         has_time,
         overlay,
@@ -489,8 +503,7 @@ pub fn use_date_range_picker_state<V: DateValue>(
         placeholder,
         placeholder_time,
         should_close_on_select,
-        format_options,
-        locale,
+        formatters,
     }
 }
 
@@ -500,11 +513,11 @@ mod tests {
     use jiff::civil::{DateTime, date, time};
 
     use super::*;
+    use crate::testing::{flush_effects, with_owner};
 
     #[test]
     fn commits_complete_ranges_only() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state =
                 use_date_range_picker_state(UseDateRangePickerStateInput::<Date>::default());
             state.set_date_time(RangePart::Start, Some(date(2024, 6, 1)));
@@ -522,8 +535,7 @@ mod tests {
     /// selected in the popover.
     #[test]
     fn a_complete_value_replaces_the_selection() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_date_range_picker_state(UseDateRangePickerStateInput::<DateTime> {
                 should_close_on_select: Signal::stored(false),
                 ..UseDateRangePickerStateInput::default()
@@ -556,8 +568,7 @@ mod tests {
     /// the placeholder's time.
     #[test]
     fn closing_commits_the_placeholder_time() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_date_range_picker_state(UseDateRangePickerStateInput::<DateTime> {
                 should_close_on_select: Signal::stored(false),
                 placeholder_value: Signal::stored(Some(date(2024, 6, 1).at(10, 30, 0, 0))),
@@ -577,10 +588,33 @@ mod tests {
         });
     }
 
+    /// react-stately's `useDateRangePickerState`: a value set to `None` from outside clears the
+    /// ends shown at once (not an update later).
+    #[test]
+    fn an_outside_none_clears_the_ends() {
+        with_owner(|| {
+            let value = RwSignal::new(Some(RangeValue {
+                start: date(2024, 6, 1),
+                end: date(2024, 6, 5),
+            }));
+            let state = use_date_range_picker_state(UseDateRangePickerStateInput::<Date> {
+                value: Some(ValueBinding::from(value)),
+                ..UseDateRangePickerStateInput::default()
+            });
+            flush_effects();
+            value.set(None);
+            assert_that!(state.start.get_untracked()).is_none();
+            assert_that!(state.end.get_untracked()).is_none();
+            // An incomplete range typed afterwards shows.
+            state.set_date_time(RangePart::Start, Some(date(2024, 7, 1)));
+            assert_that!(state.start.get_untracked()).is_equal_to(Some(date(2024, 7, 1)));
+            assert_that!(state.end.get_untracked()).is_none();
+        });
+    }
+
     #[test]
     fn selects_a_range_and_validates_its_order() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state =
                 use_date_range_picker_state(UseDateRangePickerStateInput::<Date>::default());
             state.set_open(true);

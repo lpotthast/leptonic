@@ -1,12 +1,11 @@
 // Upstream: react-aria-components/src/Separator.tsx @ 99e6102368
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use crate::{
-    hooks::{IntoAttrs, SeparatorElementType, UseSeparatorInput, use_separator},
-    utils::{
-        classes::Classes, default_class::with_default_class, orientation::Orientation,
-        styles::Styles,
-    },
+    IntoAttrs, Orientation,
+    hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator},
+    utils::{default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================

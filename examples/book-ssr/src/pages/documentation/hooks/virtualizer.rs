@@ -30,7 +30,7 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r"
                         let state = use_virtualizer_state(UseVirtualizerStateInput {
-                            layout: ListLayout::new(ListLayoutOptions { row_size: Some(32.0), ..ListLayoutOptions::default() }),
+                            layout: ListLayout::new(ListLayoutOptions { row_size: ItemSize::Fixed(32.0), ..ListLayoutOptions::default() }),
                             collection: rows.into(),
                             persisted_keys: Signal::stored(HashSet::new()),
                             layout_options: Signal::stored(None),
@@ -238,7 +238,7 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                         <ApiRow name="persisted_keys" ty="Signal<HashSet<Key>>">
                             "Items that stay rendered while out of view, e.g. the focused item. Required (an empty set)."
                         </ApiRow>
-                        <ApiRow name="layout_options" ty="Signal<Option<L::Options>>">
+                        <ApiRow name="layout_options" ty="Signal<Option<Options>>">
                             "Options replacing the ones the layout was created with. Required ("
                             <Code inline=true>"None"</Code>" keeps the layout\u{2019}s)."
                         </ApiRow>
@@ -360,27 +360,62 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                             "Whether the user scrolls the element itself (not an ancestor or the window, not "
                             <Code inline=true>"scroll_to"</Code>"), until the scrolling ends: e.g. to tell whether they scrolled away from an end."
                         </ApiRow>
-                        <ApiRow name="scroll_to" ty="Callback<Rect>">
-                            "Scrolls the element so that the visible area starts at the rectangle\u{2019}s position."
-                        </ApiRow>
-                        <ApiRow name="scroll_to_end" ty="Callback<()>">
-                            "Scrolls the element to its end, as laid out when it scrolls (the next frame)."
+                        <ApiRow name="scroller" ty="ScrollViewScroller">
+                            "Scrolls the element: "<Code inline=true>"scroll_to(rect)"</Code>" so that the visible area starts at the rectangle\u{2019}s position, "
+                            <Code inline=true>"scroll_to_end()"</Code>" to its end, as laid out when it scrolls (the next frame)."
                         </ApiRow>
                     </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="use_item_measurer">
+                <p>
+                    "Create one "<Code inline=true>"ItemMeasurer"</Code>" for the collection and share it with "
+                    "each rendered item. It measures estimated sizes and can observe later content resizes."
+                </p>
+                <Section title="Input" id="use-item-measurer-input">
+                    <ApiTable kind=ApiKind::Input of="UseItemMeasurerInput">
+                        <ApiRow name="update_item_size" ty="Callback<ItemSizeChange>">
+                            "Required. Reports the item key and measured size to the virtualizer state."
+                        </ApiRow>
+                        <ApiRow name="should_observe_item_size" ty="bool" default="false">
+                            "Measure again when content resizes; estimated sizes are measured once either way."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+                <Section title="Return" id="use-item-measurer-return">
+                    <p>"An "<Code inline=true>"ItemMeasurer"</Code>" passed to each item hook."</p>
+                </Section>
+                <Section title="Example" id="use-item-measurer-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            use leptonic::hooks::virtualizer::{
+                                ItemSizeChange, UseItemMeasurerInput, use_item_measurer,
+                            };
+                            use leptos::prelude::*;
+
+                            let measurer = use_item_measurer(UseItemMeasurerInput {
+                                update_item_size: Callback::new(move |change: ItemSizeChange| {
+                                    state.update_item_size(&change.key, change.size);
+                                }),
+                                should_observe_item_size: true,
+                            });
+                        ")}
+                    </Code>
                 </Section>
             </Section>
 
             <Section title="use_virtualizer_item">
                 <p>
                     "Positions a rendered item at its layout info, and measures items of estimated size once they are "
-                    "rendered (with "<Code inline=true>"should_observe_item_size"</Code>", whenever their content resizes). "
-                    "Render a wrapper "<Code inline=true>"<div>"</Code>" with the returned styles around the item; give it "
-                    <Code inline=true>"role=\"presentation\""</Code>" when the item has a role of its own."
+                    "rendered. Its shared "<Code inline=true>"measurer"</Code>" can also observe later resizes. Render a "
+                    "positioned outer wrapper with "<Code inline=true>"styles"</Code>" and an inner content wrapper "
+                    "with "<Code inline=true>"content_styles"</Code>". Capture both; only the inner content is measured."
                 </p>
                 <ReactAriaSource path="virtualizer/useVirtualizerItem.ts"/>
                 <Section title="Input" id="use-virtualizer-item-input">
                     <ApiTable kind=ApiKind::Input of="UseVirtualizerItemInput">
-                        <ApiRow name="element" ty="CapturedElement">"The item\u{2019}s wrapper, which is measured. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The positioned outer wrapper. Required."</ApiRow>
                         <ApiRow name="layout_info" ty="Signal<LayoutInfo>">
                             "The item\u{2019}s current layout info, from the state\u{2019}s "<Code inline=true>"visible()"</Code>". Required."
                         </ApiRow>
@@ -388,13 +423,8 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                             "The layout info of the element the wrapper is placed in (e.g. a section), for positions relative "
                             "to it. Required ("<Code inline=true>"None"</Code>": the content box)."
                         </ApiRow>
-                        <ApiRow name="update_item_size" ty="Callback<ItemSizeChange>">
-                            "Receives the measured size ("<Code inline=true>"key"</Code>" and "<Code inline=true>"size"</Code>
-                            "): call the state\u{2019}s "<Code inline=true>"update_item_size"</Code>". Required."
-                        </ApiRow>
-                        <ApiRow name="should_observe_item_size" ty="bool">
-                            "Measure again whenever the item\u{2019}s content resizes. Required."
-                        </ApiRow>
+                        <ApiRow name="content" ty="CapturedElement">"Required. Capture of the content wrapper inside the positioned item."</ApiRow>
+                        <ApiRow name="measurer" ty="ItemMeasurer">"Required. The shared item measurer created with use_item_measurer."</ApiRow>
                     </ApiTable>
                 </Section>
                 <Section title="Return" id="use-virtualizer-item-return">
@@ -403,6 +433,7 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                             "The wrapper\u{2019}s styles: absolutely positioned (sticky for sticky layout infos) at its "
                             "layout info, in the writing direction of the locale."
                         </ApiRow>
+                        <ApiRow name="content_styles" ty="Styles">"Styles for the measured content wrapper inside the positioned item."</ApiRow>
                     </ApiTable>
                     <p>
                         <Code inline=true>"layout_info_styles(info, direction, parent)"</Code>" returns the same styles for "

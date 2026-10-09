@@ -1,9 +1,12 @@
 use leptonic::{
-    atoms::prelude::{ColorSwatch, Description, Input, Label, TextField},
-    utils::{
-        color::{Color, ColorValue, HSV},
-        i18n::use_locale,
+    Color, ColorValue, HSV,
+    atoms::{
+        color_swatch::ColorSwatch,
+        field::{Description, Label},
+        input::Input,
+        text_field::TextField,
     },
+    use_locale,
 };
 use leptos::prelude::*;
 

@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::hooks::LinkTarget;
+use leptonic::hooks::link::LinkTarget;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -41,7 +41,7 @@ pub fn PageInstallation() -> impl IntoView {
                 <Section title="Dependency and Features">
                     <p>
                         "Add leptonic with the features you need. Most apps want the "<Code inline=true>"atoms"</Code>
-                        ", which include the hooks:"
+                        " feature. Hooks are always available:"
                     </p>
 
                     <Code language=Language::Shell>
@@ -66,31 +66,30 @@ pub fn PageInstallation() -> impl IntoView {
 
                     <Section title="Feature Flags">
                         <p>
-                            "Each layer (see "<Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
-                            ") is a feature; "<Code inline=true>"atoms"</Code>" includes "<Code inline=true>"hooks"</Code>
-                            ". The extras add utilities."
+                            "Hooks and shared utilities are always available. Enable "<Code inline=true>"atoms"</Code>
+                            " for unstyled elements built on those hooks. The other features add optional capabilities."
                         </p>
                         <DocTable headers=&["Feature", "Enables"]>
                             <TableRow>
-                                <TableCell><Code inline=true>"hooks"</Code></TableCell>
-                                <TableCell>"The hooks and utilities. The only default feature."</TableCell>
+                                <TableCell><Code inline=true>"intl-strings"</Code></TableCell>
+                                <TableCell>"Localized hook messages in 34 languages. Enabled by default."</TableCell>
                             </TableRow>
                             <TableRow>
                                 <TableCell><Code inline=true>"atoms"</Code></TableCell>
-                                <TableCell>"The atoms, and "<Code inline=true>"hooks"</Code>"."</TableCell>
+                                <TableCell>"The unstyled atoms."</TableCell>
                             </TableRow>
                             <TableRow>
                                 <TableCell><Code inline=true>"clipboard"</Code></TableCell>
                                 <TableCell>
-                                    "Copying to the clipboard with "<Code inline=true>"leptonic::utils::clipboard::write_text"</Code>
-                                    ". Needs only "<Code inline=true>"hooks"</Code>"."
+                                    "Copying to the clipboard with "<Code inline=true>"leptonic::write_text"</Code>
+                                    "."
                                 </TableCell>
                             </TableRow>
                             <TableRow>
                                 <TableCell><Code inline=true>"syntax-highlight"</Code></TableCell>
                                 <TableCell>
                                     "Syntax highlighting of source code with syntect: "
-                                    <Code inline=true>"leptonic::utils::syntax_highlight::highlight_to_classed_html"</Code>
+                                    <Code inline=true>"leptonic::highlight_to_classed_html"</Code>
                                     " returns HTML with "<Code inline=true>"syn-*"</Code>" classes for your stylesheet to color. "
                                     "Works on the server too."
                                 </TableCell>
@@ -226,11 +225,18 @@ pub fn PageInstallation() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                atoms::prelude::{
-                                    Button, LeptonicTheme, ThemeProvider, Toast, ToastCloseButton, ToastContent,
-                                    ToastRegion, ToastTitle,
+                                atoms::{
+                                    button::Button,
+                                    theme::{LeptonicTheme, ThemeProvider},
+                                    toast::{
+                                        Toast,
+                                        ToastCloseButton,
+                                        ToastContent,
+                                        ToastRegion,
+                                        ToastTitle,
+                                    },
                                 },
-                                hooks::{ToastOptions, ToastQueue},
+                                hooks::toast::{ToastOptions, ToastQueue},
                                 signal_ls,
                             };
                             use leptos::prelude::*;
@@ -267,11 +273,10 @@ pub fn PageInstallation() -> impl IntoView {
                     </Code>
 
                     <p>
-                        "Import leptonic through its preludes: "<Code inline=true>"leptonic::atoms::prelude"</Code>" for "
-                        "the atoms, "<Code inline=true>"leptonic::hooks"</Code>" for the hooks, and "
-                        <Code inline=true>"leptonic::prelude"</Code>" for the shared types ("<Code inline=true>"Out"</Code>", "
-                        <Code inline=true>"ValueBinding"</Code>", "<Code inline=true>"signal_ls"</Code>", \u{2026}). "
-                        "Utilities live in "<Code inline=true>"leptonic::utils"</Code>"."
+                        "Import atoms from "<Code inline=true>"leptonic::atoms::<family>"</Code>" and hooks from "
+                        <Code inline=true>"leptonic::hooks::<family>"</Code>". Shared types and utilities are exported "
+                        "from the crate root, for example "<Code inline=true>"leptonic::Out"</Code>" and "
+                        <Code inline=true>"leptonic::ValueBinding"</Code>"."
                     </p>
                 </Section>
             </Section>

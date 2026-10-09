@@ -2,61 +2,56 @@
 
 use std::fmt;
 
-use browser_test::thirtyfour::{By, WebElement, extensions::query::ElementQuery, prelude::*};
+use leptonic::AriaRole;
 
-/// Which elements a lookup means: a CSS selector (a plain `&str` or `String`), elements with an
-/// ARIA [`role`], or an [`xpath`] for relations CSS can't express; optionally only those showing a
-/// [`text`](Self::text).
+/// Which elements a lookup means: a CSS selector (a plain `&str` or `String`) or the elements
+/// with an ARIA [`role`]; optionally only those showing a [`text`](Self::text) or containing an
+/// element of another locator ([`has`](Self::has)).
+///
+/// Lookups use typed WebDriver commands. Role matching uses the browser-computed role.
 ///
 /// ```ignore
 /// page.element("#test-cb-before")
-/// page.element(role("option").text("Apple"))
+/// page.element(role(AriaRole::Option).text("Apple"))
+/// page.element(role(AriaRole::Row).has(role(AriaRole::Gridcell).text("Inbox")))
 /// label.element("input")
 /// row.elements("td")
-/// cell.count(xpath("ancestor-or-self::*[@inert]"))
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Locator {
-    kind: Kind,
-    text: Option<String>,
+    pub(super) selector: Selector,
+    pub(super) text: Option<String>,
+    pub(super) has: Vec<Locator>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Kind {
+pub(super) enum Selector {
     Css(String),
-    Role(String),
-    XPath(String),
+    Role(AriaRole),
 }
 
 /// The elements matching the CSS `selector`. A plain `&str` or `String` is one, too.
 pub fn css(selector: impl Into<String>) -> Locator {
     Locator {
-        kind: Kind::Css(selector.into()),
+        selector: Selector::Css(selector.into()),
         text: None,
+        has: Vec::new(),
     }
 }
 
-/// The elements with the ARIA `role`: explicit (`role="option"`), and implicit for buttons
-/// (`<button>`) and links (`<a href>`).
-pub fn role(role: impl Into<String>) -> Locator {
+/// Match the role computed by the browser, including native semantics and explicit overrides.
+pub fn role(role: AriaRole) -> Locator {
     Locator {
-        kind: Kind::Role(role.into()),
+        selector: Selector::Role(role),
         text: None,
-    }
-}
-
-/// The elements an XPath `expression` selects: only for relations CSS can't express (ancestors,
-/// following siblings), relative to the element it is used on.
-pub fn xpath(expression: impl Into<String>) -> Locator {
-    Locator {
-        kind: Kind::XPath(expression.into()),
-        text: None,
+        has: Vec::new(),
     }
 }
 
 impl Locator {
     /// Only the elements whose text is `text`: their text content with whitespace collapsed, also
-    /// while hidden (a collapsed panel's button). What an element shows is
+    /// while hidden when using a CSS locator. A role locator still follows browser accessibility
+    /// visibility. What an element shows is
     /// [`inner_text`](crate::pages::ElementActions::inner_text).
     #[must_use]
     pub fn text(mut self, text: impl Into<String>) -> Self {
@@ -64,36 +59,12 @@ impl Locator {
         self
     }
 
-    /// A thirtyfour query for these elements, below `root` (a page's session or an element).
-    pub(crate) fn query(&self, root: &dyn ElementQueryable) -> ElementQuery {
-        let by = match &self.kind {
-            Kind::Css(selector) => By::Css(selector.clone()),
-            Kind::Role(role) => By::Css(match role.as_str() {
-                "button" => "button, [role=button]".to_owned(),
-                "link" => "a[href], [role=link]".to_owned(),
-                role => format!("[role={role}]"),
-            }),
-            Kind::XPath(expression) => By::XPath(expression.clone()),
-        };
-        let query = root.query(by).desc(&self.to_string());
-        match &self.text {
-            Some(text) => {
-                let text = text.clone();
-                query.with_filter(move |element: WebElement| {
-                    let text = text.clone();
-                    async move {
-                        // A candidate the page replaced while it was read (a re-rendered list)
-                        // doesn't match; the next poll queries again.
-                        let Ok(content) = element.prop("textContent").await else {
-                            return Ok(false);
-                        };
-                        let content = content.unwrap_or_default();
-                        Ok(content.split_whitespace().collect::<Vec<_>>().join(" ") == text)
-                    }
-                })
-            }
-            None => query,
-        }
+    /// Only the elements containing (below them) an element `inner` matches: the row whose cell
+    /// shows a text, `role(AriaRole::Row).has(role(AriaRole::Gridcell).text("Inbox"))`.
+    #[must_use]
+    pub fn has(mut self, inner: impl Into<Locator>) -> Self {
+        self.has.push(inner.into());
+        self
     }
 }
 
@@ -117,13 +88,15 @@ impl From<&String> for Locator {
 
 impl fmt::Display for Locator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.kind {
-            Kind::Css(selector) => write!(f, "{selector:?}")?,
-            Kind::Role(role) => write!(f, "role={role}")?,
-            Kind::XPath(expression) => write!(f, "xpath {expression:?}")?,
+        match &self.selector {
+            Selector::Css(selector) => write!(f, "{selector:?}")?,
+            Selector::Role(role) => write!(f, "role={}", role.into_str())?,
         }
         if let Some(text) = &self.text {
             write!(f, " with text {text:?}")?;
+        }
+        for inner in &self.has {
+            write!(f, " having ({inner})")?;
         }
         Ok(())
     }

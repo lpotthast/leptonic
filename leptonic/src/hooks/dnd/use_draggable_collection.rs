@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/dnd/useDraggableCollection.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDraggableCollection.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use super::{use_draggable_collection_state::DraggableCollectionState, utils};
-use crate::utils::CapturedElement;
+use crate::CapturedElement;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

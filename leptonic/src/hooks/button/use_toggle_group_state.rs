@@ -14,6 +14,12 @@ use crate::hooks::collections::Key;
 // - State (C4): `default_selected_keys` + `on_selection_change`, or `selected_keys` bound to app
 //   state (a `ValueBinding`, the atoms' `selected_keys` + `set_selected_keys`).
 //
+// ## DIFFERENT BEHAVIOR
+// - Setting the selected keys to the set already selected changes nothing and calls no
+//   `on_selection_change` (react-aria's `useControlledState` compares the `Set` objects by
+//   identity, so an equal new set is reported as a change, e.g. pressing the selected button of
+//   a group that disallows an empty selection).
+//
 // =============================================================================
 
 /// How many toggle buttons of a group can be selected.
@@ -31,11 +37,11 @@ pub enum ToggleGroupSelectionMode {
 pub struct UseToggleGroupStateInput {
     pub selection_mode: ToggleGroupSelectionMode,
     /// Keeps at least one button selected.
-    pub disallow_empty_selection: bool,
+    pub disallow_empty_selection: Signal<bool>,
     /// The initially selected buttons. Ignored when `selected_keys` is bound.
     pub default_selected_keys: HashSet<Key>,
     /// The selected buttons as app state, replacing `default_selected_keys`.
-    pub selected_keys: Option<crate::utils::ValueBinding<HashSet<Key>>>,
+    pub selected_keys: Option<crate::ValueBinding<HashSet<Key>>>,
     /// Called with the selected buttons when they change.
     pub on_selection_change: Option<Callback<HashSet<Key>>>,
     pub is_disabled: Signal<bool>,
@@ -45,7 +51,7 @@ impl Default for UseToggleGroupStateInput {
     fn default() -> Self {
         Self {
             selection_mode: ToggleGroupSelectionMode::default(),
-            disallow_empty_selection: false,
+            disallow_empty_selection: Signal::stored(false),
             default_selected_keys: HashSet::new(),
             selected_keys: None,
             on_selection_change: None,
@@ -61,8 +67,8 @@ pub struct ToggleGroupState {
     pub is_disabled: Signal<bool>,
     /// The selected buttons.
     pub selected_keys: Signal<HashSet<Key>>,
-    disallow_empty_selection: bool,
-    set_keys: crate::utils::ValueBinding<HashSet<Key>>,
+    disallow_empty_selection: Signal<bool>,
+    set_keys: crate::ValueBinding<HashSet<Key>>,
     on_selection_change: Option<Callback<HashSet<Key>>>,
 }
 
@@ -90,10 +96,11 @@ impl ToggleGroupState {
     /// `disallow_empty_selection`).
     pub fn toggle_key(&self, key: &Key) {
         let current = self.selected_keys.get_untracked();
+        let disallow_empty_selection = self.disallow_empty_selection.get_untracked();
         let keys = match self.selection_mode {
             ToggleGroupSelectionMode::Multiple => {
                 let mut keys = current.clone();
-                if keys.contains(key) && (!self.disallow_empty_selection || keys.len() > 1) {
+                if keys.contains(key) && (!disallow_empty_selection || keys.len() > 1) {
                     keys.remove(key);
                 } else {
                     keys.insert(key.clone());
@@ -101,7 +108,7 @@ impl ToggleGroupState {
                 keys
             }
             ToggleGroupSelectionMode::Single => {
-                if current.contains(key) && !self.disallow_empty_selection {
+                if current.contains(key) && !disallow_empty_selection {
                     HashSet::new()
                 } else {
                     HashSet::from([key.clone()])
@@ -130,7 +137,7 @@ pub fn use_toggle_group_state(input: UseToggleGroupStateInput) -> ToggleGroupSta
         is_disabled,
     } = input;
     let set_keys = selected_keys
-        .unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_selected_keys)));
+        .unwrap_or_else(|| crate::ValueBinding::from(RwSignal::new(default_selected_keys)));
     ToggleGroupState {
         selection_mode,
         is_disabled,
@@ -160,7 +167,7 @@ mod tests {
 
     #[test]
     fn single_selection_replaces_and_deselects() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_toggle_group_state(UseToggleGroupStateInput::default());
             state.toggle_key(&Key::from("a"));
             state.toggle_key(&Key::from("b"));
@@ -172,7 +179,7 @@ mod tests {
 
     #[test]
     fn multiple_selection_adds_and_removes() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_toggle_group_state(UseToggleGroupStateInput {
                 selection_mode: ToggleGroupSelectionMode::Multiple,
                 ..UseToggleGroupStateInput::default()
@@ -188,14 +195,14 @@ mod tests {
 
     #[test]
     fn disallow_empty_selection_keeps_the_last_button() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             for selection_mode in [
                 ToggleGroupSelectionMode::Single,
                 ToggleGroupSelectionMode::Multiple,
             ] {
                 let state = use_toggle_group_state(UseToggleGroupStateInput {
                     selection_mode,
-                    disallow_empty_selection: true,
+                    disallow_empty_selection: Signal::stored(true),
                     default_selected_keys: HashSet::from([Key::from("a")]),
                     ..UseToggleGroupStateInput::default()
                 });

@@ -4,10 +4,10 @@
 //! characters rejected, incomplete text reverted), stepping by keys and the wheel within
 //! #000000–#FFFFFF, flags, forms, and channel fields as number fields.
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
+use crate::pages::{ElementActions, Page, SyntheticEvent};
 
 const PATH: &str = "/atoms/color-field";
 
@@ -28,30 +28,48 @@ async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#test-cf-log").await
 }
 
-/// "handles defaults": a text box without spin button values, labelled by its `Label`.
+/// The field is a text input without spin button values that shows the hex color and is labelled
+/// by its `Label` ("handles defaults").
+#[browser_test]
 pub async fn defaults(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let primary = input(page, "test-cf-primary").await?;
-    assert_that!(primary.attr("type").await?)
-        .get_some()
+    assert_that!(primary)
+        .has_attribute("type")
+        .await
         .is_equal_to("text");
-    assert_that!(primary.attr("autocomplete").await?)
-        .get_some()
+    assert_that!(primary)
+        .has_attribute("autocomplete")
+        .await
         .is_equal_to("off");
-    assert_that!(primary.attr("spellcheck").await?)
-        .get_some()
+    assert_that!(primary)
+        .has_attribute("spellcheck")
+        .await
         .is_equal_to("false");
-    assert_that!(primary.attr("role").await?).is_none();
-    assert_that!(primary.attr("aria-valuenow").await?).is_none();
-    assert_that!(primary.attr("aria-valuetext").await?).is_none();
-    assert_that!(primary.value().await?)
+    assert_that!(primary).attribute("role").await.is_none();
+    assert_that!(primary)
+        .attribute("aria-valuenow")
+        .await
+        .is_none();
+    assert_that!(primary)
+        .attribute("aria-valuetext")
+        .await
+        .is_none();
+    assert_that!(primary)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("#AABBCC");
-    assert_that!(primary.referenced_text("aria-labelledby").await?).is_equal_to("Primary Color");
+    assert_that!(primary)
+        .accessible_name()
+        .await
+        .is_equal_to("Primary Color");
     Ok(())
 }
 
-/// "should handle uncontrolled state".
+/// Clearing the text commits no color on blur, and typing hex digits commits that color on blur,
+/// shown as `#CBACBA` ("should handle uncontrolled state").
+#[browser_test]
 pub async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let primary = input(page, "test-cf-primary").await?;
@@ -60,7 +78,11 @@ pub async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Backspace).await?;
     blur(page).await?;
     log(page).await?.wait_for_inner_text("primary:none").await?;
-    assert_that!(primary.value().await?).get_some().is_empty();
+    assert_that!(primary)
+        .property("value")
+        .await
+        .get_some()
+        .is_empty();
     primary.focus().await?;
     page.send_keys("cbacba").await?;
     blur(page).await?;
@@ -68,13 +90,18 @@ pub async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .wait_for_inner_text("primary:none,primary:CBACBA")
         .await?;
-    assert_that!(primary.value().await?)
+    assert_that!(primary)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("#CBACBA");
     Ok(())
 }
 
-/// "should disallow invalid characters and revert back to last valid value if left incomplete".
+/// Three hex digits commit their expanded color on blur, other characters can't be typed, and
+/// incomplete text reverts to the last valid color ("should disallow invalid characters and revert
+/// back to last valid value if left incomplete").
+#[browser_test]
 pub async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let empty = input(page, "test-cf-empty").await?;
@@ -82,7 +109,9 @@ pub async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys("abc").await?;
     blur(page).await?;
     log(page).await?.wait_for_inner_text("empty:AABBCC").await?;
-    assert_that!(empty.value().await?)
+    assert_that!(empty)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("#AABBCC");
     empty.focus().await?;
@@ -92,12 +121,17 @@ pub async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
     empty.wait_for_prop("value", "abc8b").await?;
     blur(page).await?;
     empty.wait_for_prop("value", "#AABBCC").await?;
-    log(page).await?.inner_text_stays("empty:AABBCC").await?;
+    log(page)
+        .await?
+        .inner_text_stays("empty:AABBCC", std::time::Duration::from_millis(100))
+        .await?;
     Ok(())
 }
 
-/// "increment with arrow up key", "decrement with arrow down key", "not increment beyond max
-/// value", "decrement to min value".
+/// The arrow keys step the color by one but not beyond #FFFFFF, and Home goes to #000000
+/// ("increment with arrow up key", "decrement with arrow down key", "not increment beyond max
+/// value", "decrement to min value").
+#[browser_test]
 pub async fn stepping(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let max = input(page, "test-cf-max").await?;
@@ -115,67 +149,88 @@ pub async fn stepping(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .wait_for_inner_text("max:FFFFFF,max:FFFFFE,max:000000")
         .await?;
-    assert_that!(max.value().await?)
+    assert_that!(max)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("#000000");
     Ok(())
 }
 
-/// "increment with mouse wheel" (while focused).
+/// Scrolling the wheel over the focused field increments the color ("increment with mouse wheel").
+#[browser_test]
 pub async fn mouse_wheel(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let max = input(page, "test-cf-max").await?;
     max.focus().await?;
-    max.dispatch(SyntheticEvent::wheel().with("deltaY", 10))
-        .await?;
+    max.dispatch(SyntheticEvent::wheel().delta_y(10.0)).await?;
     log(page).await?.wait_for_inner_text("max:FFFFFF").await?;
     max.wait_for_prop("value", "#FFFFFF").await?;
     Ok(())
 }
 
-/// "should be readonly", "should be required".
+/// A read-only, required field's input is `readonly` and natively `required`, without
+/// `aria-required` ("should be readonly", "should be required").
+#[browser_test]
 pub async fn flags(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let flags = input(page, "test-cf-flags").await?;
-    assert_that!(flags.attr("readonly").await?).is_some();
+    assert_that!(flags).has_attribute("readonly").await;
     // Native validation (the default): `required`, not `aria-required` (react-aria).
-    assert_that!(flags.attr("required").await?).is_some();
-    assert_that!(flags.attr("aria-required").await?).is_none();
+    assert_that!(flags).has_attribute("required").await;
+    assert_that!(flags)
+        .attribute("aria-required")
+        .await
+        .is_none();
     Ok(())
 }
 
-/// "supports form reset", with the name on a hidden input.
+/// A hidden input submits the color under the field's name, and resetting the form restores the
+/// default color ("supports form reset").
+#[browser_test]
 pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let form = input(page, "test-cf-form").await?;
     let hidden = page.element("#test-cf-form input[type=hidden]").await?;
-    assert_that!(hidden.attr("name").await?)
-        .get_some()
+    assert_that!(hidden)
+        .has_attribute("name")
+        .await
         .is_equal_to("color");
+    // The form submits the hidden input's value.
+    hidden.wait_for_prop("value", "#123456").await?;
     form.focus().await?;
     page.send_keys(Key::Up).await?;
     form.wait_for_prop("value", "#123457").await?;
+    hidden.wait_for_prop("value", "#123457").await?;
     page.element("#test-cf-reset").await?.click().await?;
     form.wait_for_prop("value", "#123456").await?;
+    hidden.wait_for_prop("value", "#123456").await?;
     Ok(())
 }
 
-/// "should support the channel prop": a number field of the channel, named after it.
+/// A channel field is a number field labelled with its channel that shows the value with the
+/// channel's unit (degrees, percent) and steps it ("should support the channel prop").
+#[browser_test]
 pub async fn channel(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let hue = input(page, "test-cf-hue").await?;
-    assert_that!(hue.value().await?)
+    assert_that!(hue)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("10°");
-    assert_that!(hue.attr("aria-label").await?)
-        .get_some()
+    assert_that!(hue)
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("Hue");
     hue.focus().await?;
     page.send_keys(Key::Up).await?;
     log(page).await?.wait_for_inner_text("hue:11").await?;
     hue.wait_for_prop("value", "11°").await?;
     let saturation = input(page, "test-cf-saturation").await?;
-    assert_that!(saturation.value().await?)
+    assert_that!(saturation)
+        .property("value")
+        .await
         .get_some()
         .is_equal_to("50%");
     Ok(())

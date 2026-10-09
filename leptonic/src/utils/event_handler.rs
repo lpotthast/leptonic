@@ -1,10 +1,15 @@
+// No upstream: chainable DOM event handlers and their listener attributes (react-aria chains
+// handlers with `chain`/`mergeProps`).
 use std::sync::Arc;
 
 use leptos::{
-    attr::Attribute,
-    ev::{EventDescriptor, On, SharedEventCallback, on},
+    attr::{Attribute, NextAttribute},
+    ev::EventDescriptor,
+    prelude::Owner,
 };
 use wasm_bindgen::JsValue;
+
+use super::event_listeners::{Listener, listen_with_options};
 
 /// Internal storage for event handlers - optimized for the common single-handler case.
 /// Uses `Arc<dyn Fn(E) + Send + Sync>` for thread-safety (required for SSR).
@@ -33,7 +38,7 @@ enum EventHandlerInner<E: 'static> {
 /// # Example
 ///
 /// ```ignore
-/// use leptonic::utils::event_handler::EventHandler;
+/// use leptonic::EventHandler;
 /// use leptos::ev;
 /// use web_sys::KeyboardEvent;
 ///
@@ -47,8 +52,8 @@ enum EventHandlerInner<E: 'static> {
 ///     tracing::debug!("Another handler");
 /// }));
 ///
-/// // Convert to On<> attribute for view spreading
-/// let on_keydown = combined.to_on(ev::keydown);
+/// // The listener attribute, for view spreading
+/// let on_keydown = combined.into_on(ev::keydown);
 /// ```
 #[derive(Clone)]
 pub struct EventHandler<E: 'static> {
@@ -159,67 +164,150 @@ impl<E: Clone + 'static> EventHandler<E> {
     }
 }
 
-impl<E: Clone + 'static> EventHandler<E> {
-    /// Convert to an `On<>` attribute for the given event descriptor, cloning self.
-    /// Creates a `FnMut` closure that calls all `Fn` handlers in sequence.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let handler = EventHandler::new(|e: KeyboardEvent| { /* ... */ });
-    /// let on_keydown: On<ev::keydown, _> = handler.to_on(ev::keydown);
-    /// ```
-    ///
-    /// # Why `to_on` requires an event descriptor
-    ///
-    /// The `On<E, F>` type requires an event descriptor (`ev::keydown`, `ev::click`, etc.)
-    /// to know the event name for attaching the DOM listener. `EventHandler<KeyboardEvent>`
-    /// only knows the event *type*, not the event *name*. This method bridges that gap.
-    pub fn to_on<D>(&self, event: D) -> On<D, SharedEventCallback<E>>
-    where
-        D: EventDescriptor<EventType = E> + Send + Clone + 'static,
-        E: From<JsValue>,
-    {
-        // Create a FnMut closure that calls all the Fn handlers
-        self.clone().into_on(event)
+/// The listener attribute of an [`EventHandler`] for the event `D` ([`EventHandler::into_on`]):
+/// a DOM listener for a handler, nothing for an empty one (no listener, no wasm closure).
+///
+/// These listeners use `Fn`, so synchronously dispatched events may re-enter them. Leptos's
+/// standard `on` attribute uses an `FnMut` closure, whose Wasm boundary rejects re-entry before
+/// a hook can apply its own event guard (e.g. a press callback clicking the pressed element).
+#[derive(Clone)]
+pub struct OnEvent<D: EventDescriptor>
+where
+    D::EventType: 'static,
+{
+    event: D,
+    handler: EventHandler<D::EventType>,
+    owner: Owner,
+}
+
+impl<D: EventDescriptor> std::fmt::Debug for OnEvent<D>
+where
+    D::EventType: 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OnEvent")
+            .field("event", &self.event.name())
+            .field("handler", &self.handler)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Mounted listener state; dropping it removes the listener from its element.
+#[derive(Debug)]
+pub struct EventListenerState {
+    element: web_sys::Element,
+    listener: Option<Listener>,
+}
+
+impl<D> OnEvent<D>
+where
+    D: EventDescriptor,
+    D::EventType: Clone + From<JsValue> + 'static,
+{
+    fn attach(self, element: &web_sys::Element) -> Option<Listener> {
+        if self.handler.is_empty() {
+            return None;
+        }
+        let Self {
+            event,
+            handler,
+            owner,
+        } = self;
+        Some(listen_with_options(
+            element.as_ref(),
+            event.name(),
+            D::CAPTURE,
+            event.options(),
+            move |event| {
+                #[cfg(debug_assertions)]
+                let _zone = leptos::reactive::diagnostics::SpecialNonReactiveZone::enter();
+                owner.with(|| handler.call(D::EventType::from(JsValue::from(event))));
+            },
+        ))
+    }
+}
+
+impl<D> Attribute for OnEvent<D>
+where
+    D: EventDescriptor + Send + 'static,
+    D::EventType: Clone + From<JsValue> + 'static,
+{
+    const MIN_LENGTH: usize = 0;
+    type State = EventListenerState;
+    type AsyncOutput = Self;
+    type Cloneable = Self;
+    type CloneableOwned = Self;
+
+    fn html_len(&self) -> usize {
+        0
     }
 
-    /// Convert into an `On<>` attribute for the given event descriptor, consuming self.
-    /// Creates a `FnMut` closure that calls all `Fn` handlers in sequence.
+    fn to_html(self, _: &mut String, _: &mut String, _: &mut String, _: &mut String) {}
+
+    fn hydrate<const FROM_SERVER: bool>(self, element: &web_sys::Element) -> Self::State {
+        self.build(element)
+    }
+
+    fn build(self, element: &web_sys::Element) -> Self::State {
+        EventListenerState {
+            element: element.clone(),
+            listener: self.attach(element),
+        }
+    }
+
+    fn rebuild(self, state: &mut Self::State) {
+        state.listener.take();
+        state.listener = self.attach(&state.element);
+    }
+
+    fn into_cloneable(self) -> Self::Cloneable {
+        self
+    }
+
+    fn into_cloneable_owned(self) -> Self::CloneableOwned {
+        self
+    }
+
+    fn dry_resolve(&mut self) {}
+
+    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
+        std::future::ready(self)
+    }
+}
+
+impl<D> NextAttribute for OnEvent<D>
+where
+    D: EventDescriptor + Send + 'static,
+    D::EventType: Clone + From<JsValue> + 'static,
+{
+    type Output<NewAttr: Attribute> = (Self, NewAttr);
+
+    fn add_any_attr<NewAttr: Attribute>(self, new_attr: NewAttr) -> Self::Output<NewAttr> {
+        (self, new_attr)
+    }
+}
+
+impl<E: Clone + 'static> EventHandler<E> {
+    /// The listener attribute for the event `event` (`ev::keydown`, `ev::click`, ...), spread onto
+    /// the element: a listener calling every handler in order, or nothing when the handler is
+    /// [`empty`](Self::empty), so absent handlers attach no DOM listener.
     ///
-    /// # Example
+    /// The event descriptor names the event: an `EventHandler<KeyboardEvent>` knows the event's
+    /// type, not its name.
     ///
     /// ```ignore
     /// let handler = EventHandler::new(|e: KeyboardEvent| { /* ... */ });
-    /// let on_keydown: On<ev::keydown, _> = handler.into_on(ev::keydown);
+    /// let on_keydown: OnEvent<ev::keydown> = handler.into_on(ev::keydown);
     /// ```
-    ///
-    /// # Why `to_on` requires an event descriptor
-    ///
-    /// The `On<E, F>` type requires an event descriptor (`ev::keydown`, `ev::click`, etc.)
-    /// to know the event name for attaching the DOM listener. `EventHandler<KeyboardEvent>`
-    /// only knows the event *type*, not the event *name*. This method bridges that gap.
-    pub fn into_on<D>(self, event: D) -> On<D, SharedEventCallback<E>>
+    pub fn into_on<D>(self, event: D) -> OnEvent<D>
     where
         D: EventDescriptor<EventType = E> + Send + Clone + 'static,
         E: From<JsValue>,
     {
-        // Create a FnMut closure that calls all the Fn handlers
-        let handler = move |e: E| match &self.inner {
-            EventHandlerInner::Empty => {}
-            EventHandlerInner::Single(h) => h(e),
-            EventHandlerInner::Multiple(handlers) => {
-                let last_idx = handlers.len() - 1;
-                for (i, h) in handlers.iter().enumerate() {
-                    let is_last = i == last_idx;
-                    if is_last {
-                        h(e);
-                        break;
-                    }
-                    h(e.clone());
-                }
-            }
-        };
-        on(event, handler).into_cloneable()
+        OnEvent {
+            event,
+            handler: self,
+            owner: Owner::current().unwrap_or_default(),
+        }
     }
 }

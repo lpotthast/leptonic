@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/tooltip/useTooltipTriggerState.ts @ 99e6102368
+// Upstream: react-stately/test/tooltip/useTooltipTriggerState.test.js @ 99e6102368
 use std::time::Duration;
 
 use leptos::prelude::*;
@@ -7,8 +8,8 @@ use leptos::prelude::*;
 use super::tooltip_registry;
 use super::tooltip_registry::{TOOLTIP_COOLDOWN, TOOLTIP_DELAY};
 use crate::{
-    hooks::{OverlayTriggerState, UseOverlayTriggerStateInput, use_overlay_trigger_state},
-    utils::ValueBinding,
+    ValueBinding,
+    hooks::overlay::{OverlayTriggerState, UseOverlayTriggerStateInput, use_overlay_trigger_state},
 };
 
 // =============================================================================
@@ -249,12 +250,13 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
     // Timers (delays, cooldown) need a browser; these cover what runs without them.
 
     #[test]
     fn immediate_open_shows_the_tooltip() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput::default());
             assert_that!(state.is_open()).is_false();
             state.open(TooltipTiming::Immediate);
@@ -264,7 +266,7 @@ mod tests {
 
     #[test]
     fn a_bound_open_state_is_written() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let open = RwSignal::new(false);
             let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
                 value: Some(open.into()),

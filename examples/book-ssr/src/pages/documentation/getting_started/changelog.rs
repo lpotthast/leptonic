@@ -34,12 +34,12 @@ const RELEASES: &[Release] = &[
             (
                 "Imports and features",
                 &[
-                    "The flat `leptonic::prelude` was split by layer: `leptonic::atoms::prelude` (the atoms, \
-                 `ThemeProvider` and the themes), `leptonic::hooks` (the hooks) and `leptonic::prelude` (shared types \
-                 such as `Out`, `ValueBinding`, `Mount`, `Width`, `Margin` and `signal_ls`). Utilities live in \
-                 `leptonic::utils`.",
-                    "Features choose the layers: `hooks` (the only default) and `atoms`, which includes `hooks`. The extras \
-                 `clipboard` and `syntax-highlight` need only `hooks`; `full` enables both layers and both extras.",
+                    "Import atoms from `leptonic::atoms::<family>` and hooks from `leptonic::hooks::<family>`. \
+                 Shared types and utilities such as `Out`, `ValueBinding` and `signal_ls` are exported from the \
+                 crate root. The preludes and public `utils` module were removed.",
+                    "Hooks are always available. The `atoms` feature adds the unstyled atoms; `intl-strings`, enabled \
+                 by default, provides localized messages. `full` enables atoms, clipboard, syntax highlighting and \
+                 localized messages.",
                     "The `tiptap` and `csr` features were removed: use the `leptos-tiptap` crate directly, and enable \
                  neither `ssr` nor `hydrate` for client-side rendered apps.",
                 ],
@@ -77,7 +77,7 @@ const RELEASES: &[Release] = &[
                  the \u{201c}Styling\u{201d} section of every atom page.",
                     "`Root` \u{2192} a `ThemeProvider` around your app (controlled with `signal_ls` to remember the \
                  user\u{2019}s theme) and, if your app shows toasts, a `ToastRegion` on a `ToastQueue`. Modals need no \
-                 root. The `Leptonic` context is gone (use `leptonic::utils::platform` for platform checks), and so is the \
+                 root. The `Leptonic` context is gone (use `leptonic::platform` for platform checks), and so is the \
                  `--leptonic-vh` variable: use the `dvh` unit (`min-height: 100dvh`). See Installation.",
                     "`ThemeToggle` and `ThemeIcon` \u{2192} a switch atom on the context of `use_theme`. See Themes.",
                     "Buttons and links: `Button` \u{2192} the `Button` atom; `Link` \u{2192} the `Link` atom (`AnchorLink` \
@@ -115,8 +115,8 @@ const RELEASES: &[Release] = &[
                  and your CSS (recipes in Content & Layout); `Separator` \u{2192} the `Separator` atom; `Icon` \u{2192} \
                  `leptos_icons` with `icondata`; the transitions (`Collapse`, `Fade`, `Grow`, `Slide` and `Zoom`) \u{2192} \
                  CSS animations on the atoms\u{2019} `data-entering` and `data-exiting` attributes.",
-                    "Content: `Code` \u{2192} `leptonic::utils::syntax_highlight` (feature `syntax-highlight`) for the \
-                 highlighting and `leptonic::utils::clipboard::write_text` (feature `clipboard`) for a copy button; \
+                    "Content: `Code` \u{2192} `leptonic` (feature `syntax-highlight`) for the \
+                 highlighting and `leptonic::write_text` (feature `clipboard`) for a copy button; \
                  `TiptapEditor` \u{2192} the `leptos-tiptap` crate; `SanitizedHtml` \u{2192} the `ammonia` crate; \
                  `Quicksearch` (with `QuicksearchTrigger` and `QuicksearchOption`) \u{2192} a `SearchField`, a \
                  `ComboBox` or a modal.",
@@ -130,13 +130,13 @@ const RELEASES: &[Release] = &[
                     "`Anchor` \u{2192} `AnchorLink`.",
                     "`LinkExt` \u{2192} `Link`, which takes a `target`; `LinkExtTarget` \u{2192} `LinkTarget`.",
                     "`create_signal_ls` \u{2192} `signal_ls`.",
-                    "The key caps\u{2019} `Key` \u{2192} `KeyboardKey` (`leptonic::utils::key`), which keyboard handling \
+                    "The key caps\u{2019} `Key` \u{2192} `KeyboardKey` (`leptonic`), which keyboard handling \
                  uses too.",
-                    "`HSV` and `RGB8` moved to `leptonic::utils::color`, next to the new `HSL`, `Alpha<C>` (any color with \
+                    "`HSV` and `RGB8` moved to `leptonic`, next to the new `HSL`, `Alpha<C>` (any color with \
                  an alpha channel; replaces `RGBA8`) and `Color`. `ColorSpace` was removed: a `Color` keeps the color \
                  space it was set in.",
                     "`Size` \u{2192} `CssDimension`, of which `Width` and `Height` are now aliases: write `em(1.0)`, \
-                 `px(4)` or `pct(50.0)` (`leptonic::utils::css`).",
+                 `px(4)` or `pct(50.0)` (`leptonic::leptos_styles::css`).",
                 ],
             ),
             (
@@ -205,7 +205,7 @@ const RELEASES: &[Release] = &[
                  `VirtualList` renders only the visible rows of a plain list such as a log, optionally following its \
                  end. `use_virtualizer_state`, `use_scroll_view`, `use_virtualizer_item` and the `Layout` trait \
                  (`leptonic::hooks::virtualizer`) virtualize markup and layouts of your own.",
-                    "`Color` (`leptonic::utils::color`): a color in any of the spaces HSV, HSL and RGB, parsed from \
+                    "`Color` (`leptonic`): a color in any of the spaces HSV, HSL and RGB, parsed from \
                  CSS-like text (`#rgb`, `#rrggbb`, `rgb()`, `hsb()`, `hsl()`), with `color_name` and `hue_name` \
                  describing colors in words in the user\u{2019}s locale (\u{201c}dark vibrant blue\u{201d}).",
                     "`leptonic::jiff`, the re-exported date crate: calendars pick `jiff::civil::Date` values; date fields and \
@@ -217,10 +217,10 @@ const RELEASES: &[Release] = &[
                  languages and follow the locale (`intl-strings` feature, on by default; `use_localized_strings` gives \
                  your code the same messages). Grids, grid lists and tables announce selection changes.",
                     "Element ids that are stable between server-side rendering and hydration (`use_id`).",
-                    "`leptonic::utils::clipboard::write_text`, to copy text to the clipboard (`clipboard` feature).",
+                    "`leptonic::write_text`, to copy text to the clipboard (`clipboard` feature).",
                     "A live announcer for screen reader announcements, and keyboard shortcuts (`Shortcut`, \
                  `KeyboardShortcuts`); `Shortcut::keys` lists the keys to show for a shortcut on a platform.",
-                    "`is_text_input` and `is_typing_target` (`leptonic::utils::focusability`), telling whether keys pressed \
+                    "`is_text_input` and `is_typing_target` (`leptonic`), telling whether keys pressed \
                  at an element are the user typing.",
                 ],
             ),

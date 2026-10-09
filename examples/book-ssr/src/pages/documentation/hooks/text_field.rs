@@ -25,7 +25,7 @@ pub fn PageUseTextField() -> impl IntoView {
                 <p>"Create the state, pass it to the hook and spread the returned props onto your elements:"</p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::form::{InputType, TextFieldElement, UseTextFieldInput, UseTextFieldStateInput, ValidationBehavior, use_text_field, use_text_field_state};
 
                         let name = use_text_field_state(UseTextFieldStateInput::default());
                         let field = use_text_field(UseTextFieldInput {
@@ -52,7 +52,7 @@ pub fn PageUseTextField() -> impl IntoView {
                             auto_capitalize: None,
                             auto_correct: None,
                             spell_check: None,
-                            input_mode: None,
+                            input_mode: Signal::stored(None),
                             enter_key_hint: None,
                             auto_focus: false,
                             exclude_from_tab_order: false,
@@ -202,7 +202,7 @@ pub fn PageUseTextField() -> impl IntoView {
                         <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"The placeholder text."</ApiRow>
                         <ApiRow name="pattern" ty="Option<String>" default="None">"A validation pattern. Only for "<Code inline=true>"<input>"</Code>"."</ApiRow>
                         <ApiRow name="min_length, max_length" ty="Option<u32>" default="None">"Length constraints, rendered as native attributes."</ApiRow>
-                        <ApiRow name="input_mode" ty="Option<InputMode>" default="None">"Which virtual keyboard to show."</ApiRow>
+                        <ApiRow name="input_mode" ty="Signal<Option<InputMode>>" default="None">"Which virtual keyboard to show."</ApiRow>
                         <ApiRow name="enter_key_hint" ty="Option<EnterKeyHint>" default="None">"The label of the virtual keyboard\u{2019}s Enter key."</ApiRow>
                         <ApiRow name="auto_capitalize" ty="Option<AutoCapitalize>" default="None">"Automatic capitalization."</ApiRow>
                         <ApiRow name="auto_correct, spell_check" ty="Option<bool>" default="None">"Automatic correction and spell checking."</ApiRow>

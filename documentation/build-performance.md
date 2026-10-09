@@ -26,26 +26,30 @@ Rules and tools:
 - Other agents and projects build on the same machine. Wall times are noisy (load averages of 4 to 26 were seen):
   note the load, compare CPU time (user + sys) too, and repeat a measurement before trusting a difference under 15%.
 - Measure in a target directory of its own and delete it afterwards. A built target directory can be copied for
-  free with APFS clones (`cp -c -R target/a target/b`); cargo considers the copy fresh. Good for starting an
-  experiment from a built state.
+  free with APFS clones (`cp -c -R target/a target/b`; btrfs/XFS on Linux: `cp --reflink=always -R`); cargo
+  considers the copy fresh. Good for starting an experiment from a built state.
+- `scripts/build-bench.sh` edits files with macOS' `sed -i ''`: its `book-edit` and `lib-edit` scenarios need
+  macOS (GNU sed reads `''` as the script).
 - Experiments with manifests or profiles: use a copy of the app outside the repository whose `src` is a symlink to
-  the live sources (copy `Cargo.toml`, `Cargo.lock`, `style/`, `public/`, the repository's `.cargo/config.toml`, and
-  make the `leptonic` path absolute), so the shared working tree is never touched. Profile settings can also be
-  passed as `--config 'profile.dev.package.leptonic.opt-level=0'`.
+  the live sources (copy `Cargo.toml`, `Cargo.lock`, `style/`, `public/`, `icu4x-data/`, the repository's and the
+  app's `.cargo/config.toml` merged into one (rustflags, `LEPTOS_OUTPUT_NAME`, `ICU4X_DATA_DIR`), and make the
+  `leptonic` path absolute), so the shared working tree is never touched. Profile settings can also be passed as
+  `--config 'profile.dev.package.leptonic.opt-level=0'`.
 - Where a crate's compile time goes: `RUSTC_BOOTSTRAP=1 cargo rustc -p <crate> --lib ... -- -Ztime-passes`. Note:
   `RUSTC_BOOTSTRAP` is part of cargo's fingerprint, the first such build recompiles every dependency; the next one
   (same environment) shows the incremental case. `cargo build --timings` shows the units and the critical path.
 - Which generics a crate instantiates: `cargo llvm-lines -p book-ssr --lib --target wasm32-unknown-unknown
-  --no-default-features --features hydrate` (with `LEPTOS_OUTPUT_NAME=book-ssr`); aggregate the output by function
-  name with the generic arguments stripped.
+  --no-default-features --features hydrate`, run in the book's directory (its `.cargo/config.toml` sets
+  `LEPTOS_OUTPUT_NAME` and the ICU4X data); aggregate the output by function name with the generic arguments
+  stripped.
 - Wasm sizes: report raw, gzip -9 and brotli -q 11 (what a browser downloads). `twiggy top` on the wasm *before*
   wasm-bindgen (`<target>/front/wasm32-unknown-unknown/<profile>/book_ssr.wasm`, which still has the function
   names) attributes code to functions. Data (strings, tables) can't be attributed in an LTO build (all symbols are
   anonymous): link a non-LTO release build with a map (`cargo rustc ... --config 'profile.wasm-release.lto=false'
   -- -C link-arg=--Map=<file>`) and sum the `.rodata` input sections per object file (one per crate).
 
-Machine of all numbers below: Apple M4 Max (16 cores, 64 GB), rustc 1.99.0, cargo-leptos 0.3.11, wasm-bindgen
-0.2.129, wasm-opt version_123 (cargo-leptos' download), leptos 0.8.19.
+Machine of the numbers below unless marked otherwise (e.g. "Linux"): Apple M4 Max (16 cores, 64 GB), rustc 1.99.0,
+cargo-leptos 0.3.11, wasm-bindgen 0.2.129, wasm-opt version_123 (cargo-leptos' download), leptos 0.8.19.
 
 ## Baseline (2026-10-07)
 
@@ -201,12 +205,13 @@ wall / CPU (user + sys) of single-edit rebuilds.
   Data is decided by the app, leptonic needs no change; unsupported locales fall back to their parent or the root
   locale. Combined with route splitting the main module would be about 6.5 MB (wasm-split keeps all data in the main
   module).
-- **syntect on the client**: anything that calls `utils::syntax_highlight` in the wasm links syntect, its syntax
-  definitions and regex (1.35 MB raw, 0.58 MB brotli: the definitions barely compress). Leaving the call out isn't
-  enough while leptonic's `components::typography::Code` exists in the wasm: it highlights on the client whenever the
-  feature is on, whatever its `language`. So the book enables `syntax-highlight` only in its `ssr` feature and its
-  code blocks ask the server (`kit::code`'s `highlight` server function) for pages the client renders itself.
-  Side effect: leptonic's styled `Code` component (components layer, on its way out) doesn't highlight in the book.
+- **syntect on the client**: anything that calls leptonic's highlighter (then `utils::syntax_highlight`, today
+  `leptonic::highlight_to_classed_html`) in the wasm links syntect, its syntax definitions and regex (1.35 MB raw,
+  0.58 MB brotli: the definitions barely compress). Leaving the call out wasn't enough while leptonic's
+  `components::typography::Code` existed: it highlighted on the client whenever the feature was on, whatever its
+  `language` (the components layer is gone since 2026-10-07; now only an app's own calls link syntect). So the book
+  enables `syntax-highlight` only in its `ssr` feature and its code blocks ask the server (`kit::code`'s `highlight`
+  server function) for pages the client renders itself.
 - **Route splitting**: 217 pages wrapped as `#[lazy_route]` structs, routes as
   `page!({ ::leptos_router::Lazy::<Lz0>::new() })` (works with leptos-routes as is). The main module's code
   shrinks from 9.5 MB to 2.6 MB, its data stays (8.5 MB). But wasm-split's chunks are fine-grained: 3,198 files, a
@@ -221,7 +226,9 @@ Library (every user profits):
 - Removed `leptos_reactive` (Leptos 0.6's reactive system, only used by the dead `utils::signals` module, whose
   traits wrapped 0.6 types) and the unused dependencies `educe`, `indoc`, `leptos_meta`.
 - `icondata` with only the icon sets leptonic uses (`bootstrap-icons`, `vs-code-icons`) instead of all 19: about
-  24 s less CPU time per target in a fresh build, unless the app itself enables the other sets.
+  24 s less CPU time per target in a fresh build, unless the app itself enables the other sets. (Later that day
+  leptonic dropped `icondata`, `ammonia` (html5ever) and `leptos-tiptap` altogether, with the components layer;
+  the book keeps the two icon sets for itself.)
 
 Book: dropped `opt-level = 3` for leptonic in the dev profile; `icondata` with the two icon sets it uses.
 
@@ -247,17 +254,37 @@ Result (book, dev, measured on the changed tree with `scripts/build-bench.sh`, l
 The release build is unaffected by the profile change (the dev wasm grows from 167 MB to 190 MB: unoptimized
 leptonic code, mostly a larger name section).
 
+## Applied changes (2026-10-09): test-app
+
+- **ICU4X data of the fixtures' locales** (`testing/test-app/icu4x-data`, `^en ^de ^fr ^ja ^he ^ar ^ar-AE ^ar-EG`,
+  regenerated by `just test-app-icu-data`; the test-app's `.cargo/config.toml` sets `--cfg=icu4x_custom_data` and
+  `ICU4X_DATA_DIR` for server and wasm alike): release wasm 13.91 MB → 10.00 MB (−28%; brotli 3.04 MB → 2.27 MB).
+  Page loads in the browser suite: 110 ms → 96 ms on average (955 and 979 loads, two full runs of the same day).
+  A fixture formatting with another locale needs the data regenerated (otherwise it silently falls back to the
+  parent's or the root's data).
+- **Per-section fixtures** (the test-app's `Section`, `?only=<name>,...`): measured server-side rendering per fixture
+  (best of 5, `server-release`): the calendar page took 53 ms for 321 KB of HTML (29 calendars), every other fixture
+  at most 6 ms (table-tree 69 KB, date-picker and table-navigation 50 KB). Page loads in the suite (step log): the
+  whole calendar page 479 ms, one calendar section 104 ms (median of 45 loads, one per calendar case); date-picker
+  152 ms → 79 ms (15 loads). Sections for the calendar, date-picker and date-field fixtures; the others are not worth
+  it.
+- **Shorter real timers** in the toast, tooltip and long-press fixtures: `toast::timeouts` 10.1 s → 4.0 s,
+  `toast::remaining_time_after_pause` 5.9 s → 4.6 s, `tooltip::close_on_press_disabled_and_close_delay` 2.6 s →
+  1.6 s.
+- Together (with the other agents' changes of the same day): the full suite 44.8 s → 35.8 s (822 → 871 tests, test
+  bodies 5m 11s → 4m 25s, page loads 110 ms → 83 ms on average).
+
 ## Advice for users
 
 The book's guide "Optimizing Compile Times & Binary Sizes" (`/doc/optimizing-builds`) turns these, and the
 2026-10-08 test-app measurements (release profile without LTO, server at `opt-level = 1`, hashed files, linkers), into
 copyable configuration. Keep the two in step:
 
-- Keep the dev profile at `opt-level = 0` for leptonic when editing it (path dependency). No `opt-level` in
-  `[profile.dev.package."*"]`: profiles inheriting dev (`wasm-dev`) inherit it, and it overrides their own for every
-  dependency. For a faster dev server: a `server-dev` profile (`bin-profile-dev`, inherits dev, `opt-level = 1`):
-  test app 2026-10-08, rendering 6x faster (calendar page 87 ms instead of 550 ms), rebuild after a leptonic change
-  24 s (dev: 26 s).
+- No `opt-level` override for leptonic (`[profile.dev.package.leptonic]`) when editing it (path dependency): at 3
+  every leptonic edit took twice as long. No `opt-level` in `[profile.dev.package."*"]`: profiles inheriting dev
+  (`wasm-dev`, `server-dev`) inherit it, and it overrides their own for every dependency. For a faster dev server:
+  a `server-dev` profile (`bin-profile-dev`, inherits dev, `opt-level = 1`): test app 2026-10-08, rendering 6x
+  faster (calendar page 87 ms instead of 550 ms), rebuild after a leptonic change 24 s (dev: 26 s).
 - `[profile.dev.package."*"] debug = false` and `debug = "line-tables-only"` for the app: smaller target
   directories and faster links (the book's debug info exceeded 4 GiB without it).
 - `--cfg=erase_components` for every build (`.cargo/config.toml`), with `disable-erase-components = true` in
@@ -267,15 +294,20 @@ copyable configuration. Keep the two in step:
   after a leptonic change ~20 s (as fast as dev). `lto = true` + `codegen-units = 1` saved 1 MB but made that
   rebuild 84 s: production builds only (`CARGO_PROFILE_WASM_RELEASE_LTO=true`, `..._CODEGEN_UNITS=1`). Opt-levels
   1/2/3/`"s"` were close to `"z"` in speed, `"z"` smallest. Serve it compressed (book: brotli 2.94 MB of 13.01 MB);
-  `--precompress` (brotli 11) costs ~20 s per build on a 13 MB wasm. `hash-files = true` + `HashedStylesheet` +
+  cargo-leptos' release-only `--precompress` (brotli 11) costs ~20 s per build on a 13 MB wasm. The book also
+  precompresses at server startup in every profile (`src/assets.rs`, gzip 6 / Brotli 4), reusing fresh sidecars:
+  `just serve` delivers compressed WASM without paying for compression on each reload. `hash-files = true` + `HashedStylesheet` +
   `cache-control: public, max-age=31536000, immutable` for `/pkg/` lets browsers cache the wasm and its compiled code.
 - Linkers: rust-lld is the default on x86_64 Linux since Rust 1.90; mold linked the test server in 0.75 s instead of
-  1.2 s (not worth extra setup for leptonic's own builds).
-- Dev wasm: a `wasm-dev` profile without symbols (`lib-profile-dev`, see the experiments): 73% smaller.
+  1.2 s (not worth extra setup for leptonic's own builds). On macOS the book links with lld
+  (`-C link-arg=-fuse-ld=lld` for `aarch64-apple-darwin` in its `.cargo/config.toml`).
+- Dev wasm: a `wasm-dev` profile (`lib-profile-dev`, see the experiments) without symbols (73% smaller) and at
+  `opt-level = "z"` (book: 43.8 MB → 19.7 MB, rebuilds no slower).
 - Bake only the ICU4X locales the app supports: −20% wasm. `scripts/icu-datagen.sh` works for any app.
-- Enable only the leptonic features you use: `syntax-highlight` (syntect, regex: 68 s CPU, 1.35 MB wasm) is heavy.
-  Features can differ per side: enable `syntax-highlight` in the app's `ssr` feature only and highlight on the
-  server.
+- Enable only the leptonic features you use (`default-features = false`; the default is `intl-strings`, the hooks'
+  messages in react-aria's 34 locales: an English-only app can leave it out, saving wasm size, not measured yet).
+  `syntax-highlight` (syntect, regex: 68 s CPU, 1.35 MB wasm) is heavy. Features can differ per side: enable
+  `syntax-highlight` in the app's `ssr` feature only and highlight on the server.
 - Server dependencies: `axum-server` with `tls-rustls` builds `aws-lc-sys` (27 s CPU); `tower-http` with `full`
   builds zstd (11 s). Enable only what's needed. The book uses `tls-rustls-no-provider` plus `rustls` with only `ring`,
   installed in `main` (`rustls::crypto::ring::default_provider().install_default()`): rustls alone builds in 6.2 s
@@ -288,14 +320,17 @@ copyable configuration. Keep the two in step:
 
 In leptonic:
 
-- ICU4X `DateTimeFormatter` (any calendar) in `utils/date_time_formatter.rs` (weekday and month names) and
-  `hooks/datepicker/format.rs` (`DateTimeFormatter<CompositeFieldSet>`) pulls in data and code for every calendar
-  system (Buddhist, Chinese, Hebrew, Japanese, ...). The weekday/month names only ever format Gregorian dates
-  (`FixedCalendarDateTimeFormatter<Gregorian, _>` would do). The date field formats in the locale's calendar like
-  react-aria, so it needs the any-calendar formatter, unless that becomes a feature. Not measured yet.
+- ICU4X's any-calendar `DateTimeFormatter<CompositeFieldSet>` in `utils/date_time_formatter.rs` (leptonic's
+  `DateTimeFormatter`) and `hooks/datepicker/format.rs` pulls in data and code for every calendar system (Buddhist,
+  Chinese, Hebrew, Japanese, ...). `utils/date_time_formatter.rs` only ever formats Gregorian dates (it sets the
+  Gregorian calendar; its single fields already use `FixedCalendarDateTimeNames<Gregorian, _>`), so
+  `FixedCalendarDateTimeFormatter<Gregorian, _>` would do. The date field formats in the locale's calendar like
+  react-aria, so it needs the any-calendar formatter, unless that becomes a feature. Not measured yet (`PLAN.md`).
 - typed-builder's `PropsBuilder::build` is instantiated per combination of props a call site sets (5.5% of a user
   crate's IR, 2.4% of the wasm code). Atoms with dozens of props cost the most; fewer, grouped props (structs with
-  `Default`) reduce it.
+  `Default`) reduce it (`PLAN.md`).
+- `().into_any()` early returns for a missing context force atoms' views into `AnyView` (55 of them, `PLAN.md`,
+  "wasm size"): returning `Option<impl IntoView>` keeps them typed. Not measured yet.
 - Measured and rejected for the release wasm: `opt-level = "s"` (+11%), a newer wasm-opt (−12 KB). Debug-only
   content of the release wasm is small: panic locations are 81 KB of file paths (67 KB of them absolute paths of the
   build machine, `--remap-path-prefix` would shorten them), tracing calls a few KB.
@@ -305,7 +340,13 @@ types whose inference dominates type checking.
 
 ## Our workflow
 
-- The book and the test app build in separate target directories per agent group (`target/agents`); a fresh book
-  build costs about 8 GB and 9-13 minutes of CPU time.
+- Agents share one target directory per project: `target/agents` (leptonic, leptonic-theme),
+  `examples/book-ssr/target/agents` and `testing/test-app/target/agents` (the browser suite's
+  `TEST_APP_TARGET_DIR`), all with the repository's rustflags; the user's builds use their own. A fresh book build
+  costs about 8 GB and 9-13 minutes of CPU time; the incremental caches grow by tens of GB a day
+  (`just clean-agent-incremental`).
+- The test-app is only built with `--release` (`wasm-release`: `opt-level = "z"`, no LTO, incremental, debug
+  assertions; server `server-release`: dev at `opt-level = 1`); the book's `just serve` uses `wasm-dev` and
+  `server-dev`, its release wasm keeps fat LTO, one codegen unit and `panic = "abort"`.
 - cargo-leptos compiles every proc macro twice (server and wasm in separate target directories) and reruns
   wasm-bindgen on every build (3-4 s even when nothing changed).

@@ -237,6 +237,8 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="overlay" ty="OverlayTriggerState">"The popover\u{2019}s open state."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the shown validation fails."</ApiRow>
                         <ApiRow name="validation" ty="FormValidationState">"The validation, shared with the fields."</ApiRow>
+                        <ApiRow name="end_time" ty="Signal<Option<Time>>">"Time portion of the range end, if its value includes a time."</ApiRow>
+                        <ApiRow name="start_time" ty="Signal<Option<Time>>">"Time portion of the range start, if its value includes a time."</ApiRow>
                     </ApiTable>
                     <p>
                         "Methods: "<Code inline=true>"set_value(start, end)"</Code>", "<Code inline=true>"set_date_time(part, value)"</Code>
@@ -271,23 +273,22 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                                 validation: Some(state.validation),
                                 ..UseDateFieldStateInput::default()
                             });
-                            let mut field = use_date_field(UseDateFieldInput {
+                            use_date_field(UseDateFieldInput {
                                 state: field_state,
                                 element: CapturedElement::new(),
                                 input_element: CapturedElement::new(),
                                 options: DateFieldOptions {
                                     aria_label: name.to_owned().into(),
-                                    aria_labelledby: picker.labelledby.get_untracked(),
+                                    // Labelled and described by the picker.
                                     picker: Some(DateFieldPicker {
                                         overlay: state.overlay,
                                         focus_manager: Some(picker.focus_manager.clone()),
+                                        labelledby: picker.labelledby,
+                                        describedby: picker.field_describedby,
                                     }),
                                     ..DateFieldOptions::default()
                                 },
-                            });
-                            // The segments are described by the picker: its description and its value.
-                            field.data.aria_describedby = picker.field_describedby;
-                            field
+                            })
                         };
                         let start = field(RangePart::Start, state.start, "Start Date");
                         let end = field(RangePart::End, state.end, "End Date");

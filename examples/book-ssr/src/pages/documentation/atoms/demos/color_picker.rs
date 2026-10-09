@@ -1,12 +1,17 @@
 use leptonic::{
-    atoms::prelude::{
-        ColorArea, ColorField, ColorPicker, ColorSlider, ColorSliderOutput, ColorSliderTrack,
-        ColorSwatch, ColorSwatchPicker, ColorSwatchPickerItems, ColorThumb, Input, Label,
+    Color, ColorValue, HSV, HsvChannel, RGB8,
+    atoms::{
+        color_area::ColorArea,
+        color_field::ColorField,
+        color_picker::ColorPicker,
+        color_slider::{ColorSlider, ColorSliderOutput, ColorSliderTrack},
+        color_swatch::ColorSwatch,
+        color_swatch_picker::{ColorSwatchPicker, ColorSwatchPickerItems},
+        color_thumb::ColorThumb,
+        field::Label,
+        input::Input,
     },
-    utils::{
-        color::{Color, ColorValue, HSV, HsvChannel, RGB8},
-        i18n::use_locale,
-    },
+    use_locale,
 };
 use leptos::prelude::*;
 

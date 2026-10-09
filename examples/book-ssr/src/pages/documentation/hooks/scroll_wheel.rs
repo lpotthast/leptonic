@@ -46,7 +46,7 @@ pub fn PageUseScrollWheel() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::interactions::{ScrollEvent, UseScrollWheelInput, UseScrollWheelReturn, use_scroll_wheel};
                         use leptos::prelude::*;
 
                         let value = RwSignal::new(50.0_f64);

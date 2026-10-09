@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/utils/runAfterTransition.ts @ 99e6102368
+// Upstream: react-aria/test/utils/runAfterTransition.test.ts @ 99e6102368
 //! Runs callbacks once all running CSS transitions have finished, so that style recalculations
 //! (e.g. moving focus, restoring text selection) don't cause jank in the middle of a
 //! transition.
@@ -24,7 +25,7 @@ use leptos::prelude::request_animation_frame;
 use wasm_bindgen::{JsCast, prelude::*};
 use web_sys::{AddEventListenerOptions, Event, EventTarget, TransitionEvent};
 
-use super::EventAccessors;
+use super::dom_ext::EventAccessors;
 
 /// The listeners tracking transitions (shared, so the per-element `transitioncancel` listener
 /// can be removed again).

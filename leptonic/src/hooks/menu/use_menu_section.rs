@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/menu/useMenuSection.ts @ 99e6102368
+// Upstream: react-aria/test/menu/useMenu.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -6,10 +8,8 @@ use leptos::{
 
 use super::MenuData;
 use crate::{
-    hooks::{
-        IntoAttrs,
-        collections::{Key, NodeKind, use_node_aria_label},
-    },
+    IntoAttrs,
+    hooks::collections::{Key, NodeKind, use_node_aria_label},
     utils::{aria::AriaRole, id::use_id},
 };
 
@@ -36,12 +36,12 @@ pub struct UseMenuSectionInput {
 pub struct UseMenuSectionReturn {
     /// For the element wrapping heading and group (e.g. an `<li>` in a `<ul>` menu).
     pub item_props: UseMenuSectionItemProps,
-    /// For the heading element; `None` when the section has no header.
-    pub heading_props: Option<UseMenuSectionHeadingProps>,
+    /// For the heading element, rendered while the section has a header (`heading`).
+    pub heading_props: UseMenuSectionHeadingProps,
     /// For the element containing the section's items.
     pub group_props: UseMenuSectionGroupProps,
-    /// The header text, if any.
-    pub heading: Option<String>,
+    /// The header text, while the section has a header (follows the collection).
+    pub heading: Signal<Option<String>>,
 }
 
 #[derive(Debug)]
@@ -79,13 +79,14 @@ impl IntoAttrs for UseMenuSectionHeadingProps {
 pub struct UseMenuSectionGroupProps {
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Option<String>,
+    /// The heading, while there is one.
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 pub type UseMenuSectionGroupAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
 );
 
 impl IntoAttrs for UseMenuSectionGroupProps {
@@ -105,30 +106,33 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
     let UseMenuSectionInput { menu, key } = input;
     let heading_id = use_id("menu-section-heading");
 
-    // Whether the section has a heading is read once (it decides what renders); its label
-    // follows the collection.
-    let heading = untrack(|| {
-        menu.state.collection.with(|c| {
+    // The heading and the label follow the collection.
+    let aria_label = use_node_aria_label(menu.state.collection, key.clone());
+    let collection = menu.state.collection;
+    let heading = Memo::new(move |_| {
+        collection.with(|c| {
             c.children(&key)
                 .find(|n| n.kind == NodeKind::Header)
                 .map(|n| n.text_value.to_string())
         })
     });
-    let aria_label = use_node_aria_label(menu.state.collection, key);
+    let labelledby_id = heading_id.clone();
 
     UseMenuSectionReturn {
         item_props: UseMenuSectionItemProps {
             role: AriaRole::Presentation,
         },
-        heading_props: heading.as_ref().map(|_| UseMenuSectionHeadingProps {
-            id: heading_id.clone(),
+        heading_props: UseMenuSectionHeadingProps {
+            id: heading_id,
             role: AriaRole::Presentation,
-        }),
+        },
         group_props: UseMenuSectionGroupProps {
             role: AriaRole::Group,
             aria_label: aria_label.into(),
-            aria_labelledby: heading.as_ref().map(|_| heading_id),
+            aria_labelledby: Signal::derive(move || {
+                heading.with(Option::is_some).then(|| labelledby_id.clone())
+            }),
         },
-        heading,
+        heading: heading.into(),
     }
 }

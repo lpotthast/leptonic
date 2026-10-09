@@ -7,18 +7,21 @@ use leptos::{
     prelude::*,
     tachys::html::{class::class, style::style},
 };
+use leptos_classes::Classes;
 use leptos_router::components::{A, AProps, ToHref};
+use web_sys::FocusEvent;
 
-pub use crate::hooks::LinkRel;
 use crate::{
     ScrollBehavior,
     hooks::{
-        HoverEndEvent, HoverStartEvent, Href, LinkElementType, LinkTarget, PressEvent,
-        UseAnchorLinkInput, UseLinkInput, use_anchor_link, use_link,
+        interactions::{HoverEndEvent, HoverStartEvent, KeyboardEventWrapper, PressEvent},
+        link::{
+            Href, LinkElementType, LinkRel, LinkTarget, UseAnchorLinkInput, UseLinkInput,
+            use_anchor_link, use_link,
+        },
     },
     utils::{
-        aria::AriaCurrent, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
+        aria::AriaCurrent, data_attributes::flag, default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -100,8 +103,8 @@ pub fn Link<H>(
     /// Where the link goes: a route (resolved relative to the current one) or a URL.
     href: H,
     /// Where to open the linked document. Default: here.
-    #[prop(optional)]
-    target: LinkTarget,
+    #[prop(into, optional)]
+    target: Signal<LinkTarget>,
     /// The relationship of the linked document. `NoOpener` is added for `LinkTarget::Blank`.
     #[prop(optional)]
     rel: Vec<LinkRel>,
@@ -116,8 +119,20 @@ pub fn Link<H>(
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_start: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_end: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_change: Option<Callback<bool>>,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_hover_change: Option<Callback<bool>>,
+    #[prop(into, optional)] on_focus: Option<Callback<FocusEvent>>,
+    #[prop(into, optional)] on_blur: Option<Callback<FocusEvent>>,
+    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] on_key_down: Option<Callback<KeyboardEventWrapper>>,
+    #[prop(into, optional)] on_key_up: Option<Callback<KeyboardEventWrapper>>,
+    /// Focus the link when it mounts.
+    #[prop(optional)]
+    auto_focus: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
@@ -134,60 +149,63 @@ where
     let current_match = context
         .and_then(|ctx| ctx.current_match)
         .unwrap_or(current_match);
-    let on_press = match (on_press, context.and_then(|ctx| ctx.on_press)) {
-        (Some(own), Some(ctx)) => Some(Callback::new(move |e: PressEvent| {
-            own.run(e.clone());
-            ctx.run(e);
-        })),
-        (own, ctx) => own.or(ctx),
-    };
-    let aria_current = context.map_or_else(Signal::default, |ctx| ctx.aria_current);
+    // The context's handler first (react-aria-components merges the context's props first).
+    let on_press = crate::hooks::interactions::chain_optional_callbacks(
+        context.and_then(|ctx| ctx.on_press),
+        on_press,
+    );
+    let context_current = context.map_or_else(Signal::default, |ctx| ctx.aria_current);
     let href = SharedHref(Arc::new(href));
-    let classes = StoredValue::new(classes);
-    let styles = StoredValue::new(styles);
-    // One link per element: created here, not in the reactive branch below, which would dispose
-    // a branch's hook state while its element still reacts to `is_disabled`. Each rendering of a
-    // branch spreads clones of its attributes.
-    let link = |element_type: LinkElementType| {
-        let link = use_link(UseLinkInput {
-            target: target.clone(),
-            rel: rel.clone(),
-            is_disabled,
-            element_type,
-            aria_label,
-            // Enabled, `<A>` sets `aria-current`.
-            aria_current: if element_type == LinkElementType::Other {
-                aria_current
+    // One link for both renderings: an `<a>` while enabled, a `<span>` while disabled. Created
+    // here, not in the reactive branch below, which would dispose its state while its element
+    // still reacts to `is_disabled`; each rendering spreads clones of its attributes.
+    let link = use_link(UseLinkInput {
+        target,
+        rel,
+        is_disabled,
+        element_type: Signal::derive(move || {
+            if is_disabled.get() {
+                LinkElementType::Other
             } else {
-                Signal::default()
-            },
-            on_press,
-            on_hover_start,
-            on_hover_end,
-            ..UseLinkInput::default()
-        });
-        let data = (
-            custom_attribute("data-pressed", flag(link.is_pressed)),
-            custom_attribute("data-hovered", flag(link.is_hovered)),
-            custom_attribute("data-focused", flag(link.is_focused)),
-            custom_attribute("data-disabled", flag(link.is_disabled)),
-        );
-        let (attrs, link_styles) = link.props.into_parts();
-        StoredValue::new((attrs, data, link_styles.merge(styles.get_value())))
-    };
-    let anchor = link(LinkElementType::Anchor);
-    let span = link(LinkElementType::Other);
+                LinkElementType::Anchor
+            }
+        }),
+        aria_label,
+        // Enabled, `<A>` sets `aria-current`.
+        aria_current: Signal::derive(move || context_current.get().filter(|_| is_disabled.get())),
+        on_press,
+        on_press_start,
+        on_press_end,
+        on_press_change,
+        on_hover_start,
+        on_hover_end,
+        on_hover_change,
+        on_focus,
+        on_blur,
+        on_focus_change,
+        on_key_down,
+        on_key_up,
+        auto_focus,
+        ..UseLinkInput::default()
+    });
+    let data = (
+        custom_attribute("data-pressed", flag(link.is_pressed)),
+        custom_attribute("data-hovered", flag(link.is_hovered)),
+        custom_attribute("data-focused", flag(link.is_focused)),
+        custom_attribute("data-disabled", flag(link.is_disabled)),
+    );
+    let (attrs, link_styles) = link.props.into_parts();
+    let rendering = StoredValue::new((attrs, data, link_styles.merge(styles), classes));
 
     move || {
+        let (attrs, data, styles, classes) = rendering.get_value();
         if is_disabled.get() {
-            let (attrs, data, styles) = span.get_value();
             Either::Left(view! {
-                <span {..attrs} {..data} class=classes.get_value() style=styles>
+                <span {..attrs} {..data} class=classes style=styles>
                     {children()}
                 </span>
             })
         } else {
-            let (attrs, data, styles) = anchor.get_value();
             let children = children.clone();
             Either::Right(
                 A(AProps {
@@ -199,7 +217,7 @@ where
                     scroll: true,
                     children: Box::new(move || children()),
                 })
-                .add_any_attr(class(classes.get_value()))
+                .add_any_attr(class(classes))
                 .add_any_attr(style(styles))
                 .add_any_attr(attrs)
                 .add_any_attr(data)

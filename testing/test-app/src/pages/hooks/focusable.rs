@@ -1,4 +1,7 @@
-use leptonic::hooks::{IntoAttrs, UseFocusableInput, use_focusable};
+use leptonic::{
+    IntoAttrs,
+    hooks::focus::{UseFocusableInput, use_focusable},
+};
 use leptos::prelude::*;
 
 use crate::pages::prevent_focus_steal;

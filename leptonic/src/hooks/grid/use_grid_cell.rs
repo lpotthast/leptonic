@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/grid/useGridCell.ts @ 99e6102368
+// Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use send_wrapper::SendWrapper;
@@ -11,8 +12,8 @@ use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::GridData;
 use crate::{
+    CapturedElement, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        IntoAttrs, PropsWithStyles,
         collections::{
             FocusItem, FocusStrategy, Key, LinkBehavior, NavigationOptions, UseSelectableItemAttrs,
             UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
@@ -22,14 +23,13 @@ use crate::{
         gridlist::KeyboardNavigationBehavior,
     },
     utils::{
-        CapturedElement, EventAccessors, EventHandler,
         aria::AriaRole,
+        dom_ext::{EventAccessors, node_contains},
         focus::focus_safely,
+        focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey, redispatch_keyboard_event},
-        locale::WritingDirection,
-        node_contains,
         owner_alive::OwnerAlive,
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
         shadow_dom::get_active_element,
@@ -99,9 +99,9 @@ pub type UseGridCellAttrs = (
     Attr<attr::AriaColindex, Signal<Option<usize>>>,
     Attr<attr::Colspan, Signal<Option<usize>>>,
     UseSelectableItemAttrs,
-    On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    OnEvent<ev::Capture<ev::keydown>>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::pointerdown>,
 );
 
 impl IntoAttrs for UseGridCellProps {
@@ -125,7 +125,7 @@ impl IntoAttrs for UseGridCellProps {
 /// moving between the children before moving to the neighboring cell.
 #[allow(clippy::too_many_lines)]
 pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
-    crate::hooks::track_interaction_modality();
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseGridCellInput {
         grid,
         key,
@@ -247,7 +247,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             let key = key.clone();
             Callback::new(move |()| on_cell_action.run(key.clone()))
         })),
-        link_behavior: LinkBehavior::Action,
+        link_behavior: Signal::stored(LinkBehavior::Action),
         focus: Some(FocusItem::new(focus_cell)),
         should_use_virtual_focus: false,
         on_context_menu: None,
@@ -390,7 +390,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             && let Some(mut walker) = get_focusable_tree_walker(
                 &cell,
                 FocusableTreeWalkerOptions {
-                    tabbable: true,
+                    focusability: Focusability::Tabbable,
                     ..FocusableTreeWalkerOptions::default()
                 },
             )
@@ -432,7 +432,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             {
                 last_focused_child.set_value(Some(SendWrapper::new(target.clone())));
             }
-            if get_modality() == Modality::Pointer {
+            if get_modality() == Some(Modality::Pointer) {
                 selection.set_focused_key(Some(cell_key.get_value()), None);
             }
             return;

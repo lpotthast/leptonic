@@ -1,18 +1,22 @@
 // Upstream: react-aria/src/dnd/useAutoScroll.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 
-use crate::utils::{
+use crate::{
     CapturedElement,
-    platform::{browser::is_webkit, device::is_ios},
-    scroll::{get_scroll_parent, is_scrollable},
+    utils::{
+        platform::{browser::is_webkit, device::is_ios},
+        scroll::{get_scroll_parent, is_scrollable},
+    },
 };
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - Returns a `Copy` handle with `move_to` and `stop` (react-aria: `move` and `stop`).
 //
 // =============================================================================
 
@@ -55,7 +59,7 @@ impl AutoScroll {
                 }
             });
             if self.timer.with_value(Option::is_none) {
-                self.scroll();
+                self.schedule();
             }
         } else {
             self.stop();
@@ -66,6 +70,14 @@ impl AutoScroll {
     pub fn stop(&self) {
         if let Some(timer) = self.timer.try_update_value(Option::take).flatten() {
             timer.cancel();
+        }
+    }
+
+    /// Scroll in the next animation frame (and every frame after it, until stopped).
+    fn schedule(self) {
+        let handle = request_animation_frame_with_handle(move || self.scroll()).ok();
+        if let Some(Some(handle)) = self.timer.try_set_value(handle) {
+            handle.cancel();
         }
     }
 
@@ -84,10 +96,7 @@ impl AutoScroll {
                 element.set_scroll_top(element.scroll_top() + dy);
             }
         }
-        let handle = request_animation_frame_with_handle(move || self.scroll()).ok();
-        if let Some(Some(handle)) = self.timer.try_set_value(handle) {
-            handle.cancel();
-        }
+        self.schedule();
     }
 }
 

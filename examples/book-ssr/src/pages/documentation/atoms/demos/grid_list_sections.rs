@@ -2,10 +2,7 @@ use leptonic::{
     atoms::grid_list::{
         GridList, GridListHeader, GridListItem, GridListItemDescription, GridListSection,
     },
-    hooks::{
-        SelectionMode,
-        collections::{Key, Selection, use_collection},
-    },
+    hooks::collections::{Key, Selection, SelectionMode, use_collection},
 };
 use leptos::prelude::*;
 

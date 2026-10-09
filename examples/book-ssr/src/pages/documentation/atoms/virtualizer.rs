@@ -59,21 +59,21 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                                 virtualizer::Virtualizer,
                             },
                             hooks::{
-                                collections::{Key, use_list_collection},
-                                virtualizer::{ListLayout, ListLayoutOptions},
+                                collections::{Key, UseListCollectionInput, use_list_collection},
+                                virtualizer::{ItemSize, ListLayout, ListLayoutOptions},
                             },
                         };
                         use leptos::prelude::*;
 
-                        let orders = use_list_collection(
-                            Signal::stored((1..=10_000).collect::<Vec<usize>>()),
-                            |number| Key::from(*number),
-                            |number| format!("Order {number}"),
-                        );
+                        let orders = use_list_collection(UseListCollectionInput {
+                            items: Signal::stored((1..=10_000).collect::<Vec<usize>>()),
+                            key: |number| Key::from(*number),
+                            text_value: |number| format!("Order {number}"),
+                        });
 
                         view! {
                             <Virtualizer layout=ListLayout::new(ListLayoutOptions {
-                                row_size: Some(36.0),
+                                row_size: ItemSize::Fixed(36.0),
                                 ..ListLayoutOptions::default()
                             })>
                                 // `.orders { height: 20em; }` in your stylesheet.
@@ -111,7 +111,7 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                 </p>
                 <p>
                     "Rows of a fixed size ("<Code inline=true>"row_size"</Code>") are fastest: the layout knows where every "
-                    "option is without rendering it. With "<Code inline=true>"estimated_row_size"</Code>" instead, rows "
+                    "option is without rendering it. With "<Code inline=true>"ItemSize::Estimated(size)"</Code>" instead, rows "
                     "start at the estimate and are measured once rendered; the scrollbar adjusts as more rows are measured."
                 </p>
                 <Section title="Props" id="virtualizer-props">
@@ -120,7 +120,7 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                             "Positions the options, e.g. a "<AnchorLink href="#listlayout">"ListLayout"</AnchorLink>
                             ". Required."
                         </ApiRow>
-                        <ApiRow name="layout_options" ty="Option<Signal<L::Options>>" default="None">
+                        <ApiRow name="layout_options" ty="Option<Signal<Options>>" default="None">
                             "Replaces the options the layout was created with, e.g. to change the row size at runtime."
                         </ApiRow>
                         <ApiRow name="should_observe_item_size" ty="bool" default="false">
@@ -154,14 +154,11 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                         <ApiRow name="orientation" ty="Orientation" default="Vertical">
                             "The direction the items stack in."
                         </ApiRow>
-                        <ApiRow name="row_size" ty="Option<f64>" default="None">
-                            "The fixed size of every row along the orientation, in pixels. "<Code inline=true>"None"</Code>
-                            ": rows start at "<Code inline=true>"estimated_row_size"</Code>" and are measured once rendered."
+                        <ApiRow name="row_size" ty="ItemSize" default="ItemSize::Estimated(48.0)">
+                            "Use "<Code inline=true>"ItemSize::Fixed(size)"</Code>" for equal-sized rows, or "
+                            <Code inline=true>"ItemSize::Estimated(size)"</Code>" to measure each row after rendering."
                         </ApiRow>
-                        <ApiRow name="estimated_row_size" ty="Option<f64>" default="None">
-                            "The size of a row that wasn\u{2019}t measured yet. "<Code inline=true>"None"</Code>": 48."
-                        </ApiRow>
-                        <ApiRow name="heading_size, estimated_heading_size" ty="Option<f64>, Option<f64>" default="None">
+                        <ApiRow name="heading_size" ty="ItemSize" default="ItemSize::Estimated(48.0)">
                             "The fixed or estimated size of section headings. Virtualized listboxes don\u{2019}t render "
                             "sections yet."
                         </ApiRow>
@@ -174,14 +171,7 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                             "The space around the list. Use it instead of CSS padding on the scrolling element, which "
                             "the virtualizer sets to 0."
                         </ApiRow>
-                        <ApiRow name="anchor_to" ty="Option<ScrollAnchorEdge>" default="None">
-                            <Code inline=true>"Some(ScrollAnchorEdge::End)"</Code>": while the view is at the end, it stays "
-                            "there as items are added or measured, e.g. in a chat or a log. Vertical lists only; "
-                            <Code inline=true>"Start"</Code>" has no effect."
-                        </ApiRow>
-                        <ApiRow name="scroll_end_threshold" ty="f64" default="0.0">
-                            "Within this distance from the end (in pixels), the view counts as being at the end."
-                        </ApiRow>
+                        <ApiRow name="anchor_to_end" ty="Option<EndAnchor>">"Keep a vertical list at its end while the viewport is within the configured threshold."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -204,7 +194,7 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                 <p>
                     <Code inline=true>"is_anchored_to_end"</Code>" makes the list follow its end as items are added. "
                     "Scrolling away from the end turns following off, scrolling back to the end (within "
-                    <Code inline=true>"scroll_end_threshold"</Code>") turns it on again, and turning it on scrolls to the end."
+                    <Code inline=true>"end_threshold"</Code>") turns it on again, and turning it on scrolls to the end."
                 </p>
                 <Demo
                     description="Build log of 1,000 lines of varying height that follows its end as lines are added"
@@ -216,9 +206,8 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="VirtualList">
                         <ApiRow name="items" ty="Signal<Vec<T>>">"The items, in order. Required."</ApiRow>
                         <ApiRow name="key" ty="Fn(&T) -> Key">"The unique, stable key of an item. Required."</ApiRow>
-                        <ApiRow name="layout_options" ty="Signal<ListLayoutOptions>" default="ListLayoutOptions::default()">
-                            "Row sizes, gap and padding of the list. Its "<Code inline=true>"anchor_to"</Code>" is replaced by "
-                            <Code inline=true>"is_anchored_to_end"</Code>"."
+                        <ApiRow name="layout_options" ty="Signal<VirtualListOptions>" default="VirtualListOptions::default()">
+                            "Row size, gap, padding and the threshold for following the end of the list."
                         </ApiRow>
                         <ApiRow name="should_observe_item_size" ty="bool" default="false">
                             "Measure a row again whenever its content resizes. Rows of estimated size are measured once "
@@ -344,5 +333,8 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
 
 /// A link target on the virtualizer hooks page.
 fn hook_section(id: &str) -> String {
-    format!("{}#{id}", routes::doc::collection_state::UseVirtualizerState.materialize())
+    format!(
+        "{}#{id}",
+        routes::doc::collection_state::UseVirtualizerState.materialize()
+    )
 }

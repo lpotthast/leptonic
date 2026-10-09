@@ -1,9 +1,9 @@
 use leptonic::{
-    hooks::{
-        DragItem, DropEvent, DropItem, IntoAttrs, UseDragInput, UseDragReturn, UseDropInput,
-        UseDropReturn, use_drag, use_drop,
+    CapturedElement, IntoAttrs,
+    hooks::dnd::{
+        DragItem, DropEvent, DropItem, UseDragInput, UseDragReturn, UseDropInput, UseDropReturn,
+        use_drag, use_drop,
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -58,7 +58,7 @@ pub fn DndQuickStartDemo() -> impl IntoView {
                 role="button"
                 tabindex="0"
                 class="demo-dnd-card"
-                data-dragging=move || is_dragging.get().then_some("")
+                data-dragging=move || is_dragging.get().then_some("true")
             >
                 "Water the plants"
             </div>
@@ -68,7 +68,7 @@ pub fn DndQuickStartDemo() -> impl IntoView {
                 role="button"
                 tabindex="0"
                 class="demo-dnd-target"
-                data-drop-target=move || is_drop_target.get().then_some("")
+                data-drop-target=move || is_drop_target.get().then_some("true")
             >
                 "Drop here"
             </div>

@@ -40,7 +40,7 @@ pub fn PageUseHover() -> impl IntoView {
 
                 <p>
                     <Code inline=true>"HoverStartEvent"</Code>" and "<Code inline=true>"HoverEndEvent"</Code>" carry the "
-                    <Code inline=true>"pointer_type"</Code>" and the "<Code inline=true>"current_target"</Code>" element."
+                    <Code inline=true>"pointer_type"</Code>" and the "<Code inline=true>"target"</Code>" element."
                 </p>
             </Section>
 
@@ -56,7 +56,10 @@ pub fn PageUseHover() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::data_attributes::flag};
+                        use leptonic::{
+                            flag,
+                            hooks::interactions::{UseHoverInput, UseHoverReturn, use_hover},
+                        };
                         use leptos::prelude::*;
 
                         let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput::default());

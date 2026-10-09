@@ -1,5 +1,11 @@
 // Upstream: react-aria/src/datepicker/useDatePicker.ts @ 99e6102368
 // Upstream: react-aria/src/datepicker/useDateRangePicker.ts @ 99e6102368
+// Upstream: react-aria/test/datepicker/useDatePicker.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/DatePicker.test.js @ 99e6102368
+// Upstream: react-aria-components/test/DateRangePicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DatePicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DateRangePicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DatePickerBase.test.js @ 99e6102368
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
@@ -13,16 +19,17 @@ use super::{
     use_date_range_picker_state::DateRangePickerState,
 };
 use crate::{
+    CapturedElement, EventHandler, IdRefs, PropsWithStyles,
     hooks::{
-        OverlayTriggerState, PropsWithStyles, UseButtonInput,
+        button::UseButtonInput,
         focus::{
             FocusManager, FocusManagerOptions, FocusWithinEvent, UseFocusWithinInput,
             use_focus_within,
         },
         form::{LabelElementType, UseFieldInput, UseFieldReturn, use_field},
+        overlay::OverlayTriggerState,
     },
     utils::{
-        CapturedElement, EventHandler,
         aria::{AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
         id::use_id,
         intl_strings::{DatePickerStrings, SelectedRangeDescriptionArgs, use_localized_strings},
@@ -111,7 +118,20 @@ pub fn use_date_picker<V: DateValue>(input: UseDatePickerInput<V>) -> UseDatePic
         let date = state.format_value();
         (!date.is_empty()).then(|| strings.read().selected_date_description(&date))
     });
-    picker_aria(options, state.overlay, description, group)
+    let has_label = options.has_label;
+    let has_labelledby = options.aria_labelledby.is_some();
+    let mut result = picker_aria(options, state.overlay, description, group);
+    let labelledby = result.labelledby;
+    // A single field receives the picker's aria-label directly. Only visible or external
+    // labels need ID references; the group's self-reference is for the button and dialog.
+    result.labelledby = Signal::derive(move || {
+        if has_label.get() || has_labelledby {
+            labelledby.get()
+        } else {
+            None
+        }
+    });
+    result
 }
 
 /// Behavior and accessibility of a date range picker (react-aria's `useDateRangePicker`): a group
@@ -184,13 +204,7 @@ pub(crate) fn picker_aria(
 
     let description_id = use_description(description);
     let field_describedby_ids = field_props.aria_describedby;
-    let described_by = Signal::derive(move || {
-        let ids: Vec<String> = [description_id.get(), field_describedby_ids.get()]
-            .into_iter()
-            .flatten()
-            .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
-    });
+    let described_by = IdRefs::derive([description_id, field_describedby_ids]);
 
     // Focus moving into the popover doesn't leave the picker.
     let is_focused = StoredValue::new(false);
@@ -262,7 +276,7 @@ pub(crate) fn picker_aria(
     let excluded_button = button_id.clone();
     let focus_manager = segment_focus_manager(group)
         .with_default_accept(move |element| element.id() != excluded_button);
-    let manager = StoredValue::new(focus_manager.clone());
+    let manager = StoredValue::new(focus_manager);
     let button_labelledby = {
         let button_id = button_id.clone();
         Signal::derive(move || {
@@ -310,6 +324,11 @@ pub(crate) fn picker_aria(
             },
             aria_labelledby: button_labelledby,
             aria_describedby: described_by,
+            aria_controls: Signal::derive(
+                move || {
+                    if is_open.get() { dialog_id.get() } else { None }
+                },
+            ),
             aria_expanded: Signal::derive(move || {
                 Some(if is_open.get() {
                     AriaExpanded::True

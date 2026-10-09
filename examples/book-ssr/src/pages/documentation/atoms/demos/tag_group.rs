@@ -6,9 +6,8 @@ use leptonic::{
         field::Label,
         tag_group::{TagGroup, TagItems, TagList, TagRemoveButton},
     },
-    hooks::{
-        SelectionMode,
-        collections::{Key, Selection, use_list_collection},
+    hooks::collections::{
+        Key, Selection, SelectionMode, UseListCollectionInput, use_list_collection,
     },
 };
 use leptos::prelude::*;
@@ -20,7 +19,11 @@ pub fn TagGroupAtomDemo() -> impl IntoView {
     // App state: the tags, and the selected ones.
     let tags = RwSignal::new(ALL_TAGS.to_vec());
     let selection = RwSignal::new(Selection::default());
-    let collection = use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+    let collection = use_list_collection(UseListCollectionInput {
+        items: tags.into(),
+        key: |tag| Key::from(*tag),
+        text_value: |tag| (*tag).to_owned(),
+    });
 
     let status = move || {
         let count = match tags.with(Vec::len) {

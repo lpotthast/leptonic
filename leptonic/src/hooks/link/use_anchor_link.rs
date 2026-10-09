@@ -6,8 +6,12 @@ use wasm_bindgen::JsValue;
 use web_sys::{MouseEvent, ScrollIntoViewOptions};
 
 use crate::{
-    hooks::{PressEvent, UseLinkInput, UseLinkReturn, use_link},
-    utils::{EventHandler, modifiers::Modifiers, scroll_behavior::ScrollBehavior},
+    EventHandler,
+    hooks::{
+        interactions::PressEvent,
+        link::{UseLinkInput, UseLinkReturn, use_link},
+    },
+    utils::{modifiers::Modifiers, scroll_behavior::ScrollBehavior},
 };
 
 /// The target of an anchor link: an element on the current page, addressed by the URL fragment

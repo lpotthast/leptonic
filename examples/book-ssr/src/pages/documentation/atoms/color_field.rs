@@ -39,8 +39,14 @@ pub fn PageAtomColorField() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            utils::color::{HSV, HsvChannel, RGB8},
+                            HSV,
+                            HsvChannel,
+                            RGB8,
+                            atoms::{
+                                color_field::{ColorChannelField, ColorField},
+                                field::{FieldError, Label},
+                                input::Input,
+                            },
                         };
                         use leptos::prelude::*;
 
@@ -146,18 +152,18 @@ pub fn PageAtomColorField() -> impl IntoView {
                 <Section title="Props" id="color-channel-field-props">
                     <ApiTable kind=ApiKind::Props of="ColorChannelField">
                         <ApiRow name="channel" ty="Ch">"Required. The channel the field edits."</ApiRow>
-                        <ApiRow name="default_value" ty="Option<Ch::Color>" default="None">
+                        <ApiRow name="default_value" ty="Option<Color>" default="None">
                             "The initial color, unless "<Code inline=true>"value"</Code>" is set; "<Code inline=true>"None"</Code>": empty."
                         </ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Option<Ch::Color>>>" default="None">
+                        <ApiRow name="value" ty="Option<Signal<Option<Color>>>" default="None">
                             "The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "
                             <Code inline=true>"ColorPicker"</Code>" around it, if any."
                         </ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Option<Ch::Color>>>" default="None">
+                        <ApiRow name="set_value" ty="Option<Out<Option<Color>>>" default="None">
                             "Receives the color with the committed channel value: an "<Code inline=true>"RwSignal"</Code>", "
                             <Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Option<Ch::Color>>>" default="None">
+                        <ApiRow name="on_change" ty="Option<Callback<Option<Color>>>" default="None">
                             "Called with the color when the channel\u{2019}s value is committed."
                         </ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Disables the field or makes it read-only."</ApiRow>

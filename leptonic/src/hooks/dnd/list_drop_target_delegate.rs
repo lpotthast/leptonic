@@ -1,13 +1,14 @@
 // Upstream: react-aria/src/dnd/ListDropTargetDelegate.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
+use std::sync::{Arc, Mutex};
+
 use leptos::prelude::*;
 
 use super::types::{DropPosition, DropTarget, ItemDropTarget};
 use crate::{
-    hooks::{
-        Orientation,
-        collections::{CollectionMemo, ItemElements, ListLayout},
-    },
-    utils::{CapturedElement, i18n::use_direction, locale::WritingDirection},
+    CapturedElement, Orientation,
+    hooks::collections::{Collection, CollectionMemo, ItemElements, Key, ListLayout},
+    utils::i18n::WritingDirection,
 };
 
 // =============================================================================
@@ -17,41 +18,44 @@ use crate::{
 // ## API DIFFERENCES
 // - Finds the items' elements in the list's `ItemElements` registry (react-aria queries
 //   `[data-key]` elements in the collection element).
-// - The writing direction comes from the i18n context (react-aria: a `direction` option, LTR by
-//   default); layout and orientation are builder methods.
+// - The writing direction is the droppable collection's (from the i18n context), passed to
+//   `drop_target_from_point` (react-aria: a `direction` option of the delegate, LTR by default);
+//   layout and orientation are builder methods.
 //
 // =============================================================================
 
 /// Finds the drop target at a point of a collection (native drags).
 pub trait DropTargetDelegate: Send + Sync {
-    /// The drop target at `x`, `y` (relative to the collection element), preferring targets for
-    /// which `is_valid_drop_target` holds.
+    /// The drop target at `x`, `y` (relative to the collection element, laid out in
+    /// `direction`), preferring targets for which `is_valid_drop_target` holds.
     fn drop_target_from_point(
         &self,
         x: f64,
         y: f64,
+        direction: WritingDirection,
         is_valid_drop_target: &dyn Fn(&DropTarget) -> bool,
     ) -> Option<DropTarget>;
 }
 
 /// The drop targets of a list or grid of items: before, on or after each item, depending on the
 /// position within it (the edges are before/after when the item accepts drops on it).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct ListDropTargetDelegate {
     collection: CollectionMemo,
     item_elements: ItemElements,
     element: CapturedElement,
     layout: ListLayout,
     orientation: Orientation,
-    direction: Signal<WritingDirection>,
+    /// The keys of the collection's items in order (searched per pointer move), built once per
+    /// collection.
+    item_keys: Arc<Mutex<Option<(Arc<Collection>, Arc<[Key]>)>>>,
 }
 
 /// How close (in px) to an item's edge a drop is before/after rather than on it.
 const EDGE: f64 = 5.0;
 
 impl ListDropTargetDelegate {
-    /// A vertical stack, in the writing direction of the i18n context. Call it in a reactive
-    /// owner (a component or hook), which provides the context.
+    /// A vertical stack.
     pub fn new(
         collection: CollectionMemo,
         item_elements: ItemElements,
@@ -63,7 +67,7 @@ impl ListDropTargetDelegate {
             element,
             layout: ListLayout::Stack,
             orientation: Orientation::Vertical,
-            direction: use_direction(),
+            item_keys: Arc::default(),
         }
     }
 
@@ -77,6 +81,23 @@ impl ListDropTargetDelegate {
     pub fn with_orientation(mut self, orientation: Orientation) -> Self {
         self.orientation = orientation;
         self
+    }
+
+    /// The keys of the collection's items, in order.
+    fn item_keys(&self) -> Arc<[Key]> {
+        let collection = self.collection.get_untracked();
+        let mut cache = self
+            .item_keys
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match &*cache {
+            Some((cached, keys)) if Arc::ptr_eq(cached, &collection) => keys.clone(),
+            _ => {
+                let keys: Arc<[Key]> = collection.items().map(|n| n.key.clone()).collect();
+                *cache = Some((collection, keys.clone()));
+                keys
+            }
+        }
     }
 
     fn horizontal(&self) -> bool {
@@ -130,11 +151,10 @@ impl DropTargetDelegate for ListDropTargetDelegate {
         &self,
         x: f64,
         y: f64,
+        direction: WritingDirection,
         is_valid_drop_target: &dyn Fn(&DropTarget) -> bool,
     ) -> Option<DropTarget> {
-        let items: Vec<_> = self
-            .collection
-            .with_untracked(|c| c.items().map(|n| n.key.clone()).collect());
+        let items = self.item_keys();
         let Some(element) = self.element.get_untracked() else {
             return Some(DropTarget::Root);
         };
@@ -152,7 +172,7 @@ impl DropTargetDelegate for ListDropTargetDelegate {
         } else {
             secondary
         };
-        let rtl = self.direction.get_untracked() == WritingDirection::Rtl;
+        let rtl = direction == WritingDirection::Rtl;
         let primary_rtl = self.horizontal() && rtl;
         let secondary_rtl = self.layout == ListLayout::Grid && !self.horizontal() && rtl;
         let flow_rtl = if self.layout == ListLayout::Stack {

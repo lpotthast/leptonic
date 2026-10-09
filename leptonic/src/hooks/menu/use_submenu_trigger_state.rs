@@ -1,13 +1,15 @@
 // Upstream: react-stately/src/menu/useSubmenuTriggerState.ts @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/SubMenuTrigger.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::{
-        MenuTriggerState, OverlayTriggerState, UseOverlayTriggerStateInput,
         collections::{FocusStrategy, Key},
-        use_overlay_trigger_state,
+        menu::MenuTriggerState,
+        overlay::{OverlayTriggerState, UseOverlayTriggerStateInput, use_overlay_trigger_state},
     },
-    utils::ValueBinding,
 };
 
 // =============================================================================
@@ -17,6 +19,9 @@ use crate::{
 // ## API DIFFERENCES
 // - `overlay` is an `OverlayTriggerState` view of the submenu (for its popover), instead of
 //   placeholder `setOpen`/`point` members that make the state pass as one.
+// - The submenu's `level` is an input (the menu's `MenuData::submenu_level`), not the number of
+//   submenus open when the state is created: a trigger mounted while another submenu is open
+//   (e.g. an item added to the root menu) still opens its submenu on its menu's level.
 //
 // =============================================================================
 
@@ -27,6 +32,9 @@ pub struct UseSubmenuTriggerStateInput {
     pub trigger_key: Key,
     /// The state of the menu tree's root trigger, which tracks the open submenus.
     pub root: MenuTriggerState,
+    /// The submenu's level in the menu tree: 0 for a submenu of the root menu (the menu's
+    /// `MenuData::submenu_level`).
+    pub level: usize,
 }
 
 /// The state of a submenu trigger: whether its submenu is open, its level in the menu tree, and
@@ -76,12 +84,14 @@ impl SubmenuTriggerState {
     }
 }
 
-/// Creates the state of a submenu trigger: the item `trigger_key` of a menu in the tree of the
-/// root trigger `root`. Its level is the number of submenus open when it is created (the
-/// submenus above it).
+/// Creates the state of a submenu trigger: the item `trigger_key` of a menu on `level` in the tree
+/// of the root trigger `root`.
 pub fn use_submenu_trigger_state(input: UseSubmenuTriggerStateInput) -> SubmenuTriggerState {
-    let UseSubmenuTriggerStateInput { trigger_key, root } = input;
-    let level = root.expanded_keys_stack.with_untracked(Vec::len);
+    let UseSubmenuTriggerStateInput {
+        trigger_key,
+        root,
+        level,
+    } = input;
     let trigger_key = StoredValue::new(trigger_key);
     let is_open = Signal::derive(move || {
         root.expanded_keys_stack
@@ -119,30 +129,33 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::hooks::{UseMenuTriggerStateInput, use_menu_trigger_state};
+    use crate::{
+        hooks::menu::{UseMenuTriggerStateInput, use_menu_trigger_state},
+        testing::{flush_effects, with_owner},
+    };
 
-    fn submenu(root: MenuTriggerState, key: &str) -> SubmenuTriggerState {
+    fn submenu(root: MenuTriggerState, key: &str, level: usize) -> SubmenuTriggerState {
         use_submenu_trigger_state(UseSubmenuTriggerStateInput {
             trigger_key: Key::from(key),
             root,
+            level,
         })
     }
 
     #[test]
     fn submenus_open_by_level_and_close_deeper_ones() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let root = use_menu_trigger_state(UseMenuTriggerStateInput::default());
             root.open(None);
-            let share = submenu(root, "share");
-            let edit = submenu(root, "edit");
+            let share = submenu(root, "share", 0);
+            let edit = submenu(root, "edit", 0);
             assert_that!(share.level).is_equal_to(0);
             share.open(Some(FocusStrategy::First));
             assert_that!(share.is_open.get_untracked()).is_true();
             assert_that!(share.focus_strategy.get_untracked())
                 .is_equal_to(Some(FocusStrategy::First));
             // A submenu of the open submenu is on the next level.
-            let email = submenu(root, "email");
-            assert_that!(email.level).is_equal_to(1);
+            let email = submenu(root, "email", 1);
             email.open(None);
             assert_that!(root.expanded_keys_stack.get_untracked())
                 .is_equal_to(vec![Key::from("share"), Key::from("email")]);
@@ -160,13 +173,33 @@ mod tests {
 
     #[test]
     fn the_overlay_view_opens_and_closes_the_submenu() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let root = use_menu_trigger_state(UseMenuTriggerStateInput::default());
-            let share = submenu(root, "share");
+            let share = submenu(root, "share", 0);
             share.overlay.open();
             assert_that!(share.is_open.get_untracked()).is_true();
             share.overlay.close();
             assert_that!(share.is_open.get_untracked()).is_false();
+        });
+    }
+
+    // Upstream: useSubmenuTriggerState's level (react-stately has no test of it): a trigger
+    // mounted while another submenu is open opens its submenu on its own menu's level.
+    #[test]
+    fn a_trigger_created_while_a_submenu_is_open_keeps_its_level() {
+        with_owner(|| {
+            let root = use_menu_trigger_state(UseMenuTriggerStateInput::default());
+            root.open(None);
+            let share = submenu(root, "share", 0);
+            share.open(None);
+            // An item added to the root menu while "share" is open.
+            let edit = submenu(root, "edit", 0);
+            edit.open(None);
+            flush_effects();
+            assert_that!(root.expanded_keys_stack.get_untracked())
+                .is_equal_to(vec![Key::from("edit")]);
+            assert_that!(share.is_open.get_untracked()).is_false();
+            assert_that!(edit.is_open.get_untracked()).is_true();
         });
     }
 }

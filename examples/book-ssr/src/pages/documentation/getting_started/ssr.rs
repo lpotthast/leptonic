@@ -77,7 +77,7 @@ pub fn PageSsr() -> impl IntoView {
                     "popover through "<Code inline=true>"aria-controls"</Code>", a field through "
                     <Code inline=true>"for"</Code>". The ids must be the same in the server\u{2019}s HTML and in the hydrated "
                     "page, or the references point nowhere. Leptonic therefore creates them with "
-                    <Code inline=true>"leptonic::utils::id::use_id"</Code>", which counts with Leptos\u{2019} hydration "
+                    <Code inline=true>"leptonic::use_id"</Code>", which counts with Leptos\u{2019} hydration "
                     "counter: because the server and the client create components in the same order, they produce the same "
                     "ids. Ids created after hydration (and in client-side rendered apps) carry a "<Code inline=true>"c"</Code>
                     " marker (\u{201c}listbox-c3\u{201d}), so they never collide with server ids."
@@ -91,7 +91,7 @@ pub fn PageSsr() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::id::use_id;
+                        use leptonic::use_id;
 
                         #[component]
                         fn Hint(children: Children) -> impl IntoView {
@@ -125,7 +125,7 @@ pub fn PageSsr() -> impl IntoView {
                 </Code>
                 <p>
                     "Values that depend on the browser fall back on the server. For example, the platform checks of "
-                    <Code inline=true>"leptonic::utils::platform"</Code>" ("<Code inline=true>"device::is_mac"</Code>", "
+                    <Code inline=true>"leptonic::platform"</Code>" ("<Code inline=true>"device::is_mac"</Code>", "
                     <Code inline=true>"browser::is_safari"</Code>", \u{2026}) are "<Code inline=true>"false"</Code>
                     " there, as they read the browser\u{2019}s navigator."
                 </p>
@@ -166,13 +166,13 @@ pub fn PageSsr() -> impl IntoView {
                 <p>
                     "The locale comes from the nearest "
                     <Link href=routes::doc::utilities::I18nProvider.materialize()><Code inline=true>"I18nProvider"</Code></Link>
-                    " ("<Code inline=true>"leptonic::utils::i18n"</Code>"), \u{201c}en-US\u{201d} without one, never from the "
+                    " ("<Code inline=true>"leptonic"</Code>"), \u{201c}en-US\u{201d} without one, never from the "
                     "browser. If you choose the locale per request, e.g. from a cookie, make sure the hydrating client starts "
                     "with the same locale as the server, or formatted text differs between the two."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::i18n::{I18nProvider, Locale, locale};
+                        use leptonic::{I18nProvider, Locale, locale};
 
                         view! {
                             <I18nProvider locale=Locale::from(locale!("de-DE"))>

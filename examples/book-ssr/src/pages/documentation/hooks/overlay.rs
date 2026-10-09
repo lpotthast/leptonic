@@ -68,7 +68,10 @@ pub fn PageUseOverlay() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::FocusScope, hooks::*};
+                        use leptonic::{
+                            atoms::focus_scope::FocusScope,
+                            hooks::overlay::{UseOverlayInput, UseOverlayReturn, use_overlay},
+                        };
 
                         let (is_open, set_is_open) = signal(false);
 

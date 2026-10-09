@@ -1,11 +1,12 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
-    hooks::*,
-    utils::{
-        css::{computed_pct, computed_size},
-        style::WidthProperty,
-        styles::Styles,
+    IntoAttrs,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
     },
+    computed_pct, computed_size,
+    hooks::progress::{UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
+    leptos_styles::{Styles, property::WidthProperty},
 };
 use leptos::prelude::*;
 
@@ -28,9 +29,9 @@ pub fn ProgressBarHookDemo() -> impl IntoView {
 
     // Sized while the progress is known; while indeterminate, the CSS animates the fill.
     let fill_styles = Styles::new().add_optional(move || {
-        percentage
-            .get()
-            .map(|percentage| WidthProperty.declare(computed_size(computed_pct(percentage.as_percent()))))
+        percentage.get().map(|percentage| {
+            WidthProperty.declare(computed_size(computed_pct(percentage.as_percent())))
+        })
     });
 
     view! {

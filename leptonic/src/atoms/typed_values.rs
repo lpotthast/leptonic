@@ -3,22 +3,23 @@
 //! ([`SelectionValue`]); their hooks work with collection [`Key`]s. These adapters convert at the
 //! boundary.
 
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, hash::BuildHasher, sync::Arc};
 
 use leptos::prelude::*;
 
 use crate::{
     Out,
     hooks::{
-        SelectMode, ValidateFn,
         collections::{Key, SelectionValue},
+        form::ValidateFn,
+        select::SelectMode,
     },
     utils::dev_warn,
 };
 
-/// A typed selection (one value, a list or a set) and its key-based form.
+/// A typed selection (one value or a set) and its key-based form.
 pub(crate) trait Keyed: Clone + Send + Sync + 'static {
-    type Keys: Clone + Send + Sync + 'static;
+    type Keys: Clone + PartialEq + Send + Sync + 'static;
 
     fn to_keys(&self) -> Self::Keys;
     /// Keys of no value of the type are dropped (with a warning in debug builds).
@@ -52,18 +53,6 @@ impl<V: SelectionValue> Keyed for Option<V> {
     }
 }
 
-impl<V: SelectionValue> Keyed for Vec<V> {
-    type Keys = Vec<Key>;
-
-    fn to_keys(&self) -> Vec<Key> {
-        self.iter().map(V::to_key).collect()
-    }
-
-    fn from_keys(keys: &Vec<Key>) -> Self {
-        keys.iter().filter_map(value_of).collect()
-    }
-}
-
 impl<V: SelectionValue> Keyed for HashSet<V> {
     type Keys = HashSet<Key>;
 
@@ -81,8 +70,7 @@ mod sealed {
 }
 
 /// The value of a [`Select`](super::select::Select) or [`ComboBox`](super::combobox::ComboBox),
-/// whose shape is the selection mode: `Option<V>` selects one value, `Vec<V>` any number (in the
-/// order selected).
+/// whose shape is the selection mode: `Option<V>` selects one value, `HashSet<V>` any number.
 pub trait SelectedValues: Clone + Default + Send + Sync + 'static + sealed::Sealed {
     /// The type of one selected value.
     type Value: SelectionValue;
@@ -111,9 +99,11 @@ impl<V: SelectionValue> SelectedValues for Option<V> {
     }
 }
 
-impl<V: SelectionValue> sealed::Sealed for Vec<V> {}
+impl<V: SelectionValue, S> sealed::Sealed for HashSet<V, S> {}
 
-impl<V: SelectionValue> SelectedValues for Vec<V> {
+impl<V: SelectionValue, S: BuildHasher + Clone + Default + Send + Sync + 'static> SelectedValues
+    for HashSet<V, S>
+{
     type Value = V;
     const MODE: SelectMode = SelectMode::Multiple;
 
@@ -193,7 +183,7 @@ fn convert_state_props<T, K>(
 ) -> KeyedStateProps<K>
 where
     T: Send + Sync + 'static,
-    K: Clone + Send + Sync + 'static,
+    K: Clone + PartialEq + Send + Sync + 'static,
 {
     let StateProps {
         default_value,
@@ -204,7 +194,8 @@ where
     } = props;
     KeyedStateProps {
         default_value: default_value.as_ref().map(to_keys),
-        value: value.map(|value| Signal::derive(move || value.with(to_keys))),
+        // A memo: converted once per change, however often the keys are read.
+        value: value.map(|value| Memo::new(move |_| value.with(to_keys)).into()),
         set_value: set_value.map(|set_value| {
             let set_value = Arc::new(set_value);
             Out::from(move |keys: K| set_value.set(from_keys(&keys)))
@@ -226,7 +217,7 @@ mod tests {
     #[test]
     fn the_shape_is_the_selection_mode() {
         assert_that!(<Option<u32> as SelectedValues>::MODE).is_equal_to(SelectMode::Single);
-        assert_that!(<Vec<u32> as SelectedValues>::MODE).is_equal_to(SelectMode::Multiple);
+        assert_that!(<HashSet<u32> as SelectedValues>::MODE).is_equal_to(SelectMode::Multiple);
     }
 
     #[test]
@@ -236,12 +227,12 @@ mod tests {
         assert_that!(None::<u32>.to_key_list()).is_equal_to(Vec::<Key>::new());
         assert_that!(<Option<u32>>::from_key_list(&keys)).is_equal_to(Some(25));
         assert_that!(<Option<u32>>::from_key_list(&[])).is_none();
-        // In the order selected; keys of no `u32` are dropped.
-        assert_that!(<Vec<u32>>::from_key_list(&[
+        // Keys of no `u32` are dropped.
+        assert_that!(<HashSet<u32>>::from_key_list(&[
             Key::from("x"),
             keys[0].clone(),
             keys[1].clone()
         ]))
-        .is_equal_to(vec![25, 10]);
+        .is_equal_to(HashSet::from([25, 10]));
     }
 }

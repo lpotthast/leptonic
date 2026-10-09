@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
-    hooks::{
-        InputType, IntoAttrs, TextFieldElement, UseTextFieldInput, UseTextFieldReturn,
-        UseTextFieldStateInput, ValidationBehavior, use_text_field, use_text_field_state,
+    IntoAttrs,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+    },
+    hooks::form::{
+        InputType, TextFieldElement, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput,
+        ValidationBehavior, use_text_field, use_text_field_state,
     },
 };
 use leptos::prelude::*;
@@ -57,7 +61,7 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
         auto_capitalize: None,
         auto_correct: None,
         spell_check: None,
-        input_mode: None,
+        input_mode: Signal::stored(None),
         enter_key_hint: None,
         auto_focus: false,
         exclude_from_tab_order: false,

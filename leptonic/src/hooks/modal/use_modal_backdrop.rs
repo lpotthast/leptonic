@@ -1,10 +1,14 @@
 // Upstream: react-aria/src/overlays/useModalOverlay.ts @ 99e6102368
+// Upstream: react-aria/test/overlays/useModalOverlay.test.js @ 99e6102368
 use leptos::prelude::*;
 
-use crate::hooks::{
-    IntoAttrs, OverlayTriggerState,
-    interactions::use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
-    overlay::use_overlay::{UseOverlayAttrs, UseOverlayInput, UseOverlayProps, use_overlay},
+use crate::{
+    IntoAttrs,
+    hooks::overlay::{
+        OverlayState, OverlayTriggerState,
+        use_overlay::{UseOverlayAttrs, UseOverlayInput, UseOverlayProps, use_overlay},
+        use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
+    },
 };
 
 // =============================================================================
@@ -16,6 +20,8 @@ use crate::hooks::{
 //   are empty; the backdrop element needs no props.
 // - The modal element is captured from `modal_props` instead of passing a ref.
 // - `is_entering` is a signal.
+// - Generic over the open state (`S: OverlayState`), as `use_popover` (react-aria: structural
+//   typing of `OverlayTriggerState`).
 //
 // ## DIFFERENT BEHAVIOR
 // - `useOverlayFocusContain`: focus containment is the `FocusScope` (atom `ModalContent`) the
@@ -28,9 +34,10 @@ use crate::hooks::{
 
 /// Input of [`use_modal_backdrop`].
 #[derive(Debug, Clone)]
-pub struct UseModalBackdropInput {
-    /// Whether the modal is open; closing (Escape, outside interaction) closes it.
-    pub state: OverlayTriggerState,
+pub struct UseModalBackdropInput<S: OverlayState = OverlayTriggerState> {
+    /// Whether the modal is open; dismissing (Escape, outside interaction) closes it. An
+    /// `OverlayTriggerState`, or a component state with its own closing logic.
+    pub state: S,
 
     /// Whether interacting outside the modal closes it. Default: `false` (modals block outside
     /// interaction).
@@ -40,7 +47,7 @@ pub struct UseModalBackdropInput {
     pub is_keyboard_dismiss_disabled: Signal<bool>,
 
     /// Which outside interactions close the modal (when `is_dismissable`): `true` closes.
-    pub should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
+    pub should_close_on_interact_outside: Option<crate::hooks::overlay::InteractOutsideFilter>,
 
     /// Whether the modal is still animating in. While it is, the content outside isn't hidden
     /// from assistive technology yet (and a parent modal doesn't hide this one).
@@ -48,6 +55,7 @@ pub struct UseModalBackdropInput {
 }
 
 /// The return value of the `use_modal_backdrop` hook.
+#[derive(Debug)]
 pub struct UseModalBackdropReturn {
     /// Props for the modal content element (overlay container).
     /// Spread these onto the element that wraps the modal content.
@@ -79,7 +87,7 @@ impl IntoAttrs for UseModalBackdropModalProps {
 /// always prevented while the modal is open).
 ///
 /// Everything outside the modal element is inert while it is open, which makes the modal modal
-/// (no `aria-modal` needed, see `use_modal`). Combine with:
+/// (no `aria-modal` needed). Combine with:
 /// - `use_dialog` for ARIA role, labeling, and focus-on-mount
 /// - `FocusScope` atom for focus trapping and restoration
 ///
@@ -107,7 +115,9 @@ impl IntoAttrs for UseModalBackdropModalProps {
 /// }
 /// ```
 #[allow(clippy::needless_pass_by_value)]
-pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropReturn {
+pub fn use_modal_backdrop<S: OverlayState>(
+    input: UseModalBackdropInput<S>,
+) -> UseModalBackdropReturn {
     let UseModalBackdropInput {
         state,
         is_dismissable,
@@ -115,7 +125,7 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
         should_close_on_interact_outside,
         is_entering,
     } = input;
-    let is_open = state.is_open;
+    let is_open = Signal::derive(move || state.is_open());
     #[cfg(feature = "ssr")]
     let _ = is_entering;
 

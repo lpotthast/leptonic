@@ -1,10 +1,14 @@
 use leptonic::{
-    atoms::prelude::{Button, Label, Meter, MeterFill, MeterValueText},
-    utils::{
-        classes::Classes,
+    atoms::{
+        button::Button,
+        field::Label,
+        meter::{Meter, MeterFill, MeterValueText},
+    },
+    leptos_classes::Classes,
+    leptos_styles::{
+        Styles,
         css::{CssColor, CssColorName, css_custom_property, var},
-        style::BackgroundColorProperty,
-        styles::Styles,
+        property::BackgroundColorProperty,
     },
 };
 use leptos::prelude::*;

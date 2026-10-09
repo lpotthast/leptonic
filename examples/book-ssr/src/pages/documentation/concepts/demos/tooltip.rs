@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use leptonic::atoms::prelude::{Button, Tooltip, TooltipTrigger};
+use leptonic::atoms::{
+    button::Button,
+    tooltip::{Tooltip, TooltipTrigger},
+};
 use leptos::prelude::*;
 
 #[component]

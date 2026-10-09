@@ -1,4 +1,4 @@
-use leptonic::hooks::*;
+use leptonic::hooks::link::{UseLinkInput, use_link};
 use leptos::prelude::*;
 
 #[component]

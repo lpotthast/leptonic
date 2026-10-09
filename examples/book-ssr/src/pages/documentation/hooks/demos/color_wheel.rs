@@ -1,17 +1,19 @@
 use leptonic::{
+    ColorValue, HSV, HsvChannel, IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::*,
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        css::CssColor,
-        style::BackgroundColorProperty,
+    hooks::{
+        color::{
+            UseColorWheelInput, UseColorWheelStateInput, use_color_wheel, use_color_wheel_state,
+        },
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
     },
+    leptos_styles::{css::CssColor, property::BackgroundColorProperty},
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorWheelDemo() -> impl IntoView {
-    let locale = leptonic::utils::i18n::use_locale();
+    let locale = leptonic::use_locale();
     let disabled = RwSignal::new(false);
 
     let state = use_color_wheel_state(UseColorWheelStateInput {
@@ -28,12 +30,13 @@ pub fn ColorWheelDemo() -> impl IntoView {
     // A ring between the radii 100 and 74 pixels.
     let wheel = use_color_wheel(UseColorWheelInput {
         state,
-        outer_radius: 100.0,
-        inner_radius: 74.0,
+        outer_radius: Signal::stored(100.0),
+        inner_radius: Signal::stored(74.0),
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
         aria_details: None,
+        aria_errormessage: None,
         name: None,
         form: None,
     });
@@ -41,7 +44,7 @@ pub fn ColorWheelDemo() -> impl IntoView {
     // The focus is on the hidden input inside the thumb: `within` reports it on the thumb as
     // `data-focus-visible`.
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
 

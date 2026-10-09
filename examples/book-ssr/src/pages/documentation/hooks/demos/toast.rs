@@ -1,13 +1,16 @@
 use std::time::Duration;
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::button::Button,
     hooks::{
-        IntoAttrs, QueuedToast, ToastOptions, ToastQueue, UseToastInput, UseToastRegionInput,
-        UseToastRegionReturn, UseToastReturn, use_button, use_toast, use_toast_region,
-        use_toast_state,
+        button::use_button,
+        toast::{
+            QueuedToast, ToastOptions, ToastQueue, UseToastInput, UseToastRegionInput,
+            UseToastRegionReturn, UseToastReturn, UseToastStateInput, use_toast, use_toast_region,
+            use_toast_state,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;
@@ -55,19 +58,18 @@ fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl In
 #[component]
 fn NoticeRegion(queue: ToastQueue<Notice>) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseToastRegionReturn { region_props } =
-        use_toast_region(UseToastRegionInput {
-            queue,
-            element,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-        });
+    let UseToastRegionReturn { region_props } = use_toast_region(UseToastRegionInput {
+        queue,
+        element,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+    });
 
     view! {
         <div {..region_props.into_attrs()} {..element.attr()} class="demo-hook-toast-region">
             <For
                 each=move || queue.visible_toasts.get()
-                key=|toast| toast.key.clone()
+                key=|toast| toast.key
                 children=move |toast| view! { <NoticeToast toast queue/> }
             />
         </div>
@@ -77,7 +79,9 @@ fn NoticeRegion(queue: ToastQueue<Notice>) -> impl IntoView {
 #[component]
 pub fn ToastHooksDemo() -> impl IntoView {
     // Shows up to two toasts; further ones wait until one closes.
-    let queue = use_toast_state::<Notice>(Some(2));
+    let queue = use_toast_state::<Notice>(UseToastStateInput {
+        max_visible_toasts: 2,
+    });
     let added = StoredValue::new(0);
     let closed = RwSignal::new(0);
 

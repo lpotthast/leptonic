@@ -6,7 +6,7 @@
 //! spin button.
 //!
 //! ```ignore
-//! use leptonic::utils::live_announcer::{announce_polite, clear_announcer, Assertiveness};
+//! use leptonic::{Assertiveness, announce_polite, clear_announcer};
 //!
 //! announce_polite("Sorted by name, ascending.");
 //! clear_announcer(Some(Assertiveness::Polite));

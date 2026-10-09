@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/virtualizer/ScrollAnchor.ts @ 99e6102368
+// Upstream: react-stately/test/virtualizer/ScrollAnchor.test.ts @ 99e6102368
 use std::sync::Arc;
 
 use super::LayoutInfo;
@@ -354,7 +355,6 @@ impl ScrollAnchorTracker {
 
 #[cfg(test)]
 mod tests {
-    // Upstream: react-stately/test/virtualizer/ScrollAnchor.test.ts
     use assertr::prelude::*;
 
     use super::*;

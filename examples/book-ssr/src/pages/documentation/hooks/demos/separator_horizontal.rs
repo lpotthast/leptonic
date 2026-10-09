@@ -1,4 +1,7 @@
-use leptonic::hooks::*;
+use leptonic::{
+    IntoAttrs,
+    hooks::separator::{UseSeparatorInput, use_separator},
+};
 use leptos::prelude::*;
 
 #[component]

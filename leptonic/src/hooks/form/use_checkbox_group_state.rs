@@ -1,4 +1,7 @@
 // Upstream: react-stately/src/checkbox/useCheckboxGroupState.ts @ 99e6102368
+// Upstream: react-stately/test/checkbox/useCheckboxGroupState.test.tsx @ 99e6102368
+
+use std::collections::HashSet;
 
 use leptos::prelude::*;
 
@@ -14,7 +17,8 @@ use crate::hooks::collections::Key;
 //
 // ## API DIFFERENCES
 // - Values are `Key`s (strings or integers), not strings: what collections and toggle button
-//   groups use; they render as the checkboxes' form values.
+//   groups use; they render as the checkboxes' form values. The checked values are a
+//   `HashSet<Key>` (react-aria: an array in the order checked; set-valued values are sets, C16).
 // - State (C4): `default_value` + `on_change`, or `value` bound to app state (a `ValueBinding`,
 //   the atoms' `value` + `set_value`).
 // - The validation behavior is set here (react-aria: on `useCheckboxGroup`), so the state and
@@ -26,17 +30,17 @@ use crate::hooks::collections::Key;
 #[derive(Clone)]
 pub struct UseCheckboxGroupStateInput {
     /// The initially checked values. Ignored when `value` is bound.
-    pub default_value: Vec<Key>,
+    pub default_value: HashSet<Key>,
     /// The checked values as app state, replacing `default_value`.
-    pub value: Option<crate::utils::ValueBinding<Vec<Key>>>,
+    pub value: Option<crate::ValueBinding<HashSet<Key>>>,
     /// Called with the checked values when they change.
-    pub on_change: Option<Callback<Vec<Key>>>,
+    pub on_change: Option<Callback<HashSet<Key>>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     /// At least one checkbox must be checked.
     pub is_required: Signal<bool>,
     pub is_invalid: Signal<bool>,
-    pub validate: Option<ValidateFn<Vec<Key>>>,
+    pub validate: Option<ValidateFn<HashSet<Key>>>,
     pub validation_behavior: ValidationBehavior,
     /// The `name` of the checkboxes (for form submission and server errors).
     pub name: Option<String>,
@@ -45,7 +49,7 @@ pub struct UseCheckboxGroupStateInput {
 impl Default for UseCheckboxGroupStateInput {
     fn default() -> Self {
         Self {
-            default_value: Vec::new(),
+            default_value: HashSet::new(),
             value: None,
             on_change: None,
             is_disabled: Signal::stored(false),
@@ -71,8 +75,8 @@ impl std::fmt::Debug for UseCheckboxGroupStateInput {
 /// The state of a checkbox group: its checked values and validation.
 #[derive(Clone, Copy)]
 pub struct CheckboxGroupState {
-    /// The checked values, in the order they were checked.
-    pub value: Signal<Vec<Key>>,
+    /// The checked values.
+    pub value: Signal<HashSet<Key>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     /// Whether a value is required: the group is required and nothing is checked.
@@ -81,10 +85,10 @@ pub struct CheckboxGroupState {
     pub is_invalid: Signal<bool>,
     pub validation: FormValidationState,
     pub validation_behavior: ValidationBehavior,
-    default_value: StoredValue<Vec<Key>>,
+    default_value: StoredValue<HashSet<Key>>,
     name: StoredValue<Option<String>>,
-    set_value: crate::utils::ValueBinding<Vec<Key>>,
-    on_change: Option<Callback<Vec<Key>>>,
+    set_value: crate::ValueBinding<HashSet<Key>>,
+    on_change: Option<Callback<HashSet<Key>>>,
     /// The invalid checkboxes' validations, in the order they became invalid (react-aria: a
     /// `Map`, which keeps insertion order), so the group's errors keep that order.
     invalid_values: StoredValue<Vec<(Key, ValidationResult)>>,
@@ -105,7 +109,7 @@ impl CheckboxGroupState {
     }
 
     /// The initially checked values (restored on form reset).
-    pub fn default_value(&self) -> Vec<Key> {
+    pub fn default_value(&self) -> HashSet<Key> {
         self.default_value.get_value()
     }
 
@@ -118,7 +122,7 @@ impl CheckboxGroupState {
         !self.is_disabled.get_untracked() && !self.is_read_only.get_untracked()
     }
 
-    fn update(&self, value: Vec<Key>) {
+    fn update(&self, value: HashSet<Key>) {
         if self.value.with_untracked(|v| *v == value) {
             return;
         }
@@ -129,7 +133,7 @@ impl CheckboxGroupState {
     }
 
     /// Replace the checked values.
-    pub fn set_value(&self, value: Vec<Key>) {
+    pub fn set_value(&self, value: HashSet<Key>) {
         if self.can_change() {
             self.update(value);
         }
@@ -139,7 +143,7 @@ impl CheckboxGroupState {
     pub fn add_value(&self, value: Key) {
         if self.can_change() && !self.value.with_untracked(|v| v.contains(&value)) {
             let mut values = self.value.get_untracked();
-            values.push(value);
+            values.insert(value);
             self.update(values);
         }
     }
@@ -148,7 +152,7 @@ impl CheckboxGroupState {
     pub fn remove_value(&self, value: &Key) {
         if self.can_change() && self.value.with_untracked(|v| v.contains(value)) {
             let mut values = self.value.get_untracked();
-            values.retain(|v| v != value);
+            values.remove(value);
             self.update(values);
         }
     }
@@ -200,7 +204,7 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         name,
     } = input;
     let set_value =
-        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_value)));
+        value.unwrap_or_else(|| crate::ValueBinding::from(RwSignal::new(default_value)));
     let value = set_value.value;
     let default_value = value.get_untracked();
     let validation = use_form_validation_state(UseFormValidationStateInput {
@@ -209,13 +213,13 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         value,
         validate,
         validation_behavior,
-        name: name.clone(),
+        names: name.clone().into_iter().collect(),
     });
     CheckboxGroupState {
         value,
         is_disabled,
         is_read_only,
-        is_required: Signal::derive(move || is_required.get() && value.with(Vec::is_empty)),
+        is_required: Signal::derive(move || is_required.get() && value.with(HashSet::is_empty)),
         is_invalid: validation.is_invalid,
         validation,
         validation_behavior,
@@ -235,14 +239,15 @@ mod tests {
         super::use_form_validation_state::{DEFAULT_VALIDATION_RESULT, ValidityStateSnapshot},
         *,
     };
+    use crate::testing::with_owner;
 
-    fn keys(keys: &[&str]) -> Vec<Key> {
+    fn keys(keys: &[&str]) -> HashSet<Key> {
         keys.iter().map(|k| Key::from(*k)).collect()
     }
 
     #[test]
-    fn adds_removes_and_toggles_values_in_order() {
-        Owner::new().with(|| {
+    fn adds_removes_and_toggles_values() {
+        with_owner(|| {
             let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
                 default_value: keys(&["b"]),
                 ..UseCheckboxGroupStateInput::default()
@@ -257,9 +262,47 @@ mod tests {
         });
     }
 
+    // "should be possible to control the value", "should call the provided `onChange` callback
+    // whenever value changes".
+    #[test]
+    fn a_bound_value_is_read_and_changes_are_reported() {
+        with_owner(|| {
+            let app = RwSignal::new(keys(&["a"]));
+            let changes = RwSignal::new(Vec::new());
+            let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
+                value: Some(crate::ValueBinding::from(app)),
+                on_change: Some(Callback::new(move |v| changes.update(|c| c.push(v)))),
+                ..UseCheckboxGroupStateInput::default()
+            });
+            assert_that!(state.is_selected(&Key::from("a"))).is_true();
+            state.add_value(Key::from("b"));
+            assert_that!(app.get_untracked()).is_equal_to(keys(&["a", "b"]));
+            app.set(keys(&["c"]));
+            assert_that!(state.value.get_untracked()).is_equal_to(keys(&["c"]));
+            state.remove_value(&Key::from("c"));
+            assert_that!(changes.get_untracked())
+                .is_equal_to(vec![keys(&["a", "b"]), HashSet::new()]);
+        });
+    }
+
+    // "should go back to the initial value after `toggleState` being called twice on the same
+    // value".
+    #[test]
+    fn toggling_twice_restores_the_value() {
+        with_owner(|| {
+            let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
+                default_value: keys(&["a", "b"]),
+                ..UseCheckboxGroupStateInput::default()
+            });
+            state.toggle_value(Key::from("a"));
+            state.toggle_value(Key::from("a"));
+            assert_that!(state.value.get_untracked()).is_equal_to(keys(&["a", "b"]));
+        });
+    }
+
     #[test]
     fn read_only_and_disabled_groups_keep_their_value() {
-        Owner::new().with(|| {
+        with_owner(|| {
             for (is_read_only, is_disabled) in [(true, false), (false, true)] {
                 let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
                     is_read_only: Signal::stored(is_read_only),
@@ -275,7 +318,7 @@ mod tests {
 
     #[test]
     fn required_until_something_is_checked() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
                 is_required: Signal::stored(true),
                 ..UseCheckboxGroupStateInput::default()
@@ -287,7 +330,7 @@ mod tests {
     }
     #[test]
     fn errors_keep_the_order_checkboxes_became_invalid() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
                 validation_behavior: ValidationBehavior::Aria,
                 ..UseCheckboxGroupStateInput::default()

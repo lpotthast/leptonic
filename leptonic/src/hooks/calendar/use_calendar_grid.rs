@@ -1,8 +1,11 @@
 // Upstream: react-aria/src/calendar/useCalendarGrid.ts @ 99e6102368
+// Upstream: react-aria/test/calendar/useCalendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/CalendarBase.test.js @ 99e6102368
 use jiff::civil::Date;
 use leptos::{
     attr::{self, Attr},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
@@ -10,17 +13,19 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::states::{CalendarData, CalendarStates, visible_range_description};
 use crate::{
-    hooks::{IntoAttrs, UseKeyboardInput, form::use_label::labels, use_keyboard},
+    EventHandler, IntoAttrs, OnEvent,
+    hooks::interactions::{UseKeyboardInput, use_keyboard},
+    labels,
     utils::{
-        EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaMultiselectable, AriaReadonly, AriaRole},
         date::{DateDuration, DateExt, DateRange, today},
         date_time_formatter::{DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter},
+        dom_ext::EventAccessors,
         focusability::is_focusable,
-        i18n::{use_direction, use_locale},
+        i18n::{WritingDirection, use_direction, use_locale},
         id::use_id,
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
-        locale::WritingDirection,
     },
 };
 
@@ -90,10 +95,10 @@ pub type UseCalendarGridAttrs = (
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::keyup>,
 );
 
 impl IntoAttrs for UseCalendarGridProps {
@@ -135,55 +140,62 @@ fn shortcuts(state: &CalendarStates, direction: Signal<WritingDirection>) -> Key
     };
     KeyboardShortcuts::new()
         .on(
-            Shortcut::key("End"),
+            Shortcut::new(KeyboardKey::End),
             once(|state| state.calendar().focus_section_end()),
         )
         .on(
-            Shortcut::key("Home"),
+            Shortcut::new(KeyboardKey::Home),
             once(|state| state.calendar().focus_section_start()),
         )
-        .on(Shortcut::key("Escape"), move |e: &KeyboardEvent| {
-            if e.repeat() {
-                return ShortcutOutcome::Ignored;
-            }
-            // Cancels a range being selected; the Escape key goes on (e.g. to close a popover).
-            if let Some(range) = state.range() {
-                range.set_anchor_date(None);
-            }
-            ShortcutOutcome::Ignored
+        .on(
+            Shortcut::new(KeyboardKey::Escape),
+            move |e: &KeyboardEvent| {
+                if e.repeat() {
+                    return ShortcutOutcome::Ignored;
+                }
+                // Cancels a range being selected; the Escape key goes on (e.g. to close a popover).
+                if let Some(range) = state.range() {
+                    range.set_anchor_date(None);
+                }
+                ShortcutOutcome::Ignored
+            },
+        )
+        .on(Shortcut::new(KeyboardKey::Enter), move |_| {
+            state.select_focused_date();
         })
-        .on(Shortcut::key("Enter"), move |_| state.select_focused_date())
-        .on(Shortcut::key(" "), move |_| state.select_focused_date())
-        .on(Shortcut::key("PageUp"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Space), move |_| {
+            state.select_focused_date();
+        })
+        .on(Shortcut::new(KeyboardKey::PageUp), move |_| {
             calendar.focus_previous_section(false);
         })
-        .on(Shortcut::key("PageUp").shift(), move |_| {
+        .on(Shortcut::new(KeyboardKey::PageUp).shift(), move |_| {
             calendar.focus_previous_section(true);
         })
-        .on(Shortcut::key("PageDown"), move |_| {
+        .on(Shortcut::new(KeyboardKey::PageDown), move |_| {
             calendar.focus_next_section(false);
         })
-        .on(Shortcut::key("PageDown").shift(), move |_| {
+        .on(Shortcut::new(KeyboardKey::PageDown).shift(), move |_| {
             calendar.focus_next_section(true);
         })
-        .on(Shortcut::key("ArrowLeft"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| {
             if direction.get_untracked() == WritingDirection::Rtl {
                 calendar.focus_next_day();
             } else {
                 calendar.focus_previous_day();
             }
         })
-        .on(Shortcut::key("ArrowRight"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| {
             if direction.get_untracked() == WritingDirection::Rtl {
                 calendar.focus_previous_day();
             } else {
                 calendar.focus_next_day();
             }
         })
-        .on(Shortcut::key("ArrowUp"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowUp), move |_| {
             calendar.focus_previous_row();
         })
-        .on(Shortcut::key("ArrowDown"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowDown), move |_| {
             calendar.focus_next_row();
         })
 }
@@ -233,8 +245,6 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
 
     let id = use_id("calendar-grid");
     let aria_label = data.aria_label;
-    let labelledby = data.aria_labelledby.clone();
-    let own_id = id.clone();
     let label = Memo::new(move |_| {
         let label = [
             aria_label.get(),
@@ -245,9 +255,10 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
         .filter(|label| !label.is_empty())
         .collect::<Vec<_>>()
         .join(", ");
-        labels(&own_id, Some(label), labelledby.clone()).0
+        Some(label)
     });
-    let (_, aria_labelledby) = labels(&id, Some(String::new()), data.aria_labelledby);
+    let aria_labelledby =
+        labels(&id, Some(String::new()), data.aria_labelledby.as_deref()).aria_labelledby;
 
     let week_days = Memo::new(move |_| {
         let formatter = DateTimeFormatter::new(

@@ -1,12 +1,15 @@
 use leptonic::{
+    I18nProvider, Locale,
     atoms::grid_list::{
         GridList, GridListHeader, GridListItem, GridListItemDescription, GridListSection,
     },
     hooks::{
-        FocusMode, KeyboardNavigationBehavior, SelectionBehavior, SelectionMode,
-        collections::{ItemLink, Key, Selection, use_collection, use_list_collection},
+        collections::{
+            ItemLink, Key, Selection, SelectionBehavior, SelectionMode, UseListCollectionInput,
+            use_collection, use_list_collection,
+        },
+        gridlist::{FocusMode, KeyboardNavigationBehavior},
     },
-    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 
@@ -34,18 +37,18 @@ const FRUITS: [&str; 3] = ["Apple", "Banana", "Cherry"];
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomGridListFeatures() -> impl IntoView {
     let fruits = || {
-        use_list_collection(
-            Signal::stored(FRUITS.to_vec()),
-            |fruit| Key::from(*fruit),
-            |fruit| (*fruit).to_owned(),
-        )
+        use_list_collection(UseListCollectionInput {
+            items: Signal::stored(FRUITS.to_vec()),
+            key: |fruit| Key::from(*fruit),
+            text_value: |fruit| (*fruit).to_owned(),
+        })
     };
     let items = |prefix: &'static str, count: usize| {
-        use_list_collection(
-            Signal::stored((1..=count).collect::<Vec<_>>()),
-            |i| Key::from(i.to_string()),
-            move |i| format!("{prefix} {i}"),
-        )
+        use_list_collection(UseListCollectionInput {
+            items: Signal::stored((1..=count).collect::<Vec<_>>()),
+            key: |i| Key::from(i.to_string()),
+            text_value: move |i| format!("{prefix} {i}"),
+        })
     };
     let input_selection = RwSignal::new(String::new());
     let actions = RwSignal::new(Vec::<String>::new());

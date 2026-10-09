@@ -1,4 +1,8 @@
-use leptonic::atoms::prelude::{Breadcrumb, Breadcrumbs, CheckboxButton, CheckboxField, Link};
+use leptonic::atoms::{
+    breadcrumbs::{Breadcrumb, Breadcrumbs},
+    checkbox::{CheckboxButton, CheckboxField},
+    link::Link,
+};
 use leptos::prelude::*;
 
 /// The trail of this page. The last item is the current page: it can't be followed.

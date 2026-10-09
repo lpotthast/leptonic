@@ -1,6 +1,10 @@
 use std::collections::VecDeque;
 
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::focus::{UseFocusInput, UseFocusReturn, use_focus},
+};
 use leptos::prelude::*;
 
 #[component]

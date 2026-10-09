@@ -1,5 +1,6 @@
 // Upstream: react-aria/src/label/useField.ts @ 99e6102368
 // Upstream: react-aria/src/label/useLabel.ts @ 99e6102368
+// Upstream: react-aria/test/label/useField.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -8,10 +9,7 @@ use leptos::{
 use super::use_label::{
     LabelElementType, UseLabelFieldProps, UseLabelInput, UseLabelProps, UseLabelReturn, use_label,
 };
-use crate::{
-    hooks::IntoAttrs,
-    utils::{SlotProps, use_slot},
-};
+use crate::{IdRefs, IntoAttrs, SlotProps, use_slot};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -141,14 +139,11 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
             aria_labelledby,
             // The error message is a description too: `aria-errormessage` is unsupported by
             // VoiceOver and NVDA.
-            aria_describedby: Signal::derive(move || {
-                let ids: Vec<String> = [description_id.get(), error_message_id.get()]
-                    .into_iter()
-                    .flatten()
-                    .chain(aria_describedby.clone())
-                    .collect();
-                (!ids.is_empty()).then(|| ids.join(" "))
-            }),
+            aria_describedby: IdRefs::derive([
+                description_id,
+                error_message_id,
+                Signal::stored(aria_describedby),
+            ]),
         },
         description_props: description.props,
         error_message_props: error_message.props,
@@ -162,10 +157,13 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
+    // useField.test.js: "should return label props", "should not return an id for description
+    // and error message if they are not passed in".
     #[test]
     fn a_visible_label_labels_the_field() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let field = use_field(UseFieldInput {
                 id: Some("f".to_owned()),
                 has_label: Signal::stored(true),
@@ -182,7 +180,7 @@ mod tests {
 
     #[test]
     fn aria_label_next_to_other_labels_adds_the_field_itself() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let field = use_field(UseFieldInput {
                 id: Some("f".to_owned()),
                 aria_label: "Name".into(),
@@ -197,7 +195,7 @@ mod tests {
 
     #[test]
     fn span_labels_have_no_for_attribute() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let field = use_field(UseFieldInput {
                 has_label: Signal::stored(true),
                 label_element_type: LabelElementType::Span,

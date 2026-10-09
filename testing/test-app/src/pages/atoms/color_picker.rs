@@ -1,4 +1,5 @@
 use leptonic::{
+    AlphaChannel, Color, HSV, HsvChannel, RGB8,
     atoms::{
         color_area::ColorArea,
         color_field::ColorField,
@@ -8,10 +9,7 @@ use leptonic::{
         color_thumb::ColorThumb,
         input::Input,
     },
-    utils::{
-        color::{AlphaChannel, Color, HSV, HsvChannel, RGB8},
-        styles::Styles,
-    },
+    leptos_styles::Styles,
 };
 use leptos::prelude::*;
 

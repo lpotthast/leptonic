@@ -1,5 +1,7 @@
 // Upstream: react-aria-components/src/RadioGroup.tsx @ 99e6102368
+// Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     field::{FieldContext, LabelContext},
@@ -7,18 +9,20 @@ use super::{
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
-    Out,
+    IntoAttrs, Orientation, Out,
     atoms::field::LabelPresence,
     hooks::{
-        IntoAttrs, Orientation, RadioGroupData, UseHoverInput, UseRadioGroupInput,
-        UseRadioGroupReturn, UseRadioGroupStateInput, UseRadioInput, UseRadioReturn, ValidateFn,
-        ValidationBehavior,
         collections::{Key, SelectionValue},
-        use_hover, use_radio, use_radio_group, use_radio_group_state,
+        form::{
+            RadioGroupData, UseRadioGroupInput, UseRadioGroupReturn, UseRadioGroupStateInput,
+            UseRadioInput, UseRadioReturn, ValidateFn, ValidationBehavior, use_radio,
+            use_radio_group, use_radio_group_state,
+        },
+        interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        classes::Classes, data_attributes::flag, default_class::with_default_class, dev_warn,
-        styles::Styles, visually_hidden::visually_hidden_styles,
+        data_attributes::flag, default_class::with_default_class, dev_warn, styles::Styles,
+        visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -39,7 +43,7 @@ use crate::{
 
 /// Context from [`RadioGroup`] to its radios.
 #[derive(Clone)]
-pub struct RadioGroupCtx {
+pub struct RadioGroupContext {
     pub data: RadioGroupData,
     pub is_invalid: Signal<bool>,
 }
@@ -68,8 +72,8 @@ pub fn RadioGroup<V: SelectionValue>(
     #[prop(into, optional)] on_change: Option<Callback<Option<V>>>,
     /// The group's layout, announced as `aria-orientation` (default vertical). All arrow keys
     /// move the selection; in a horizontal group, Left/Right follow the writing direction.
-    #[prop(default = Orientation::Vertical)]
-    orientation: Orientation,
+    #[prop(into, default = Orientation::Vertical.into())]
+    orientation: Signal<Orientation>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] is_required: Signal<bool>,
@@ -99,8 +103,7 @@ pub fn RadioGroup<V: SelectionValue>(
         on_change,
         validate,
     } = keyed_state_props(Some(default_value), value, set_value, on_change, validate);
-    let (value, on_change) =
-        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
+    let (value, on_change) = crate::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_radio_group_state(UseRadioGroupStateInput {
         default_value: default_value.flatten(),
         value,
@@ -140,7 +143,7 @@ pub fn RadioGroup<V: SelectionValue>(
         on_blur: None,
         on_focus_change: None,
     });
-    let ctx = RadioGroupCtx { data, is_invalid };
+    let ctx = RadioGroupContext { data, is_invalid };
     let label = LabelContext::span(label_props).with_presence(label_presence);
     let field = FieldContext {
         description: description_props,
@@ -157,7 +160,7 @@ pub fn RadioGroup<V: SelectionValue>(
                     {..props.into_attrs()}
                     class=classes
                     style=styles
-                    data-orientation=orientation.as_str()
+                    data-orientation=move || orientation.get().as_str()
                     data-disabled=flag(state.is_disabled)
                     data-readonly=flag(state.is_read_only)
                     data-required=flag(state.is_required)
@@ -197,7 +200,7 @@ pub fn RadioField(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-RadioField", classes);
-    let group = expect_context::<RadioGroupCtx>();
+    let group = expect_context::<RadioGroupContext>();
     let state = group.data.state;
     let radio = use_radio_atom(
         &group,
@@ -219,7 +222,7 @@ pub fn RadioField(
         description: radio.description_props.clone(),
         ..expect_context::<FieldContext>()
     };
-    let button = RadioButtonCtx {
+    let button = RadioButtonContext {
         radio: StoredValue::new(Some(radio)),
     };
 
@@ -257,8 +260,8 @@ pub fn RadioButton(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-RadioButton", classes);
     let (Some(group), Some(ctx)) = (
-        use_context::<RadioGroupCtx>(),
-        use_context::<RadioButtonCtx>(),
+        use_context::<RadioGroupContext>(),
+        use_context::<RadioButtonContext>(),
     ) else {
         dev_warn!("a <RadioButton> belongs in a <RadioField> in a <RadioGroup>");
         return ().into_any();
@@ -272,7 +275,7 @@ pub fn RadioButton(
 
 /// What a [`RadioField`] hands its [`RadioButton`].
 #[derive(Clone)]
-struct RadioButtonCtx {
+struct RadioButtonContext {
     /// The radio, taken by the button.
     radio: StoredValue<Option<UseRadioReturn>>,
 }
@@ -290,7 +293,7 @@ struct RadioSetup {
 }
 
 /// The radio of a [`RadioField`] in `group`.
-fn use_radio_atom(group: &RadioGroupCtx, setup: RadioSetup) -> UseRadioReturn {
+fn use_radio_atom(group: &RadioGroupContext, setup: RadioSetup) -> UseRadioReturn {
     let RadioSetup {
         value,
         is_disabled,
@@ -323,7 +326,7 @@ fn use_radio_atom(group: &RadioGroupCtx, setup: RadioSetup) -> UseRadioReturn {
 
 /// The `<label>` of a [`RadioButton`].
 fn radio_button(
-    group: RadioGroupCtx,
+    group: RadioGroupContext,
     radio: UseRadioReturn,
     classes: Classes,
     styles: Styles,

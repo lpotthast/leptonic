@@ -1,8 +1,14 @@
 use std::time::Duration;
 
 use leptonic::{
-    atoms::prelude::{Button, CheckboxButton, CheckboxField, Focusable, OverlayArrow, Tooltip, TooltipTrigger},
-    hooks::Placement,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+        focusable::Focusable,
+        overlay_arrow::OverlayArrow,
+        tooltip::{Tooltip, TooltipTrigger},
+    },
+    hooks::overlay::Placement,
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;

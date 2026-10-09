@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude as atoms;
+use leptonic::atoms;
 use leptos::prelude::*;
 
 const TOTAL_BYTES: u32 = 4_000;
@@ -11,28 +11,28 @@ pub fn ProgressBarAtomDemo() -> impl IntoView {
     let progress = Signal::derive(move || (!size_unknown.get()).then(|| uploaded.get()));
 
     view! {
-        <atoms::ProgressBar value=progress max_value=TOTAL_BYTES classes="demo-value-bar-container">
+        <atoms::progress_bar::ProgressBar value=progress max_value=TOTAL_BYTES classes="demo-value-bar-container">
             <div class="demo-value-bar-header">
-                <atoms::Label>"Uploading"</atoms::Label>
-                <atoms::ProgressBarValueText />
+                <atoms::field::Label>"Uploading"</atoms::field::Label>
+                <atoms::progress_bar::ProgressBarValueText />
             </div>
             <div class="demo-value-bar">
-                <atoms::ProgressBarFill classes="demo-value-bar-fill" />
+                <atoms::progress_bar::ProgressBarFill classes="demo-value-bar-fill" />
             </div>
-        </atoms::ProgressBar>
+        </atoms::progress_bar::ProgressBar>
         <div class="demo-inline-controls">
-            <atoms::Button on_press=move |_| uploaded.update(|bytes| *bytes = (*bytes + 400).min(TOTAL_BYTES)) classes="demo-btn">
+            <atoms::button::Button on_press=move |_| uploaded.update(|bytes| *bytes = (*bytes + 400).min(TOTAL_BYTES)) classes="demo-btn">
                 "Upload 400 bytes"
-            </atoms::Button>
-            <atoms::Button on_press=move |_| uploaded.set(0) classes="demo-btn">"Restart"</atoms::Button>
+            </atoms::button::Button>
+            <atoms::button::Button on_press=move |_| uploaded.set(0) classes="demo-btn">"Restart"</atoms::button::Button>
         </div>
         <div class="demo-controls">
-            <atoms::CheckboxField is_selected=size_unknown set_selected=size_unknown>
-                <atoms::CheckboxButton classes="demo-check">
+            <atoms::checkbox::CheckboxField is_selected=size_unknown set_selected=size_unknown>
+                <atoms::checkbox::CheckboxButton classes="demo-check">
                     <span class="demo-check-box" aria-hidden="true"></span>
                     "Size unknown"
-                </atoms::CheckboxButton>
-            </atoms::CheckboxField>
+                </atoms::checkbox::CheckboxButton>
+            </atoms::checkbox::CheckboxField>
         </div>
     }
 }

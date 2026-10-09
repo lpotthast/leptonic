@@ -4,7 +4,7 @@ use leptonic::{
         datepicker::{DateInput, DateSegment, TimeField},
         field::{Description, FieldError, Label},
     },
-    hooks::ValidationBehavior,
+    hooks::form::ValidationBehavior,
     jiff::civil::{Time, time},
 };
 use leptos::prelude::*;

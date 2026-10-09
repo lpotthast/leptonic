@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use leptonic::{
     atoms::{
         field::{FieldError, Label},
@@ -5,25 +7,25 @@ use leptonic::{
         listbox::{ListBox, ListBoxItems},
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
-    hooks::collections::{CollectionMemo, Key, use_list_collection},
+    hooks::collections::{CollectionMemo, Key, UseListCollectionInput, use_list_collection},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
 const ANIMALS: [(&str, &str); 3] = [("cat", "Cat"), ("dog", "Dog"), ("kangaroo", "Kangaroo")];
 
 fn animals() -> CollectionMemo {
-    use_list_collection(
-        Signal::stored(ANIMALS.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, text)| (*text).to_owned(),
-    )
+    use_list_collection(UseListCollectionInput {
+        items: Signal::stored(ANIMALS.to_vec()),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, text)| (*text).to_owned(),
+    })
 }
 
-fn join(keys: &[Key]) -> String {
-    keys.iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(",")
+/// The keys, sorted (a multiple selection is a set).
+fn join<'a>(keys: impl IntoIterator<Item = &'a Key>) -> String {
+    let mut keys: Vec<String> = keys.into_iter().map(ToString::to_string).collect();
+    keys.sort();
+    keys.join(",")
 }
 
 /// The trigger with the value and the popover with one option per item (and the empty state
@@ -62,12 +64,12 @@ fn Parts(#[prop(optional)] with_empty_state: bool) -> impl IntoView {
 /// - `#sf-submit`: required, name "submitted", value bound to app state (`#sf-submit-clear`
 ///   clears it), a submit button; submissions counted in `#sf-submits`.
 /// - `#sf-disabled`: disabled, name "disabled-select".
-/// - `#sf-empty`: no options; `#sf-empty-allowed`: no options, `allows_empty_collection`, an
-///   empty state "No results".
+/// - `#sf-empty-allowed`: no options, `allows_empty_collection`, an empty state "No results".
 /// - `#sf-many`: 320 options ("item0" ... with the keys 0 ...), multiple selection, required, name
 ///   "many", a submit button and a reset button.
 /// - `#sf-open`: the open state bound to app state (`#sf-open-toggle` toggles it, shown in
 ///   `#sf-open-state`).
+/// - `#sf-unloaded`: no options (not loaded yet), the default value "cat", name "unloaded".
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomSelectForms() -> impl IntoView {
@@ -75,34 +77,34 @@ pub fn PageAtomSelectForms() -> impl IntoView {
     let submitted = RwSignal::new(None::<Key>);
     let submits = RwSignal::new(0_u32);
     let many_submits = RwSignal::new(0_u32);
-    let empty = use_list_collection(
-        Signal::stored(Vec::<&str>::new()),
-        |key| Key::from(*key),
-        |key| (*key).to_owned(),
-    );
+    let empty = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(Vec::<&str>::new()),
+        key: |key| Key::from(*key),
+        text_value: |key| (*key).to_owned(),
+    });
     let items: Vec<usize> = (0..320).collect();
-    let many = use_list_collection(
-        Signal::stored(items),
-        |i| Key::from(i.to_string()),
-        |i| format!("item{i}"),
-    );
+    let many = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(items),
+        key: |i| Key::from(i.to_string()),
+        text_value: |i| format!("item{i}"),
+    });
     let is_open = RwSignal::new(false);
 
     view! {
         <h1>"Select forms"</h1>
 
         <Form attr:id="sf-multiple">
-            <Select<Vec<Key>>
+            <Select<HashSet<Key>>
                 collection=animals()
                 name="select"
-                on_change={move |keys: Vec<Key>| {
+                on_change={move |keys: HashSet<Key>| {
                     multiple_changes.update(|c| c.push(format!("[{}]", join(&keys))));
                 }}
             >
                 <Label>"Animals"</Label>
                 <Parts />
                 <HiddenSelect />
-            </Select<Vec<Key>>>
+            </Select<HashSet<Key>>>
         </Form>
         <div>"Changes: " <span id="sf-multiple-changes">{move || multiple_changes.get().join("|")}</span></div>
 
@@ -148,12 +150,6 @@ pub fn PageAtomSelectForms() -> impl IntoView {
             </Select<Option<Key>>>
         </form>
 
-        <div id="sf-empty">
-            <Select collection=empty default_value=Some(Key::from("cat"))>
-                <Label>"Empty"</Label>
-                <Parts />
-            </Select>
-        </div>
         <div id="sf-empty-allowed">
             <Select<Option<Key>> collection=empty allows_empty_collection=true>
                 <Label>"Empty allowed"</Label>
@@ -168,16 +164,24 @@ pub fn PageAtomSelectForms() -> impl IntoView {
                 many_submits.update(|n| *n += 1);
             }
         >
-            <Select<Vec<Key>> collection=many is_required=true name="many">
+            <Select<HashSet<Key>> collection=many is_required=true name="many">
                 <Label>"Many"</Label>
                 <Parts />
                 <FieldError />
                 <HiddenSelect />
-            </Select<Vec<Key>>>
+            </Select<HashSet<Key>>>
             <button type="submit" id="sf-many-submit">"Submit"</button>
             <input type="reset" id="sf-many-reset" />
         </Form>
         <div>"Submits: " <span id="sf-many-submits">{many_submits}</span></div>
+
+        <form id="sf-unloaded">
+            <Select<Option<Key>> collection=empty default_value=Some(Key::from("cat")) name="unloaded">
+                <Label>"Unloaded"</Label>
+                <Parts />
+                <HiddenSelect />
+            </Select<Option<Key>>>
+        </form>
 
         <div id="sf-open">
             <button id="sf-open-toggle" on:click=move |_| is_open.update(|open| *open = !*open)>

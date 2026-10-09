@@ -6,24 +6,27 @@ use leptos::{
         custom::{CustomAttr, custom_attribute},
     },
     ev,
-    ev::{On, SharedEventCallback},
     oco::Oco,
     prelude::*,
 };
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        FocusHandle, FocusableContextAttr, FocusableContextAttrs, HoverEndEvent, HoverStartEvent,
-        IntoAttrs, LinkRel, LinkTarget, PressEvent, PressResponderContext, PropsWithStyles,
-        UseFocusRingInput, UseFocusRingReturn, UseFocusableInput, UseFocusableReturn,
-        UseHoverInput, UseHoverReturn, UsePressInput, UsePressReturn, link_rel_to_string,
-        use_focus_ring, use_focusable, use_hover, use_press,
+        focus::{
+            FocusHandle, FocusableContextAttr, FocusableContextAttrs, UseFocusRingInput,
+            UseFocusRingReturn, UseFocusableInput, UseFocusableReturn, use_focus_ring,
+            use_focusable,
+        },
+        interactions::{
+            HoverEndEvent, HoverStartEvent, PressEvent, PressResponderContext, UseHoverInput,
+            UseHoverReturn, UsePressInput, UsePressReturn, use_hover,
+            use_keyboard::KeyboardEventWrapper, use_press,
+        },
+        link::{LinkRel, LinkTarget, link_rel},
     },
-    utils::{
-        ElementCaptureAttr, EventHandler,
-        aria::{AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
-    },
+    utils::aria::{AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
 };
 
 // =============================================================================
@@ -49,8 +52,9 @@ use crate::{
 //   attributes from one hook (as `use_button`).
 //
 // ## ADDITIONS
-// - `rel="noopener"` is added for `LinkTarget::Blank`, so that the new browsing context gets no
-//   access to this one (older browsers don't imply it). React-aria: `rel` as given.
+// - `rel="noopener"` is added for `LinkTarget::Blank` (unless `rel` has `Opener`), so that the new
+//   browsing context gets no access to this one (older browsers don't imply it). React-aria: `rel`
+//   as given.
 //
 // =============================================================================
 
@@ -72,14 +76,16 @@ pub struct UseLinkInput {
     pub href: Signal<Option<String>>,
 
     /// Where to open the linked document. Default: the same browsing context.
-    pub target: LinkTarget,
+    pub target: Signal<LinkTarget>,
 
     /// The relationship of the linked document. `NoOpener` is added for `LinkTarget::Blank`.
     pub rel: Vec<LinkRel>,
 
     pub is_disabled: Signal<bool>,
 
-    pub element_type: LinkElementType,
+    /// The element the props are spread onto. A signal: e.g. the `Link` atom renders a `<span>`
+    /// while disabled.
+    pub element_type: Signal<LinkElementType>,
 
     /// Names the link when its content doesn't.
     pub aria_label: MaybeProp<String>,
@@ -93,6 +99,16 @@ pub struct UseLinkInput {
     pub on_press_change: Option<Callback<bool>>,
     pub on_hover_start: Option<Callback<HoverStartEvent>>,
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
+    pub on_hover_change: Option<Callback<bool>>,
+    pub on_focus: Option<Callback<FocusEvent>>,
+    pub on_blur: Option<Callback<FocusEvent>>,
+    pub on_focus_change: Option<Callback<bool>>,
+    pub on_key_down: Option<Callback<KeyboardEventWrapper>>,
+    pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
+    /// Focus the link when it mounts.
+    pub auto_focus: bool,
+    /// Remove the link from the tab order. It stays focusable programmatically and by pointer.
+    pub exclude_from_tab_order: Signal<bool>,
 }
 
 /// Return value of [`use_link`].
@@ -114,8 +130,8 @@ pub struct UseLinkReturn {
 #[derive(Debug)]
 pub struct UseLinkProps {
     pub href: Signal<Option<String>>,
-    pub target: Option<Oco<'static, str>>,
-    pub rel: Option<String>,
+    pub target: Signal<Option<Oco<'static, str>>>,
+    pub rel: Signal<Option<String>>,
     pub role: Signal<Option<AriaRole>>,
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: MaybeProp<String>,
@@ -147,8 +163,8 @@ pub struct UseLinkProps {
 pub type UseLinkAttrs = (
     (
         Attr<attr::Href, Signal<Option<String>>>,
-        Attr<attr::Target, Option<Oco<'static, str>>>,
-        Attr<attr::Rel, Option<String>>,
+        Attr<attr::Target, Signal<Option<Oco<'static, str>>>>,
+        Attr<attr::Rel, Signal<Option<String>>>,
         Attr<attr::Role, Signal<Option<AriaRole>>>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
@@ -164,18 +180,18 @@ pub type UseLinkAttrs = (
         ElementCaptureAttr,
     ),
     (
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
-        On<ev::click, SharedEventCallback<MouseEvent>>,
-        On<ev::dblclick, SharedEventCallback<MouseEvent>>,
-        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-        On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-        On<ev::dragstart, SharedEventCallback<DragEvent>>,
-        On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
+        OnEvent<ev::click>,
+        OnEvent<ev::dblclick>,
+        OnEvent<ev::pointerdown>,
+        OnEvent<ev::pointerup>,
+        OnEvent<ev::mousedown>,
+        OnEvent<ev::dragstart>,
+        OnEvent<ev::pointerenter>,
+        OnEvent<ev::pointerleave>,
     ),
     FocusableContextAttr,
 );
@@ -238,7 +254,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     let UseLinkInput {
         href,
         target,
-        mut rel,
+        rel,
         is_disabled,
         element_type,
         aria_label,
@@ -249,6 +265,14 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         on_press_change,
         on_hover_start,
         on_hover_end,
+        on_hover_change,
+        on_focus,
+        on_blur,
+        on_focus_change,
+        on_key_down,
+        on_key_up,
+        auto_focus,
+        exclude_from_tab_order,
     } = input;
 
     // A surrounding trigger (`DialogTrigger`, `MenuTrigger`, ...): its ARIA props, capture and
@@ -266,18 +290,20 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         None => is_disabled,
     };
 
-    let is_anchor = element_type == LinkElementType::Anchor;
-    // A new browsing context must not get access to this one.
-    // See: <https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/>
-    if target == LinkTarget::Blank && !rel.contains(&LinkRel::NoOpener) {
-        rel.push(LinkRel::NoOpener);
-    }
+    let is_anchor = move || element_type.get() == LinkElementType::Anchor;
 
     let UseFocusableReturn {
         props: focusable_props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
         is_disabled,
+        auto_focus,
+        exclude_from_tab_order,
+        on_focus,
+        on_blur,
+        on_focus_change,
+        on_key_down,
+        on_key_up,
         shortcuts,
         ..UseFocusableInput::default()
     });
@@ -288,7 +314,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     } = use_press(UsePressInput {
         is_disabled,
         // Routers handle link clicks in a document-level listener.
-        propagation: crate::hooks::PressPropagation::Continue,
+        propagation: crate::hooks::interactions::PressPropagation::Continue,
         on_press,
         on_press_start,
         on_press_end,
@@ -303,7 +329,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         is_disabled,
         on_hover_start,
         on_hover_end,
-        ..UseHoverInput::default()
+        on_hover_change,
     });
 
     let UseFocusRingReturn {
@@ -321,7 +347,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
 
     // Other elements are made focusable (react-aria: `tabIndex: 0` unless disabled).
     let focusable_tabindex = focusable_props.tabindex;
-    let tabindex = Signal::derive(move || match element_type {
+    let tabindex = Signal::derive(move || match element_type.get() {
         LinkElementType::Anchor => focusable_tabindex.get(),
         LinkElementType::Other => {
             (!is_disabled.get()).then(|| focusable_tabindex.get().unwrap_or(0))
@@ -329,22 +355,36 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     });
 
     let element_capture = match trigger {
-        Some(trigger) => focusable_props
-            .element_capture
-            .chain(trigger.element.attr()),
+        Some(trigger) => {
+            // The link renders no id: it gets the trigger's once mounted, unless it has its own.
+            let element = CapturedElement::new();
+            trigger.sync_id_once_mounted(element);
+            focusable_props
+                .element_capture
+                .chain(trigger.element.attr())
+                .chain(element.attr())
+        }
         None => focusable_props.element_capture,
     };
     #[cfg(debug_assertions)]
     let element_capture = element_capture.chain(ElementCaptureAttr::new(move |el| {
-        super::debug_validate_element_type(element_type, &el);
+        super::debug_validate_element_type(element_type.get_untracked(), &el);
     }));
 
     let props = UseLinkProps {
-        href: Signal::derive(move || href.get().filter(|_| is_anchor && !is_disabled.get())),
-        target: (is_anchor && target != LinkTarget::Same).then(|| target.to_oco()),
-        rel: link_rel_to_string(&rel).filter(|_| is_anchor),
+        href: Signal::derive(move || href.get().filter(|_| is_anchor() && !is_disabled.get())),
+        target: Signal::derive(move || {
+            target.with(|target| {
+                (is_anchor() && *target != LinkTarget::Same).then(|| target.to_oco())
+            })
+        }),
+        rel: Signal::derive(move || {
+            target
+                .with(|target| link_rel(target, rel.clone()))
+                .filter(|_| is_anchor())
+        }),
         // An `<a>` without `href` (disabled) has no implicit role: keep it a link.
-        role: Signal::derive(move || (!is_anchor || is_disabled.get()).then_some(AriaRole::Link)),
+        role: Signal::derive(move || (!is_anchor() || is_disabled.get()).then_some(AriaRole::Link)),
         tabindex,
         aria_label,
         aria_current,
@@ -352,18 +392,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         aria_haspopup: trigger.map_or_else(Signal::default, |t| t.aria_haspopup),
         aria_expanded: trigger.map_or_else(Signal::default, |t| t.aria_expanded),
         aria_controls: trigger.map_or_else(Signal::default, |t| t.aria_controls),
-        aria_describedby: Signal::derive(move || {
-            let ids: Vec<String> = press_describedby
-                .with(|d| {
-                    d.as_ref()
-                        .map(|d| d.ids().map(str::to_owned).collect::<Vec<_>>())
-                })
-                .unwrap_or_default()
-                .into_iter()
-                .chain(context_describedby.get())
-                .collect();
-            (!ids.is_empty()).then(|| ids.join(" "))
-        }),
+        aria_describedby: IdRefs::derive([press_describedby, context_describedby]),
         data_focus_visible: focus_ring_props.data_focus_visible,
         element_capture,
         on_keydown: focusable_props.on_keydown.chain(press_props.on_keydown),

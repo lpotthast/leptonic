@@ -1,10 +1,12 @@
 use leptonic::{
-    atoms::virtualizer::VirtualList,
+    IntoAttrs,
+    atoms::virtualizer::{VirtualList, VirtualListOptions},
     hooks::{
-        IntoAttrs, UseFocusRingInput, collections::Key, use_focus_ring,
-        virtualizer::ListLayoutOptions,
+        collections::Key,
+        focus::{UseFocusRingInput, use_focus_ring},
+        virtualizer::ItemSize,
     },
-    utils::styles::Styles,
+    leptos_styles::Styles,
 };
 use leptos::prelude::*;
 
@@ -17,11 +19,14 @@ use leptos::prelude::*;
 ///   type): a focusable `VirtualList` (`#test-vl-rebuilt-list`), an element with `use_focus_ring`'s
 ///   props (`#test-vl-rebuilt-plain`), and a component with them spread onto it
 ///   (`#test-vl-rebuilt-wrapper`, a known Leptos bug: the old listeners stay).
+/// - `#test-vl-text`: 50 rows of plain text ("Text 0", ...; no element of their own), estimated
+///   20px, observed; `#test-vl-text-bigger` switches its font size from 14px to 40px.
 #[component]
 pub fn PageAtomVirtualList() -> impl IntoView {
     let lines = RwSignal::new((0..2000).collect::<Vec<usize>>());
     let follow = RwSignal::new(true);
     let source = RwSignal::new(0_usize);
+    let bigger = RwSignal::new(false);
     let line_text = |i: usize| {
         if i.is_multiple_of(7) {
             format!("Line {i} {}", "long text that wraps ".repeat(12))
@@ -49,10 +54,10 @@ pub fn PageAtomVirtualList() -> impl IntoView {
         <VirtualList
             items=lines
             key=|i: &usize| Key::from(format!("line-{i}"))
-            layout_options=ListLayoutOptions {
-                estimated_row_size: Some(20.0),
-                scroll_end_threshold: 10.0,
-                ..ListLayoutOptions::default()
+            layout_options=VirtualListOptions {
+                row_size: ItemSize::Estimated(20.0),
+                end_threshold: 10.0,
+                ..VirtualListOptions::default()
             }
             should_observe_item_size=true
             is_anchored_to_end=follow
@@ -68,6 +73,23 @@ pub fn PageAtomVirtualList() -> impl IntoView {
                 {line_text(i)}
             </div>
         </VirtualList>
+        <button id="test-vl-text-bigger" on:click=move |_| bigger.set(true)>"Bigger text"</button>
+        <div style:font-size=move || if bigger.get() { "40px" } else { "14px" }>
+            <VirtualList
+                items=Signal::stored((0..50).collect::<Vec<usize>>())
+                key=|i: &usize| Key::from(format!("text-{i}"))
+                layout_options=VirtualListOptions {
+                    row_size: ItemSize::Estimated(20.0),
+                    ..VirtualListOptions::default()
+                }
+                should_observe_item_size=true
+                styles=Styles::new().add_unchecked("width", "200px").add_unchecked("height", "200px")
+                attr:id="test-vl-text"
+                let:i
+            >
+                {format!("Text {i}")}
+            </VirtualList>
+        </div>
         <button id="test-vl-source" on:click=move |_| source.update(|s| *s += 1)>"Switch source"</button>
         <div id="test-vl-rebuilt">
             {move || {
@@ -92,9 +114,9 @@ fn RebuiltLogs(source: usize) -> impl IntoView {
         <VirtualList
             items=lines
             key=|line: &String| Key::from(line.clone())
-            layout_options=ListLayoutOptions {
-                row_size: Some(20.0),
-                ..ListLayoutOptions::default()
+            layout_options=VirtualListOptions {
+                row_size: ItemSize::Fixed(20.0),
+                ..VirtualListOptions::default()
             }
             styles=Styles::new().add_unchecked("width", "200px").add_unchecked("height", "100px")
             attr:id="test-vl-rebuilt-list"

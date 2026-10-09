@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/dnd/DropTargetKeyboardNavigation.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/DropTargetKeyboardNavigation.test.tsx @ 99e6102368
 use super::types::{DropPosition, DropTarget, ItemDropTarget};
 use crate::hooks::collections::{Collection, Key, KeyboardDelegate, NavigationOptions, NodeKind};
 
@@ -236,14 +237,12 @@ mod tests {
 
     use super::*;
     use crate::{
-        hooks::{
-            Orientation,
-            collections::{
-                CollectionMemo, LayoutDelegate, ListKeyboardDelegate, Rect, SelectionManager,
-                SelectionOptions, Size,
-            },
+        Orientation,
+        hooks::collections::{
+            CollectionMemo, LayoutDelegate, ListKeyboardDelegate, Rect, SelectionManager,
+            SelectionOptions, Size,
         },
-        utils::locale::WritingDirection,
+        utils::i18n::WritingDirection,
     };
 
     struct NoLayout;
@@ -401,7 +400,7 @@ mod tests {
 
     #[test]
     fn navigates_forward_vertically() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(Orientation::Vertical, WritingDirection::Ltr);
             assert_that!(collect(&d, NavigationDirection::Down, false)).is_equal_to(expected());
         });
@@ -409,7 +408,7 @@ mod tests {
 
     #[test]
     fn navigates_backward_vertically() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(Orientation::Vertical, WritingDirection::Ltr);
             let mut results = collect(&d, NavigationDirection::Up, false);
             results.reverse();
@@ -418,8 +417,8 @@ mod tests {
     }
 
     #[test]
-    fn navigates_forward_horizontally() {
-        Owner::new().with(|| {
+    fn navigates_forward_horizontally_ltr() {
+        crate::testing::with_owner(|| {
             let d = delegate(Orientation::Horizontal, WritingDirection::Ltr);
             assert_that!(collect(&d, NavigationDirection::Right, false)).is_equal_to(expected());
         });
@@ -427,9 +426,29 @@ mod tests {
 
     #[test]
     fn navigates_forward_horizontally_rtl() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(Orientation::Horizontal, WritingDirection::Rtl);
             assert_that!(collect(&d, NavigationDirection::Left, true)).is_equal_to(expected());
+        });
+    }
+
+    #[test]
+    fn navigates_backward_horizontally_ltr() {
+        crate::testing::with_owner(|| {
+            let d = delegate(Orientation::Horizontal, WritingDirection::Ltr);
+            let mut results = collect(&d, NavigationDirection::Left, false);
+            results.reverse();
+            assert_that!(results).is_equal_to(expected());
+        });
+    }
+
+    #[test]
+    fn navigates_backward_horizontally_rtl() {
+        crate::testing::with_owner(|| {
+            let d = delegate(Orientation::Horizontal, WritingDirection::Rtl);
+            let mut results = collect(&d, NavigationDirection::Right, true);
+            results.reverse();
+            assert_that!(results).is_equal_to(expected());
         });
     }
 }

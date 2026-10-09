@@ -93,13 +93,14 @@ verify:
   cargo fmt --all --check
   cargo clippy -p leptonic --tests
   cargo clippy -p leptonic --features full --tests
+  cargo clippy -p leptonic --test browser_test
   cargo clippy -p leptonic --no-default-features --features atoms,clipboard --tests
   cargo clippy -p leptonic --features full,ssr --tests
   cargo clippy -p leptonic --features full,hydrate --tests
   cargo clippy -p leptonic-theme --tests
-  LEPTOS_OUTPUT_NAME=leptonic-test-app cargo clippy --manifest-path ./testing/test-app/Cargo.toml --features ssr
-  LEPTOS_OUTPUT_NAME=leptonic-test-app cargo clippy --manifest-path ./testing/test-app/Cargo.toml --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
-  # From the book's directory, so that its `.cargo/config.toml` (`LEPTOS_OUTPUT_NAME`, ICU4X data) applies.
+  # From the apps' directories, so that their `.cargo/config.toml` (`LEPTOS_OUTPUT_NAME`; the book's ICU4X data) applies.
+  cd ./testing/test-app && cargo clippy --features ssr
+  cd ./testing/test-app && cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
   cd ./examples/book-ssr && cargo clippy --features ssr
   cd ./examples/book-ssr && cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
   just unit-test
@@ -135,6 +136,11 @@ book-serve-isolated port="4300":
 # build) and for another locale. The book bakes only the data of the locales its demos format with (3.6 MB less wasm).
 book-icu-data:
   ./scripts/icu-datagen.sh examples/book-ssr examples/book-ssr/icu4x-data ^en ^en-GB ^de ^ar ^ar-EG ^es ^fr ^hi ^ja ^pt ^pt-BR ^sv
+
+# Regenerate the test-app's ICU4X data (`testing/test-app/icu4x-data`): after every ICU4X update and when a fixture
+# formats with another locale (a locale without data falls back to its parent's or the root's, silently).
+test-app-icu-data:
+  ./scripts/icu-datagen.sh testing/test-app testing/test-app/icu4x-data ^en ^de ^fr ^ja ^he ^ar ^ar-AE ^ar-EG
 
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
@@ -214,7 +220,6 @@ upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
-# Run `cargo clippy --tests` for every crate. Lint levels are configured in each crate's [lints.clippy] section.
 # Free disk space: delete the incremental caches of the agents' shared target dirs (they pile up old sessions;
 # the next build is slower, nothing else changes).
 clean-agent-incremental:
@@ -224,16 +229,30 @@ clean-agent-incremental:
 doc:
   RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path ./leptonic/Cargo.toml --features full --no-deps
 
-clippy: # "-" prefixes allow for non-zero status codes!
-  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml
-  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --features full
+# Run `cargo clippy --tests` on every crate. Lint levels are configured in each crate's [lints.clippy] section.
+# Runs every check even after a failure, then fails listing the failed ones. The apps are linted from their own
+# directories, so that their `.cargo/config.toml` (`LEPTOS_OUTPUT_NAME`) applies as in their builds.
+clippy:
+  #!/usr/bin/env bash
+  set -uo pipefail
+  failed=()
+  check() { echo "==> $*"; (eval "$@") || failed+=("$*"); }
+  check cargo clippy --tests --manifest-path ./leptonic/Cargo.toml
+  check cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --features full
+  # The browser suite is no default test target (leptonic/Cargo.toml): `--tests` skips it.
+  check cargo clippy --test browser_test --manifest-path ./leptonic/Cargo.toml
   # Release too: some lints depend on type sizes that differ there (`trivially_copy_pass_by_ref`).
-  -cargo clippy --tests --release --manifest-path ./leptonic/Cargo.toml --features full
-  # The atoms without the components layer: what consumers like agnite dev-ui build (consumers.md).
-  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --no-default-features --features atoms,clipboard
-  -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml
-  -cargo clippy --tests --manifest-path ./testing/test-app/Cargo.toml
-  -cd ./examples/book-ssr && cargo clippy --tests
-  -cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml
-  -cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
-  -cargo clippy --tests --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
+  check cargo clippy --tests --release --manifest-path ./leptonic/Cargo.toml --features full
+  # The atoms alone: what consumers like agnite dev-ui build (consumers.md).
+  check cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --no-default-features --features atoms,clipboard
+  check cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml
+  check "cd ./testing/test-app && cargo clippy --features ssr"
+  check "cd ./testing/test-app && cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown"
+  check "cd ./examples/book-ssr && cargo clippy --tests"
+  check cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml
+  check cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  check cargo clippy --tests --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
+  if (( ${#failed[@]} )); then
+    printf 'clippy failed:\n'; printf '  %s\n' "${failed[@]}"
+    exit 1
+  fi

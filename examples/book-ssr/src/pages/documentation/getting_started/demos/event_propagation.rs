@@ -1,7 +1,13 @@
 use leptonic::{
+    IntoAttrs, KeyboardKey, Propagation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::*,
-    utils::{Propagation, key::KeyboardKey},
+    hooks::{
+        form::{
+            InputType, TextFieldElement, UseTextFieldInput, UseTextFieldStateInput,
+            ValidationBehavior, use_text_field, use_text_field_state,
+        },
+        interactions::{KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
+    },
 };
 use leptos::prelude::*;
 
@@ -54,7 +60,7 @@ pub fn EventPropagationDemo() -> impl IntoView {
         auto_capitalize: None,
         auto_correct: None,
         spell_check: None,
-        input_mode: None,
+        input_mode: Signal::stored(None),
         enter_key_hint: None,
         auto_focus: false,
         exclude_from_tab_order: false,

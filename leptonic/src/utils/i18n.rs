@@ -1,9 +1,35 @@
-// Upstream: react-aria/src/interactions/context.ts @ 6f664fe911
+// Upstream: react-aria/src/i18n/I18nProvider.tsx @ 99e6102368
+// Upstream: react-aria/src/i18n/utils.ts @ 99e6102368
+use icu_locale::LocaleDirectionality;
 use leptos::prelude::*;
 
-use super::locale::WritingDirection;
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `Locale` wraps a parsed `icu_locale::Locale` (react-aria: a BCP 47 string and a direction);
+//   `FromStr` reports invalid locales instead of passing them on.
+// - The context also changes the locale (`I18nContext::set_locale`); react-aria's provider only
+//   passes its `locale` prop down.
+// - Without a `locale`, the provider uses en-US (react-aria: `useDefaultLocale`, the browser's
+//   language; open item in PLAN.md).
+//
+// ## BEHAVIOR DIFFERENCES
+// - `isRTL`: the direction comes from ICU4X's `LocaleDirectionality` (CLDR's likely script and
+//   its direction), where react-aria asks `Intl.Locale` and falls back to hand-written script and
+//   language lists. Same results without a list to maintain.
+//
+// =============================================================================
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/context.ts
+/// The writing direction of a locale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WritingDirection {
+    /// Left-to-right
+    Ltr,
+    /// Right-to-left
+    Rtl,
+}
 
 /// Locale information for internationalization.
 ///
@@ -15,8 +41,8 @@ pub struct Locale {
     /// The parsed ICU locale.
     inner: icu_locale::Locale,
 
-    /// The writing direction for the locale.
-    pub direction: WritingDirection,
+    /// The writing direction of the locale, derived from it.
+    direction: WritingDirection,
 }
 
 impl Default for Locale {
@@ -67,29 +93,20 @@ impl Locale {
         self.inner.to_string()
     }
 
-    /// Determines the writing direction from a parsed ICU locale.
-    ///
-    /// Uses the likely-subtags algorithm to determine the script, then
-    /// checks if the script is inherently RTL.
+    /// The writing direction of a parsed ICU locale: that of its likely script (CLDR data).
+    /// Locales of unknown direction are left-to-right.
     fn direction_for_icu_locale(locale: &icu_locale::Locale) -> WritingDirection {
-        // Use likely subtags to maximize the language identifier — this fills in the script subtag.
-        let mut langid = locale.id.clone();
-        let expander = icu_locale::LocaleExpander::new_extended();
-        expander.maximize(&mut langid);
-
-        // Check the script for RTL direction.
-        if let Some(script) = langid.script {
-            let script_str = script.as_str();
-            // Scripts that are written right-to-left.
-            if matches!(
-                script_str,
-                "Arab" | "Hebr" | "Thaa" | "Syrc" | "Mand" | "Nkoo" | "Adlm" | "Samr"
-            ) {
-                return WritingDirection::Rtl;
-            }
+        if LocaleDirectionality::new_extended().is_right_to_left(&locale.id) {
+            WritingDirection::Rtl
+        } else {
+            WritingDirection::Ltr
         }
+    }
 
-        WritingDirection::Ltr
+    /// The writing direction of the locale.
+    #[must_use]
+    pub fn direction(&self) -> WritingDirection {
+        self.direction
     }
 
     /// Returns true if the locale is right-to-left.
@@ -118,13 +135,12 @@ impl Locale {
 }
 
 /// Context type for providing locale information throughout the application.
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct I18nContext {
     /// The current locale.
     pub locale: Signal<Locale>,
 
-    /// Set the locale.
-    pub set_locale: Callback<Locale>,
+    set_locale: WriteSignal<Locale>,
 }
 
 impl I18nContext {
@@ -134,16 +150,21 @@ impl I18nContext {
         self.locale.get()
     }
 
+    /// Changes the locale for everything inside the provider.
+    pub fn set_locale(&self, locale: Locale) {
+        self.set_locale.set(locale);
+    }
+
     /// Returns the current writing direction.
     #[must_use]
     pub fn direction(&self) -> WritingDirection {
-        self.locale.get().direction
+        self.locale.with(Locale::direction)
     }
 
     /// Returns true if the current locale is RTL.
     #[must_use]
     pub fn is_rtl(&self) -> bool {
-        self.locale.get().is_rtl()
+        self.locale.with(Locale::is_rtl)
     }
 }
 
@@ -171,9 +192,7 @@ pub fn I18nProvider(
 
     let context = I18nContext {
         locale: locale_signal.into(),
-        set_locale: Callback::new(move |new_locale: Locale| {
-            set_locale_signal.set(new_locale);
-        }),
+        set_locale: set_locale_signal,
     };
 
     // Only for the children: a component body has no owner of its own, so `provide_context`
@@ -197,7 +216,7 @@ pub fn use_locale() -> Signal<Locale> {
 #[must_use]
 pub fn use_direction() -> Signal<WritingDirection> {
     let locale = use_locale();
-    Signal::derive(move || locale.with(|l| l.direction))
+    Signal::derive(move || locale.with(Locale::direction))
 }
 
 #[cfg(test)]
@@ -210,20 +229,20 @@ mod tests {
     fn test_locale_default() {
         let locale = Locale::default();
         assert_that!(locale.locale_str()).is_equal_to("en-US".to_string());
-        assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
+        assert_that!(locale.direction()).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_new() {
         let locale = Locale::from(locale!("de-DE"));
         assert_that!(locale.locale_str()).is_equal_to("de-DE".to_string());
-        assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
+        assert_that!(locale.direction()).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_rtl() {
         let locale = Locale::from(locale!("ar-SA"));
-        assert_that!(locale.direction).is_equal_to(WritingDirection::Rtl);
+        assert_that!(locale.direction()).is_equal_to(WritingDirection::Rtl);
         assert_that!(locale.is_rtl()).is_true();
     }
 
@@ -244,6 +263,17 @@ mod tests {
         assert_that!(Locale::from(locale!("he")).is_rtl()).is_true(); // Hebrew (Hebr script)
         assert_that!(Locale::from(locale!("ps")).is_rtl()).is_true(); // Pashto (Arab script)
         assert_that!(Locale::from(locale!("yi")).is_rtl()).is_true(); // Yiddish (Hebr script)
+        assert_that!(Locale::from(locale!("ckb")).is_rtl()).is_true(); // Central Kurdish (Arab script)
+        assert_that!(Locale::from(locale!("dv")).is_rtl()).is_true(); // Dhivehi (Thaa script)
+    }
+
+    /// Scripts the former hand-written list (and react-aria's list before `Intl.Locale`) missed.
+    #[test]
+    fn test_locale_rtl_for_every_rtl_script() {
+        assert_that!(Locale::from(locale!("men-Mend")).is_rtl()).is_true(); // Mende Kikakui
+        assert_that!(Locale::from(locale!("rhg-Rohg")).is_rtl()).is_true(); // Hanifi Rohingya
+        assert_that!(Locale::from(locale!("ff-Adlm")).is_rtl()).is_true(); // Adlam
+        assert_that!(Locale::from(locale!("ff-Latn")).is_rtl()).is_false();
     }
 
     #[test]

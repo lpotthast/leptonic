@@ -1,15 +1,12 @@
 use leptonic::{
+    ListFormatOptions, ListFormatStyle, ListFormatType, ListFormatter, Locale, Orientation,
     atoms::{
         field::Label,
         input::Input,
         radio::{RadioButton, RadioField, RadioGroup},
         text_field::TextField,
     },
-    hooks::{Orientation, collections::Key},
-    utils::{
-        i18n::Locale,
-        list_formatter::{ListFormatOptions, ListFormatStyle, ListFormatType, ListFormatter},
-    },
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 
@@ -18,7 +15,7 @@ pub fn ListFormatterDemo() -> impl IntoView {
     let locale = RwSignal::new(Locale::default());
     let text = RwSignal::new(String::from("apples, pears, plums"));
 
-    let format = move |r#type: ListFormatType, style: ListFormatStyle| {
+    let format = move |kind: ListFormatType, style: ListFormatStyle| {
         move || {
             let items = text.with(|text| {
                 text.split(',')
@@ -28,7 +25,7 @@ pub fn ListFormatterDemo() -> impl IntoView {
                     .collect::<Vec<_>>()
             });
             let items: Vec<&str> = items.iter().map(String::as_str).collect();
-            ListFormatter::new(&locale.get(), &ListFormatOptions { r#type, style }).format(&items)
+            ListFormatter::new(&locale.get(), &ListFormatOptions { kind, style }).format(&items)
         }
     };
 

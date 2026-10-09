@@ -1,6 +1,5 @@
 use leptonic::{
-    atoms::button::Button,
-    utils::scroll::{ScrollAlignment, ScrollIntoViewOpts, is_scrollable, scroll_into_view},
+    ScrollAlignment, ScrollIntoViewOpts, atoms::button::Button, is_scrollable, scroll_into_view,
 };
 use leptos::{html, prelude::*, wasm_bindgen::JsCast};
 

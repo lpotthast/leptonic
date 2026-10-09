@@ -1,15 +1,18 @@
 // Upstream: react-stately/src/numberfield/useNumberFieldState.ts @ 99e6102368
+// Upstream: react-stately/test/numberfield/useNumberFieldState.test.ts @ 99e6102368
 use leptos::prelude::*;
 
 use super::use_form_validation_state::{
     FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
     use_form_validation_state,
 };
-use crate::utils::{
+use crate::{
     NumberValue, ValueBinding,
-    i18n::{Locale, use_locale},
-    number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle},
-    number_parser::NumberParser,
+    utils::{
+        i18n::{Locale, use_locale},
+        number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle},
+        number_parser::NumberParser,
+    },
 };
 
 // =============================================================================
@@ -138,7 +141,7 @@ pub struct NumberFieldState<T: NumberValue> {
     decrement: Callback<()>,
     increment_to_max: Callback<()>,
     decrement_to_min: Callback<()>,
-    validate: Callback<String, bool>,
+    parser: Memo<NumberParser>,
 }
 
 impl<T: NumberValue> NumberFieldState<T> {
@@ -182,8 +185,14 @@ impl<T: NumberValue> NumberFieldState<T> {
     }
 
     /// Whether `text` may be typed: a valid number, or the beginning of one.
-    pub fn validate(&self, text: String) -> bool {
-        self.validate.run(text)
+    pub fn validate(&self, text: &str) -> bool {
+        self.parser.with_untracked(|parser| {
+            parser.is_valid_partial_number(
+                text,
+                self.min_value.get_untracked(),
+                self.max_value.get_untracked(),
+            )
+        })
     }
 }
 
@@ -286,29 +295,34 @@ pub fn use_number_field_state<T: NumberValue>(
         None => value.clamp_to(min_value.get_untracked(), max_value.get_untracked()),
     };
 
-    // The committed value: bound app state, or owned.
-    let (value, store_value): (Signal<Option<T>>, Callback<Option<T>>) =
+    // The committed value: bound app state, or owned. A memo: the text below is re-formatted
+    // only when the number changes (react-aria), not when the app sets the same value again or
+    // the bounds change without moving it.
+    let (value, store_value): (Memo<Option<T>>, Callback<Option<T>>) =
         if let Some(binding) = binding {
             // Shown snapped, as react-aria snaps a controlled value (the bound state keeps what
             // the app set).
-            let value = match commit_behavior {
-                CommitBehavior::Snap => Signal::derive(move || {
+            let value = Memo::new(move |_| match commit_behavior {
+                CommitBehavior::Snap => {
                     let (min, max) = (min_value.get(), max_value.get());
                     let step = explicit_step.get();
                     binding.value.get().map(|value| match step {
                         Some(step) => value.snap_to_step(min, max, step),
                         None => value.clamp_to(min, max),
                     })
-                }),
-                CommitBehavior::Validate => binding.value,
-            };
+                }
+                CommitBehavior::Validate => binding.value.get(),
+            });
             (value, Callback::new(move |v| binding.set(v)))
         } else {
             let owned = RwSignal::new(match commit_behavior {
                 CommitBehavior::Snap => default_value.map(snap_committed),
                 CommitBehavior::Validate => default_value,
             });
-            (owned.into(), Callback::new(move |v| owned.set(v)))
+            (
+                Memo::new(move |_| owned.get()),
+                Callback::new(move |v| owned.set(v)),
+            )
         };
     let set_value = Callback::new(move |new: Option<T>| {
         if value.get_untracked() != new {
@@ -332,7 +346,7 @@ pub fn use_number_field_state<T: NumberValue>(
     });
 
     // The value of the typed text.
-    let number_value = Signal::derive(move || {
+    let number_value = Memo::new(move |_| {
         parser.track();
         input_value.with(|text| parse(text))
     });
@@ -340,10 +354,10 @@ pub fn use_number_field_state<T: NumberValue>(
     let validation = use_form_validation_state(UseFormValidationStateInput {
         builtin_validation: Signal::default(),
         is_invalid,
-        value,
+        value: value.into(),
         validate,
         validation_behavior,
-        name,
+        names: name.into_iter().collect(),
     });
 
     let commit = Callback::new(move |text: Option<String>| {
@@ -451,10 +465,10 @@ pub fn use_number_field_state<T: NumberValue>(
     };
 
     NumberFieldState {
-        number_value,
+        number_value: number_value.into(),
         input_value: input_value.into(),
-        can_increment: Signal::derive(move || can_step(true)),
-        can_decrement: Signal::derive(move || can_step(false)),
+        can_increment: Memo::new(move |_| can_step(true)).into(),
+        can_decrement: Memo::new(move |_| can_step(false)).into(),
         min_value,
         max_value,
         step,
@@ -465,7 +479,8 @@ pub fn use_number_field_state<T: NumberValue>(
         validation,
         validation_behavior,
         default_number_value,
-        value,
+        value: value.into(),
+        parser,
         set_value: Callback::new(move |new: Option<T>| {
             set_value.run(new);
             input_value.set(format(value.get_untracked()));
@@ -476,15 +491,6 @@ pub fn use_number_field_state<T: NumberValue>(
         decrement,
         increment_to_max,
         decrement_to_min,
-        validate: Callback::new(move |text: String| {
-            parser.with_untracked(|parser| {
-                parser.is_valid_partial_number(
-                    &text,
-                    min_value.get_untracked(),
-                    max_value.get_untracked(),
-                )
-            })
-        }),
     }
 }
 
@@ -493,12 +499,17 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::{flush_effects, with_owner};
 
     fn with_state<T: NumberValue, R>(
         input: UseNumberFieldStateInput<T>,
         f: impl FnOnce(NumberFieldState<T>) -> R,
     ) -> R {
-        Owner::new().with(|| f(use_number_field_state(input)))
+        with_owner(|| {
+            let state = use_number_field_state(input);
+            flush_effects();
+            f(state)
+        })
     }
 
     #[test]
@@ -688,12 +699,12 @@ mod tests {
     #[test]
     fn integer_fields_reject_fractions_while_typing() {
         with_state(UseNumberFieldStateInput::<u16>::default(), |state| {
-            assert_that!(state.validate("12".to_owned())).is_true();
-            assert_that!(state.validate("1.".to_owned())).is_false();
-            assert_that!(state.validate("-".to_owned())).is_false();
+            assert_that!(state.validate("12")).is_true();
+            assert_that!(state.validate("1.")).is_false();
+            assert_that!(state.validate("-")).is_false();
         });
         with_state(UseNumberFieldStateInput::<f32>::default(), |state| {
-            assert_that!(state.validate("-1.".to_owned())).is_true();
+            assert_that!(state.validate("-1.")).is_true();
         });
     }
 
@@ -727,7 +738,7 @@ mod tests {
 
     #[test]
     fn a_bound_value_is_read_and_written() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(Some(4_i64));
             let state = use_number_field_state(UseNumberFieldStateInput {
                 value: Some(ValueBinding::from(app)),
@@ -740,7 +751,7 @@ mod tests {
     }
     #[test]
     fn a_bound_value_shows_snapped() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(Some(17_i32));
             let state = use_number_field_state(UseNumberFieldStateInput {
                 value: Some(ValueBinding::from(app)),
@@ -757,7 +768,7 @@ mod tests {
 
     #[test]
     fn committing_empty_text_shows_what_a_bound_value_holds() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(Some(4_i32));
             let state = use_number_field_state(UseNumberFieldStateInput {
                 // Rejects `None`.
@@ -774,6 +785,245 @@ mod tests {
             state.set_input_value(String::new());
             state.commit(None);
             assert_that!(state.input_value.get_untracked()).is_equal_to("4".to_owned());
+        });
+    }
+
+    // Upstream re-formats the text only when the number, the locale or the format options change.
+    #[test]
+    fn changing_the_bounds_keeps_the_text_being_typed() {
+        with_owner(|| {
+            let min = RwSignal::new(Some(0_i32));
+            let max = RwSignal::new(Some(100_i32));
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                default_value: Some(5),
+                min_value: min.into(),
+                max_value: max.into(),
+                ..UseNumberFieldStateInput::default()
+            });
+            flush_effects();
+            state.set_input_value("12".to_owned());
+            min.set(Some(1));
+            max.set(Some(50));
+            flush_effects();
+            assert_that!(state.input_value.get_untracked()).is_equal_to("12".to_owned());
+        });
+    }
+
+    #[test]
+    fn the_app_setting_the_same_value_keeps_the_text_being_typed() {
+        with_owner(|| {
+            let app = RwSignal::new(Some(5_i32));
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                value: Some(ValueBinding::from(app)),
+                ..UseNumberFieldStateInput::default()
+            });
+            flush_effects();
+            state.set_input_value("12".to_owned());
+            app.set(Some(5));
+            flush_effects();
+            assert_that!(state.input_value.get_untracked()).is_equal_to("12".to_owned());
+            // A new value replaces the text.
+            app.set(Some(7));
+            flush_effects();
+            assert_that!(state.input_value.get_untracked()).is_equal_to("7".to_owned());
+        });
+    }
+
+    // useNumberFieldState.test.ts: "does not reset inputValue when re-rendered with same
+    // formatOptions content", "resets inputValue when formatOptions content actually changes".
+    #[test]
+    fn only_changed_format_options_re_format_the_text() {
+        with_owner(|| {
+            let options = RwSignal::new(NumberFormatOptions::default());
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                default_value: Some(10.0_f64),
+                format_options: options.into(),
+                ..UseNumberFieldStateInput::default()
+            });
+            flush_effects();
+            state.set_input_value("12".to_owned());
+            options.set(NumberFormatOptions::default());
+            flush_effects();
+            assert_that!(state.input_value.get_untracked()).is_equal_to("12".to_owned());
+            options.set(NumberFormatOptions {
+                minimum_fraction_digits: Some(2),
+                ..NumberFormatOptions::default()
+            });
+            flush_effects();
+            assert_that!(state.input_value.get_untracked()).is_equal_to("10.00".to_owned());
+        });
+    }
+
+    // RS NumberField.test.js: "should not trigger onChange when entering a minus sign and
+    // blurring" (a lone "-" clears an empty field without a change), "can type .5", "should
+    // handle typing ,123 in en-US".
+    #[test]
+    fn partial_and_leading_separator_texts_commit() {
+        let changes = RwSignal::new(Vec::new());
+        with_state(
+            UseNumberFieldStateInput::<f64> {
+                on_change: Some(Callback::new(move |v| changes.update(|c| c.push(v)))),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                state.set_input_value("-".to_owned());
+                state.commit(None);
+                assert_that!(state.input_value.get_untracked()).is_equal_to(String::new());
+                assert_that!(changes.get_untracked()).is_empty();
+                state.commit(Some(".5".to_owned()));
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(0.5));
+                assert_that!(state.input_value.get_untracked()).is_equal_to("0.5".to_owned());
+                state.commit(Some(",123".to_owned()));
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(123.0));
+            },
+        );
+    }
+
+    // RS NumberField.test.js: "clamps a defaultValue outside the range", "the value 0 is shown",
+    // "rounds the reported value as displayed" (10.0145 with 2 fraction digits is 10.01).
+    #[test]
+    fn default_values_clamp_and_commits_round_as_displayed() {
+        with_state(
+            UseNumberFieldStateInput::<i32> {
+                default_value: Some(50),
+                max_value: Signal::stored(Some(20)),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(20));
+            },
+        );
+        with_state(
+            UseNumberFieldStateInput::<i32> {
+                default_value: Some(0),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                assert_that!(state.input_value.get_untracked()).is_equal_to("0".to_owned());
+            },
+        );
+        with_state(
+            UseNumberFieldStateInput::<f64> {
+                format_options: Signal::stored(NumberFormatOptions {
+                    maximum_fraction_digits: Some(2),
+                    ..NumberFormatOptions::default()
+                }),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                state.commit(Some("10.0145".to_owned()));
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(10.01));
+                assert_that!(state.input_value.get_untracked()).is_equal_to("10.01".to_owned());
+            },
+        );
+    }
+
+    // RS NumberField.test.js: percent fields ("typing 25 is 0.25", "a step adds 1%") and the
+    // accounting format ("-10 becomes ($10.00)").
+    #[test]
+    fn percent_and_accounting_formats() {
+        with_state(
+            UseNumberFieldStateInput::<f64> {
+                format_options: Signal::stored(NumberFormatOptions {
+                    style: NumberStyle::Percent,
+                    ..NumberFormatOptions::default()
+                }),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                state.commit(Some("25".to_owned()));
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(0.25));
+                assert_that!(state.input_value.get_untracked()).is_equal_to("25%".to_owned());
+                state.increment();
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(0.26));
+                assert_that!(state.input_value.get_untracked()).is_equal_to("26%".to_owned());
+            },
+        );
+        with_state(
+            UseNumberFieldStateInput::<f64> {
+                format_options: Signal::stored(NumberFormatOptions {
+                    style: NumberStyle::Currency,
+                    currency: Some("USD".to_owned()),
+                    currency_sign: crate::utils::number_formatter::CurrencySign::Accounting,
+                    ..NumberFormatOptions::default()
+                }),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                state.commit(Some("-10".to_owned()));
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(-10.0));
+                assert_that!(state.input_value.get_untracked()).is_equal_to("($10.00)".to_owned());
+            },
+        );
+    }
+
+    // RS NumberField.test.js: "End goes to the last step at or below max", "Home goes to the
+    // first step at or above min" (bounds off the step grid).
+    #[test]
+    fn end_and_home_with_bounds_off_the_step_grid() {
+        with_state(
+            UseNumberFieldStateInput::<i32> {
+                default_value: Some(5),
+                min_value: Signal::stored(Some(2)),
+                max_value: Signal::stored(Some(21)),
+                step: Signal::stored(Some(5)),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                state.increment_to_max();
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(17));
+                state.decrement_to_min();
+                assert_that!(state.value().get_untracked()).is_equal_to(Some(2));
+            },
+        );
+    }
+
+    // RS NumberField.test.js: "typing 2, then incrementing shows 3; again from 3 reports no new
+    // change but updates the text".
+    #[test]
+    fn stepping_from_typed_text_updates_the_text_without_a_change() {
+        let changes = RwSignal::new(Vec::new());
+        with_state(
+            UseNumberFieldStateInput::<i32> {
+                on_change: Some(Callback::new(move |v| changes.update(|c| c.push(v)))),
+                ..UseNumberFieldStateInput::default()
+            },
+            |state| {
+                state.set_input_value("2".to_owned());
+                state.increment();
+                assert_that!(state.input_value.get_untracked()).is_equal_to("3".to_owned());
+                state.set_input_value("2".to_owned());
+                state.increment();
+                assert_that!(state.input_value.get_untracked()).is_equal_to("3".to_owned());
+                assert_that!(changes.get_untracked()).is_equal_to(vec![Some(3)]);
+            },
+        );
+    }
+
+    // RS NumberField.test.js: "typed text beyond max disables incrementing" (and beyond min
+    // decrementing), until it is deleted; and "the app setting no value empties the text".
+    #[test]
+    fn typed_text_beyond_the_bounds_disables_stepping() {
+        with_owner(|| {
+            let app = RwSignal::new(Some(5_i32));
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                value: Some(ValueBinding::from(app)),
+                min_value: Signal::stored(Some(0)),
+                max_value: Signal::stored(Some(10)),
+                ..UseNumberFieldStateInput::default()
+            });
+            flush_effects();
+            state.set_input_value("12".to_owned());
+            assert_that!(state.can_increment.get_untracked()).is_false();
+            assert_that!(state.can_decrement.get_untracked()).is_true();
+            state.set_input_value("-1".to_owned());
+            assert_that!(state.can_decrement.get_untracked()).is_false();
+            state.set_input_value(String::new());
+            assert_that!(state.can_increment.get_untracked()).is_true();
+            assert_that!(state.can_decrement.get_untracked()).is_true();
+            app.set(None);
+            flush_effects();
+            assert_that!(state.input_value.get_untracked()).is_equal_to(String::new());
         });
     }
 

@@ -1,6 +1,9 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
-    utils::use_description::use_description,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+    },
+    use_description,
 };
 use leptos::prelude::*;
 

@@ -2,12 +2,12 @@
 // Upstream: react-aria-components/src/ColorSwatch.tsx @ 99e6102368
 
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use super::{color_picker::ColorPickerContext, color_swatch_picker::ColorSwatchPickerItemContext};
 use crate::{
-    hooks::{UseColorSwatchInput, use_color_swatch},
+    hooks::color::{UseColorSwatchInput, use_color_swatch},
     utils::{
-        classes::Classes,
         color::{Color, ColorProp},
         default_class::with_default_class,
         styles::Styles,
@@ -53,7 +53,7 @@ pub fn ColorSwatch(
         color_name,
         aria_label,
         aria_labelledby,
-        color: Into::<crate::utils::color::ColorProp>::into(color).0,
+        color,
         id: None,
     })
     .color_swatch_props

@@ -19,7 +19,7 @@ pub fn PageAtomFocusManagerProvider() -> impl IntoView {
 
             <Section title="Hooks Used">
                 <p>
-                    <Link href=routes::doc::focus::UseFocusManager.materialize()><Code inline=true>"use_focus_manager"</Code></Link>
+                    <Link href=routes::doc::focus::UseFocusManager.materialize()><Code inline=true>"create_focus_manager"</Code></Link>
                     ". The atom spreads the hook\u{2019}s props on its div and hands the manager to its children. It renders "
                     "no data attributes."
                 </p>
@@ -43,8 +43,8 @@ pub fn PageAtomFocusManagerProvider() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            hooks::{FocusManager as Manager, FocusManagerOptions},
+                            atoms::{button::Button, focus_manager::FocusManagerProvider},
+                            hooks::focus::{FocusManager as Manager, FocusManagerOptions},
                         };
 
                         #[component]
@@ -67,7 +67,7 @@ pub fn PageAtomFocusManagerProvider() -> impl IntoView {
                 </Code>
                 <p>
                     "Each method takes "<Link href=format!("{}#focusmanageroptions", routes::doc::focus::UseFocusManager.materialize())>"FocusManagerOptions"</Link>
-                    " ("<Code inline=true>"from"</Code>", "<Code inline=true>"wrap"</Code>", "<Code inline=true>"tabbable"</Code>
+                    " ("<Code inline=true>"from"</Code>", "<Code inline=true>"wrap"</Code>", "<Code inline=true>"focusability"</Code>
                     ", "<Code inline=true>"accept"</Code>") and returns the element it focused, if any."
                 </p>
             </Section>
@@ -98,7 +98,7 @@ pub fn PageAtomFocusManagerProvider() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
                 <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>
                 <li><Link href=routes::doc::Toolbar.materialize()>"Toolbar"</Link></li>
             </SeeAlso>

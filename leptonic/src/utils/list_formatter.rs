@@ -6,10 +6,10 @@
 //
 // ## API DIFFERENCES
 // - A formatter built from a `Locale` and options (react-aria: a hook memoizing
-//   `Intl.ListFormat`), with ICU4X's `ListFormatter` (works during SSR).
+//   `Intl.ListFormat`), with ICU4X's `ListFormatter` (works during SSR); the options are enums
+//   (`kind`: `Intl.ListFormat`'s `type`).
 //
 // =============================================================================
-// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useListFormatter.tsx
 
 use icu_list::{ListFormatter as IcuListFormatter, options::ListLength};
 
@@ -56,8 +56,8 @@ impl ListFormatStyle {
 /// Options for creating a [`ListFormatter`].
 #[derive(Debug, Clone, Default)]
 pub struct ListFormatOptions {
-    /// The type of list formatting. Defaults to `Conjunction`.
-    pub r#type: ListFormatType,
+    /// The type of list formatting (`Intl.ListFormat`'s `type`). Defaults to `Conjunction`.
+    pub kind: ListFormatType,
 
     /// The style of list formatting. Defaults to `Long`.
     pub style: ListFormatStyle,
@@ -83,34 +83,26 @@ pub struct ListFormatter {
 }
 
 impl ListFormatter {
-    /// Creates a new list formatter with the given locale and options.
-    ///
-    /// - `locale`: A `Locale` for locale-sensitive formatting.
-    /// - `options`: Type and style options.
+    /// Creates a new list formatter with the given locale and options. A locale without list
+    /// patterns gets the root locale's (of the same type and style).
     ///
     /// # Panics
     ///
-    /// Panics if ICU4X cannot create a list formatter for the given locale or the default locale.
+    /// Never with ICU4X's compiled data, which has every type and style for the root locale.
     #[must_use]
     pub fn new(locale: &Locale, options: &ListFormatOptions) -> Self {
-        let prefs = icu_list::ListFormatterPreferences::from(locale.icu_locale());
         let icu_options = icu_list::options::ListFormatterOptions::default()
             .with_length(options.style.to_icu_length());
-
-        let inner = match options.r#type {
+        let build = |prefs| match options.kind {
             ListFormatType::Conjunction => IcuListFormatter::try_new_and(prefs, icu_options),
             ListFormatType::Disjunction => IcuListFormatter::try_new_or(prefs, icu_options),
             ListFormatType::Unit => IcuListFormatter::try_new_unit(prefs, icu_options),
-        }
-        .unwrap_or_else(|_| {
-            // Fallback to default locale
-            IcuListFormatter::try_new_and(
-                icu_list::ListFormatterPreferences::default(),
-                icu_list::options::ListFormatterOptions::default(),
-            )
-            .expect("ICU4X default list formatter should always be available")
-        });
-
+        };
+        let inner = build(icu_list::ListFormatterPreferences::from(
+            locale.icu_locale(),
+        ))
+        .or_else(|_| build(icu_list::ListFormatterPreferences::default()))
+        .expect("ICU4X's compiled data has list patterns of every type for the root locale");
         Self { inner }
     }
 
@@ -135,7 +127,7 @@ mod tests {
         let formatter = ListFormatter::new(
             &Locale::from(locale!("en-US")),
             &ListFormatOptions {
-                r#type: ListFormatType::Conjunction,
+                kind: ListFormatType::Conjunction,
                 style: ListFormatStyle::Long,
             },
         );
@@ -148,7 +140,7 @@ mod tests {
         let formatter = ListFormatter::new(
             &Locale::from(locale!("en-US")),
             &ListFormatOptions {
-                r#type: ListFormatType::Disjunction,
+                kind: ListFormatType::Disjunction,
                 style: ListFormatStyle::Long,
             },
         );
@@ -161,7 +153,7 @@ mod tests {
         let formatter = ListFormatter::new(
             &Locale::from(locale!("de-DE")),
             &ListFormatOptions {
-                r#type: ListFormatType::Conjunction,
+                kind: ListFormatType::Conjunction,
                 style: ListFormatStyle::Long,
             },
         );
@@ -175,7 +167,7 @@ mod tests {
         let formatter = ListFormatter::new(
             &Locale::from(locale!("fr-FR")),
             &ListFormatOptions {
-                r#type: ListFormatType::Conjunction,
+                kind: ListFormatType::Conjunction,
                 style: ListFormatStyle::Long,
             },
         );

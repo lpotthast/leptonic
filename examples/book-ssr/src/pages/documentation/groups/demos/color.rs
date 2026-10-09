@@ -1,13 +1,20 @@
 use leptonic::{
-    atoms::prelude::{
-        Button, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSliderTrack, ColorSwatch,
-        ColorThumb, Dialog, DialogTrigger, Input, Label, Popover,
+    Color, ColorValue, HSV, HsvChannel, RGB8,
+    atoms::{
+        button::Button,
+        color_area::ColorArea,
+        color_field::ColorField,
+        color_picker::ColorPicker,
+        color_slider::{ColorSlider, ColorSliderTrack},
+        color_swatch::ColorSwatch,
+        color_thumb::ColorThumb,
+        dialog::{Dialog, DialogTrigger},
+        field::Label,
+        input::Input,
+        popover::Popover,
     },
-    hooks::Placement,
-    utils::{
-        color::{Color, ColorValue, HSV, HsvChannel, RGB8},
-        i18n::use_locale,
-    },
+    hooks::overlay::Placement,
+    use_locale,
 };
 use leptos::prelude::*;
 

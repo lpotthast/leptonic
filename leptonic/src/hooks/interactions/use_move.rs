@@ -1,20 +1,10 @@
 // Upstream: react-aria/src/interactions/useMove.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/useMove.test.js @ 99e6102368
 //! Move interactions: dragging with a pointer and the arrow keys.
-use leptos::{
-    ev,
-    prelude::*,
-    tachys::html::event::{On, SharedEventCallback},
-};
+use leptos::{ev, prelude::*};
 use web_sys::{KeyboardEvent, PointerEvent};
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{
-        EventHandler, Modifiers,
-        element_capture::{CapturedElement, ElementCaptureAttr},
-        pointer_type::PointerType,
-    },
-};
+use crate::{EventHandler, IntoAttrs, Modifiers, OnEvent, utils::pointer_type::PointerType};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -22,11 +12,17 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - Events carry `Modifiers` (react-aria: four boolean fields).
-// - The props capture the element (`element_capture`), which callers chain with their own
-//   captures.
-//
 // - As upstream, move events have no `continuePropagation` (the pointer down and the arrow keys
 //   are always stopped), so they don't implement `Propagation`.
+//
+// ## DIFFERENT BEHAVIOR
+// - Pointer events of a type the browser can't tell (`PointerType::Unknown`: an empty or
+//   vendor-specific `pointerType`) move as a mouse (react-aria: an empty `pointerType` is
+//   `'mouse'`, others pass on).
+//
+// ## ADDITIONS
+// - `is_disabled`: a disabled element starts no moves (react-aria's callers leave out the props
+//   instead), so callers needn't switch the props themselves.
 //
 // ## OMITTED FEATURES
 // - The mouse and touch fallbacks for environments without `PointerEvent` (react-aria uses them
@@ -100,7 +96,6 @@ pub struct UseMoveReturn {
 pub struct UseMoveProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
-    pub element_capture: ElementCaptureAttr,
 }
 
 impl IntoAttrs for UseMoveProps {
@@ -110,16 +105,11 @@ impl IntoAttrs for UseMoveProps {
         (
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown.into_on(ev::keydown),
-            self.element_capture,
         )
     }
 }
 
-pub type UseMoveAttrs = (
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    ElementCaptureAttr,
-);
+pub type UseMoveAttrs = (OnEvent<ev::pointerdown>, OnEvent<ev::keydown>);
 
 /// Handles move interactions: dragging with a mouse, pen or touch, and the arrow keys
 /// (react-aria's `useMove`). A move starts on the first movement after a primary button press
@@ -127,27 +117,28 @@ pub type UseMoveAttrs = (
 /// one-pixel move in its direction (callers decide what a move along an axis means). Only one
 /// pointer moves at a time.
 pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
-    let element = CapturedElement::new();
-
     #[cfg(feature = "ssr")]
     {
         let _ = input;
         UseMoveReturn {
             props: UseMoveProps {
-                on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
-                on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
-                element_capture: element.attr(),
+                on_pointerdown: EventHandler::empty(),
+                on_keydown: EventHandler::empty(),
             },
         }
     }
 
     #[cfg(not(feature = "ssr"))]
     {
-        use crate::utils::{
+        use wasm_bindgen::JsCast;
+
+        use crate::{
             EventModifiers,
-            event_listeners::{Listener, listen_to},
-            key::{KeyboardEventKey, KeyboardKey},
-            text_selection::{disable_text_selection, restore_text_selection},
+            utils::{
+                event_listeners::{Listener, listen_to},
+                key::{KeyboardEventKey, KeyboardKey},
+                text_selection::{disable_text_selection, restore_text_selection},
+            },
         };
 
         /// The move in progress.
@@ -179,7 +170,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 did_move.set_value(true);
                 if let Some(on_move_start) = on_move_start {
                     on_move_start.run(MoveStartEvent {
-                        pointer_type: pointer_type.clone(),
+                        pointer_type,
                         modifiers,
                     });
                 }
@@ -221,12 +212,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             });
             // `movementX`/`movementY` are always 0 in Safari on macOS, and scaled by the device
             // pixel ratio in Chrome on Android (react-aria): the page coordinates' differences.
-            move_by(
-                PointerType::from(e.pointer_type()),
-                e.modifiers(),
-                x - last_x,
-                y - last_y,
-            );
+            move_by(move_pointer_type(&e), e.modifiers(), x - last_x, y - last_y);
         };
         let on_pointer_up = move |e: PointerEvent| {
             let is_ours =
@@ -236,7 +222,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             }
             // Dropping the state removes the window listeners.
             state.set_value(None);
-            end(PointerType::from(e.pointer_type()), e.modifiers());
+            end(move_pointer_type(&e), e.modifiers());
         };
 
         let handle_pointer_down = move |e: PointerEvent| {
@@ -246,7 +232,13 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             start();
             e.stop_propagation();
             e.prevent_default();
-            let Some(window) = leptos_use::use_window().as_ref().cloned() else {
+            // The window of the element's document (react-aria's `getOwnerWindow`).
+            let Some(window) = e
+                .target()
+                .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
+                .and_then(|node| node.owner_document())
+                .and_then(|document| document.default_view())
+            else {
                 return;
             };
             let listeners = vec![
@@ -291,8 +283,17 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             props: UseMoveProps {
                 on_pointerdown: EventHandler::new(handle_pointer_down),
                 on_keydown: EventHandler::new(handle_keydown),
-                element_capture: element.attr(),
             },
         }
+    }
+}
+
+/// The pointer type a pointer event moves as: an unknown one as a mouse (react-aria:
+/// `e.pointerType || 'mouse'`).
+#[cfg(not(feature = "ssr"))]
+fn move_pointer_type(e: &PointerEvent) -> PointerType {
+    match PointerType::of(e) {
+        PointerType::Unknown => PointerType::Mouse,
+        pointer_type => pointer_type,
     }
 }

@@ -29,7 +29,12 @@ pub fn PageAtomProgressBar() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::*;
+                        use leptonic::{
+                            atoms::{
+                                field::Label,
+                                progress_bar::{ProgressBar, ProgressBarFill, ProgressBarValueText},
+                            },
+                        };
 
                         let total_bytes = 4_000_000_u64;
                         // `None` while the progress isn't known.

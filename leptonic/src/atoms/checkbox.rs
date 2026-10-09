@@ -1,5 +1,10 @@
 // Upstream: react-aria-components/src/Checkbox.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/CheckboxGroup.test.js @ 99e6102368
+use std::collections::HashSet;
+
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     field::{FieldContext, LabelContext},
@@ -7,20 +12,22 @@ use super::{
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
-    Out,
+    IntoAttrs, Out, ValueBinding,
     atoms::field::LabelPresence,
     hooks::{
-        CheckboxGroupData, IntoAttrs, ToggleOptions, UseCheckboxGroupInput,
-        UseCheckboxGroupItemInput, UseCheckboxGroupReturn, UseCheckboxGroupStateInput,
-        UseCheckboxInput, UseCheckboxReturn, UseHoverInput, UseToggleStateInput, ValidateFn,
-        ValidationBehavior,
         collections::{Key, SelectionValue},
-        use_checkbox, use_checkbox_group, use_checkbox_group_item, use_checkbox_group_state,
-        use_hover, use_toggle_state,
+        form::{
+            CheckboxGroupData, ToggleOptions, UseCheckboxGroupInput, UseCheckboxGroupItemInput,
+            UseCheckboxGroupReturn, UseCheckboxGroupStateInput, UseCheckboxInput,
+            UseCheckboxReturn, UseToggleStateInput, ValidateFn, ValidationBehavior, use_checkbox,
+            use_checkbox_group, use_checkbox_group_item, use_checkbox_group_state,
+            use_toggle_state,
+        },
+        interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
-        dev_warn, styles::Styles, visually_hidden::visually_hidden_styles,
+        data_attributes::flag, default_class::with_default_class, dev_warn, styles::Styles,
+        visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -41,7 +48,7 @@ use crate::{
 
 /// Context from [`CheckboxGroup`] to its checkboxes.
 #[derive(Clone)]
-pub struct CheckboxGroupCtx {
+pub struct CheckboxGroupContext {
     pub data: CheckboxGroupData,
 }
 
@@ -104,7 +111,7 @@ pub fn CheckboxField(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CheckboxField", classes);
-    let in_group = use_context::<CheckboxGroupCtx>().is_some();
+    let in_group = use_context::<CheckboxGroupContext>().is_some();
     let checkbox = use_checkbox_atom(CheckboxSetup {
         value,
         default_selected,
@@ -150,7 +157,7 @@ pub fn CheckboxField(
         },
         validation_details: checkbox.validation_details,
     };
-    let button = CheckboxButtonCtx {
+    let button = CheckboxButtonContext {
         checkbox: StoredValue::new(Some(checkbox)),
         is_indeterminate,
         is_required,
@@ -191,7 +198,7 @@ pub fn CheckboxButton(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CheckboxButton", classes);
-    let Some(ctx) = use_context::<CheckboxButtonCtx>() else {
+    let Some(ctx) = use_context::<CheckboxButtonContext>() else {
         dev_warn!("a <CheckboxButton> belongs in a <CheckboxField>");
         return ().into_any();
     };
@@ -212,7 +219,7 @@ pub fn CheckboxButton(
 
 /// What a [`CheckboxField`] hands its [`CheckboxButton`].
 #[derive(Clone)]
-struct CheckboxButtonCtx {
+struct CheckboxButtonContext {
     /// The checkbox, taken by the button.
     checkbox: StoredValue<Option<UseCheckboxReturn>>,
     is_indeterminate: Signal<bool>,
@@ -270,6 +277,12 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         auto_focus,
         on_focus_change,
     } = setup;
+    let group = use_context::<CheckboxGroupContext>();
+    let validation_behavior = if group.is_some() {
+        validation_behavior
+    } else {
+        Some(use_validation_behavior(validation_behavior))
+    };
     let options = ToggleOptions {
         id,
         is_disabled,
@@ -277,7 +290,7 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         is_required,
         is_invalid,
         validate,
-        validation_behavior: Some(use_validation_behavior(validation_behavior)),
+        validation_behavior,
         name,
         form,
         value: form_value,
@@ -288,7 +301,7 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         on_focus_change,
         ..ToggleOptions::default()
     };
-    if let Some(group) = use_context::<CheckboxGroupCtx>() {
+    if let Some(group) = group {
         let value = value.expect("a checkbox in a <CheckboxGroup> needs a `value`");
         use_checkbox_group_item(UseCheckboxGroupItemInput {
             is_indeterminate,
@@ -363,26 +376,27 @@ fn checkbox_button(
 /// Data attributes: `data-disabled`, `data-readonly`, `data-required`, `data-invalid`.
 ///
 /// Default class: `leptonic-CheckboxGroup`.
-#[allow(clippy::too_many_arguments)]
+// All controlled and uncontrolled selection props share the hook's HashSet representation.
+#[allow(clippy::too_many_arguments, clippy::implicit_hasher)]
 #[component]
 pub fn CheckboxGroup<V: SelectionValue>(
     /// The initially checked values. Ignored with `value`.
     #[prop(optional)]
-    default_value: Vec<V>,
+    default_value: HashSet<V>,
     /// The checked values (controlled): a value or any signal.
     #[prop(into, optional)]
-    value: Option<Signal<Vec<V>>>,
+    value: Option<Signal<HashSet<V>>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
-    set_value: Option<Out<Vec<V>>>,
-    #[prop(into, optional)] on_change: Option<Callback<Vec<V>>>,
+    set_value: Option<Out<HashSet<V>>>,
+    #[prop(into, optional)] on_change: Option<Callback<HashSet<V>>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     /// Whether at least one checkbox must be checked.
     #[prop(into, optional)]
     is_required: Signal<bool>,
     #[prop(into, optional)] is_invalid: Signal<bool>,
-    #[prop(optional)] validate: Option<ValidateFn<Vec<V>>>,
+    #[prop(optional)] validate: Option<ValidateFn<HashSet<V>>>,
     /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
     #[prop(optional)]
     validation_behavior: Option<ValidationBehavior>,
@@ -407,8 +421,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
         on_change,
         validate,
     } = keyed_state_props(Some(default_value), value, set_value, on_change, validate);
-    let (value, on_change) =
-        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
+    let (value, on_change) = crate::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
         default_value: default_value.unwrap_or_default(),
         value,
@@ -446,7 +459,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
         on_blur: None,
         on_focus_change: None,
     });
-    let ctx = CheckboxGroupCtx { data };
+    let ctx = CheckboxGroupContext { data };
     let label = LabelContext::span(label_props).with_presence(label_presence);
     let field = FieldContext {
         description: description_props,

@@ -3,8 +3,8 @@ use std::{collections::HashSet, sync::Arc};
 use leptonic::{
     atoms::grid::{Grid, GridCell, GridRow, GridRowGroup},
     hooks::{
-        CellFocusMode, GridFocusMode, SelectionMode,
-        collections::{Collection, CollectionMemo, Key, Selection},
+        collections::{Collection, CollectionMemo, Key, Selection, SelectionMode},
+        grid::{CellFocusMode, GridFocusMode},
     },
 };
 use leptos::prelude::*;

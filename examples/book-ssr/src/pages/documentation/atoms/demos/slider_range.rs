@@ -11,10 +11,7 @@ use leptos::prelude::*;
 pub fn SliderRangeDemo() -> impl IntoView {
     let price = RwSignal::new(vec![20_u16, 80]);
     // Show a thumb's value while it is hovered or dragged.
-    let popover = SliderPopover::When {
-        hovered: true,
-        dragged: true,
-    };
+    let popover = SliderPopover::OnHoverOrDrag;
 
     view! {
         <Slider min_value=0 max_value=100 values=price set_values=price classes=["demo-slider", "demo-slider-blue"]>

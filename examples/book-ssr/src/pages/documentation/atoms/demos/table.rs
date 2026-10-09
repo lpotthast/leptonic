@@ -6,9 +6,8 @@ use leptonic::{
         table::{Table, TableBody, TableCell, TableHeader, TableRow},
     },
     hooks::{
-        DisabledBehavior, SelectionMode, SortDescriptor, SortDirection, TableCollection,
-        TableOptions,
-        collections::{Key, Selection},
+        collections::{DisabledBehavior, Key, Selection, SelectionMode},
+        table::{SortDescriptor, SortDirection, TableCollection},
     },
 };
 use leptos::prelude::*;
@@ -83,31 +82,27 @@ pub fn TableAtomDemo() -> impl IntoView {
     let members = Memo::new(move |_| sort.with(|sort| sorted(sort.as_ref())));
     // Columns and rows, in the sorted order. The selection checkbox column comes first.
     let table = Memo::new(move |_| {
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("name", "Name").row_header().allows_sorting();
-                t.column("role", "Role").allows_sorting();
-                t.column("city", "City");
-                members.with(|members| {
-                    for member in members {
-                        t.row(member.id, member.name, |r| {
-                            r.cell(member.name);
-                            r.cell(member.role);
-                            r.cell(member.city);
-                        });
-                    }
-                });
-            },
-        ))
+        Arc::new(TableCollection::build(|t| {
+            t.column("name", "Name").row_header().allows_sorting();
+            t.column("role", "Role").allows_sorting();
+            t.column("city", "City");
+            members.with(|members| {
+                for member in members {
+                    t.row(member.id, member.name, |r| {
+                        r.cell(member.name);
+                        r.cell(member.role);
+                        r.cell(member.city);
+                    });
+                }
+            });
+        }))
     });
 
     view! {
         <div class="demo-table-scroll">
             <Table
                 table=table
+                show_selection_checkboxes=true
                 selection_mode=SelectionMode::Multiple
                 // Alan is on leave: his row can neither be selected nor focused.
                 disabled_keys=Signal::stored(HashSet::from([Key::from("alan")]))

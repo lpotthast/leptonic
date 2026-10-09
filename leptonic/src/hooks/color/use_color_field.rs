@@ -1,16 +1,17 @@
 // Upstream: react-aria/src/color/useColorField.ts @ 99e6102368
 use leptos::{
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use web_sys::{CompositionEvent, FocusEvent, InputEvent, WheelEvent};
 
 use super::use_color_field_state::ColorFieldState;
 use crate::{
+    CapturedElement, EventHandler, IntoAttrs, OnEvent, SlotProps,
     hooks::{
-        InputType, IntoAttrs, TextFieldElement, UseFocusWithinInput, UseFocusWithinReturn,
-        UseScrollWheelInput, UseSpinButtonInput, UseSpinButtonReturn,
+        focus::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
         form::{
+            InputType, TextFieldElement,
             use_form_reset::{UseFormResetInput, use_form_reset},
             use_form_validation_state::ValidityStateSnapshot,
             use_formatted_text_field::{
@@ -21,15 +22,18 @@ use crate::{
                 UseTextFieldInput, UseTextFieldInputAttrs, UseTextFieldInputProps,
                 UseTextFieldReturn, use_text_field,
             },
-            use_text_field_state::TextFieldState,
+            use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
         },
-        interactions::{use_keyboard::KeyboardEventWrapper, use_scroll_wheel::ScrollEvent},
-        use_focus_within, use_scroll_wheel, use_spin_button,
+        interactions::{
+            UseScrollWheelInput, use_keyboard::KeyboardEventWrapper, use_scroll_wheel,
+            use_scroll_wheel::ScrollEvent,
+        },
+        spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
-        CapturedElement, EventHandler, SlotProps,
         color::{ColorValue, RGB8},
         id::use_id,
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
     },
 };
@@ -99,12 +103,12 @@ pub struct UseColorFieldInputProps {
 pub type UseColorFieldInputAttrs = (
     UseTextFieldInputAttrs,
     (
-        On<ev::beforeinput, SharedEventCallback<InputEvent>>,
-        On<ev::compositionstart, SharedEventCallback<CompositionEvent>>,
-        On<ev::compositionend, SharedEventCallback<CompositionEvent>>,
-        On<ev::wheel, SharedEventCallback<WheelEvent>>,
-        On<ev::focusin, SharedEventCallback<FocusEvent>>,
-        On<ev::focusout, SharedEventCallback<FocusEvent>>,
+        OnEvent<ev::beforeinput>,
+        OnEvent<ev::compositionstart>,
+        OnEvent<ev::compositionend>,
+        OnEvent<ev::wheel>,
+        OnEvent<ev::focusin>,
+        OnEvent<ev::focusout>,
     ),
 );
 
@@ -153,7 +157,7 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
     let inactive = move || is_disabled.get_untracked() || is_read_only.get_untracked();
 
     // Enter commits; its default action (submitting the form) is kept.
-    let shortcuts = KeyboardShortcuts::new().on(Shortcut::key("Enter"), move |_| {
+    let shortcuts = KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::Enter), move |_| {
         if inactive() {
             return ShortcutOutcome::Ignored;
         }
@@ -172,14 +176,18 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
     });
 
     // Typing changes the text only while it is (the beginning of) a hex color.
-    let text_state = TextFieldState::new(
-        state.input_value,
-        Callback::new(move |text: String| {
-            if state.validate(&text) {
-                state.set_input_value(text);
-            }
-        }),
-    );
+    let text_state = use_text_field_state(UseTextFieldStateInput {
+        default_value: String::new(),
+        value: Some(crate::ValueBinding::new(
+            state.input_value,
+            Callback::new(move |text: String| {
+                if state.validate(&text) {
+                    state.set_input_value(text);
+                }
+            }),
+        )),
+        on_change: None,
+    });
     let UseTextFieldReturn {
         label_props,
         input_props: mut text_field_props,
@@ -224,7 +232,7 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
         min_length: None,
         max_length: None,
         auto_capitalize: None,
-        input_mode: None,
+        input_mode: Signal::stored(None),
         enter_key_hint: None,
         exclude_from_tab_order: false,
         label_id: None,
@@ -250,17 +258,12 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
     // The spin button's keys (arrows, Page Up/Down, Home/End), not its role: the input stays a
     // text box without value attributes (react-aria).
     let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
-        value: Signal::derive(move || {
-            state
-                .color_value
-                .get()
-                .map(|c| f64::from(c.to_rgb8().to_hex_int()))
-        }),
+        value: Signal::derive(move || state.color_value.get().map(|c| c.to_rgb8().to_hex_int())),
         text_value: Signal::derive(move || {
             state.color_value.get().map(|c| c.to_rgb8().to_string())
         }),
-        min_value: Signal::stored(Some(0.0)),
-        max_value: Signal::stored(Some(f64::from(0xFF_FF_FF_u32))),
+        min_value: Signal::stored(Some(0)),
+        max_value: Signal::stored(Some(0xFF_FF_FF_u32)),
         is_disabled,
         is_read_only,
         is_required,

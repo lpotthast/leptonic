@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::hooks::LinkTarget;
+use leptonic::hooks::link::LinkTarget;
 use leptos::prelude::*;
 
 use super::demos::classes_and_styles_meter::ClassesAndStylesMeterDemo;
@@ -32,11 +32,11 @@ pub fn PageClassesAndStyles() -> impl IntoView {
 
             <p>
                 "Neither crate depends on Leptonic, so you can use them in any Leptos project. Leptonic re-exports them as "
-                <Code inline=true>"leptonic::utils::classes"</Code> " and "
-                <Code inline=true>"leptonic::utils::styles"</Code>
+                <Code inline=true>"leptonic::leptos_classes"</Code> " and "
+                <Code inline=true>"leptonic::leptos_styles"</Code>
                 ". The typed CSS values are re-exported as "
-                <Code inline=true>"leptonic::utils::css"</Code> " and the property selectors as "
-                <Code inline=true>"leptonic::utils::style"</Code> "."
+                <Code inline=true>"leptonic::leptos_styles::css"</Code> " and the property selectors as "
+                <Code inline=true>"leptonic::leptos_styles::property"</Code> "."
             </p>
 
             <Section title="The Problem">
@@ -97,7 +97,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(
                             r#"
-                            use leptonic::utils::classes::Classes;
+                            use leptonic::leptos_classes::Classes;
 
                             // From a single name or an array of names.
                             let c = Classes::from("card");
@@ -164,7 +164,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(
                             r#"
-                            use leptonic::utils::classes::Classes;
+                            use leptonic::leptos_classes::Classes;
                             use leptos::prelude::*;
 
                             /// The innermost Leptos component renders the accumulated classes.
@@ -253,10 +253,16 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(
                             r#"
-                            use leptonic::utils::{
-                                css::{CssColor, CssColorName, Padding, px, rgb},
-                                style::{BackgroundColorProperty, ColorProperty, PaddingProperty},
-                                styles::Styles,
+                            use leptonic::{
+                                leptos_styles::{
+                                    Styles,
+                                    css::{CssColor, CssColorName, Padding, px, rgb},
+                                    property::{
+                                        BackgroundColorProperty,
+                                        ColorProperty,
+                                        PaddingProperty,
+                                    },
+                                },
                             };
 
                             let styles = Styles::new()
@@ -296,10 +302,14 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(
                             r"
-                            use leptonic::utils::{
-                                css::{computed_pct, computed_size, rgb},
-                                style::{BackgroundColorProperty, WidthProperty},
-                                styles::Styles,
+                            use leptonic::{
+                                computed_pct,
+                                computed_size,
+                                leptos_styles::{
+                                    Styles,
+                                    css::rgb,
+                                    property::{BackgroundColorProperty, WidthProperty},
+                                },
                             };
 
                             let (progress, _) = signal(42.0);
@@ -321,7 +331,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                         " panic on non-finite numbers, and " <Code inline=true>"NonNegativeLengthPercentage::new"</Code>
                         " panics on negative ones. For literals and values you know are in range, that\u{2019}s fine. "
                         "For anything computed at runtime, like a slider position when " <Code inline=true>"min == max"</Code>
-                        ", use the helpers in " <Code inline=true>"leptonic::utils::css"</Code> ", which never panic:"
+                        ", use the helpers in " <Code inline=true>"leptonic::leptos_styles::css"</Code> ", which never panic:"
                     </p>
 
                     <DocTable headers=&["Helper", "Returns"]>
@@ -360,10 +370,12 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(
                             r#"
-                            use leptonic::utils::{
-                                css::{CssColor, CssColorName, css_custom_property, rgb, var},
-                                style::ColorProperty,
-                                styles::Styles,
+                            use leptonic::{
+                                leptos_styles::{
+                                    Styles,
+                                    css::{CssColor, CssColorName, css_custom_property, rgb, var},
+                                    property::ColorProperty,
+                                },
                             };
 
                             css_custom_property!(ACCENT: CssColor = "--accent");
@@ -421,10 +433,16 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(
                             r#"
-                            use leptonic::utils::{
-                                css::{BorderCornerRadius, Padding, px, rgb},
-                                style::{BackgroundColorProperty, BorderStartStartRadiusProperty, PaddingProperty},
-                                styles::Styles,
+                            use leptonic::{
+                                leptos_styles::{
+                                    Styles,
+                                    css::{BorderCornerRadius, Padding, px, rgb},
+                                    property::{
+                                        BackgroundColorProperty,
+                                        BorderStartStartRadiusProperty,
+                                        PaddingProperty,
+                                    },
+                                },
                             };
                             use leptos::prelude::*;
 
@@ -554,10 +572,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(
                         r"
-                        use leptonic::utils::css::{
-                            CssDimension, LengthPercentageAuto, Margin, NonNegativeLengthPercentage, Size, em, pct,
-                            px, rem, try_px,
-                        };
+                        use leptonic::leptos_styles::css::{CssDimension, LengthPercentageAuto, Margin, NonNegativeLengthPercentage, Size, em, pct, px, rem, try_px};
 
                         let a: CssDimension = pct(100.0); // 100%
                         let b = em(1.0);                  // 1em
@@ -576,10 +591,8 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 </Code>
 
                 <p>
-                    <Code inline=true>"leptonic::prelude"</Code>" re-exports the types leptonic\u{2019}s own props use: "
-                    <Code inline=true>"Width"</Code>" and "<Code inline=true>"Height"</Code>" (both "
-                    <Code inline=true>"CssDimension"</Code>"), "<Code inline=true>"Margin"</Code>", "
-                    <Code inline=true>"Padding"</Code>" and "<Code inline=true>"FontWeight"</Code>"."
+                    "Use the CSS value types from "<Code inline=true>"leptonic::leptos_styles::css"</Code>
+                    " with typed property declarations. Atom styling props accept "<Code inline=true>"Styles"</Code>"."
                 </p>
 
                 <p>
@@ -623,7 +636,11 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(
                         r#"
-                        use leptonic::{atoms::prelude::Button, utils::{classes::Classes, styles::Styles}};
+                        use leptonic::{
+                            atoms::button::Button,
+                            leptos_classes::Classes,
+                            leptos_styles::Styles,
+                        };
 
                         /// The app's save button: adds its class, passes everything to the atom.
                         #[component]

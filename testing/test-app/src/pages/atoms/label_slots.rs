@@ -10,7 +10,7 @@ use leptonic::{
         select::{Select, SelectPopover, SelectTrigger, SelectValue},
         slider::{Slider, SliderThumb, SliderTrack},
     },
-    hooks::collections::{Key, use_list_collection},
+    hooks::collections::{Key, UseListCollectionInput, use_list_collection},
 };
 use leptos::prelude::*;
 
@@ -23,11 +23,11 @@ const FRUITS: [&str; 3] = ["Apple", "Banana", "Cherry"];
 pub fn PageAtomLabelSlots() -> impl IntoView {
     let shown = RwSignal::new(false);
     let fruits = move || {
-        use_list_collection(
-            Signal::stored(FRUITS.to_vec()),
-            |fruit| Key::from(*fruit),
-            |fruit| (*fruit).to_owned(),
-        )
+        use_list_collection(UseListCollectionInput {
+            items: Signal::stored(FRUITS.to_vec()),
+            key: |fruit| Key::from(*fruit),
+            text_value: |fruit| (*fruit).to_owned(),
+        })
     };
     let label = move |text: &'static str| {
         view! {

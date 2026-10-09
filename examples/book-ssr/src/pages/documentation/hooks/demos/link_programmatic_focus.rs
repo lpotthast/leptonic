@@ -1,4 +1,7 @@
-use leptonic::{atoms::button::Button, hooks::*};
+use leptonic::{
+    atoms::button::Button,
+    hooks::link::{UseLinkInput, use_link},
+};
 use leptos::prelude::*;
 
 #[component]

@@ -40,15 +40,15 @@ pub fn PageAtomGridList() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::grid_list::{GridList, GridListItem},
-                            hooks::{Key, SelectionMode, use_list_collection},
+                            hooks::collections::{Key, SelectionMode, UseListCollectionInput, use_list_collection},
                         };
                         use leptos::prelude::*;
 
-                        let files = use_list_collection(
-                            Signal::stored(vec!["Notes.txt", "Photo.jpg"]),
-                            |file| Key::from(*file),
-                            |file| (*file).to_owned(),
-                        );
+                        let files = use_list_collection(UseListCollectionInput {
+                            items: Signal::stored(vec!["Notes.txt", "Photo.jpg"]),
+                            key: |file| Key::from(*file),
+                            text_value: |file| (*file).to_owned(),
+                        });
 
                         view! {
                             <GridList collection=files selection_mode=SelectionMode::Multiple aria_label="Files">
@@ -87,9 +87,9 @@ pub fn PageAtomGridList() -> impl IntoView {
                             <Code inline=true>"Toggle"</Code>": a click toggles the row. "<Code inline=true>"Replace"</Code>
                             ": a click replaces the selection, and keyboard focus selects."
                         </ApiRow>
-                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">"The initially selected rows."</ApiRow>
+                        <ApiRow name="default_selection" ty="Selection" default="empty">"The initially selected rows."</ApiRow>
                         <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                            "The selection (controlled), replacing "<Code inline=true>"default_selection"</Code>": a value or any signal."
                         </ApiRow>
                         <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
                             "Receives the new selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>
@@ -101,9 +101,9 @@ pub fn PageAtomGridList() -> impl IntoView {
                             <Code inline=true>"All"</Code>": disabled rows can\u{2019}t be focused or used. "
                             <Code inline=true>"Selection"</Code>": they only can\u{2019}t be selected."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the grid list."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
                             <Code inline=true>"Stack"</Code>": one row below the other. "<Code inline=true>"Grid"</Code>
                             ": rows wrap like cards, and "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" find the row in the same column."
@@ -125,6 +125,7 @@ pub fn PageAtomGridList() -> impl IntoView {
                         <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated row."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the grid element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The rows (a "<Code inline=true>"GridListItem"</Code>" per row) and sections."</ApiRow>
+                        <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends instead of when it starts."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

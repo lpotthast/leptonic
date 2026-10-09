@@ -1,11 +1,10 @@
+// No upstream: application theme context and document styling.
 //! Themes: a theme type, the provider applying it (`data-theme`) and access to it.
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 use leptos_use::use_document;
 
-use crate::{
-    Out,
-    utils::{classes::Classes, default_class::with_default_class},
-};
+use crate::{Out, ValueBinding, utils::default_class::with_default_class};
 
 /// Marker indicating that a `ThemeProvider` has already claimed the
 /// document-element `data-theme` attribute. Nested providers skip it.
@@ -62,6 +61,8 @@ pub fn use_theme<T: Theme + 'static>() -> Option<ThemeContext<T>> {
 
 /// Applies a theme (`data-theme`) to its children and, for the outermost provider, to the
 /// document element (portaled content inherits it); [`use_theme`] reads and switches it.
+/// On unmount, the outermost provider restores the previous document theme, or removes the
+/// attribute if it was absent. A later value written by other code is left in place.
 ///
 /// State props (C4): `theme` + `set_theme` (controlled, e.g. from `signal_ls`), or
 /// `default_theme`; `on_theme_change` observes.
@@ -88,12 +89,18 @@ where
     T: Theme + 'static,
 {
     let classes = with_default_class("leptonic-ThemeProvider", classes);
+    let (binding, on_theme_change) =
+        ValueBinding::from_state_props(theme, set_theme, on_theme_change);
     let owned = RwSignal::new(default_theme.unwrap_or_default());
-    let theme = theme.unwrap_or_else(|| owned.into());
+    let theme = binding.map_or_else(|| owned.into(), |binding| binding.value);
     let set_theme = Callback::new(move |new: T| {
-        match set_theme {
-            Some(set_theme) => set_theme.set(new),
-            None => owned.set(new),
+        if new == theme.get_untracked() {
+            return;
+        }
+        if let Some(binding) = binding {
+            binding.set(new);
+        } else {
+            owned.set(new);
         }
         if let Some(on_theme_change) = on_theme_change {
             on_theme_change.run(new);
@@ -108,11 +115,31 @@ where
     // mirror data-theme onto <html> so Portal content inherits CSS variables.
     let is_root = use_context::<RootThemeApplied>().is_none();
     if is_root {
+        // Store only strings: SSR owners may be disposed on a different thread.
+        let applied = StoredValue::new(None::<(Option<String>, &'static str)>);
         Effect::new(move |_| {
             if let Some(doc) = use_document().as_ref()
                 && let Some(el) = doc.document_element()
             {
-                let _ = el.set_attribute("data-theme", theme.get().name());
+                let name = theme.get().name();
+                applied.update_value(|applied| match applied {
+                    Some((_, last)) => *last = name,
+                    None => *applied = Some((el.get_attribute("data-theme"), name)),
+                });
+                let _ = el.set_attribute("data-theme", name);
+            }
+        });
+        on_cleanup(move || {
+            if let Some((previous, last)) = applied.get_value()
+                && let Some(doc) = use_document().as_ref()
+                && let Some(el) = doc.document_element()
+                && el.get_attribute("data-theme").as_deref() == Some(last)
+            {
+                if let Some(previous) = previous {
+                    let _ = el.set_attribute("data-theme", &previous);
+                } else {
+                    let _ = el.remove_attribute("data-theme");
+                }
             }
         });
     }

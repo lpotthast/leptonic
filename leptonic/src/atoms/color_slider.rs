@@ -2,6 +2,7 @@
 // Upstream: react-aria-components/src/ColorSlider.tsx @ 99e6102368
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
@@ -9,20 +10,21 @@ use super::{
     field::{LabelContext, LabelPresence},
 };
 use crate::{
-    Out,
+    IntoAttrs, Orientation, Out, ValueBinding,
     hooks::{
-        IntoAttrs, UseColorSliderInput, UseColorSliderReturn, UseColorSliderStateInput,
-        UseHoverInput, UseLabelProps, UseSliderGroupAttrs, UseSliderOutputAttrs,
-        UseSliderTrackAttrs, use_color_slider, use_color_slider_state, use_hover,
+        color::{
+            UseColorSliderInput, UseColorSliderReturn, UseColorSliderStateInput, use_color_slider,
+            use_color_slider_state,
+        },
+        form::UseLabelProps,
+        interactions::{UseHoverInput, use_hover},
+        slider::{UseSliderGroupAttrs, UseSliderOutputAttrs, UseSliderTrackAttrs},
     },
     utils::{
-        ValueBinding,
-        classes::Classes,
         color::{ColorChannel, ColorValue},
         data_attributes::flag,
         default_class::with_default_class,
         i18n::use_locale,
-        orientation::Orientation,
         styles::Styles,
     },
 };
@@ -96,6 +98,12 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Elements describing the slider.
+    #[prop(into, optional)]
+    aria_describedby: Option<String>,
+    /// Elements with details about the slider.
+    #[prop(into, optional)]
+    aria_details: Option<String>,
     /// The name of the input, for form submission.
     #[prop(into, optional)]
     name: Option<String>,
@@ -131,7 +139,8 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
         name,
         form,
         state,
-        aria_describedby: None,
+        aria_describedby,
+        aria_details,
     });
 
     let label = LabelContext::span(UseLabelProps {
@@ -192,9 +201,7 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
 ///
 /// Data attributes: `data-hovered`, `data-orientation`, `data-disabled`.
 ///
-/// # Panics
-///
-/// Outside a [`ColorSlider`].
+/// Outside a [`ColorSlider`] it renders nothing (with a development warning).
 ///
 /// Default class: `leptonic-ColorSliderTrack`.
 #[component]
@@ -209,13 +216,11 @@ pub fn ColorSliderTrack(
         is_disabled,
         track,
         ..
-    } = expect_context::<ColorSliderContext>();
+    } = expect_color_slider()?;
     let (group_attrs, attrs, track_styles) = track.get_value();
-    let hover = use_hover(UseHoverInput {
-        is_disabled,
-        ..UseHoverInput::default()
-    });
-    view! {
+    // Hovered also while disabled (react-aria-components' `SliderTrack`).
+    let hover = use_hover(UseHoverInput::default());
+    Some(view! {
         <div
             {..group_attrs}
             {..attrs}
@@ -228,16 +233,14 @@ pub fn ColorSliderTrack(
         >
             {children()}
         </div>
-    }
+    })
 }
 
 /// The channel's formatted value of the [`ColorSlider`] around it.
 ///
 /// Data attributes: `data-orientation`, `data-disabled`.
 ///
-/// # Panics
-///
-/// Outside a [`ColorSlider`].
+/// Outside a [`ColorSlider`] it renders nothing (with a development warning).
 ///
 /// Default class: `leptonic-ColorSliderOutput`.
 #[component]
@@ -252,9 +255,9 @@ pub fn ColorSliderOutput(
         output,
         formatted,
         ..
-    } = expect_context::<ColorSliderContext>();
+    } = expect_color_slider()?;
     let attrs = output.get_value();
-    view! {
+    Some(view! {
         <output
             {..attrs}
             class=classes
@@ -264,5 +267,14 @@ pub fn ColorSliderOutput(
         >
             {formatted}
         </output>
+    })
+}
+
+/// The context of the [`ColorSlider`] around a part, or a development warning.
+fn expect_color_slider() -> Option<ColorSliderContext> {
+    let context = use_context::<ColorSliderContext>();
+    if context.is_none() {
+        crate::utils::dev_warn!("ColorSlider parts must be inside a <ColorSlider>.");
     }
+    context
 }

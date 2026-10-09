@@ -1,18 +1,15 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    I18nProvider, Locale, Orientation,
     atoms::{
         listbox::{ListBox, ListBoxItem, ListBoxItems, ListBoxSection, ListBoxSectionHeading},
         separator::Separator,
     },
-    hooks::{
-        DisabledBehavior, Orientation, SelectionBehavior, SelectionMode,
-        collections::{
-            CollectionMemo, ItemLink, Key, ListLayout, Selection, use_collection,
-            use_list_collection,
-        },
+    hooks::collections::{
+        CollectionMemo, DisabledBehavior, ItemLink, Key, ListLayout, Selection, SelectionBehavior,
+        SelectionMode, UseListCollectionInput, use_collection, use_list_collection,
     },
-    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 
@@ -21,11 +18,11 @@ use super::listbox::describe_selection;
 const ANIMALS: [&str; 3] = ["Cat", "Dog", "Kangaroo"];
 
 fn animals() -> CollectionMemo {
-    use_list_collection(
-        Signal::stored(ANIMALS.to_vec()),
-        |animal| Key::from(*animal),
-        |animal| (*animal).to_owned(),
-    )
+    use_list_collection(UseListCollectionInput {
+        items: Signal::stored(ANIMALS.to_vec()),
+        key: |animal| Key::from(*animal),
+        text_value: |animal| (*animal).to_owned(),
+    })
 }
 
 /// The options of the surrounding listbox's collection.
@@ -53,6 +50,9 @@ fn Items() -> impl IntoView {
 /// - `#lbf-removal`: Cat, Dog, Kangaroo; `#lbf-remove-dog` removes Dog.
 /// - `#lbf-relabel`: Cat labelled "Cat" (a section "Pets" labelled "Pets"); `#lbf-relabel-cat`
 ///   relabels them "Kitten" and "Animals".
+/// - `#lbf-rename`: Cat and Dog rendered by `ListBoxItems`; `#lbf-rename-section`: a section with
+///   the header "Pets" (Cat, Dog). `#lbf-rename-cat` renames Cat "Kitten" and the header
+///   "Animals", keeping the keys.
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomListBoxFeatures() -> impl IntoView {
@@ -80,11 +80,11 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
         let _ = b.item("two", "Two").link(ItemLink::new("#lbf-two"));
     });
     let options: Vec<String> = (1..=30).map(|i| format!("Option {i}")).collect();
-    let many = use_list_collection(
-        Signal::stored(options),
-        |option: &String| Key::from(option.as_str()),
-        |option: &String| option.clone(),
-    );
+    let many = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(options),
+        key: |option: &String| Key::from(option.as_str()),
+        text_value: |option: &String| option.clone(),
+    });
     let item_disabled_behavior = use_collection(|b| {
         b.item("Cat", "Cat");
         let _ = b
@@ -93,17 +93,17 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
             .disabled_behavior(DisabledBehavior::Selection);
         let _ = b.item("Kangaroo", "Kangaroo").disabled(true);
     });
-    let empty = use_list_collection(
-        Signal::stored(Vec::<&str>::new()),
-        |key| Key::from(*key),
-        |key| (*key).to_owned(),
-    );
+    let empty = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(Vec::<&str>::new()),
+        key: |key| Key::from(*key),
+        text_value: |key| (*key).to_owned(),
+    });
     let remaining = RwSignal::new(ANIMALS.to_vec());
-    let removal = use_list_collection(
-        remaining.into(),
-        |animal| Key::from(*animal),
-        |animal| (*animal).to_owned(),
-    );
+    let removal = use_list_collection(UseListCollectionInput {
+        items: remaining.into(),
+        key: |animal| Key::from(*animal),
+        text_value: |animal| (*animal).to_owned(),
+    });
     let relabeled = RwSignal::new(false);
     let relabel = use_collection(move |b| {
         let relabeled = relabeled.get();
@@ -115,6 +115,21 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
                 s.item("dog", "Dog");
             })
             .aria_label(if relabeled { "Animals" } else { "Pets" });
+    });
+    let renamed = RwSignal::new(false);
+    let rename = use_collection(move |b| {
+        b.item("cat", if renamed.get() { "Kitten" } else { "Cat" });
+        b.item("dog", "Dog");
+    });
+    let rename_section = use_collection(move |b| {
+        b.section("pets", |s| {
+            s.header(
+                "pets-header",
+                if renamed.get() { "Animals" } else { "Pets" },
+            );
+            s.item("cat", if renamed.get() { "Kitten" } else { "Cat" });
+            s.item("dog", "Dog");
+        });
     });
     let rtl = "ar-AE".parse::<Locale>().expect("a locale");
 
@@ -259,6 +274,22 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
             <button id="lbf-relabel-cat" on:click=move |_| relabeled.set(true)>"Relabel"</button>
             <ListBox collection=relabel aria_label="Relabel">
                 <ListBoxSection key="pets">
+                    <ListBoxItem key="cat">"Cat"</ListBoxItem>
+                    <ListBoxItem key="dog">"Dog"</ListBoxItem>
+                </ListBoxSection>
+            </ListBox>
+        </div>
+
+        <button id="lbf-rename-cat" on:click=move |_| renamed.set(true)>"Rename"</button>
+        <div id="lbf-rename">
+            <ListBox collection=rename aria_label="Rename">
+                <Items />
+            </ListBox>
+        </div>
+        <div id="lbf-rename-section">
+            <ListBox collection=rename_section aria_label="Rename section">
+                <ListBoxSection key="pets">
+                    <ListBoxSectionHeading />
                     <ListBoxItem key="cat">"Cat"</ListBoxItem>
                     <ListBoxItem key="dog">"Dog"</ListBoxItem>
                 </ListBoxSection>

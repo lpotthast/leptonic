@@ -19,25 +19,25 @@
 //! selectable), "should support empty state", and focus moving on when the focused option is
 //! removed, labels following the collection.
 use assertr::{matchers::eq, prelude::*};
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath};
+use crate::pages::{ElementActions, KeyKind, Page, SyntheticEvent, role};
+
+const PATH: &str = "/atoms/listbox-features";
 
 /// The option with the text `text` in the listbox inside `container`.
 async fn option(page: &Page<'_>, container: &str, text: &str) -> Result<WebElement, Report> {
     let container = page.element(container).await?;
-    container
-        .element(xpath(format!(
-            ".//*[@role='option'][normalize-space(.)='{text}']"
-        )))
-        .await
+    container.element(role(AriaRole::Option).text(text)).await
 }
 
 /// The location's hash (`#fragment`), or `""`.
 async fn hash(page: &Page<'_>) -> Result<String, Report> {
     Ok(page
-        .driver
+        .low_level()
+        .driver()
         .current_url()
         .await?
         .fragment()
@@ -45,27 +45,34 @@ async fn hash(page: &Page<'_>) -> Result<String, Report> {
         .unwrap_or_default())
 }
 
-/// Each section is a `<section>` group directly in the listbox, named by its header (a
-/// presentation element) or its `aria-label`; a separator is a `<div>`.
+/// Each section renders as a `<section>` group named by its presentational header or its
+/// `aria-label`, and a separator renders as a `<div>` ("should support sections").
+#[browser_test]
 pub async fn sections_and_separators(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
-    page.element("#lbf-sections [role=group]").await?;
+    page.goto_path(PATH).await?;
+    page.wait_for_count("#lbf-sections [role=group]", 2).await?;
     let groups = page.elements("#lbf-sections [role=group]").await?;
     assert_that!(&groups).has_length(2);
     for group in &groups {
-        assert_that!(group.class_name().await?)
-            .get_some()
+        assert_that!(group)
+            .has_attribute("class")
+            .await
             .is_equal_to("leptonic-ListBoxSection");
         assert_that!(group.tag_name().await?).is_equal_to("section");
     }
     let heading_id = groups[0].attr("aria-labelledby").await?.unwrap_or_default();
     let heading = page.element(format!("#{heading_id}")).await?;
-    assert_that!(heading.inner_text().await?).is_equal_to("Veggies");
-    assert_that!(heading.attr("role").await?)
-        .get_some()
+    assert_that!(heading)
+        .inner_text()
+        .await
+        .is_equal_to("Veggies");
+    assert_that!(heading)
+        .has_attribute("role")
+        .await
         .is_equal_to("presentation");
-    assert_that!(groups[1].attr("aria-label").await?)
-        .get_some()
+    assert_that!(groups[1])
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("Protein");
     // A separator between the options is no `<hr>` (invalid inside a listbox).
     let separator = page
@@ -75,9 +82,10 @@ pub async fn sections_and_separators(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Arrow keys, Home and End move across sections.
+/// Arrow keys, Home and End move the focus across section boundaries.
+#[browser_test]
 pub async fn arrow_keys_cross_sections(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let tomato = option(page, "#lbf-sections", "Tomato").await?;
     tomato.click().await?;
     page.wait_for_focus(&tomato).await?;
@@ -96,23 +104,30 @@ pub async fn arrow_keys_cross_sections(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should support hover": interactive options show it, others don't.
+/// Hovering a selectable option sets `data-hovered`, hovering a non-interactive one doesn't
+/// ("should support hover", "should not show hover state when item is not interactive").
+#[browser_test]
 pub async fn hover(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let cat = option(page, "#lbf-replace", "Cat").await?;
     cat.hover().await?;
     cat.wait_for_attr("data-hovered", Some("true")).await?;
     let plain = option(page, "#lbf-horizontal", "Dog").await?;
     plain.hover().await?;
     cat.wait_for_attr("data-hovered", None).await?;
-    plain.attr_stays("data-hovered", None).await?;
+    plain
+        .attr_stays("data-hovered", None, std::time::Duration::from_millis(100))
+        .await?;
     Ok(())
 }
 
-/// A click replaces the selection, Ctrl+click toggles, Shift+click extends, a double click
-/// performs the action (and selects).
+/// With replace selection behavior, a click replaces the selection, Ctrl+click toggles, Shift+click
+/// extends and a double click selects and performs the action ("should perform toggle selection in
+/// highlight mode when using modifier keys", "should trigger onAction on double click if
+/// selectionBehavior="replace"").
+#[browser_test]
 pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let selection = page.element("#lbf-replace-selection").await?;
     let cat = option(page, "#lbf-replace", "Cat").await?;
     let dog = option(page, "#lbf-replace", "Dog").await?;
@@ -121,7 +136,8 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
     selection.wait_for_inner_text("Cat").await?;
     dog.click().await?;
     selection.wait_for_inner_text("Dog").await?;
-    page.driver
+    page.low_level()
+        .driver()
         .action_chain()
         .key_down(Key::Control)
         .click_element(&kangaroo)
@@ -129,7 +145,8 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     selection.wait_for_inner_text("Dog,Kangaroo").await?;
-    page.driver
+    page.low_level()
+        .driver()
         .action_chain()
         .key_down(Key::Shift)
         .click_element(&cat)
@@ -137,7 +154,8 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     selection.wait_for_inner_text("Cat,Dog,Kangaroo").await?;
-    page.driver
+    page.low_level()
+        .driver()
         .action_chain()
         .double_click_element(&dog)
         .perform()
@@ -150,10 +168,12 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// After a click, arrow keys move the selection with the focus; Ctrl moves focus only;
-/// Ctrl+Space toggles the focused option; Enter performs its action.
+/// With replace selection behavior, arrow keys move the selection with the focus, Ctrl+arrow moves
+/// only the focus, Ctrl+Space toggles and Enter performs the action ("replaces selection as focus
+/// moves with arrow keys", "navigates focus when Control is held (non-contiguous)").
+#[browser_test]
 pub async fn replace_selection_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let selection = page.element("#lbf-replace-selection").await?;
     let dog = option(page, "#lbf-replace", "Dog").await?;
     let kangaroo = option(page, "#lbf-replace", "Kangaroo").await?;
@@ -165,7 +185,9 @@ pub async fn replace_selection_by_keyboard(page: &Page<'_>) -> Result<(), Report
     selection.wait_for_inner_text("Kangaroo").await?;
     page.send_keys(Key::Control + Key::Up).await?;
     page.wait_for_focus(&dog).await?;
-    selection.inner_text_stays("Kangaroo").await?;
+    selection
+        .inner_text_stays("Kangaroo", std::time::Duration::from_millis(100))
+        .await?;
     page.send_keys(Key::Control + " ").await?;
     selection.wait_for_inner_text("Dog,Kangaroo").await?;
     page.send_keys(Key::Enter).await?;
@@ -176,9 +198,11 @@ pub async fn replace_selection_by_keyboard(page: &Page<'_>) -> Result<(), Report
     Ok(())
 }
 
-/// "should support onAction": a press and Enter perform the action, nothing is selected.
+/// Without selection, a press and Enter perform an option's action and select nothing ("should
+/// support onAction, interactionType: $interactionType").
+#[browser_test]
 pub async fn actions_without_selection(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let actions = page.element("#lbf-action-actions").await?;
     let cat = option(page, "#lbf-action", "Cat").await?;
     let dog = option(page, "#lbf-action", "Dog").await?;
@@ -189,14 +213,15 @@ pub async fn actions_without_selection(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_focus(&dog).await?;
     page.send_keys(Key::Enter).await?;
     actions.wait_for_inner_text("Cat,Dog").await?;
-    assert_that!(dog.attr("aria-selected").await?).is_none();
+    assert_that!(dog).attribute("aria-selected").await.is_none();
     Ok(())
 }
 
-/// Links open on press and Enter; ArrowDown onto a link is handled (the default, scrolling, is
-/// prevented).
+/// Link options open on press and on Enter, and ArrowDown onto a link moves the focus with the
+/// native scrolling prevented ("should support links with selectionMode="none"").
+#[browser_test]
 pub async fn links(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let one = option(page, "#lbf-links", "One").await?;
     one.click().await?;
     assert_that!(|| hash(page))
@@ -205,7 +230,7 @@ pub async fn links(page: &Page<'_>) -> Result<(), Report> {
         .await;
     page.wait_for_focus(&one).await?;
     let arrow_down = one
-        .dispatch(SyntheticEvent::keyboard("keydown", "ArrowDown"))
+        .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "ArrowDown"))
         .await?;
     assert_that!(arrow_down.default_prevented).is_true();
     page.wait_for_focus(&option(page, "#lbf-links", "Two").await?)
@@ -218,22 +243,32 @@ pub async fn links(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// A link item opens also with single selection, and isn't selected.
+/// With single selection, pressing a link option opens it without selecting it ("should support
+/// links with selectionMode="%s"").
+#[browser_test]
 pub async fn links_with_single_selection(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let one = option(page, "#lbf-links-single", "One").await?;
     one.click().await?;
     assert_that!(|| hash(page))
         .eventually_ok()
         .matches(eq("#lbf-one"))
         .await;
-    one.attr_stays("aria-selected", Some("false")).await?;
+    one.attr_stays(
+        "aria-selected",
+        Some("false"),
+        std::time::Duration::from_millis(100),
+    )
+    .await?;
     Ok(())
 }
 
-/// Horizontal (also right-to-left), grid and wrapping listboxes move focus by their layout.
+/// Arrow keys move the focus by the layout in horizontal (also right-to-left), grid and wrapping
+/// listboxes ("should support horizontal orientation", "should support grid layout", "wraps focus
+/// with ArrowUp and ArrowDown when shouldFocusWrap is set").
+#[browser_test]
 pub async fn arrow_keys_per_layout(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     for (container, keys) in [
         (
             "#lbf-horizontal",
@@ -281,9 +316,11 @@ pub async fn arrow_keys_per_layout(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// PageDown moves a page of options down (at least three), PageUp back.
+/// PageDown moves the focus a page of options down (at least three) and PageUp back ("navigates by
+/// page with PageDown and PageUp").
+#[browser_test]
 pub async fn page_down_and_up(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let first = option(page, "#lbf-page", "Option 1").await?;
     first.click().await?;
     page.wait_for_focus(&first).await?;
@@ -308,11 +345,11 @@ pub async fn page_down_and_up(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// `disabledBehavior="selection"` on the listbox and on one item: the disabled option is
-/// focusable but neither Space nor a press selects it. An item disabled without its own behavior
-/// is skipped.
+/// With `disabledBehavior="selection"` (on the listbox or the item), a disabled option is
+/// focusable but neither Space nor a press selects it, while a fully disabled item is skipped.
+#[browser_test]
 pub async fn disabled_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     for container in ["#lbf-disabled-selection", "#lbf-item-disabled-behavior"] {
         let cat = option(page, container, "Cat").await?;
         let dog = option(page, container, "Dog").await?;
@@ -320,36 +357,50 @@ pub async fn disabled_selection_behavior(page: &Page<'_>) -> Result<(), Report> 
         page.wait_for_focus(&cat).await?;
         page.send_keys(Key::Down).await?;
         page.wait_for_focus(&dog).await?;
-        assert_that!(dog.attr("aria-disabled").await?)
+        assert_that!(dog)
+            .attribute("aria-disabled")
+            .await
             .with_detail_message(container)
             .is_none();
         page.send_keys(" ").await?;
         dog.click().await?;
-        dog.attr_stays("aria-selected", Some("false"))
-            .await
-            .context_with(|| format!("{container}: Dog"))?;
+        dog.attr_stays(
+            "aria-selected",
+            Some("false"),
+            std::time::Duration::from_millis(100),
+        )
+        .await
+        .context_with(|| format!("{container}: Dog"))?;
     }
     let dog = option(page, "#lbf-item-disabled-behavior", "Dog").await?;
     page.send_keys(Key::Down).await?;
-    page.focus_stays(&dog).await?;
+    page.focus_stays(&dog, std::time::Duration::from_millis(100))
+        .await?;
     Ok(())
 }
 
-/// "should support empty state": the listbox is marked empty and shows the empty content.
+/// An empty listbox has `data-empty` and shows its empty-state content ("should support empty
+/// state").
+#[browser_test]
 pub async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let empty = page.element("#lbf-empty [role=listbox]").await?;
-    assert_that!(empty.attr("data-empty").await?)
-        .get_some()
+    assert_that!(empty)
+        .has_attribute("data-empty")
+        .await
         .is_equal_to("true");
     let empty_option = page.element("#lbf-empty [role=option]").await?;
-    assert_that!(empty_option.inner_text().await?).is_equal_to("No results");
+    assert_that!(empty_option)
+        .inner_text()
+        .await
+        .is_equal_to("No results");
     Ok(())
 }
 
 /// Removing the focused option moves focus to the next one.
+#[browser_test]
 pub async fn removing_the_focused_option(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let dog = option(page, "#lbf-removal", "Dog").await?;
     dog.click().await?;
     page.wait_for_focus(&dog).await?;
@@ -363,19 +414,37 @@ pub async fn removing_the_focused_option(page: &Page<'_>) -> Result<(), Report> 
     Ok(())
 }
 
-/// Labels follow the collection: an item and a section relabelled in place.
+/// Relabelling an item and a section in place updates their `aria-label`s ("should update
+/// collection when descendants update").
+#[browser_test]
 pub async fn labels_follow_the_collection(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/listbox-features").await?;
+    page.goto_path(PATH).await?;
     let cat = option(page, "#lbf-relabel", "Cat").await?;
     let group = page.element("#lbf-relabel [role=group]").await?;
-    assert_that!(cat.attr("aria-label").await?)
-        .get_some()
+    assert_that!(cat)
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("Cat");
-    assert_that!(group.attr("aria-label").await?)
-        .get_some()
+    assert_that!(group)
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("Pets");
     page.element("#lbf-relabel-cat").await?.click().await?;
     cat.wait_for_attr("aria-label", Some("Kitten")).await?;
     group.wait_for_attr("aria-label", Some("Animals")).await?;
+    Ok(())
+}
+
+/// Renaming an item and a section header in the collection under the same keys updates the
+/// options rendered by `ListBoxItems` and the section's default heading.
+#[browser_test]
+pub async fn renamed_items_update(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let cat = option(page, "#lbf-rename", "Cat").await?;
+    let heading = page.element("#lbf-rename-section header").await?;
+    assert_that!(heading).inner_text().await.is_equal_to("Pets");
+    page.element("#lbf-rename-cat").await?.click().await?;
+    cat.wait_for_inner_text("Kitten").await?;
+    heading.wait_for_inner_text("Animals").await?;
     Ok(())
 }

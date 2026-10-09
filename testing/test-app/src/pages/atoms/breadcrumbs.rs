@@ -1,8 +1,15 @@
 use leptonic::{
-    atoms::prelude::{Breadcrumb, Breadcrumbs, Link},
+    IntoAttrs,
+    atoms::{
+        breadcrumbs::{Breadcrumb, Breadcrumbs},
+        link::Link,
+    },
     hooks::{
-        IntoAttrs, LinkElementType, UseBreadcrumbItemInput, UseBreadcrumbsInput, UseLinkInput,
-        collections::Key, use_breadcrumb_item, use_breadcrumbs,
+        breadcrumbs::{
+            UseBreadcrumbItemInput, UseBreadcrumbsInput, use_breadcrumb_item, use_breadcrumbs,
+        },
+        collections::Key,
+        link::{LinkElementType, UseLinkInput},
     },
 };
 use leptos::prelude::*;
@@ -25,7 +32,7 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
         let (attrs, styles) = use_breadcrumb_item(UseBreadcrumbItemInput {
             link: UseLinkInput {
                 href: Signal::stored(href.map(str::to_owned)),
-                element_type,
+                element_type: Signal::stored(element_type),
                 is_disabled: Signal::stored(is_disabled),
                 ..UseLinkInput::default()
             },
@@ -64,10 +71,10 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
 
             <nav>
                 <Breadcrumbs aria_label="Actions" on_action=move |key: Key| action.set(key.to_string())>
-                    <Breadcrumb id="action-1">
+                    <Breadcrumb key="action-1">
                         <Link href="#action-1">"Action 1"</Link>
                     </Breadcrumb>
-                    <Breadcrumb id="action-2" is_current=true>
+                    <Breadcrumb key="action-2" is_current=true>
                         <Link href="#action-2">"Action 2"</Link>
                     </Breadcrumb>
                 </Breadcrumbs>

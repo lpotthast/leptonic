@@ -1,9 +1,16 @@
 use leptonic::{
-    hooks::*,
-    utils::{
-        css::{LengthPercentageAuto, computed_pct, computed_size},
-        style::{LeftProperty, WidthProperty},
-        styles::Styles,
+    IntoAttrs, Orientation, computed_pct, computed_size,
+    hooks::{
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
+        slider::{
+            UseSliderInput, UseSliderStateInput, UseSliderThumbInput, use_slider, use_slider_state,
+            use_slider_thumb,
+        },
+    },
+    leptos_styles::{
+        Styles,
+        css::LengthPercentageAuto,
+        property::{LeftProperty, WidthProperty},
     },
 };
 use leptos::prelude::*;
@@ -53,7 +60,7 @@ pub fn SliderRangeDemo() -> impl IntoView {
             aria_details: None,
         });
         let focus_ring = use_focus_ring(UseFocusRingInput {
-            within: true,
+            target: FocusRingTarget::Within,
             ..UseFocusRingInput::default()
         });
         let (attrs, styles) = thumb.thumb_props.into_parts();
@@ -70,11 +77,11 @@ pub fn SliderRangeDemo() -> impl IntoView {
     let fill_styles = Styles::new()
         .add_reactive(move || {
             LeftProperty.declare(LengthPercentageAuto::from(computed_pct(
-                state.thumb_percent(0) * 100.0,
+                state.thumb_percent(0).as_percent(),
             )))
         })
         .add_reactive(move || {
-            let width = (state.thumb_percent(1) - state.thumb_percent(0)) * 100.0;
+            let width = state.thumb_percent(1).as_percent() - state.thumb_percent(0).as_percent();
             WidthProperty.declare(computed_size(computed_pct(width)))
         });
 

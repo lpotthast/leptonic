@@ -1,4 +1,6 @@
 // Upstream: react-stately/src/datepicker/types.ts @ 99e6102368
+// Upstream: @internationalized/date/src/conversion.ts @ 99e6102368
+// Upstream: @internationalized/date/tests/conversion.test.js @ 99e6102368
 //! The values and segments of date and time fields.
 
 // =============================================================================
@@ -432,4 +434,44 @@ impl TimeValue for Zoned {
 pub struct RangeValue<V> {
     pub start: V,
     pub end: V,
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+    use jiff::{Timestamp, civil::date, tz::offset};
+
+    use super::*;
+
+    fn los_angeles() -> TimeZone {
+        TimeZone::get("America/Los_Angeles").expect("the time zone database has Los Angeles")
+    }
+
+    fn instant(text: &str) -> Timestamp {
+        text.parse().expect("an instant")
+    }
+
+    /// `@internationalized/date` `conversion.test.js` (`toAbsolute`): a normal local time, a
+    /// skipped one moved forward ("daylight saving time start"), a repeated one at its earlier
+    /// instant ("daylight saving time end"), or at the later one when that offset is asked for
+    /// ("... with disambiguation = later").
+    #[test]
+    fn converts_local_times_as_temporals_compatible() {
+        let zoned = |date_time: DateTime, offset| {
+            to_zoned(date_time, los_angeles(), offset)
+                .expect("a zoned value")
+                .timestamp()
+        };
+        assert_that!(zoned(date(2020, 2, 3).at(2, 0, 0, 0), None))
+            .is_equal_to(instant("2020-02-03T10:00Z"));
+        assert_that!(zoned(date(2020, 3, 8).at(2, 0, 0, 0), None))
+            .is_equal_to(instant("2020-03-08T10:00Z"));
+        assert_that!(zoned(date(2020, 11, 1).at(1, 0, 0, 0), None))
+            .is_equal_to(instant("2020-11-01T08:00Z"));
+        assert_that!(zoned(date(2020, 11, 1).at(1, 0, 0, 0), Some(offset(-8))))
+            .is_equal_to(instant("2020-11-01T09:00Z"));
+        // An offset the time doesn't have there: the earlier instant.
+        assert_that!(zoned(date(2020, 11, 1).at(1, 0, 0, 0), Some(offset(-5))))
+            .is_equal_to(instant("2020-11-01T08:00Z"));
+    }
 }

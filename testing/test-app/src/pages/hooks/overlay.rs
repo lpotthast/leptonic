@@ -1,10 +1,11 @@
 use leptonic::{
+    IntoAttrs,
     atoms::{
         button::Button,
         dialog::Dialog,
         modal::{ModalBackdrop, ModalContent},
     },
-    hooks::{InteractOutsideFilter, IntoAttrs, UseOverlayInput, UseOverlayReturn, use_overlay},
+    hooks::overlay::{InteractOutsideFilter, UseOverlayInput, UseOverlayReturn, use_overlay},
 };
 use leptos::prelude::*;
 
@@ -88,11 +89,11 @@ pub fn PageHookOverlay() -> impl IntoView {
             <p>"Escapes: " <span id="test-ov-escapes">{escapes}</span></p>
         </div>
 
-        <Button attr:id="test-ov-modal-open" on_press=move |_| outer.set(true)>"Open modal"</Button>
+        <Button id="test-ov-modal-open" on_press=move |_| outer.set(true)>"Open modal"</Button>
         <ModalBackdrop is_open=outer set_open=outer is_dismissable=true classes="test-ov-outer-backdrop">
             <ModalContent>
                 <Dialog aria_label="Outer">
-                    <Button attr:id="test-ov-modal-inner-open" on_press=move |_| inner.set(true)>
+                    <Button id="test-ov-modal-inner-open" on_press=move |_| inner.set(true)>
                         "Open inner"
                     </Button>
                 </Dialog>
@@ -101,7 +102,7 @@ pub fn PageHookOverlay() -> impl IntoView {
         <ModalBackdrop is_open=inner set_open=inner is_dismissable=true classes="test-ov-inner-backdrop">
             <ModalContent>
                 <Dialog aria_label="Inner">
-                    <Button attr:id="test-ov-modal-inner-close" on_press=move |_| inner.set(false)>
+                    <Button id="test-ov-modal-inner-close" on_press=move |_| inner.set(false)>
                         "Close inner"
                     </Button>
                 </Dialog>

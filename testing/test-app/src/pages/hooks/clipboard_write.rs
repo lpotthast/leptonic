@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use leptonic::utils::clipboard::{write_text, write_text_deferred};
+use leptonic::{write_text, write_text_deferred};
 use leptos::prelude::*;
 
 /// `utils::clipboard`: "Write" writes "Written now"; "Write later" writes "Loaded later" once it
@@ -9,7 +9,7 @@ use leptos::prelude::*;
 #[component]
 pub fn PageHookClipboardWrite() -> impl IntoView {
     let status = RwSignal::new(String::new());
-    let report = move |result: Result<(), leptonic::utils::clipboard::ClipboardError>| {
+    let report = move |result: Result<(), leptonic::ClipboardError>| {
         status.set(match result {
             Ok(()) => "written".to_owned(),
             Err(err) => err.to_string(),

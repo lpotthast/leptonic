@@ -1,7 +1,12 @@
 use leptonic::{
-    atoms::prelude::{Button, Dialog, DialogTrigger, ModalBackdrop, ModalContent, ProgressBar},
-    hooks::{ButtonFormAttributes, ButtonType, FormMethod},
-    utils::aria::AriaCurrent,
+    AriaCurrent,
+    atoms::{
+        button::Button,
+        dialog::{Dialog, DialogTrigger},
+        modal::{ModalBackdrop, ModalContent},
+        progress_bar::ProgressBar,
+    },
+    hooks::button::{ButtonFormAttributes, ButtonType, FormMethod},
 };
 use leptos::prelude::*;
 
@@ -33,7 +38,7 @@ pub fn PageAtomButton() -> impl IntoView {
                 <h2>"Basic Button"</h2>
                 <Button
                     on_press=move |_| set_basic_count.update(|c| *c += 1)
-                    attr:id="test-button-basic"
+                    id="test-button-basic"
                 >
                     "Press me"
                 </Button>
@@ -45,7 +50,7 @@ pub fn PageAtomButton() -> impl IntoView {
                 <Button
                     on_press=move |_| set_disabled_count.update(|c| *c += 1)
                     is_disabled=Signal::from(true)
-                    attr:id="test-button-disabled"
+                    id="test-button-disabled"
                 >
                     "Disabled"
                 </Button>
@@ -58,7 +63,7 @@ pub fn PageAtomButton() -> impl IntoView {
                 <h2>"Labelled Button"</h2>
                 // Icon-only: named by `aria_label`, marked as the current page.
                 <Button
-                    attr:id="test-button-labelled"
+                    id="test-button-labelled"
                     aria_label="Page 2"
                     aria_current=Some(AriaCurrent::Page)
                 >
@@ -70,7 +75,7 @@ pub fn PageAtomButton() -> impl IntoView {
                 <h2>"Form props"</h2>
                 <form id="test-button-form"></form>
                 <Button
-                    attr:id="test-button-form-props"
+                    id="test-button-form-props"
                     button_type=ButtonType::Submit
                     form=ButtonFormAttributes {
                         form: Some("test-button-form".into()),
@@ -87,7 +92,7 @@ pub fn PageAtomButton() -> impl IntoView {
             <section>
                 <h2>"Pending"</h2>
                 <Button
-                    attr:id="test-button-pending"
+                    id="test-button-pending"
                     is_pending=pending
                     on_press=move |_| {
                         pending.set(true);
@@ -109,7 +114,7 @@ pub fn PageAtomButton() -> impl IntoView {
                     <input id="test-button-pending-input-1" type="text" />
                     <input id="test-button-pending-input-2" type="text" />
                     <Button
-                        attr:id="test-button-pending-submit"
+                        id="test-button-pending-submit"
                         button_type=ButtonType::Submit
                         is_pending=submit_pending
                         on_press=move |_| {
@@ -129,14 +134,14 @@ pub fn PageAtomButton() -> impl IntoView {
                     "Toggle submit pending"
                 </button>
 
-                <Button attr:id="test-button-pending-labelled" aria_label="Upload" is_pending=true>
+                <Button id="test-button-pending-labelled" aria_label="Upload" is_pending=true>
                     "\u{2191}"
                     <ProgressBar aria_label="uploading" value={None::<u32>} />
                 </Button>
 
                 <DialogTrigger>
                     <Button
-                        attr:id="test-button-pending-trigger"
+                        id="test-button-pending-trigger"
                         is_pending=true
                         on_focus_change=move |focused| trigger_focused.set(focused)
                     >

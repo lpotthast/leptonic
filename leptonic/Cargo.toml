@@ -18,7 +18,7 @@ build = "build.rs"
 features = ["docsrs"]
 
 [features]
-default = ["hooks", "intl-strings"]
+default = ["intl-strings"]
 
 ssr = [
     "leptos/ssr",
@@ -27,17 +27,13 @@ ssr = [
 ]
 hydrate = ["leptos/hydrate", "leptos-element-capture/hydrate"]
 
-# Core functionality. Hooks provide low level functions like `use_ress` which handle interactions, aria attributes and
-# more. Use hooks to build your own components.
-hooks = []
-
-# Atoms are mostly unopinionated headless / unstyled Leptos components buily on top of hooks, basically making
-# hook-usage easy from a Leptos app. All atoms render a single HTML element and are therefore easy to style and compose.
-# Atoms allow you to build more complex component without requring too much knowledge about the underlying hooks.
-atoms = ["hooks"]
+# Atoms are unstyled Leptos components built on top of the hooks (which are always available), making hook usage
+# easy from a Leptos app. Every atom renders a single HTML element and is therefore easy to style and compose. Atoms
+# let you build more complex components without requiring much knowledge about the underlying hooks.
+atoms = []
 
 # Enables clipboard support.
-clipboard = ["hooks", "web-sys/Clipboard", "web-sys/ClipboardItem", "web-sys/BlobPropertyBag"]
+clipboard = ["web-sys/Clipboard", "web-sys/ClipboardItem", "web-sys/BlobPropertyBag"]
 
 # Syntax highlighting of source code into classed HTML (`utils::syntax_highlight`).
 syntax-highlight = ["dep:syntect"]
@@ -46,7 +42,7 @@ syntax-highlight = ["dep:syntect"]
 # they are English (en-US) in every locale (a smaller wasm).
 intl-strings = []
 
-full = ["hooks", "atoms", "clipboard", "syntax-highlight", "intl-strings"]
+full = ["atoms", "clipboard", "syntax-highlight", "intl-strings"]
 
 nightly = ["leptos/nightly"]
 
@@ -67,7 +63,6 @@ leptos_router = { version = "0.8.17", default-features = false }
 send_wrapper = { version = "0.6.0", default-features = false }
 serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
 serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
-smallvec = { version = "1", default-features = false }
 strum = { version = "0.28.0", default-features = false, features = ["derive"] }
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std"] }
@@ -133,6 +128,10 @@ web-sys = { version = "0.3.106", default-features = false, features = [
     "MutationObserver",
     "MutationObserverInit",
     "MutationRecord",
+    # The virtualizer: its clock, and one observer of its rows' sizes.
+    "Performance",
+    "ResizeObserver",
+    "ResizeObserverEntry",
 ] }
 fixed_decimal = { version = "0.7", default-features = false }
 icu_calendar = { version = "2.3", default-features = false, features = ["compiled_data"] }
@@ -163,11 +162,12 @@ leptonic-theme = { version = "0.5", path = "../leptonic-theme", default-features
 # executor is installed is dropped instead of panicking (tests without the helper).
 any_spawner = { version = "0.3.0", default-features = false, features = ["tracing"] }
 # The user's checkout: eventual assertions (`eventually`, `consistently`, `Patience`; unreleased 0.8).
-assertr = { path = "../../assertr/assertr", default-features = false, features = ["std", "num"] }
+assertr = { path = "../../assertr/assertr", default-features = false, features = ["std", "num", "thirtyfour-cdp"] }
 # `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
 # without compiling `aws-lc-rs`.
 browser-test = { path = "../../browser-test", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
+# `http::Method` for WebDriver commands thirtyfour has no method for (`computedlabel`).
 # The user's checkout: `LeptosTestAppConfig::with_build_profile` (unreleased).
 leptos-browser-test = { path = "../../leptos-browser-test", default-features = false }
 # `effects`: Effects run in native unit tests (`testing::with_owner`); Leptos enables it only for csr/hydrate.
@@ -179,6 +179,13 @@ thirtyfour = { version = "0.37.5", default-features = false, features = ["cdp"] 
 tokio = { version = "1.53.2", features = ["rt", "rt-multi-thread", "macros", "time"], default-features = false }
 tracing = { version = "0.1.44", default-features = false }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "registry", "ansi", "std"] }
+
+# The browser suite builds and serves `testing/test-app` and drives Chrome: a plain `cargo test` (or `just test`) skips
+# it. It runs only when named: `cargo test --test browser_test` (`just browser-test`). Lint it by name, too:
+# `cargo clippy --test browser_test` (`--tests` and `--all-targets` skip it, also next to `--test`).
+[[test]]
+name = "browser_test"
+test = false
 
 [package.metadata.cargo-machete]
 # Used for its `sync` feature only (ICU4X formatters cached in signals).

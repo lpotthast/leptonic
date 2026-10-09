@@ -1,12 +1,8 @@
 // Upstream: react-aria/src/interactions/useScrollWheel.ts @ 99e6102368
-use leptos::{
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use web_sys::WheelEvent;
 
-use crate::{hooks::IntoAttrs, utils::EventHandler};
+use crate::{EventHandler, IntoAttrs, OnEvent};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -18,15 +14,37 @@ use crate::{hooks::IntoAttrs, utils::EventHandler};
 // - As upstream, `ScrollEvent` has no `continuePropagation` (the wheel event is always stopped),
 //   so it doesn't implement `Propagation`.
 //
+// ## DIFFERENT BEHAVIOR
+// - The deltas are in pixels whatever the wheel event's `deltaMode`: line deltas (Firefox with a
+//   mouse wheel) count 16 pixels per line, page deltas a viewport height per page. react-aria
+//   passes `deltaX`/`deltaY` on, so the same wheel turn scrolls a value about 100 times slower in
+//   Firefox.
+//
 // =============================================================================
 
 /// Scroll event data.
 #[derive(Debug, Clone, Copy)]
 pub struct ScrollEvent {
-    /// The horizontal scroll delta.
+    /// The horizontal scroll delta, in CSS pixels (positive: right).
     pub delta_x: f64,
-    /// The vertical scroll delta.
+    /// The vertical scroll delta, in CSS pixels (positive: down).
     pub delta_y: f64,
+}
+
+/// The pixels a wheel delta of one line counts (browsers scroll about this much per line).
+const PIXELS_PER_LINE: f64 = 16.0;
+
+/// The pixels per unit of `event`'s deltas (its `deltaMode`: pixels, lines or pages).
+fn pixels_per_delta(event: &WheelEvent) -> f64 {
+    match event.delta_mode() {
+        WheelEvent::DOM_DELTA_LINE => PIXELS_PER_LINE,
+        WheelEvent::DOM_DELTA_PAGE => leptos_use::use_window()
+            .as_ref()
+            .and_then(|window| window.inner_height().ok())
+            .and_then(|height| height.as_f64())
+            .unwrap_or(PIXELS_PER_LINE),
+        _ => 1.0,
+    }
 }
 
 /// Input parameters for the `use_scroll_wheel` hook.
@@ -61,7 +79,7 @@ impl IntoAttrs for UseScrollWheelProps {
 }
 
 /// Attributes returned by `use_scroll_wheel` that must be spread onto an element.
-pub type UseScrollWheelAttrs = (On<ev::wheel, SharedEventCallback<WheelEvent>>,);
+pub type UseScrollWheelAttrs = (OnEvent<ev::wheel>,);
 
 /// Handles scroll wheel events on an element.
 ///
@@ -69,7 +87,7 @@ pub type UseScrollWheelAttrs = (On<ev::wheel, SharedEventCallback<WheelEvent>>,)
 /// 1. Prevent the default scroll behavior (stops page scrolling)
 /// 2. Stop event propagation
 /// 3. Ignore zoom events (when ctrl is pressed)
-/// 4. Call the `on_scroll` handler with the scroll delta
+/// 4. Call the `on_scroll` handler with the scroll delta, in pixels
 ///
 /// This is useful for custom scroll implementations, sliders, number inputs,
 /// or any component that needs to respond to mouse wheel input without
@@ -122,9 +140,10 @@ pub fn use_scroll_wheel(input: UseScrollWheelInput) -> UseScrollWheelReturn {
         e.stop_propagation();
 
         if let Some(on_scroll) = on_scroll {
+            let scale = pixels_per_delta(&e);
             on_scroll.run(ScrollEvent {
-                delta_x: e.delta_x(),
-                delta_y: e.delta_y(),
+                delta_x: e.delta_x() * scale,
+                delta_y: e.delta_y() * scale,
             });
         }
     };

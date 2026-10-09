@@ -1,15 +1,11 @@
 use leptonic::{
+    GridStrings, I18nProvider, Locale, Orientation, SearchFieldStrings, TableStrings, ToastStrings,
     atoms::{
         field::Label,
         radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::{Orientation, collections::Key},
-    utils::{
-        i18n::{I18nProvider, Locale, locale, use_i18n},
-        intl_strings::{
-            GridStrings, SearchFieldStrings, TableStrings, ToastStrings, use_localized_strings,
-        },
-    },
+    hooks::collections::Key,
+    locale, use_i18n, use_localized_strings,
 };
 use leptos::prelude::*;
 
@@ -34,14 +30,14 @@ pub fn LocalizedStringsDemo() -> impl IntoView {
 /// Changes the locale of the surrounding provider.
 #[component]
 fn LocaleChoice() -> impl IntoView {
-    let set_locale = use_i18n().map(|i18n| i18n.set_locale);
+    let i18n = use_i18n();
     let on_change = move |key: Option<Key>| {
         let new_locale = key
             .as_ref()
             .and_then(Key::as_str)
             .and_then(|tag| tag.parse::<Locale>().ok());
-        if let (Some(new_locale), Some(set_locale)) = (new_locale, set_locale) {
-            set_locale.run(new_locale);
+        if let (Some(new_locale), Some(i18n)) = (new_locale, i18n) {
+            i18n.set_locale(new_locale);
         }
     };
 

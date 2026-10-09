@@ -14,6 +14,11 @@ just serve       # https://127.0.0.1:4100 (self-signed certificate from ./certs)
 or, in this directory, `cargo leptos serve`. The `--cfg=web_sys_unstable_apis` flag leptonic needs is set in
 `.cargo/config.toml`.
 
+The server prepares gzip and Brotli WASM files before accepting requests in every build profile, including
+`just serve`'s `wasm-dev` and `server-dev`. It reuses fresh compressed files; missing or stale files are compressed
+once at startup (gzip level 6, Brotli quality 4). Browsers receive their preferred encoding without compression on
+each reload. No extra cargo-leptos flag or command-line compressor is needed.
+
 ## Structure
 
 | Path                           | Content                                                                         |

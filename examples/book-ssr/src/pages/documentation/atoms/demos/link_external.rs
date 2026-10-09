@@ -1,6 +1,6 @@
 use leptonic::{
-    atoms::prelude::{Link, LinkRel},
-    hooks::LinkTarget,
+    atoms::link::Link,
+    hooks::link::{LinkRel, LinkTarget},
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;

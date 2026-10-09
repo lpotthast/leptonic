@@ -7,9 +7,9 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageUseFocusManager() -> impl IntoView {
     view! {
-        <DocPage title="use_focus_manager">
+        <DocPage title="create_focus_manager">
             <p>
-                "The "<Code inline=true>"use_focus_manager"</Code>" hook moves focus programmatically within a container: to the "
+                "The "<Code inline=true>"create_focus_manager"</Code>" hook moves focus programmatically within a container: to the "
                 "next, previous, first or last focusable element. The "
                 <Link href=routes::doc::focus::FocusManagerProvider.materialize()>"FocusManagerProvider"</Link>
                 " atom renders such a container for you. See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>
@@ -20,19 +20,18 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <Section title="Input">
                 <p>
-                    <Code inline=true>"UseFocusManagerInput"</Code>" is an empty struct; pass "
-                    <Code inline=true>"UseFocusManagerInput::default()"</Code>". All configuration is passed per call as "
+                    <Code inline=true>"create_focus_manager()"</Code>" takes no arguments. Configure each focus operation with "
                     <AnchorLink href="#focusmanageroptions">"FocusManagerOptions"</AnchorLink>"."
                 </p>
             </Section>
 
             <Section title="Return">
-                <ApiTable kind=ApiKind::Return of="UseFocusManagerReturn">
+                <ApiTable kind=ApiKind::Return of="CreateFocusManagerReturn">
                     <ApiRow name="focus_manager" ty="FocusManager">
                         "Moves focus within the container, see "<AnchorLink href="#focusmanager">"FocusManager"</AnchorLink>
-                        ". Cheap to clone."
+                        ". It implements Copy."
                     </ApiRow>
-                    <ApiRow name="props" ty="UseFocusManagerProps">
+                    <ApiRow name="props" ty="FocusManagerScopeProps">
                         "Captures the container element. Spread it onto the container with "
                         <Code inline=true>"{..props.into_attrs()}"</Code>"."
                     </ApiRow>
@@ -69,7 +68,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
                     <p><Code inline=true>"FocusManagerOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
 
                     <ApiTable kind=ApiKind::Input of="FocusManagerOptions">
-                        <ApiRow name="from" ty="Option<web_sys::Element>" default="None">
+                        <ApiRow name="from" ty="Option<Element>" default="None">
                             "The element to start from. "<Code inline=true>"None"</Code>" starts at "
                             <Code inline=true>"document.activeElement"</Code>"."
                         </ApiRow>
@@ -77,12 +76,10 @@ pub fn PageUseFocusManager() -> impl IntoView {
                             "Whether "<Code inline=true>"focus_next"</Code>" and "<Code inline=true>"focus_previous"</Code>
                             " wrap around at the end and beginning."
                         </ApiRow>
-                        <ApiRow name="tabbable" ty="bool" default="false">
-                            "Only consider elements reachable with "<Keys keys="Tab"/>" ("<Code inline=true>"tabindex >= 0"</Code>")."
-                        </ApiRow>
-                        <ApiRow name="accept" ty="Option<Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>" default="None">
+                        <ApiRow name="accept" ty="Option<AcceptElement>" default="None">
                             "Skips elements for which the filter returns false."
                         </ApiRow>
+                        <ApiRow name="focusability" ty="Focusability" default="Focusability::Focusable">"Consider all focusable elements or only tabbable elements."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -96,20 +93,24 @@ pub fn PageUseFocusManager() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+                            KeyboardShortcuts,
+                            Shortcut,
+                            hooks::{
+                                focus::{CreateFocusManagerReturn, FocusManagerOptions, create_focus_manager},
+                                interactions::{UseKeyboardInput, use_keyboard},
+                            },
                         };
 
-                        let UseFocusManagerReturn { focus_manager, props } =
-                            use_focus_manager(UseFocusManagerInput::default());
+                        let CreateFocusManagerReturn { focus_manager, props } =
+                            create_focus_manager();
 
                         let wrap = || FocusManagerOptions { wrap: true, ..Default::default() };
-                        let next = focus_manager.clone();
+                        let next = focus_manager;
                         let keyboard = use_keyboard(UseKeyboardInput {
                             shortcuts: Some(
                                 KeyboardShortcuts::new()
-                                    .on(Shortcut::key("ArrowRight"), move |_| { next.focus_next(wrap()); })
-                                    .on(Shortcut::key("ArrowLeft"), move |_| { focus_manager.focus_previous(wrap()); }),
+                                    .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| { next.focus_next(wrap()); })
+                                    .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| { focus_manager.focus_previous(wrap()); }),
                             ),
                             allow_repeats: true,
                             ..Default::default()
@@ -158,11 +159,11 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <Section title="Focus Containment">
                 <p>
-                    <Code inline=true>"use_focus_manager"</Code>" only moves focus when you call it. It does not contain focus "
+                    <Code inline=true>"create_focus_manager"</Code>" only moves focus when you call it. It does not contain focus "
                     "or handle "<Keys keys="Tab"/>". To keep "<Keys keys="Tab"/>" inside a container, use the "
                     <Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
                     " atom, which also restores and auto-focuses. Children of a "<Code inline=true>"FocusScope"</Code>
-                    " get its "<Code inline=true>"FocusManager"</Code>" from the "<Code inline=true>"FocusScopeContext"</Code>"."
+                    " read its "<Code inline=true>"FocusManager"</Code>" with "<Code inline=true>"use_focus_manager_context()"</Code>"."
                 </p>
             </Section>
 
@@ -176,7 +177,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
                         "Disabled, hidden and inert elements are skipped (see "
                         <Link href=routes::doc::focus::Focusability.materialize()>"focusability"</Link>")."
                     </li>
-                    <li>"With "<Code inline=true>"tabbable: true"</Code>", the radio buttons of a group count as a single stop."</li>
+                    <li>"With "<Code inline=true>"focusability: Focusability::Tabbable"</Code>", the radio buttons of a group count as a single stop."</li>
                     <li>"The walk descends into shadow roots."</li>
                 </ul>
             </Section>

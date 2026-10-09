@@ -1,9 +1,10 @@
 use leptonic::{
     atoms::{
         grid_list::{GridList, GridListItem},
-        prelude::{ContextMenuTrigger, Menu, MenuItems, Popover, use_context_menu_target},
+        menu::{ContextMenuTrigger, Menu, MenuItems, use_context_menu_target},
+        popover::Popover,
     },
-    hooks::collections::{Key, use_collection, use_list_collection},
+    hooks::collections::{Key, UseListCollectionInput, use_collection, use_list_collection},
 };
 use leptos::prelude::*;
 
@@ -13,11 +14,11 @@ const FILES: [&str; 3] = ["Documents", "Pictures", "Music"];
 /// (Open, Rename, Delete). Each action is appended to `#test-cm-actions` as "Action Row".
 #[component]
 pub fn PageAtomContextMenu() -> impl IntoView {
-    let files = use_list_collection(
-        Signal::stored(FILES.to_vec()),
-        |file| Key::from(*file),
-        |file| (*file).to_owned(),
-    );
+    let files = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FILES.to_vec()),
+        key: |file| Key::from(*file),
+        text_value: |file| (*file).to_owned(),
+    });
     let actions = RwSignal::new(Vec::<String>::new());
     view! {
         <h1>"Context menus"</h1>

@@ -50,7 +50,10 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                 <Section title="Example" id="use-breadcrumbs-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{IntoAttrs, UseBreadcrumbsInput, use_breadcrumbs};
+                            use leptonic::{
+                                IntoAttrs,
+                                hooks::breadcrumbs::{UseBreadcrumbsInput, use_breadcrumbs},
+                            };
 
                             let breadcrumbs = use_breadcrumbs(UseBreadcrumbsInput::default());
 
@@ -95,7 +98,12 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                 <Section title="Example" id="use-breadcrumb-item-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{UseBreadcrumbItemInput, UseLinkInput, use_breadcrumb_item};
+                            use leptonic::{
+                                hooks::{
+                                    breadcrumbs::{UseBreadcrumbItemInput, use_breadcrumb_item},
+                                    link::UseLinkInput,
+                                },
+                            };
 
                             let (attrs, styles) = use_breadcrumb_item(UseBreadcrumbItemInput {
                                 link: UseLinkInput {

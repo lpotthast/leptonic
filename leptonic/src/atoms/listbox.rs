@@ -1,24 +1,58 @@
+// Upstream: react-aria-components/src/ListBox.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.ssr.test.js @ 99e6102368
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The options come from a `collection` built from data (`use_collection`), rendered by
+//   `ListBoxItem`s (or `ListBoxItems`) in collection order, instead of a collection built from
+//   the rendered children.
+// - State (C4): `default_selection` + `on_selection_change`, or `selection` + `set_selection`.
+// - `ListBoxSectionHeading` is the section's `Header`; `ListBoxItemLabel` and
+//   `ListBoxItemDescription` are the `Text` slots `label` and `description`.
+// - Inside a `Select` or `ComboBox`, the listbox takes the parent's configuration from
+//   `ListBoxParent` (react-aria-components: `ListBoxContext` and `ListStateContext`), which it
+//   hides from listboxes inside its options.
+// - A `ListBox` without a `collection` outside of a `Select` or `ComboBox` warns and renders
+//   nothing.
+//
+// ## OMITTED FEATURES
+// - Render props and `className`/`style` functions (styling uses the data attributes).
+// - Drag and drop on the atoms (`dragAndDropHooks`), `ListBoxLoadMoreItem`.
+//
+// =============================================================================
+
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::separator::SeparatorContext;
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Orientation, Out, SlotProps, ValueBinding,
     hooks::{
-        DisabledBehavior, IntoAttrs, ListBoxData, Orientation, SelectionBehavior, SelectionMode,
-        SeparatorElementType, UseFocusRingInput, UseListBoxInput, UseListBoxReturn,
-        UseListBoxSectionHeadingProps, UseListBoxSectionInput, UseListBoxSectionReturn,
-        UseOptionInput, UseOptionReturn,
         collections::{
-            AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout, Node,
-            Selection, SelectionOptions, UseListStateInput, use_list_state,
+            AutoFocus, CollectionMemo, CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key,
+            ListLayout, Node, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
+            UseListStateInput, use_list_state,
         },
-        use_focus_ring, use_listbox, use_listbox_section, use_option,
+        focus::{UseFocusRingInput, use_focus_ring},
+        listbox::{
+            ListBoxData, UseListBoxInput, UseListBoxReturn, UseListBoxSectionHeadingProps,
+            UseListBoxSectionInput, UseListBoxSectionReturn, UseOptionInput, UseOptionReturn,
+            use_listbox, use_listbox_section, use_option,
+        },
+        separator::SeparatorElementType,
     },
     utils::{
-        CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
+        data_attributes::flag,
+        default_class::with_default_class,
+        scoped_context::{clear_context, scoped_view, use_clearable_context},
+        styles::Styles,
     },
 };
 
@@ -31,7 +65,7 @@ pub struct ListBoxParent {
 
 /// Context from [`ListBoxItem`] to [`ListBoxItemLabel`] and [`ListBoxItemDescription`].
 #[derive(Debug, Clone)]
-pub struct ListBoxItemCtx {
+pub struct ListBoxItemContext {
     label_props: StoredValue<Option<SlotProps>>,
     description_props: StoredValue<Option<SlotProps>>,
     pub is_selected: Signal<bool>,
@@ -54,12 +88,15 @@ pub struct ListBoxItemCtx {
 /// ignored. A [`Separator`](super::separator::Separator) between options renders a
 /// `<div role="separator">` (an `<hr>` can't be inside a listbox).
 ///
-/// # Panics
-///
-/// Without a `collection` outside of a `Select` or `ComboBox`.
+/// Without a `collection` outside of a `Select` or `ComboBox`, it warns (debug builds) and
+/// renders nothing.
 ///
 /// ```ignore
-/// let fruits = use_list_collection(Signal::stored(vec!["Apple", "Banana"]), |f| Key::from(*f), |f| f.to_string());
+/// let fruits = use_list_collection(UseListCollectionInput {
+///     items: Signal::stored(vec!["Apple", "Banana"]),
+///     key: |f| Key::from(*f),
+///     text_value: |f| f.to_string(),
+/// });
 /// view! {
 ///     <ListBox collection=fruits selection_mode=SelectionMode::Multiple aria_label="Fruits">
 ///         <ListBoxItem key="Apple">"Apple"</ListBoxItem>
@@ -85,8 +122,8 @@ pub fn ListBox(
     selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected keys.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
+    default_selection: Selection,
+    /// The selection (controlled), replacing `default_selection`: a value or any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -95,10 +132,10 @@ pub fn ListBox(
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] disabled_behavior: DisabledBehavior,
-    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(default = Orientation::Vertical)] orientation: Orientation,
+    #[prop(into, default = Orientation::Vertical.into())] orientation: Signal<Orientation>,
     #[prop(optional)] layout: ListLayout,
     /// Arrow keys wrap around at the ends.
     #[prop(optional)]
@@ -122,21 +159,25 @@ pub fn ListBox(
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let element = CapturedElement::new();
-    let mut input = if let Some(parent) = use_context::<ListBoxParent>() {
+    let mut input = if let Some(parent) = use_clearable_context::<ListBoxParent>() {
         parent.input.get_value()
     } else {
+        let Some(collection) = collection else {
+            crate::utils::dev_warn!(
+                "ListBox: a ListBox outside of a Select or ComboBox needs a `collection`"
+            );
+            return None;
+        };
         let state = {
-            let collection =
-                collection.expect("a ListBox outside of a Select or ComboBox needs a `collection`");
             use_list_state(UseListStateInput {
                 collection,
                 selection: SelectionOptions {
                     selection_mode,
                     selection_behavior,
-                    default_selection: Selection::keys(default_selected_keys),
+                    default_selection,
                     selection,
                     on_selection_change,
-                    disallow_empty_selection: Signal::stored(disallow_empty_selection),
+                    disallow_empty_selection,
                     disabled_keys: disabled_keys.unwrap_or_default(),
                     disabled_behavior,
                     ..SelectionOptions::default()
@@ -191,10 +232,8 @@ pub fn ListBox(
         ListLayout::Stack => "stack",
         ListLayout::Grid => "grid",
     };
-    let data_orientation = match input.orientation {
-        Orientation::Horizontal => "horizontal",
-        Orientation::Vertical => "vertical",
-    };
+    let orientation = input.orientation;
+    let data_orientation = move || orientation.get().as_str();
     let collection = state.collection;
     let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
@@ -215,7 +254,7 @@ pub fn ListBox(
         None => styles,
     };
 
-    view! {
+    Some(view! {
         <Provider value=data>
             <Provider value=root>
             // Separators between the options are `<div role="separator">`s (react-aria-components).
@@ -233,13 +272,15 @@ pub fn ListBox(
                     data-layout=data_layout
                     data-orientation=data_orientation
                 >
-                    {children()}
+                    // A ListBox inside the options is not the parent's (react-aria-components:
+                    // `ListBox` consumes its context).
+                    {scoped_view(clear_context::<ListBoxParent>, children)}
                     {empty}
                 </div>
             </Provider>
             </Provider>
         </Provider>
-    }
+    })
 }
 
 /// An option of a [`ListBox`], for the collection item `key`.
@@ -259,7 +300,10 @@ pub fn ListBoxItem(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxItem", classes);
-    let list = expect_context::<ListBoxData>();
+    let Some(list) = use_context::<ListBoxData>() else {
+        crate::utils::dev_warn!("<ListBoxItem> must be inside a <ListBox>");
+        return None;
+    };
     // Without a node, the item can't be focused or selected (e.g. a key of another type than the
     // collection's: `"10"` for the item, `10` in the collection).
     if !list
@@ -289,7 +333,7 @@ pub fn ListBoxItem(
         key,
     });
 
-    let ctx = ListBoxItemCtx {
+    let ctx = ListBoxItemContext {
         label_props: StoredValue::new(Some(label_props)),
         description_props: StoredValue::new(Some(description_props)),
         is_selected,
@@ -302,7 +346,7 @@ pub fn ListBoxItem(
     let (attrs, option_styles) = props.into_parts();
     let styles = option_styles.merge(styles);
 
-    view! {
+    Some(view! {
         <Provider value=ctx>
             <div
                 {..attrs}
@@ -318,7 +362,7 @@ pub fn ListBoxItem(
                 {children()}
             </div>
         </Provider>
-    }
+    })
 }
 
 /// One [`ListBoxItem`] per item of the listbox's collection, as it currently is (e.g. filtered
@@ -344,31 +388,27 @@ where
     let list = expect_context::<ListBoxData>();
     let collection = list.state.collection;
     let children = std::sync::Arc::new(children);
+    let render = std::sync::Arc::new(move |key: Key| {
+        let node_key = key.clone();
+        let node = Memo::new(move |_| collection.with(|c| c.get(&node_key).cloned()));
+        let children = children.clone();
+        view! {
+            <ListBoxItem key=key classes=classes.clone()>
+                {move || node.get().map(|node| children(node))}
+            </ListBoxItem>
+        }
+        .into_any()
+    });
     // Inside a `Virtualizer`: the visible options only.
     if let Some(root) = use_context::<Option<super::virtualizer::VirtualizedRoot>>().flatten() {
-        let classes = classes.clone();
-        let render = std::sync::Arc::new(move |key: Key| {
-            let Some(node) = collection.with_untracked(|c| c.get(&key).cloned()) else {
-                return ().into_any();
-            };
-            let children = children.clone();
-            view! { <ListBoxItem key=key classes=classes.clone()>{children(node)}</ListBoxItem> }
-                .into_any()
-        });
         return super::virtualizer::render_visible_items(root, render).into_any();
     }
     view! {
         <For
-            each=move || collection.with(|c| c.items().cloned().collect::<Vec<_>>())
-            key=|node| node.key.clone()
-            let:node
-        >
-            {
-                let children = children.clone();
-                let key = node.key.clone();
-                view! { <ListBoxItem key=key classes=classes.clone()>{children(node)}</ListBoxItem> }
-            }
-        </For>
+            each=move || collection.with(|c| c.items().map(|node| node.key.clone()).collect::<Vec<_>>())
+            key=Clone::clone
+            children=move |key| render(key)
+        />
     }
     .into_any()
 }
@@ -383,14 +423,17 @@ pub fn ListBoxItemLabel(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxItemLabel", classes);
-    let ctx = expect_context::<ListBoxItemCtx>();
-    slot(
+    let Some(ctx) = use_context::<ListBoxItemContext>() else {
+        crate::utils::dev_warn!("<ListBoxItemLabel> must be inside a <ListBoxItem>");
+        return None;
+    };
+    Some(slot(
         ctx.label_props,
         "ListBoxItemLabel",
         classes,
         styles,
         children,
-    )
+    ))
 }
 
 /// Secondary text of a [`ListBoxItem`] (describes the option).
@@ -403,14 +446,17 @@ pub fn ListBoxItemDescription(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxItemDescription", classes);
-    let ctx = expect_context::<ListBoxItemCtx>();
-    slot(
+    let Some(ctx) = use_context::<ListBoxItemContext>() else {
+        crate::utils::dev_warn!("<ListBoxItemDescription> must be inside a <ListBoxItem>");
+        return None;
+    };
+    Some(slot(
         ctx.description_props,
         "ListBoxItemDescription",
         classes,
         styles,
         children,
-    )
+    ))
 }
 
 /// Renders a label/description slot. The slot's props go to the first such element only.
@@ -441,10 +487,10 @@ fn slot(
 
 /// What a [`ListBoxSection`] provides to its [`ListBoxSectionHeading`].
 #[derive(Clone, Copy)]
-struct ListBoxSectionCtx {
+struct ListBoxSectionContext {
     heading_props: StoredValue<Option<UseListBoxSectionHeadingProps>>,
     /// The collection's header text.
-    heading: StoredValue<Option<String>>,
+    heading: Signal<Option<String>>,
 }
 
 /// A group of options in a [`ListBox`], for the collection section `key`: one `role="group"`
@@ -469,23 +515,26 @@ pub fn ListBoxSection(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxSection", classes);
-    let list = expect_context::<ListBoxData>();
+    let Some(list) = use_context::<ListBoxData>() else {
+        crate::utils::dev_warn!("<ListBoxSection> must be inside a <ListBox>");
+        return None;
+    };
     let UseListBoxSectionReturn {
         heading_props,
         group_props,
         heading,
         ..
     } = use_listbox_section(UseListBoxSectionInput { list, key });
-    let ctx = ListBoxSectionCtx {
+    let ctx = ListBoxSectionContext {
         heading_props: StoredValue::new(heading_props),
-        heading: StoredValue::new(heading),
+        heading,
     };
 
-    view! {
+    Some(view! {
         <section {..group_props.into_attrs()} class=classes style=styles>
             <Provider value=ctx>{children()}</Provider>
         </section>
-    }
+    })
 }
 
 /// The heading of a [`ListBoxSection`] (react-aria-components: `Header`), labelling the section.
@@ -500,10 +549,15 @@ pub fn ListBoxSectionHeading(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxSectionHeading", classes);
-    let ctx = expect_context::<ListBoxSectionCtx>();
-    let content = match children {
-        Some(children) => children().into_any(),
-        None => ctx.heading.get_value().into_any(),
+    let Some(ctx) = use_context::<ListBoxSectionContext>() else {
+        crate::utils::dev_warn!("<ListBoxSectionHeading> must be inside a <ListBoxSection>");
+        return ().into_any();
+    };
+    let content = if let Some(children) = children {
+        children().into_any()
+    } else {
+        let heading = ctx.heading;
+        (move || heading.get()).into_any()
     };
     if let Some(props) = ctx.heading_props.try_update_value(Option::take).flatten() {
         view! {

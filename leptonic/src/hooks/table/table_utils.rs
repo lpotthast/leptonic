@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/table/TableUtils.ts @ 99e6102368
+// Upstream: react-stately/test/table/TableUtils.test.js @ 99e6102368
 use crate::hooks::collections::Key;
 
 // =============================================================================
@@ -178,7 +179,7 @@ pub fn calculate_column_sizes(
         has_non_frozen_items = false;
         for item in &mut items {
             #[allow(clippy::float_cmp)]
-            let same_sign = total_violation.signum() == item.violation.signum();
+            let same_sign = js_sign(total_violation) == js_sign(item.violation);
             if total_violation == 0.0 || same_sign {
                 item.frozen = true;
             } else if !item.frozen {
@@ -199,6 +200,12 @@ pub fn calculate_column_sizes(
         }
     }
     sizes
+}
+
+/// The sign of `value` as JavaScript's `Math.sign`: 0 for zero (`f64::signum` gives 1 for 0.0, so an
+/// item without violation would count as one with a min violation).
+fn js_sign(value: f64) -> f64 {
+    if value == 0.0 { 0.0 } else { value.signum() }
 }
 
 /// Round floats that sum up to an integer to integers with the same sum.
@@ -357,6 +364,42 @@ mod tests {
             |_| Some(ColumnBound::Px(50.0)),
         );
         assert_that!(widths).is_equal_to(vec![133.0, 134.0, 533.0]);
+    }
+
+    #[test]
+    fn a_fractional_column_clamped_at_its_minimum_leaves_the_rest_to_the_others() {
+        let widths = calculate_column_sizes(
+            300.0,
+            &[
+                ColumnSizing {
+                    min_width: Some(ColumnBound::Px(150.0)),
+                    ..sized("name", ColumnSize::Fr(1.0))
+                },
+                sized("type", ColumnSize::Fr(1.0)),
+                sized("level", ColumnSize::Fr(1.0)),
+            ],
+            &HashMap::new(),
+            |_| None,
+            |_| None,
+        );
+        assert_that!(widths).is_equal_to(vec![150.0, 75.0, 75.0]);
+    }
+
+    /// TableUtils.test.js: "handles js fp rounding errors".
+    #[test]
+    fn handles_js_fp_rounding_errors() {
+        let widths = calculate_column_sizes(
+            1000.7,
+            &[
+                sized("name", ColumnSize::Fr(1.0)),
+                sized("type", ColumnSize::Fr(1.0)),
+            ],
+            &HashMap::new(),
+            |_| Some(ColumnSize::Px(150.0)),
+            |_| Some(ColumnBound::Px(50.0)),
+        );
+        assert_that!(widths.clone()).is_equal_to(vec![500.0, 500.7]);
+        assert_that!(widths.iter().sum::<f64>()).is_equal_to(1000.7);
     }
 
     #[test]

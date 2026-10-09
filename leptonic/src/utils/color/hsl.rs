@@ -1,12 +1,11 @@
 //! The HSL color space.
 
 use super::{
-    AreaGradient, ColorChannelRange, ColorSpaceAxes, ColorValue, HSV, RGB8, axes_of,
+    AreaGradient, ColorChannelRange, ColorSpaceAxes, ColorValue, HSV, HUE_STOPS, RGB8, axes_of,
     hue_space_area_gradient, hue_stops, round_fraction,
 };
 use crate::utils::{
-    i18n::Locale,
-    locale::WritingDirection,
+    i18n::{Locale, WritingDirection},
     math::to_fixed_number,
     number_formatter::{NumberFormatOptions, NumberStyle, UnitDisplay},
 };
@@ -116,49 +115,39 @@ impl ColorValue for HSL {
                 max_value: 360.0,
                 step: 1.0,
                 page_size: 15.0,
-                gradient_stops: Some(&[0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0]),
             },
             // 0 to 1 (react-aria: 0 to 100; see the module's deviations).
-            HslChannel::Saturation => ColorChannelRange {
+            HslChannel::Saturation | HslChannel::Lightness => ColorChannelRange {
                 min_value: 0.0,
                 max_value: 1.0,
                 step: 0.01,
                 page_size: 0.1,
-                gradient_stops: None,
-            },
-            // 0 to 1 (react-aria: 0 to 100; see the module's deviations).
-            HslChannel::Lightness => ColorChannelRange {
-                min_value: 0.0,
-                max_value: 1.0,
-                step: 0.01,
-                page_size: 0.1,
-                // 3-stop gradient: black (0) → pure color (0.5) → white (1.0).
-                gradient_stops: Some(&[0.0, 0.5, 1.0]),
             },
         }
     }
 
-    fn channels() -> Vec<HslChannel> {
-        vec![
+    fn channels() -> [HslChannel; 3] {
+        [
             HslChannel::Hue,
             HslChannel::Saturation,
             HslChannel::Lightness,
         ]
     }
 
+    fn gradient_stops(channel: HslChannel) -> &'static [f64] {
+        match channel {
+            HslChannel::Hue => &HUE_STOPS,
+            HslChannel::Saturation => &[0.0, 1.0],
+            // Black, the vivid color, white (react-aria: the hue doesn't show otherwise).
+            HslChannel::Lightness => &[0.0, 0.5, 1.0],
+        }
+    }
+
     fn color_space_axes(
         x_channel: Option<HslChannel>,
         y_channel: Option<HslChannel>,
     ) -> ColorSpaceAxes<HslChannel> {
-        axes_of(
-            [
-                HslChannel::Hue,
-                HslChannel::Saturation,
-                HslChannel::Lightness,
-            ],
-            x_channel,
-            y_channel,
-        )
+        axes_of(Self::channels(), x_channel, y_channel)
     }
 
     fn to_css_string(&self) -> String {
@@ -225,14 +214,14 @@ impl ColorValue for HSL {
 
 impl From<HSL> for RGB8 {
     // Standard HSL → RGB conversion.
-    // Expects: 0 ≤ H < 360, 0 ≤ S ≤ 1, 0 ≤ L ≤ 1.
+    // Expects: 0 ≤ S ≤ 1, 0 ≤ L ≤ 1; hues wrap around (react-aria: `% 12` of twelfths).
     #[allow(
         clippy::many_single_char_names,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss
     )]
     fn from(hsl: HSL) -> Self {
-        let (h, s, l) = (hsl.hue, hsl.saturation, hsl.lightness);
+        let (h, s, l) = (hsl.hue.rem_euclid(360.0), hsl.saturation, hsl.lightness);
 
         let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
         let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());

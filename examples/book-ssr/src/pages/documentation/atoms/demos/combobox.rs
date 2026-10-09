@@ -9,7 +9,7 @@ use leptonic::{
     },
     hooks::{
         collections::{Key, use_collection},
-        use_contains_filter,
+        combobox::use_contains_filter,
     },
 };
 use leptos::prelude::*;

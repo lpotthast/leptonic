@@ -1,18 +1,17 @@
 use std::collections::HashSet;
 
-use leptonic::hooks::Orientation;
-use leptonic::hooks::collections::ListLayout;
 use leptonic::{
+    CapturedElement, IntoAttrs, Orientation,
     hooks::{
-        IntoAttrs, ListBoxData, SelectionMode, UseListBoxInput, UseListBoxReturn, UseOptionInput,
-        UseOptionReturn,
         collections::{
-            CollectionOptions, Key, SelectionOptions, UseListStateInput, use_list_collection,
-            use_list_state,
+            CollectionOptions, Key, ListLayout, SelectionMode, SelectionOptions,
+            UseListCollectionInput, UseListStateInput, use_list_collection, use_list_state,
         },
-        use_listbox, use_option,
+        listbox::{
+            ListBoxData, UseListBoxInput, UseListBoxReturn, UseOptionInput, UseOptionReturn,
+            use_listbox, use_option,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -58,11 +57,11 @@ fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> i
 #[component]
 pub fn ListboxDemo() -> impl IntoView {
     // The options, as a collection: keys identify them, texts are used for type-ahead.
-    let collection = use_list_collection(
-        Signal::stored(FRUITS.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, label)| (*label).to_owned(),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FRUITS.to_vec()),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, label)| (*label).to_owned(),
+    });
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
@@ -83,7 +82,7 @@ pub fn ListboxDemo() -> impl IntoView {
         element: CapturedElement::new(),
         id: None,
         aria_labelledby: Signal::stored(None),
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
         layout_delegate: None,
         is_virtualized: false,

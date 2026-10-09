@@ -1,11 +1,8 @@
 use std::time::Duration;
 
 #[cfg(feature = "ssr")]
-use leptonic::utils::syntax_highlight::highlight_to_classed_html;
-use leptonic::{
-    atoms::prelude::Button,
-    utils::{clipboard::write_text, live_announcer::announce_polite},
-};
+use leptonic::highlight_to_classed_html;
+use leptonic::{announce_polite, atoms::button::Button, write_text};
 use leptos::prelude::*;
 use leptos_classes::Classes;
 

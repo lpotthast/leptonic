@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/checkbox/useCheckbox.ts @ 99e6102368
+// Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
@@ -7,7 +8,7 @@ use super::{
     use_toggle::{ToggleOptions, UseToggleInput, UseToggleReturn, use_toggle_with},
     use_toggle_state::ToggleState,
 };
-use crate::{hooks::PropsWithStyles, utils::EventHandler};
+use crate::{EventHandler, PropsWithStyles};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

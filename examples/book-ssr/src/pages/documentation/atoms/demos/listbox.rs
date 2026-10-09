@@ -6,10 +6,7 @@ use leptonic::{
             ListBoxSectionHeading,
         },
     },
-    hooks::{
-        SelectionMode,
-        collections::{Key, Selection, use_collection},
-    },
+    hooks::collections::{Key, Selection, SelectionMode, use_collection},
 };
 use leptos::prelude::*;
 

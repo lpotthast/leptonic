@@ -227,6 +227,19 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                 </Section>
             </Section>
 
+            <Section title="Time Fields in the Popover">
+                <p>
+                    "Read a surrounding picker's state with "<Code inline=true>"use_date_picker_state_context::<V>()"</Code>
+                    " or "<Code inline=true>"use_date_range_picker_state_context::<V>()"</Code>" from "
+                    <Code inline=true>"leptonic::atoms::datepicker"</Code>". Both return "<Code inline=true>"Option"</Code>
+                    "; use the same value type as the picker. For a "<Code inline=true>"TimeField"</Code>" in a single "
+                    "picker's popover, bind "<Code inline=true>"value=state.time_value"</Code>" and send present time values to "
+                    <Code inline=true>"state.select_time(time)"</Code>". For a range, read "<Code inline=true>"state.start_time"</Code>
+                    " or "<Code inline=true>"state.end_time"</Code>" and call "
+                    <Code inline=true>"state.select_time(RangePart::Start, time)"</Code>" or its end counterpart."
+                </p>
+            </Section>
+
             <Section title="DatePickerGroup">
                 <p>
                     "The "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"role=\"group\""</Code>" around the field and "

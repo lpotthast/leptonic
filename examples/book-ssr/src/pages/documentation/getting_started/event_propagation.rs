@@ -96,14 +96,33 @@ pub fn PageEventPropagation() -> impl IntoView {
                 <p>
                     "Leptonic\u{2019}s event types "<Code inline=true>"PressEvent"</Code>" and "
                     <Code inline=true>"KeyboardEventWrapper"</Code>" implement the "<Code inline=true>"Propagation"</Code>
-                    " trait ("<Code inline=true>"leptonic::utils::Propagation"</Code>"). Its "
+                    " trait ("<Code inline=true>"leptonic::Propagation"</Code>"). Its "
                     <Code inline=true>"continue_propagation()"</Code>" lets the event bubble on. There is no "
                     <Code inline=true>"stop_propagation()"</Code>": stopping is what happens anyway."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::{hooks::*, utils::{Propagation, key::KeyboardKey}};
+                        use leptonic::{
+                            KeyboardKey,
+                            Propagation,
+                            hooks::{
+                                collections::Key,
+                                focus::use_focus_within,
+                                interactions::{
+                                    KeyboardEventWrapper,
+                                    PressEvent,
+                                    PressPropagation,
+                                    UseKeyboardInput,
+                                    use_context_menu,
+                                    use_hover,
+                                    use_keyboard,
+                                    use_move,
+                                    use_press,
+                                    use_scroll_wheel,
+                                },
+                            },
+                        };
 
                         let keyboard = use_keyboard(UseKeyboardInput {
                             on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {

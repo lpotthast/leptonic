@@ -25,19 +25,36 @@ pub fn PageGridListHooks() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
+                            CapturedElement,
                             hooks::{
-                                collections::{CollectionOptions, ListLayout, SelectionOptions, UseListStateInput},
-                                *,
+                                collections::{
+                                    CollectionOptions,
+                                    Key,
+                                    ListLayout,
+                                    SelectionOptions,
+                                    UseListCollectionInput,
+                                    UseListStateInput,
+                                    use_list_collection,
+                                    use_list_state,
+                                },
+                                gridlist::{
+                                    FocusMode,
+                                    KeyboardNavigationBehavior,
+                                    UseGridListInput,
+                                    UseGridListItemInput,
+                                    UseGridListReturn,
+                                    use_grid_list,
+                                    use_grid_list_item,
+                                },
                             },
-                            utils::CapturedElement,
                         };
                         use leptos::prelude::*;
 
-                        let files = use_list_collection(
-                            Signal::stored(vec!["Notes.txt", "Photo.jpg"]),
-                            |file| Key::from(*file),
-                            |file| (*file).to_owned(),
-                        );
+                        let files = use_list_collection(UseListCollectionInput {
+                            items: Signal::stored(vec!["Notes.txt", "Photo.jpg"]),
+                            key: |file| Key::from(*file),
+                            text_value: |file| (*file).to_owned(),
+                        });
                         let state = use_list_state(UseListStateInput { collection: files, selection: SelectionOptions::default() });
                         let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
                             state,
@@ -197,7 +214,7 @@ pub fn PageGridListHooks() -> impl IntoView {
                         <ApiRow name="row_group_props" ty="UseGridListSectionRowGroupProps">
                             "For the element containing the section\u{2019}s rows ("<Code inline=true>"role=\"rowgroup\""</Code>")."
                         </ApiRow>
-                        <ApiRow name="heading" ty="Option<String>">"The header text, if the section has a header."</ApiRow>
+                        <ApiRow name="heading" ty="Signal<Option<String>>">"The header text, if the section has a header."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

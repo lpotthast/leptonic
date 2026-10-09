@@ -17,32 +17,126 @@ use leptos_use::use_window;
 
 #[cfg(feature = "atoms")]
 pub mod atoms;
+mod attrs;
 pub mod hooks;
 #[cfg(test)]
 pub(crate) mod testing;
-pub mod utils;
+pub(crate) mod utils;
 
-// Let's make some types of our public API more easily accessible.
+// Leptonic has no prelude: atoms and hooks are imported from their modules
+// (`leptonic::atoms::button::Button`, `leptonic::hooks::interactions::use_press`), everything else
+// users need from the crate root below, the only path to each of these items (their modules are
+// private; documentation/conventions.md, "No prelude; one path per public item").
+
 /// The date crate of leptonic's date APIs (calendars, date fields).
 pub use jiff;
+/// Classes for the `classes` props of atoms (`Classes`).
+pub use leptos_classes;
+pub use leptos_element_capture::{CapturedElement, ElementCaptureAttr, ElementCaptureCallback};
+/// Typed inline styles for the `styles` props of atoms (`Styles`, typed declarations, CSS values).
+pub use leptos_styles;
 
-pub use crate::utils::scroll_behavior::ScrollBehavior;
-
-pub mod prelude {
-    pub use super::{
-        FontWeight, Height, Margin, Mount, Out, Padding, Width,
-        utils::{
-            aria::{AriaExpanded, AriaHasPopup},
-            callback::{ViewCallback, ViewProducer},
+#[cfg(feature = "clipboard")]
+pub use crate::utils::clipboard::{ClipboardError, write_text, write_text_deferred};
+#[cfg(feature = "syntax-highlight")]
+pub use crate::utils::syntax_highlight::highlight_to_classed_html;
+pub use crate::{
+    attrs::{IntoAttrs, PropsWithStyles},
+    utils::{
+        aria::{
+            AriaAtomic, AriaAutocomplete, AriaChecked, AriaCurrent, AriaDisabled, AriaExpanded,
+            AriaHasPopup, AriaHidden, AriaInvalid, AriaKeyshortcuts, AriaLive, AriaModal,
+            AriaMultiselectable, AriaOrientation, AriaPressed, AriaReadonly, AriaRelevant,
+            AriaRequired, AriaRole, AriaSelected, AriaSort,
         },
-    };
-    pub use crate::{hooks::IntoAttrs, signal_ls, utils::ValueBinding};
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Language {
-    En,
-}
+        aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside, keep_visible},
+        color::{
+            Alpha, AlphaChannel, AreaGradient, BlendMode, Color, ColorChannel, ColorChannelRange,
+            ColorFormat, ColorProp, ColorSpaceAxes, ColorValue, HSL, HSV, HslChannel, HsvChannel,
+            OpaqueColor, ParseColorError, RGB8, RgbChannel,
+        },
+        data_attributes::flag,
+        date::{
+            DateDuration, DateExt, DateRange, first_day_of_week, max_date, min_date, today,
+            use_today,
+        },
+        date_time_formatter::{
+            DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, DateTimeStyle, MonthFormat,
+            NumericFormat, TimeZoneFormat,
+        },
+        dom_ext::ContainsTarget,
+        event_handler::{EventHandler, OnEvent},
+        filter::{
+            Collator, CollatorOptions, CollatorSensitivity, Filter, FilterQuery, use_collator,
+            use_filter,
+        },
+        focus::{focus_element, focus_safely},
+        focusability::{
+            FOCUSABLE_SELECTOR, TABBABLE_SELECTOR, is_focusable, is_tabbable, is_typing_target,
+            prevent_focus_attr, will_open_keyboard,
+        },
+        fraction::Fraction,
+        heading_level::HeadingLevel,
+        i18n::{
+            I18nContext, I18nProvider, InvalidLocale, Locale, WritingDirection, locale,
+            use_direction, use_i18n, use_locale,
+        },
+        id::use_id,
+        id_refs::IdRefs,
+        intl_strings::{
+            AtomStrings, BreadcrumbsStrings, Bundle, CalendarStrings, ColorInputLabelArgs,
+            ColorNameAndValueArgs, ColorNameArgs, ColorNameStrings, ColorStrings, ComboBoxStrings,
+            DatePickerStrings, DateRangeArgs, DateValidationStrings, DndStrings,
+            FocusAnnouncementArgs, GridStrings, InsertBetweenArgs, LocalizedStrings, MenuStrings,
+            NumberFieldStrings, OverlayStrings, SearchFieldStrings, SelectedRangeDescriptionArgs,
+            SpinButtonStrings, Strings, TableStrings, TagStrings, ToastStrings,
+            TransparentColorNameArgs, TreeStrings, use_localized_strings,
+        },
+        key::KeyboardKey,
+        keyboard_shortcut::{InvalidShortcut, KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        labels::{Labels, labels},
+        list_formatter::{ListFormatOptions, ListFormatStyle, ListFormatType, ListFormatter},
+        live_announcer::{
+            Announcement, Assertiveness, announce, announce_assertive, announce_polite,
+            announce_with_timeout, clear_announcer, destroy_announcer,
+        },
+        modifiers::{EventModifiers, Modifiers},
+        number_formatter::{
+            CurrencyDisplay, CurrencySign, NumberFormatOptions, NumberFormatter, NumberPart,
+            NumberPartKind, NumberStyle, NumberingSystem, SignDisplay, UnitDisplay,
+            use_number_formatter,
+        },
+        number_parser::NumberParser,
+        number_value::{NumberSignal, NumberValue, OptionalNumberSignal},
+        orientation::Orientation,
+        platform::{
+            browser::{is_chrome, is_firefox, is_safari, is_webkit},
+            device::{
+                has_touch_events, is_android, is_apple_device, is_ios, is_ipad, is_iphone, is_mac,
+            },
+            use_platform_check,
+        },
+        plurals::plural_category,
+        point::Point,
+        pointer_type::PointerType,
+        propagation_control::{Propagation, PropagationControl},
+        scroll::{
+            ScrollAlignment, ScrollIntoViewOpts, ScrollIntoViewportOpts, get_scroll_parent,
+            get_scroll_parents, is_scrollable, scroll_into_view, scroll_into_viewport,
+        },
+        scroll_behavior::ScrollBehavior,
+        slot_id::{Slot, SlotAttrs, SlotProps, use_slot},
+        styles::css::{computed_pct, computed_px, computed_size},
+        use_description::use_description,
+        use_viewport_size::{ViewportSize, use_viewport_size},
+        value_binding::ValueBinding,
+        virtual_focus::move_virtual_focus,
+        visually_hidden::{
+            VISUALLY_HIDDEN_STYLE, visually_hidden_fixed_styles, visually_hidden_full_size_styles,
+            visually_hidden_styles,
+        },
+    },
+};
 
 /// The `Out` type represents any outgoing / emittable value. Use it in components that should
 /// return (propagate) a value upwards using a function-like property.
@@ -55,7 +149,6 @@ pub enum Language {
 /// or use a closure (which will be converted to a `Callback`).
 #[derive(Debug)]
 pub enum Out<O: 'static, S = SyncStorage> {
-    Fn(fn(O) -> ()),
     Callback(Callback<O, ()>),
     WriteSignal(WriteSignal<O, S>),
     RwSignal(RwSignal<O, S>),
@@ -70,20 +163,7 @@ impl<O: 'static, S> Clone for Out<O, S> {
     }
 }
 
-impl<O: 'static, S> Default for Out<O, S> {
-    fn default() -> Self {
-        Self::new_fn(|_| {
-            // intentional noop
-        })
-    }
-}
-
 impl<O: 'static, S> Out<O, S> {
-    /// Creates a new `Out` from the given function pointer.
-    pub fn new_fn(f: fn(O) -> ()) -> Self {
-        Self::Fn(f)
-    }
-
     /// Creates a new `Out` from the given function.
     pub fn new_callback(f: impl Fn(O) + Send + Sync + 'static) -> Self {
         Self::Callback(Callback::new(f))
@@ -93,7 +173,6 @@ impl<O: 'static, S> Out<O, S> {
 impl<O: 'static> Out<O, LocalStorage> {
     pub fn set(&self, new_value: O) {
         match self {
-            Self::Fn(f) => f(new_value),
             Self::Callback(callback) => Callable::run(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
@@ -105,7 +184,6 @@ impl<O: 'static> Out<O, LocalStorage> {
 impl<O: Send + Sync + 'static> Out<O, SyncStorage> {
     pub fn set(&self, new_value: O) {
         match self {
-            Self::Fn(f) => f(new_value),
             Self::Callback(callback) => Callable::run(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
@@ -150,16 +228,6 @@ impl<O: 'static, S> From<StoredValue<O, S>> for Out<O, S> {
     }
 }
 
-#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Mount {
-    /// Mount the child view once. Then keep it mounted as long as the parent lives.
-    #[default]
-    Once,
-
-    /// Always re-mount the child view when it is needed.
-    WhenShown,
-}
-
 /// Create a read-write signal pair kept in the browser's `LocalStorage` under `key`.
 ///
 /// It starts with `initial`, as the server renders it (the server has no storage), so hydration
@@ -192,8 +260,7 @@ pub fn signal_ls<
     (value, set_value)
 }
 
-#[must_use]
-pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str) -> Option<T> {
+fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str) -> Option<T> {
     use_window().as_ref().and_then(|window| {
         let storage = window.local_storage().ok()??;
         let stored = storage.get(key).ok()??;
@@ -209,26 +276,3 @@ pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str
         }
     })
 }
-
-pub fn track_in_local_storage<T: Send + Sync + serde::Serialize + Clone + 'static>(
-    key: &'static str,
-    signal: ReadSignal<T>,
-) {
-    Effect::new(move |_old| {
-        if let Some(window) = &*use_window() {
-            let storage = window.local_storage().ok()??;
-            let val = signal.get(); // TODO (new): Can we use read() instead?
-            storage
-                .set(key, serde_json::to_string(&val).ok()?.as_ref())
-                .ok()
-        } else {
-            Some(())
-        }
-    });
-}
-
-pub type Width = utils::css::CssDimension;
-pub type Height = utils::css::CssDimension;
-
-// Re-export CSS shorthand value types from leptos-styles.
-pub use utils::css::{FontWeight, Margin, Padding};

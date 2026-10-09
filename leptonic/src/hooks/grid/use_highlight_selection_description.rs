@@ -3,9 +3,8 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::{
-        Modality,
         collections::{SelectionBehavior, SelectionManager, SelectionMode},
-        use_interaction_modality,
+        focus::{Modality, use_interaction_modality},
     },
     utils::{
         intl_strings::{GridStrings, use_localized_strings},
@@ -40,7 +39,7 @@ pub fn use_highlight_selection_description(
         // Before any interaction too (react-aria: modality `null`).
         let should_long_press = matches!(
             modality.get(),
-            None | Some(Modality::Unknown | Modality::Pointer | Modality::Virtual)
+            None | Some(Modality::Pointer | Modality::Virtual)
         ) && has_touch_events();
         let highlights = selection.selection_behavior() == SelectionBehavior::Replace
             && selection.selection_mode() != SelectionMode::None

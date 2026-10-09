@@ -1,16 +1,18 @@
-use leptonic::hooks::collections::CollectionOptions;
-use leptonic::hooks::collections::SelectionOptions;
+use std::collections::HashSet;
+
 use leptonic::{
+    CapturedElement, IntoAttrs,
     hooks::{
-        GridListData, IntoAttrs, UseTreeInput, UseTreeItemInput, UseTreeItemReturn,
-        UseTreeStateInput,
-        collections::{Key, use_collection},
-        use_button, use_tree, use_tree_item, use_tree_state,
+        button::use_button,
+        collections::{CollectionOptions, Key, SelectionOptions, use_collection},
+        gridlist::{FocusMode, GridListData, KeyboardNavigationBehavior},
+        tree::{
+            UseTreeInput, UseTreeItemInput, UseTreeItemReturn, UseTreeStateInput, use_tree,
+            use_tree_item, use_tree_state,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
-use std::collections::HashSet;
 
 /// A file tree built from the tree hooks, all items collapsed:
 /// Documents (Project (Report, Budget), CV), Photos (Cat), Notes.
@@ -41,9 +43,11 @@ pub fn PageHookTree() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         id: None,
-        aria_labelledby: None,
+        aria_labelledby: Signal::stored(None),
         options: CollectionOptions::default(),
         on_action: None,
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
+        should_select_on_press_up: false,
     });
     let data = tree.data;
     let visible = state.list.collection;
@@ -54,7 +58,9 @@ pub fn PageHookTree() -> impl IntoView {
             <button id="test-tree-before">"Before"</button>
             <div {..tree.props.into_attrs()}>
                 <For
-                    each=move || visible.with(|c| c.items().map(|n| n.key.clone()).collect::<Vec<_>>())
+                    each=move || {
+                        visible.with(|c| c.items().map(|n| n.key.clone()).collect::<Vec<_>>())
+                    }
                     key=Clone::clone
                     let:key
                 >
@@ -79,19 +85,29 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
         expand_button_attrs,
         has_child_items,
         ..
-    } = use_tree_item(UseTreeItemInput { tree, key });
+    } = use_tree_item(UseTreeItemInput {
+        tree,
+        key,
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let (attrs, styles) = item.row_props.into_parts();
     // Only items with children have one (an item can get children later).
     let button = move || {
         has_child_items.get().then(|| {
             let (attrs, styles) = use_button(expand_button.clone()).props.into_parts();
-            view! { <button {..attrs} {..expand_button_attrs.clone()} style=styles>"›"</button> }
+            view! {
+                <button {..attrs} {..expand_button_attrs.clone()} style=styles>
+                    "›"
+                </button>
+            }
         })
     };
 
     view! {
         <div {..attrs} style=styles>
-            <div {..item.grid_cell_props.into_attrs()}>{button} {text}</div>
+            <div {..item.grid_cell_props.into_attrs()}>{button} <span>{text}</span></div>
         </div>
     }
 }

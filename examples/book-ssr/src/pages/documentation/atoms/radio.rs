@@ -35,11 +35,8 @@ pub fn PageAtomRadio() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::{
-                                field::Label,
-                                radio::{RadioButton, RadioField, RadioGroup},
-                            },
-                            hooks::Key,
+                            atoms::{field::Label, radio::{RadioButton, RadioField, RadioGroup}},
+                            hooks::collections::Key,
                         };
                         use leptos::prelude::*;
 
@@ -104,7 +101,7 @@ pub fn PageAtomRadio() -> impl IntoView {
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<V>>>" default="None">"Called with the selected value when it changes."</ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Vertical">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
                             "Sets "<Code inline=true>"aria-orientation"</Code>" and "<Code inline=true>"data-orientation"</Code>
                             ". Lay the radios out to match."
                         </ApiRow>

@@ -1,8 +1,8 @@
 use leptonic::{
-    atoms::{field::Label, input::Input, prelude as atoms, text_field::TextField},
+    atoms::{self, field::Label, input::Input, text_field::TextField},
     hooks::{
-        SubmenuKind,
         collections::{Key, use_collection},
+        menu::SubmenuKind,
     },
 };
 use leptos::prelude::*;
@@ -18,31 +18,31 @@ pub fn MenuSubdialogDemo() -> impl IntoView {
     });
 
     view! {
-        <atoms::MenuTrigger>
-            <atoms::Button classes="demo-btn">"File"</atoms::Button>
-            <atoms::Popover offset=4.0>
-                <atoms::Menu
+        <atoms::menu::MenuTrigger>
+            <atoms::button::Button classes="demo-btn">"File"</atoms::button::Button>
+            <atoms::popover::Popover offset=4.0>
+                <atoms::menu::Menu
                     collection=file
                     on_action=move |key: Key| last_action.set(Some(key))
                     classes="demo-menu-list"
                 >
-                    <atoms::MenuItem key="open" classes="demo-menu-atom-item">"Open"</atoms::MenuItem>
+                    <atoms::menu::MenuItem key="open" classes="demo-menu-atom-item">"Open"</atoms::menu::MenuItem>
                     // Opens a dialog next to the item. Focus moves into it and stays there; Escape closes it.
-                    <atoms::SubmenuTrigger key="rename" kind=SubmenuKind::Dialog>
-                        <atoms::MenuItem key="rename" classes="demo-menu-atom-item">"Rename \u{2026}"</atoms::MenuItem>
-                        <atoms::Popover offset=-4.0 classes="demo-popover">
-                            <atoms::Dialog aria_label="Rename">
+                    <atoms::menu::SubmenuTrigger key="rename" kind=SubmenuKind::Dialog>
+                        <atoms::menu::MenuItem key="rename" classes="demo-menu-atom-item">"Rename \u{2026}"</atoms::menu::MenuItem>
+                        <atoms::popover::Popover offset=-4.0 classes="demo-popover">
+                            <atoms::dialog::Dialog aria_label="Rename">
                                 <TextField value=name set_value=name classes="demo-field">
                                     <Label classes="demo-field-label">"File name"</Label>
                                     <Input classes=["demo-input", "demo-text-input", "demo-atom-input"]/>
                                 </TextField>
-                            </atoms::Dialog>
-                        </atoms::Popover>
-                    </atoms::SubmenuTrigger>
-                    <atoms::MenuItem key="delete" classes="demo-menu-atom-item">"Delete"</atoms::MenuItem>
-                </atoms::Menu>
-            </atoms::Popover>
-        </atoms::MenuTrigger>
+                            </atoms::dialog::Dialog>
+                        </atoms::popover::Popover>
+                    </atoms::menu::SubmenuTrigger>
+                    <atoms::menu::MenuItem key="delete" classes="demo-menu-atom-item">"Delete"</atoms::menu::MenuItem>
+                </atoms::menu::Menu>
+            </atoms::popover::Popover>
+        </atoms::menu::MenuTrigger>
         <p class="demo-status">
             {move || format!("File: {}. ", name.get())}
             {move || match last_action.get() {

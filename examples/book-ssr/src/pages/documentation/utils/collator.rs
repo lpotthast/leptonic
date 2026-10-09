@@ -23,7 +23,7 @@ pub fn PageCollator() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::filter::{CollatorOptions, use_collator};
+                        use leptonic::{CollatorOptions, use_collator};
 
                         // A collator for the locale of the `I18nProvider`, created again only when the locale changes.
                         let collator = use_collator(CollatorOptions::default());
@@ -117,9 +117,9 @@ pub fn PageCollator() -> impl IntoView {
                     </TableRow>
                 </DocTable>
                 <p>
-                    "An empty query always matches. A filter compares pieces of the text as long as the query in bytes, so "
-                    "a query only matches accented text when it has the same accents: \u{201c}apf\u{201d} doesn\u{2019}t find "
-                    "\u{201c}\u{c4}pfel\u{201d} yet."
+                    "Prepare the input once with "<Code inline=true>"FilterQuery::new(input)"</Code>" and pass a "
+                    "reference to it when matching each option. An empty query always matches. Matching compares "
+                    "Unicode characters, so base sensitivity matches \u{201c}apf\u{201d} with \u{201c}\u{c4}pfel\u{201d}."
                 </p>
                 <p>
                     "Comboboxes filter their options with such a filter: see "<Code inline=true>"use_contains_filter"</Code>

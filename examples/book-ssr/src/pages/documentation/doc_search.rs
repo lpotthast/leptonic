@@ -1,15 +1,16 @@
 use leptonic::{
-    atoms::prelude::{
-        Button, Dialog, Input, Link, ModalBackdrop, ModalContent, SearchField,
-        SearchFieldClearButton, ShortcutKeys,
+    AriaHasPopup, KeyboardKey, KeyboardShortcuts, Shortcut, announce_polite,
+    atoms::{
+        button::Button,
+        dialog::Dialog,
+        input::Input,
+        kbd::ShortcutKeys,
+        link::Link,
+        modal::{ModalBackdrop, ModalContent},
+        search_field::{SearchField, SearchFieldClearButton},
     },
-    hooks::{UseGlobalShortcutsInput, use_global_shortcuts},
-    utils::{
-        aria::AriaHasPopup,
-        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        live_announcer::announce_polite,
-        platform::device,
-    },
+    hooks::interactions::{UseGlobalShortcutsInput, use_global_shortcuts},
+    is_apple_device,
 };
 use leptos::prelude::*;
 use leptos_router::{
@@ -24,7 +25,7 @@ use crate::{
 };
 
 /// Opens and closes the search anywhere on the page: Cmd+K on Apple devices, Ctrl+K elsewhere.
-const TOGGLE_SEARCH: Shortcut = Shortcut::key("k").primary();
+const TOGGLE_SEARCH: Shortcut = Shortcut::new(KeyboardKey::K).primary();
 
 /// Queries shorter than this aren't searched.
 const MIN_QUERY_LEN: usize = 2;
@@ -247,7 +248,7 @@ fn SearchTrigger(on_press: impl Fn() + Send + Sync + 'static) -> impl IntoView {
     // `aria-keyshortcuts` names the generic form (Control) on the server and in the first client render; switched
     // after hydration (as `ShortcutKeys` switches its keys), so that server and client markup match.
     let apple = RwSignal::new(false);
-    Effect::new(move |_| apple.set(device::is_apple_device()));
+    Effect::new(move |_| apple.set(is_apple_device()));
 
     view! {
         // The name contains the visible text (which small screens hide); the shortcut is announced through

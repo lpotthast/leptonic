@@ -1,9 +1,9 @@
 // Upstream: react-aria/src/radio/useRadio.ts @ 99e6102368
+// Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
     tachys::html::property::{Property, prop},
 };
@@ -18,12 +18,16 @@ use super::{
     use_toggle::UseToggleLabelProps,
 };
 use crate::{
+    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
     hooks::{
-        FocusableContextAttr, FocusableContextAttrs, IntoAttrs, PressEvent, PropsWithStyles,
-        UseFocusRingInput, UseFocusableInput, UsePressInput, collections::Key, use_focus_ring,
-        use_focusable, use_press,
+        collections::Key,
+        focus::{
+            FocusRingTarget, FocusableContextAttr, FocusableContextAttrs, UseFocusRingInput,
+            UseFocusableInput, use_focus_ring, use_focusable,
+        },
+        interactions::{PressEvent, UsePressInput, use_press},
     },
-    utils::{ElementCaptureAttr, EventHandler, SlotProps, join_slot_ids, use_slot},
+    use_slot,
 };
 
 // =============================================================================
@@ -135,19 +139,19 @@ pub type UseRadioInputAttrs = (
         ElementCaptureAttr,
     ),
     (
-        On<ev::change, SharedEventCallback<Event>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
-        On<ev::focusin, SharedEventCallback<FocusEvent>>,
-        On<ev::focusout, SharedEventCallback<FocusEvent>>,
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::click, SharedEventCallback<MouseEvent>>,
-        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-        On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-        On<ev::dragstart, SharedEventCallback<DragEvent>>,
-        On<ev::dblclick, SharedEventCallback<MouseEvent>>,
+        OnEvent<ev::change>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
+        OnEvent<ev::focusin>,
+        OnEvent<ev::focusout>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::click>,
+        OnEvent<ev::pointerdown>,
+        OnEvent<ev::pointerup>,
+        OnEvent<ev::mousedown>,
+        OnEvent<ev::dragstart>,
+        OnEvent<ev::dblclick>,
     ),
     FocusableContextAttr,
 );
@@ -244,9 +248,8 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
     let focus_handle = focusable.focus_handle;
     let mut focusable_props = focusable.props;
     let focus_ring = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Element,
         is_disabled,
-        within: false,
-        auto_focus,
         is_text_input: false,
         on_focus: None,
         on_blur: None,
@@ -353,7 +356,7 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
             None
         }
     });
-    let aria_describedby = join_slot_ids(&[
+    let aria_describedby = IdRefs::derive([
         Signal::stored(aria_describedby),
         description.referenced_id,
         group_error,

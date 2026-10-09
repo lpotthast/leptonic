@@ -1,9 +1,9 @@
 // Upstream: react-aria/src/visually-hidden/VisuallyHidden.tsx @ 99e6102368
 use leptos_styles::Styles;
 
-use crate::utils::{
+use crate::utils::styles::{
     css::{CssDimension, Opacity, computed_pct, computed_px, computed_size},
-    style::{HeightProperty, OpacityProperty, WidthProperty},
+    property::{HeightProperty, OpacityProperty, WidthProperty},
 };
 
 /// The CSS hiding an element visually while keeping it available to assistive technology

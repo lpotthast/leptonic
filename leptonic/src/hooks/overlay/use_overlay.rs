@@ -1,31 +1,28 @@
 // Upstream: react-aria/src/overlays/useOverlay.ts @ 99e6102368
+// Upstream: react-aria/test/overlays/useOverlay.test.js @ 99e6102368
+// Upstream: react-aria/test/overlays/useOverlay.shadow.test.js @ 99e6102368
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{attr, attr::Attr, ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::visible_overlays;
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
     hooks::{
-        IntoAttrs,
         focus::use_focus_within::{UseFocusWithinInput, use_focus_within},
         interactions::{
-            use_interact_outside::{UseInteractOutsideInput, use_interact_outside},
+            use_interact_outside::{
+                InteractOutsideEvent, UseInteractOutsideInput, use_interact_outside,
+            },
             use_keyboard::{UseKeyboardInput, use_keyboard},
         },
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
-        focus_scope_tree::is_element_in_child_of_active_scope,
         id::use_id,
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
     },
 };
@@ -138,9 +135,9 @@ impl IntoAttrs for UseOverlayProps {
 pub type UseOverlayAttrs = (
     Attr<attr::Id, String>,
     ElementCaptureAttr,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
 );
 
 /// Provides the behavior for overlays such as dialogs, popovers, and menus.
@@ -262,7 +259,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     // Escape closes the topmost overlay (a handled shortcut stops propagation). With keyboard
     // dismissal disabled, the key press bubbles on.
     let keyboard = use_keyboard(UseKeyboardInput {
-        shortcuts: Some(KeyboardShortcuts::new().on(Shortcut::key("Escape"), move |_| {
+        shortcuts: Some(KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::Escape), move |_| {
             if is_keyboard_dismiss_disabled.get_untracked() {
                 return false;
             }
@@ -275,7 +272,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     let interact_outside_return = use_interact_outside(UseInteractOutsideInput {
         is_disabled: Signal::derive(move || !(is_dismissable.get() && is_open.get())),
 
-        on_interact_outside_start: Some(Callback::new(move |e: web_sys::MouseEvent| {
+        on_interact_outside_start: Some(Callback::new(move |e: InteractOutsideEvent| {
             // Capture topmost at pointerdown time.
             if let Some(el) = stacked_element.get_untracked() {
                 if visible_overlays::is_topmost(&el) {
@@ -286,7 +283,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
             }
 
             // Check the filter callback.
-            let should_close = close_on_interact(&e.expect_target());
+            let should_close = close_on_interact(&e.target());
 
             if should_close
                 && let Some(el) = stacked_element.get_untracked()
@@ -299,9 +296,9 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
 
         element: group,
 
-        on_interact_outside: Some(Callback::new(move |e: web_sys::MouseEvent| {
+        on_interact_outside: Some(Callback::new(move |e: InteractOutsideEvent| {
             // Check the filter callback.
-            let should_close = close_on_interact(&e.expect_target());
+            let should_close = close_on_interact(&e.target());
 
             if should_close {
                 if let Some(el) = stacked_element.get_untracked()
@@ -338,7 +335,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
 
         on_focus_within: None,
 
-        on_blur_within: Some(Callback::new(move |e: crate::hooks::FocusWithinEvent| {
+        on_blur_within: Some(Callback::new(move |e: crate::hooks::focus::FocusWithinEvent| {
             // Do not close if relatedTarget is null, which means focus is lost to the body.
             // That can happen when switching tabs, or due to a VoiceOver/Chrome bug.
             // Clicking on the body to close the overlay is handled by use_interact_outside.
@@ -353,7 +350,15 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                 return;
             };
 
-            if is_element_in_child_of_active_scope(related_el) {
+            // Without atoms there are no registered FocusScopes, but top-layer focus is
+            // still exempt from dismissal.
+            #[cfg(not(feature = "atoms"))]
+            if crate::utils::focusability::is_in_top_layer(related_el) {
+                return;
+            }
+
+            #[cfg(feature = "atoms")]
+            if crate::utils::focus_scope_tree::is_element_in_child_of_active_scope(related_el) {
                 return;
             }
 

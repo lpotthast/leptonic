@@ -1,4 +1,5 @@
 use leptonic::{
+    CapturedElement, IntoAttrs, ValueBinding,
     atoms::{
         calendar::{
             Calendar, CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody,
@@ -9,7 +10,7 @@ use leptonic::{
         popover::Popover,
     },
     hooks::{
-        IntoAttrs, Placement, UseButtonReturn,
+        button::{UseButtonReturn, use_button},
         datepicker::{
             DateFieldData, DateFieldOptions, DateFieldPicker, DatePickerOptions, DateSegment,
             DateSegmentType, UseDateFieldInput, UseDateFieldReturn, UseDateFieldStateInput,
@@ -17,11 +18,10 @@ use leptonic::{
             UseDateSegmentReturn, use_date_field, use_date_field_state, use_date_picker,
             use_date_picker_state, use_date_segment,
         },
-        use_button,
+        overlay::Placement,
     },
     jiff::civil::Date,
-    prelude::ValueBinding,
-    utils::{CapturedElement, id::use_id},
+    use_id,
 };
 use leptos::prelude::*;
 
@@ -65,24 +65,24 @@ pub fn DatePickerHookDemo() -> impl IntoView {
     let UseDateFieldReturn {
         field_props,
         input_props,
-        mut data,
+        data,
         ..
     } = use_date_field(UseDateFieldInput {
         state: field_state,
         element: CapturedElement::new(),
         input_element: CapturedElement::new(),
         options: DateFieldOptions {
-            // Part of the picker: Alt + ArrowDown in the field opens its popover.
+            // Part of the picker: Alt + ArrowDown in the field opens its popover, and the segments
+            // are named and described by the picker (its label, its description and its value).
             picker: Some(DateFieldPicker {
                 overlay: state.overlay,
                 focus_manager: None,
+                labelledby,
+                describedby: field_describedby,
             }),
             ..DateFieldOptions::default()
         },
     });
-    // The segments are named and described by the picker: its label, its description and its value.
-    data.aria_labelledby = labelledby;
-    data.aria_describedby = field_describedby;
 
     let UseButtonReturn {
         props: button_props,

@@ -60,7 +60,7 @@ pub fn PageArchitecture() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::{ButtonElementType, UseButtonInput, UseButtonReturn, use_button};
+                        use leptonic::hooks::button::{ButtonElementType, UseButtonInput, UseButtonReturn, use_button};
 
                         let UseButtonReturn { props, .. } = use_button(UseButtonInput {
                             element_type: ButtonElementType::Other,
@@ -90,8 +90,8 @@ pub fn PageArchitecture() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                atoms::prelude::Button,
-                                hooks::{UseToggleStateInput, use_toggle_state},
+                                atoms::button::Button,
+                                hooks::form::{UseToggleStateInput, use_toggle_state},
                             };
 
                             let toggle = use_toggle_state(UseToggleStateInput {
@@ -150,20 +150,24 @@ pub fn PageArchitecture() -> impl IntoView {
                         <b>"Independent hooks on one element."</b>" When hooks add unrelated behavior to the same element, say "
                         <Link href=routes::doc::interactions::UsePress.materialize()><Code inline=true>"use_press"</Code></Link>
                         " and "<Link href=routes::doc::interactions::UseHover.materialize()><Code inline=true>"use_hover"</Code></Link>
-                        " on an element of your own, merge their props with the "<Code inline=true>"MergeWith"</Code>
-                        " trait. Event handlers are chained so both run; for other attributes the last one wins:"
+                        " on an element of your own, spread both sets of props. Leptos attaches each event handler; for "
+                        "other attributes the last one wins:"
                     </p>
 
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{hooks::*, utils::MergeWith};
+                            use leptonic::{
+                                IntoAttrs,
+                                hooks::interactions::{UseHoverInput, UsePressInput, use_hover, use_press},
+                            };
 
                             let press = use_press(UsePressInput { /* ... */ ..Default::default() });
                             let hover = use_hover(UseHoverInput { /* ... */ ..Default::default() });
 
-                            let (attrs, styles) = press.props.merge_with(hover.props).into_parts();
+                            let (press_attrs, styles) = press.props.into_parts();
+                            let hover_attrs = hover.props.into_attrs();
 
-                            view! { <div {..attrs} style=styles>"Hover and press me"</div> }
+                            view! { <div {..press_attrs} {..hover_attrs} style=styles>"Hover and press me"</div> }
                         "#)}
                     </Code>
 
@@ -184,7 +188,7 @@ pub fn PageArchitecture() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::Button;
+                        use leptonic::atoms::button::Button;
 
                         view! {
                             <Button classes="save-button" on_press=move |_| { /* handle press */ }>
@@ -265,7 +269,9 @@ pub fn PageArchitecture() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::*;
+                        use leptonic::{
+                            atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
+                        };
 
                         let accepted = RwSignal::new(false);
 

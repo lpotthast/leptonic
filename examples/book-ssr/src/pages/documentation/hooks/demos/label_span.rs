@@ -1,4 +1,7 @@
-use leptonic::hooks::*;
+use leptonic::{
+    IntoAttrs,
+    hooks::form::{LabelElementType, UseLabelInput, UseLabelReturn, use_label},
+};
 use leptos::prelude::*;
 
 #[component]

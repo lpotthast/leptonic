@@ -10,9 +10,7 @@ pub fn PageCallbacks() -> impl IntoView {
             <p>
                 "Leptonic\u{2019}s atoms accept functions through two prop types: Leptos\u{2019} "
                 <Code inline=true>"Callback"</Code>" for events and leptonic\u{2019}s "<Code inline=true>"Out"</Code>
-                " for values they hand back to you. For your own Leptos components, leptonic adds "
-                <Code inline=true>"ViewCallback"</Code>" / "<Code inline=true>"ViewProducer"</Code>" for functions that "
-                "render views. All of them are "
+                " for values they hand back to you. Both are "
                 <Code inline=true>"Copy"</Code>", so a Leptos component can use them in as many places as it needs, "
                 "and all of them convert from closures, so you rarely name them when you use one. Hooks take the same "
                 "types in their input structs, and bind state to your app with a "
@@ -47,7 +45,7 @@ pub fn PageCallbacks() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::Button;
+                        use leptonic::atoms::button::Button;
                         use leptos::prelude::*;
 
                         /// What `Rating` reports when the user picks a rating.
@@ -74,7 +72,7 @@ pub fn PageCallbacks() -> impl IntoView {
 
             <Section title="Out">
                 <p>
-                    <Code inline=true>"Out<O, S = SyncStorage>"</Code>" (from "<Code inline=true>"leptonic::prelude"</Code>
+                    <Code inline=true>"Out<O, S = SyncStorage>"</Code>" (from "<Code inline=true>"leptonic"</Code>
                     ") is anything an atom can write a value to. Setters of state props such as "
                     <Code inline=true>"set_value"</Code>" ("<Code inline=true>"TextField"</Code>") or "
                     <Code inline=true>"set_selected"</Code>" ("<Code inline=true>"CheckboxField"</Code>") use it, so you can pass "
@@ -92,10 +90,6 @@ pub fn PageCallbacks() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"A closure "<Code inline=true>"Fn(O)"</Code>", or a "<Code inline=true>"Callback<O>"</Code></TableCell>
-                        <TableCell>"The function."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"A function pointer, via "<Code inline=true>"Out::new_fn"</Code></TableCell>
                         <TableCell>"The function."</TableCell>
                     </TableRow>
                 </DocTable>
@@ -140,8 +134,8 @@ pub fn PageCallbacks() -> impl IntoView {
                     <p>
                         "Declare the prop as "<Code inline=true>"#[prop(into)] set_value: Out<T>"</Code>
                         " and write to it with "<Code inline=true>"set_value.set(value)"</Code>". "
-                        <Code inline=true>"Out"</Code>" implements "<Code inline=true>"Default"</Code>" as a no-op, so "
-                        <Code inline=true>"#[prop(into, optional)]"</Code>" works too. How leptonic combines "
+                        "For an optional setter, use "<Code inline=true>"#[prop(into, optional)] set_value: Option<Out<T>>"</Code>
+                        " and write only when it is present. How leptonic combines "
                         <Code inline=true>"Out"</Code>" setters with value props is described in "
                         <Link href=format!("{}#state-props", routes::doc::Architecture.materialize())>"Hooks & Atoms"</Link>
                         " (\u{201c}State Props\u{201d})."
@@ -149,41 +143,37 @@ pub fn PageCallbacks() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="ViewCallback and ViewProducer">
+            <Section title="Rendering Views">
                 <p>
-                    <Code inline=true>"ViewCallback<In>"</Code>" is a "<Code inline=true>"Callback<In, AnyView>"</Code>
-                    ": it renders a view for an input. "<Code inline=true>"ViewProducer"</Code>" renders a view without "
-                    "input. Both convert from closures returning anything that implements "<Code inline=true>"IntoView"</Code>
-                    "; call them with "<Code inline=true>"render"</Code>" and "<Code inline=true>"produce"</Code>". Use them "
-                    "in your own Leptos components for props that render part of the view, such as each item of a list:"
+                    "Use a generic function for a prop that renders views. The return type stays concrete and can be "
+                    "any type implementing "<Code inline=true>"IntoView"</Code>"."
                 </p>
-
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::prelude::ViewCallback;
                         use leptos::prelude::*;
 
                         #[component]
-                        pub fn UserList(
+                        pub fn UserList<F, V>(
                             #[prop(into)] users: Signal<Vec<String>>,
-                            #[prop(into)] render_user: ViewCallback<String>,
-                        ) -> impl IntoView {
+                            render_user: F,
+                        ) -> impl IntoView
+                        where
+                            F: Fn(String) -> V + Clone + Send + Sync + 'static,
+                            V: IntoView + 'static,
+                        {
                             view! {
                                 <ul>
                                     <For each=move || users.get() key=|user| user.clone() let:user>
-                                        <li>{render_user.render(user)}</li>
+                                        <li>{render_user(user)}</li>
                                     </For>
                                 </ul>
                             }
                         }
-
-                        view! { <UserList users=users render_user=|user: String| view! { <b>{user}</b> }/> }
                     ")}
                 </Code>
-
                 <p>
-                    "Leptonic\u{2019}s atoms take children instead: a closure where an atom renders something per item or "
-                    "state, e.g. "<Code inline=true>"<DateInput children=|segment| \u{2026}/>"</Code>"."
+                    "Leptonic atoms use children closures when they render a view per item or state, such as "
+                    <Code inline=true>"<DateInput children=|segment| \u{2026}/>"</Code>"."
                 </p>
             </Section>
 
@@ -191,7 +181,7 @@ pub fn PageCallbacks() -> impl IntoView {
                 <p>
                     "Hooks own their state (see "<Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     "). To keep that state in your app instead, bind it with a "<Code inline=true>"ValueBinding<T>"</Code>
-                    " (from "<Code inline=true>"leptonic::prelude"</Code>"): a "<Code inline=true>"Signal<T>"</Code>" the "
+                    " (from "<Code inline=true>"leptonic"</Code>"): a "<Code inline=true>"Signal<T>"</Code>" the "
                     "hook reads and a setter the hook calls with every change. It is the hooks\u{2019} counterpart of an "
                     "atom\u{2019}s "<Code inline=true>"x"</Code>" and "<Code inline=true>"set_x"</Code>" props, and of "
                     "Leptos\u{2019} "<Code inline=true>"bind:value"</Code>". Create it from an "<Code inline=true>"RwSignal"</Code>
@@ -204,7 +194,8 @@ pub fn PageCallbacks() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::{hooks::*, prelude::*};
+                        use leptonic::hooks::form::{UseToggleStateInput, use_toggle_state};
+                        use leptos::prelude::*;
 
                         let notifications = RwSignal::new(true);
 

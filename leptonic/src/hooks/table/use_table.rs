@@ -1,26 +1,31 @@
 // Upstream: react-aria/src/table/useTable.ts @ 99e6102368
 // Upstream: react-aria/src/table/utils.ts @ 99e6102368
+// Upstream: react-aria/test/table/useTable.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TableTests.js @ 99e6102368
 use std::{sync::Arc, time::Duration};
 
 use leptos::prelude::*;
 
 use super::{SortDirection, TableKeyboardDelegate, TableState};
 use crate::{
+    CapturedElement, IdRefs,
     hooks::{
-        GridData, GridKeyboardDelegate, KeyboardNavigationBehavior, UseGridInput, UseGridProps,
-        UseGridReturn,
-        collections::{CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate},
-        use_grid,
+        collections::{
+            CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, keyboard_delegate_memo,
+        },
+        grid::{
+            GridData, GridKeyboardDelegate, UseGridInput, UseGridProps, UseGridReturn, use_grid,
+        },
+        gridlist::KeyboardNavigationBehavior,
     },
     utils::{
-        CapturedElement,
         aria::AriaRole,
         filter::{CollatorOptions, use_collator},
         i18n::use_direction,
         id::use_id,
         intl_strings::{TableStrings, use_localized_strings},
         live_announcer::{Assertiveness, announce_with_timeout},
-        slot_id::join_slot_ids,
         use_description::use_description,
     },
 };
@@ -47,7 +52,8 @@ pub struct UseTableInput {
     /// The element id. Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    /// Ids of elements labelling the table.
+    pub aria_labelledby: Signal<Option<String>>,
     /// Replaces the table keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Keyboard and focus behavior.
@@ -74,16 +80,17 @@ pub struct TableData {
 impl TableData {
     /// The id of the column header of `column`.
     pub fn column_header_id(&self, column: &Key) -> String {
-        format!("{}-{}", self.id, normalize_key(column))
+        format!("{}-{}", self.id, column.id_fragment())
     }
 
     /// The id of the cell of `row` in `column`.
     pub fn cell_id(&self, row: &Key, column: &Key) -> String {
+        // `%_` occurs in no id fragment: it separates them unambiguously.
         format!(
-            "{}-{}-{}",
+            "{}-{}%_{}",
             self.id,
-            normalize_key(row),
-            normalize_key(column)
+            row.id_fragment(),
+            column.id_fragment()
         )
     }
 
@@ -100,11 +107,6 @@ impl TableData {
     }
 }
 
-/// A key as an id fragment: without whitespace.
-fn normalize_key(key: &Key) -> String {
-    key.to_string().split_whitespace().collect()
-}
-
 /// Return value of [`use_table`].
 #[derive(Debug)]
 pub struct UseTableReturn {
@@ -113,18 +115,26 @@ pub struct UseTableReturn {
     pub data: TableData,
 }
 
+/// Input of [`use_table_keyboard_delegate`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseTableKeyboardDelegateInput {
+    pub state: TableState,
+    /// The table element, in which the delegate measures the rendered rows.
+    pub element: CapturedElement,
+}
+
 /// The keyboard delegate of a table: a [`TableKeyboardDelegate`] measuring the rendered rows
 /// in `element`, with the current locale's reading direction and collation.
 pub fn use_table_keyboard_delegate(
-    state: TableState,
-    element: CapturedElement,
+    input: UseTableKeyboardDelegateInput,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
+    let UseTableKeyboardDelegateInput { state, element } = input;
     // One collator per locale, not per read of the delegate.
     let collator = use_collator(CollatorOptions::default());
     let direction = use_direction();
     let grid = state.grid;
     let layout_delegate = Arc::new(DomLayoutDelegate::new(element, grid.list.item_elements));
-    Signal::derive(move || {
+    keyboard_delegate_memo(move || {
         let collator = collator.get();
         let direction = direction.get();
         let grid_delegate = GridKeyboardDelegate::new(
@@ -162,7 +172,9 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         on_cell_action,
     } = input;
     let id = id.unwrap_or_else(|| use_id("table"));
-    let delegate = keyboard_delegate.unwrap_or_else(|| use_table_keyboard_delegate(state, element));
+    let delegate = keyboard_delegate.unwrap_or_else(|| {
+        use_table_keyboard_delegate(UseTableKeyboardDelegateInput { state, element })
+    });
 
     let UseGridReturn { props, data } = use_grid(UseGridInput {
         state: state.grid,
@@ -183,9 +195,9 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
     let strings = use_localized_strings::<TableStrings>();
     let sort_description = Memo::new(move |_| {
         state.sort_descriptor.get().map(|sort| {
-            let column = state.table.with(|table| {
-                table
-                    .columns()
+            let column = state.columns.with(|columns| {
+                columns
+                    .iter()
                     .find(|column| column.key == sort.column)
                     .map(|column| column.text_value.to_string())
                     .unwrap_or_default()
@@ -218,7 +230,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         } else {
             AriaRole::Grid
         }),
-        aria_describedby: join_slot_ids(&[
+        aria_describedby: IdRefs::derive([
             use_description(sort_description.into()),
             props.aria_describedby,
         ]),

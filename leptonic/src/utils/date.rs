@@ -1,5 +1,7 @@
-// Upstream: internationalized/date/src/manipulation.ts @ 99e6102368
-// Upstream: internationalized/date/src/queries.ts @ 99e6102368
+// Upstream: @internationalized/date/src/manipulation.ts @ 99e6102368
+// Upstream: @internationalized/date/src/queries.ts @ 99e6102368
+// Upstream: @internationalized/date/tests/manipulation.test.js @ 99e6102368
+// Upstream: @internationalized/date/tests/queries.test.js @ 99e6102368
 //! Calendar dates: the parts of react-aria's `@internationalized/date` the calendar and date
 //! hooks need, for the Gregorian calendar on `jiff::civil::Date`.
 
@@ -23,6 +25,8 @@ use crate::utils::i18n::Locale;
 //
 // ## OMITTED FEATURES
 // - Calendar systems other than the Gregorian (Japanese, Hebrew, ...), eras.
+// - Dates from 9999 BC (proleptic -9998) back: jiff's dates start at -9999-01-01, where adding
+//   is constrained instead.
 //
 // =============================================================================
 
@@ -259,11 +263,19 @@ pub fn max_date(a: Date, b: Date) -> Date {
 }
 
 /// The first day of the week in `locale` (from CLDR's week data, honoring a `-u-fw-` override),
-/// e.g. Sunday in `en-US`, Monday in `de-DE`.
+/// e.g. Sunday in `en-US`, Monday in `de-DE` and in the ISO calendar (`-u-ca-iso8601`).
 #[must_use]
 pub fn first_day_of_week(locale: &Locale) -> Weekday {
     use icu_calendar::{types::Weekday as IcuWeekday, week::WeekInformation};
+    use icu_locale::extensions::unicode::{key, value};
 
+    let keywords = &locale.icu_locale().extensions.unicode.keywords;
+    // The ISO calendar's weeks start on Monday (react-aria's `getWeekStart`), unless `-fw-`
+    // says otherwise.
+    if keywords.get(&key!("fw")).is_none() && keywords.get(&key!("ca")) == Some(&value!("iso8601"))
+    {
+        return Weekday::Monday;
+    }
     let Ok(info) = WeekInformation::try_new(locale.icu_locale().into()) else {
         return Weekday::Monday;
     };
@@ -329,6 +341,74 @@ mod tests {
         assert_that!(Date::MIN.subtract(DateDuration::years(1))).is_equal_to(Date::MIN);
     }
 
+    /// `@internationalized/date` `manipulation.test.js`, the Gregorian `add`/`subtract` cases
+    /// ("should add years", ..., "should add between BC and AD", "should constrain when hitting
+    /// the maximum year"); BC years are proleptic (BC 10 is -9).
+    #[test]
+    fn adds_and_subtracts_as_upstream() {
+        let d = DateDuration::days;
+        let cases = [
+            (date(2020, 1, 1), DateDuration::years(5), date(2025, 1, 1)),
+            (date(2020, 1, 1), DateDuration::months(5), date(2020, 6, 1)),
+            (date(2020, 9, 1), DateDuration::months(5), date(2021, 2, 1)),
+            (date(2020, 9, 1), DateDuration::months(17), date(2022, 2, 1)),
+            (date(2020, 9, 1), d(5), date(2020, 9, 6)),
+            (date(2020, 9, 20), d(15), date(2020, 10, 5)),
+            (date(2020, 9, 20), d(46), date(2020, 11, 5)),
+            (date(2020, 12, 20), d(15), date(2021, 1, 4)),
+            (date(2020, 12, 20), d(380), date(2022, 1, 4)),
+            (date(2020, 2, 28), d(1), date(2020, 2, 29)),
+            (date(2020, 2, 28), d(2), date(2020, 3, 1)),
+            (date(2019, 2, 28), d(1), date(2019, 3, 1)),
+            (date(2020, 9, 1), DateDuration::weeks(5), date(2020, 10, 6)),
+            (
+                date(2020, 10, 25),
+                DateDuration {
+                    years: 2,
+                    months: 3,
+                    days: 10,
+                    ..DateDuration::default()
+                },
+                date(2023, 2, 4),
+            ),
+            (date(-9, 9, 3), DateDuration::years(1), date(-8, 9, 3)),
+            (date(0, 9, 3), DateDuration::years(1), date(1, 9, 3)),
+            (date(-10, 9, 3), DateDuration::years(20), date(10, 9, 3)),
+        ];
+        for (from, duration, to) in cases {
+            assert_that!(from.add(duration))
+                .with_detail_message(format!("{from} + {duration:?}"))
+                .is_equal_to(to);
+            assert_that!(to.subtract(duration))
+                .with_detail_message(format!("{to} - {duration:?}"))
+                .is_equal_to(from);
+        }
+        // "should add/subtract months and constrain days".
+        assert_that!(date(2020, 8, 31).add(DateDuration::months(1))).is_equal_to(date(2020, 9, 30));
+        assert_that!(date(2020, 10, 31).subtract(DateDuration::months(1)))
+            .is_equal_to(date(2020, 9, 30));
+        assert_that!(date(9999, 12, 1).add(DateDuration::months(1)))
+            .is_equal_to(date(9999, 12, 31));
+    }
+
+    /// `@internationalized/date` `queries.test.js`: `isSameMonth`/`isSameYear` ("works with two
+    /// dates in the same calendar"), `getWeeksInMonth` ("should work for months starting at the
+    /// beginning/end of the week", "should support custom firstDayOfWeek"), `minDate`/`maxDate`.
+    #[test]
+    fn queries_as_upstream() {
+        assert_that!(date(2021, 4, 16).is_same_month(date(2021, 4, 30))).is_true();
+        assert_that!(date(2021, 4, 16).is_same_month(date(2021, 5, 16))).is_false();
+        assert_that!(date(2021, 4, 16).is_same_month(date(2022, 4, 16))).is_false();
+        assert_that!(date(2021, 4, 16).is_same_year(date(2021, 12, 1))).is_true();
+        assert_that!(date(2021, 4, 16).is_same_year(date(2022, 4, 16))).is_false();
+        assert_that!(date(2021, 8, 4).weeks_in_month(Weekday::Sunday)).is_equal_to(5);
+        assert_that!(date(2021, 8, 4).weeks_in_month(Weekday::Monday)).is_equal_to(6);
+        assert_that!(date(2021, 10, 4).weeks_in_month(Weekday::Sunday)).is_equal_to(6);
+        assert_that!(date(2021, 10, 4).weeks_in_month(Weekday::Monday)).is_equal_to(5);
+        assert_that!(min_date(date(2021, 4, 16), date(2021, 4, 15))).is_equal_to(date(2021, 4, 15));
+        assert_that!(max_date(date(2021, 4, 16), date(2021, 4, 15))).is_equal_to(date(2021, 4, 16));
+    }
+
     #[test]
     fn weeks_start_on_the_given_day() {
         // 2024-05-15 is a Wednesday.
@@ -351,5 +431,31 @@ mod tests {
         assert_that!(first_day_of_week(&locale("en-US"))).is_equal_to(Weekday::Sunday);
         assert_that!(first_day_of_week(&locale("de-DE"))).is_equal_to(Weekday::Monday);
         assert_that!(first_day_of_week(&locale("en-US-u-fw-wed"))).is_equal_to(Weekday::Wednesday);
+    }
+
+    /// `@internationalized/date` `queries.test.js`: "should return the day of week in fr-CA / fr-FR
+    /// / fr", "should return the start of the week in en-US-u-ca-iso8601" (the ISO calendar starts
+    /// weeks on Monday, unless `-fw-` says otherwise).
+    #[test]
+    fn first_days_of_week_of_regions_and_the_iso_calendar() {
+        let locale = |tag: &str| tag.parse::<Locale>().expect("a locale");
+        // 2021-08-04 is a Wednesday.
+        let day = date(2021, 8, 4);
+        assert_that!(day.day_of_week(first_day_of_week(&locale("en-US")))).is_equal_to(3);
+        assert_that!(day.day_of_week(first_day_of_week(&locale("fr-CA")))).is_equal_to(3);
+        assert_that!(day.day_of_week(first_day_of_week(&locale("fr-FR")))).is_equal_to(2);
+        assert_that!(day.day_of_week(first_day_of_week(&locale("fr")))).is_equal_to(2);
+        for (tag, start) in [
+            ("en-US-u-ca-iso8601", date(2021, 8, 2)),
+            ("fr-FR-u-ca-iso8601", date(2021, 8, 2)),
+            ("en-US-u-ca-iso8601-fw-tue", date(2021, 8, 3)),
+            ("en-US-u-nu-thai-ca-iso8601", date(2021, 8, 2)),
+            ("en-US-u-nu-thai-ca-iso8601-fw-tue", date(2021, 8, 3)),
+            ("en-US-u-ca-iso8601-fw-tue-nu-thai", date(2021, 8, 3)),
+        ] {
+            assert_that!(day.start_of_week(first_day_of_week(&locale(tag))))
+                .with_detail_message(tag)
+                .is_equal_to(start);
+        }
     }
 }

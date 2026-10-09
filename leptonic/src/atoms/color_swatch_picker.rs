@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
@@ -11,11 +12,11 @@ use super::{
     listbox::{ListBox, ListBoxItem},
 };
 use crate::{
-    Out,
-    hooks::collections::{Key, ListLayout, Selection, SelectionMode, use_list_collection},
+    Out, ValueBinding,
+    hooks::collections::{
+        Key, ListLayout, Selection, SelectionMode, UseListCollectionInput, use_list_collection,
+    },
     utils::{
-        ValueBinding,
-        classes::Classes,
         color::{Color, ColorValue, RGB8},
         default_class::with_default_class,
         i18n::use_locale,
@@ -70,7 +71,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
     /// The colors to pick from (distinct as hex).
     #[prop(into)]
     colors: Signal<Vec<C>>,
-    /// The initially picked color.
+    /// The initially picked color. Default: black (`#000000`, as react-aria-components).
     #[prop(optional)]
     default_value: Option<C>,
     /// The picked color (controlled): a value or any signal. Default: the `ColorPicker`'s
@@ -96,30 +97,31 @@ pub fn ColorSwatchPicker<C: ColorValue>(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorSwatchPicker", classes);
     let locale = use_locale();
-    let collection = use_list_collection(
-        colors,
-        |color: &C| color_key((*color).into()),
-        move |color: &C| color.color_name(&locale.get()),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: colors,
+        key: |color: &C| color_key((*color).into()),
+        text_value: move |color: &C| color.color_name(&locale.get()),
+    });
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<C>);
     // Without app state, the picker owns the picked color.
-    let owned = RwSignal::new(default_value);
+    let owned = RwSignal::new(
+        default_value.unwrap_or_else(|| C::from(Color::from(RGB8 { r: 0, g: 0, b: 0 }))),
+    );
     let picked = Signal::derive(move || match binding {
-        Some(binding) => Some(binding.value.get()),
+        Some(binding) => binding.value.get(),
         None => owned.get(),
     });
     let set_picked = Callback::new(move |color: C| {
         match binding {
             Some(binding) => binding.set(color),
-            None => owned.set(Some(color)),
+            None => owned.set(color),
         }
         if let Some(on_change) = on_change {
             on_change.run(color);
         }
     });
-    let selection =
-        Signal::derive(move || Selection::keys(picked.get().map(|color| color_key(color.into()))));
+    let selection = Signal::derive(move || Selection::keys(Some(color_key(picked.get().into()))));
     let set_selection = Callback::new(move |selection: Selection| {
         // Single selection: the one key ("all" can't occur).
         let Selection::Keys(keys) = selection else {
@@ -231,8 +233,11 @@ pub fn ColorSwatchPickerItems(
     #[prop(optional)]
     children: Option<ChildrenFn>,
 ) -> impl IntoView {
-    let PickerContext { colors, .. } = expect_context::<PickerContext>();
-    view! {
+    let Some(PickerContext { colors, .. }) = use_context::<PickerContext>() else {
+        crate::utils::dev_warn!("<ColorSwatchPickerItems> must be inside a <ColorSwatchPicker>.");
+        return None;
+    };
+    Some(view! {
         <For
             each=move || colors.get()
             key=|color| color_key(*color)
@@ -248,5 +253,5 @@ pub fn ColorSwatchPickerItems(
                 }
             }
         />
-    }
+    })
 }

@@ -1,12 +1,12 @@
 use leptonic::{
+    ColorValue, HSV, HsvChannel, IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::*,
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        css::CssColor,
-        i18n::use_locale,
-        style::BackgroundColorProperty,
+    hooks::{
+        color::{UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state},
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
     },
+    leptos_styles::{css::CssColor, property::BackgroundColorProperty},
+    use_locale,
 };
 use leptos::prelude::*;
 
@@ -44,7 +44,7 @@ pub fn ColorAreaDemo() -> impl IntoView {
     // The focus is on a hidden input inside the thumb: `within` reports it on the thumb as
     // `data-focus-visible`.
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..Default::default()
     });
 

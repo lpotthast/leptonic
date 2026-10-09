@@ -1,11 +1,11 @@
-use leptonic::hooks::*;
+use leptonic::hooks::link::{LinkRel, LinkTarget, UseLinkInput, use_link};
 use leptos::prelude::*;
 
 #[component]
 pub fn LinkExternalDemo() -> impl IntoView {
     let link = use_link(UseLinkInput {
         href: Signal::stored(Some("https://leptos.dev".to_owned())),
-        target: LinkTarget::Blank,
+        target: LinkTarget::Blank.into(),
         // `NoOpener` is added for `LinkTarget::Blank`.
         rel: vec![LinkRel::NoReferrer],
         ..UseLinkInput::default()

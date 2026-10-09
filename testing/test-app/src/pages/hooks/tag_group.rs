@@ -1,15 +1,18 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     hooks::{
-        IntoAttrs, TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput, UseTagReturn,
+        button::use_button,
         collections::{
-            Key, ListState, SelectionOptions, UseListStateInput, use_list_collection,
-            use_list_state,
+            Key, ListState, SelectionOptions, UseListCollectionInput, UseListStateInput,
+            use_list_collection, use_list_state,
         },
-        use_button, use_tag, use_tag_group,
+        tag::{
+            TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput, UseTagReturn, use_tag,
+            use_tag_group,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -18,8 +21,11 @@ use leptos::prelude::*;
 #[component]
 pub fn PageHookTagGroup() -> impl IntoView {
     let tags = RwSignal::new(vec!["News", "Travel", "Gaming", "Shopping"]);
-    let collection =
-        use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+    let collection = use_list_collection(UseListCollectionInput {
+        items: tags.into(),
+        key: |tag| Key::from(*tag),
+        text_value: |tag| (*tag).to_owned(),
+    });
     let state: ListState = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions::default(),

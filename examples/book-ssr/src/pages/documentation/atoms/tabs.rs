@@ -54,7 +54,10 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::tabs::{Tab, TabList, TabPanel, Tabs}, hooks::use_collection};
+                        use leptonic::{
+                            atoms::tabs::{Tab, TabList, TabPanel, Tabs},
+                            hooks::collections::use_collection,
+                        };
 
                         let collection = use_collection(|b| {
                             b.item("details", "Details");
@@ -120,7 +123,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::button::Button, hooks::Key};
+                        use leptonic::{atoms::button::Button, hooks::collections::Key};
 
                         let selected = RwSignal::new(Key::from("details"));
 
@@ -151,7 +154,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                         <ApiRow name="set_selected_key" ty="Option<Out<Key>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_selection_change" ty="Option<Callback<Key>>" default="None">
+                        <ApiRow name="on_selected_key_change" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of the tab the user selects."
                         </ApiRow>
                         <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
@@ -207,6 +210,12 @@ pub fn PageAtomTabs() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the tab."</ApiRow>
                         <ApiRow name="children" ty="Children">"The tab\u{2019}s label."</ApiRow>
+                        <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus leaves the element."</ApiRow>
+                        <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus enters the element."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focused state changes."</ApiRow>
+                        <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">"Called when the hovered state changes."</ApiRow>
+                        <ApiRow name="on_hover_end" ty="Option<Callback<HoverEndEvent>>" default="None">"Called when hover ends."</ApiRow>
+                        <ApiRow name="on_hover_start" ty="Option<Callback<HoverStartEvent>>" default="None">"Called when hover starts."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -232,6 +241,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                         <ApiRow name="children" ty="ChildrenFn">
                             "The panel content, rendered each time the tab is selected (once, with "<Code inline=true>"should_force_mount"</Code>")."
                         </ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Accessible label when visible content does not provide one."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -321,18 +331,18 @@ pub fn PageAtomTabs() -> impl IntoView {
 
             <Section title="Composition">
                 <p>
-                    "The parts find their tab list through the context: "<Code inline=true>"TabListData"</Code>" (provided by "
-                    <Code inline=true>"Tabs"</Code>") and "<Code inline=true>"TabListItemData"</Code>" (provided by "
-                    <Code inline=true>"TabList"</Code>"). Your own Leptos components inside "<Code inline=true>"Tabs"</Code>
-                    " can read the state, e.g. to show the selected tab elsewhere:"
+                    "The parts share "<Code inline=true>"TabListState"</Code>" through the context provided by "
+                    <Code inline=true>"Tabs"</Code>". Your own Leptos components inside it can read that state, "
+                    "for example to show the selected tab elsewhere:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::TabListData;
+                        use leptonic::hooks::tabs::TabListState;
+                        use leptos::prelude::*;
 
                         #[component]
                         fn SelectedTab() -> impl IntoView {
-                            let state = expect_context::<TabListData>().state;
+                            let state = expect_context::<TabListState>();
                             view! { <p>"Showing: " {move || state.selected_key().map(|key| key.to_string())}</p> }
                         }
                     "#)}

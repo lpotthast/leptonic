@@ -63,7 +63,7 @@ pub fn PageUseDialog() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog};
 
                         let UseDialogReturn { dialog_props, title_props, content_props } =
                             use_dialog(UseDialogInput {

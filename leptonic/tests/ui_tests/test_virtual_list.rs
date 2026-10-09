@@ -2,7 +2,7 @@
 //! A virtualized log (`VirtualList`, no react-aria equivalent): it renders a slice of its 2,000
 //! lines and follows its end while lines are appended; scrolling away stops following, toggling
 //! it on scrolls back to the end; rows holding the text selection stay rendered; the rows' text
-//! is selectable.
+//! is selectable; rows of plain text are measured again when they resize.
 //!
 //! A view rebuilt in place (the same type, a new owner: tachys reuses the DOM) whose elements carry
 //! a hook's props: the old owner's handlers must be gone (agnite dev-ui, 2026-10-07: a click
@@ -15,80 +15,29 @@
 //! its main branch, 2026-03-14), not in leptonic.
 //!
 //! Following turns off when the user scrolls away from the end: measured row sizes must survive
-//! that (the layout options change, but only `anchor_to`), else the content jumps and every row is
+//! that (the layout options change, but only `anchor_to_end`), else the content jumps and every row is
 //! measured again. A behavior guard: the original bug didn't reproduce here (its timing); the
 //! regression test is the unit test `anchoring_changes_keep_measured_sizes`.
 use std::time::Duration;
 
 use assertr::{
-    matchers::{all_of, eq, ge, gt, lt, predicate},
+    matchers::{all_of, eq, gt, lt},
     prelude::*,
 };
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::{Report, prelude::ResultExt};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::pages::{ElementActions, Page, PageActions};
+use crate::{
+    fixtures::virtual_list::{LogView, VirtualListActions},
+    pages::{ElementActions, Page},
+};
 
-/// Runs `script` with `log` bound to the log element and `arg` to `arg`; `script` returns its
-/// result (`return ...`) if any.
-async fn on_log<T: DeserializeOwned>(
-    page: &Page<'_>,
-    script: &str,
-    arg: impl Serialize,
-) -> Result<T, Report> {
-    page.eval(
-        &format!(
-            "const log = document.getElementById('test-vl-log'); const arg = arguments[0]; {script}"
-        ),
-        vec![serde_json::to_value(arg)?],
-    )
-    .await
-}
-
-/// How far the log is scrolled from its end, in pixels.
-const DISTANCE_TO_END: &str = "return log.scrollHeight - log.clientHeight - log.scrollTop;";
-
-/// The texts of the rendered lines, in DOM order.
-const RENDERED_LINES: &str =
-    "return Array.from(log.querySelectorAll('.line')).map(l => l.textContent);";
-
-/// The `top` of each rendered row, in DOM order (a text selection follows the DOM).
-const ROW_TOPS: &str = "return Array.from(log.querySelectorAll('.line')).map(l => parseFloat(l.parentElement.style.top));";
-
-/// The extent of the rendered rows and of the log's viewport, in content pixels.
-const COVERAGE: &str = "
-    const rows = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement);
-    return {
-        rows_top: rows.length ? Math.min(...rows.map(r => parseFloat(r.style.top))) : null,
-        rows_bottom: rows.length
-            ? Math.max(...rows.map(r => parseFloat(r.style.top) + parseFloat(r.style.height)))
-            : null,
-        view_top: log.scrollTop,
-        view_bottom: log.scrollTop + log.clientHeight,
-    };";
-
-/// The extent of the rendered rows and of the viewport ([`COVERAGE`]).
-#[derive(Debug, Deserialize)]
-struct Coverage {
-    rows_top: Option<f64>,
-    rows_bottom: Option<f64>,
-    view_top: f64,
-    view_bottom: f64,
-}
-
-impl Coverage {
-    fn covers_the_view(&self) -> bool {
-        matches!(
-            (self.rows_top, self.rows_bottom),
-            (Some(top), Some(bottom)) if top <= self.view_top && bottom >= self.view_bottom
-        )
-    }
-}
+const PATH: &str = "/atoms/virtual-list";
 
 /// Wait until the log is scrolled to its end (within 2px).
 async fn wait_for_the_end(page: &Page<'_>) -> Result<(), Report> {
-    assert_that!(|| on_log::<f64>(page, DISTANCE_TO_END, ()))
+    let log = VirtualListActions::new(page).log().await?;
+    assert_that!(|| async { Ok::<_, Report>(log.scroll_extent().await?.distance_to_end()) })
         .eventually_ok()
         .matches(all_of(matchers![gt(-2.0), lt(2.0)]))
         .await;
@@ -97,7 +46,8 @@ async fn wait_for_the_end(page: &Page<'_>) -> Result<(), Report> {
 
 /// Wait until the line with the text `line` is rendered.
 async fn wait_for_rendered(page: &Page<'_>, line: &str) -> Result<(), Report> {
-    assert_that!(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
+    let list = VirtualListActions::new(page);
+    assert_that!(|| async { Ok::<_, Report>(list.view().await?.texts()) })
         .eventually_ok()
         .satisfies(|lines| {
             lines.contains(line.to_owned());
@@ -108,7 +58,11 @@ async fn wait_for_rendered(page: &Page<'_>, line: &str) -> Result<(), Report> {
 
 /// Scrolls the log to its top, which stops following.
 async fn scroll_to_the_top(page: &Page<'_>) -> Result<(), Report> {
-    on_log::<()>(page, "log.scrollTop = arg;", 0).await?;
+    VirtualListActions::new(page)
+        .log()
+        .await?
+        .scroll_to_top(0.0)
+        .await?;
     page.element("#test-vl-follow")
         .await?
         .wait_for_inner_text("not following")
@@ -117,45 +71,30 @@ async fn scroll_to_the_top(page: &Page<'_>) -> Result<(), Report> {
 
 /// The rendered rows' tops are in visual order in the DOM.
 async fn assert_rows_in_visual_order(page: &Page<'_>) -> Result<(), Report> {
-    let tops = on_log::<Vec<f64>>(page, ROW_TOPS, ()).await?;
+    let tops = VirtualListActions::new(page).view().await?.tops();
     let mut sorted = tops.clone();
     sorted.sort_by(f64::total_cmp);
     assert_that!(tops).is_equal_to(sorted);
     Ok(())
 }
 
-/// Selects from the first to the third short line ("Line <n>") in visual order; returns the
-/// selection's text (whitespace collapsed) and the texts of its first and last line.
-const SELECT_THREE_SHORT_ROWS: &str = "
-    const lines = Array.from(log.querySelectorAll('.line'))
-        .filter(l => /^Line \\d+$/.test(l.textContent))
-        .sort((a, b) => parseFloat(a.parentElement.style.top) - parseFloat(b.parentElement.style.top));
-    const range = document.createRange();
-    range.setStartBefore(lines[0]);
-    range.setEndAfter(lines[2]);
-    return [range.toString().replace(/\\s+/g, ' ').trim(), [lines[0].textContent, lines[2].textContent]];";
-
-/// The first row in the log's view and its offset from the view's top, e.g. `Line 1234@-3`.
-const ANCHOR: &str = "
-    const row = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement)
-        .find(r => parseFloat(r.style.top) >= log.scrollTop);
-    return row.textContent.slice(0, 12) + '@' + (parseFloat(row.style.top) - log.scrollTop);";
-
-/// Following: at the end, with the last line rendered, and only a slice of all lines; the lines'
-/// text is selectable.
+/// The log starts at its end with the last line rendered and only a slice of its lines in the
+/// DOM, and the lines' text is selectable.
+#[browser_test]
 pub async fn follows_its_end(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
     wait_for_the_end(page).await?;
     wait_for_rendered(page, "Line 1999").await?;
     assert_that!(page.count("#test-vl-log .line").await?).is_less_than(100);
-    let line = page.element("#test-vl-log .line").await?;
+    let line = page.first_element("#test-vl-log .line").await?;
     assert_that!(line.css_value("user-select").await?).is_not_equal_to("none");
     Ok(())
 }
 
 /// Appended lines come into view, in visual order in the DOM.
+#[browser_test]
 pub async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
     page.element("#test-vl-append").await?.click().await?;
     wait_for_rendered(page, "Line 2049").await?;
     wait_for_the_end(page).await?;
@@ -163,18 +102,14 @@ pub async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report
     Ok(())
 }
 
-/// Scrolling the page is not the user scrolling the list away from its end: lines appended while
-/// the page scrolls come into view, and the list keeps following once the scrolling ended. (Found
-/// in Chrome Headless Shell, where clicking the append button scrolled the page.)
+/// Lines appended while the page (not the list) scrolls come into view, and the list keeps
+/// following once the page's scrolling ended.
+#[browser_test]
 pub async fn page_scroll_keeps_following(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
     // The append button out of view: the click scrolls the page to it first, so the lines are
     // appended while the page scrolls.
-    page.eval::<()>(
-        "document.body.style.minHeight = '300vh'; window.scrollBy(0, 1000);",
-        vec![],
-    )
-    .await?;
+    VirtualListActions::new(page).scroll_the_page_down().await?;
     page.element("#test-vl-append").await?.click().await?;
     wait_for_rendered(page, "Line 2049").await?;
     wait_for_the_end(page).await?;
@@ -189,23 +124,27 @@ pub async fn page_scroll_keeps_following(page: &Page<'_>) -> Result<(), Report> 
     Ok(())
 }
 
-/// After scroll jumps too, the rows are in visual order; a selection from one visible row to
-/// another holds exactly the rows between.
+/// After scroll jumps, the rendered rows cover the view in visual order in the DOM, so a selection
+/// from one row to another holds exactly the rows between.
+#[browser_test]
 pub async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
-    for top in [10_000, 5_000, 20_000] {
-        on_log::<()>(page, "log.scrollTop = arg;", top).await?;
-        assert_that!(|| on_log::<Coverage>(page, COVERAGE, ()))
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
+    let log = list.log().await?;
+    for top in [10_000.0, 5_000.0, 20_000.0] {
+        log.scroll_to_top(top).await?;
+        assert_that!(|| list.view())
             .with_subject_name(format!("the rendered rows, scrolled to {top}"))
             .eventually_ok()
-            .matches(predicate(Coverage::covers_the_view).described_as("covering the viewport"))
+            .satisfies(|view| {
+                view.derive_owned(LogView::covers_the_view).is_true();
+            })
             .await;
         assert_rows_in_visual_order(page)
             .await
             .context_with(|| format!("scrolled to {top}"))?;
     }
-    let (text, [first, last]) =
-        on_log::<(String, [String; 2])>(page, SELECT_THREE_SHORT_ROWS, ()).await?;
+    let (text, [first, last]) = list.select_three_short_lines().await?;
     assert_that!(text.as_str())
         .starts_with(&first)
         .ends_with(&last);
@@ -215,57 +154,61 @@ pub async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Re
 }
 
 /// Scrolling away stops following; appended lines don't move the view.
+#[browser_test]
 pub async fn scrolling_away_stops_following(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
     scroll_to_the_top(page).await?;
+    let log = VirtualListActions::new(page).log().await?;
+    let height = log.scroll_extent().await?.scroll_height;
     page.element("#test-vl-append").await?.click().await?;
-    wait_for_rendered(page, "Line 1").await?;
-    assert_that!(on_log::<f64>(page, "return log.scrollTop;", ()).await?).is_equal_to(0.0);
+    // The appended lines are laid out: the content grew.
+    assert_that!(|| async { Ok::<_, Report>(log.scroll_extent().await?.scroll_height) })
+        .eventually_ok()
+        .satisfies(|grown| {
+            grown.is_greater_than(height);
+        })
+        .await;
+    page.settle().await?;
+    assert_that!(|| async { Ok::<_, Report>(log.scroll_extent().await?.top) })
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(100))
+        .matches(eq(0.0))
+        .await;
+    page.element("#test-vl-follow")
+        .await?
+        .inner_text_stays("not following", Duration::from_millis(100))
+        .await?;
     Ok(())
 }
 
 /// A row holding the text selection stays rendered while scrolled away; without the selection,
 /// it goes.
+#[browser_test]
 pub async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
     scroll_to_the_top(page).await?;
     wait_for_rendered(page, "Line 1").await?;
-    on_log::<()>(
-        page,
-        "const line = Array.from(log.querySelectorAll('.line')).find(l => l.textContent === arg);
-         window.selectionChanges = 0;
-         document.addEventListener('selectionchange', () => window.selectionChanges += 1);
-         const range = document.createRange();
-         range.selectNodeContents(line);
-         const selection = window.getSelection();
-         selection.removeAllRanges();
-         selection.addRange(range);",
-        "Line 1",
-    )
-    .await?;
-    // `selectionchange` is dispatched later; the list's own listener (registered at mount) has
-    // run once this one did. A user doesn't select and scroll within one task.
-    assert_that!(|| on_log::<u32>(page, "return window.selectionChanges;", ()))
-        .eventually_ok()
-        .matches(ge(1))
-        .await;
+    // Returns once the list's `selectionchange` listener ran: a user doesn't select and scroll
+    // within one task.
+    list.select_line("Line 1").await?;
     // Scrolling back to the end follows again; the selected row stays rendered.
+    let log = list.log().await?;
     let follow = page.element("#test-vl-follow").await?;
     assert_that!(|| async {
-        on_log::<()>(page, "log.scrollTop = log.scrollHeight;", ()).await?;
+        let end = log.scroll_extent().await?.scroll_height;
+        log.scroll_to_top(end).await?;
         follow.inner_text().await
     })
     .eventually_ok()
     .matches(eq("following"))
     .await;
     wait_for_rendered(page, "Line 1999").await?;
-    assert_that!(on_log::<Vec<String>>(page, RENDERED_LINES, ()).await?)
-        .contains("Line 1".to_owned());
-    assert_that!(on_log::<String>(page, "return window.getSelection().toString();", ()).await?)
-        .is_equal_to("Line 1");
+    assert_that!(list.view().await?.texts()).contains("Line 1".to_owned());
+    assert_that!(list.selection_text().await?).is_equal_to("Line 1");
 
-    on_log::<()>(page, "window.getSelection().removeAllRanges();", ()).await?;
-    assert_that!(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
+    list.clear_selection().await?;
+    assert_that!(|| async { Ok::<_, Report>(list.view().await?.texts()) })
         .eventually_ok()
         .satisfies(|lines| {
             lines.does_not_contain("Line 1".to_owned());
@@ -275,8 +218,9 @@ pub async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> 
 }
 
 /// Turning following on scrolls to the end.
+#[browser_test]
 pub async fn turning_following_on_scrolls_to_the_end(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
     scroll_to_the_top(page).await?;
     let follow = page.element("#test-vl-follow").await?;
     follow.click().await?;
@@ -286,11 +230,12 @@ pub async fn turning_following_on_scrolls_to_the_end(page: &Page<'_>) -> Result<
     Ok(())
 }
 
-/// Rebuilding the view three times: clicks on the rebuilt list and the plain element, and Tab, hit
-/// only live handlers (a disposed owner's handler panics, which fails the test).
+/// After a view with a hook's props is rebuilt in place, clicks and Tab reach only the new owner's
+/// handlers, never the disposed owner's (which would panic and fail the test).
+#[browser_test]
 pub async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
-    page.element("#test-vl-rebuilt-list .line").await?;
+    page.goto_path(PATH).await?;
+    page.first_element("#test-vl-rebuilt-list .line").await?;
     for round in 1..=3 {
         page.element("#test-vl-source").await?.click().await?;
         page.element("#test-vl-rebuilt-plain")
@@ -307,11 +252,13 @@ pub async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), 
     Ok(())
 }
 
-/// A click on the rebuilt component with spread attributes hits only live handlers.
+/// After a component with spread attributes is rebuilt in place, a click on it reaches only live
+/// handlers. Known issue: tachys keeps the old event listeners.
+#[browser_test]
 pub async fn rebuilt_component_spread_drops_the_old_handlers(
     page: &Page<'_>,
 ) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
     page.element("#test-vl-source").await?.click().await?;
     page.element("#test-vl-rebuilt-plain")
         .await?
@@ -324,54 +271,63 @@ pub async fn rebuilt_component_spread_drops_the_old_handlers(
     Ok(())
 }
 
-/// A user scroll up from the end and down again (so the rows above the stop were rendered and
-/// measured) turns following off; the content doesn't move, and no measured row height goes back
-/// to the estimate.
+/// When a user scroll away from the end turns following off, the content doesn't move and no
+/// measured row height goes back to the estimate.
+#[browser_test]
 pub async fn follow_toggle_keeps_measured_sizes(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/virtual_list").await?;
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
     wait_for_the_end(page).await?;
     wait_for_rendered(page, "Line 1999").await?;
+    list.record_reestimated_rows().await?;
 
-    // Records every row wrapper whose measured height goes back to the 20px estimate.
-    on_log::<()>(
-        page,
-        "window.__vlReestimated = [];
-         new MutationObserver(records => {
-             for (const record of records) {
-                 const wrapper = record.target;
-                 if (!wrapper.firstElementChild?.classList.contains('line')) continue;
-                 const old = /height: ([0-9.]+)px/.exec(record.oldValue ?? '')?.[1];
-                 if (old !== undefined && old !== '20' && wrapper.style.height === '20px') {
-                     window.__vlReestimated.push(wrapper.textContent.slice(0, 12));
-                 }
-             }
-         }).observe(log, { subtree: true, attributes: true, attributeFilter: ['style'], attributeOldValue: true });",
-        (),
-    )
-    .await?;
-
-    // The user scroll: one step every 50ms (real timers pacing it, so the scroll doesn't end in
+    // The user scroll: one step every 50ms (paced in the page, so the scroll doesn't end in
     // between), 30 up, 12 down. Then the first row in view and its offset, before the scroll ends
     // (300ms later) and turns following off.
-    for step in std::iter::repeat_n(-150, 30).chain(std::iter::repeat_n(150, 12)) {
-        on_log::<()>(page, "log.scrollTop += arg;", step).await?;
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    let steps: Vec<f64> = std::iter::repeat_n(-150.0, 30)
+        .chain(std::iter::repeat_n(150.0, 12))
+        .collect();
+    list.log()
+        .await?
+        .scroll_by_steps(&steps, Duration::from_millis(50))
+        .await?;
     // The page handled the last step (well before the scroll ends).
     page.settle().await?;
-    let before = on_log::<String>(page, ANCHOR, ()).await?;
+    let before = list.view().await?.anchor();
     page.element("#test-vl-follow")
         .await?
         .wait_for_inner_text("not following")
         .await?;
     // Settle (a re-layout runs in effects and frames), then check: the content didn't move.
     page.settle().await?;
-    assert_that!(|| on_log::<String>(page, ANCHOR, ()))
+    assert_that!(|| async { Ok::<_, Report>(list.view().await?.anchor()) })
         .consistently_ok()
         .for_at_least(Duration::from_millis(500))
         .matches(eq(before))
         .await;
-    assert_that!(on_log::<Vec<String>>(page, "return window.__vlReestimated;", ()).await?)
-        .is_empty();
+    assert_that!(list.reestimated_rows().await?).is_empty();
+    Ok(())
+}
+
+/// Rows of plain text (no element of their own) are measured again when their content resizes:
+/// a bigger font makes them taller (react-aria observes only an item's element children).
+#[browser_test]
+pub async fn text_rows_are_measured_again_when_they_resize(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    // The first row's wrapper (the list > its content box > the rows).
+    let row = || page.first_element("#test-vl-text > [role=presentation] > [role=presentation]");
+    assert_that!(|| async { row().await?.client_rect().await })
+        .eventually_ok()
+        .satisfies(|rect| {
+            rect.derive(|rect| &rect.height).is_less_than(30.0);
+        })
+        .await;
+    page.element("#test-vl-text-bigger").await?.click().await?;
+    assert_that!(|| async { row().await?.client_rect().await })
+        .eventually_ok()
+        .satisfies(|rect| {
+            rect.derive(|rect| &rect.height).is_greater_than(40.0);
+        })
+        .await;
     Ok(())
 }

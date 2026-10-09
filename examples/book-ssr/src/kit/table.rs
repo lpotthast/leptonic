@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use leptonic::{atoms::kbd::Keys as KeyCaps, utils::key::KeyboardKey};
+use leptonic::{KeyboardKey, atoms::kbd::Keys as KeyCaps};
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
@@ -258,7 +258,7 @@ mod tests {
     use std::{fs, path::Path, str::FromStr};
 
     use assertr::prelude::*;
-    use leptonic::utils::key::KeyboardKey;
+    use leptonic::KeyboardKey;
 
     use super::{KEY_DESCRIPTIONS, split_type};
 

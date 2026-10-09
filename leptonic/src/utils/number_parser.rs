@@ -1,4 +1,5 @@
 // Upstream: @internationalized/number/src/NumberParser.ts @ 99e6102368
+// Upstream: @internationalized/number/test/NumberParser.test.js @ 99e6102368
 //! Locale-aware parsing of formatted numbers and validation of partial input.
 
 use std::sync::{Arc, OnceLock};
@@ -182,7 +183,6 @@ impl NumberParser {
 /// The parser of one locale and numbering system.
 #[derive(Debug)]
 struct ParserImpl {
-    locale: Locale,
     options: NumberFormatOptions,
     formatter: NumberFormatter,
     numbering_system: NumberingSystem,
@@ -209,7 +209,6 @@ impl ParserImpl {
         let formatter = NumberFormatter::new(locale, options.clone());
         let symbols = symbols(locale, options);
         Self {
-            locale: locale.clone(),
             options: options.clone(),
             numbering_system: formatter.numbering_system(),
             formatter,
@@ -248,19 +247,16 @@ impl ParserImpl {
             decimal.absolute.multiply_pow10(-2);
             decimal.absolute.trim_start();
             // Rounded as the formatter shows it: two more fraction digits than the percent.
-            let rounding = NumberFormatter::new(
-                &self.locale,
-                NumberFormatOptions {
-                    style: NumberStyle::Decimal,
-                    minimum_fraction_digits: Some(
-                        (self.formatter.minimum_fraction_digits() + 2).min(20),
-                    ),
-                    maximum_fraction_digits: Some(
-                        (self.formatter.maximum_fraction_digits().unwrap_or(0) + 2).min(20),
-                    ),
-                    ..self.options.clone()
-                },
-            );
+            let rounding = NumberFormatOptions {
+                style: NumberStyle::Decimal,
+                minimum_fraction_digits: Some(
+                    (self.formatter.minimum_fraction_digits() + 2).min(20),
+                ),
+                maximum_fraction_digits: Some(
+                    (self.formatter.maximum_fraction_digits().unwrap_or(0) + 2).min(20),
+                ),
+                ..self.options.clone()
+            };
             return Some(rounding.round(decimal));
         }
 
@@ -515,11 +511,12 @@ fn parse_ascii_number(value: &str) -> Option<Decimal> {
         Some(b'+') => (false, &value[1..]),
         _ => (false, value),
     };
+    // At most one decimal point, which may end the number ("5.", as `Number`): "1.2." is NaN.
+    if unsigned.bytes().filter(|b| *b == b'.').count() > 1 {
+        return None;
+    }
     let unsigned = unsigned.strip_suffix('.').unwrap_or(unsigned);
-    if unsigned.is_empty()
-        || unsigned == "."
-        || !unsigned.bytes().all(|b| b.is_ascii_digit() || b == b'.')
-    {
+    if unsigned.is_empty() || !unsigned.bytes().all(|b| b.is_ascii_digit() || b == b'.') {
         return None;
     }
     let unsigned = if unsigned.starts_with('.') {
@@ -642,6 +639,15 @@ mod tests {
         assert_that!(decimal("en-US").parse::<f64>("1abc")).is_none();
         assert_that!(decimal("en-US").parse::<f64>("")).is_none();
         assert_that!(decimal("en-US").parse::<f64>("12.34.56")).is_none();
+    }
+
+    // JavaScript's `Number`: one trailing decimal point is allowed, a second one makes it NaN.
+    #[test]
+    fn returns_none_for_a_trailing_point_after_a_fraction() {
+        let parser = decimal("en-US");
+        assert_that!(parser.parse::<f64>("1.")).is_equal_to(Some(1.0));
+        assert_that!(parser.parse::<f64>("1.2.")).is_none();
+        assert_that!(parser.parse::<f64>("1..")).is_none();
     }
 
     #[test]
@@ -928,6 +934,42 @@ mod tests {
         }
     }
 
+    // "should handle percent with minimum integer digits", "should handle non-grouping in
+    // russian locale".
+    #[test]
+    fn round_trips_upstream_counterexamples() {
+        let cases = [
+            (
+                "ar-AE-u-nu-latn",
+                percent(NumberFormatOptions {
+                    minimum_integer_digits: Some(4),
+                    minimum_fraction_digits: Some(9),
+                    maximum_significant_digits: Some(1),
+                    ..NumberFormatOptions::default()
+                }),
+                0.0095,
+            ),
+            (
+                "ru-RU",
+                percent(NumberFormatOptions {
+                    use_grouping: false,
+                    ..NumberFormatOptions::default()
+                }),
+                2.220_446_049_250_313e-16,
+            ),
+        ];
+        for (locale, options, value) in cases {
+            let locale: Locale = locale.parse().expect("a locale");
+            let formatter = NumberFormatter::new(&locale, options.clone());
+            let parser = NumberParser::new(&locale, &options);
+            let formatted = formatter.format(value);
+            let parsed = parser.parse::<f64>(&formatted);
+            assert_that!(parsed.map(|parsed| formatter.format(parsed)))
+                .with_detail_message(format!("{locale:?}: {formatted:?}"))
+                .is_equal_to(Some(formatted.clone()));
+        }
+    }
+
     // ---- is_valid_partial_number ----
 
     #[test]
@@ -1155,6 +1197,20 @@ mod tests {
         );
         assert_that!(valid(&no_decimals, "1.")).is_false();
         assert_that!(valid(&no_decimals, "123")).is_true();
+    }
+
+    // A maximum of 0 fraction digits lowers the currency's default minimum of 2: no decimal point.
+    #[test]
+    fn partial_currency_without_fraction_digits() {
+        let no_cents = number_parser(
+            "en-US",
+            NumberFormatOptions {
+                maximum_fraction_digits: Some(0),
+                ..currency(CurrencyDisplay::Symbol, CurrencySign::Standard)
+            },
+        );
+        assert_that!(valid(&no_cents, "$5.")).is_false();
+        assert_that!(valid(&no_cents, "$5")).is_true();
     }
 
     #[test]

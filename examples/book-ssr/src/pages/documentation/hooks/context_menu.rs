@@ -43,8 +43,8 @@ pub fn PageUseContextMenu() -> impl IntoView {
 
                 <p><Code inline=true>"ContextMenuEvent"</Code>" describes the request:"</p>
                 <ApiTable kind=ApiKind::Fields of="ContextMenuEvent">
-                    <ApiRow name="target" ty="SendWrapper<web_sys::Element>">"The element the context menu is for."</ApiRow>
-                    <ApiRow name="x, y" ty="f64">"The position relative to the target\u{2019}s top left corner, in pixels."</ApiRow>
+                    <ApiRow name="target" ty="SendWrapper<Element>">"The element the context menu is for."</ApiRow>
+                    <ApiRow name="point" ty="Point">"Pointer coordinates in the event target, in CSS pixels."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -54,27 +54,19 @@ pub fn PageUseContextMenu() -> impl IntoView {
                         "The "<Code inline=true>"contextmenu"</Code>" and "<Code inline=true>"keydown"</Code>" handlers. Spread "
                         "them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
                     </ApiRow>
-                    <ApiRow name="on_long_press_start" ty="Option<Callback<LongPressEvent>>">
-                        "On iOS, which fires no "<Code inline=true>"contextmenu"</Code>" event: pass it to the element\u{2019}s "
-                        <Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>". "
-                        <Code inline=true>"None"</Code>" elsewhere."
-                    </ApiRow>
-                    <ApiRow name="on_long_press" ty="Option<Callback<LongPressEvent>>">
-                        "On iOS: pass it to the element\u{2019}s "<Code inline=true>"use_press"</Code>"; a long press then "
-                        "requests the context menu. "<Code inline=true>"None"</Code>" elsewhere."
-                    </ApiRow>
+                    <ApiRow name="long_press" ty="Option<LongPress>">"Long-press handlers and options, including the threshold and accessible description."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::interactions::{ContextMenuEvent, UseContextMenuInput, UseContextMenuReturn, use_context_menu};
                         use leptos::prelude::*;
 
                         let UseContextMenuReturn { props, .. } = use_context_menu(UseContextMenuInput {
                             on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
-                                open_menu_at(e.x, e.y);
+                                open_menu_at(e.point.x, e.point.y);
                             })),
                         });
 

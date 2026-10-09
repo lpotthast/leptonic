@@ -1,7 +1,7 @@
 # Leptonic: guiding decisions and API conventions
 
 Long-term rules for the library (moved out of `PLAN.md`, which holds open work only). `CLAUDE.md` has the
-working rules for agents; `documentation/hooks-implementation.md` and `atoms-implementation.md` the implementation
+working rules for agents; `hooks-implementation.md`, `atoms-implementation.md` and `leptos-and-dom.md` the implementation
 patterns.
 
 ## Guiding decisions
@@ -19,13 +19,15 @@ patterns.
   The API shape is ours: signals instead of controlled/uncontrolled props, `CapturedElement` instead of refs,
   typed ARIA values, typed keyboard shortcuts. Document every deviation in the hook header.
 - **Compose inputs, not DOM props.** A hook that configures an element rendered by another hook returns that hook's
-  input (`use_menu_trigger` → `UseButtonInput`), combined by callers with struct update syntax. `MergeWith` is only
-  for independent hooks on one element. See `documentation/hooks-implementation.md`.
+  input (`use_menu_trigger` → `UseButtonInput`), combined by callers with struct update syntax. Independent hooks on
+  one element are each spread onto it; id lists they share are joined with `IdRefs`. See `hooks-implementation.md`,
+  "Combining Hooks".
 - **Upstream is tracked by commit.** Every ported file starts with `// Upstream: <path> @ <sha>`;
   `scripts/upstream-drift.sh` lists unabsorbed upstream commits, `--mark-synced` records a finished re-sync.
 - **Tests are the definition of done.** Pure logic and `*_state` hooks get native unit tests (`testing::with_owner`
   runs their Effects). DOM behavior gets browser tests against `testing/test-app`, derived from react-aria's own
-  tests. A hook without a test is not finished.
+  tests. A hook without a test is not finished. Every bug fix starts with a failing test (the user: improving the
+  integration-test suite is of utmost importance).
 - **Docs follow code.** Every hook and atom change gets its book-ssr page updated: the library session
   sends the new API to the book session, which updates pages, API tables and demos (`CLAUDE.md`, "Working in
   Parallel").
@@ -45,12 +47,24 @@ patterns.
   opt-in bubbling); all others keep upstream's fixed behavior (hover/focus never stop, move/scroll wheel/DnD always
   stop). Details: `hooks-implementation.md`, "Event Propagation Control".
 - **Target modern browsers.** Where react-aria carries code for old browsers, we omit it.
+- **One way to do a thing** (the user's rule, 2026-10-09): every task has exactly one API, helper or pattern. No
+  second constructor, alias, conversion path, merge mechanism or test helper doing the same job; when two exist, keep
+  the better one, migrate every user (library, test-app, tests, book) and delete the other.
+- **No prelude; one path per public item** (the user's rule, 2026-10-09): leptonic has no prelude module and no
+  glob re-exports of atoms or hooks (no `pub use hooks::interactions::*` in `hooks/mod.rs`). Atoms and hooks are
+  imported from their module: `leptonic::atoms::button::Button`, `leptonic::hooks::interactions::use_press` (a
+  family module exposes its own hooks). Everything else users are expected to use (shared types like `Out`,
+  `ValueBinding`, `Locale`, `I18nProvider`, ...) is re-exported flat from `lib.rs` (`leptonic::Locale`), and the
+  module it lives in is private, so there is no second, deep path to it.
+  Internal code follows the same paths: no crate-private flat hook re-exports or convenience aliases.
+  Import a hook from its family, shared types from the crate root, and dependency types from their crate.
+- **Delete what is no longer relevant** (the user's rule, 2026-10-09): unused or obsolete public API (types,
+  aliases, variants, helpers) is removed, not kept "just in case". Tell the book about removals it documents.
 
 ## API conventions (decided 2026-10-05, audit §1)
 
-Every hook and atom follows these (the remaining migrations are items in `PLAN.md`). The short table in
-`documentation/hooks-implementation.md` ("API Conventions") and the global entries in `hooks/mod.rs` summarize them;
-per-hook deviation blocks only list what goes beyond them.
+Every hook and atom follows these (the remaining migrations are items in `PLAN.md`). The global entries in
+`hooks/mod.rs` summarize them; per-hook deviation blocks only list what goes beyond them (`porting.md`).
 
 - **C1 State flags:** `is_disabled`, `is_read_only`, `is_required`, `is_invalid`, as `Signal<bool>` (default `false`),
   in hook inputs and atom props alike. Reason: react-aria's names (`isDisabled`), already the majority; one name per
@@ -84,11 +98,10 @@ per-hook deviation blocks only list what goes beyond them.
   used only as a flag.
 - **C10 Callbacks:** `Option<Callback<NamedEvent>>`; `Arc<dyn Fn(&T) -> R>` aliases only for predicates over
   borrowed data. No tuple arguments, no `Callback<()>` for configuration, no bools meaning modes. Delays are
-  `Duration`. Keys are `utils::key::KeyboardKey`, pointer types `PointerType` (no string comparisons).
+  `Duration`. Keys are `KeyboardKey` (`utils/key.rs`), pointer types `PointerType` (no string comparisons).
 - **C11 Reactivity:** anything a user could reasonably change at runtime is `Signal<T>` with a default;
   `Option<Signal<T>>` only for "inherit vs. override" (documented).
-- **C12 ARIA typing:** typed enums from `utils/aria.rs`, `tabindex` as `i32`. The `&'static str` advice in
-  hooks-implementation.md goes.
+- **C12 ARIA typing:** typed enums from `utils/aria.rs`, `tabindex` as `i32`.
 - **C13 Units:** `Fraction` (0..=1) newtype for percentages, `Point { x, y }` for coordinates, `Duration` for time.
 - **C14 Field parts (decided 2026-10-05 by the user):** one generic `Label`, `Description` and `FieldError` atom
   reading a `FieldContext` that every field atom provides (TextField, SearchField, NumberField, CheckboxGroup,
@@ -101,6 +114,7 @@ per-hook deviation blocks only list what goes beyond them.
   over the value type (`SelectionValue`: `to_key`/`from_key`; implemented for `Key`, `String`, the integers, and
   enums through `selection_value!`): `RadioGroup<V>` (`Option<V>`), `CheckboxGroup<V>` and `ToggleButtonGroup<V>`
   (`HashSet<V>`), `Select<S>`/`ComboBox<S>` whose type is the selection mode (`S: SelectedValues`: `Option<V>`
-  one value, `Vec<V>` several; no `selection_mode` prop). Hooks keep working with `Key`s; `atoms/typed_values.rs`
+  one value, `HashSet<V>` several; no `selection_mode` prop). Set-valued props and values are always `HashSet`
+  (the user, 2026-10-09), never `Vec`: default and controlled props of one state have the same type. Hooks keep working with `Key`s; `atoms/typed_values.rs`
   converts at the boundary. Items take a `Key` (`value=Size::Small` through `From<Size> for Key`), not a generic
   `V`; a key of no value of the group's type warns in debug builds (react-aria: `Key` = `string | number`).

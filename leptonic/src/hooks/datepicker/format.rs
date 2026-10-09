@@ -1,5 +1,8 @@
-// Upstream: react-stately/src/datepicker/utils.ts @ 99e6102368 (`getFormatOptions`)
-// Upstream: react-stately/src/datepicker/useDateFieldState.ts @ 99e6102368 (`processSegments`)
+// Upstream: react-stately/src/datepicker/utils.ts @ 99e6102368
+// Upstream: react-stately/src/datepicker/useDateFieldState.ts @ 99e6102368
+// Upstream: @internationalized/date/src/DateFormatter.ts @ 99e6102368
+// Upstream: @internationalized/date/tests/DateFormatter.test.js @ 99e6102368
+// (Ported: `getFormatOptions`, `processSegments`.)
 //! Formatting date field values with ICU4X: the whole value, and its parts in the locale's
 //! order (`Intl.DateTimeFormat#formatToParts`), from which the segments are made.
 
@@ -12,6 +15,10 @@
 //   `getFormatOptions`): year, month and day (or month and day, or the day) up to the
 //   granularity's time precision, short (descriptions: long), the time zone's short specific name
 //   unless hidden. ICU4X has no per-field options: leading zeros come from column alignment.
+// - Months, days and hours are padded as the locale's short pattern pads them (de-DE:
+//   "05.06.2024"); `Intl`'s numeric fields follow CLDR's `yMd` skeleton instead, which pads per
+//   locale and field (de-DE "5.6.2024", bg "5.06.2024", en-GB "05/06/2024"). ICU4X ships no
+//   skeleton data (`availableFormats`) to tell.
 // - Era stripping: ICU4X adds an era to years before 1000; `Intl`'s numeric years have none
 //   unless asked for, so it is removed (with its separating literal) unless the era shows
 //   (`show_era`: a value before Christ).
@@ -27,7 +34,10 @@
 //
 // =============================================================================
 
-use std::fmt;
+use std::{
+    fmt,
+    sync::{Arc, OnceLock},
+};
 
 use icu_datetime::{
     DateTimeFormatter, DateTimeFormatterPreferences,
@@ -37,7 +47,7 @@ use icu_datetime::{
     },
     options::{Alignment, Length, TimePrecision, YearStyle},
     pattern::{DateTimePattern, DayPeriodNameLength, FixedCalendarDateTimeNames},
-    preferences::{HourCycle as IcuHourCycle, NumberingSystem},
+    preferences::{CalendarAlgorithm, HourCycle as IcuHourCycle, NumberingSystem},
 };
 use jiff::tz::TimeZone;
 use writeable::{Part, PartsWrite, TryWriteable, Writeable};
@@ -68,6 +78,45 @@ pub(crate) struct FormatOptions {
     pub should_force_leading_zeros: bool,
 }
 
+/// The formatters of a locale and options, each built on first use: keep them in a `Memo`
+/// (equal when their locale and options are).
+#[derive(Clone)]
+pub(crate) struct Formatters {
+    locale: Locale,
+    options: FormatOptions,
+    short: Arc<OnceLock<DateFormatter>>,
+    long: Arc<OnceLock<DateFormatter>>,
+}
+
+impl PartialEq for Formatters {
+    fn eq(&self, other: &Self) -> bool {
+        self.locale == other.locale && self.options == other.options
+    }
+}
+
+impl Formatters {
+    pub fn new(locale: Locale, options: FormatOptions) -> Self {
+        Self {
+            locale,
+            options,
+            short: Arc::default(),
+            long: Arc::default(),
+        }
+    }
+
+    /// Numeric dates ("6/15/2024"): the segments' and validation messages'.
+    pub fn short(&self) -> &DateFormatter {
+        self.short
+            .get_or_init(|| DateFormatter::new(&self.locale, &self.options))
+    }
+
+    /// Months by name ("June 15, 2024"): for descriptions.
+    pub fn long(&self) -> &DateFormatter {
+        self.long
+            .get_or_init(|| DateFormatter::long(&self.locale, &self.options))
+    }
+}
+
 /// Formats date field values (react-aria's `DateFormatter` with the field's options).
 pub(crate) struct DateFormatter {
     formatter: Option<DateTimeFormatter<CompositeFieldSet>>,
@@ -76,6 +125,7 @@ pub(crate) struct DateFormatter {
     show_era: bool,
     /// The locale's AM and PM names, replacing flexible day periods (`B`).
     am_pm: Option<[String; 2]>,
+    padded_segments: OnceLock<Vec<DateSegmentType>>,
 }
 
 fn preferences(
@@ -84,6 +134,9 @@ fn preferences(
     latin_digits: bool,
 ) -> DateTimeFormatterPreferences {
     let mut prefs = DateTimeFormatterPreferences::from(locale.icu_locale());
+    // The Gregorian calendar the values and segments use, also in locales defaulting to another
+    // one (th-TH: Buddhist years) or asking for one (`-u-ca-`).
+    prefs.calendar_algorithm = Some(CalendarAlgorithm::Gregory);
     // The locale's own 12- or 24-hour clock, as `Intl`'s `hour12` (react-aria's `hourCycle`):
     // a 12-hour clock is h11 in Japan, h12 elsewhere.
     prefs.hour_cycle = hour_cycle.map(|hour_cycle| match hour_cycle {
@@ -149,7 +202,34 @@ impl DateFormatter {
             formatter,
             show_era: options.show_era,
             am_pm: time_precision.and_then(|_| am_pm(prefs)),
+            padded_segments: OnceLock::new(),
         }
+    }
+
+    /// Width comes from the pattern, not a particular value (midnight's "12" is not padding).
+    fn pads_segment<V: DateValue>(&self, kind: DateSegmentType, value: &V) -> bool {
+        self.padded_segments
+            .get_or_init(|| {
+                let reference = value.with_fields(
+                    jiff::civil::date(2001, 1, 1),
+                    jiff::civil::time(1, 1, 1, 0),
+                    None,
+                );
+                self.format_to_parts(&reference)
+                    .into_iter()
+                    .filter_map(|(kind, text)| {
+                        kind.filter(|kind| {
+                            matches!(
+                                kind,
+                                DateSegmentType::Month
+                                    | DateSegmentType::Day
+                                    | DateSegmentType::Hour
+                            ) && text.chars().count() >= 2
+                        })
+                    })
+                    .collect()
+            })
+            .contains(&kind)
     }
 
     /// The value formatted.
@@ -376,6 +456,7 @@ pub(crate) fn resolve_hour_cycle(
         show_era: false,
         // Only the hour is read.
         am_pm: None,
+        padded_segments: OnceLock::new(),
     };
     let parts =
         |hour: i8| formatter.format_to_parts(&jiff::civil::date(2001, 1, 1).at(hour, 0, 0, 0));
@@ -399,6 +480,35 @@ pub(crate) fn resolve_hour_cycle(
     }
 }
 
+/// The number formatters of a locale's segments: plain, and padded to two digits.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct SegmentNumbers {
+    number: NumberFormatter,
+    two_digits: NumberFormatter,
+}
+
+impl SegmentNumbers {
+    pub fn new(locale: &Locale) -> Self {
+        Self {
+            number: NumberFormatter::new(
+                locale,
+                NumberFormatOptions {
+                    use_grouping: false,
+                    ..NumberFormatOptions::default()
+                },
+            ),
+            two_digits: NumberFormatter::new(
+                locale,
+                NumberFormatOptions {
+                    use_grouping: false,
+                    minimum_integer_digits: Some(2),
+                    ..NumberFormatOptions::default()
+                },
+            ),
+        }
+    }
+}
+
 /// The segments of a date field (react-stately's `processSegments`): the parts of `date_value`
 /// (the display value completed by a placeholder), the numbers taken from the display value
 /// itself (they may form an invalid date, e.g. February 30), placeholders for missing values,
@@ -407,25 +517,12 @@ pub(crate) fn segments<V: DateValue>(
     date_value: &V,
     display_value: &IncompleteDate,
     formatter: &DateFormatter,
+    numbers: &SegmentNumbers,
     locale: &Locale,
     granularity: Granularity,
 ) -> Vec<DateSegment> {
     let parts = formatter.format_to_parts(date_value);
-    let number = NumberFormatter::new(
-        locale,
-        NumberFormatOptions {
-            use_grouping: false,
-            ..NumberFormatOptions::default()
-        },
-    );
-    let two_digits = NumberFormatter::new(
-        locale,
-        NumberFormatOptions {
-            use_grouping: false,
-            minimum_integer_digits: Some(2),
-            ..NumberFormatOptions::default()
-        },
-    );
+    let SegmentNumbers { number, two_digits } = numbers;
     let mut segments = Vec::new();
     for (kind, text) in parts {
         let Some(kind) = kind else {
@@ -438,8 +535,8 @@ pub(crate) fn segments<V: DateValue>(
             | DateSegmentType::Day
             | DateSegmentType::Hour => {
                 let value = display_value.get(kind).unwrap_or(0);
-                // As the locale pads it (e.g. "05.06.2024").
-                let padded = text.chars().count() >= 2 && kind != DateSegmentType::Year;
+                // As the locale's short pattern pads it (e.g. "05.06.2024").
+                let padded = formatter.pads_segment(kind, date_value);
                 if padded {
                     two_digits.format(value)
                 } else {
@@ -536,6 +633,78 @@ mod tests {
             .is_equal_to("6/5/2024, 1:05\u{202f}PM".to_owned());
     }
 
+    /// Locales defaulting to another calendar (Thai: Buddhist, Persian: Persian) and `-u-ca-`
+    /// extensions format the Gregorian date the segments edit, not a Buddhist year 2567.
+    #[test]
+    fn formats_gregorian_dates_in_every_locale() {
+        let value = date(2024, 6, 5);
+        for id in [
+            "th-TH",
+            "fa-IR",
+            "en-US-u-ca-buddhist",
+            "ja-JP-u-ca-japanese",
+        ] {
+            let formatter = DateFormatter::new(&locale(id), &options(Granularity::Day));
+            let year = formatter
+                .format_to_parts(&value)
+                .into_iter()
+                .find(|(kind, _)| *kind == Some(DateSegmentType::Year))
+                .map(|(_, text)| text);
+            let long = DateFormatter::long(&locale(id), &options(Granularity::Day)).format(&value);
+            assert_that!(year.as_deref().map(latin_digits))
+                .with_detail_message(id)
+                .is_equal_to(Some("2024".to_owned()));
+            assert_that!(latin_digits(&long).as_str())
+                .with_detail_message(id)
+                .contains("2024");
+        }
+    }
+
+    /// The text with Arabic-Indic and Extended Arabic-Indic digits as Latin ones.
+    fn latin_digits(text: &str) -> String {
+        text.chars()
+            .map(|c| match c {
+                '\u{0660}'..='\u{0669}' => {
+                    char::from_u32(u32::from('0') + u32::from(c) - 0x0660).expect("a Latin digit")
+                }
+                '\u{06F0}'..='\u{06F9}' => {
+                    char::from_u32(u32::from('0') + u32::from(c) - 0x06F0).expect("a Latin digit")
+                }
+                c => c,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn midnight_does_not_make_a_partial_hour_two_digits_wide() {
+        let locale = locale("en-US");
+        let value = date(2019, 2, 3).at(8, 0, 0, 0);
+        let display = IncompleteDate::new(ResolvedHourCycle::H12, Some(&value)).set(
+            DateSegmentType::Hour,
+            0,
+            &value,
+        );
+        let numbers = SegmentNumbers::new(&locale);
+        for (force_zeros, expected) in [(false, "0"), (true, "00")] {
+            let mut options = options(Granularity::Minute);
+            options.should_force_leading_zeros = force_zeros;
+            let formatter = DateFormatter::new(&locale, &options);
+            let parts = segments(
+                &display.to_value(&value),
+                &display,
+                &formatter,
+                &numbers,
+                &locale,
+                Granularity::Minute,
+            );
+            let hour = parts
+                .iter()
+                .find(|part| part.kind == DateSegmentType::Hour)
+                .expect("an hour segment");
+            assert_that!(hour.text.as_str()).is_equal_to(expected);
+        }
+    }
+
     #[test]
     fn forces_leading_zeros() {
         let mut options = options(Granularity::Minute);
@@ -619,7 +788,14 @@ mod tests {
         let formatter = DateFormatter::new(&en, &options(Granularity::Day));
         let display =
             IncompleteDate::new(ResolvedHourCycle::H12, Some(&value)).clear(DateSegmentType::Day);
-        let segments = segments(&value, &display, &formatter, &en, Granularity::Day);
+        let segments = segments(
+            &value,
+            &display,
+            &formatter,
+            &SegmentNumbers::new(&en),
+            &en,
+            Granularity::Day,
+        );
         let texts: Vec<&str> = segments
             .iter()
             .map(|segment| segment.text.as_str())

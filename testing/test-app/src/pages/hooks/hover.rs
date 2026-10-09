@@ -1,9 +1,9 @@
 use leptonic::{
+    IntoAttrs,
     atoms::hoverable::Hoverable,
-    hooks::{HoverEndEvent, HoverStartEvent, IntoAttrs, UseHoverInput, use_hover},
+    hooks::interactions::{HoverEndEvent, HoverStartEvent, UseHoverInput, use_hover},
 };
-use leptos::{prelude::*, web_sys};
-use wasm_bindgen::JsCast;
+use leptos::prelude::*;
 
 /// `use_hover` (react-aria's `useHover.test.js`): a target with an inner element, which can be
 /// disabled while hovered and whose inner button removes itself. Hover events are appended to
@@ -13,30 +13,16 @@ pub fn PageHookHover() -> impl IntoView {
     let log = RwSignal::new(Vec::<String>::new());
     let disabled = RwSignal::new(false);
     let inner_shown = RwSignal::new(true);
-    let target_id = |target: &web_sys::EventTarget| {
-        target
-            .dyn_ref::<web_sys::Element>()
-            .map(web_sys::Element::id)
-            .unwrap_or_default()
-    };
     let hover = use_hover(UseHoverInput {
         is_disabled: disabled.into(),
         on_hover_start: Some(Callback::new(move |e: HoverStartEvent| {
             log.update(|l| {
-                l.push(format!(
-                    "start:{}:{}",
-                    e.pointer_type,
-                    target_id(&e.current_target)
-                ));
+                l.push(format!("start:{}:{}", e.pointer_type, e.target.id()));
             });
         })),
         on_hover_end: Some(Callback::new(move |e: HoverEndEvent| {
             log.update(|l| {
-                l.push(format!(
-                    "end:{}:{}",
-                    e.pointer_type,
-                    target_id(&e.current_target)
-                ));
+                l.push(format!("end:{}:{}", e.pointer_type, e.target.id()));
             });
         })),
         on_hover_change: Some(Callback::new(move |hovered: bool| {
@@ -69,9 +55,6 @@ pub fn PageHookHover() -> impl IntoView {
             <p>
                 <button id="test-hover-disable" on:click=move |_| disabled.update(|d| *d = !*d)>
                     "Toggle disabled"
-                </button>
-                <button id="test-hover-reset" on:click=move |_| log.set(Vec::new())>
-                    "Reset log"
                 </button>
             </p>
             <div>"Log: " <span id="test-hover-log">{move || log.get().join(",")}</span></div>

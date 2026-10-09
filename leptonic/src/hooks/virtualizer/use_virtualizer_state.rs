@@ -158,12 +158,16 @@ impl<L: Layout> LayoutDelegate for VirtualizerLayoutDelegate<L> {
     }
 }
 
-/// The time for the overscan's scroll velocity. The JS clock exists only in WebAssembly; natively
-/// (server-side rendering, native tests) nothing scrolls: a constant.
+/// The time for the overscan's scroll velocity (`performance.now()`, as upstream: sub-millisecond,
+/// monotonic). The JS clock exists only in WebAssembly; natively (server-side rendering, native
+/// tests) nothing scrolls: a constant.
 fn now() -> f64 {
     #[cfg(target_arch = "wasm32")]
     {
-        js_sys::Date::now()
+        leptos_use::use_window()
+            .as_ref()
+            .and_then(web_sys::Window::performance)
+            .map_or(0.0, |performance| performance.now())
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -201,7 +205,8 @@ pub fn use_virtualizer_state<L: Layout>(input: UseVirtualizerStateInput<L>) -> V
         let persisted_keys = persisted_keys.get();
         let visible_rect = state.visible_rect.get();
         let size = state.size.get();
-        let is_scrolling = state.is_scrolling.get();
+        // Read when laying out (for the anchor); starting or ending to scroll changes nothing.
+        let is_scrolling = state.is_scrolling.get_untracked();
         let item_generation = state.invalidation.get();
         // Items were measured since the last render (not: ever).
         let item_size_changed =
@@ -259,7 +264,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        hooks::virtualizer::{ListLayout, ListLayoutOptions, ScrollAnchorEdge},
+        hooks::virtualizer::{EndAnchor, ItemSize, ListLayout, ListLayoutOptions},
         testing::{flush_effects, with_owner},
         utils::point::Point,
     };
@@ -274,7 +279,7 @@ mod tests {
 
     fn rows_of(size: f64) -> ListLayoutOptions {
         ListLayoutOptions {
-            row_size: Some(size),
+            row_size: ItemSize::Fixed(size),
             ..ListLayoutOptions::default()
         }
     }
@@ -431,7 +436,7 @@ mod tests {
             let Fixture { state, .. } = list(
                 100,
                 ListLayoutOptions {
-                    estimated_row_size: Some(20.0),
+                    row_size: ItemSize::Estimated(20.0),
                     ..ListLayoutOptions::default()
                 },
                 0.0,
@@ -460,7 +465,7 @@ mod tests {
             let Fixture { state, moves, .. } = list(
                 100,
                 ListLayoutOptions {
-                    anchor_to: Some(ScrollAnchorEdge::End),
+                    anchor_to_end: Some(EndAnchor::default()),
                     ..rows_of(48.0)
                 },
                 0.0,

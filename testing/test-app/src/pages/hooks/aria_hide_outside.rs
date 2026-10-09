@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, time::Duration};
 
-use leptonic::utils::{AriaHideOutsideOptions, aria_hide_outside, keep_visible};
+use leptonic::{AriaHideOutsideOptions, HideMode, aria_hide_outside, keep_visible};
 use leptos::{prelude::*, web_sys};
 
 type Reverts = HashMap<&'static str, Box<dyn FnOnce()>>;
@@ -18,12 +18,16 @@ fn element(id: &str) -> web_sys::Element {
 }
 
 fn hide(case: &'static str, targets: &[&str], root: &str) {
+    hide_with(case, targets, root, HideMode::AriaHidden);
+}
+
+fn hide_with(case: &'static str, targets: &[&str], root: &str, mode: HideMode) {
     let targets: Vec<_> = targets.iter().map(|id| element(id)).collect();
     let revert = aria_hide_outside(
         &targets,
         AriaHideOutsideOptions {
             root: Some(element(root)),
-            ..AriaHideOutsideOptions::default()
+            mode,
         },
     );
     REVERTS.with_borrow_mut(|reverts| reverts.insert(case, revert));
@@ -160,6 +164,7 @@ fn revert(case: &'static str) {
 ///   `#test-aho-mo-<case>` (see `mutate`).
 /// - reorder (`#test-aho-reorder`): keyed rows (`#test-aho-row-a`..) reordered by
 ///   `#test-aho-reorder-button` (the hide's target) while hidden.
+/// - inert (`#test-aho-inert`): a hide in `HideMode::Inert` around a span and an SVG.
 #[component]
 pub fn PageHookAriaHideOutside() -> impl IntoView {
     let order = RwSignal::new(vec!["a", "b", "c", "d"]);
@@ -171,50 +176,98 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
     };
     view! {
         <div>
-            <button id="test-aho-hide-basic" on:click=|_| hide("basic", &["test-aho-target"], "test-aho-basic")>
+            <button
+                id="test-aho-hide-basic"
+                on:click=|_| hide("basic", &["test-aho-target"], "test-aho-basic")
+            >
                 "Hide basic"
             </button>
-            <button id="test-aho-revert-basic" on:click=|_| revert("basic")>"Revert basic"</button>
-            <button id="test-aho-hide-row" on:click=|_| hide("row", &["test-aho-row-2"], "test-aho-grid")>
+            <button id="test-aho-revert-basic" on:click=|_| revert("basic")>
+                "Revert basic"
+            </button>
+            <button
+                id="test-aho-hide-row"
+                on:click=|_| hide("row", &["test-aho-row-2"], "test-aho-grid")
+            >
                 "Hide row"
             </button>
-            <button id="test-aho-revert-row" on:click=|_| revert("row")>"Revert row"</button>
+            <button id="test-aho-revert-row" on:click=|_| revert("row")>
+                "Revert row"
+            </button>
             <button
                 id="test-aho-hide-nested-1"
-                on:click=|_| hide("nested-1", &["test-aho-n-button", "test-aho-n-r1", "test-aho-n-r2"], "test-aho-nested")
+                on:click=|_| hide(
+                    "nested-1",
+                    &["test-aho-n-button", "test-aho-n-r1", "test-aho-n-r2"],
+                    "test-aho-nested",
+                )
             >
                 "Hide nested 1"
             </button>
-            <button id="test-aho-hide-nested-2" on:click=|_| hide("nested-2", &["test-aho-n-button"], "test-aho-nested")>
+            <button
+                id="test-aho-hide-nested-2"
+                on:click=|_| hide("nested-2", &["test-aho-n-button"], "test-aho-nested")
+            >
                 "Hide nested 2"
             </button>
-            <button id="test-aho-revert-nested-1" on:click=|_| revert("nested-1")>"Revert nested 1"</button>
-            <button id="test-aho-revert-nested-2" on:click=|_| revert("nested-2")>"Revert nested 2"</button>
-            <button id="test-aho-hide-outer" on:click=|_| hide("outer", &["test-aho-target"], "test-aho-outer-root")>
+            <button id="test-aho-revert-nested-1" on:click=|_| revert("nested-1")>
+                "Revert nested 1"
+            </button>
+            <button id="test-aho-revert-nested-2" on:click=|_| revert("nested-2")>
+                "Revert nested 2"
+            </button>
+            <button
+                id="test-aho-hide-outer"
+                on:click=|_| hide("outer", &["test-aho-target"], "test-aho-outer-root")
+            >
                 "Hide outer"
             </button>
-            <button id="test-aho-revert-outer" on:click=|_| revert("outer")>"Revert outer"</button>
-            <button id="test-aho-hide-late" on:click=|_| hide("late", &["test-aho-late-dialog"], "test-aho-late")>
+            <button id="test-aho-revert-outer" on:click=|_| revert("outer")>
+                "Revert outer"
+            </button>
+            <button
+                id="test-aho-hide-late"
+                on:click=|_| hide("late", &["test-aho-late-dialog"], "test-aho-late")
+            >
                 "Hide late"
             </button>
-            <button id="test-aho-late-open-popover" on:click=|_| open_late_overlay("popover", false)>
+            <button
+                id="test-aho-late-open-popover"
+                on:click=|_| open_late_overlay("popover", false)
+            >
                 "Open popover"
             </button>
             <button id="test-aho-late-open-modal" on:click=|_| open_late_overlay("modal", true)>
                 "Open modal"
             </button>
-            <button id="test-aho-revert-late" on:click=|_| { revert("modal"); revert("popover"); revert("late"); }>
+            <button
+                id="test-aho-revert-late"
+                on:click=|_| {
+                    revert("modal");
+                    revert("popover");
+                    revert("late");
+                }
+            >
                 "Revert late"
             </button>
-            <button id="test-aho-hide-mo" on:click=|_| hide("mo", &["test-aho-mo-target"], "test-aho-mo")>
+            <button
+                id="test-aho-hide-mo"
+                on:click=|_| hide("mo", &["test-aho-mo-target"], "test-aho-mo")
+            >
                 "Hide mutations"
             </button>
-            <button id="test-aho-revert-mo" on:click=|_| revert("mo")>"Revert mutations"</button>
-            <button id="test-aho-mo-outside-button" on:click=|_| mutate("outside")>"Add outside"</button>
+            <button id="test-aho-revert-mo" on:click=|_| revert("mo")>
+                "Revert mutations"
+            </button>
+            <button id="test-aho-mo-outside-button" on:click=|_| mutate("outside")>
+                "Add outside"
+            </button>
             <button id="test-aho-mo-in-hidden-button" on:click=|_| mutate("in-hidden")>
                 "Add to hidden container"
             </button>
-            <button id="test-aho-mo-inside-button" on:click=|_| mutate("inside")>"Add inside"</button>
+            <button id="test-aho-mo-inside-button" on:click=|_| mutate("inside")>
+                "Add inside"
+            </button>
             <button id="test-aho-mo-top-layer-button" on:click=|_| mutate("top-layer")>
                 "Add top layer"
             </button>
@@ -230,7 +283,23 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
             >
                 "Hide reorder"
             </button>
-            <button id="test-aho-revert-reorder" on:click=|_| revert("reorder")>"Revert reorder"</button>
+            <button id="test-aho-revert-reorder" on:click=|_| revert("reorder")>
+                "Revert reorder"
+            </button>
+            <button
+                id="test-aho-hide-inert"
+                on:click=|_| hide_with(
+                    "inert",
+                    &["test-aho-inert-target"],
+                    "test-aho-inert",
+                    HideMode::Inert,
+                )
+            >
+                "Hide inert"
+            </button>
+            <button id="test-aho-revert-inert" on:click=|_| revert("inert")>
+                "Revert inert"
+            </button>
         </div>
 
         <div id="test-aho-basic">
@@ -249,7 +318,9 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
                 </div>
             </div>
             <div id="test-aho-row-2" role="row">
-                <div id="test-aho-cell-2" role="gridcell">"Cell 2"</div>
+                <div id="test-aho-cell-2" role="gridcell">
+                    "Cell 2"
+                </div>
             </div>
         </div>
 
@@ -273,7 +344,9 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
         </div>
 
         <div id="test-aho-reorder">
-            <button id="test-aho-reorder-button" on:click=reorder>"Reorder"</button>
+            <button id="test-aho-reorder-button" on:click=reorder>
+                "Reorder"
+            </button>
             <For each=move || order.get() key=|row| *row let:row>
                 <div role="presentation">
                     <div id=format!("test-aho-row-{row}") role="row">
@@ -281,6 +354,14 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
                     </div>
                 </div>
             </For>
+        </div>
+
+        <div id="test-aho-inert">
+            <span id="test-aho-inert-span" aria-hidden="false">"Outside"</span>
+            <svg id="test-aho-inert-svg" width="10" height="10" role="img" aria-label="Icon">
+                <rect width="10" height="10"></rect>
+            </svg>
+            <button id="test-aho-inert-target" aria-labelledby="test-aho-inert-span">"Target"</button>
         </div>
 
         <div id="test-aho-late">

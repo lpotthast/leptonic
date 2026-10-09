@@ -1,11 +1,11 @@
-pub mod use_menu;
-pub mod use_menu_item;
-pub mod use_menu_section;
-pub mod use_menu_trigger;
-pub mod use_menu_trigger_state;
-pub mod use_safely_mouse_to_submenu;
-pub mod use_submenu_trigger;
-pub mod use_submenu_trigger_state;
+pub(crate) mod use_menu;
+pub(crate) mod use_menu_item;
+pub(crate) mod use_menu_section;
+pub(crate) mod use_menu_trigger;
+pub(crate) mod use_menu_trigger_state;
+pub(crate) mod use_safely_mouse_to_submenu;
+pub(crate) mod use_submenu_trigger;
+pub(crate) mod use_submenu_trigger_state;
 
 pub use use_menu::*;
 pub use use_menu_item::*;

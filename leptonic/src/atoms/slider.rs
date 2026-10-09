@@ -2,25 +2,29 @@
 use std::sync::Arc;
 
 use leptos::{context::Provider, ev, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     field::{FieldContext, LabelContext},
     visually_hidden::VisuallyHidden,
 };
 use crate::{
-    Out,
+    IntoAttrs, Orientation, Out, ValueBinding,
     atoms::field::LabelPresence,
     hooks::{
-        ComputedSliderMark, IntoAttrs, SliderMarks, UseFocusRingInput, UseHoverInput,
-        UseLabelProps, UseSliderInput, UseSliderMarksInput, UseSliderOutputAttrs, UseSliderReturn,
-        UseSliderStateInput, UseSliderThumbInput, UseSliderThumbReturn, UseSliderTrackAttrs,
-        ValidityStateSnapshot, use_focus_ring, use_hover, use_slider, use_slider_marks,
-        use_slider_state, use_slider_thumb,
+        focus::{UseFocusRingInput, use_focus_ring},
+        form::{UseLabelProps, ValidityStateSnapshot},
+        interactions::{UseHoverInput, use_hover},
+        slider::{
+            ComputedSliderMark, SliderMarkPlacement, UseSliderInput, UseSliderMarksInput,
+            UseSliderOutputAttrs, UseSliderReturn, UseSliderStateInput, UseSliderThumbInput,
+            UseSliderThumbReturn, UseSliderTrackAttrs, use_slider, use_slider_marks,
+            use_slider_state, use_slider_thumb,
+        },
     },
     utils::{
-        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
-        number_formatter::NumberFormatOptions, number_value::NumberValue, orientation::Orientation,
-        styles::Styles,
+        data_attributes::flag, default_class::with_default_class, fraction::Fraction,
+        number_formatter::NumberFormatOptions, number_value::NumberValue, styles::Styles,
     },
 };
 
@@ -31,8 +35,7 @@ use crate::{
 // ## API DIFFERENCES
 // - `Slider` is generic over its value type (as `use_slider_state`); its children reach it through
 //   a context of plain `f64` positions and formatted labels, so they need no type parameter.
-// - Values are a `Vec` (`default_values`, or `values` + `set_values`); the themed `Slider` and
-//   `RangeSlider` take a single value and a range.
+// - Values are a `Vec` (`default_values`, or `values` + `set_values`).
 // - Render props become `data-*` attributes plus plain children; `SliderOutput` shows the
 //   formatted values without children.
 // - Label, description and error message are the field parts (C14): `Label`, `Description`,
@@ -45,7 +48,8 @@ use crate::{
 //   (react-aria-components: 100%, as a default style that a `style` prop replaces): CSS sizes it.
 //
 // ## ADDITIONS
-// - `SliderThumbTooltip`, `SliderMarks`/`SliderMark` for the themed slider.
+// - `SliderThumbTooltip` (a thumb's value, shown as `SliderPopover` says), `SliderMarks`/`SliderMark`
+//   (marks along the track, `use_slider_marks`).
 //
 // =============================================================================
 
@@ -54,12 +58,12 @@ use crate::{
 struct SliderContext {
     orientation: Signal<Orientation>,
     is_disabled: Signal<bool>,
-    /// The thumbs' positions on the track, 0.0 to 1.0.
-    percents: Signal<Vec<f64>>,
+    /// The thumbs' positions on the track.
+    percents: Signal<Vec<Fraction>>,
     /// The first thumb's bounds, as `f64`.
     first_thumb_bounds: Signal<(f64, f64)>,
-    /// Where a value (as `f64`) is on the track, 0.0 to 1.0.
-    value_percent: Callback<f64, f64>,
+    /// Where a value (as `f64`) is on the track.
+    value_percent: Callback<f64, Fraction>,
     /// The values, formatted for an output.
     formatted: Signal<String>,
     track: StoredValue<(UseSliderTrackAttrs, Styles)>,
@@ -67,7 +71,7 @@ struct SliderContext {
     /// Creates thumb `index` (in the thumb's reactive owner).
     thumb: Arc<dyn Fn(ThumbOptions) -> (UseSliderThumbReturn, Signal<String>) + Send + Sync>,
     /// The range, step and values as `f64`, and a formatter, for marks.
-    marks: Arc<dyn Fn(SliderMarks) -> Signal<Vec<ComputedSliderMark>> + Send + Sync>,
+    marks: Arc<dyn Fn(SliderMarkPlacement) -> Signal<Vec<ComputedSliderMark>> + Send + Sync>,
 }
 
 /// A thumb's settings, without the slider's value type.
@@ -235,9 +239,9 @@ pub fn Slider<T: NumberValue>(
         value_percent: Callback::new(move |value: f64| {
             let (min, max) = (min_value.get().to_f64(), max_value.get().to_f64());
             if max == min {
-                0.0
+                Fraction::ZERO
             } else {
-                (value - min) / (max - min)
+                Fraction::new((value - min) / (max - min))
             }
         }),
         formatted: Signal::derive(move || state.formatted_values()),
@@ -331,10 +335,8 @@ pub fn SliderTrack(
     let Some(slider) = expect_slider() else {
         return children().into_any();
     };
-    let hover = use_hover(UseHoverInput {
-        is_disabled: slider.is_disabled,
-        ..UseHoverInput::default()
-    });
+    // Hovered also while disabled (react-aria-components).
+    let hover = use_hover(UseHoverInput::default());
     let (attrs, track_styles) = slider.track.get_value();
     let orientation = slider.orientation;
     view! {
@@ -381,10 +383,8 @@ pub fn SliderFill(
         value_percent,
         ..
     } = slider;
-    let hover = use_hover(UseHoverInput {
-        is_disabled,
-        ..UseHoverInput::default()
-    });
+    // Hovered also while disabled (react-aria-components).
+    let hover = use_hover(UseHoverInput::default());
     // In percent: (start, size).
     let span = Signal::derive(move || {
         let (min, max) = first_thumb_bounds.get();
@@ -396,8 +396,13 @@ pub fn SliderFill(
                 percents[0]
             } else {
                 value_percent.run(offset)
-            } * 100.0;
-            let end = percents.last().copied().unwrap_or(0.0) * 100.0;
+            }
+            .as_percent();
+            let end = percents
+                .last()
+                .copied()
+                .unwrap_or(Fraction::ZERO)
+                .as_percent();
             (start.min(end), (start.max(end) - start.min(end)).max(0.0))
         })
     });
@@ -485,6 +490,12 @@ pub fn SliderThumb(
     };
     // A `Label` inside the thumb names it (react-aria-components' `LabelContext` of the thumb).
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    // Hovered unless this thumb is disabled (react-aria-components' `useHover(props)`: the
+    // slider's `is_disabled` doesn't count).
+    let hover = use_hover(UseHoverInput {
+        is_disabled,
+        ..UseHoverInput::default()
+    });
     let (thumb, label) = (slider.thumb)(ThumbOptions {
         index,
         is_disabled,
@@ -508,10 +519,6 @@ pub fn SliderThumb(
         is_focused,
     } = thumb;
     let thumb_label = LabelContext::label(label_props).with_presence(label_presence);
-    let hover = use_hover(UseHoverInput {
-        is_disabled,
-        ..UseHoverInput::default()
-    });
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
     let is_focus_visible = focus_ring.is_focus_visible;
     let input_focus = (
@@ -553,10 +560,12 @@ pub fn SliderThumb(
 pub enum SliderPopover {
     #[default]
     Never,
-    When {
-        hovered: bool,
-        dragged: bool,
-    },
+    /// While the pointer is over the thumb.
+    OnHover,
+    /// While the thumb is dragged.
+    OnDrag,
+    /// While the pointer is over the thumb or it is dragged.
+    OnHoverOrDrag,
     Always,
 }
 
@@ -577,9 +586,9 @@ pub fn SliderThumbTooltip(
     };
     let visible = Signal::derive(move || match popover {
         SliderPopover::Never => false,
-        SliderPopover::When { hovered, dragged } => {
-            (hovered && thumb.is_hovered.get()) || (dragged && thumb.is_dragging.get())
-        }
+        SliderPopover::OnHover => thumb.is_hovered.get(),
+        SliderPopover::OnDrag => thumb.is_dragging.get(),
+        SliderPopover::OnHoverOrDrag => thumb.is_hovered.get() || thumb.is_dragging.get(),
         SliderPopover::Always => true,
     });
     // The input announces the value: the tooltip only shows it.
@@ -625,7 +634,7 @@ pub fn SliderOutput(
 /// Default class: `leptonic-SliderMarks`.
 #[component]
 pub fn SliderMarks<C, V>(
-    #[prop(into)] marks: SliderMarks,
+    #[prop(into)] marks: SliderMarkPlacement,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: C,
@@ -665,7 +674,7 @@ pub fn SliderMark(
         let mark = mark.clone();
         move || mark.is_in_range().then_some("true")
     };
-    let position = format!("{}%", mark.percentage * 100.0);
+    let position = format!("{}%", mark.percentage.as_percent());
     let bottom = position.clone();
     let styles = Styles::new()
         .add_unchecked("position", "absolute")

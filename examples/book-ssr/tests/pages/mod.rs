@@ -206,7 +206,7 @@ impl BookPage<'_> {
             .eventually_ok()
             .within(timeout)
             .polling_every(POLL_INTERVAL)
-            .giving_up_on(|_: &Report| true)
+            .giving_up_on_any_error()
             .matches(eq(true));
         async move {
             check.await;

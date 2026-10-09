@@ -1,4 +1,7 @@
-use leptonic::hooks::*;
+use leptonic::{
+    IntoAttrs,
+    hooks::focus::{UseFocusInput, UseFocusReturn, use_focus},
+};
 use leptos::prelude::*;
 
 #[component]

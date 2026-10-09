@@ -1,28 +1,29 @@
 //! Headless virtualization of collection atoms, and of plain lists.
 // Upstream: react-aria-components/src/Virtualizer.tsx @ 99e6102368
+// Upstream: react-aria/src/virtualizer/Virtualizer.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
-        IntoAttrs, UseFocusRingInput,
         collections::{Collection, Key, LayoutDelegate, Rect, use_collection},
-        use_focus_ring,
+        focus::{UseFocusRingInput, use_focus_ring},
         virtualizer::{
-            ItemSizeChange, Layout, LayoutInfo, ListLayout, ListLayoutOptions, ScrollAnchorEdge,
-            ScrollDirection, UseScrollViewInput, UseVirtualizerStateInput, VirtualizerState,
+            EndAnchor, ItemMeasurer, ItemSize, ItemSizeChange, Layout, LayoutInfo, ListLayout,
+            ListLayoutOptions, ScrollDirection, ScrollViewScroller, UseItemMeasurerInput,
+            UseScrollViewInput, UseVirtualizerStateInput, VirtualizerState, use_item_measurer,
             use_scroll_view, use_virtualizer_state,
         },
     },
-    utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
-    },
+    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -67,8 +68,8 @@ pub(crate) struct VirtualizedRoot {
     pub(crate) visible: Signal<Vec<LayoutInfo>>,
     /// The visible layout infos by key (rows look theirs up on every scroll frame).
     pub(crate) layout_infos: Memo<HashMap<Key, LayoutInfo>>,
-    pub(crate) update_item_size: Callback<ItemSizeChange>,
-    pub(crate) should_observe_item_size: bool,
+    /// Measures the rendered items.
+    pub(crate) measurer: ItemMeasurer,
     /// The wrappers of the rendered items (each with a token identifying the wrapper).
     pub(crate) rendered: StoredValue<HashMap<Key, (Arc<()>, CapturedElement)>>,
 }
@@ -90,8 +91,8 @@ impl VirtualizerRenderer {
 struct VirtualizedParts<L: Layout> {
     root: VirtualizedRoot,
     state: VirtualizerState<L>,
-    /// Scrolls the view to its end, as laid out then.
-    scroll_to_end: Callback<()>,
+    /// Scrolls the view (to its end, as laid out then).
+    scroller: ScrollViewScroller,
     /// The user scrolls the view itself (not the page, not `scroll_to`).
     is_user_scrolling: Signal<bool>,
 }
@@ -107,8 +108,8 @@ fn create_virtualized<L: Layout>(
         persisted_keys,
         element,
     } = input;
-    // The scroll view's `scroll_to`, created after the state.
-    let scroll_to = StoredValue::new(None::<Callback<Rect>>);
+    // The scroll view's scroller, created after the state.
+    let scroller = StoredValue::new(None::<ScrollViewScroller>);
     let state = use_virtualizer_state(UseVirtualizerStateInput {
         layout,
         collection,
@@ -116,8 +117,8 @@ fn create_virtualized<L: Layout>(
         layout_options,
         // The virtualizer moved the viewport (e.g. to keep an anchor in place).
         on_visible_rect_change: Callback::new(move |rect: Rect| {
-            if let Some(scroll_to) = scroll_to.get_value() {
-                scroll_to.run(rect);
+            if let Some(scroller) = scroller.get_value() {
+                scroller.scroll_to(rect);
             }
         }),
     });
@@ -131,7 +132,7 @@ fn create_virtualized<L: Layout>(
         scroll_direction: Signal::stored(ScrollDirection::Both),
         allows_window_scrolling: Signal::stored(true),
     });
-    scroll_to.set_value(Some(scroll_view.scroll_to));
+    scroller.set_value(Some(scroll_view.scroller));
     let visible = state.visible();
     let root = VirtualizedRoot {
         layout_delegate: StoredValue::new(state.layout_delegate()),
@@ -146,16 +147,18 @@ fn create_virtualized<L: Layout>(
                     .collect()
             })
         }),
-        update_item_size: Callback::new(move |change: ItemSizeChange| {
-            state.update_item_size(&change.key, change.size);
+        measurer: use_item_measurer(UseItemMeasurerInput {
+            update_item_size: Callback::new(move |change: ItemSizeChange| {
+                state.update_item_size(&change.key, change.size);
+            }),
+            should_observe_item_size,
         }),
-        should_observe_item_size,
         rendered: StoredValue::new(HashMap::new()),
     };
     VirtualizedParts {
         root,
         state,
-        scroll_to_end: scroll_view.scroll_to_end,
+        scroller: scroll_view.scroller,
         is_user_scrolling: scroll_view.is_user_scrolling,
     }
 }
@@ -200,6 +203,35 @@ pub fn Virtualizer<L: Layout + Clone>(
     crate::utils::scoped_context::scoped_view(move || provide_context(renderer), children)
 }
 
+/// The layout of a [`VirtualList`]: a vertical stack of rows.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct VirtualListOptions {
+    /// The rows' size. Default: estimated at 48px.
+    pub row_size: ItemSize,
+    /// The gap between rows.
+    pub gap: f64,
+    /// The padding around the rows.
+    pub padding: f64,
+    /// Within this distance (px) from the end, the list counts as being at its end (scrolling
+    /// back there anchors it again). At least 1px.
+    pub end_threshold: f64,
+}
+
+impl VirtualListOptions {
+    /// The list layout's options, anchored to the end or not.
+    fn layout_options(self, is_anchored_to_end: bool) -> ListLayoutOptions {
+        ListLayoutOptions {
+            row_size: self.row_size,
+            gap: self.gap,
+            padding: self.padding,
+            anchor_to_end: is_anchored_to_end.then_some(EndAnchor {
+                threshold: self.end_threshold,
+            }),
+            ..ListLayoutOptions::default()
+        }
+    }
+}
+
 /// A virtualized list of plain rows, e.g. a log: only the visible rows are rendered, positioned
 /// by a [`ListLayout`]. Unlike a virtualized `ListBox`, the list has no roles, focus or
 /// selection handling: rows are whatever `children` renders for an item, and their text stays
@@ -211,8 +243,7 @@ pub fn Virtualizer<L: Layout + Clone>(
 ///
 /// With `is_anchored_to_end`, the end stays in view while items are added (a log's "follow"):
 /// scrolling away from the end turns it off, scrolling back to the end (within
-/// `scroll_end_threshold` of the layout options) turns it on, and turning it on scrolls to the
-/// end.
+/// `end_threshold` of the layout options) turns it on, and turning it on scrolls to the end.
 ///
 /// Default class: `leptonic-VirtualList`.
 ///
@@ -220,7 +251,7 @@ pub fn Virtualizer<L: Layout + Clone>(
 /// <VirtualList
 ///     items=lines
 ///     key=|line: &LogLine| Key::from(line.id)
-///     layout_options=ListLayoutOptions { estimated_row_size: Some(20.0), ..ListLayoutOptions::default() }
+///     layout_options=VirtualListOptions { row_size: ItemSize::Estimated(20.0), ..VirtualListOptions::default() }
 ///     is_anchored_to_end=follow
 ///     set_anchored_to_end=set_follow
 ///     is_focusable=true
@@ -235,9 +266,9 @@ pub fn VirtualList<T, KF, R, IV>(
     #[prop(into)] items: Signal<Vec<T>>,
     /// The key of an item: unique and stable.
     key: KF,
-    /// The rows' sizes, gap and padding. Its `anchor_to` is replaced by `is_anchored_to_end`.
+    /// The rows' size, gap and padding, and the distance from the end that counts as the end.
     #[prop(into, optional)]
-    layout_options: Signal<ListLayoutOptions>,
+    layout_options: Signal<VirtualListOptions>,
     /// Re-measure rows whenever their content resizes (rows of estimated size are measured once
     /// rendered).
     #[prop(optional)]
@@ -299,17 +330,15 @@ where
     let VirtualizedParts {
         root,
         state,
-        scroll_to_end,
+        scroller,
         is_user_scrolling,
     } = create_virtualized(
-        ListLayout::new(layout_options.get_untracked()),
-        Signal::derive(move || {
-            let anchor_to = is_anchored.get().then_some(ScrollAnchorEdge::End);
-            Some(ListLayoutOptions {
-                anchor_to,
-                ..layout_options.get()
-            })
-        }),
+        ListLayout::new(
+            layout_options
+                .get_untracked()
+                .layout_options(is_anchored.get_untracked()),
+        ),
+        Signal::derive(move || Some(layout_options.get().layout_options(is_anchored.get()))),
         should_observe_item_size,
         VirtualizedRootInput {
             collection: collection.into(),
@@ -332,9 +361,7 @@ where
         })
     };
     let is_at_end = move || {
-        let threshold = layout_options
-            .with_untracked(|o| o.scroll_end_threshold)
-            .max(1.0);
+        let threshold = layout_options.with_untracked(|o| o.end_threshold).max(1.0);
         distance_from_end().is_none_or(|distance| distance <= threshold)
     };
     // The user scrolled the list: anchored when they stopped at the end. Scrolls of the page or an
@@ -363,7 +390,7 @@ where
         {
             // To the end as laid out when it scrolls (the next frame): the visible rectangle may
             // already be where the virtualizer moves the view, the view not yet there.
-            scroll_to_end.run(());
+            scroller.scroll_to_end();
         }
     });
 
@@ -640,17 +667,20 @@ fn VirtualizedItem(
             .with(|infos| infos.get(&key).cloned())
             .unwrap_or_else(|| LayoutInfo::new(NodeKind::Item, key.clone(), Rect::default()))
     });
-    let styles = use_virtualizer_item(UseVirtualizerItemInput {
+    let content = CapturedElement::new();
+    let item = use_virtualizer_item(UseVirtualizerItemInput {
         element,
+        content,
         layout_info: layout_info.into(),
         parent: Signal::stored(None),
-        update_item_size: root.update_item_size,
-        should_observe_item_size: root.should_observe_item_size,
-    })
-    .styles;
+        measurer: root.measurer,
+    });
+    let styles = item.styles;
     view! {
         <div role="presentation" {..element.attr()} style=move || styles.get()>
-            {children()}
+            <div role="presentation" {..content.attr()} style=item.content_styles>
+                {children()}
+            </div>
         </div>
     }
 }

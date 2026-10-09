@@ -1,12 +1,15 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use leptonic::{
-    atoms::tabs::{Tab, TabList, TabPanel, TabPanels, Tabs},
-    hooks::{
-        KeyboardActivation, Orientation,
-        collections::{Collection, Key},
+    I18nProvider, Locale, Orientation,
+    atoms::{
+        tabs::{Tab, TabList, TabPanel, TabPanels, Tabs},
+        tooltip::{Tooltip, TooltipTrigger},
     },
-    utils::i18n::{I18nProvider, Locale},
+    hooks::{
+        collections::{Collection, Key},
+        tabs::KeyboardActivation,
+    },
 };
 use leptos::prelude::*;
 
@@ -30,6 +33,12 @@ fn TestTabs(
     /// The selected key, bound.
     #[prop(optional)]
     selected: Option<RwSignal<Key>>,
+    /// Disables all tabs (`Tabs::is_disabled`).
+    #[prop(optional)]
+    is_disabled: bool,
+    /// Names the panels (`TabPanel::aria_label`: "Panel A", ...).
+    #[prop(optional)]
+    panel_labels: bool,
 ) -> impl IntoView {
     let collection = Memo::new(move |_| {
         Arc::new(Collection::build(|b| {
@@ -53,7 +62,11 @@ fn TestTabs(
     let panels = move || {
         TABS.map(|tab| {
             view! {
-                <TabPanel key=tab should_force_mount=should_force_mount>
+                <TabPanel
+                    key=tab
+                    should_force_mount=should_force_mount
+                    aria_label=panel_labels.then(|| format!("Panel {}", tab.to_uppercase()))
+                >
                     {format!("Panel {}", tab.to_uppercase())}
                 </TabPanel>
             }
@@ -70,7 +83,7 @@ fn TestTabs(
                 disabled_keys=Signal::stored(disabled_keys)
                 selected_key=selected
                 set_selected_key=selected
-                on_selection_change=on_selection_change
+                on_selected_key_change=on_selection_change
             >
                 <TabList aria_label=name>{tabs()}</TabList>
                 {panels()}
@@ -83,7 +96,8 @@ fn TestTabs(
                 orientation=orientation
                 keyboard_activation=keyboard_activation
                 disabled_keys=Signal::stored(disabled_keys)
-                on_selection_change=on_selection_change
+                is_disabled=is_disabled
+                on_selected_key_change=on_selection_change
             >
                 <TabList aria_label=name>{tabs()}</TabList>
                 {panels()}
@@ -119,7 +133,7 @@ fn DynamicTabs() -> impl IntoView {
             collection=collection
             selected_key=selected
             set_selected_key=selected
-            on_selection_change=move |_| changes.update(|c| *c += 1)
+            on_selected_key_change=move |_| changes.update(|c| *c += 1)
         >
             <TabList aria_label="Dynamic tabs">
                 <For each=move || 1..=count.get() key=|i| *i let:i>
@@ -219,13 +233,72 @@ fn AnimatedTabs() -> impl IntoView {
     }
 }
 
+/// Tabs "First", "Second" and "Third" with "Third" selected by default.
+#[component]
+fn DefaultSelectedTabs() -> impl IntoView {
+    let collection = Memo::new(|_| {
+        Arc::new(Collection::build(|b| {
+            b.item("first", "First");
+            b.item("second", "Second");
+            b.item("third", "Third");
+        }))
+    });
+    view! {
+        <button id="test-tabs-default-before">"Before"</button>
+        <Tabs collection=collection default_selected_key="third">
+            <TabList aria_label="default">
+                <Tab key="first">"First"</Tab>
+                <Tab key="second">"Second"</Tab>
+                <Tab key="third">"Third"</Tab>
+            </TabList>
+            <TabPanel key="first">"Panel First"</TabPanel>
+            <TabPanel key="second">"Panel Second"</TabPanel>
+            <TabPanel key="third">"Panel Third"</TabPanel>
+        </Tabs>
+    }
+}
+
+/// Tabs whose "Tooltip tab" is wrapped in a `TooltipTrigger` (react-aria-components' "supports
+/// tooltips"), and whose panels hold an input ("Input panel") or only a disabled input
+/// ("Disabled input panel").
+#[component]
+fn TooltipAndInputTabs() -> impl IntoView {
+    let collection = Memo::new(|_| {
+        Arc::new(Collection::build(|b| {
+            b.item("plain", "Plain");
+            b.item("tooltip", "Tooltip tab");
+        }))
+    });
+    view! {
+        <Tabs collection=collection>
+            <TabList aria_label="Tooltip and inputs">
+                <Tab key="plain">"Plain"</Tab>
+                <TooltipTrigger delay=Duration::from_millis(100) close_delay=Duration::from_millis(100)>
+                    <Tab key="tooltip">"Tooltip tab"</Tab>
+                    <Tooltip>"Test"</Tooltip>
+                </TooltipTrigger>
+            </TabList>
+            <TabPanel key="plain">
+                <input aria-label="Input panel" />
+            </TabPanel>
+            <TabPanel key="tooltip">
+                <input aria-label="Disabled input panel" disabled=true />
+            </TabPanel>
+        </Tabs>
+    }
+}
+
 /// Tabs in different configurations: basic, a disabled tab, a disabled first tab, all tabs
 /// disabled, vertical, manual activation, vertical right-to-left, force-mounted panels, tabs
 /// disabled by `Tab::is_disabled`, a bound selected key (`#test-tabs-controlled-select-c`
-/// selects C from outside; B is disabled), dynamic, nested and animated tabs.
+/// selects C from outside; B is disabled), dynamic, nested and animated tabs; all tabs disabled by
+/// `Tabs::is_disabled` ("all-tabs-disabled"), a third tab selected by default ("default"),
+/// named panels ("labelled-panels"), right-to-left horizontal ("rtl"),
+/// and a tab with a tooltip next to panels with inputs.
 #[component]
 pub fn PageAtomTabs() -> impl IntoView {
     let rtl: Locale = "ar-AE".parse().expect("a valid locale");
+    let rtl_horizontal: Locale = "ar-AE".parse().expect("a valid locale");
     let controlled = RwSignal::new(Key::from("b"));
     view! {
         <div id="test-page-atom-tabs">
@@ -243,6 +316,12 @@ pub fn PageAtomTabs() -> impl IntoView {
             <TestTabs name="tab-disabled" tab_disabled=vec!["b"] />
             <TestTabs name="tab-first-disabled" tab_disabled=vec!["a"] />
             <TestTabs name="controlled" disabled_keys=vec!["b"] selected=controlled />
+            <TestTabs name="all-tabs-disabled" is_disabled=true />
+            <DefaultSelectedTabs />
+            <TestTabs name="labelled-panels" panel_labels=true />
+            <I18nProvider locale=rtl_horizontal>
+                <TestTabs name="rtl" />
+            </I18nProvider>
             <button id="test-tabs-controlled-select-c" on:click=move |_| controlled.set(Key::from("c"))>
                 "Select C"
             </button>
@@ -253,6 +332,7 @@ pub fn PageAtomTabs() -> impl IntoView {
             <DynamicTabs />
             <NestedTabs />
             <AnimatedTabs />
+            <TooltipAndInputTabs />
         </div>
     }
 }

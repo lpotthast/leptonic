@@ -1,9 +1,12 @@
 // Upstream: react-stately/src/table/useTableColumnResizeState.ts @ 99e6102368
+// Upstream: react-aria/test/table/tableResizingTests.tsx @ 99e6102368
+// Upstream: react-stately/test/table/TableUtils.test.js @ 99e6102368
 use std::{collections::HashMap, sync::Arc};
 
 use leptos::prelude::*;
 
 use super::{
+    table_collection::ColumnKind,
     table_column_layout::{
         ColumnWidths, DEFAULT_MIN_WIDTH, DefaultMinWidth, DefaultWidth, build_column_widths,
         initial_width, resize_column_width,
@@ -68,10 +71,10 @@ impl TableColumnResizeState {
     /// their sizes.
     pub fn update_resized_columns(&self, column: &Key, width: f64) -> HashMap<Key, ColumnSize> {
         let new_sizes = untrack(|| {
-            self.table_state.table.with(|table| {
+            self.table_state.columns.with(|columns| {
                 self.column_widths.with(|current| {
                     self.sizes
-                        .with(|sizes| resize_column_width(table, current, sizes, column, width))
+                        .with(|sizes| resize_column_width(columns, current, sizes, column, width))
                 })
             })
         });
@@ -124,14 +127,17 @@ pub fn use_table_column_resize_state(
 
     let (resizing_column, set_resizing_column) = signal(None);
     let (resized, set_resized) = signal(HashMap::<Key, ColumnSize>::new());
-    let table = table_state.table;
+    // The columns only: row changes don't lay the columns out again.
+    let columns = table_state.columns;
 
     let sizes = {
         let default_width = default_width.clone();
         Memo::new(move |_| {
-            table.with(|t| {
+            columns.with(|columns| {
                 resized.with(|resized| {
-                    t.columns()
+                    columns
+                        .iter()
+                        .filter(|column| column.kind != ColumnKind::Group)
                         .map(|column| {
                             let size = resized
                                 .get(&column.key)
@@ -146,9 +152,15 @@ pub fn use_table_column_resize_state(
     };
     let column_widths = Memo::new(move |_| {
         let table_width = table_width.get();
-        table.with(|t| {
+        columns.with(|columns| {
             sizes.with(|sizes| {
-                build_column_widths(table_width, t, sizes, &*default_width, &*default_min_width)
+                build_column_widths(
+                    table_width,
+                    columns,
+                    sizes,
+                    &*default_width,
+                    &*default_min_width,
+                )
             })
         })
     });
@@ -169,9 +181,9 @@ mod tests {
 
     use super::*;
     use crate::hooks::{
-        GridFocusMode, TableCollection, UseTableStateInput,
         collections::{DisabledBehavior, SelectionOptions},
-        use_table_state,
+        grid::GridFocusMode,
+        table::{TableCollection, UseTableStateInput, use_table_state},
     };
 
     fn widths(state: &TableColumnResizeState, keys: &[&str]) -> Vec<f64> {
@@ -182,7 +194,7 @@ mod tests {
 
     #[test]
     fn keeps_resized_widths_when_columns_change() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let with_type = RwSignal::new(true);
             let table = Memo::new(move |_| {
                 let with_type = with_type.get();
@@ -196,6 +208,7 @@ mod tests {
                 }))
             });
             let table_state = use_table_state(UseTableStateInput {
+                show_selection_checkboxes: Signal::stored(false),
                 tree: None,
                 table,
                 selection: SelectionOptions {
@@ -234,7 +247,7 @@ mod tests {
 
     #[test]
     fn clamps_to_the_column_bounds() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let table = Memo::new(move |_| {
                 Arc::new(TableCollection::build(|t| {
                     t.column("name", "Name");
@@ -242,6 +255,7 @@ mod tests {
                 }))
             });
             let table_state = use_table_state(UseTableStateInput {
+                show_selection_checkboxes: Signal::stored(false),
                 tree: None,
                 table,
                 selection: SelectionOptions {

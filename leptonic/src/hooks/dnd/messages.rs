@@ -1,3 +1,7 @@
+// Upstream: react-aria/src/dnd/DragManager.ts @ 99e6102368
+// Upstream: react-aria/src/dnd/useDrag.ts @ 99e6102368
+// Upstream: react-aria/src/dnd/useDraggableItem.ts @ 99e6102368
+// Upstream: react-aria/src/dnd/useVirtualDrop.ts @ 99e6102368
 //! The texts drag and drop shows and announces, by drag modality (react-aria picks the message
 //! keys the same way).
 
@@ -55,5 +59,28 @@ pub(crate) fn drop_description(strings: &DndStrings, modality: DragModality) -> 
         DragModality::Keyboard => strings.drop_description_keyboard(),
         DragModality::Touch => strings.drop_description_touch(),
         DragModality::Virtual => strings.drop_description_virtual(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::utils::{i18n::Locale, intl_strings::LocalizedStrings};
+
+    /// Touch drags (a coarse primary pointer) have descriptions and announcements of their own
+    /// (react-aria's "should use touch specific aria descriptions when available").
+    #[test]
+    fn touch_drags_have_their_own_texts() {
+        let locale: Locale = "en-US".parse().expect("a valid locale");
+        let strings = DndStrings::for_locale(locale);
+        let touch = DragModality::Touch;
+        assert_that!(drag_description(&strings, touch))
+            .is_equal_to("Double tap to start dragging.");
+        assert_that!(end_drag(&strings, touch)).is_equal_to("Dragging. Double tap to cancel drag.");
+        assert_that!(drag_started(&strings, touch))
+            .is_equal_to("Started dragging. Navigate to a drop target, then double tap to drop.");
+        assert_that!(drop_description(&strings, touch)).is_equal_to("Double tap to drop.");
     }
 }

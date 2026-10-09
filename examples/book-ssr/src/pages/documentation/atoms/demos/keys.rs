@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude::Keys, utils::key::KeyboardKey};
+use leptonic::{KeyboardKey, atoms::kbd::Keys};
 use leptos::prelude::*;
 
 #[component]

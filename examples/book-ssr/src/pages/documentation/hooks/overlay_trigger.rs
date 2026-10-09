@@ -44,7 +44,20 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                button::{UseButtonInput, UseButtonReturn, use_button},
+                                overlay::{
+                                    OverlayTriggerType,
+                                    UseOverlayInput,
+                                    UseOverlayReturn,
+                                    UseOverlayTriggerInput,
+                                    UseOverlayTriggerReturn,
+                                    use_overlay,
+                                    use_overlay_trigger,
+                                },
+                            },
+                        };
 
                         let (is_open, set_is_open) = signal(false);
                         let UseOverlayReturn { props: overlay_props, id, .. } = use_overlay(UseOverlayInput {

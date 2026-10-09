@@ -1,14 +1,24 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::{checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
+    IntoAttrs,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        focus_scope::FocusScope,
+    },
     hooks::{
-        IntoAttrs, ListBoxData, SelectMode, UseHiddenSelectReturn, UseListBoxInput,
-        UseListBoxReturn, UseOptionInput, UseOptionReturn, UseOverlayInput, UseSelectInput,
-        UseSelectReturn, UseSelectStateInput, ValidationBehavior,
-        collections::{CloseOnSelect, Key, use_list_collection},
-        use_button, use_hidden_select, use_listbox, use_option, use_overlay, use_select,
-        use_select_state,
+        button::use_button,
+        collections::{CloseOnSelect, Key, UseListCollectionInput, use_list_collection},
+        form::ValidationBehavior,
+        listbox::{
+            ListBoxData, UseListBoxInput, UseListBoxReturn, UseOptionInput, UseOptionReturn,
+            use_listbox, use_option,
+        },
+        overlay::{UseOverlayInput, use_overlay},
+        select::{
+            SelectMode, UseHiddenSelectReturn, UseSelectInput, UseSelectReturn,
+            UseSelectStateInput, use_hidden_select, use_select, use_select_state,
+        },
     },
 };
 use leptos::prelude::*;
@@ -22,11 +32,11 @@ const FRUITS: [(&str, &str); 4] = [
 
 #[component]
 pub fn SelectDemo() -> impl IntoView {
-    let collection = use_list_collection(
-        Signal::stored(FRUITS.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, label)| (*label).to_owned(),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FRUITS.to_vec()),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, label)| (*label).to_owned(),
+    });
     let state = use_select_state(UseSelectStateInput {
         collection,
         selection_mode: SelectMode::Single,
@@ -167,7 +177,10 @@ fn FruitOption(list: ListBoxData, key: &'static str, label: &'static str) -> imp
 
 /// A visually hidden native `<select>` that takes part in forms and autofill.
 #[component]
-fn FruitHiddenSelect(hidden_select: leptonic::hooks::UseHiddenSelectInput) -> impl IntoView {
+fn FruitHiddenSelect(
+    hidden_select: leptonic::hooks::select::UseHiddenSelectInput,
+) -> impl IntoView {
+    let state = hidden_select.state;
     let UseHiddenSelectReturn {
         container_props,
         select_props,
@@ -180,12 +193,19 @@ fn FruitHiddenSelect(hidden_select: leptonic::hooks::UseHiddenSelectInput) -> im
             <select {..select_props.into_attrs()}>
                 <For
                     each=move || options.get()
-                    key=|option| (option.value.clone(), option.is_selected)
+                    key=|option| option.key.clone()
                     let:option
                 >
-                    <option value=option.value selected=option.is_selected>
-                        {option.text}
-                    </option>
+                    {
+                        let value = option.value.clone();
+                        let text = option.text.clone();
+                        let selected = move || option.is_selected(&state);
+                        view! {
+                            <option value=value selected=selected.clone() prop:selected=selected>
+                                {text}
+                            </option>
+                        }
+                    }
                 </For>
             </select>
         </div>

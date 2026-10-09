@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/dnd/useDroppableItem.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
 use std::rc::Rc;
 
 use leptos::{
@@ -10,14 +11,9 @@ use super::{
     drag_manager::{self, DroppableItemOptions, use_drag_session},
     types::{DragTypes, DropOperation, DropTarget},
     use_droppable_collection::DroppableCollectionData,
-    use_droppable_collection_state::DropOperationEvent,
     use_virtual_drop::use_virtual_drop,
-    utils::{dragging_keys, is_internal_drop_operation},
 };
-use crate::{
-    hooks::IntoAttrs,
-    utils::{CapturedElement, aria::AriaHidden},
-};
+use crate::{CapturedElement, IntoAttrs, utils::aria::AriaHidden};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -92,17 +88,11 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
 
     // Also called by the drag manager, which may outlive this item's signals briefly.
     let operation = move |types: &DragTypes, allowed: &[DropOperation]| {
-        let Some(target) = target.try_get() else {
+        let Some(target) = target.try_get_untracked() else {
             return DropOperation::Cancel;
         };
         let collection_element = collection_element.get_untracked().map(|e| (*e).clone());
-        state.get_drop_operation(&DropOperationEvent {
-            target,
-            types: types.clone(),
-            allowed_operations: allowed.to_vec(),
-            is_internal: is_internal_drop_operation(collection_element.as_ref()),
-            dragging_keys: dragging_keys(),
-        })
+        state.drop_operation_at(collection_element.as_ref(), &target, types, allowed)
     };
 
     let registration: StoredValue<Option<u64>> = StoredValue::new(None);
@@ -128,11 +118,12 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
     on_cleanup(unregister);
 
     let session = use_drag_session();
-    let is_valid_drop_target = Signal::derive(move || {
+    // Follows the drag session and the item's target (the operation itself is a query).
+    let is_valid_drop_target = Memo::new(move |_| {
+        target.track();
         session.with(|s| {
             s.as_ref().is_some_and(|s| {
-                operation(&DragTypes::of_items(&s.items), &s.allowed_drop_operations)
-                    != DropOperation::Cancel
+                operation(&s.types, &s.allowed_drop_operations) != DropOperation::Cancel
             })
         })
     });

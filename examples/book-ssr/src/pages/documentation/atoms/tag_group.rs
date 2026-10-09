@@ -43,12 +43,16 @@ pub fn PageAtomTagGroup() -> impl IntoView {
 
                         use leptonic::{
                             atoms::{field::Label, tag_group::{TagGroup, TagItems, TagList, TagRemoveButton}},
-                            hooks::collections::{Key, use_list_collection},
+                            hooks::collections::{Key, UseListCollectionInput, use_list_collection},
                         };
                         use leptos::prelude::*;
 
                         let tags = RwSignal::new(vec!["News", "Travel", "Gaming"]);
-                        let collection = use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+                        let collection = use_list_collection(UseListCollectionInput {
+                            items: tags.into(),
+                            key: |tag| Key::from(*tag),
+                            text_value: |tag| (*tag).to_owned(),
+                        });
 
                         view! {
                             <TagGroup
@@ -93,9 +97,9 @@ pub fn PageAtomTagGroup() -> impl IntoView {
                             "How pointer presses change the selection: "<Code inline=true>"Toggle"</Code>" the tag, or "
                             <Code inline=true>"Replace"</Code>" the selection with it."
                         </ApiRow>
-                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="empty">"The initially selected tags."</ApiRow>
+                        <ApiRow name="default_selection" ty="Selection" default="empty">"The initially selected tags."</ApiRow>
                         <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                            "The selection (controlled), replacing "<Code inline=true>"default_selection"</Code>": a value or any signal."
                         </ApiRow>
                         <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
                             "Receives the new selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>
@@ -107,7 +111,7 @@ pub fn PageAtomTagGroup() -> impl IntoView {
                             "Whether disabled tags can\u{2019}t be focused or used at all ("<Code inline=true>"All"</Code>
                             "), or only not selected ("<Code inline=true>"Selection"</Code>")."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Whether the last selected tag can\u{2019}t be deselected."</ApiRow>
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Whether the last selected tag can\u{2019}t be deselected."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names a group without a visible "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
                             "Further labelling and describing elements."

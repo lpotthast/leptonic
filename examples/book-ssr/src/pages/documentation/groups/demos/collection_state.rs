@@ -1,14 +1,11 @@
 use leptonic::{
-    hooks::{
-        IntoAttrs, Key, ListState, Node, Orientation, SelectionMode,
-        collections::{
-            CollectionOptions, LinkBehavior, ListLayout, Selection, SelectionOptions,
-            UseListStateInput, UseSelectableItemInput, UseSelectableItemReturn,
-            UseSelectableListInput, use_selectable_item, use_selectable_list,
-        },
-        use_collection, use_list_state,
+    CapturedElement, IntoAttrs, Orientation,
+    hooks::collections::{
+        CollectionOptions, Key, LinkBehavior, ListLayout, ListState, Node, Selection,
+        SelectionMode, SelectionOptions, UseListStateInput, UseSelectableItemInput,
+        UseSelectableItemReturn, UseSelectableListInput, use_collection, use_list_state,
+        use_selectable_item, use_selectable_list,
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -36,7 +33,7 @@ pub fn CollectionStateDemo() -> impl IntoView {
     let list = use_selectable_list(UseSelectableListInput {
         state,
         element: CapturedElement::new(),
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
         layout_delegate: None,
         keyboard_delegate: None,
@@ -98,7 +95,7 @@ fn FruitItem(state: ListState, collection_id: String, node: Node) -> impl IntoVi
         allows_different_press_origin: false,
         on_action: Signal::stored(None),
         on_context_menu: None,
-        link_behavior: LinkBehavior::default(),
+        link_behavior: Signal::stored(LinkBehavior::default()),
         focus: None,
         should_use_virtual_focus: false,
     });

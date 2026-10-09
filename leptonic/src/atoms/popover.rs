@@ -1,22 +1,35 @@
 // Upstream: react-aria-components/src/Popover.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Popover.test.js @ 99e6102368
 use leptos::{context::Provider, either::Either, portal::Portal, prelude::*};
+use leptos_classes::Classes;
+use send_wrapper::SendWrapper;
 
 use super::{
     dialog::DialogTriggerContext, dismiss_button::DismissButton, focus_scope::FocusScope,
     overlay_arrow::OverlayArrowContext, press::ClearTriggerContexts,
 };
 use crate::{
-    Out,
+    CapturedElement, Out, PropsWithStyles,
     hooks::{
-        OverlayFocusContain, OverlayState, Placement, PlacementAxis, PopoverModality,
-        PropsWithStyles, UseEnterAnimationInput, UseExitAnimationInput, UseOverlayArrowProps,
-        UsePopoverInput, UsePopoverProps, UsePopoverReturn, use_enter_animation,
-        use_exit_animation, use_popover,
+        animation::{
+            UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
+            use_enter_animation, use_exit_animation,
+        },
+        overlay::{
+            OverlayFocusContain, OverlayPositionOptions, OverlayState, Placement, PlacementAxis,
+            PopoverModality, Rect, UseOverlayArrowProps, UsePopoverInput, UsePopoverProps,
+            UsePopoverReturn, use_popover,
+        },
     },
     utils::{
-        CapturedElement, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, focus::focus_safely, i18n::use_direction,
-        locale::WritingDirection, point::Point, shadow_dom::get_active_element, styles::Styles,
+        data_attributes::flag,
+        default_class::with_default_class,
+        focus::focus_safely,
+        i18n::{WritingDirection, use_direction},
+        point::Point,
+        scoped_context::{ClearContexts, scoped_view},
+        shadow_dom::get_active_element,
+        styles::Styles,
     },
 };
 
@@ -103,6 +116,24 @@ pub fn Popover(
     /// The minimum distance between an `OverlayArrow` and the popover's edges.
     #[prop(into, optional)]
     arrow_boundary_offset: Signal<f64>,
+    /// The element the popover must stay within. Default: the document body.
+    #[prop(optional)]
+    boundary: Option<CapturedElement>,
+    /// Whether the position follows changes (resizes, ...).
+    #[prop(into, default = Signal::stored(true))]
+    should_update_position: Signal<bool>,
+    /// Replaces the trigger's bounding rectangle (viewport coordinates), e.g. a point. Default: the
+    /// trigger's (or the point a context menu opened at).
+    #[prop(into, optional)]
+    target_rect: Signal<Option<Rect>>,
+    /// Called with the popover element when it starts entering (e.g. to start a Web Animation,
+    /// which the entry waits for like for CSS animations).
+    #[prop(into, optional)]
+    on_enter: Option<Callback<SendWrapper<web_sys::Element>>>,
+    /// Called with the popover element when it starts exiting; it stays rendered until the
+    /// animations started then finished.
+    #[prop(into, optional)]
+    on_exit: Option<Callback<SendWrapper<web_sys::Element>>>,
     /// Whether the popover takes over the page while open. Default: modal; non-modal for a
     /// submenu.
     #[prop(optional, into)]
@@ -110,7 +141,7 @@ pub fn Popover(
     #[prop(into, optional)] is_keyboard_dismiss_disabled: Signal<bool>,
     /// Which outside interactions close the popover: `true` closes.
     #[prop(optional)]
-    should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
+    should_close_on_interact_outside: Option<crate::hooks::overlay::InteractOutsideFilter>,
     /// Names the popover when it is a dialog itself.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -126,9 +157,10 @@ pub fn Popover(
     let context = use_context::<DialogTriggerContext>();
     let state =
         super::dialog::overlay_open_state(is_open, set_open, default_open, on_open_change, context);
-    let trigger = trigger
-        .or(context.map(|ctx| ctx.trigger))
-        .expect("a <Popover> needs a `trigger` or a surrounding <DialogTrigger>");
+    let Some(trigger) = trigger.or(context.map(|ctx| ctx.trigger)) else {
+        crate::utils::dev_warn!("A <Popover> needs a `trigger` or a surrounding <DialogTrigger>.");
+        return ().into_any();
+    };
     // A submenu's popover belongs to the group of its root popover.
     let submenu = use_context::<Option<SubmenuPopoverContext>>().flatten();
     let group = match (submenu, use_context::<PopoverGroupContext>()) {
@@ -164,22 +196,30 @@ pub fn Popover(
         ..
     } = use_popover(UsePopoverInput {
         trigger,
-        placement,
-        offset,
-        cross_offset,
-        container_padding,
-        should_flip,
-        max_height,
-        arrow_boundary_offset,
+        position: OverlayPositionOptions {
+            placement,
+            offset,
+            cross_offset,
+            container_padding,
+            should_flip,
+            max_height,
+            arrow_boundary_offset,
+            boundary,
+            should_update_position,
+            arrow_size: Signal::stored(None),
+        },
+        target_rect,
+        // A menu's: keeps the focused item in place (react-aria-components' `scrollRef`).
+        scroll: submenu
+            .is_none()
+            .then(|| defaults.and_then(|defaults| defaults.scroll))
+            .flatten(),
         modality,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
         group: Some(group.element()),
         is_submenu: submenu.is_some(),
         state,
-        arrow_size: Signal::stored(None),
-        boundary: None,
-        target_rect: Signal::stored(None),
     });
     // The trigger's `aria-controls`.
     if let Some(context) = context {
@@ -199,6 +239,11 @@ pub fn Popover(
                 (None, Some(_)) => "MenuTrigger",
                 (None, None) => "DialogTrigger",
             }),
+            on_enter,
+            on_exit,
+            width_with: None,
+            clear_contexts: defaults
+                .map_or_else(ClearContexts::default, |defaults| defaults.clear_contexts),
         },
         modality,
         CapturedElement::new(),
@@ -208,20 +253,21 @@ pub fn Popover(
             aria_labelledby: move || {
                 aria_labelledby
                     .clone()
-                    .or_else(|| context.and_then(|ctx| ctx.ensure_trigger_id()))
+                    .or_else(|| context.map(|ctx| ctx.trigger_id.get()))
             },
         },
         classes,
         styles,
         children,
     )
+    .into_any()
 }
 
 /// What a `SubmenuTrigger` tells the `Popover` of its submenu (react-aria-components' popover
 /// context values for submenus).
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SubmenuPopoverContext {
-    pub should_close_on_interact_outside: StoredValue<crate::hooks::InteractOutsideFilter>,
+    pub should_close_on_interact_outside: StoredValue<crate::hooks::overlay::InteractOutsideFilter>,
     /// The trigger item, naming the popover if it is a dialog.
     pub aria_labelledby: StoredValue<String>,
 }
@@ -232,6 +278,10 @@ pub(crate) struct SubmenuPopoverContext {
 pub(crate) struct PopoverDefaults {
     pub placement: Placement,
     pub offset: f64,
+    /// The menu, whose focused item keeps its place when the popover moves.
+    pub scroll: Option<CapturedElement>,
+    /// The contexts the popover's content doesn't see (react-aria-components' `clearContexts`).
+    pub clear_contexts: ClearContexts,
 }
 
 /// The container of a root popover, which also holds the popovers of its submenus
@@ -274,6 +324,15 @@ pub(crate) struct PopoverParts {
     /// What opened the popover, as `data-trigger` (react-aria-components' component names:
     /// `MenuTrigger`, `SubmenuTrigger`, `DialogTrigger`, `Select`, `ComboBox`).
     pub trigger_name: Option<&'static str>,
+    /// Called with the popover element when it starts entering.
+    pub on_enter: Option<Callback<SendWrapper<web_sys::Element>>>,
+    /// Called with the popover element when it starts exiting.
+    pub on_exit: Option<Callback<SendWrapper<web_sys::Element>>>,
+    /// Another element `--trigger-width` spans together with the trigger (a combo box's button,
+    /// react-aria-components: the input and the button).
+    pub width_with: Option<CapturedElement>,
+    /// The contexts the popover's content doesn't see (the parts of the atom it belongs to).
+    pub clear_contexts: ClearContexts,
 }
 
 /// Renders a popover (the `Popover` atom, and the select's and combo box's popovers): in a portal
@@ -302,6 +361,10 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
         trigger_anchor_point,
         trigger,
         trigger_name,
+        on_enter,
+        on_exit,
+        width_with,
+        clear_contexts,
     } = parts;
     // The trigger's width, measured per opening (see `measure_trigger_width`).
     let trigger_width = RwSignal::new(None::<f64>);
@@ -350,7 +413,9 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     // into it. Hovering a submenu trigger keeps focus on the trigger.
     Effect::new(move |_| {
         if !is_dialog.get()
-            || (is_submenu && crate::hooks::get_modality() == crate::hooks::Modality::Pointer)
+            || (is_submenu
+                && crate::hooks::focus::get_modality()
+                    == Some(crate::hooks::focus::Modality::Pointer))
         {
             return;
         }
@@ -372,51 +437,57 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     let is_exiting = use_exit_animation(UseExitAnimationInput {
         element: capture,
         is_open,
-        on_exit: None,
+        on_exit,
     })
     .is_exiting;
 
     // The popover, in a focus scope (containing focus while `contain`). `entering` tracks this
-    // opening's element.
-    let popover =
-        move |contain: Signal<bool>, entering: CapturedElement, is_entering: Signal<bool>| {
-            view! {
-                <FocusScope contain=contain restore_focus=true>
-                    <div
-                        {..attrs.get_value()}
-                        {..capture.attr().chain(entering.attr())}
-                        data-entering=flag(is_entering)
-                        data-exiting=flag(is_exiting)
-                        class=classes.get_value()
-                        style=styles.get_value()
-                        data-placement=move || placement.get().map(PlacementAxis::as_str)
-                        data-trigger=trigger_name
-                        // Portaled out of the locale's subtree (react-aria-components sets it too).
-                        dir=move || match direction.get() {
-                            WritingDirection::Ltr => "ltr",
-                            WritingDirection::Rtl => "rtl",
-                        }
-                        role=move || is_dialog.get().then_some("dialog")
-                        tabindex=move || is_dialog.get().then_some(-1)
-                        aria-label=move || is_dialog.get().then(|| aria_label.get()).flatten()
-                        aria-labelledby=move || {
-                            is_dialog.get().then(|| dialog_labelledby.get()).flatten()
-                        }
-                    >
-                        // Pressing in the popover must not toggle it through the trigger's responder.
-                        <ClearTriggerContexts>
-                            <Provider value=arrow_context.get_value()>
-                                {modality
-                                    .is_modal()
-                                    .then(|| view! { <DismissButton on_dismiss=close /> })}
-                                {(children.get_value())()}
-                                <DismissButton on_dismiss=close />
-                            </Provider>
-                        </ClearTriggerContexts>
-                    </div>
-                </FocusScope>
-            }
-        };
+    // opening's element, `hiding` hides it until placed.
+    let popover = move |contain: Signal<bool>,
+                        entering: CapturedElement,
+                        is_entering: Signal<bool>,
+                        hiding: Styles| {
+        view! {
+            <FocusScope contain=contain restore_focus=true>
+                <div
+                    {..attrs.get_value()}
+                    {..capture.attr().chain(entering.attr())}
+                    data-entering=flag(is_entering)
+                    data-exiting=flag(is_exiting)
+                    class=classes.get_value()
+                    // The only writer of the popover's `style` (lessons.md).
+                    style=hiding.merge(styles.get_value())
+                    data-placement=move || placement.get().map(PlacementAxis::as_str)
+                    data-trigger=trigger_name
+                    // Portaled out of the locale's subtree (react-aria-components sets it too).
+                    dir=move || match direction.get() {
+                        WritingDirection::Ltr => "ltr",
+                        WritingDirection::Rtl => "rtl",
+                    }
+                    role=move || is_dialog.get().then_some("dialog")
+                    tabindex=move || is_dialog.get().then_some(-1)
+                    aria-label=move || is_dialog.get().then(|| aria_label.get()).flatten()
+                    aria-labelledby=move || {
+                        is_dialog.get().then(|| dialog_labelledby.get()).flatten()
+                    }
+                >
+                    // Pressing in the popover must not toggle it through the trigger's responder.
+                    <ClearTriggerContexts>
+                        <Provider value=arrow_context.get_value()>
+                            {modality
+                                .is_modal()
+                                .then(|| view! { <DismissButton on_dismiss=close /> })}
+                            {scoped_view(
+                                move || clear_contexts.clear(),
+                                move || (children.get_value())(),
+                            )}
+                            <DismissButton on_dismiss=close />
+                        </Provider>
+                    </ClearTriggerContexts>
+                </div>
+            </FocusScope>
+        }
+    };
     // A modal popover's underlay catches interaction with the page.
     let underlay = move || {
         move || {
@@ -426,64 +497,80 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     };
 
     view! {
-            // No portal container while closed: a modal would make it inert.
-            <Show when=move || is_open.get() || is_exiting.get()>
-                {
-                    // Entering once the placement is known (react-aria-components).
-                    let entering = CapturedElement::new();
-                    let is_entering = use_enter_animation(UseEnterAnimationInput {
+        // No portal container while closed: a modal would make it inert.
+        <Show when=move || is_open.get() || is_exiting.get()>
+            {
+                // Entering once the placement is known (react-aria-components).
+                let entering = CapturedElement::new();
+                let UseEnterAnimationReturn { is_entering, styles: hiding } =
+                    use_enter_animation(UseEnterAnimationInput {
                         is_ready: Signal::derive(move || placement.get().is_some() && is_open.get()),
                         element: entering,
-    on_enter: None
-                    })
-                    .is_entering;
-                    measure_trigger_width(trigger, trigger_width);
-                    // A non-modal popover contains focus once a dialog is inside (per opening).
-                    let overlay = OverlayFocusContain::new();
-                    let contain = Signal::derive(move || {
-                        // Not while exiting: the page is usable again.
-                        (modality.is_modal() || is_dialog.get() || overlay.contain().get())
-                            && !is_exiting.get()
+                        on_enter,
                     });
-                    match group {
-                        // A root popover renders the container its submenus' popovers mount into.
-                        PopoverGroup::Root(container) => Either::Left(view! {
-                            <Portal>
+                let hiding = StoredValue::new(hiding);
+                measure_trigger_width(trigger, width_with, trigger_width);
+                // A non-modal popover contains focus once a dialog is inside (per opening).
+                let overlay = OverlayFocusContain::new();
+                let contain = Signal::derive(move || {
+                    // Not while exiting: the page is usable again.
+                    (modality.is_modal() || is_dialog.get() || overlay.contain().get())
+                        && !is_exiting.get()
+                });
+                match group {
+                    // A root popover renders the container its submenus' popovers mount into.
+                    PopoverGroup::Root(container) => Either::Left(view! {
+                        <Portal>
+                            <Provider value=overlay>
+                                {underlay()}
+                                <div style="display: contents" {..container.attr()}>
+                                    <Provider value=PopoverGroupContext(container)>
+                                        {popover(contain, entering, is_entering, hiding.get_value())}
+                                    </Provider>
+                                </div>
+                            </Provider>
+                        </Portal>
+                    }),
+                    PopoverGroup::Sub(root) => {
+                        let mount = root.get_untracked().map(|root| (*root).clone());
+                        Either::Right(view! {
+                            <Portal nostrip:mount=mount.clone()>
                                 <Provider value=overlay>
                                     {underlay()}
-                                    <div style="display: contents" {..container.attr()}>
-                                        <Provider value=PopoverGroupContext(container)>
-                                            {popover(contain, entering, is_entering)}
-                                        </Provider>
-                                    </div>
+                                    {popover(contain, entering, is_entering, hiding.get_value())}
                                 </Provider>
                             </Portal>
-                        }),
-                        PopoverGroup::Sub(root) => Either::Right(view! {
-                            <Portal nostrip:mount=root.get_untracked().map(|root| (*root).clone())>
-                                <Provider value=overlay>
-                                    {underlay()}
-                                    {popover(contain, entering, is_entering)}
-                                </Provider>
-                            </Portal>
-                        }),
+                        })
                     }
                 }
-            </Show>
-        }
+            }
+        </Show>
+    }
 }
 
-/// Measures the trigger's width into `width` now and whenever the trigger resizes, until the
-/// current owner (an opening of the popover) is disposed: a closed popover observes nothing.
-fn measure_trigger_width(trigger: CapturedElement, width: RwSignal<Option<f64>>) {
+/// Measures the trigger's width (from the left of the trigger and `with` to the right of both)
+/// into `width` now and whenever the trigger resizes, until the current owner (an opening of the
+/// popover) is disposed: a closed popover observes nothing.
+fn measure_trigger_width(
+    trigger: CapturedElement,
+    with: Option<CapturedElement>,
+    width: RwSignal<Option<f64>>,
+) {
     #[cfg(feature = "ssr")]
-    let _ = (trigger, width);
+    let _ = (trigger, with, width);
     #[cfg(not(feature = "ssr"))]
     {
         let measure = move || {
             let measured = trigger
                 .get_bounding_client_rect_untracked()
-                .map(|rect| rect.width())
+                .map(
+                    |rect| match with.and_then(|with| with.get_bounding_client_rect_untracked()) {
+                        Some(other) => {
+                            rect.right().max(other.right()) - rect.left().min(other.left())
+                        }
+                        None => rect.width(),
+                    },
+                )
                 .filter(|width| *width > 0.0);
             if width
                 .try_get_untracked()

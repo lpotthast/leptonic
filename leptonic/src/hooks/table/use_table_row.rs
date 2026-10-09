@@ -1,31 +1,31 @@
 // Upstream: react-aria/src/table/useTableRow.ts @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TreeGridTable.test.tsx @ 99e6102368
 use leptos::{
     attr::{
         self, Attr,
         custom::{CustomAttr, custom_attribute},
     },
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use web_sys::KeyboardEvent;
 
 use super::TableData;
 use crate::{
+    EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        IntoAttrs, PressEvent, PropsWithStyles, UseButtonInput, UseGridRowAttrs, UseGridRowInput,
-        UseGridRowProps, UseGridRowReturn,
+        button::UseButtonInput,
         collections::{Key, Node},
-        use_grid_row,
+        grid::{UseGridRowAttrs, UseGridRowInput, UseGridRowProps, UseGridRowReturn, use_grid_row},
+        interactions::PressEvent,
     },
     utils::{
-        EventHandler,
         aria::AriaExpanded,
         focusability::{PreventFocusAttr, prevent_focus_attr},
-        i18n::use_direction,
-        id::use_id,
+        i18n::{WritingDirection, use_direction},
         intl_strings::{TableStrings, use_localized_strings},
         key::{KeyboardEventKey, KeyboardKey},
-        locale::WritingDirection,
     },
 };
 
@@ -37,6 +37,11 @@ use crate::{
 // - A tree table's expand button is configured, not rendered: `expand_button` is the
 //   `UseButtonInput` for `use_button`; its `data-leptonic-prevent-focus` attribute comes
 //   separately (`expand_button_attrs`), as `UseButtonInput` takes no extra attributes.
+//
+// ## DIFFERENT BEHAVIOR
+// - The expand button is labelled "Expand"/"Collapse" plus the row's text value. react-aria
+//   labels it by itself and the row header cells, which contain the button in a tree table, so
+//   browsers name it "Collapse Collapse Games".
 //
 // ## OMITTED FEATURES
 // - Virtualization (`aria-rowindex`), synthetic link props, `expandedKeys: 'all'`.
@@ -52,7 +57,7 @@ pub struct UseTableRowInput {
     pub key: Key,
     /// Called when a context menu is requested on the row (right click, Shift+F10, the context
     /// menu key; a long press on iOS unless it selects).
-    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
+    pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_table_row`].
@@ -104,7 +109,7 @@ pub type UseTableRowAttrs = (
     CustomAttr<&'static str, Signal<Option<usize>>>,
     Attr<attr::AriaPosinset, Signal<Option<usize>>>,
     Attr<attr::AriaSetsize, Signal<Option<usize>>>,
-    On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
+    OnEvent<ev::Capture<ev::keydown>>,
 );
 
 impl IntoAttrs for UseTableRowProps {
@@ -121,24 +126,6 @@ impl IntoAttrs for UseTableRowProps {
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
         )
     }
-}
-
-/// The row's position in a tree table: its level (from 1), its position among its sibling rows
-/// (from 1) and their number. Siblings are rows (items), not cells.
-fn tree_position(
-    collection: &crate::hooks::Collection,
-    key: &Key,
-) -> Option<(usize, usize, usize)> {
-    let node = collection.get(key)?;
-    let siblings: Vec<&Node> = match &node.parent_key {
-        Some(parent) => collection
-            .children(parent)
-            .filter(|n| n.is_item())
-            .collect(),
-        None => collection.iter().filter(|n| n.is_item()).collect(),
-    };
-    let index = siblings.iter().position(|n| n.key == *key)?;
-    Some((node.level + 1, index + 1, siblings.len()))
 }
 
 /// A body row of a table, labelled by its row header cells. In a tree table also a tree item:
@@ -179,8 +166,8 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let full = state.table;
     let row_key = StoredValue::new(key);
     let position = Memo::new(move |_| {
-        tree?;
-        row_key.with_value(|key| full.with(|t| tree_position(t.collection(), key)))
+        let tree = tree?;
+        row_key.with_value(|key| tree.position(key))
     });
     let has_child_rows = Memo::new(move |_| {
         tree.is_some()
@@ -230,25 +217,27 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     });
 
     let expand_button = tree.map(|tree| {
-        let button_id = use_id("table-expand");
         let strings = use_localized_strings::<TableStrings>();
         UseButtonInput {
-            // Labelled by its own label ("Expand"/"Collapse") and the row.
-            id: Some(button_id.clone()),
+            // "Expand"/"Collapse" and the row's name.
             aria_label: MaybeProp::derive(move || {
                 let strings = strings.read();
-                Some(if is_expanded.get() {
+                let action = if is_expanded.get() {
                     strings.collapse()
                 } else {
                     strings.expand()
+                };
+                let row = row_key.with_value(|key| {
+                    full.with(|t| t.collection().get(key).map(|n| n.text_value.clone()))
+                });
+                Some(match row {
+                    Some(row) if !row.is_empty() => format!("{action} {row}"),
+                    _ => action,
                 })
-            }),
-            aria_labelledby: Signal::derive(move || {
-                Some(format!("{button_id} {}", aria_labelledby.get()))
             }),
             is_disabled,
             exclude_from_tab_order: Signal::stored(true),
-            prevent_focus_on_press: true,
+            prevent_focus_on_press: true.into(),
             on_press: Some(Callback::new(move |_: PressEvent| {
                 if is_disabled.get_untracked() {
                     return;
@@ -272,9 +261,9 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
                         .get()
                         .then(|| AriaExpanded::from(is_expanded.get()))
                 }),
-                aria_level: Signal::derive(move || position.get().map(|(level, _, _)| level)),
-                aria_posinset: Signal::derive(move || position.get().map(|(_, index, _)| index)),
-                aria_setsize: Signal::derive(move || position.get().map(|(_, _, size)| size)),
+                aria_level: Signal::derive(move || position.get().map(|p| p.level)),
+                aria_posinset: Signal::derive(move || position.get().map(|p| p.index)),
+                aria_setsize: Signal::derive(move || position.get().map(|p| p.set_size)),
                 on_keydown_capture,
             },
             styles,
@@ -289,6 +278,6 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         expand_button_attrs: prevent_focus_attr(),
         is_expanded,
         has_child_rows: has_child_rows.into(),
-        level: Signal::derive(move || position.get().map(|(level, _, _)| level)),
+        level: Signal::derive(move || position.get().map(|p| p.level)),
     }
 }

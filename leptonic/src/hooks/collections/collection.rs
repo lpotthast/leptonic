@@ -1,4 +1,7 @@
 // Upstream: react-aria/src/collections/BaseCollection.ts @ 99e6102368
+// Upstream: react-aria/src/collections/CollectionBuilder.tsx @ 99e6102368
+// Upstream: react-stately/src/list/ListCollection.ts @ 99e6102368
+// Upstream: react-aria/test/collections/CollectionBuilder.test.js @ 99e6102368
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
@@ -36,7 +39,7 @@ impl Collection {
     /// Build a collection.
     ///
     /// ```
-    /// use leptonic::hooks::Collection;
+    /// use leptonic::hooks::collections::Collection;
     ///
     /// let collection = Collection::build(|b| {
     ///     b.section("fruit", |s| {
@@ -474,6 +477,57 @@ impl CollectionBuilder {
         self.entries.push(entry);
     }
 
+    /// A builder holding the rows of `collection` (its top-level nodes other than table header
+    /// rows, with their subtrees), every row starting with `leading_empty_cells` more empty cells
+    /// and its cells keyed by their new position ([`Key::cell`]). Adds a table's selection
+    /// checkbox cells to rows built without them.
+    pub(crate) fn rows_with_leading_cells(
+        collection: &Collection,
+        leading_empty_cells: usize,
+    ) -> Self {
+        fn entry(collection: &Collection, node: &Node, leading_empty_cells: usize) -> Entry {
+            let mut entry = Entry::from_node(node);
+            let children: Vec<&Node> = collection
+                .siblings_from(node.first_child_key.as_ref())
+                .collect();
+            if children.iter().any(|child| child.kind == NodeKind::Cell) {
+                for i in 0..leading_empty_cells {
+                    entry.children.push(Entry::new(
+                        Key::cell(&node.key, i),
+                        NodeKind::Cell,
+                        Arc::from(""),
+                    ));
+                }
+            }
+            let mut cells = leading_empty_cells;
+            for child in children {
+                let mut child_entry = entry_of(collection, child, leading_empty_cells);
+                if child.kind == NodeKind::Cell {
+                    child_entry.key = Key::cell(&node.key, cells);
+                    cells += 1;
+                }
+                entry.children.push(child_entry);
+            }
+            entry
+        }
+        // Cells have no children to rebuild.
+        fn entry_of(collection: &Collection, node: &Node, leading_empty_cells: usize) -> Entry {
+            if node.kind == NodeKind::Cell {
+                Entry::from_node(node)
+            } else {
+                entry(collection, node, leading_empty_cells)
+            }
+        }
+        Self {
+            entries: collection
+                .siblings_from(collection.first_key.as_ref())
+                .filter(|node| node.kind != NodeKind::HeaderRow)
+                .map(|node| entry(collection, node, leading_empty_cells))
+                .collect(),
+            leading_empty_cells,
+        }
+    }
+
     /// Add everything `other` built, after this builder's nodes.
     pub(crate) fn append(&mut self, other: CollectionBuilder) {
         self.entries.extend(other.entries);
@@ -709,6 +763,7 @@ impl SectionBuilder<'_> {
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
+    use leptos::prelude::{Get, RwSignal, Set, WithUntracked};
 
     use super::*;
 
@@ -848,6 +903,8 @@ mod tests {
         assert_that!(filtered.contains_key(&Key::from("child"))).is_true();
     }
 
+    // Upstream: CollectionBuilder.test.js "should throw when two items share a key" (here: the
+    // first occurrence is kept).
     #[test]
     fn duplicate_keys_keep_the_first_occurrence() {
         let c = Collection::build(|b| {
@@ -858,6 +915,97 @@ mod tests {
         assert_that!(c.size()).is_equal_to(2);
         assert_that!(&*c.get(&Key::from("a")).unwrap().text_value).is_equal_to("First");
         assert_that!(c.key_after(&Key::from("a"))).is_equal_to(Some(&Key::from("b")));
+
+        let c = Collection::build(|b| {
+            b.item("a", "First");
+            b.item("x", "X");
+            b.item("a", "Again");
+        });
+        assert_that!(keys(c.items())).is_equal_to(vec!["a".to_owned(), "x".to_owned()]);
+        assert_that!(c.last_key()).is_equal_to(Some(&Key::from("x")));
+    }
+
+    // Upstream: CollectionBuilder.test.js "should have correct firstKey, lastKey and should be
+    // frozen after all items are deleted".
+    #[test]
+    fn an_emptied_collection_has_no_first_or_last_key() {
+        crate::testing::with_owner(|| {
+            let items = RwSignal::new(vec!["a", "b"]);
+            let collection = super::super::use_collection(move |b| {
+                for item in items.get() {
+                    b.item(item, item);
+                }
+            });
+            assert_that!(collection.with_untracked(|c| c.first_key().cloned()))
+                .is_equal_to(Some(Key::from("a")));
+            items.set(Vec::new());
+            assert_that!(collection.with_untracked(|c| c.first_key().cloned())).is_none();
+            assert_that!(collection.with_untracked(|c| c.last_key().cloned())).is_none();
+            assert_that!(collection.with_untracked(|c| c.size())).is_equal_to(0);
+        });
+    }
+
+    // Upstream: CollectionBuilder.test.js "should allow a new item to reuse the key of an item
+    // removed in the same render".
+    #[test]
+    fn rebuilds_keep_the_new_order() {
+        crate::testing::with_owner(|| {
+            let items = RwSignal::new(vec!["a", "b"]);
+            let collection = super::super::use_collection(move |b| {
+                for item in items.get() {
+                    b.item(item, item);
+                }
+            });
+            items.set(vec!["a", "c", "b"]);
+            assert_that!(collection.with_untracked(|c| keys(c.items()))).is_equal_to(vec![
+                "a".to_owned(),
+                "c".to_owned(),
+                "b".to_owned(),
+            ]);
+            items.set(vec!["a"]);
+            assert_that!(collection.with_untracked(|c| keys(c.items())))
+                .is_equal_to(vec!["a".to_owned()]);
+            assert_that!(collection.with_untracked(|c| c.key_after(&Key::from("a")).cloned()))
+                .is_none();
+        });
+    }
+
+    // Upstream: ListBox.test.js "should update collection when moving item to a different
+    // section".
+    #[test]
+    fn an_item_moved_to_another_section_belongs_to_it() {
+        crate::testing::with_owner(|| {
+            let moved = RwSignal::new(false);
+            let collection = super::super::use_collection(move |b| {
+                let moved = moved.get();
+                b.section("veggies", |s| {
+                    s.item("lettuce", "Lettuce");
+                    if moved {
+                        s.item("ham", "Ham");
+                    }
+                });
+                b.section("protein", |s| {
+                    if !moved {
+                        s.item("ham", "Ham");
+                    }
+                    s.item("tuna", "Tuna");
+                });
+            });
+            moved.set(true);
+            collection.with_untracked(|c| {
+                assert_that!(keys(c.children(&Key::from("veggies"))))
+                    .is_equal_to(vec!["lettuce".to_owned(), "ham".to_owned()]);
+                assert_that!(keys(c.children(&Key::from("protein"))))
+                    .is_equal_to(vec!["tuna".to_owned()]);
+                assert_that!(c.get(&Key::from("ham")).and_then(|n| n.parent_key.clone()))
+                    .is_equal_to(Some(Key::from("veggies")));
+                assert_that!(keys(c.items())).is_equal_to(vec![
+                    "lettuce".to_owned(),
+                    "ham".to_owned(),
+                    "tuna".to_owned(),
+                ]);
+            });
+        });
     }
 
     #[test]

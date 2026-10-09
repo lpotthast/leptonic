@@ -1,37 +1,41 @@
 // Upstream: react-aria/src/datepicker/useDateSegment.ts @ 99e6102368
+// Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DateField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DatePicker.test.js @ 99e6102368
 use leptos::{
     attr::{
         self, Attr,
         custom::{CustomAttr, custom_attribute},
     },
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use web_sys::{FocusEvent, InputEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use super::{
-    format::{DateFormatter, FormatOptions},
+    format::{DateFormatter, FormatOptions, Formatters},
     types::{DateSegment, DateSegmentType, DateValue, Granularity, HourCycle, MaxGranularity},
     use_date_field::{DateFieldData, display_name},
 };
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        IntoAttrs, PropsWithStyles, UseKeyboardInput, UseSpinButtonInput, UseSpinButtonReturn,
-        form::use_label::labels, use_keyboard, use_spin_button,
+        interactions::{UseKeyboardInput, use_keyboard},
+        spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
+    labels,
     utils::{
-        CapturedElement, ElementCaptureAttr, EventHandler,
         aria::{AriaDisabled, AriaInvalid, AriaReadonly, AriaRequired, AriaRole},
         date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, MonthFormat},
-        filter::{CollatorOptions, use_filter},
-        i18n::{use_direction, use_locale},
+        filter::{CollatorOptions, FilterQuery, use_filter},
+        i18n::{WritingDirection, use_direction, use_locale},
         id::use_id,
         intl_strings::{DatePickerStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        locale::WritingDirection,
         number_formatter::NumberFormatOptions,
         number_parser::NumberParser,
-        platform::device::is_ios,
+        platform::{device::is_ios, use_platform_check},
         styles::Styles,
     },
 };
@@ -70,7 +74,7 @@ pub struct UseDateSegmentReturn {
 #[derive(Debug)]
 pub struct UseDateSegmentProps {
     pub id: String,
-    pub role: AriaRole,
+    pub role: Signal<AriaRole>,
     pub aria_valuenow: Signal<Option<String>>,
     pub aria_valuetext: Signal<Option<String>>,
     pub aria_valuemin: Signal<Option<String>>,
@@ -103,7 +107,7 @@ pub struct UseDateSegmentProps {
 pub type UseDateSegmentAttrs = (
     (
         Attr<attr::Id, String>,
-        Attr<attr::Role, AriaRole>,
+        Attr<attr::Role, Signal<AriaRole>>,
         Attr<attr::AriaValuenow, Signal<Option<String>>>,
         Attr<attr::AriaValuetext, Signal<Option<String>>>,
         Attr<attr::AriaValuemin, Signal<Option<String>>>,
@@ -126,14 +130,14 @@ pub type UseDateSegmentAttrs = (
         Attr<attr::Tabindex, Signal<Option<i32>>>,
     ),
     (
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
-        On<ev::beforeinput, SharedEventCallback<InputEvent>>,
-        On<ev::input, SharedEventCallback<web_sys::Event>>,
-        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-        On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
+        OnEvent<ev::beforeinput>,
+        OnEvent<ev::input>,
+        OnEvent<ev::pointerdown>,
+        OnEvent<ev::mousedown>,
         ElementCaptureAttr,
     ),
 );
@@ -271,22 +275,37 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     let direction = use_direction();
     let entered_keys = StoredValue::new(String::new());
 
-    // "6 – June" for numeric months, "1 PM" for hours.
-    let text_value = Signal::derive(move || {
+    // "6 – June" for numeric months, "1 PM" for hours; formatters kept per locale (and options).
+    let month_names = Memo::new(move |_| {
+        DateTimeFormatter::new(
+            &locale.get(),
+            DateTimeFormatOptions {
+                month: Some(MonthFormat::Long),
+                ..DateTimeFormatOptions::default()
+            },
+        )
+    });
+    let hours = Memo::new(move |_| {
+        Formatters::new(
+            locale.get(),
+            FormatOptions {
+                granularity: Granularity::Hour,
+                max_granularity: MaxGranularity::Hour,
+                time_zone: None,
+                hide_time_zone: true,
+                ..state.format_options()
+            },
+        )
+    });
+    let text_value = Memo::new(move |_| {
         let segment = segment.get();
         if segment.is_placeholder {
             return String::new();
         }
         match kind {
             DateSegmentType::Month => {
-                let month = DateTimeFormatter::new(
-                    &locale.get(),
-                    DateTimeFormatOptions {
-                        month: Some(MonthFormat::Long),
-                        ..DateTimeFormatOptions::default()
-                    },
-                )
-                .format_date(state.date_value.get().date());
+                let month =
+                    month_names.with(|names| names.format_date(state.date_value.get().date()));
                 if month == segment.text {
                     month
                 } else {
@@ -294,18 +313,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
                 }
             }
             DateSegmentType::Hour => {
-                let options = state.format_options();
-                DateFormatter::new(
-                    &locale.get(),
-                    &FormatOptions {
-                        granularity: Granularity::Hour,
-                        max_granularity: MaxGranularity::Hour,
-                        time_zone: None,
-                        hide_time_zone: true,
-                        ..options
-                    },
-                )
-                .format(&state.date_value.get())
+                hours.with(|hours| hours.short().format(&state.date_value.get()))
             }
             _ => segment.text,
         }
@@ -313,10 +321,10 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
 
     let reset_keys = move || entered_keys.set_value(String::new());
     let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
-        value: Signal::derive(move || segment.get().value.map(f64::from)),
+        value: Signal::derive(move || segment.get().value),
         text_value: Signal::derive(move || Some(text_value.get())),
-        min_value: Signal::derive(move || segment.get().min_value.map(f64::from)),
-        max_value: Signal::derive(move || segment.get().max_value.map(f64::from)),
+        min_value: Signal::derive(move || segment.get().min_value),
+        max_value: Signal::derive(move || segment.get().max_value),
         is_disabled: state.is_disabled,
         is_read_only: Signal::derive(move || {
             state.is_read_only.get() || !segment.get().is_editable
@@ -397,22 +405,32 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(
             KeyboardShortcuts::new()
-                .on(Shortcut::key("Backspace"), move |_: &KeyboardEvent| {
-                    backspace();
-                })
-                .on(Shortcut::key("Delete"), move |_: &KeyboardEvent| {
-                    backspace();
-                })
+                .on(
+                    Shortcut::new(KeyboardKey::Backspace),
+                    move |_: &KeyboardEvent| {
+                        backspace();
+                    },
+                )
+                .on(
+                    Shortcut::new(KeyboardKey::Delete),
+                    move |_: &KeyboardEvent| {
+                        backspace();
+                    },
+                )
                 // Firefox fires no `selectstart` for Ctrl/Cmd+A.
-                .on(Shortcut::key("a").primary(), |_: &KeyboardEvent| {}),
+                .on(
+                    Shortcut::new(KeyboardKey::A).primary(),
+                    |_: &KeyboardEvent| {},
+                ),
         ),
         allow_repeats: true,
         ..UseKeyboardInput::default()
     });
 
     let filter = use_filter(CollatorOptions::default());
-    let starts_with =
-        move |name: &str, key: &str| filter.with_untracked(|filter| filter.starts_with(name, key));
+    let starts_with = move |name: &str, key: &str| {
+        filter.with_untracked(|filter| filter.starts_with(name, &FilterQuery::new(key)))
+    };
     let day_periods = Memo::new(move |_| day_periods(&locale.get()));
     let eras = Memo::new(move |_| {
         if kind == DateSegmentType::Era {
@@ -644,11 +662,13 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     });
 
     // Spin buttons can't be focused with VoiceOver on iOS.
-    let as_textbox = is_ios() || kind == DateSegmentType::TimeZoneName;
+    let is_ios = use_platform_check(is_ios);
+    let as_textbox = move || is_ios.get() || kind == DateSegmentType::TimeZoneName;
     let unless_textbox = move |signal: Signal<Option<String>>| {
-        Signal::derive(move || if as_textbox { None } else { signal.get() })
+        Signal::derive(move || if as_textbox() { None } else { signal.get() })
     };
     let aria_valuetext = spin.aria_valuetext;
+    let spin_role = spin.role;
 
     // Only the first segment is described (unless invalid): read once, not on every segment.
     let is_first = Signal::derive(move || {
@@ -685,7 +705,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
                 .unwrap_or_default(),
             if labelledby.is_some() { ", " } else { "" },
         );
-        labels(&label_id, Some(label), labelledby)
+        labels(&label_id, Some(label), labelledby.as_deref())
     });
     let is_editable = Signal::derive(move || {
         !state.is_disabled.get() && !state.is_read_only.get() && segment.get().is_editable
@@ -711,17 +731,23 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
         segment_props: PropsWithStyles::new(
             UseDateSegmentProps {
                 id,
-                role: if as_textbox {
-                    AriaRole::Textbox
-                } else {
-                    spin.role
-                },
+                role: Signal::derive(move || {
+                    if as_textbox() {
+                        AriaRole::Textbox
+                    } else {
+                        spin_role
+                    }
+                }),
                 aria_valuenow: unless_textbox(spin.aria_valuenow),
-                aria_valuetext: Signal::derive(move || (!as_textbox).then(|| aria_valuetext.get())),
+                aria_valuetext: Signal::derive(move || {
+                    (!as_textbox()).then(|| aria_valuetext.get())
+                }),
                 aria_valuemin: unless_textbox(spin.aria_valuemin),
                 aria_valuemax: unless_textbox(spin.aria_valuemax),
-                aria_label: Signal::derive(move || label.get().0),
-                aria_labelledby: Signal::derive(move || label.get().1),
+                aria_label: Signal::derive(move || label.with(|label| label.aria_label.clone())),
+                aria_labelledby: Signal::derive(move || {
+                    label.with(|label| label.aria_labelledby.clone())
+                }),
                 aria_describedby,
                 aria_invalid: flag(state.is_invalid),
                 aria_readonly: Signal::derive(move || {

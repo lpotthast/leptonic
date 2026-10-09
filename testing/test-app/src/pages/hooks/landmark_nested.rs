@@ -1,9 +1,8 @@
 use leptonic::{
-    hooks::{
-        IntoAttrs, LandmarkController, LandmarkRole, UseLandmarkInput, UseLandmarkReturn,
-        use_landmark,
+    CapturedElement, IntoAttrs,
+    hooks::landmark::{
+        LandmarkController, LandmarkRole, UseLandmarkInput, UseLandmarkReturn, use_landmark,
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -90,7 +89,7 @@ pub fn PageHookLandmarkNested() -> impl IntoView {
             <button
                 id="test-lmn-forward"
                 on:click=move |_| with_controller(|c| {
-                    c.navigate(leptonic::hooks::LandmarkDirection::Forward, None);
+                    c.navigate(leptonic::hooks::landmark::LandmarkDirection::Forward, None);
                 })
             >
                 "Forward"

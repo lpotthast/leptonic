@@ -1,7 +1,17 @@
-// Upstream: react-aria/src/i18n/useFilter.ts @ 6f664fe911
-// Upstream: react-aria/src/i18n/useCollator.ts @ 6f664fe911
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useFilter.ts
-// and https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useCollator.ts
+// Upstream: react-aria/src/i18n/useFilter.ts @ 99e6102368
+// Upstream: react-aria/src/i18n/useCollator.ts @ 99e6102368
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - ICU4X collation instead of `Intl.Collator` (SSR-safe).
+// - The search text is a `FilterQuery`, normalized once for any number of strings (react-aria
+//   normalizes it on every call).
+// - Windows are counted in characters (react-aria: UTF-16 code units).
+//
+// =============================================================================
 
 use std::{cmp::Ordering, sync::Arc};
 
@@ -133,16 +143,43 @@ pub fn use_filter(options: CollatorOptions) -> Signal<Arc<Filter>> {
     .into()
 }
 
-/// NFC-normalizes a string using ICU4X.
-fn normalize_nfc(s: &str) -> String {
-    let normalizer = ComposingNormalizer::new_nfc();
-    normalizer.normalize(s).into_owned()
+/// NFC-normalizes a string using ICU4X (borrowed when it already is).
+fn normalize_nfc(s: &str) -> std::borrow::Cow<'_, str> {
+    ComposingNormalizer::new_nfc().normalize(s)
+}
+
+/// A search text prepared for [`Filter`]'s matching: normalized once, to be matched against many
+/// strings (e.g. every option of a combo box, per keystroke).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FilterQuery {
+    normalized: String,
+    /// The number of characters of `normalized`: the length of the windows compared.
+    chars: usize,
+}
+
+impl FilterQuery {
+    /// Prepares `query` (NFC-normalized, so that composed and decomposed characters match).
+    #[must_use]
+    pub fn new(query: &str) -> Self {
+        let normalized = normalize_nfc(query).into_owned();
+        Self {
+            chars: normalized.chars().count(),
+            normalized,
+        }
+    }
+
+    /// Whether the query is empty (it matches every string).
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.normalized.is_empty()
+    }
 }
 
 /// Locale-aware string filtering with `contains`, `starts_with`, and `ends_with`.
 ///
 /// Uses ICU4X `Collator` with locale-sensitive matching,
-/// and NFC-normalizes strings before comparison. This mirrors react-aria's `useFilter`.
+/// and NFC-normalizes strings before comparison. This mirrors react-aria's `useFilter`. The
+/// query is a [`FilterQuery`], prepared once for any number of strings.
 ///
 /// SSR-safe: uses pure Rust ICU4X instead of browser `Intl` APIs.
 ///
@@ -151,9 +188,10 @@ fn normalize_nfc(s: &str) -> String {
 /// ```ignore
 /// let filter = Filter::new(&Locale::from(locale!("en-US")), &CollatorOptions::default());
 ///
-/// assert!(filter.contains("café", "cafe"));   // base sensitivity: accent-insensitive
-/// assert!(filter.starts_with("Hello", "hello")); // base sensitivity: case-insensitive
-/// assert!(filter.ends_with("world!", "WORLD!")); // base sensitivity: case-insensitive
+/// let cafe = FilterQuery::new("cafe");
+/// assert!(filter.contains("café", &cafe));   // base sensitivity: accent-insensitive
+/// assert!(filter.starts_with("Hello", &FilterQuery::new("hello"))); // case-insensitive
+/// assert!(filter.ends_with("world!", &FilterQuery::new("WORLD!")));
 /// ```
 #[derive(Debug)]
 pub struct Filter {
@@ -169,77 +207,68 @@ impl Filter {
         }
     }
 
-    /// Returns `true` if `string` contains `substring` according to locale-aware comparison.
-    ///
-    /// Slides a window of as many characters as `substring` has over the NFC-normalized
-    /// `string`, comparing each window via the collator. An empty `substring` always matches.
-    #[must_use]
-    pub fn contains(&self, string: &str, substring: &str) -> bool {
-        if substring.is_empty() {
-            return true;
-        }
-
-        let string = normalize_nfc(string);
-        let substring = normalize_nfc(substring);
-        let window = substring.chars().count();
-
-        // Byte offsets of every character start, plus the end of the string, so that the
-        // windows can be sliced by character count (upstream slices by JS string length).
-        let boundaries: Vec<usize> = string
-            .char_indices()
-            .map(|(index, _)| index)
-            .chain(std::iter::once(string.len()))
-            .collect();
-        boundaries.windows(window + 1).any(|bounds| {
-            self.collator
-                .compare(&string[bounds[0]..bounds[window]], &substring)
-                == Ordering::Equal
-        })
+    fn equals(&self, part: &str, query: &FilterQuery) -> bool {
+        self.collator.compare(part, &query.normalized) == Ordering::Equal
     }
 
-    /// Returns `true` if `string` starts with `substring` according to locale-aware comparison.
+    /// Returns `true` if `string` contains `query` according to locale-aware comparison.
     ///
-    /// Compares as many leading characters of `string` as `substring` has via the collator.
-    /// An empty `substring` always matches.
+    /// Slides a window of as many characters as `query` has over the NFC-normalized `string`,
+    /// comparing each window via the collator. An empty `query` always matches.
     #[must_use]
-    pub fn starts_with(&self, string: &str, substring: &str) -> bool {
-        if substring.is_empty() {
+    pub fn contains(&self, string: &str, query: &FilterQuery) -> bool {
+        if query.is_empty() {
             return true;
         }
-
         let string = normalize_nfc(string);
-        let substring = normalize_nfc(substring);
-        let window = substring.chars().count();
+        // Windows by character count (upstream slices by JS string length): the byte offsets of
+        // every character start, plus the end of the string, `chars` apart.
+        let boundaries = || {
+            string
+                .char_indices()
+                .map(|(index, _)| index)
+                .chain(std::iter::once(string.len()))
+        };
+        boundaries()
+            .zip(boundaries().skip(query.chars))
+            .any(|(start, end)| self.equals(&string[start..end], query))
+    }
 
+    /// Returns `true` if `string` starts with `query` according to locale-aware comparison.
+    ///
+    /// Compares as many leading characters of `string` as `query` has via the collator. An
+    /// empty `query` always matches.
+    #[must_use]
+    pub fn starts_with(&self, string: &str, query: &FilterQuery) -> bool {
+        if query.is_empty() {
+            return true;
+        }
+        let string = normalize_nfc(string);
         // JS `slice` clamps: a shorter `string` is compared as a whole.
         let end = string
             .char_indices()
-            .nth(window)
+            .nth(query.chars)
             .map_or(string.len(), |(index, _)| index);
-        self.collator.compare(&string[..end], &substring) == Ordering::Equal
+        self.equals(&string[..end], query)
     }
 
-    /// Returns `true` if `string` ends with `substring` according to locale-aware comparison.
+    /// Returns `true` if `string` ends with `query` according to locale-aware comparison.
     ///
-    /// Compares as many trailing characters of `string` as `substring` has via the collator.
-    /// An empty `substring` always matches.
+    /// Compares as many trailing characters of `string` as `query` has via the collator. An
+    /// empty `query` always matches.
     #[must_use]
-    pub fn ends_with(&self, string: &str, substring: &str) -> bool {
-        if substring.is_empty() {
+    pub fn ends_with(&self, string: &str, query: &FilterQuery) -> bool {
+        if query.is_empty() {
             return true;
         }
-
         let string = normalize_nfc(string);
-        let substring = normalize_nfc(substring);
-        let window = substring.chars().count();
-
         // JS `slice` clamps: a shorter `string` is compared as a whole.
         let start = string
             .char_indices()
             .rev()
-            .nth(window - 1)
+            .nth(query.chars - 1)
             .map_or(0, |(index, _)| index);
-        self.collator.compare(&string[start..], &substring) == Ordering::Equal
+        self.equals(&string[start..], query)
     }
 }
 
@@ -324,76 +353,76 @@ mod tests {
     #[test]
     fn test_filter_contains_empty_substring() {
         let filter = default_filter("en-US");
-        assert_that!(filter.contains("hello", "")).is_true();
+        assert_that!(filter.contains("hello", &FilterQuery::new(""))).is_true();
     }
 
     #[test]
     fn test_filter_contains_basic() {
         let filter = default_filter("en-US");
-        assert_that!(filter.contains("hello world", "world")).is_true();
-        assert_that!(filter.contains("hello world", "xyz")).is_false();
+        assert_that!(filter.contains("hello world", &FilterQuery::new("world"))).is_true();
+        assert_that!(filter.contains("hello world", &FilterQuery::new("xyz"))).is_false();
     }
 
     #[test]
     fn test_filter_starts_with_basic() {
         let filter = default_filter("en-US");
-        assert_that!(filter.starts_with("hello world", "hello")).is_true();
-        assert_that!(filter.starts_with("hello world", "world")).is_false();
+        assert_that!(filter.starts_with("hello world", &FilterQuery::new("hello"))).is_true();
+        assert_that!(filter.starts_with("hello world", &FilterQuery::new("world"))).is_false();
     }
 
     #[test]
     fn test_filter_ends_with_basic() {
         let filter = default_filter("en-US");
-        assert_that!(filter.ends_with("hello world", "world")).is_true();
-        assert_that!(filter.ends_with("hello world", "hello")).is_false();
+        assert_that!(filter.ends_with("hello world", &FilterQuery::new("world"))).is_true();
+        assert_that!(filter.ends_with("hello world", &FilterQuery::new("hello"))).is_false();
     }
 
     #[test]
     fn test_filter_case_insensitive() {
         let filter = default_filter("en-US");
-        assert_that!(filter.contains("Hello World", "hello")).is_true();
-        assert_that!(filter.starts_with("Hello World", "hello")).is_true();
+        assert_that!(filter.contains("Hello World", &FilterQuery::new("hello"))).is_true();
+        assert_that!(filter.starts_with("Hello World", &FilterQuery::new("hello"))).is_true();
     }
 
     #[test]
     fn test_filter_with_german_locale() {
         let filter = default_filter("de-DE");
-        assert_that!(filter.contains("Straße", "STRAß")).is_true();
+        assert_that!(filter.contains("Straße", &FilterQuery::new("STRAß"))).is_true();
         // Windows are as long as the substring in characters (upstream: JS string length), so
         // "ß" doesn't match two characters.
-        assert_that!(filter.contains("Straße", "strass")).is_false();
+        assert_that!(filter.contains("Straße", &FilterQuery::new("strass"))).is_false();
     }
 
     #[test]
     fn test_filter_matches_umlauts_and_accents() {
         let filter = default_filter("de-DE");
-        assert_that!(filter.contains("Müller", "mul")).is_true();
-        assert_that!(filter.contains("Herr Müller", "muller")).is_true();
-        assert_that!(filter.contains("café", "cafe")).is_true();
-        assert_that!(filter.contains("Crème brûlée", "brulee")).is_true();
-        assert_that!(filter.contains("Müller", "mux")).is_false();
-        assert_that!(filter.starts_with("Ärger", "arg")).is_true();
-        assert_that!(filter.starts_with("Österreich", "OST")).is_true();
-        assert_that!(filter.ends_with("Gemüse", "muse")).is_true();
-        assert_that!(filter.ends_with("café", "fe")).is_true();
-        assert_that!(filter.ends_with("café", "ca")).is_false();
+        assert_that!(filter.contains("Müller", &FilterQuery::new("mul"))).is_true();
+        assert_that!(filter.contains("Herr Müller", &FilterQuery::new("muller"))).is_true();
+        assert_that!(filter.contains("café", &FilterQuery::new("cafe"))).is_true();
+        assert_that!(filter.contains("Crème brûlée", &FilterQuery::new("brulee"))).is_true();
+        assert_that!(filter.contains("Müller", &FilterQuery::new("mux"))).is_false();
+        assert_that!(filter.starts_with("Ärger", &FilterQuery::new("arg"))).is_true();
+        assert_that!(filter.starts_with("Österreich", &FilterQuery::new("OST"))).is_true();
+        assert_that!(filter.ends_with("Gemüse", &FilterQuery::new("muse"))).is_true();
+        assert_that!(filter.ends_with("café", &FilterQuery::new("fe"))).is_true();
+        assert_that!(filter.ends_with("café", &FilterQuery::new("ca"))).is_false();
     }
 
     #[test]
     fn test_filter_substring_longer_than_string() {
         let filter = default_filter("en-US");
-        assert_that!(filter.contains("ab", "abc")).is_false();
-        assert_that!(filter.starts_with("ab", "abc")).is_false();
-        assert_that!(filter.ends_with("ab", "abc")).is_false();
-        assert_that!(filter.contains("é", "é")).is_true();
+        assert_that!(filter.contains("ab", &FilterQuery::new("abc"))).is_false();
+        assert_that!(filter.starts_with("ab", &FilterQuery::new("abc"))).is_false();
+        assert_that!(filter.ends_with("ab", &FilterQuery::new("abc"))).is_false();
+        assert_that!(filter.contains("é", &FilterQuery::new("é"))).is_true();
     }
 
     #[test]
     fn test_filter_normalizes_decomposed_input() {
         let filter = default_filter("en-US");
         // "e" + COMBINING ACUTE ACCENT is NFC-normalized to "é" (one character).
-        assert_that!(filter.contains("cafe\u{301} au lait", "fé a")).is_true();
-        assert_that!(filter.starts_with("e\u{301}clair", "ec")).is_true();
+        assert_that!(filter.contains("cafe\u{301} au lait", &FilterQuery::new("fé a"))).is_true();
+        assert_that!(filter.starts_with("e\u{301}clair", &FilterQuery::new("ec"))).is_true();
     }
 
     #[test]
@@ -412,6 +441,6 @@ mod tests {
     #[test]
     fn test_filter_with_japanese_locale() {
         let filter = default_filter("ja-JP");
-        assert_that!(filter.contains("東京都", "東京")).is_true();
+        assert_that!(filter.contains("東京都", &FilterQuery::new("東京"))).is_true();
     }
 }

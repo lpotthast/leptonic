@@ -7,9 +7,9 @@ use leptos::{
 
 use super::use_disclosure_state::DisclosureState;
 use crate::{
-    hooks::{IntoAttrs, PressEvent, UseButtonInput},
+    CapturedElement, ElementCaptureAttr, IntoAttrs,
+    hooks::{button::UseButtonInput, interactions::PressEvent},
     utils::{
-        CapturedElement, ElementCaptureAttr,
         aria::{AriaExpanded, AriaHidden, AriaRole},
         id::use_id,
         pointer_type::PointerType,
@@ -53,15 +53,17 @@ pub struct UseDisclosureReturn {
 }
 
 /// Props for the panel element.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseDisclosurePanelProps {
     pub id: String,
     /// `group` by default; `region` for an important section (a landmark).
     pub role: Signal<AriaRole>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_hidden: Signal<Option<AriaHidden>>,
-    /// `until-found` when the panel starts collapsed; afterwards the hook manages the attribute.
-    pub hidden: Option<&'static str>,
+    /// Whether the panel renders collapsed (`hidden="until-found"`): the state when the hook
+    /// ran. Afterwards the hook manages the attribute; a panel rendered later (again) sets this
+    /// to the state at that time.
+    pub hidden_until_found: bool,
     pub element_capture: ElementCaptureAttr,
 }
 
@@ -74,7 +76,7 @@ impl IntoAttrs for UseDisclosurePanelProps {
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaHidden, self.aria_hidden),
-            custom_attribute("hidden", self.hidden),
+            custom_attribute("hidden", self.hidden_until_found.then_some("until-found")),
             self.element_capture,
         )
     }
@@ -160,7 +162,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
             role: Signal::stored(AriaRole::Group),
             aria_labelledby: Signal::stored(Some(trigger_id.clone())),
             aria_hidden: Signal::derive(move || (!is_expanded.get()).then_some(AriaHidden::True)),
-            hidden: (!is_expanded.get_untracked()).then_some("until-found"),
+            hidden_until_found: !is_expanded.get_untracked(),
             element_capture: panel_element.attr(),
         },
         trigger_id,
@@ -225,7 +227,10 @@ fn manage_panel(state: DisclosureState, is_disabled: Signal<bool>, panel: Captur
             });
         };
 
-    let previous = StoredValue::new(None::<bool>);
+    // The panel element and its state when last shown: a new element (the panel rendered again,
+    // e.g. inside a `Show`) starts without animation, as on the first render.
+    let previous =
+        StoredValue::new(None::<(send_wrapper::SendWrapper<web_sys::HtmlElement>, bool)>);
     Effect::new(move |_| {
         let expanded = state.is_expanded.get();
         is_disabled.track();
@@ -236,8 +241,15 @@ fn manage_panel(state: DisclosureState, is_disabled: Signal<bool>, panel: Captur
         let Some(panel) = panel.dyn_ref::<web_sys::HtmlElement>().cloned() else {
             return;
         };
-        match previous.get_value() {
-            // First render: no animation.
+        let current = send_wrapper::SendWrapper::new(panel.clone());
+        let was_expanded = previous.with_value(|previous| {
+            previous
+                .as_ref()
+                .filter(|(element, _)| **element == panel)
+                .map(|(_, was_expanded)| *was_expanded)
+        });
+        match was_expanded {
+            // First render (of this element): no animation.
             None => {
                 if expanded {
                     let _ = panel.remove_attribute("hidden");
@@ -279,7 +291,7 @@ fn manage_panel(state: DisclosureState, is_disabled: Signal<bool>, panel: Captur
             }
             Some(_) => {}
         }
-        previous.set_value(Some(expanded));
+        previous.set_value(Some((current, expanded)));
     });
 
     on_cleanup(cancel_frame);

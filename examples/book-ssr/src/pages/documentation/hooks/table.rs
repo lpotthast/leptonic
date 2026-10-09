@@ -186,13 +186,17 @@ fn TableCollectionSection() -> impl IntoView {
             </DocTable>
 
             <p>
-                "Cell keys derive from their row: "<Code inline=true>"Key::cell(&row, index)"</Code>", counting the data "
-                "columns from 0. When no column is marked as row header, the first data column labels the rows. "
-                <Code inline=true>"TableCollection::build_with(TableOptions { show_selection_checkboxes: true }, ..)"</Code>
-                " adds a first column for selection checkboxes: its cell is cell 0 of every row, and the data cells start "
-                "at index 1."
+                "Cell keys derive from their row and column. Use "<Code inline=true>"table.cell_key(&row, column_index)"</Code>
+                " to look them up. When no column is marked as row header, the first data column labels the rows. "
+                "Set "<Code inline=true>"show_selection_checkboxes"</Code>" on the table state to add a selection "
+                "column while selection is enabled. Read the resulting columns from "<Code inline=true>"state.columns"</Code>"."
             </p>
 
+            <p>
+                "For a collection built outside the table state, "<Code inline=true>"with_selection_column()"</Code>
+                " returns a copy with the leading selection column, preserving an existing one. "
+                <Code inline=true>"has_selection_column()"</Code>" reports whether it is present."
+            </p>
             <p>"Read the table through these methods:"</p>
             <DocTable headers=&["Method", "Description"]>
                 <TableRow>
@@ -288,6 +292,7 @@ fn TableStateSections() -> impl IntoView {
                         "hierarchy and holds the expanded rows ("<Code inline=true>"default_expanded_keys"</Code>", "
                         <Code inline=true>"expanded_keys"</Code>", "<Code inline=true>"on_expanded_change"</Code>")."
                     </ApiRow>
+                    <ApiRow name="show_selection_checkboxes" ty="Signal<bool>" default="false">"Show the selection column while selection is enabled."</ApiRow>
                 </ApiTable>
                 <p>
                     <Code inline=true>"SelectionOptions::default()"</Code>" uses "<Code inline=true>"DisabledBehavior::All"</Code>
@@ -312,6 +317,7 @@ fn TableStateSections() -> impl IntoView {
                         "Set in a tree table: "<Code inline=true>"column()"</Code>" and the "<Code inline=true>"expansion"</Code>"."
                     </ApiRow>
                     <ApiRow name="sort_descriptor" ty="Signal<Option<SortDescriptor>>">"The current sorting."</ApiRow>
+                    <ApiRow name="columns" ty="Memo<Arc<[Column]>>">"The currently rendered columns, including the selection column when enabled."</ApiRow>
                 </ApiTable>
                 <p>
                     <Code inline=true>"sort(&column, direction: Option<SortDirection>)"</Code>" sorts by "
@@ -369,10 +375,10 @@ fn TableStateSections() -> impl IntoView {
                     <ApiRow name="id" ty="Option<String>" default="None">
                         "The element id; cell and column header ids derive from it. Generated when "<Code inline=true>"None"</Code>"."
                     </ApiRow>
-                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the table."</ApiRow>
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<String>>" default="None">"Names the table."</ApiRow>
                     <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                         "Replaces the table navigation ("
-                            <Link href=format!("{}#use-table-keyboard-delegate", routes::doc::CollectionState.materialize())>"use_table_keyboard_delegate"</Link>")."
+                        <Link href=format!("{}#use-table-keyboard-delegate", routes::doc::CollectionState.materialize())>"use_table_keyboard_delegate"</Link>")."
                     </ApiRow>
                     <ApiRow name="options" ty="CollectionOptions" default="CollectionOptions::default()">
                         "Keyboard and focus behavior: wrapping, Escape, select all, type-ahead, see "

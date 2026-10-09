@@ -50,7 +50,7 @@ pub fn PageUseFocus() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::focus::{UseFocusInput, UseFocusReturn, use_focus};
                         use leptos::prelude::*;
 
                         let (is_focused, set_is_focused) = signal(false);

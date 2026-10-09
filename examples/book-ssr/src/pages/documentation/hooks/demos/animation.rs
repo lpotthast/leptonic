@@ -1,10 +1,10 @@
 use leptonic::{
+    CapturedElement,
     atoms::button::Button,
-    hooks::{
+    hooks::animation::{
         UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
         UseExitAnimationReturn, use_enter_animation, use_exit_animation,
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -38,7 +38,10 @@ pub fn AnimationDemo() -> impl IntoView {
 #[component]
 fn AnimatedPanel(element: CapturedElement, is_exiting: Signal<bool>) -> impl IntoView {
     // Created with each mount: an enter animation is tracked once per hook.
-    let UseEnterAnimationReturn { is_entering } = use_enter_animation(UseEnterAnimationInput {
+    let UseEnterAnimationReturn {
+        is_entering,
+        styles,
+    } = use_enter_animation(UseEnterAnimationInput {
         element,
         is_ready: Signal::stored(true),
         on_enter: None,
@@ -48,6 +51,7 @@ fn AnimatedPanel(element: CapturedElement, is_exiting: Signal<bool>) -> impl Int
         <div
             {..element.attr()}
             class="demo-animated-panel"
+            style=styles
             data-entering=move || is_entering.get().then_some("")
             data-exiting=move || is_exiting.get().then_some("")
         >

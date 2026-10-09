@@ -2,13 +2,15 @@
 //! Texts the atoms and their hooks provide themselves follow the locale (de-DE): the search
 //! field's clear button, the number field's steppers and role description, a tag's remove
 //! button and the select's placeholder.
+use browser_test::browser_test;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions};
+use crate::pages::{ElementActions, Page};
 
 const PATH: &str = "/atoms/localized";
 
 /// The SearchField's clear button is labelled in German.
+#[browser_test]
 pub async fn search_field(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element(".leptonic-SearchField button")
@@ -19,6 +21,7 @@ pub async fn search_field(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The NumberField's role description and stepper buttons are labelled in German.
+#[browser_test]
 pub async fn number_field(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let number_field = page.element(".leptonic-NumberField").await?;
@@ -41,6 +44,7 @@ pub async fn number_field(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The tag's remove button is labelled in German.
+#[browser_test]
 pub async fn tag(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element(".leptonic-TagRemoveButton")
@@ -51,6 +55,7 @@ pub async fn tag(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The Select's placeholder is German.
+#[browser_test]
 pub async fn select(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element(".leptonic-SelectValue")

@@ -1,10 +1,11 @@
 // Upstream: react-aria/src/overlays/calculatePosition.ts @ 99e6102368
+// Upstream: react-aria/test/overlays/calculatePosition.test.ts @ 99e6102368
 //! Where to place an overlay relative to its target: the pure computation
 //! ([`calculate_position_internal`]) and the DOM measurements feeding it ([`calculate_position`]).
 // Positioning runs in the browser only; on the server the computation is unused.
 #![cfg_attr(feature = "ssr", allow(dead_code))]
 
-use crate::utils::{locale::WritingDirection, point::Point};
+use crate::utils::{i18n::WritingDirection, point::Point};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -683,7 +684,8 @@ pub(crate) fn calculate_position_internal(input: &PositionInput) -> PositionResu
         is_container_descendant_of_boundary,
         visual_viewport,
     );
-    // A user max height only restricts (and 0 means none, as react-aria's falsy check).
+    // A user max height only restricts; `Some(0.0)` is a max height of 0 (react-aria ignores a
+    // falsy `maxHeight`).
     if let Some(user_max_height) = user_max_height
         && user_max_height < max_height
     {
@@ -1108,7 +1110,6 @@ pub(crate) mod dom {
     }
 }
 
-// Upstream: react-aria/test/overlays/calculatePosition.test.ts @ 99e6102368
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;

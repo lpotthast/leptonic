@@ -3,18 +3,16 @@ use leptos::prelude::*;
 
 use super::use_color_slider_state::ColorSliderState;
 use crate::{
+    PropsWithStyles,
     hooks::slider::{
         UseSliderInput, UseSliderReturn, UseSliderThumbInput, UseSliderThumbReturn, use_slider,
         use_slider_thumb,
     },
     utils::{
         color::ColorValue,
-        css::ForcedColorAdjust,
-        i18n::{use_direction, use_locale},
-        locale::WritingDirection,
+        i18n::{WritingDirection, use_direction, use_locale},
         orientation::Orientation,
-        style::ForcedColorAdjustProperty,
-        styles::Styles,
+        styles::{Styles, css::ForcedColorAdjust, property::ForcedColorAdjustProperty},
         visually_hidden::visually_hidden_full_size_styles,
     },
 };
@@ -40,6 +38,7 @@ pub struct UseColorSliderInput<C: ColorValue> {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
+    pub aria_details: Option<String>,
     /// The name of the input, for form submission.
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
@@ -70,6 +69,7 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_label,
         aria_labelledby,
         aria_describedby,
+        aria_details,
         name,
         form,
     } = input;
@@ -91,7 +91,7 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_describedby,
         state: state.slider,
         id: None,
-        aria_details: None,
+        aria_details,
     });
     let mut thumb = use_slider_thumb(UseSliderThumbInput {
         is_disabled: state.slider.is_disabled,
@@ -110,12 +110,13 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_errormessage: None,
         aria_details: None,
     });
-    let value = state.value;
+    let display_color = state.display_color();
     let formatted = state.formatted_value();
     thumb.input_props.aria_valuetext = Signal::derive(move || {
         // The hue names a hue slider, the color the other channels, nothing an alpha slider
-        // (react-aria).
-        let color = value.get();
+        // (react-aria). Named is the display color: the hue at full saturation (a gray's hue has
+        // a name too), the other channels' color opaque.
+        let color = display_color.get();
         let text = formatted.get();
         if C::is_alpha_channel(channel) {
             text
@@ -126,21 +127,21 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         }
     });
 
-    let display_color = state.display_color();
+    // Forced colors would replace the thumb's color (react-aria).
+    let (thumb_props, thumb_styles) = thumb.thumb_props.into_inner();
+    thumb.thumb_props = PropsWithStyles::new(
+        thumb_props,
+        thumb_styles.add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None)),
+    );
+
     let orientation = state.slider.orientation;
     let direction = use_direction();
     let background = move || {
         let color = display_color.get();
-        let range = C::channel_range(channel);
-        let stops: Vec<String> = match range.gradient_stops {
-            Some(stops) => stops
-                .iter()
-                .map(|&stop| color.with_channel_value(channel, stop).to_css_string())
-                .collect(),
-            None => [range.min_value, range.max_value]
-                .map(|stop| color.with_channel_value(channel, stop).to_css_string())
-                .to_vec(),
-        };
+        let stops: Vec<String> = C::gradient_stops(channel)
+            .iter()
+            .map(|&stop| color.with_channel_value(channel, stop).to_css_string())
+            .collect();
         let to = match (orientation.get(), direction.get()) {
             (Orientation::Vertical, _) => "top",
             (Orientation::Horizontal, WritingDirection::Ltr) => "right",

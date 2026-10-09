@@ -1,24 +1,18 @@
 // Upstream: react-aria/src/interactions/useHover.ts @ 99e6102368
-use leptos::{
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/interactions/useHover.test.js @ 99e6102368
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{EventHandler, pointer_type::PointerType},
-};
+use crate::{EventHandler, IntoAttrs, OnEvent, utils::pointer_type::PointerType};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `HoverStartEvent`/`HoverEndEvent` instead of one `HoverEvent` with a `type`; the hovered
-//   element is `current_target` (react-aria: `target`, set to the event's current target).
+// - `HoverStartEvent`/`HoverEndEvent` instead of one `HoverEvent` with a `type`; `target` is the
+//   hovered element (as react-aria's, the event's current target), typed as an `Element`.
 // - As upstream, hover events don't stop propagation and have no `continuePropagation`, so they
 //   don't implement `Propagation`.
 //
@@ -66,7 +60,7 @@ mod global_touch {
                 ev::pointerup,
                 false,
                 |e: web_sys::PointerEvent| {
-                    if PointerType::from(e.pointer_type()) == PointerType::Touch {
+                    if PointerType::of(&e) == PointerType::Touch {
                         IGNORE_EMULATED_MOUSE_EVENTS.set(true);
                         set_timeout(
                             || IGNORE_EMULATED_MOUSE_EVENTS.set(false),
@@ -95,7 +89,7 @@ pub struct HoverStartEvent {
     /// The pointer's type (`Mouse` or `Pen`).
     pub pointer_type: PointerType,
     /// The hovered element.
-    pub current_target: SendWrapper<web_sys::EventTarget>,
+    pub target: SendWrapper<web_sys::Element>,
 }
 
 /// A pointer stopped hovering the element.
@@ -104,7 +98,7 @@ pub struct HoverEndEvent {
     /// The pointer's type (`Mouse` or `Pen`).
     pub pointer_type: PointerType,
     /// The element that was hovered.
-    pub current_target: SendWrapper<web_sys::EventTarget>,
+    pub target: SendWrapper<web_sys::Element>,
 }
 
 /// Input of [`use_hover`].
@@ -171,15 +165,12 @@ impl IntoAttrs for UseHoverProps {
 }
 
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
-pub type UseHoverAttrs = (
-    On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
-);
+pub type UseHoverAttrs = (OnEvent<ev::pointerenter>, OnEvent<ev::pointerleave>);
 
 #[cfg(not(feature = "ssr"))]
 struct HoverState {
     pointer_type: PointerType,
-    target: web_sys::EventTarget,
+    target: web_sys::Element,
     /// The global `pointerover` listener that detects the removal of the hovered element
     /// (removed when the state is dropped).
     _pointerover: Option<crate::utils::event_listeners::Listener>,
@@ -197,8 +188,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         let (is_hovered, _) = signal(false);
         UseHoverReturn {
             props: UseHoverProps {
-                on_pointerenter: EventHandler::new(|_: PointerEvent| {}),
-                on_pointerleave: EventHandler::new(|_: PointerEvent| {}),
+                on_pointerenter: EventHandler::empty(),
+                on_pointerleave: EventHandler::empty(),
             },
             is_hovered: is_hovered.into(),
         }
@@ -206,9 +197,12 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
     #[cfg(not(feature = "ssr"))]
     {
-        use crate::utils::{
-            ContainsTarget, EventAccessors, EventTargetExt, event_listeners::listen_to,
-            node_contains,
+        use crate::{
+            ContainsTarget,
+            utils::{
+                dom_ext::{EventAccessors, EventTargetExt, node_contains},
+                event_listeners::listen_to,
+            },
         };
 
         let UseHoverInput {
@@ -242,7 +236,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             if let Some(on_hover_end) = on_hover_end {
                 on_hover_end.run(HoverEndEvent {
                     pointer_type,
-                    current_target: SendWrapper::new(target),
+                    target: SendWrapper::new(target),
                 });
             }
 
@@ -255,7 +249,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
         let trigger_hover_start =
             move |pointer_type: PointerType,
-                  current_target: web_sys::EventTarget,
+                  current_target: web_sys::Element,
                   target: web_sys::EventTarget| {
                 if is_hovered.get_untracked() {
                     return;
@@ -267,7 +261,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
                 // Ensure that the event target is contained within current_target.
                 // This guards against events that bubble from outside the element.
-                if node_contains(current_target.as_node().as_ref(), target.as_node().as_ref())
+                if node_contains(Some(current_target.as_ref()), target.as_node().as_ref())
                     == Some(false)
                 {
                     return;
@@ -275,8 +269,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
                 if let Some(on_hover_start) = on_hover_start {
                     on_hover_start.run(HoverStartEvent {
-                        pointer_type: pointer_type.clone(),
-                        current_target: SendWrapper::new(current_target.clone()),
+                        pointer_type,
+                        target: SendWrapper::new(current_target.clone()),
                     });
                 }
 
@@ -291,13 +285,13 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 // the mouse is over. We detect this case by checking if the new pointerover target is
                 // still contained within our hovered element — if not, the element was removed and we
                 // trigger a hover end.
-                let pointerover = current_target.get_owner_document().map(|document| {
+                let pointerover = current_target.owner_document().map(|document| {
                     let ct_for_closure = current_target.clone();
                     listen_to(&document, ev::pointerover, true, move |e: PointerEvent| {
                         if is_hovered.get_untracked() {
                             let event_target = e.expect_target();
                             if node_contains(
-                                ct_for_closure.as_node().as_ref(),
+                                Some(ct_for_closure.as_ref()),
                                 event_target.as_node().as_ref(),
                             ) == Some(false)
                             {
@@ -319,12 +313,14 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 return;
             }
 
-            let pointer_type = PointerType::from(e.pointer_type());
+            let pointer_type = PointerType::of(&e);
             if global_touch::ignore_emulated_mouse_events() && pointer_type == PointerType::Mouse {
                 return;
             }
 
-            trigger_hover_start(pointer_type, e.expect_current_target(), e.expect_target());
+            if let Some(current_target) = e.expect_current_target().to_element() {
+                trigger_hover_start(pointer_type, current_target, e.expect_target());
+            }
         };
 
         let handle_pointer_leave = move |e: PointerEvent| {

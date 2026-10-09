@@ -1,15 +1,16 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    CapturedElement,
     hooks::{
-        collections::{CollectionMemo, Key, use_list_collection},
+        collections::{CollectionMemo, Key, UseListCollectionInput, use_list_collection},
         virtualizer::{
-            ItemSizeChange, LayoutInfo, ListLayout, ListLayoutOptions, ScrollDirection,
-            UseScrollViewInput, UseVirtualizerItemInput, UseVirtualizerStateInput,
-            VirtualizerState, use_scroll_view, use_virtualizer_item, use_virtualizer_state,
+            ItemMeasurer, ItemSize, ItemSizeChange, LayoutInfo, ListLayout, ListLayoutOptions,
+            ScrollDirection, UseItemMeasurerInput, UseScrollViewInput, UseVirtualizerItemInput,
+            UseVirtualizerStateInput, VirtualizerState, use_item_measurer, use_scroll_view,
+            use_virtualizer_item, use_virtualizer_state,
         },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -18,16 +19,16 @@ const ROWS: usize = 100_000;
 
 #[component]
 pub fn VirtualizerHooksDemo() -> impl IntoView {
-    let rows = use_list_collection(
-        Signal::stored((1..=ROWS).collect::<Vec<usize>>()),
-        |number| Key::from(*number),
-        |number| format!("Row {number}"),
-    );
+    let rows = use_list_collection(UseListCollectionInput {
+        items: Signal::stored((1..=ROWS).collect::<Vec<usize>>()),
+        key: |number| Key::from(*number),
+        text_value: |number| format!("Row {number}"),
+    });
 
     // Lays out the collection: every row is 32px high.
     let state = use_virtualizer_state(UseVirtualizerStateInput {
         layout: ListLayout::new(ListLayoutOptions {
-            row_size: Some(32.0),
+            row_size: ItemSize::Fixed(32.0),
             ..ListLayoutOptions::default()
         }),
         collection: rows.into(),
@@ -35,6 +36,14 @@ pub fn VirtualizerHooksDemo() -> impl IntoView {
         layout_options: Signal::stored(None),
         // Called when the virtualizer moves the viewport, which only anchored layouts do.
         on_visible_rect_change: Callback::new(|_| {}),
+    });
+
+    // Measures the rendered rows (rows of a fixed size are never measured).
+    let measurer = use_item_measurer(UseItemMeasurerInput {
+        update_item_size: Callback::new(move |change: ItemSizeChange| {
+            state.update_item_size(&change.key, change.size);
+        }),
+        should_observe_item_size: false,
     });
 
     // The scrolling element reports what is visible to the state.
@@ -62,7 +71,7 @@ pub fn VirtualizerHooksDemo() -> impl IntoView {
             <div style=scroll_view.content_styles>
                 // Only the visible rows (and a few more in the scroll direction).
                 <For each=move || state.visible().get() key=|info| info.key.clone() let:info>
-                    <VirtualRow info=info state=state rows=rows/>
+                    <VirtualRow info=info state=state rows=rows measurer=measurer/>
                 </For>
             </div>
         </div>
@@ -78,6 +87,7 @@ fn VirtualRow(
     info: LayoutInfo,
     state: VirtualizerState<ListLayout>,
     rows: CollectionMemo,
+    measurer: ItemMeasurer,
 ) -> impl IntoView {
     let key = info.key.clone();
     let text = rows.with_untracked(|rows| {
@@ -92,20 +102,21 @@ fn VirtualRow(
             .unwrap_or_else(|| info.clone())
     });
     let element = CapturedElement::new();
-    let styles = use_virtualizer_item(UseVirtualizerItemInput {
+    let content = CapturedElement::new();
+    let item = use_virtualizer_item(UseVirtualizerItemInput {
         element,
+        content,
         layout_info,
         parent: Signal::stored(None),
-        update_item_size: Callback::new(move |change: ItemSizeChange| {
-            state.update_item_size(&change.key, change.size);
-        }),
-        should_observe_item_size: false,
-    })
-    .styles;
+        measurer,
+    });
+    let styles = item.styles;
 
     view! {
         <div {..element.attr()} class="demo-virt-row" style=move || styles.get()>
-            {text}
+            <div {..content.attr()} style=item.content_styles>
+                {text}
+            </div>
         </div>
     }
 }

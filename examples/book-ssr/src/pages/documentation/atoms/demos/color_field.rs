@@ -1,11 +1,13 @@
 use leptonic::{
-    atoms::prelude::{
-        CheckboxButton, CheckboxField, ColorChannelField, ColorField, ColorSwatch, Input, Label,
+    ColorValue, RGB8, RgbChannel,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        color_field::{ColorChannelField, ColorField},
+        color_swatch::ColorSwatch,
+        field::Label,
+        input::Input,
     },
-    utils::{
-        color::{ColorValue, RGB8, RgbChannel},
-        i18n::use_locale,
-    },
+    use_locale,
 };
 use leptos::prelude::*;
 

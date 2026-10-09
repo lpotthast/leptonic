@@ -7,8 +7,8 @@ use leptonic::{
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
     hooks::{
-        ButtonType,
-        collections::{Key, use_list_collection},
+        button::ButtonType,
+        collections::{Key, UseListCollectionInput, use_list_collection},
     },
     selection_value,
 };
@@ -34,11 +34,11 @@ const SIZES: [(Size, &str); 4] = [
 
 #[component]
 pub fn SelectFormDemo() -> impl IntoView {
-    let sizes = use_list_collection(
-        Signal::stored(SIZES.to_vec()),
-        |(size, _)| Key::from(*size),
-        |(_, label)| (*label).to_owned(),
-    );
+    let sizes = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(SIZES.to_vec()),
+        key: |(size, _)| Key::from(*size),
+        text_value: |(_, label)| (*label).to_owned(),
+    });
     let submitted = RwSignal::new(None::<String>);
 
     // Reads the submitted value the way a server would receive it: from the form data.

@@ -53,7 +53,9 @@ pub fn PageAtomFocusable() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{Focusable, Tooltip, TooltipTrigger};
+                        use leptonic::{
+                            atoms::{focusable::Focusable, tooltip::{Tooltip, TooltipTrigger}},
+                        };
 
                         view! {
                             <TooltipTrigger>

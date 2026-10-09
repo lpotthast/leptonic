@@ -6,7 +6,7 @@ use leptonic::{
         datepicker::{DateField, DateInput, DateSegment},
         field::{Description, FieldError, Label},
     },
-    hooks::ValidationBehavior,
+    hooks::form::ValidationBehavior,
     jiff::civil::{Date, Weekday},
 };
 use leptos::prelude::*;

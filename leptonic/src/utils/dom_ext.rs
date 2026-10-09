@@ -53,8 +53,6 @@ pub(crate) trait EventTargetExt {
     #[cfg(not(feature = "ssr"))]
     fn as_element(&self) -> Option<&web_sys::Element>;
     fn to_element(&self) -> Option<web_sys::Element>;
-    #[cfg(not(feature = "ssr"))]
-    fn as_html_element(&self) -> Option<web_sys::HtmlElement>;
     fn as_node(&self) -> Option<web_sys::Node>;
     /// The target's owner document, else the global document (`None` during SSR).
     fn get_owner_document(&self) -> Option<web_sys::Document>;
@@ -68,11 +66,6 @@ impl EventTargetExt for web_sys::EventTarget {
 
     fn to_element(&self) -> Option<web_sys::Element> {
         self.clone().dyn_into::<web_sys::Element>().ok()
-    }
-
-    #[cfg(not(feature = "ssr"))]
-    fn as_html_element(&self) -> Option<web_sys::HtmlElement> {
-        self.clone().dyn_into::<web_sys::HtmlElement>().ok()
     }
 
     fn as_node(&self) -> Option<web_sys::Node> {

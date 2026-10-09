@@ -24,7 +24,7 @@ pub fn PageUseOverlayFocusContain() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::use_overlay_focus_contain;
+                        use leptonic::hooks::overlay::use_overlay_focus_contain;
 
                         /// A panel that keeps keyboard focus inside the overlay it is rendered in.
                         #[component]
@@ -51,7 +51,10 @@ pub fn PageUseOverlayFocusContain() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::{atoms::prelude::FocusScope, hooks::OverlayFocusContain};
+                        use leptonic::{
+                            atoms::focus_scope::FocusScope,
+                            hooks::overlay::OverlayFocusContain,
+                        };
                         use leptos::context::Provider;
 
                         // Per opening: containment requested by one opening doesn't carry over to the next.

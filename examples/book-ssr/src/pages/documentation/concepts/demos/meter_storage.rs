@@ -1,4 +1,8 @@
-use leptonic::atoms::prelude::{Button, Label, Meter, MeterFill, MeterValueText};
+use leptonic::atoms::{
+    button::Button,
+    field::Label,
+    meter::{Meter, MeterFill, MeterValueText},
+};
 use leptos::prelude::*;
 
 #[component]

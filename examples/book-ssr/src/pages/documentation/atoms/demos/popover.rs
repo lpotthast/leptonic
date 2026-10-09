@@ -1,6 +1,11 @@
 use leptonic::{
-    atoms::prelude::{Button, Dialog, DialogTitle, DialogTrigger, OverlayArrow, Popover},
-    hooks::Placement,
+    atoms::{
+        button::Button,
+        dialog::{Dialog, DialogTitle, DialogTrigger},
+        overlay_arrow::OverlayArrow,
+        popover::Popover,
+    },
+    hooks::overlay::Placement,
 };
 use leptos::prelude::*;
 

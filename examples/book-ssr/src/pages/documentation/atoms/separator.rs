@@ -38,15 +38,15 @@ pub fn PageAtomSeparator() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude as atoms;
+                        use leptonic::atoms;
 
                         view! {
-                            <atoms::Menu collection=actions aria_label="Actions">
-                                <atoms::MenuItem key="copy">"Copy"</atoms::MenuItem>
+                            <atoms::menu::Menu collection=actions aria_label="Actions">
+                                <atoms::menu::MenuItem key="copy">"Copy"</atoms::menu::MenuItem>
                                 // A <div role="separator"> between the items.
-                                <atoms::Separator classes="my-menu-separator"/>
-                                <atoms::MenuItem key="delete">"Delete"</atoms::MenuItem>
-                            </atoms::Menu>
+                                <atoms::separator::Separator classes="my-menu-separator"/>
+                                <atoms::menu::MenuItem key="delete">"Delete"</atoms::menu::MenuItem>
+                            </atoms::menu::Menu>
                         }
                     "#)}
                 </Code>

@@ -29,8 +29,8 @@ pub fn PageUseColorWheel() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::color::HSV,
+                            HSV,
+                            hooks::color::{UseColorWheelInput, UseColorWheelStateInput, use_color_wheel, use_color_wheel_state},
                         };
                         use leptos::prelude::*;
 
@@ -43,12 +43,13 @@ pub fn PageUseColorWheel() -> impl IntoView {
                         });
                         let wheel = use_color_wheel(UseColorWheelInput {
                             state,
-                            outer_radius: 100.0,
-                            inner_radius: 74.0,
+                            outer_radius: Signal::stored(100.0),
+                            inner_radius: Signal::stored(74.0),
                             aria_label: MaybeProp::default(),
                             aria_labelledby: None,
                             aria_describedby: None,
                             aria_details: None,
+                            aria_errormessage: None,
                             name: None,
                             form: None,
                         });
@@ -140,12 +141,12 @@ pub fn PageUseColorWheel() -> impl IntoView {
                             <TableCell>"Change the hue by "<Code inline=true>"step"</Code>" (at least the hue\u{2019}s step), wrapping around."</TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"set_hue_from_point(x, y, radius)"</Code></TableCell>
-                            <TableCell>"Sets the hue of a point relative to the wheel\u{2019}s center ("<Code inline=true>"y"</Code>" pointing down)."</TableCell>
+                            <TableCell><Code inline=true>"set_hue_from_point(point, radius)"</Code></TableCell>
+                            <TableCell>"Sets the hue of a "<Code inline=true>"Point"</Code>" relative to the wheel\u{2019}s center ("<Code inline=true>"y"</Code>" pointing down)."</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"thumb_position(radius)"</Code></TableCell>
-                            <TableCell>"The thumb\u{2019}s position relative to the center, on a circle of "<Code inline=true>"radius"</Code>" (tracked)."</TableCell>
+                            <TableCell>"The thumb\u{2019}s position (a "<Code inline=true>"Point"</Code>") relative to the center, on a circle of "<Code inline=true>"radius"</Code>" (tracked)."</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"display_color()"</Code></TableCell>
@@ -181,14 +182,15 @@ pub fn PageUseColorWheel() -> impl IntoView {
                         <ApiRow name="state" ty="ColorWheelState<C>">
                             "The state from "<Code inline=true>"use_color_wheel_state"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="outer_radius" ty="f64">"The ring\u{2019}s outer radius, in pixels. Required."</ApiRow>
-                        <ApiRow name="inner_radius" ty="f64">"The ring\u{2019}s inner radius, in pixels. Required."</ApiRow>
+                        <ApiRow name="outer_radius" ty="Signal<f64>">"The ring\u{2019}s outer radius, in pixels. Required."</ApiRow>
+                        <ApiRow name="inner_radius" ty="Signal<f64>">"The ring\u{2019}s inner radius, in pixels. Required."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the channel\u{2019}s name does."
                         </ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the wheel."</ApiRow>
                         <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the wheel."</ApiRow>
                         <ApiRow name="aria_details" ty="Option<String>" default="None">"The ids of the elements with details about the wheel."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"The id of the element with the wheel\u{2019}s error message."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to."</ApiRow>
                     </ApiTable>

@@ -1,11 +1,15 @@
+// No upstream: writing text to the system clipboard (react-aria has no clipboard writer; its
+// `useClipboard` handles clipboard events, `hooks::clipboard::use_clipboard`).
 //! Writing to the system clipboard (the async Clipboard API; requires the `clipboard` feature).
 
 /// Why text couldn't be written to the clipboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClipboardError {
-    /// No clipboard: on the server, or without a browser window.
+    /// No clipboard: on the server, without a browser window, or outside a secure context
+    /// (browsers offer no `navigator.clipboard` to pages served over plain HTTP, except from
+    /// `localhost`, e.g. a development server opened from a phone in the LAN).
     Unavailable,
-    /// The browser refused (no permission, the page isn't focused, an insecure context, ...).
+    /// The browser refused (no permission, the page isn't focused, ...).
     Denied,
     /// The text to write didn't come ([`write_text_deferred`]'s future gave `None`).
     NoText,
@@ -23,6 +27,22 @@ impl std::fmt::Display for ClipboardError {
 
 impl std::error::Error for ClipboardError {}
 
+/// The browser's clipboard. `navigator.clipboard` is `undefined` outside secure contexts, where
+/// calling it would throw.
+fn clipboard() -> Result<web_sys::Clipboard, ClipboardError> {
+    use wasm_bindgen::JsCast;
+
+    let navigator = leptos_use::use_window()
+        .navigator()
+        .ok_or(ClipboardError::Unavailable)?;
+    let clipboard = js_sys::Reflect::get(&navigator, &"clipboard".into())
+        .map_err(|_| ClipboardError::Unavailable)?;
+    if clipboard.is_undefined() || clipboard.is_null() {
+        return Err(ClipboardError::Unavailable);
+    }
+    Ok(clipboard.unchecked_into())
+}
+
 /// Writes `text` to the clipboard.
 ///
 /// ```ignore
@@ -35,14 +55,10 @@ impl std::error::Error for ClipboardError {}
 ///
 /// # Errors
 ///
-/// [`ClipboardError::Unavailable`] without a browser window, [`ClipboardError::Denied`] when the
-/// browser refuses.
+/// [`ClipboardError::Unavailable`] without a clipboard (see there), [`ClipboardError::Denied`]
+/// when the browser refuses.
 pub async fn write_text(text: &str) -> Result<(), ClipboardError> {
-    let promise = {
-        let window = leptos_use::use_window();
-        let navigator = window.navigator().ok_or(ClipboardError::Unavailable)?;
-        navigator.clipboard().write_text(text)
-    };
+    let promise = clipboard()?.write_text(text);
     wasm_bindgen_futures::JsFuture::from(promise)
         .await
         .map(|_| ())
@@ -71,8 +87,8 @@ pub async fn write_text(text: &str) -> Result<(), ClipboardError> {
 ///
 /// # Errors
 ///
-/// [`ClipboardError::Unavailable`] without a browser window, [`ClipboardError::NoText`] when `text`
-/// gives `None`, [`ClipboardError::Denied`] when the browser refuses.
+/// [`ClipboardError::Unavailable`] without a clipboard (see there), [`ClipboardError::NoText`] when
+/// `text` gives `None`, [`ClipboardError::Denied`] when the browser refuses.
 pub fn write_text_deferred(
     text: impl Future<Output = Option<String>> + 'static,
 ) -> impl Future<Output = Result<(), ClipboardError>> {
@@ -94,8 +110,7 @@ fn start_deferred_write(
 ) -> Result<(js_sys::Promise, std::rc::Rc<std::cell::Cell<bool>>), ClipboardError> {
     use wasm_bindgen::JsValue;
 
-    let window = leptos_use::use_window();
-    let navigator = window.navigator().ok_or(ClipboardError::Unavailable)?;
+    let clipboard = clipboard()?;
     let gave_text = std::rc::Rc::new(std::cell::Cell::new(false));
     // A promise of the text as a `text/plain` blob (Safari takes blobs only).
     let blob = wasm_bindgen_futures::future_to_promise({
@@ -114,6 +129,6 @@ fn start_deferred_write(
         .map_err(|_| ClipboardError::Unavailable)?;
     let item = web_sys::ClipboardItem::new_with_record_from_str_to_blob_promise(&record)
         .map_err(|_| ClipboardError::Unavailable)?;
-    let promise = navigator.clipboard().write(&js_sys::Array::of1(&item));
+    let promise = clipboard.write(&js_sys::Array::of1(&item));
     Ok((promise, gave_text))
 }

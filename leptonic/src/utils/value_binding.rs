@@ -1,3 +1,4 @@
+// No upstream: bindings to app state (react-stately: controlled props, `useControlledState`).
 //! Two-way bindings of a component's value to app state.
 
 use leptos::prelude::*;
@@ -86,10 +87,11 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
     #[test]
     fn state_props_with_a_value_bind_it() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(1);
             let changes = RwSignal::new(Vec::new());
             let (binding, on_change) = ValueBinding::from_state_props(
@@ -109,7 +111,7 @@ mod tests {
 
     #[test]
     fn a_value_without_a_setter_is_read_only() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let (binding, _) = ValueBinding::from_state_props(Some(Signal::stored(1)), None, None);
             let binding = binding.expect("bound");
             binding.set(2);
@@ -119,7 +121,7 @@ mod tests {
 
     #[test]
     fn a_setter_without_a_value_receives_every_change() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(0);
             let changes = RwSignal::new(Vec::new());
             let (binding, on_change) = ValueBinding::from_state_props(

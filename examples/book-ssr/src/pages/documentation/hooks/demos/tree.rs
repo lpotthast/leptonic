@@ -1,13 +1,18 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     hooks::{
-        GridListData, IntoAttrs, SelectionMode, UseTreeInput, UseTreeItemInput, UseTreeItemReturn,
-        UseTreeStateInput,
-        collections::{CollectionOptions, Key, Selection, SelectionOptions, use_collection},
-        use_button, use_tree, use_tree_item, use_tree_state,
+        button::use_button,
+        collections::{
+            CollectionOptions, Key, Selection, SelectionMode, SelectionOptions, use_collection,
+        },
+        gridlist::{FocusMode, GridListData, KeyboardNavigationBehavior},
+        tree::{
+            UseTreeInput, UseTreeItemInput, UseTreeItemReturn, UseTreeStateInput, use_tree,
+            use_tree_item, use_tree_state,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -54,9 +59,11 @@ pub fn TreeDemo() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         id: None,
-        aria_labelledby: None,
+        aria_labelledby: Signal::stored(None),
         options: CollectionOptions::default(),
         on_action: None,
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
+        should_select_on_press_up: false,
     });
     let data = tree.data;
     // The visible items, in order: children of collapsed items are left out.
@@ -89,7 +96,13 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
         expand_button_attrs,
         is_expanded,
         has_child_items,
-    } = use_tree_item(UseTreeItemInput { tree, key });
+    } = use_tree_item(UseTreeItemInput {
+        tree,
+        key,
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let (attrs, styles) = item.row_props.into_parts();
     // Parents get a button expanding or collapsing them; leaves an empty spacer of the same width.
     let toggle = if has_child_items.get_untracked() {

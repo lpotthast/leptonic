@@ -1,14 +1,17 @@
 // Upstream: react-stately/src/color/useColorChannelFieldState.ts @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/color/ColorField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ColorField.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::form::{
         use_form_validation_state::{ValidateFn, ValidationBehavior},
         use_number_field_state::{
             NumberFieldState, UseNumberFieldStateInput, use_number_field_state,
         },
     },
-    utils::{ValueBinding, color::ColorValue},
+    utils::color::ColorValue,
 };
 
 // =============================================================================
@@ -143,8 +146,6 @@ pub fn use_color_channel_field_state<C: ColorValue + Default>(
 
 #[cfg(test)]
 mod tests {
-    // Upstream: @adobe/react-spectrum/test/color/ColorField.test.js ("channel") and
-    // react-aria-components/test/ColorField.test.js ("should support the channel prop").
     use assertr::prelude::*;
 
     use super::*;

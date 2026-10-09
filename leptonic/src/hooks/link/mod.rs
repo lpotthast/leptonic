@@ -103,18 +103,43 @@ impl fmt::Display for LinkRel {
     }
 }
 
-/// Joins a slice of `LinkRel` values into a space-separated string
-/// suitable for the HTML `rel` attribute. Returns `None` if the slice is empty.
+/// The `rel` attribute of a link opening in `target`: `rel`, plus `noopener` for
+/// [`LinkTarget::Blank`] unless `rel` asks for [`LinkRel::Opener`] or has it already (the new
+/// browsing context gets no access to this one). `None` without values.
 #[must_use]
-pub fn link_rel_to_string(rels: &[LinkRel]) -> Option<String> {
-    if rels.is_empty() {
-        None
-    } else {
-        Some(
-            rels.iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(" "),
-        )
+pub fn link_rel(target: &LinkTarget, mut rel: Vec<LinkRel>) -> Option<String> {
+    if *target == LinkTarget::Blank
+        && !rel.contains(&LinkRel::NoOpener)
+        && !rel.contains(&LinkRel::Opener)
+    {
+        rel.push(LinkRel::NoOpener);
+    }
+    (!rel.is_empty()).then(|| {
+        rel.iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" ")
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+
+    #[test]
+    fn rel_adds_noopener_for_blank_targets() {
+        assert_that!(link_rel(&LinkTarget::Blank, vec![LinkRel::NoFollow]))
+            .is_equal_to(Some("nofollow noopener".to_owned()));
+        assert_that!(link_rel(&LinkTarget::Blank, vec![LinkRel::NoOpener]))
+            .is_equal_to(Some("noopener".to_owned()));
+        assert_that!(link_rel(&LinkTarget::Same, Vec::new())).is_none();
+    }
+
+    #[test]
+    fn rel_keeps_opener() {
+        assert_that!(link_rel(&LinkTarget::Blank, vec![LinkRel::Opener]))
+            .is_equal_to(Some("opener".to_owned()));
     }
 }

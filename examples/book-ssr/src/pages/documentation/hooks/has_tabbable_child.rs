@@ -52,7 +52,7 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::focus::{UseHasTabbableChildInput, UseHasTabbableChildReturn, use_has_tabbable_child};
 
                         let UseHasTabbableChildReturn { has_tabbable_child, props } =
                             use_has_tabbable_child(UseHasTabbableChildInput::default());
@@ -98,7 +98,7 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
                 <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>
                 <li><Link href=routes::doc::focus::Focusability.materialize()>"focusability"</Link></li>
             </SeeAlso>

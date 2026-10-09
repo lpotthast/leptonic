@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
-    hooks::{SelectionMode, TableCollection, collections::Selection},
+    hooks::{
+        collections::{Selection, SelectionMode},
+        table::TableCollection,
+    },
 };
 use leptos::prelude::*;
 

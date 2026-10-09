@@ -33,8 +33,9 @@ pub fn PageAtomColorArea() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            utils::color::{HSV, HsvChannel},
+                            HSV,
+                            HsvChannel,
+                            atoms::{color_area::ColorArea, color_thumb::ColorThumb},
                         };
                         use leptos::prelude::*;
 
@@ -91,13 +92,13 @@ pub fn PageAtomColorArea() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="ColorArea">
                         <ApiRow name="value" ty="Option<Signal<C>>" default="None">"The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "<Code inline=true>"ColorPicker"</Code>" around it, if any."</ApiRow>
                         <ApiRow name="set_value" ty="Option<Out<C>>" default="None">"Receives the new color: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"</ApiRow>
-                        <ApiRow name="default_value" ty="Option<C>" default="C::default()">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
+                        <ApiRow name="default_value" ty="Option<C>" default="white">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<C>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
                         <ApiRow name="on_change_end" ty="Option<Callback<C>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
-                        <ApiRow name="x_channel" ty="Option<C::Channel>" default="None">
+                        <ApiRow name="x_channel" ty="Option<Channel>" default="None">
                             "The channel on the X axis. "<Code inline=true>"None"</Code>": the color space\u{2019}s first axis (saturation for HSV)."
                         </ApiRow>
-                        <ApiRow name="y_channel" ty="Option<C::Channel>" default="None">
+                        <ApiRow name="y_channel" ty="Option<Channel>" default="None">
                             "The channel on the Y axis, maximum at the top. "<Code inline=true>"None"</Code>": the color space\u{2019}s second axis."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables pointer and keyboard interaction and the inputs."</ApiRow>
@@ -111,6 +112,9 @@ pub fn PageAtomColorArea() -> impl IntoView {
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the inputs belong to."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the area."</ApiRow>
                         <ApiRow name="children" ty="Children">"The "<Code inline=true>"ColorThumb"</Code>", and anything else to draw on the area. Required."</ApiRow>
+                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements providing additional details."</ApiRow>
+                        <ApiRow name="x_channel_step" ty="Option<f64>" default="None">"Step for the horizontal color channel; uses the channel default when omitted."</ApiRow>
+                        <ApiRow name="y_channel_step" ty="Option<f64>" default="None">"Step for the vertical color channel; uses the channel default when omitted."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

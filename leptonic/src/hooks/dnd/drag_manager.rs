@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/dnd/DragManager.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/dnd.test.js @ 99e6102368
 //! Keyboard and screen reader drag and drop: a drag session lets the user move between drop
 //! targets (Tab, or a collection's own keys), drop (Enter) or cancel (Escape), while the rest of
 //! the page is inert (`inert`, not only `aria-hidden`, as react-aria's `shouldUseInert`).
@@ -18,17 +19,19 @@ use super::{
         DragEndEvent, DragItem, DragTypes, DropActivateEvent, DropEnterEvent, DropEvent,
         DropExitEvent, DropItem, DropOperation, DropTarget, TextDropItem,
     },
-    utils::{DragModality, get_drag_modality},
+    utils::{DragModality, event_target_element, get_drag_modality},
 };
-use crate::utils::{
-    CapturedElement, EventAccessors,
-    aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside},
-    event_listeners::{Listener, listen},
-    intl_strings::DndStrings,
-    key::{KeyboardEventKey, KeyboardKey},
-    live_announcer::{Assertiveness, announce},
-    node_contains,
-    virtual_click::{is_virtual_click, is_virtual_pointer_event},
+use crate::{
+    CapturedElement,
+    utils::{
+        aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside},
+        dom_ext::node_contains,
+        event_listeners::{Listener, listen},
+        intl_strings::DndStrings,
+        key::{KeyboardEventKey, KeyboardKey},
+        live_announcer::{Assertiveness, announce},
+        virtual_click::{is_virtual_click, is_virtual_pointer_event},
+    },
 };
 
 // =============================================================================
@@ -42,6 +45,8 @@ use crate::utils::{
 //   listener dispatches nested focus events into the same listener.
 // - Hooks observe the session through [`use_drag_session`], a signal of the dragged items and
 //   allowed operations.
+// - The session's event handlers, frame and mutation callbacks run untracked, as Leptos runs `on:`
+//   handlers: drop targets' and apps' callbacks read signals without subscribing anything.
 //
 // =============================================================================
 
@@ -87,6 +92,8 @@ pub(crate) struct DroppableItemOptions {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DragSessionInfo {
     pub items: Vec<DragItem>,
+    /// The types of `items`.
+    pub types: DragTypes,
     pub allowed_drop_operations: Vec<DropOperation>,
 }
 
@@ -174,28 +181,37 @@ fn drop_item_for(element: &web_sys::Element) -> Option<Item> {
     })
 }
 
-/// Start a keyboard (or screen reader) drag of `target`.
-pub(crate) fn begin_dragging(target: DragTarget) {
+/// A keyboard (or screen reader) drag is in progress already.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DragInProgress;
+
+/// Start a keyboard (or screen reader) drag of `target`. Fails while another one is in progress
+/// (e.g. a second Enter on the drag source before the session's first frame set it up).
+pub(crate) fn begin_dragging(target: DragTarget) -> Result<(), DragInProgress> {
     if session().is_some() {
-        leptos::logging::error!("Cannot begin dragging while already dragging");
-        return;
+        return Err(DragInProgress);
     }
-    let session = Rc::new(DragSession::new(target));
-    SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
+    let started = Rc::new(DragSession::new(target));
+    SESSION.with(|s| *s.borrow_mut() = Some(started.clone()));
     SESSION_INFO.with(|info| {
         info.set(Some(DragSessionInfo {
-            items: session.drag_target.items.clone(),
-            allowed_drop_operations: session.drag_target.allowed_drop_operations.clone(),
+            items: started.drag_target.items.clone(),
+            types: started.types.clone(),
+            allowed_drop_operations: started.drag_target.allowed_drop_operations.clone(),
         }));
     });
     request_animation_frame(move || {
-        if is_virtual_dragging() {
-            session.setup();
-            if get_drag_modality() == DragModality::Keyboard {
-                session.next();
+        untrack(|| {
+            // Not canceled (or replaced) before this frame.
+            if session().is_some_and(|current| Rc::ptr_eq(&current, &started)) {
+                started.setup();
+                if get_drag_modality() == DragModality::Keyboard {
+                    started.next();
+                }
             }
-        }
+        });
     });
+    Ok(())
 }
 
 /// The current keyboard drag session, if any (react-aria's `useDragSession`).
@@ -285,6 +301,8 @@ struct SessionState {
 
 struct DragSession {
     drag_target: DragTarget,
+    /// The types of the dragged items.
+    types: DragTypes,
     state: RefCell<SessionState>,
     listeners: RefCell<Vec<Listener>>,
     mutation_observer: RefCell<Option<(web_sys::MutationObserver, Closure<dyn Fn()>)>>,
@@ -293,6 +311,7 @@ struct DragSession {
 impl DragSession {
     fn new(drag_target: DragTarget) -> Self {
         Self {
+            types: DragTypes::of_items(&drag_target.items),
             drag_target,
             state: RefCell::new(SessionState::default()),
             listeners: RefCell::new(Vec::new()),
@@ -309,43 +328,39 @@ impl DragSession {
         };
         let document: web_sys::EventTarget = document.into();
         let window: web_sys::EventTarget = window.into();
-        let mut listeners = Vec::new();
-        let this = self.clone();
-        listeners.push(listen(&document, "keydown", true, move |e| {
-            this.on_key_down(e.unchecked_ref());
-        }));
-        let this = self.clone();
-        listeners.push(listen(&document, "keyup", true, move |e| {
-            this.on_key_up(e.unchecked_ref());
-        }));
-        let this = self.clone();
-        listeners.push(listen(&window, "focus", true, move |e| {
-            this.on_focus(e.unchecked_ref());
-        }));
-        let this = self.clone();
-        listeners.push(listen(&window, "blur", true, move |e| {
-            this.on_blur(e.unchecked_ref());
-        }));
-        let this = self.clone();
-        listeners.push(listen(&document, "click", true, move |e| {
-            this.on_click(e.unchecked_ref());
-        }));
-        let this = self.clone();
-        listeners.push(listen(&document, "pointerdown", true, move |e| {
-            this.on_pointer_down(e.unchecked_ref());
-        }));
-        for event in CANCELED_EVENTS {
+        // The session's handlers run the drop targets' callbacks (and the app's) untracked, as
+        // Leptos runs `on:` handlers: they read signals without subscribing anything.
+        let on = |target: &web_sys::EventTarget,
+                  event: &'static str,
+                  handler: fn(&Rc<Self>, &web_sys::Event)| {
             let this = self.clone();
-            listeners.push(listen(&document, event, true, move |e| {
-                this.cancel_event(&e);
-            }));
+            listen(target, event, true, move |e| untrack(|| handler(&this, &e)))
+        };
+        let mut listeners = vec![
+            on(&document, "keydown", |this, e| {
+                this.on_key_down(e.unchecked_ref());
+            }),
+            on(&document, "keyup", |this, e| {
+                this.on_key_up(e.unchecked_ref());
+            }),
+            on(&window, "focus", |this, e| this.on_focus(e.unchecked_ref())),
+            on(&window, "blur", |this, e| this.on_blur(e.unchecked_ref())),
+            on(&document, "click", |this, e| {
+                this.on_click(e.unchecked_ref());
+            }),
+            on(&document, "pointerdown", |this, e| {
+                this.on_pointer_down(e.unchecked_ref());
+            }),
+        ];
+        for event in CANCELED_EVENTS {
+            listeners.push(on(&document, event, |this, e| this.cancel_event(e)));
         }
         *self.listeners.borrow_mut() = listeners;
 
         let this = Rc::downgrade(self);
         let callback = Closure::<dyn Fn()>::new(move || {
             if let Some(this) = this.upgrade() {
-                this.update_valid_drop_targets();
+                untrack(|| this.update_valid_drop_targets());
             }
         });
         if let Ok(observer) = web_sys::MutationObserver::new(callback.as_ref().unchecked_ref()) {
@@ -378,10 +393,6 @@ impl DragSession {
         self.state.borrow().current_drop_item.clone()
     }
 
-    fn types(&self) -> DragTypes {
-        DragTypes::of_items(&self.drag_target.items)
-    }
-
     fn on_key_down(self: &Rc<Self>, e: &web_sys::KeyboardEvent) {
         self.cancel_event(e);
         if e.typed_key() == KeyboardKey::Escape {
@@ -406,9 +417,11 @@ impl DragSession {
     fn on_key_up(self: &Rc<Self>, e: &web_sys::KeyboardEvent) {
         self.cancel_event(e);
         if e.typed_key() == KeyboardKey::Enter {
-            let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
-            let on_activate_button =
-                contains(self.current_activate_button().as_ref(), target.as_ref());
+            let target = event_target_element(e);
+            let on_activate_button = contains(
+                self.current_activate_button().as_ref(),
+                target.as_ref().map(JsCast::unchecked_ref),
+            );
             if e.alt_key() || on_activate_button {
                 Self::activate(self.current_drop_target(), self.current_drop_item());
             } else {
@@ -434,9 +447,7 @@ impl DragSession {
     }
 
     fn on_focus(self: &Rc<Self>, e: &web_sys::FocusEvent) {
-        let event_target = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+        let event_target = event_target_element(e);
         if event_target.is_some() && event_target == self.current_activate_button() {
             self.cancel_event(e);
             return;
@@ -481,9 +492,7 @@ impl DragSession {
             self.cancel_event(e);
             return;
         }
-        let event_target = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+        let event_target = event_target_element(e);
         if event_target.as_ref() != Some(&self.drag_target.element) {
             self.cancel_event(e);
         }
@@ -501,10 +510,7 @@ impl DragSession {
         if !(is_virtual_click(e) || is_virtual) {
             return;
         }
-        let Some(event_target) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-        else {
+        let Some(event_target) = event_target_element(e) else {
             return;
         };
         let node: &web_sys::Node = event_target.unchecked_ref();
@@ -555,9 +561,7 @@ impl DragSession {
     fn cancel_event(&self, e: &web_sys::Event) {
         let kind = e.type_();
         if kind == "focusin" || kind == "focusout" {
-            let target = e
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+            let target = event_target_element(e);
             if target.is_some()
                 && (target.as_ref() == Some(&self.drag_target.element)
                     || target == self.current_activate_button())
@@ -587,7 +591,7 @@ impl DragSession {
             restore();
         }
 
-        let mut valid = find_valid_drop_targets(&self.drag_target);
+        let mut valid = find_valid_drop_targets(&self.drag_target, &self.types);
         if !valid.is_empty() {
             let nearest = self.find_nearest_drop_target(&valid);
             valid.rotate_left(nearest);
@@ -604,14 +608,14 @@ impl DragSession {
             self.set_current_drop_target(valid.first().cloned(), None);
         }
 
-        let types = self.types();
+        let types = &self.types;
         let allowed = &self.drag_target.allowed_drop_operations;
         let valid_items: Vec<Item> = drop_items()
             .into_iter()
             .filter(|item| {
                 item.get_drop_operation
                     .as_ref()
-                    .is_none_or(|get| get(&types, allowed) != DropOperation::Cancel)
+                    .is_none_or(|get| get(types, allowed) != DropOperation::Cancel)
             })
             .collect();
         let visible_targets = valid.iter().filter(|t| {
@@ -834,13 +838,13 @@ impl DragSession {
             self.cancel();
             return;
         };
-        let types = self.types();
+        let types = &self.types;
         let allowed = &self.drag_target.allowed_drop_operations;
         let operation = if let Some(get) = item.as_ref().and_then(|i| i.get_drop_operation.as_ref())
         {
-            get(&types, allowed)
+            get(types, allowed)
         } else if let Some(get) = &target.get_drop_operation {
-            get(&types, allowed)
+            get(types, allowed)
         } else {
             allowed.first().copied().unwrap_or(DropOperation::Cancel)
         };
@@ -897,8 +901,7 @@ fn dispatch_focusin_on_active_element() {
     }
 }
 
-fn find_valid_drop_targets(drag_target: &DragTarget) -> Vec<Target> {
-    let types = DragTypes::of_items(&drag_target.items);
+fn find_valid_drop_targets(drag_target: &DragTarget, types: &DragTypes) -> Vec<Target> {
     drop_targets()
         .into_iter()
         .filter(|target| {
@@ -909,7 +912,7 @@ fn find_valid_drop_targets(drag_target: &DragTarget) -> Vec<Target> {
                 return false;
             }
             target.get_drop_operation.as_ref().is_none_or(|get| {
-                get(&types, &drag_target.allowed_drop_operations) != DropOperation::Cancel
+                get(types, &drag_target.allowed_drop_operations) != DropOperation::Cancel
             })
         })
         .collect()

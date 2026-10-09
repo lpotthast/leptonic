@@ -1,3 +1,4 @@
+// Upstream: react-stately/test/color/Color.test.tsx @ 99e6102368
 use assertr::prelude::*;
 
 use super::*;
@@ -122,8 +123,11 @@ fn hsv_channel_range() {
 
 #[test]
 fn hsv_channels() {
-    let channels = HSV::channels();
-    assert_that!(channels.len()).is_equal_to(3);
+    assert_that!(HSV::channels()).is_equal_to([
+        HsvChannel::Hue,
+        HsvChannel::Saturation,
+        HsvChannel::Brightness,
+    ]);
 }
 
 #[test]
@@ -263,8 +267,8 @@ fn hsl_channel_range() {
     assert_that!(range.max_value).is_close_to(360.0, 0.001);
     assert_that!(range.step).is_close_to(1.0, 0.001);
 
-    let light_range = HSL::channel_range(HslChannel::Lightness);
-    assert_that!(light_range.gradient_stops.unwrap().len()).is_equal_to(3);
+    assert_that!(HSL::gradient_stops(HslChannel::Lightness))
+        .is_equal_to([0.0, 0.5, 1.0].as_slice());
 }
 
 #[test]
@@ -537,7 +541,7 @@ fn alpha_survives_conversions_and_opaque_types_drop_it() {
     let channel = AlphaChannel::<HsvChannel>::Alpha;
     let half = Alpha::new(HSV::new()).with_channel_value(channel, 0.5);
     assert_that!(half.format_channel_value(channel, &en())).is_equal_to("50%".to_owned());
-    assert_that!(Alpha::<HSV>::channels().len()).is_equal_to(3);
+    assert_that!(Alpha::<HSV>::channels()).is_equal_to(HSV::channels().map(AlphaChannel::Color));
 }
 
 #[test]
@@ -657,4 +661,28 @@ fn the_opaque_color_drops_the_alpha() {
     let color = Alpha::new(RGB8 { r: 1, g: 2, b: 3 }).with_alpha(0.3);
     assert_that!(color.opaque().alpha).is_equal_to(1.0);
     assert_that!(RGB8 { r: 1, g: 2, b: 3 }.opaque()).is_equal_to(RGB8 { r: 1, g: 2, b: 3 });
+}
+
+/// Hues outside 0..360 wrap around in conversions, as react-stately's `(n + hue / 60) % 6`:
+/// 450° is 90° (chartreuse), −30° is 330° (rose).
+#[test]
+fn hues_outside_the_circle_wrap_around_in_conversions() {
+    let chartreuse = RGB8 {
+        r: 128,
+        g: 255,
+        b: 0,
+    };
+    let rose = RGB8 {
+        r: 255,
+        g: 0,
+        b: 128,
+    };
+    assert_that!(RGB8::from(HSV::new().with_hue(450.0))).is_equal_to(chartreuse);
+    assert_that!(RGB8::from(HSV::new().with_hue(-30.0))).is_equal_to(rose);
+    assert_that!(RGB8::from(HSL::new().with_hue(450.0))).is_equal_to(chartreuse);
+    assert_that!(RGB8::from(HSL::new().with_hue(-30.0))).is_equal_to(rose);
+    // 360° is red, as 0°.
+    assert_that!(RGB8::from(HSV::new().with_hue(360.0))).is_equal_to(RGB8 { r: 255, g: 0, b: 0 });
+    assert_that!(HSV::new().with_hue(-30.0).to_css_string())
+        .is_equal_to("rgb(255, 0, 128)".to_owned());
 }

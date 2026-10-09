@@ -11,7 +11,7 @@ use leptonic::{
         field::{Description, FieldError, Label},
         popover::Popover,
     },
-    hooks::ValidationBehavior,
+    hooks::form::ValidationBehavior,
     jiff::civil::{Date, Weekday, date},
 };
 use leptos::prelude::*;

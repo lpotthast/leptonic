@@ -28,14 +28,6 @@ pub fn PageUseFocusRing() -> impl IntoView {
                         <Code inline=true>"is_focused"</Code>" and "<Code inline=true>"is_focus_visible"</Code>" to "
                         <Code inline=true>"false"</Code>"."
                     </ApiRow>
-                    <ApiRow name="within" ty="bool" default="false">
-                        "Track focus anywhere inside the element instead of on the element itself, see "
-                        <AnchorLink href="#within-mode">"Within Mode"</AnchorLink>"."
-                    </ApiRow>
-                    <ApiRow name="auto_focus" ty="bool" default="false">
-                        "Set this when the element is focused on mount: the ring then starts out visible. It does not focus the "
-                        "element itself."
-                    </ApiRow>
                     <ApiRow name="is_text_input" ty="bool" default="false">
                         "Use text input rules: only "<Keys keys="Tab"/>" and "<Keys keys="Escape"/>" make focus visible, see "<AnchorLink href="#text-input-mode">"Text Input Mode"</AnchorLink>"."
                     </ApiRow>
@@ -48,6 +40,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
                     <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
                         "Called with the new focus state."
                     </ApiRow>
+                    <ApiRow name="target" ty="FocusRingTarget" default="FocusRingTarget::Element">"Track the element itself or focus anywhere in its subtree."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -69,7 +62,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::focus::{UseFocusRingInput, use_focus_ring};
 
                         let focus_ring = use_focus_ring(UseFocusRingInput::default());
 
@@ -113,7 +106,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
 
             <Section title="Within Mode">
                 <p>
-                    "With "<Code inline=true>"within: true"</Code>", the hook listens to "<Code inline=true>"focusin"</Code>" and "
+                    "With "<Code inline=true>"target: FocusRingTarget::Within"</Code>", the hook listens to "<Code inline=true>"focusin"</Code>" and "
                     <Code inline=true>"focusout"</Code>" (via "
                     <Link href=routes::doc::focus::UseFocusWithin.materialize()>"use_focus_within"</Link>
                     ") and sets "<Code inline=true>"data-focus-visible"</Code>" on the container while any descendant has keyboard "

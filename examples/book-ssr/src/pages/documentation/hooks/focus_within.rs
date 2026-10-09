@@ -65,7 +65,7 @@ pub fn PageUseFocusWithin() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::focus::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within};
 
                         let UseFocusWithinReturn { props, is_focus_within } =
                             use_focus_within(UseFocusWithinInput::default());

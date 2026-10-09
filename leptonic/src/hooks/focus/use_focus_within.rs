@@ -1,12 +1,9 @@
 // Upstream: react-aria/src/interactions/useFocusWithin.ts @ 99e6102368
-use leptos::{
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/interactions/useFocusWithin.test.js @ 99e6102368
+use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
-use crate::{hooks::IntoAttrs, utils::EventHandler};
+use crate::{EventHandler, IntoAttrs, OnEvent};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -96,10 +93,7 @@ impl IntoAttrs for UseFocusWithinProps {
 }
 
 /// These attributes must be spread onto the target element.
-pub type UseFocusWithinAttrs = (
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-);
+pub type UseFocusWithinAttrs = (OnEvent<ev::focusin>, OnEvent<ev::focusout>);
 
 /// Handles focus events for a target element and all its descendants.
 ///
@@ -112,7 +106,7 @@ pub type UseFocusWithinAttrs = (
 ///
 /// ```ignore
 /// let focus_within = use_focus_within(UseFocusWithinInput {
-///     disabled: Signal::derive(|| false),
+///     is_disabled: Signal::stored(false),
 ///     on_focus_within: Some(Callback::new(|_| {
 ///         // Focus entered the element tree
 ///     })),
@@ -125,7 +119,7 @@ pub type UseFocusWithinAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..focus_within.attrs}>
+///     <div {..focus_within.props.into_attrs()}>
 ///         <input type="text" />
 ///         <button>"Submit"</button>
 ///     </div>
@@ -150,9 +144,8 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
         use wasm_bindgen::JsCast;
 
         use crate::utils::{
-            EventAccessors, EventTargetExt,
+            dom_ext::{EventAccessors, EventTargetExt, set_event_target},
             event_listeners::{Listener, listen_to},
-            set_event_target,
             shadow_dom::{get_active_element, get_event_target, node_contains},
             synthetic_blur::SyntheticBlurObserver,
         };

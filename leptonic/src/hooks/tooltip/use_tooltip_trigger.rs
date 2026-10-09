@@ -1,20 +1,13 @@
 // Upstream: react-aria/src/tooltip/useTooltipTrigger.ts @ 99e6102368
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/tooltip/useTooltip.test.js @ 99e6102368
+use leptos::{attr, attr::Attr, ev, prelude::*};
 use web_sys::KeyboardEvent;
 
 use super::use_tooltip_trigger_state::{TooltipTiming, TooltipTriggerState};
 use crate::{
-    hooks::{
-        IntoAttrs,
-        focus::use_focus_visible::{Modality, get_modality},
-    },
-    utils::{EventHandler, id::use_id, pointer_type::PointerType},
+    EventHandler, IntoAttrs, OnEvent,
+    hooks::focus::use_focus_visible::{Modality, get_modality},
+    utils::{id::use_id, pointer_type::PointerType},
 };
 
 // =============================================================================
@@ -59,6 +52,7 @@ pub enum TooltipTriggerMode {
 }
 
 /// The return value of the `use_tooltip_trigger` hook.
+#[derive(Debug)]
 pub struct UseTooltipTriggerReturn {
     /// Props for the trigger element.
     pub trigger_props: UseTooltipTriggerProps,
@@ -98,12 +92,12 @@ impl IntoAttrs for UseTooltipTriggerProps {
 /// Attributes for the tooltip trigger element.
 pub type UseTooltipTriggerAttrs = (
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    On<ev::pointerenter, SharedEventCallback<web_sys::PointerEvent>>,
-    On<ev::pointerleave, SharedEventCallback<web_sys::PointerEvent>>,
-    On<ev::focus, SharedEventCallback<web_sys::FocusEvent>>,
-    On<ev::blur, SharedEventCallback<web_sys::FocusEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::pointerdown, SharedEventCallback<web_sys::PointerEvent>>,
+    OnEvent<ev::pointerenter>,
+    OnEvent<ev::pointerleave>,
+    OnEvent<ev::focus>,
+    OnEvent<ev::blur>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::pointerdown>,
 );
 
 /// Props for the tooltip element.
@@ -144,7 +138,7 @@ pub struct UseTooltipTriggerTooltipProps {
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerReturn {
-    crate::hooks::track_interaction_modality();
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseTooltipTriggerInput {
         state,
         is_disabled,
@@ -188,13 +182,13 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         // Touch never hovers (as `useHover`).
         if is_disabled.get_untracked()
             || trigger_type == TooltipTriggerMode::Focus
-            || PointerType::from(e.pointer_type()) == PointerType::Touch
+            || PointerType::of(&e) == PointerType::Touch
         {
             return;
         }
         // Only count as hovered when the user is using a pointer. This prevents Chrome's phantom
         // hover events after keyboard interactions.
-        is_hovered.set_value(get_modality() == Modality::Pointer);
+        is_hovered.set_value(get_modality() == Some(Modality::Pointer));
         handle_show();
     };
 
@@ -216,7 +210,7 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         }
         // Only show tooltip on focus when it's keyboard/virtual focus,
         // not pointer focus (clicking to focus should not show tooltip).
-        if get_modality() != Modality::Pointer {
+        if get_modality() != Some(Modality::Pointer) {
             is_focused.set_value(true);
             handle_show();
         }

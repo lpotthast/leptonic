@@ -6,13 +6,15 @@ use leptos::prelude::*;
 use super::{
     CollectionOptions, DomLayoutDelegate, KeyboardDelegate, LayoutDelegate, ListKeyboardDelegate,
     ListLayout, ListState, UseSelectableCollectionInput, UseSelectableCollectionReturn,
-    use_selectable_collection,
+    keyboard_delegate_memo, use_selectable_collection,
 };
-use crate::utils::{
+use crate::{
     CapturedElement,
-    filter::{CollatorOptions, use_collator},
-    i18n::use_direction,
-    orientation::Orientation,
+    utils::{
+        filter::{CollatorOptions, use_collator},
+        i18n::use_direction,
+        orientation::Orientation,
+    },
 };
 
 // =============================================================================
@@ -29,7 +31,7 @@ pub struct UseSelectableListInput {
     pub state: ListState,
     /// The list element; the hook's props capture it.
     pub element: CapturedElement,
-    pub orientation: Orientation,
+    pub orientation: Signal<Orientation>,
     /// Items stacked (one per row/column) or wrapping in a grid.
     pub layout: ListLayout,
     /// Replaces the list keyboard delegate.
@@ -88,7 +90,7 @@ pub struct UseListKeyboardDelegateInput {
     pub state: ListState,
     /// The list element, in which the default layout delegate measures the rendered items.
     pub element: CapturedElement,
-    pub orientation: Orientation,
+    pub orientation: Signal<Orientation>,
     pub layout: ListLayout,
     /// Where the items are. `None`: measured in the DOM, inside `element` (a virtualizer's layout
     /// knows items that aren't rendered).
@@ -122,11 +124,11 @@ pub fn use_list_keyboard_delegate(
         .unwrap_or_else(|| Arc::new(DomLayoutDelegate::new(element, state.item_elements)));
     let collator = use_collator(CollatorOptions::default());
     let direction = use_direction();
-    Signal::derive(move || {
+    keyboard_delegate_memo(move || {
         Arc::new(
             ListKeyboardDelegate::new(state.collection, state.selection, layout_delegate.clone())
                 .with_layout(layout)
-                .with_orientation(orientation)
+                .with_orientation(orientation.get())
                 .with_direction(direction.get())
                 .with_collator(collator.get()),
         ) as Arc<dyn KeyboardDelegate>

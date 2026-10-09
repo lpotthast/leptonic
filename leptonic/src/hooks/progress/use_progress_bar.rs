@@ -1,13 +1,14 @@
 // Upstream: react-aria/src/progress/useProgressBar.ts @ 99e6102368
+// Upstream: react-aria/test/progress/useProgressBar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ProgressBar.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
 };
 
 use crate::{
-    hooks::{
-        IntoAttrs, LabelElementType, UseLabelFieldAttrs, UseLabelInput, UseLabelProps, use_label,
-    },
+    IntoAttrs,
+    hooks::form::{LabelElementType, UseLabelFieldAttrs, UseLabelInput, UseLabelProps, use_label},
     utils::{
         aria::AriaRole,
         fraction::Fraction,
@@ -34,7 +35,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_progress_bar`] (and, with its own value type, [`use_meter`](fn@crate::hooks::use_meter)).
+/// Input of [`use_progress_bar`] (and, with its own value type, [`use_meter`](fn@crate::hooks::meter::use_meter)).
 #[derive(Debug, Clone)]
 pub struct UseProgressBarInput<T: NumberValue> {
     /// The progress, clamped to the range. `None`: indeterminate (the progress isn't known).
@@ -96,7 +97,7 @@ pub struct UseProgressBarReturn {
 /// Props for the progress bar (or meter) element.
 #[derive(Debug)]
 pub struct UseProgressBarProps {
-    pub field_props: crate::hooks::UseLabelFieldProps,
+    pub field_props: crate::hooks::form::UseLabelFieldProps,
     pub aria_describedby: Option<String>,
     pub role: AriaRole,
     pub aria_valuenow: Signal<Option<String>>,
@@ -245,7 +246,7 @@ mod tests {
     // Upstream: useProgressBar.test.js "with default props if no props are provided".
     #[test]
     fn defaults_to_zero_of_a_hundred() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput::default());
             assert_that!(progress.props.role).is_equal_to(AriaRole::Progressbar);
             assert_that!(progress.props.aria_valuenow.get_untracked())
@@ -260,7 +261,7 @@ mod tests {
     // Upstream: "with value of 25%" and RAC "supports a custom range".
     #[test]
     fn formats_the_percentage() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput {
                 value: Signal::stored(Some(3.0)),
                 max_value: Signal::stored(6.0),
@@ -281,7 +282,7 @@ mod tests {
 
     #[test]
     fn clamps_the_value_to_the_range() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput {
                 value: Signal::stored(Some(150.0)),
                 ..UseProgressBarInput::default()
@@ -301,7 +302,7 @@ mod tests {
     // RAC: "renders 0 percent for an empty range (with a non-zero bound)".
     #[test]
     fn an_empty_range_is_zero_percent() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput {
                 value: Signal::stored(Some(5.0)),
                 min_value: Signal::stored(5.0),
@@ -322,7 +323,7 @@ mod tests {
     // Upstream: "with indeterminate prop".
     #[test]
     fn indeterminate_has_no_value() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput {
                 value: Signal::stored(None),
                 ..UseProgressBarInput::default()
@@ -337,7 +338,7 @@ mod tests {
     // Upstream: "with custom text value".
     #[test]
     fn a_value_label_replaces_the_text() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput {
                 value: Signal::stored(Some(25.0)),
                 value_label: "Loading 1 of 4".into(),
@@ -351,7 +352,7 @@ mod tests {
     // Non-percent styles format the value itself.
     #[test]
     fn a_decimal_style_formats_the_value() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = use_progress_bar(UseProgressBarInput::<u32> {
                 value: Signal::stored(Some(1500)),
                 max_value: Signal::stored(4000),
@@ -366,7 +367,7 @@ mod tests {
     // Upstream: "supports labeling".
     #[test]
     fn a_visible_label_names_the_bar() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let progress = use_progress_bar(UseProgressBarInput::<f64> {
                 has_label: Signal::stored(true),
                 ..UseProgressBarInput::default()

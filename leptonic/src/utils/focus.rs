@@ -1,5 +1,6 @@
 // Upstream: react-aria/src/interactions/focusSafely.ts @ 99e6102368
 // Upstream: react-aria/src/utils/focusWithoutScrolling.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/focusSafely.test.js @ 99e6102368
 //! Focus utilities for managing element focus without side effects.
 //!
 //! This module provides utilities for focusing elements without triggering scroll,
@@ -47,11 +48,6 @@ pub fn focus_element(element: &web_sys::Element, prevent_scroll: bool) {
     }
 }
 
-/// Focuses an HTML element (see [`focus_element`]).
-pub fn focus_html_element(html_element: &web_sys::HtmlElement, prevent_scroll: bool) {
-    focus_element(html_element, prevent_scroll);
-}
-
 /// Focus an element while avoiding undesired side effects such as page scrolling
 /// and screen reader issues with CSS transitions.
 ///
@@ -69,7 +65,7 @@ pub fn focus_safely(element: &web_sys::Element) {
     #[cfg(not(feature = "ssr"))]
     {
         use crate::{
-            hooks::{Modality, get_modality},
+            hooks::focus::{Modality, get_modality},
             utils::shadow_dom::get_active_element,
         };
 
@@ -77,7 +73,7 @@ pub fn focus_safely(element: &web_sys::Element) {
             return;
         }
 
-        if get_modality() == Modality::Virtual {
+        if get_modality() == Some(Modality::Virtual) {
             // Use ownerDocument to correctly handle iframes and shadow DOM.
             let owner_doc = element.owner_document();
             let active_element = owner_doc.as_ref().and_then(get_active_element);

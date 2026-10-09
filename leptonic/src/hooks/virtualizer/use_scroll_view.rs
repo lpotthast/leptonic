@@ -3,8 +3,12 @@
 use leptos::prelude::*;
 
 use crate::{
+    CapturedElement,
     hooks::collections::{Rect, Size},
-    utils::{CapturedElement, i18n::use_direction, locale::WritingDirection, styles::Styles},
+    utils::{
+        i18n::{WritingDirection, use_direction},
+        styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -83,15 +87,32 @@ pub struct UseScrollViewReturn {
     /// Something scrolls: the view, an ancestor or the window. Kept true until 300ms after the last
     /// scroll event.
     pub is_scrolling: Signal<bool>,
-    /// The user scrolls the view itself (not an ancestor or the window, not [`Self::scroll_to`]).
+    /// The user scrolls the view itself (not an ancestor or the window, not
+    /// [`ScrollViewScroller::scroll_to`]).
     /// Kept true until the scrolling ends: e.g. to decide whether they scrolled away from an end.
     pub is_user_scrolling: Signal<bool>,
+    /// Scrolls the view programmatically.
+    pub scroller: ScrollViewScroller,
+}
+
+/// Scrolls a scroll view (from [`use_scroll_view`]).
+#[derive(Debug, Clone, Copy)]
+pub struct ScrollViewScroller {
+    request: Callback<ScrollTarget>,
+}
+
+impl ScrollViewScroller {
     /// Scrolls the view so `rect`'s position is the visible rectangle's (e.g. where the
     /// virtualizer moved the viewport).
-    pub scroll_to: Callback<Rect>,
+    pub fn scroll_to(&self, rect: Rect) {
+        self.request.run(ScrollTarget::Rect(rect));
+    }
+
     /// Scrolls the view to its end (vertically), as laid out when the scroll happens: in the next
     /// frame, taking precedence over [`Self::scroll_to`] requests of the same frame.
-    pub scroll_to_end: Callback<()>,
+    pub fn scroll_to_end(&self) {
+        self.request.run(ScrollTarget::End);
+    }
 }
 
 /// What the next frame scrolls to.
@@ -497,15 +518,15 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
             }
         });
     };
-    let scroll_to = Callback::new(move |rect| request_scroll(ScrollTarget::Rect(rect)));
-    let scroll_to_end = Callback::new(move |()| request_scroll(ScrollTarget::End));
+    let scroller = ScrollViewScroller {
+        request: Callback::new(request_scroll),
+    };
 
     UseScrollViewReturn {
         scroll_view_styles,
         content_styles,
         is_scrolling: is_scrolling.into(),
         is_user_scrolling: is_user_scrolling.into(),
-        scroll_to,
-        scroll_to_end,
+        scroller,
     }
 }

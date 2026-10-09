@@ -1,24 +1,26 @@
 use leptonic::{
+    Alpha, HSV, RGB8,
     atoms::{
         color_thumb::ColorThumb,
         color_wheel::{ColorWheel, ColorWheelTrack},
     },
-    utils::{
-        color::{HSV, RGB8},
-        styles::Styles,
-    },
+    leptos_styles::Styles,
 };
 use leptos::prelude::*;
 
 /// `ColorWheel` atoms (react-spectrum's `ColorWheel.test.tsx`): wheels of radius 100 (track ring
 /// from 74); hues are logged as `change:<hue>`/`end:<hue>` to `#test-cw-log`. RGB wheels ("rgb":
 /// red, "gray") log `rgb:<hex>` to `#test-cw-rgb-log`. "show": a wheel whose track and thumb are
-/// inside a `<Show>` toggled by `#test-cw-toggle`.
+/// inside a `<Show>` toggled by `#test-cw-toggle`. "labelledby": an RGB wheel without default value, labelled by `#test-cw-label`;
+/// "alpha": a half transparent `Alpha<HSV>`; "props": a custom class, a `data-foo` attribute and
+/// the form `test-cw-other-form`; "radius": radii 50/30, growing to 80/60 with `#test-cw-grow`.
 #[component]
 pub fn PageAtomColorWheel() -> impl IntoView {
     let log = RwSignal::new(Vec::<String>::new());
     let rgb_log = RwSignal::new(Vec::<String>::new());
     let shown = RwSignal::new(true);
+    let outer = RwSignal::new(50.0);
+    let inner = Signal::derive(move || outer.get() - 20.0);
     let hsv = |hue: f64| HSV {
         hue,
         saturation: 1.0,
@@ -100,6 +102,45 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                         <ColorWheelTrack />
                         <ColorThumb />
                     </Show>
+                </ColorWheel>
+            </div>
+            <span id="test-cw-label">"Tint"</span>
+            <div id="test-cw-labelledby">
+                // Without a default value: red (`hsl(0, 100%, 50%)`).
+                <ColorWheel<RGB8> outer_radius=50.0 inner_radius=30.0 aria_labelledby="test-cw-label">
+                    <ColorWheelTrack />
+                    <ColorThumb />
+                </ColorWheel<RGB8>>
+            </div>
+            <div id="test-cw-alpha">
+                <ColorWheel
+                    outer_radius=50.0
+                    inner_radius=30.0
+                    default_value=Alpha::new(hsv(0.0)).with_alpha(0.5)
+                >
+                    <ColorWheelTrack />
+                    <ColorThumb />
+                </ColorWheel>
+            </div>
+            <form id="test-cw-other-form"></form>
+            <div id="test-cw-props">
+                <ColorWheel
+                    outer_radius=50.0
+                    inner_radius=30.0
+                    default_value=hsv(0.0)
+                    classes="custom-wheel"
+                    form="test-cw-other-form"
+                    attr:data-foo="bar"
+                >
+                    <ColorWheelTrack />
+                    <ColorThumb />
+                </ColorWheel>
+            </div>
+            <button id="test-cw-grow" on:click=move |_| outer.set(80.0)>"Grow"</button>
+            <div id="test-cw-radius">
+                <ColorWheel outer_radius=outer inner_radius=inner default_value=hsv(90.0)>
+                    <ColorWheelTrack />
+                    <ColorThumb />
                 </ColorWheel>
             </div>
             <div>"RGB log: " <span id="test-cw-rgb-log">{move || rgb_log.get().join(",")}</span></div>

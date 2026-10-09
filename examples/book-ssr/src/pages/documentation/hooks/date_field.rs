@@ -194,8 +194,9 @@ pub fn PageDateFieldHooks() -> impl IntoView {
 
                 <Section title="DateFieldData">
                     <p>
-                        <Code inline=true>"Copy"</Code>". Change "<Code inline=true>"aria_describedby"</Code>" to describe the "
-                        "segments differently, as a picker does."
+                        <Code inline=true>"Copy"</Code>". Pass this data to every segment. Inside a picker, supply the picker's "
+                        <Code inline=true>"labelledby"</Code>" and "<Code inline=true>"field_describedby"</Code>" through "
+                        <Code inline=true>"DateFieldPicker { labelledby, describedby, .. }"</Code>" when creating the field."
                     </p>
                     <ApiTable kind=ApiKind::Fields of="datepicker::use_date_field::DateFieldData">
                         <ApiRow name="state" ty="DateFieldState<V>">"The field\u{2019}s state."</ApiRow>
@@ -209,9 +210,10 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                hooks::{IntoAttrs, datepicker::*},
+                                CapturedElement,
+                                IntoAttrs,
+                                hooks::datepicker::*,
                                 jiff::civil::Date,
-                                utils::CapturedElement,
                             };
                             use leptos::prelude::*;
 

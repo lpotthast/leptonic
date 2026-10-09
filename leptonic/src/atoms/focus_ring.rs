@@ -2,7 +2,22 @@
 use leptos::{attr::custom::custom_attribute, ev, prelude::*};
 use web_sys::FocusEvent;
 
-use crate::{hooks::*, utils::scoped_context::scoped_view};
+use crate::{
+    hooks::focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+    utils::scoped_context::scoped_view,
+};
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `data-focused` and `data-focus-visible` on the child, plus a [`FocusRingContext`], replace
+//   `focusClass`/`focusRingClass`: styling by attribute, as react-aria-components' atoms.
+// - `target: FocusRingTarget` instead of `within: bool`; no `auto_focus` (it has no effect on
+//   react-aria's `useFocusRing`, see `use_focus_ring`).
+//
+// =============================================================================
 
 /// Context for accessing focus ring state from child components.
 #[derive(Clone, Copy)]
@@ -17,14 +32,13 @@ pub struct FocusRingContext {
 #[component(transparent)]
 pub fn FocusRing(
     #[prop(into, optional)] is_disabled: Signal<bool>,
-    /// Whether focus inside the child counts too, instead of only focus on the child itself.
+    /// What counts: focus on the child itself (default), or focus anywhere inside it.
     #[prop(optional)]
-    within: bool,
+    target: FocusRingTarget,
     /// Whether the child is a text input: typing in it doesn't make focus visible, only Tab and
     /// Escape do.
     #[prop(optional)]
     is_text_input: bool,
-    #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] on_focus: Option<Callback<FocusEvent>>,
     #[prop(into, optional)] on_blur: Option<Callback<FocusEvent>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
@@ -36,8 +50,7 @@ pub fn FocusRing(
         props: focus_ring_props,
     } = use_focus_ring(UseFocusRingInput {
         is_disabled,
-        within,
-        auto_focus,
+        target,
         is_text_input,
         on_focus,
         on_blur,

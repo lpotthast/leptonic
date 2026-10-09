@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # Report react-spectrum commits that leptonic has not absorbed yet.
 #
-# Every leptonic source file that ports react-aria / react-stately code declares its upstream files:
+# Every leptonic file that ports react-aria / react-stately code, or mirrors react-spectrum tests,
+# declares its upstream files in top-level lines at its start:
 #
 #   // Upstream: react-aria/src/interactions/usePress.ts @ 6f664fe911
+#   // Upstream: react-aria/test/interactions/usePress.test.js @ 6f664fe911
 #
-# The path is relative to react-spectrum's `packages/` directory (the atom theme's stylesheets name
-# `../starters/docs/src/...`), the hash is the react-spectrum commit the file was last synced against. This script lists, per leptonic file, the upstream commits touching those files since then.
+# Upstream test files count like sources: a native test module (`mod tests`) names the test files
+# its cases mirror in its source file's header, a browser test file in its own. The path is relative
+# to react-spectrum's `packages/` directory (the atom theme's stylesheets name `../starters/docs/src/...`),
+# the hash is the react-spectrum commit the file was last synced against. This script lists, per
+# leptonic file, the upstream commits touching those files since then.
 #
 # Usage:
 #   scripts/upstream-drift.sh [-v] [PATH_FILTER]   Report drift (most drifted first). -v lists the commits.

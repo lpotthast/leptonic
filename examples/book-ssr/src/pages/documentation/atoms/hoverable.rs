@@ -37,14 +37,18 @@ pub fn PageAtomHoverable() -> impl IntoView {
                     <ApiRow name="on_hover_end" ty="Option<Callback<HoverEndEvent>>" default="None">
                         "Called when the hover ends."
                     </ApiRow>
-                    <ApiRow name="children" ty="ChildrenFn">"Required. The element to track. Must render a single element."</ApiRow>
+                    <ApiRow name="children" ty="TypedChildren<V>">"Required. The element to track. Must render a single element."</ApiRow>
+                    <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">"Called when the hovered state changes."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::*, hooks::HoverStartEvent};
+                        use leptonic::{
+                            atoms::hoverable::Hoverable,
+                            hooks::interactions::HoverStartEvent,
+                        };
                         use leptos::{logging::log, prelude::*};
 
                         // Style the hovered card with `.card[data-hovered]`.

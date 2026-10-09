@@ -1,10 +1,10 @@
 use leptonic::{
-    hooks::{
+    CapturedElement, IntoAttrs, flag,
+    hooks::dnd::{
         DragEndEvent, DragItem, DropActivateEvent, DropEnterEvent, DropEvent, DropExitEvent,
-        DropItem, DropOperation, DropOperationQuery, IntoAttrs, UseDragInput, UseDragReturn,
-        UseDropInput, UseDropReturn, use_drag, use_drop,
+        DropItem, DropOperation, DropOperationQuery, UseDragInput, UseDragReturn, UseDropInput,
+        UseDropReturn, use_drag, use_drop,
     },
-    utils::CapturedElement,
 };
 use leptos::{ev, prelude::*, web_sys};
 use leptos_router::hooks::use_query_map;
@@ -12,7 +12,7 @@ use leptos_router::hooks::use_query_map;
 /// The custom event (on `#test-page-hook-dnd-targets`, `detail`: the action) that changes the
 /// page during a drag, when the drag manager blocks clicks: `add-target` mounts "Drop here 3",
 /// `remove-target` unmounts "Drop here 2", `hide-target` hides it and `hide-draggable` the
-/// draggable with `aria-hidden`.
+/// draggable with `aria-hidden`, `add-input` mounts the text field "Text field 2".
 pub const ACTION_EVENT: &str = "dnd-action";
 
 /// Drag and drop between single elements (react-aria's `dnd.test.js` "keyboard", "screen reader"
@@ -32,7 +32,7 @@ pub const ACTION_EVENT: &str = "dnd-action";
 #[component]
 pub fn PageHookDndTargets() -> impl IntoView {
     let query = use_query_map();
-    let flag = move |name: &str| query.with_untracked(|q| q.get(name).is_some());
+    let has = move |name: &str| query.with_untracked(|q| q.get(name).is_some());
     let operation = move |name: &str| {
         query.with_untracked(|q| match q.get(name).as_deref() {
             Some("copy") => Some(DropOperation::Copy),
@@ -41,11 +41,11 @@ pub fn PageHookDndTargets() -> impl IntoView {
             _ => None,
         })
     };
-    let ancestor = flag("ancestor");
-    let hidden_tree = flag("hidden-tree");
-    let disabled_drag = flag("disabled-drag");
-    let disabled_drop = flag("disabled-drop");
-    let cancel_2 = flag("cancel-2");
+    let ancestor = has("ancestor");
+    let hidden_tree = has("hidden-tree");
+    let disabled_drag = has("disabled-drag");
+    let disabled_drop = has("disabled-drop");
+    let cancel_2 = has("cancel-2");
     let preferred = operation("op");
     let allowed = operation("allowed");
 
@@ -54,11 +54,13 @@ pub fn PageHookDndTargets() -> impl IntoView {
     let removed = RwSignal::new(false);
     let target_hidden = RwSignal::new(false);
     let draggable_hidden = RwSignal::new(false);
+    let input_added = RwSignal::new(false);
     let on_action = move |e: web_sys::CustomEvent| match e.detail().as_string().as_deref() {
         Some("add-target") => added.set(true),
         Some("remove-target") => removed.set(true),
         Some("hide-target") => target_hidden.set(true),
         Some("hide-draggable") => draggable_hidden.set(true),
+        Some("add-input") => input_added.set(true),
         _ => {}
     };
     let droppable = move |label: &'static str, index: usize, is_disabled: bool, cancel: bool| {
@@ -106,16 +108,21 @@ pub fn PageHookDndTargets() -> impl IntoView {
             {droppable("Drop here", 1, disabled_drop, false)}
             <input aria-label="Text field" />
             <Show when=move || !removed.get()>
-                <div aria-hidden=move || target_hidden.get().then_some("true")>
-                    {droppable("Drop here 2", 2, false, cancel_2)}
-                </div>
+                <div aria-hidden=move || {
+                    target_hidden.get().then_some("true")
+                }>{droppable("Drop here 2", 2, false, cancel_2)}</div>
             </Show>
             <span>"Text"</span>
             {hidden_tree
                 .then(|| {
-                    view! { <div aria-hidden="true">{droppable("Hidden target", 9, false, false)}</div> }
+                    view! {
+                        <div aria-hidden="true">{droppable("Hidden target", 9, false, false)}</div>
+                    }
                 })}
             <Show when=move || added.get()>{droppable("Drop here 3", 3, false, false)}</Show>
+            <Show when=move || input_added.get()>
+                <input aria-label="Text field 2" />
+            </Show>
             <ol id="test-dnd-targets-log">
                 {move || log.get().into_iter().map(|e| view! { <li>{e}</li> }).collect_view()}
             </ol>
@@ -147,12 +154,7 @@ fn Draggable(
         is_disabled: Signal::stored(is_disabled),
     });
     view! {
-        <div
-            role="button"
-            tabindex="0"
-            {..drag_props.into_attrs()}
-            data-dragging=move || is_dragging.get().to_string()
-        >
+        <div role="button" tabindex="0" {..drag_props.into_attrs()} data-dragging=flag(is_dragging)>
             "Drag me"
         </div>
     }
@@ -219,7 +221,7 @@ fn Droppable(
             role="button"
             tabindex="0"
             {..drop_props.into_attrs()}
-            data-droptarget=move || is_drop_target.get().to_string()
+            data-drop-target=flag(is_drop_target)
         >
             {label}
             {children.map(|children| children())}

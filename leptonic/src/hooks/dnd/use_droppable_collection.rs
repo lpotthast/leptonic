@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/dnd/useDroppableCollection.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
 use std::{collections::HashSet, rc::Rc, sync::Arc};
 
 use leptos::prelude::*;
@@ -16,23 +17,21 @@ use super::{
     },
     use_auto_scroll::use_auto_scroll,
     use_drop::{DropOperationPointQuery, UseDropInput, UseDropProps, UseDropReturn, use_drop},
-    use_droppable_collection_state::{DropOperationEvent, DroppableCollectionState, ItemDropQuery},
+    use_droppable_collection_state::{DroppableCollectionState, ItemDropQuery},
     utils::{
         clear_global_dnd_state, dragging_keys, is_internal_drop_operation, set_drop_collection,
         with_dnd_state,
     },
 };
 use crate::{
+    CapturedElement,
     hooks::{
-        SelectionMode,
-        collections::{Collection, Key, KeyboardDelegate, NodeKind},
+        collections::{Collection, Key, KeyboardDelegate, Node, NodeKind, SelectionMode},
         focus::use_focus_visible::{Modality, set_modality},
     },
     utils::{
-        CapturedElement,
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
-        locale::WritingDirection,
     },
 };
 
@@ -103,6 +102,27 @@ struct DroppingState {
     timeout: Option<TimeoutHandle>,
 }
 
+/// The items of `collection` among `nodes` (and their descendants) that `previous` lacks, in
+/// order.
+fn inserted_items<'a>(
+    collection: &'a Collection,
+    previous: &Collection,
+    nodes: &mut dyn Iterator<Item = &'a Node>,
+    inserted: &mut Vec<Key>,
+) {
+    for node in nodes {
+        if node.is_item() && !previous.contains_key(&node.key) {
+            inserted.push(node.key.clone());
+        }
+        // Sections' items and items' child items (not a row's cells). A trait object: a generic
+        // iterator type would nest with every level (polymorphic recursion).
+        let mut children = collection
+            .children(&node.key)
+            .filter(|child| child.is_item());
+        inserted_items(collection, previous, &mut children, inserted);
+    }
+}
+
 fn drop_item_types(item: &DropItem) -> DragTypes {
     match item {
         DropItem::Directory(_) => DragTypes::from_types([DragType::Directory]),
@@ -129,13 +149,7 @@ pub fn use_droppable_collection(
     let collection_element = move || element.get_untracked().map(|e| (*e).clone());
     let is_internal = move || is_internal_drop_operation(collection_element().as_ref());
     let operation_at = move |target: &DropTarget, types: &DragTypes, allowed: &[DropOperation]| {
-        state.get_drop_operation(&DropOperationEvent {
-            target: target.clone(),
-            types: types.clone(),
-            allowed_operations: allowed.to_vec(),
-            is_internal: is_internal(),
-            dragging_keys: dragging_keys(),
-        })
+        state.drop_operation_at(collection_element().as_ref(), target, types, allowed)
     };
 
     // The default drop handling: insert, root drop, item drop, move, reorder.
@@ -192,7 +206,7 @@ pub fn use_droppable_collection(
                 }
                 if is_internal && let Some(on_move) = options.on_move {
                     on_move.run(DroppableCollectionReorderEvent {
-                        keys: dragging_keys.clone(),
+                        keys: (*dragging_keys).clone(),
                         drop_operation,
                         target: t.clone(),
                     });
@@ -207,7 +221,7 @@ pub fn use_droppable_collection(
                     }
                     if is_internal && let Some(on_reorder) = options.on_reorder {
                         on_reorder.run(DroppableCollectionReorderEvent {
-                            keys: dragging_keys,
+                            keys: (*dragging_keys).clone(),
                             drop_operation,
                             target: t.clone(),
                         });
@@ -220,67 +234,67 @@ pub fn use_droppable_collection(
     // Focus (and select) what the drop changed, once the collection reflects it.
     let dropping: StoredValue<Option<DroppingState>> = StoredValue::new(None);
     let list = state.list;
+    // Runs in a timeout or an Effect: reads and writes the selection untracked.
     let update_focus_after_drop = move || {
-        let Some(dropping_state) = dropping.try_update_value(Option::take).flatten() else {
-            return;
-        };
-        let selection = list.selection;
-        let collection = list.collection.get_untracked();
-        let focused_key = selection.focused_key();
-        let prev = &dropping_state.collection;
-        if collection.size() > prev.size()
-            && untrack(|| selection.selected_keys()) == dropping_state.selected_keys
-        {
-            // Inserted items: select them, focus the first.
-            let new_keys: Vec<Key> = collection
-                .items()
-                .filter(|n| !prev.contains_key(&n.key))
-                .map(|n| n.key.clone())
-                .collect();
-            selection.set_selected_keys(new_keys.iter().cloned());
-            if focused_key == dropping_state.focused_key
-                && let Some(first) = new_keys.first()
+        untrack(|| {
+            let Some(dropping_state) = dropping.try_update_value(Option::take).flatten() else {
+                return;
+            };
+            let selection = list.selection;
+            let collection = list.collection.get_untracked();
+            let focused_key = selection.focused_key();
+            let prev = &dropping_state.collection;
+            if collection.size() > prev.size()
+                && selection.selected_keys() == dropping_state.selected_keys
             {
-                let node = collection.get(first);
-                let on_item = matches!(&dropping_state.target, DropTarget::Item(t) if t.drop_position == DropPosition::On);
-                let key = match node {
-                    Some(n) if n.kind == NodeKind::Cell || on_item => n.parent_key.clone(),
-                    _ => Some(first.clone()),
-                };
-                if let Some(key) = key {
-                    selection.set_focused_key(Some(key), None);
+                // Inserted items (also into items, e.g. a tree's): select them, focus the first.
+                let mut new_keys = Vec::new();
+                inserted_items(&collection, prev, &mut collection.iter(), &mut new_keys);
+                selection.set_selected_keys(new_keys.iter().cloned());
+                if focused_key == dropping_state.focused_key
+                    && let Some(first) = new_keys.first()
+                {
+                    let node = collection.get(first);
+                    let on_item = matches!(&dropping_state.target, DropTarget::Item(t) if t.drop_position == DropPosition::On);
+                    let key = match node {
+                        Some(n) if n.kind == NodeKind::Cell || on_item => n.parent_key.clone(),
+                        _ => Some(first.clone()),
+                    };
+                    if let Some(key) = key {
+                        selection.set_focused_key(Some(key), None);
+                    }
+                    if selection.selection_mode() == SelectionMode::None {
+                        set_modality(Modality::Keyboard);
+                    }
                 }
-                if untrack(|| selection.selection_mode()) == SelectionMode::None {
-                    set_modality(Modality::Keyboard);
-                }
+            } else if let Some(prev_focused) = &dropping_state.focused_key
+                && focused_key.as_ref() == Some(prev_focused)
+                && dropping_state.is_internal
+                && matches!(&dropping_state.target, DropTarget::Item(t) if t.drop_position != DropPosition::On)
+                && collection
+                    .get(prev_focused)
+                    .and_then(|n| n.parent_key.as_ref())
+                    .is_some_and(|parent| dropping_state.dragging_keys.contains(parent))
+            {
+                let parent = collection
+                    .get(prev_focused)
+                    .and_then(|n| n.parent_key.clone());
+                selection.set_focused_key(parent, None);
+                set_modality(Modality::Keyboard);
+            } else if focused_key == dropping_state.focused_key
+                && let DropTarget::Item(t) = &dropping_state.target
+                && t.drop_position == DropPosition::On
+                && collection.contains_key(&t.key)
+            {
+                selection.set_focused_key(Some(t.key.clone()), None);
+                set_modality(Modality::Keyboard);
+            } else if let Some(focused) = &focused_key
+                && !selection.is_selected(focused)
+            {
+                set_modality(Modality::Keyboard);
             }
-        } else if let Some(prev_focused) = &dropping_state.focused_key
-            && focused_key.as_ref() == Some(prev_focused)
-            && dropping_state.is_internal
-            && matches!(&dropping_state.target, DropTarget::Item(t) if t.drop_position != DropPosition::On)
-            && collection
-                .get(prev_focused)
-                .and_then(|n| n.parent_key.as_ref())
-                .is_some_and(|parent| dropping_state.dragging_keys.contains(parent))
-        {
-            let parent = collection
-                .get(prev_focused)
-                .and_then(|n| n.parent_key.clone());
-            selection.set_focused_key(parent, None);
-            set_modality(Modality::Keyboard);
-        } else if focused_key == dropping_state.focused_key
-            && let DropTarget::Item(t) = &dropping_state.target
-            && t.drop_position == DropPosition::On
-            && collection.contains_key(&t.key)
-        {
-            selection.set_focused_key(Some(t.key.clone()), None);
-            set_modality(Modality::Keyboard);
-        } else if let Some(focused) = &focused_key
-            && !untrack(|| selection.is_selected(focused))
-        {
-            set_modality(Modality::Keyboard);
-        }
-        selection.set_focused(true);
+            selection.set_focused(true);
+        });
     };
 
     let on_drop = move |e: DropEvent, target: DropTarget| {
@@ -288,9 +302,9 @@ pub fn use_droppable_collection(
         dropping.set_value(Some(DroppingState {
             collection: list.collection.get_untracked(),
             focused_key: selection.focused_key(),
-            selected_keys: untrack(|| selection.selected_keys()),
+            selected_keys: selection.selected_keys(),
             target: target.clone(),
-            dragging_keys: dragging_keys(),
+            dragging_keys: (*dragging_keys()).clone(),
             is_internal: is_internal(),
             timeout: None,
         }));
@@ -340,6 +354,8 @@ pub fn use_droppable_collection(
         }
     });
 
+    let direction = use_direction();
+
     // Native drags.
     let auto_scroll = use_auto_scroll(element);
     let point_delegate = drop_target_delegate.clone();
@@ -359,8 +375,12 @@ pub fn use_droppable_collection(
             let is_valid = |t: &DropTarget| {
                 operation_at(t, &q.types, &q.allowed_operations) != DropOperation::Cancel
             };
-            let Some(mut target) = point_delegate.drop_target_from_point(q.x, q.y, &is_valid)
-            else {
+            let Some(mut target) = point_delegate.drop_target_from_point(
+                q.x,
+                q.y,
+                direction.get_untracked(),
+                &is_valid,
+            ) else {
                 next_target.set_value(None);
                 return DropOperation::Cancel;
             };
@@ -416,7 +436,6 @@ pub fn use_droppable_collection(
     drop_props.aria_describedby = Signal::stored(None);
 
     // Keyboard and screen reader drags.
-    let direction = use_direction();
     let registration: StoredValue<Option<u64>> = StoredValue::new(None);
     let unregister = move || {
         if let Some(id) = registration.try_get_value().flatten() {
@@ -465,15 +484,8 @@ fn keyboard_drop_target(
 ) -> DropTargetOptions {
     let state = *state;
     let collection_element = element.clone();
-    let is_internal = move || is_internal_drop_operation(Some(&collection_element));
     let operation_at = move |target: &DropTarget, types: &DragTypes, allowed: &[DropOperation]| {
-        state.get_drop_operation(&DropOperationEvent {
-            target: target.clone(),
-            types: types.clone(),
-            allowed_operations: allowed.to_vec(),
-            is_internal: is_internal(),
-            dragging_keys: dragging_keys(),
-        })
+        state.drop_operation_at(Some(&collection_element), target, types, allowed)
     };
     let operation_for_targets = operation_at.clone();
     let operation_for_enter = operation_at.clone();
@@ -545,14 +557,13 @@ fn keyboard_drop_target(
             key = node.parent_key;
         }
         if let Some(k) = &key
-            && untrack(|| selection.is_selected(k))
+            && selection.is_selected(k)
         {
-            let selected = untrack(|| selection.selected_keys());
-            if selected.len() > 1 && untrack(|| selection.first_selected_key()).as_ref() == Some(k)
-            {
+            let selected = selection.selected_keys();
+            if selected.len() > 1 && selection.first_selected_key().as_ref() == Some(k) {
                 drop_position = DropPosition::Before;
             } else {
-                key = untrack(|| selection.last_selected_key());
+                key = selection.last_selected_key();
             }
         }
         let mut target = key.map(|key| DropTarget::Item(ItemDropTarget { key, drop_position }));

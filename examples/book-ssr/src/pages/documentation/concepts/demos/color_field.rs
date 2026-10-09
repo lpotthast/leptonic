@@ -1,9 +1,7 @@
 use leptonic::{
-    atoms::prelude::{ColorField, Input, Label},
-    utils::{
-        color::{ColorValue, RGB8},
-        i18n::use_locale,
-    },
+    ColorValue, RGB8,
+    atoms::{color_field::ColorField, field::Label, input::Input},
+    use_locale,
 };
 use leptos::prelude::*;
 

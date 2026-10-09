@@ -1,8 +1,12 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
+    IntoAttrs,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+    },
     hooks::{
-        ClipboardAction, DragItem, DropItem, IntoAttrs, UseClipboardInput, UseClipboardReturn,
-        use_clipboard,
+        clipboard::{ClipboardAction, UseClipboardInput, UseClipboardReturn, use_clipboard},
+        dnd::{DragItem, DropItem},
     },
 };
 use leptos::prelude::*;

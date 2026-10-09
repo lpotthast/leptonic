@@ -63,16 +63,24 @@ pub fn PageAtomComboBox() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::{combobox::*, field::Label, input::Input, listbox::{ListBox, ListBoxItems}},
-                            hooks::{Key, use_contains_filter, use_list_collection},
+                            atoms::{
+                                combobox::*,
+                                field::Label,
+                                input::Input,
+                                listbox::{ListBox, ListBoxItems},
+                            },
+                            hooks::{
+                                collections::{Key, UseListCollectionInput, use_list_collection},
+                                combobox::use_contains_filter,
+                            },
                         };
                         use leptos::prelude::*;
 
-                        let fruits = use_list_collection(
-                            Signal::stored(vec!["Apple", "Banana", "Cherry"]),
-                            |fruit| Key::from(*fruit),
-                            |fruit| (*fruit).to_owned(),
-                        );
+                        let fruits = use_list_collection(UseListCollectionInput {
+                            items: Signal::stored(vec!["Apple", "Banana", "Cherry"]),
+                            key: |fruit| Key::from(*fruit),
+                            text_value: |fruit| (*fruit).to_owned(),
+                        });
 
                         view! {
                             <ComboBox<Option<Key>> collection=fruits filter=use_contains_filter()>
@@ -158,19 +166,19 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         <ApiRow name="set_input_value" ty="Option<Out<String>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_input_change" ty="Option<Callback<String>>" default="None">
+                        <ApiRow name="on_input_value_change" ty="Option<Callback<String>>" default="None">
                             "Called when the input text changes."
                         </ApiRow>
                         <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
                             "Options that can\u{2019}t be focused or selected, besides those disabled in the collection."
                         </ApiRow>
-                        <ApiRow name="menu_trigger" ty="ComboBoxMenuTrigger" default="Input">
+                        <ApiRow name="menu_trigger" ty="Signal<ComboBoxMenuTrigger>" default="Input">
                             "When the popover opens: on typing, also on focus, or only with the button and arrow keys."
                         </ApiRow>
-                        <ApiRow name="allows_empty_collection" ty="bool" default="false">
+                        <ApiRow name="allows_empty_collection" ty="Signal<bool>" default="false">
                             "Keep the popover open when no option matches."
                         </ApiRow>
-                        <ApiRow name="allows_custom_value" ty="bool" default="false">
+                        <ApiRow name="allows_custom_value" ty="Signal<bool>" default="false">
                             "Keep typed text that matches no option (the selection is cleared)."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the input and the button."</ApiRow>
@@ -213,6 +221,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                             "Classes and styles of the wrapping "<Code inline=true>"<div>"</Code>"."
                         </ApiRow>
                         <ApiRow name="children" ty="Children">"The parts, the field atoms and any other content."</ApiRow>
+                        <ApiRow name="should_focus_wrap" ty="bool" default="false">"Wrap keyboard focus from the last item to the first and back."</ApiRow>
                     </ApiTable>
                     <p>
                         "See "<Link href=format!("{}#use-combobox-state", routes::doc::combobox::Hook.materialize())>
@@ -251,6 +260,11 @@ pub fn PageAtomComboBox() -> impl IntoView {
 
             <Section title="ComboBoxPopover">
                 <p>
+                    "The popover spans the input and button together. A "<Code inline=true>"Label"</Code>", "
+                    <Code inline=true>"Input"</Code>" or "<Code inline=true>"Description"</Code>" inside belongs to its own "
+                    "field, rather than the combo box. Give a field in the popover its own field atom."
+                </p>
+                <p>
                     "The popover with the options. It is rendered into the document body while open, positioned at the input "
                     "and flipped when there is no room. It is non-modal: focus stays in the input, and the page stays "
                     "usable. Focus leaving the combobox and scrolling the page close it."
@@ -284,6 +298,21 @@ pub fn PageAtomComboBox() -> impl IntoView {
                 </p>
             </Section>
 
+            <Section title="ComboBoxValue">
+                <p>
+                    "Displays the selected option texts, formatted as a localized list for multiple selection. "
+                    "Place it inside "<Code inline=true>"ComboBox"</Code>" wherever a separate selection readout is useful. "
+                    "With no selection, it displays its placeholder and sets "<Code inline=true>"data-placeholder"</Code>"."
+                </p>
+                <Section title="Props" id="combobox-value-props">
+                    <ApiTable kind=ApiKind::Props of="ComboBoxValue">
+                        <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"Text shown with no selection."</ApiRow>
+                        <ApiRow name="classes" ty="Classes" default="empty">"Classes added to leptonic-ComboBoxValue."</ApiRow>
+                        <ApiRow name="styles" ty="Styles" default="empty">"Inline styles for the value element."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
             <Section title="Data Attributes">
                 <ApiTable kind=ApiKind::DataAttributes>
                     <ApiRow name="data-open" ty="true">
@@ -301,13 +330,13 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="data-focus-visible" ty="true">
                         "On the "<Code inline=true>"Input"</Code>": it has keyboard focus. On an item: the option is "
-                        "focused by keyboard."
+                        "focused by keyboard. Also set on the popup button when its focus is visible."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">
-                        "On "<Code inline=true>"ComboBoxButton"</Code>" and items: being pressed."
+                        "On "<Code inline=true>"ComboBoxButton"</Code>" while pressed or while the popover is open; on items while pressed."
                     </ApiRow>
                     <ApiRow name="data-focused" ty="true">
-                        "On an item: the option has the (virtual) focus, by keyboard or pointer hover."
+                        "On the button while focused; on an item while it has virtual focus, by keyboard or pointer hover."
                     </ApiRow>
                     <ApiRow name="data-selected" ty="true">"On an item: the option is selected."</ApiRow>
                 </ApiTable>
@@ -361,7 +390,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
 
             <Section title="Composition">
                 <p>
-                    "The parts find the combobox through the "<Code inline=true>"ComboBoxCtx"</Code>" context. Your own "
+                    "The parts find the combobox through the "<Code inline=true>"ComboBoxContext"</Code>" context. Your own "
                     "Leptos components inside "<Code inline=true>"ComboBox"</Code>" can read it too, e.g. to show a hint while "
                     "the text matches no selection:"
                 </p>
@@ -369,7 +398,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     {indoc!(r#"
                         #[component]
                         fn SearchHint() -> impl IntoView {
-                            let state = expect_context::<ComboBoxCtx>().state;
+                            let state = expect_context::<ComboBoxContext>().state;
                             let searching = move || !state.input_value().is_empty() && state.selected_key().is_none();
                             view! {
                                 <Show when=searching>

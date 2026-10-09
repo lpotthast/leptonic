@@ -1,20 +1,26 @@
 // Upstream: react-aria-components/src/Modal.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Modal.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Dialog.test.js @ 99e6102368
 use leptos::{context::Provider, portal::Portal, prelude::*};
+use leptos_classes::Classes;
+use send_wrapper::SendWrapper;
 
 use super::{
     dialog::DialogTriggerContext, dismiss_button::DismissButton, focus_scope::FocusScope,
     press::ClearTriggerContexts,
 };
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out,
     hooks::{
-        IntoAttrs, OverlayFocusContain, UseEnterAnimationInput, UseExitAnimationInput,
-        UseModalBackdropInput, UseModalBackdropReturn, UseOverlayAttrs, use_enter_animation,
-        use_exit_animation, use_modal_backdrop,
+        animation::{
+            UseEnterAnimationInput, UseExitAnimationInput, use_enter_animation, use_exit_animation,
+        },
+        modal::{UseModalBackdropInput, UseModalBackdropReturn, use_modal_backdrop},
+        overlay::{OverlayFocusContain, UseOverlayAttrs},
     },
     utils::{
-        CapturedElement, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles, use_viewport_size::use_viewport_size,
+        data_attributes::flag, default_class::with_default_class, styles::Styles,
+        use_viewport_size::use_viewport_size,
     },
 };
 
@@ -37,8 +43,11 @@ use crate::{
 // - No `aria-modal` (as react-aria-components, WebKit bug 211934): the inert content outside
 //   (`use_modal_backdrop`) makes the modal modal.
 //
+// - `on_enter`/`on_exit` are `Callback`s of the element (react-aria-components: functions that
+//   may return a promise); Web Animations they start are awaited like CSS ones.
+//
 // ## OMITTED FEATURES
-// - `UNSTABLE_portalContainer`, `UNSTABLE_deferUntilEntered`, `onEnter`/`onExit` props.
+// - `UNSTABLE_portalContainer`, `UNSTABLE_deferUntilEntered`.
 // - Deferring the reveal until an on-screen keyboard opened by an auto-focused input finished
 //   its transition (`runAfterKeyboard`): leptonic doesn't track the on-screen keyboard yet.
 //
@@ -55,6 +64,8 @@ struct ModalBackdropContext {
     /// reader users.
     is_dismissable: Signal<bool>,
     close: Callback<()>,
+    /// The `ModalContent`'s `on_exit`, called by the modal's exit animation.
+    on_modal_exit: StoredValue<Option<Callback<SendWrapper<web_sys::Element>>>>,
 }
 
 /// Backdrop overlay for a modal. Provides dismiss behavior (Escape key, outside click)
@@ -107,7 +118,17 @@ pub fn ModalBackdrop(
 
     /// Filter for which outside interactions should close the modal.
     #[prop(optional)]
-    should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
+    should_close_on_interact_outside: Option<crate::hooks::overlay::InteractOutsideFilter>,
+
+    /// Called with the backdrop element when it starts entering (e.g. to start a Web Animation,
+    /// which the entry waits for like for CSS animations).
+    #[prop(into, optional)]
+    on_enter: Option<Callback<SendWrapper<web_sys::Element>>>,
+
+    /// Called with the backdrop element when it starts exiting; it stays rendered until the
+    /// animations started then finished.
+    #[prop(into, optional)]
+    on_exit: Option<Callback<SendWrapper<web_sys::Element>>>,
 
     #[prop(into, optional)] classes: Classes,
 
@@ -134,15 +155,26 @@ pub fn ModalBackdrop(
 
     // Backdrop and modal stay rendered while either's exit animations run (`data-exiting`).
     let (backdrop, modal) = (CapturedElement::new(), CapturedElement::new());
-    let exiting = |element| {
+    let on_modal_exit = StoredValue::new(None::<Callback<SendWrapper<web_sys::Element>>>);
+    let exiting = |element, on_exit| {
         use_exit_animation(UseExitAnimationInput {
             element,
             is_open,
-            on_exit: None,
+            on_exit,
         })
         .is_exiting
     };
-    let (is_backdrop_exiting, is_modal_exiting) = (exiting(backdrop), exiting(modal));
+    let (is_backdrop_exiting, is_modal_exiting) = (
+        exiting(backdrop, on_exit),
+        exiting(
+            modal,
+            Some(Callback::new(move |element| {
+                if let Some(on_exit) = on_modal_exit.get_value() {
+                    on_exit.run(element);
+                }
+            })),
+        ),
+    );
     let is_exiting = Signal::derive(move || is_backdrop_exiting.get() || is_modal_exiting.get());
 
     let modal_props_attrs = StoredValue::new(modal_props.into_attrs());
@@ -161,6 +193,7 @@ pub fn ModalBackdrop(
             is_exiting,
             is_dismissable,
             close: Callback::new(move |()| state.close()),
+            on_modal_exit,
         }>
             // No portal container while closed: a modal would make it inert.
             <Show when=move || is_open.get() || is_exiting.get()>
@@ -170,7 +203,7 @@ pub fn ModalBackdrop(
                     let is_entering = use_enter_animation(UseEnterAnimationInput {
                         element: entering,
                         is_ready: Signal::stored(true),
-                        on_enter: None,
+                        on_enter,
                     })
                     .is_entering;
                     // As react-aria-components' `ModalOverlay`: the visual viewport's and the
@@ -252,6 +285,16 @@ pub fn ModalContent(
     #[prop(into, optional)]
     auto_focus: Signal<bool>,
 
+    /// Called with the modal element when it starts entering (e.g. to start a Web Animation,
+    /// which the entry waits for like for CSS animations).
+    #[prop(into, optional)]
+    on_enter: Option<Callback<SendWrapper<web_sys::Element>>>,
+
+    /// Called with the modal element when it starts exiting; the backdrop stays rendered until
+    /// the animations started then finished.
+    #[prop(into, optional)]
+    on_exit: Option<Callback<SendWrapper<web_sys::Element>>>,
+
     #[prop(into, optional)] classes: Classes,
 
     #[prop(into, optional)] styles: Styles,
@@ -259,13 +302,17 @@ pub fn ModalContent(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ModalContent", classes);
-    let ctx = expect_context::<ModalBackdropContext>();
+    let Some(ctx) = use_context::<ModalBackdropContext>() else {
+        crate::utils::dev_warn!("A <ModalContent> must be inside a <ModalBackdrop>.");
+        return ().into_any();
+    };
+    ctx.on_modal_exit.set_value(on_exit);
 
     let entering = CapturedElement::new();
     let is_entering = use_enter_animation(UseEnterAnimationInput {
         element: entering,
         is_ready: Signal::stored(true),
-        on_enter: None,
+        on_enter,
     })
     .is_entering;
     let close = ctx.close;
@@ -285,11 +332,14 @@ pub fn ModalContent(
                 data-entering=flag(is_entering)
                 data-exiting=flag(ctx.is_exiting)
             >
-                {move || ctx.is_dismissable.get().then(|| view! { <DismissButton on_dismiss=close /> })}
+                {move || {
+                    ctx.is_dismissable.get().then(|| view! { <DismissButton on_dismiss=close /> })
+                }}
                 {children()}
             </div>
         </FocusScope>
     }
+    .into_any()
 }
 
 /// The page's scrollable size (react-aria-components' `ModalOverlay`), without fractional parts

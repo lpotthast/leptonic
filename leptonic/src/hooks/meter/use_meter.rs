@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/meter/useMeter.ts @ 99e6102368
+// Upstream: react-aria-components/test/Meter.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
-    hooks::{UseProgressBarInput, UseProgressBarReturn, progress::use_progress_bar::progress},
+    hooks::progress::{UseProgressBarInput, UseProgressBarReturn, use_progress_bar::progress},
     utils::{aria::AriaRole, number_formatter::NumberFormatOptions, number_value::NumberValue},
 };
 
@@ -126,7 +127,7 @@ mod tests {
     // Upstream: RAC Meter.test.js "renders" and "supports a custom range".
     #[test]
     fn a_meter_has_the_meter_role_and_a_value() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let meter = use_meter(UseMeterInput {
                 value: Signal::stored(3),
                 max_value: Signal::stored(6),

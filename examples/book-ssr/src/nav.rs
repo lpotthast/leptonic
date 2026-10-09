@@ -1073,7 +1073,7 @@ fn focus() -> NavGroup {
                 Atom,
             ),
             page(
-                "use_focus_manager",
+                "create_focus_manager",
                 "Moves focus to the next, previous, first or last element of a container",
                 doc::focus::UseFocusManager.materialize(),
                 Hook,

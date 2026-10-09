@@ -13,7 +13,7 @@ pub fn PageUseTag() -> impl IntoView {
                 "users navigate with the arrow keys and can select and remove. "<Code inline=true>"use_tag_group"</Code>
                 " and "<Code inline=true>"use_tag"</Code>" build one from a list state; you render the tags and their "
                 "remove buttons. A tag group is a horizontal "<Link href=routes::doc::GridList.materialize()>"grid list"</Link>
-". See the "<Link href=routes::doc::TagGroup.materialize()>"Tag Group overview"</Link>" for concept guidance and keyboard interaction."
+    ". See the "<Link href=routes::doc::TagGroup.materialize()>"Tag Group overview"</Link>" for concept guidance and keyboard interaction."
             </p>
 
             <ReactAria hook="useTagGroup"/>
@@ -71,13 +71,27 @@ pub fn PageUseTag() -> impl IntoView {
                             use std::collections::HashSet;
 
                             use leptonic::{
-                                hooks::{*, collections::{SelectionOptions, UseListStateInput}},
-                                utils::CapturedElement,
+                                CapturedElement,
+                                hooks::{
+                                    collections::{
+                                        Key,
+                                        SelectionOptions,
+                                        UseListCollectionInput,
+                                        UseListStateInput,
+                                        use_list_collection,
+                                        use_list_state,
+                                    },
+                                    tag::{UseTagGroupInput, UseTagGroupReturn, use_tag_group},
+                                },
                             };
                             use leptos::prelude::*;
 
                             let tags = RwSignal::new(vec!["Rust", "Leptos"]);
-                            let collection = use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+                            let collection = use_list_collection(UseListCollectionInput {
+                                items: tags.into(),
+                                key: |tag| Key::from(*tag),
+                                text_value: |tag| (*tag).to_owned(),
+                            });
                             let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions::default() });
 
                             let UseTagGroupReturn { grid_props, label_props, data, .. } = use_tag_group(UseTagGroupInput {

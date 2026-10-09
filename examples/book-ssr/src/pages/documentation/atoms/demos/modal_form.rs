@@ -9,7 +9,7 @@ use leptonic::{
         modal::{ModalBackdrop, ModalContent},
         text_field::TextField,
     },
-    hooks::ButtonType,
+    hooks::button::ButtonType,
 };
 use leptos::{ev, prelude::*};
 

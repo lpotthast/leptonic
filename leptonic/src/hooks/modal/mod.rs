@@ -3,10 +3,11 @@
 //! - `use_modal_backdrop` (react-aria's `useModalOverlay`): dismissing (Escape, interacting
 //!   outside, through `use_overlay`), scroll prevention, and hiding everything outside the modal
 //!   (inert, through `utils::aria_hide_outside`), which is what makes the modal modal.
-//! - `use_modal` (react-aria's `useModal`): `aria-modal="true"` for a modal element. The modal
-//!   atoms don't use it: as react-aria-components, they set no `aria-modal` (WebKit bug 211934:
-//!   Safari focuses the first focusable element of an `aria-modal` element itself); the inert
-//!   content outside does the job.
+//!
+//! No `use_modal` (react-aria's `useModal`, the legacy `ModalProvider` API): as
+//! react-aria-components, modals set no `aria-modal` (WebKit bug 211934: Safari focuses the first
+//! focusable element of an `aria-modal` element itself); the inert content outside makes them
+//! modal.
 //!
 //! ## Hook Composition
 //!
@@ -21,8 +22,6 @@
 //!
 //! See each hook's deviation block for the details.
 
-pub mod use_modal;
-pub mod use_modal_backdrop;
+pub(crate) mod use_modal_backdrop;
 
-pub use use_modal::*;
 pub use use_modal_backdrop::*;

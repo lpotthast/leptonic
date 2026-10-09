@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/overlays/ariaHideOutside.ts @ 99e6102368
+// Upstream: react-aria/test/overlays/ariaHideOutside.test.js @ 99e6102368
 //! Hides all elements outside the given targets from assistive technology.
 //!
 //! When a modal or popover is open, content behind it should be hidden from
@@ -20,6 +21,9 @@
 //!
 //! - `shouldUseInert: boolean` is the [`HideMode`] enum; `inert` is always supported (modern
 //!   browsers only), so there is no `aria-hidden` fallback for it.
+//! - Inert HTML elements also get `aria-hidden="true"`: Chromium otherwise drops text
+//!   referenced by `aria-labelledby`/`aria-describedby` inside inert content. Both attributes
+//!   are restored on cleanup, preserving the author's prior `aria-hidden` value.
 //! - Omitted: watching shadow roots around the targets (react-aria's `shadowDOM` flag, off by
 //!   default).
 //! - Registering an overlay opened from inside (`keep_visible`, a nested `aria_hide_outside`)
@@ -38,39 +42,59 @@ pub enum HideMode {
 }
 
 impl HideMode {
-    /// The attribute hiding an element in this mode.
+    /// The attribute hiding `element` in this mode: `inert` exists on HTML elements only, others
+    /// (SVG) get `aria-hidden` (as react-aria's `setHidden`).
     #[cfg(not(feature = "ssr"))]
-    fn attribute(self) -> &'static str {
+    fn attribute(self, element: &web_sys::Element) -> &'static str {
+        use wasm_bindgen::JsCast;
         match self {
-            Self::AriaHidden => "aria-hidden",
-            Self::Inert => "inert",
+            Self::Inert if element.is_instance_of::<web_sys::HtmlElement>() => "inert",
+            Self::AriaHidden | Self::Inert => "aria-hidden",
         }
     }
 
     #[cfg(not(feature = "ssr"))]
     fn is_hidden(self, element: &web_sys::Element) -> bool {
-        match self {
-            Self::AriaHidden => element.get_attribute("aria-hidden").as_deref() == Some("true"),
-            Self::Inert => element.has_attribute("inert"),
+        match self.attribute(element) {
+            "inert" => element.has_attribute("inert"),
+            _ => element.get_attribute("aria-hidden").as_deref() == Some("true"),
         }
     }
 
     #[cfg(not(feature = "ssr"))]
     fn hide(self, element: &web_sys::Element) {
-        let value = match self {
-            Self::AriaHidden => "true",
-            Self::Inert => "",
-        };
-        let _ = element.set_attribute(self.attribute(), value);
+        let attribute = self.attribute(element);
+        let value = if attribute == "inert" { "" } else { "true" };
+        if attribute == "inert" {
+            INERT_ARIA_HIDDEN.with_borrow(|map| {
+                let previous = element
+                    .get_attribute("aria-hidden")
+                    .map_or(JsValue::NULL, JsValue::from);
+                map.set(element.unchecked_ref(), &previous);
+            });
+            let _ = element.set_attribute("aria-hidden", "true");
+        }
+        let _ = element.set_attribute(attribute, value);
     }
 
     /// Shows an element again. As react-aria, `aria-hidden` mode removes `inert` as well.
     #[cfg(not(feature = "ssr"))]
     fn show(self, element: &web_sys::Element) {
-        let _ = element.remove_attribute(self.attribute());
+        let _ = element.remove_attribute(self.attribute(element));
         if self == Self::AriaHidden {
             let _ = element.remove_attribute("inert");
         }
+        INERT_ARIA_HIDDEN.with_borrow(|map| {
+            let key = element.unchecked_ref();
+            if map.has(key) {
+                if let Some(previous) = map.get(key).as_string() {
+                    let _ = element.set_attribute("aria-hidden", &previous);
+                } else {
+                    let _ = element.remove_attribute("aria-hidden");
+                }
+                map.delete(key);
+            }
+        });
     }
 }
 
@@ -113,8 +137,6 @@ pub fn keep_visible(_element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
 
 #[cfg(not(feature = "ssr"))]
 use std::cell::{Cell, RefCell};
-#[cfg(not(feature = "ssr"))]
-use std::rc::Rc;
 
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
@@ -124,11 +146,58 @@ use wasm_bindgen::prelude::*;
 #[cfg(not(feature = "ssr"))]
 use crate::utils::dom_ext::node_contains;
 
+/// A set of elements by identity: a JavaScript `Set` (as upstream's), so a membership check is
+/// one call into JavaScript instead of one per element compared. Clones share the set.
+#[cfg(not(feature = "ssr"))]
+#[derive(Clone)]
+struct ElementSet(js_sys::Set);
+
+#[cfg(not(feature = "ssr"))]
+impl ElementSet {
+    fn new(elements: &[web_sys::Element]) -> Self {
+        let set = Self(js_sys::Set::new(&JsValue::UNDEFINED));
+        for element in elements {
+            set.add(element);
+        }
+        set
+    }
+
+    fn has(&self, element: &web_sys::Element) -> bool {
+        self.0.has(element.as_ref())
+    }
+
+    fn add(&self, element: &web_sys::Element) {
+        self.0.add(element.as_ref());
+    }
+
+    fn delete(&self, element: &web_sys::Element) {
+        self.0.delete(element.as_ref());
+    }
+
+    /// The elements, in insertion order.
+    fn to_vec(&self) -> Vec<web_sys::Element> {
+        js_sys::Array::from(self.0.as_ref())
+            .iter()
+            .map(JsCast::unchecked_into)
+            .collect()
+    }
+
+    /// Whether one of the elements contains `node` (or is it).
+    fn any_contains(&self, node: &web_sys::Node) -> bool {
+        self.to_vec()
+            .iter()
+            .any(|element| node_contains(Some(element.as_ref()), Some(node)).unwrap_or(false))
+    }
+}
+
 #[cfg(not(feature = "ssr"))]
 thread_local! {
     /// Reference count per hidden element. Uses `WeakMap` so removed DOM
     /// elements can be garbage collected.
     static REF_COUNT_MAP: RefCell<js_sys::WeakMap> = RefCell::new(js_sys::WeakMap::new());
+
+    /// Prior author values of `aria-hidden`, before inert mode adds the naming workaround.
+    static INERT_ARIA_HIDDEN: RefCell<js_sys::WeakMap> = RefCell::new(js_sys::WeakMap::new());
 
     /// Stack of active observers. The topmost observer is the one currently
     /// watching for mutations. When an overlay closes, its observer is removed
@@ -142,8 +211,8 @@ thread_local! {
 #[cfg(not(feature = "ssr"))]
 struct ObserverWrapper {
     id: u64,
-    visible_nodes: Rc<RefCell<Vec<web_sys::Element>>>,
-    hidden_nodes: Rc<RefCell<Vec<web_sys::Element>>>,
+    visible_nodes: ElementSet,
+    hidden_nodes: ElementSet,
     mode: HideMode,
     observer: web_sys::MutationObserver,
     root: web_sys::Element,
@@ -173,27 +242,24 @@ impl ObserverWrapper {
     fn reveal(&self, element: &web_sys::Element) {
         let containing: Vec<web_sys::Element> = self
             .hidden_nodes
-            .borrow()
-            .iter()
+            .to_vec()
+            .into_iter()
             .filter(|hidden| {
                 node_contains(Some(hidden.as_ref()), Some(element.as_ref())).unwrap_or(false)
             })
-            .cloned()
             .collect();
         if containing.is_empty() {
             return;
         }
-        self.hidden_nodes
-            .borrow_mut()
-            .retain(|hidden| !containing.contains(hidden));
         for node in &containing {
+            self.hidden_nodes.delete(node);
             show_element(node, self.mode);
         }
         // The element stays visible to this walk even when it isn't one of this call's targets
         // (a nested hide's target).
-        let mut visible = self.visible_nodes.borrow().clone();
+        let mut visible = self.visible_nodes.to_vec();
         visible.push(element.clone());
-        let visible = Rc::new(RefCell::new(visible));
+        let visible = ElementSet::new(&visible);
         for node in &containing {
             walk_children(node, self.mode, &visible, &self.hidden_nodes);
         }
@@ -216,11 +282,11 @@ enum WalkAction {
 #[cfg(not(feature = "ssr"))]
 fn classify(
     element: &web_sys::Element,
-    visible_nodes: &[web_sys::Element],
-    hidden_nodes: &[web_sys::Element],
+    visible_nodes: &ElementSet,
+    hidden_nodes: &ElementSet,
 ) -> WalkAction {
     // Already hidden or already visible — skip subtree.
-    if hidden_nodes.iter().any(|n| n == element) || visible_nodes.iter().any(|n| n == element) {
+    if hidden_nodes.has(element) || visible_nodes.has(element) {
         return WalkAction::Reject;
     }
 
@@ -229,7 +295,7 @@ fn classify(
     // hiding elements with role="row", so we hide cells individually.
     // https://bugs.webkit.org/show_bug.cgi?id=222623
     if let Some(parent) = element.parent_element()
-        && hidden_nodes.iter().any(|n| n == &parent)
+        && hidden_nodes.has(&parent)
         && parent.get_attribute("role").as_deref() != Some("row")
     {
         return WalkAction::Reject;
@@ -237,6 +303,7 @@ fn classify(
 
     // Node contains a visible target — don't hide it, but recurse into children.
     let contains_visible = visible_nodes
+        .to_vec()
         .iter()
         .any(|v| node_contains(Some(element.as_ref()), Some(v.as_ref())).unwrap_or(false));
 
@@ -250,7 +317,7 @@ fn classify(
 /// Discover live announcer and top-layer elements in the subtree and add
 /// them to the visible set.
 #[cfg(not(feature = "ssr"))]
-fn discover_special_elements(root: &web_sys::Element, visible_nodes: &mut Vec<web_sys::Element>) {
+fn discover_special_elements(root: &web_sys::Element, visible_nodes: &ElementSet) {
     let Ok(special) = root.query_selector_all("[data-live-announcer], [data-leptonic-top-layer]")
     else {
         return;
@@ -259,9 +326,8 @@ fn discover_special_elements(root: &web_sys::Element, visible_nodes: &mut Vec<we
         if let Some(el) = special
             .item(i)
             .and_then(|n| n.dyn_ref::<web_sys::Element>().cloned())
-            && !visible_nodes.iter().any(|v| v == &el)
         {
-            visible_nodes.push(el);
+            visible_nodes.add(&el);
         }
     }
 }
@@ -271,16 +337,10 @@ fn discover_special_elements(root: &web_sys::Element, visible_nodes: &mut Vec<we
 fn walk(
     element: &web_sys::Element,
     mode: HideMode,
-    visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
-    hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
+    visible_nodes: &ElementSet,
+    hidden_nodes: &ElementSet,
 ) {
-    let action = {
-        let vis = visible_nodes.borrow();
-        let hid = hidden_nodes.borrow();
-        classify(element, &vis, &hid)
-    };
-
-    match action {
+    match classify(element, visible_nodes, hidden_nodes) {
         WalkAction::Reject => {}
         WalkAction::Skip => walk_children(element, mode, visible_nodes, hidden_nodes),
         // As upstream's TreeWalker, which descends into accepted nodes.
@@ -296,8 +356,8 @@ fn walk(
 fn walk_children(
     element: &web_sys::Element,
     mode: HideMode,
-    visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
-    hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
+    visible_nodes: &ElementSet,
+    hidden_nodes: &ElementSet,
 ) {
     let children = element.children();
     for i in 0..children.length() {
@@ -309,11 +369,7 @@ fn walk_children(
 
 /// Hide an element and update the reference count.
 #[cfg(not(feature = "ssr"))]
-fn hide_element(
-    element: &web_sys::Element,
-    mode: HideMode,
-    hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
-) {
+fn hide_element(element: &web_sys::Element, mode: HideMode, hidden_nodes: &ElementSet) {
     REF_COUNT_MAP.with_borrow(|map| {
         let key: &js_sys::Object = element.unchecked_ref();
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -329,7 +385,7 @@ fn hide_element(
             mode.hide(element);
         }
 
-        hidden_nodes.borrow_mut().push(element.clone());
+        hidden_nodes.add(element);
         let _ = map.set(key, &JsValue::from_f64(f64::from(count + 1)));
     });
 }
@@ -361,18 +417,16 @@ fn show_element(element: &web_sys::Element, mode: HideMode) {
 fn create_mutation_observer(
     root: &web_sys::Element,
     mode: HideMode,
-    visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
-    hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
+    visible_nodes: &ElementSet,
+    hidden_nodes: &ElementSet,
 ) -> Option<(
     web_sys::MutationObserver,
     Closure<dyn FnMut(js_sys::Array, web_sys::MutationObserver)>,
 )> {
-    let vis_for_cb = Rc::clone(visible_nodes);
-    let hid_for_cb = Rc::clone(hidden_nodes);
-
+    let (visible_nodes, hidden_nodes) = (visible_nodes.clone(), hidden_nodes.clone());
     let callback: Closure<dyn FnMut(js_sys::Array, web_sys::MutationObserver)> = Closure::new(
         move |mutations: js_sys::Array, _observer: web_sys::MutationObserver| {
-            handle_mutations(&mutations, mode, &vis_for_cb, &hid_for_cb);
+            handle_mutations(&mutations, mode, &visible_nodes, &hidden_nodes);
         },
     );
 
@@ -392,45 +446,25 @@ fn create_mutation_observer(
 fn handle_mutations(
     mutations: &js_sys::Array,
     mode: HideMode,
-    visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
-    hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
+    visible_nodes: &ElementSet,
+    hidden_nodes: &ElementSet,
 ) {
     for i in 0..mutations.length() {
-        let record = mutations.get(i);
-
-        let target: Option<web_sys::Node> = js_sys::Reflect::get(&record, &"target".into())
-            .ok()
-            .and_then(|t| t.dyn_into().ok());
-        let Some(target) = target else { continue };
-
-        // Skip disconnected targets.
-        let is_connected = js_sys::Reflect::get(&target, &"isConnected".into())
-            .ok()
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-        if !is_connected {
+        let Ok(record) = mutations.get(i).dyn_into::<web_sys::MutationRecord>() else {
+            continue;
+        };
+        let Some(target) = record.target() else {
+            continue;
+        };
+        // Skip disconnected targets, and targets inside a visible or hidden node.
+        if !target.is_connected()
+            || visible_nodes.any_contains(&target)
+            || hidden_nodes.any_contains(&target)
+        {
             continue;
         }
 
-        // Skip if target is inside a visible or hidden node.
-        {
-            let vis = visible_nodes.borrow();
-            let hid = hidden_nodes.borrow();
-            let inside = vis
-                .iter()
-                .chain(hid.iter())
-                .any(|node| node_contains(Some(node.as_ref()), Some(&target)).unwrap_or(false));
-            if inside {
-                continue;
-            }
-        }
-
-        // Process added nodes.
-        let added: Option<web_sys::NodeList> = js_sys::Reflect::get(&record, &"addedNodes".into())
-            .ok()
-            .and_then(|v| v.dyn_into().ok());
-        let Some(added) = added else { continue };
-
+        let added = record.added_nodes();
         for j in 0..added.length() {
             let Some(node) = added.item(j) else { continue };
             let Some(el) = node.dyn_ref::<web_sys::Element>() else {
@@ -440,9 +474,9 @@ fn handle_mutations(
             if el.has_attribute("data-live-announcer")
                 || el.has_attribute("data-leptonic-top-layer")
             {
-                visible_nodes.borrow_mut().push(el.clone());
+                visible_nodes.add(el);
             } else {
-                discover_special_elements(el, &mut visible_nodes.borrow_mut());
+                discover_special_elements(el, visible_nodes);
                 walk(el, mode, visible_nodes, hidden_nodes);
             }
         }
@@ -470,11 +504,11 @@ pub fn aria_hide_outside(
         return Box::new(|| {});
     };
 
-    let visible_nodes: Rc<RefCell<Vec<web_sys::Element>>> = Rc::new(RefCell::new(targets.to_vec()));
-    let hidden_nodes: Rc<RefCell<Vec<web_sys::Element>>> = Rc::new(RefCell::new(Vec::new()));
+    let visible_nodes = ElementSet::new(targets);
+    let hidden_nodes = ElementSet::new(&[]);
 
     // Discover and preserve live announcer / top-layer elements.
-    discover_special_elements(&root, &mut visible_nodes.borrow_mut());
+    discover_special_elements(&root, &visible_nodes);
 
     // Disconnect the previous observer (if nested), keeping the targets visible to it.
     OBSERVER_STACK.with_borrow(|stack| {
@@ -506,8 +540,8 @@ pub fn aria_hide_outside(
     OBSERVER_STACK.with_borrow_mut(|stack| {
         stack.push(ObserverWrapper {
             id: wrapper_id,
-            visible_nodes: Rc::clone(&visible_nodes),
-            hidden_nodes: Rc::clone(&hidden_nodes),
+            visible_nodes,
+            hidden_nodes: hidden_nodes.clone(),
             mode,
             observer,
             root,
@@ -516,7 +550,6 @@ pub fn aria_hide_outside(
     });
 
     // Cleanup closure.
-    let hidden_for_cleanup = Rc::clone(&hidden_nodes);
     Box::new(move || {
         OBSERVER_STACK.with_borrow_mut(|stack| {
             if stack.last().is_some_and(|w| w.id == wrapper_id) {
@@ -532,8 +565,8 @@ pub fn aria_hide_outside(
             }
         });
 
-        for node in hidden_for_cleanup.borrow().iter() {
-            show_element(node, mode);
+        for node in hidden_nodes.to_vec() {
+            show_element(&node, mode);
         }
     })
 }
@@ -542,17 +575,13 @@ pub fn aria_hide_outside(
 pub fn keep_visible(element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
     OBSERVER_STACK.with_borrow(|stack| {
         let wrapper = stack.last()?;
-        let vis = wrapper.visible_nodes.borrow();
-        if vis.iter().any(|n| n == element) {
+        if wrapper.visible_nodes.has(element) {
             return None;
         }
-        drop(vis);
-        wrapper.visible_nodes.borrow_mut().push(element.clone());
+        wrapper.visible_nodes.add(element);
         wrapper.reveal(element);
-        let nodes = Rc::clone(&wrapper.visible_nodes);
+        let nodes = wrapper.visible_nodes.clone();
         let el = element.clone();
-        Some(Box::new(move || {
-            nodes.borrow_mut().retain(|n| n != &el);
-        }) as Box<dyn FnOnce()>)
+        Some(Box::new(move || nodes.delete(&el)) as Box<dyn FnOnce()>)
     })
 }

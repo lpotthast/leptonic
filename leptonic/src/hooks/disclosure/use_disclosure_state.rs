@@ -1,7 +1,7 @@
 // Upstream: react-stately/src/disclosure/useDisclosureState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::ValueBinding;
+use crate::ValueBinding;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -50,21 +50,6 @@ impl DisclosureState {
     }
 }
 
-impl From<ValueBinding<bool>> for DisclosureState {
-    fn from(value: ValueBinding<bool>) -> Self {
-        use_disclosure_state(UseDisclosureStateInput {
-            value: Some(value),
-            ..UseDisclosureStateInput::default()
-        })
-    }
-}
-
-impl From<RwSignal<bool>> for DisclosureState {
-    fn from(signal: RwSignal<bool>) -> Self {
-        ValueBinding::from(signal).into()
-    }
-}
-
 /// Manages whether a disclosure is expanded.
 pub fn use_disclosure_state(input: UseDisclosureStateInput) -> DisclosureState {
     let UseDisclosureStateInput {
@@ -99,7 +84,7 @@ mod tests {
 
     #[test]
     fn toggles_and_reports_changes_only() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let changes = Arc::new(Mutex::new(Vec::new()));
             let recorded = Arc::clone(&changes);
             let state = use_disclosure_state(UseDisclosureStateInput {
@@ -119,9 +104,12 @@ mod tests {
 
     #[test]
     fn binds_app_state() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let expanded = RwSignal::new(true);
-            let state = DisclosureState::from(expanded);
+            let state = use_disclosure_state(UseDisclosureStateInput {
+                value: Some(ValueBinding::from(expanded)),
+                ..UseDisclosureStateInput::default()
+            });
             assert_that!(state.is_expanded.get_untracked()).is_true();
             state.toggle();
             assert_that!(expanded.get_untracked()).is_false();

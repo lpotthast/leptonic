@@ -1,25 +1,26 @@
 // Upstream: react-stately/src/datepicker/useDatePickerState.ts @ 99e6102368
+// Upstream: react-aria-components/test/DatePicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DatePicker.test.js @ 99e6102368
 use std::sync::Arc;
 
 use jiff::civil::{Date, Time};
 use leptos::prelude::*;
 
 use super::{
-    format::{DateFormatter, FormatOptions},
+    format::{FormatOptions, Formatters},
     types::{DateValue, Era, Granularity, HourCycle, MaxGranularity},
     use_date_field_state::{resolve_granularity, validation_result},
 };
 use crate::{
+    ValueBinding,
     hooks::{
-        OverlayTriggerState, UseOverlayTriggerStateInput,
         form::{
             FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
             use_form_validation_state,
         },
-        use_overlay_trigger_state,
+        overlay::{OverlayTriggerState, UseOverlayTriggerStateInput, use_overlay_trigger_state},
     },
     utils::{
-        ValueBinding,
         i18n::use_locale,
         intl_strings::{DateValidationStrings, use_localized_strings},
     },
@@ -112,13 +113,12 @@ pub struct DatePickerState<V: DateValue> {
     pub is_invalid: Signal<bool>,
     pub validation: FormValidationState,
     pub(crate) binding: ValueBinding<Option<V>>,
-    pub(crate) format_options: Memo<FormatOptions>,
+    formatters: Memo<Formatters>,
     selected_date: RwSignal<Option<Date>>,
     selected_time: RwSignal<Option<Time>>,
     placeholder: Memo<V>,
     placeholder_time: Signal<Time>,
     should_close_on_select: Signal<bool>,
-    locale: Signal<crate::utils::i18n::Locale>,
 }
 
 // Derived, it would require a `Copy` value type.
@@ -168,7 +168,9 @@ impl<V: DateValue> DatePickerState<V> {
                 None => self.selected_date.set(Some(date)),
             }
         } else {
-            self.commit(date, Time::midnight());
+            // A value with a time edited by day keeps its time (react-stately's
+            // `useCalendarState`: `value.set(date)`).
+            self.commit(date, self.date_to_value(date).time());
         }
         if should_close {
             self.overlay.set_open(false);
@@ -193,7 +195,8 @@ impl<V: DateValue> DatePickerState<V> {
         let Some(value) = self.value.get() else {
             return String::new();
         };
-        DateFormatter::long(&self.locale.get(), &self.format_options.get()).format(&value)
+        self.formatters
+            .with(|formatters| formatters.long().format(&value))
     }
 }
 
@@ -313,16 +316,16 @@ pub fn use_date_picker_state<V: DateValue>(
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let strings = use_localized_strings::<DateValidationStrings>();
-    let builtin_validation = Signal::derive(move || {
+    let formatters = Memo::new(move |_| Formatters::new(locale.get(), format_options.get()));
+    let builtin_validation = Memo::new(move |_| {
         let value = binding.value.get();
         let (min, max) = (min_value.get(), max_value.get());
-        let formatter = DateFormatter::new(&locale.get(), &format_options.get());
         Some(validation_result(
             value.as_ref(),
             min.as_ref(),
             max.as_ref(),
             is_date_unavailable.get_value(),
-            &formatter,
+            &|limit| formatters.with(|formatters| formatters.short().format(limit)),
             &strings.read(),
         ))
     });
@@ -330,9 +333,9 @@ pub fn use_date_picker_state<V: DateValue>(
         is_invalid,
         value: binding.value,
         validate,
-        builtin_validation,
+        builtin_validation: builtin_validation.into(),
         validation_behavior,
-        name,
+        names: name.into_iter().collect(),
     });
 
     // Closing commits a date selected without a time, with the placeholder time (a time selected
@@ -375,13 +378,12 @@ pub fn use_date_picker_state<V: DateValue>(
         is_invalid: validation.is_invalid,
         validation,
         binding,
-        format_options,
+        formatters,
         selected_date,
         selected_time,
         placeholder,
         placeholder_time,
         should_close_on_select,
-        locale,
     }
 }
 
@@ -391,11 +393,11 @@ mod tests {
     use jiff::civil::{DateTime, date, time};
 
     use super::*;
+    use crate::testing::with_owner;
 
     #[test]
     fn selects_a_date_and_closes() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_date_picker_state(UseDatePickerStateInput::<Date>::default());
             state.set_open(true);
             state.select_date(date(2024, 6, 5));
@@ -406,8 +408,7 @@ mod tests {
 
     #[test]
     fn keeps_the_time_of_a_date_time() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_date_picker_state(UseDatePickerStateInput::<DateTime> {
                 default_value: Some(date(2024, 6, 5).at(14, 30, 0, 0)),
                 ..UseDatePickerStateInput::default()
@@ -418,10 +419,25 @@ mod tests {
         });
     }
 
+    /// A date-time picker editing days only keeps the value's time when a date is selected
+    /// (react-stately's `useCalendarState`: `value.set(newValue)` for values with a time).
+    #[test]
+    fn keeps_the_time_of_a_date_time_edited_by_day() {
+        with_owner(|| {
+            let state = use_date_picker_state(UseDatePickerStateInput::<DateTime> {
+                default_value: Some(date(2024, 6, 5).at(14, 30, 0, 0)),
+                granularity: Signal::stored(Some(Granularity::Day)),
+                ..UseDatePickerStateInput::default()
+            });
+            state.select_date(date(2024, 6, 20));
+            assert_that!(state.value.get_untracked())
+                .is_equal_to(Some(date(2024, 6, 20).at(14, 30, 0, 0)));
+        });
+    }
+
     #[test]
     fn waits_for_a_time_unless_closing() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_date_picker_state(UseDatePickerStateInput::<DateTime> {
                 should_close_on_select: Signal::stored(false),
                 ..UseDatePickerStateInput::default()

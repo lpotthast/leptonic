@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/utils/number.ts @ 99e6102368
+// Upstream: react-stately/test/utils/number.test.ts @ 99e6102368
 //
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -154,6 +155,47 @@ mod tests {
         assert_that!(snap_value_to_step(23.0, None, Some(22.0), 5.0)).is_equal_to(20.0);
         // A step that isn't positive only clamps.
         assert_that!(snap_value_to_step(7.3, Some(0.0), Some(5.0), 0.0)).is_equal_to(5.0);
+    }
+
+    // number.test.ts: "should return the input unchanged for integer steps", "should round to
+    // the correct decimal places for steps with decimals", "should handle rounding for
+    // exponential step values".
+    #[test]
+    fn round_to_step_precision_like_react_aria() {
+        assert_that!(round_to_step_precision(7.123, 1.0)).is_equal_to(7.123);
+        assert_that!(round_to_step_precision(5.0, 10.0)).is_equal_to(5.0);
+        assert_that!(round_to_step_precision(1.24, 0.1)).is_equal_to(1.24);
+        assert_that!(round_to_step_precision(1.456, 0.01)).is_equal_to(1.456);
+        assert_that!(round_to_step_precision(1.2345, 0.015)).is_equal_to(1.2345);
+        assert_that!(round_to_step_precision(1.2345, 0.25)).is_equal_to(1.235);
+        assert_that!(round_to_step_precision(2.349, 0.1)).is_equal_to(2.35);
+        assert_that!(round_to_step_precision(2.35, 0.1)).is_equal_to(2.35);
+        assert_that!(round_to_step_precision(-1.456, 0.01)).is_equal_to(-1.456);
+        assert_that!(round_to_step_precision(0.0, 0.01)).is_equal_to(0.0);
+        assert_that!(round_to_step_precision(0.123_456_789, 1e-3)).is_equal_to(0.1235);
+        assert_that!(round_to_step_precision(0.123_456_789, 1e-7)).is_equal_to(0.123_456_79);
+        assert_that!(round_to_step_precision(0.123_456_789, 1.5e-7)).is_equal_to(0.123_456_789);
+        assert_that!(round_to_step_precision(0.123_456_789, 2.5e-6)).is_equal_to(0.123_456_79);
+        assert_that!(round_to_step_precision(0.123_456_789, 1e-8)).is_equal_to(0.123_456_789);
+    }
+
+    // number.test.ts: "should snap value to nearest step based on min and max", "should snap
+    // value nearest step when min or max are undefined".
+    #[test]
+    fn snap_value_to_step_like_react_aria() {
+        assert_that!(snap_value_to_step(2.0, Some(-0.5), Some(100.0), 3.0)).is_equal_to(2.5);
+        assert_that!(snap_value_to_step(-6.2, Some(-2.5), Some(100.0), 3.0)).is_equal_to(-2.5);
+        assert_that!(snap_value_to_step(106.2, Some(-2.5), Some(100.0), 3.0)).is_equal_to(99.5);
+        assert_that!(snap_value_to_step(-0.009_999, Some(-0.5), Some(0.5), 0.01))
+            .is_equal_to(-0.01);
+        assert_that!(snap_value_to_step(-8.0, Some(-100.0), Some(100.0), 5.0)).is_equal_to(-10.0);
+        assert_that!(snap_value_to_step(-6.0, Some(-100.0), Some(100.0), 5.0)).is_equal_to(-5.0);
+        assert_that!(snap_value_to_step(3.0, Some(-100.0), Some(100.0), 5.0)).is_equal_to(5.0);
+        assert_that!(snap_value_to_step(2.0, Some(-100.0), Some(100.0), 5.0)).is_equal_to(0.0);
+        assert_that!(snap_value_to_step(2.0, None, None, 3.0)).is_equal_to(3.0);
+        assert_that!(snap_value_to_step(6.0, None, Some(5.0), 3.0)).is_equal_to(3.0);
+        assert_that!(snap_value_to_step(4.0, None, Some(5.0), 3.0)).is_equal_to(3.0);
+        assert_that!(snap_value_to_step(1.0, Some(3.0), None, 3.0)).is_equal_to(3.0);
     }
 
     #[test]

@@ -177,18 +177,18 @@ pub fn PageAtomCheckbox() -> impl IntoView {
                 </p>
                 <Section title="Props" id="checkbox-group-props">
                     <ApiTable kind=ApiKind::Props of="atoms::checkbox::CheckboxGroup">
-                        <ApiRow name="default_value" ty="Vec<V>" default="vec![]">"The initially checked values."</ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Vec<V>>>" default="None">
+                        <ApiRow name="default_value" ty="HashSet<V>" default="vec![]">"The initially checked values."</ApiRow>
+                        <ApiRow name="value" ty="Option<Signal<HashSet<V>>>" default="None">
                             "The checked values (controlled): a value or any signal."
                         </ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Vec<V>>>" default="None">
+                        <ApiRow name="set_value" ty="Option<Out<HashSet<V>>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Vec<V>>>" default="None">"Called with the checked values when they change."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<HashSet<V>>>" default="None">"Called with the checked values when they change."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Disables the checkboxes, or prevents changes."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"At least one checkbox must be checked."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the group invalid."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<Vec<V>>>" default="None">"Validates the checked values."</ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<HashSet<V>>>" default="None">"Validates the checked values."</ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
                             <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."

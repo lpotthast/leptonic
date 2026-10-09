@@ -4,7 +4,7 @@ use leptonic::{
         dialog::{Dialog, DialogDescription, DialogTitle},
         modal::{ModalBackdrop, ModalContent},
     },
-    hooks::DialogRole,
+    hooks::dialog::DialogRole,
 };
 use leptos::prelude::*;
 

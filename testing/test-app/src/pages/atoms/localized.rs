@@ -1,4 +1,5 @@
 use leptonic::{
+    I18nProvider, Locale,
     atoms::{
         field::Label,
         input::Input,
@@ -11,7 +12,6 @@ use leptonic::{
         tag_group::{TagGroup, TagItems, TagList, TagRemoveButton},
     },
     hooks::collections::{Key, use_collection},
-    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 

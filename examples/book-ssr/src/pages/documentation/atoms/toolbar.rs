@@ -43,16 +43,16 @@ pub fn PageAtomToolbar() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude as atoms;
+                        use leptonic::atoms;
 
                         let bold = RwSignal::new(false);
                         let italic = RwSignal::new(false);
 
                         view! {
-                            <atoms::Toolbar aria_label="Text formatting">
-                                <atoms::ToggleButton is_selected=bold set_selected=bold>"Bold"</atoms::ToggleButton>
-                                <atoms::ToggleButton is_selected=italic set_selected=italic>"Italic"</atoms::ToggleButton>
-                            </atoms::Toolbar>
+                            <atoms::toolbar::Toolbar aria_label="Text formatting">
+                                <atoms::toggle_button::ToggleButton is_selected=bold set_selected=bold>"Bold"</atoms::toggle_button::ToggleButton>
+                                <atoms::toggle_button::ToggleButton is_selected=italic set_selected=italic>"Italic"</atoms::toggle_button::ToggleButton>
+                            </atoms::toolbar::Toolbar>
                         }
                     "#)}
                 </Code>

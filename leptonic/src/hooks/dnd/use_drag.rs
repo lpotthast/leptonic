@@ -1,5 +1,14 @@
 // Upstream: react-aria/src/dnd/useDrag.ts @ 99e6102368
-use std::rc::Rc;
+// Upstream: react-aria/src/dnd/DragPreview.tsx @ 99e6102368
+// Upstream: react-aria/test/dnd/dnd.test.js @ 99e6102368
+// Upstream: react-aria/test/dnd/dnd.ssr.test.js @ 99e6102368
+use std::{
+    rc::Rc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicU64, Ordering},
+    },
+};
 
 use leptos::{
     attr::{
@@ -7,7 +16,6 @@ use leptos::{
         custom::{CustomAttr, custom_attribute},
     },
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use send_wrapper::SendWrapper;
@@ -22,14 +30,15 @@ use super::{
         DropOperations,
     },
     utils::{
-        global_drop_effect, set_global_allowed_drop_operations, set_global_drop_effect,
-        use_drag_modality, write_to_data_transfer,
+        event_target_element, global_drop_effect, set_global_allowed_drop_operations,
+        set_global_drop_effect, use_drag_modality, write_to_data_transfer,
     },
 };
 use crate::{
-    hooks::{IntoAttrs, UseButtonInput, interactions::use_press::PressEvent},
+    EventHandler, IntoAttrs, OnEvent,
+    hooks::{button::UseButtonInput, interactions::use_press::PressEvent},
     utils::{
-        EventHandler,
+        dom_ext::EventAccessors,
         event_listeners::{Listener, listen},
         intl_strings::{DndStrings, use_localized_strings},
         key::{KeyboardEventKey, KeyboardKey},
@@ -51,11 +60,19 @@ use crate::{
 // - The dragged data and the allowed operations are signals (`items`, `allowed_drop_operations`),
 //   read when a drag starts (react-aria: the `getItems`/`getAllowedDropOperations` functions).
 //
-// ## BEHAVIOR DIFFERENCES
+// ## DIFFERENT BEHAVIOR
 // - A pointer counts as virtual (a screen reader's) when `is_virtual_pointer_event` says so OR it
 //   hits the element's center (TalkBack) OR it is iOS VoiceOver's zero-size pointer. react-aria
 //   overwrites the first check with the pointer type when the second fails, so a virtual pointer
 //   off center starts a native drag there.
+// - A keyboard or screen reader drag starts (`on_drag_start`) only if no other one is in
+//   progress, e.g. after a second Enter before the first drag's session was set up (react-aria
+//   calls `onDragStart`, then throws).
+// - A native drag ends once: unmounting the dragged element ends it (as in react-aria), and a
+//   `dragend` the browser still sends to the removed element afterwards is ignored; a `dragend`
+//   before the frame that marks the element as dragging keeps it from being marked.
+// - Cleanup ends an active native drag before checking DOM attachment: Leptos disposes the
+//   owner before removing its element, unlike React's unmount cleanup ordering.
 //
 // =============================================================================
 
@@ -103,13 +120,13 @@ pub struct UseDragProps {
 pub type UseDragAttrs = (
     CustomAttr<&'static str, Signal<&'static str>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
-    On<ev::Capture<ev::keyup>, SharedEventCallback<KeyboardEvent>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::dragstart, SharedEventCallback<DragEvent>>,
-    On<ev::drag, SharedEventCallback<DragEvent>>,
-    On<ev::dragend, SharedEventCallback<DragEvent>>,
+    OnEvent<ev::pointerdown>,
+    OnEvent<ev::Capture<ev::keydown>>,
+    OnEvent<ev::Capture<ev::keyup>>,
+    OnEvent<ev::click>,
+    OnEvent<ev::dragstart>,
+    OnEvent<ev::drag>,
+    OnEvent<ev::dragend>,
 );
 
 impl IntoAttrs for UseDragProps {
@@ -127,6 +144,36 @@ impl IntoAttrs for UseDragProps {
             self.on_drag.into_on(ev::drag),
             self.on_dragend.into_on(ev::dragend),
         )
+    }
+}
+
+/// The native drag of an element, shared with handlers that may run after the element's owner was
+/// disposed.
+#[derive(Debug, Default)]
+struct NativeDrag {
+    /// Bumped by every `dragstart` and every end, so that the frame a `dragstart` schedules
+    /// doesn't mark a drag as dragging that ended in the meantime.
+    generation: AtomicU64,
+    /// A drag started and hasn't ended.
+    active: AtomicBool,
+}
+
+impl NativeDrag {
+    /// A drag starts: its generation.
+    fn start(&self) -> u64 {
+        self.active.store(true, Ordering::Relaxed);
+        self.generation.fetch_add(1, Ordering::Relaxed) + 1
+    }
+
+    /// Whether no drag started or ended since the one of `generation` started.
+    fn is_current(&self, generation: u64) -> bool {
+        self.generation.load(Ordering::Relaxed) == generation
+    }
+
+    /// The drag ends: `true` for the first end after a start only.
+    fn end(&self) -> bool {
+        self.generation.fetch_add(1, Ordering::Relaxed);
+        self.active.swap(false, Ordering::Relaxed)
     }
 }
 
@@ -154,14 +201,12 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let strings = use_localized_strings::<DndStrings>();
 
     let position = StoredValue::new((0.0_f64, 0.0_f64));
-    let dragging_element: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-        StoredValue::new(None);
+    let native_drag = Arc::new(NativeDrag::default());
     let (is_dragging, set_is_dragging) = signal(false);
     // Also called after the drag ended or in an animation frame, when this element may be gone
     // (hence `try_*`).
     let set_dragging = move |element: Option<web_sys::Element>| {
         set_is_dragging.try_set(element.is_some());
-        dragging_element.try_set_value(element.map(SendWrapper::new));
     };
     let drop_guard: StoredValue<Option<SendWrapper<Listener>>> = StoredValue::new(None);
     let modality_on_pointer_down: StoredValue<Option<PointerModality>> = StoredValue::new(None);
@@ -180,14 +225,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     };
 
     let start_dragging = move |target: web_sys::Element| {
-        if let Some(on_start) = on_drag_start {
-            let rect = target.get_bounding_client_rect();
-            on_start.run(DragStartEvent {
-                x: rect.x() + rect.width() / 2.0,
-                y: rect.y() + rect.height() / 2.0,
-            });
-        }
-        drag_manager::begin_dragging(DragTarget {
+        let started = drag_manager::begin_dragging(DragTarget {
             strings: strings.get_untracked(),
             element: target.clone(),
             items: items.get_untracked(),
@@ -200,9 +238,21 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
                 }
             })),
         });
+        // Another keyboard drag is still being set up (e.g. a second Enter in the same frame).
+        if started.is_err() {
+            return;
+        }
+        if let Some(on_start) = on_drag_start {
+            let rect = target.get_bounding_client_rect();
+            on_start.run(DragStartEvent {
+                x: rect.x() + rect.width() / 2.0,
+                y: rect.y() + rect.height() / 2.0,
+            });
+        }
         set_dragging(Some(target));
     };
 
+    let native = native_drag.clone();
     let on_dragstart = move |e: DragEvent| {
         if e.default_prevented() {
             return;
@@ -210,10 +260,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         e.stop_propagation();
         if modality_on_pointer_down.get_value() == Some(PointerModality::Virtual) {
             e.prevent_default();
-            if let Some(target) = e
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-            {
+            if let Some(target) = event_target_element(&e) {
                 start_dragging(target);
             }
             modality_on_pointer_down.set_value(None);
@@ -240,10 +287,8 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
 
         if let Some(preview) = preview
             && let Some(DragPreview { element, offset }) = preview.run(items)
-            && let Some(current) = e
-                .current_target()
-                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
         {
+            let current: web_sys::Element = e.expect_current_target().unchecked_into();
             let size = element.get_bounding_client_rect();
             let rect = current.get_bounding_client_rect();
             let mut default_x = e.client_x() - rect.x();
@@ -281,35 +326,51 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         }
 
         position.set_value((e.client_x(), e.client_y()));
-        let target = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
-        request_animation_frame(move || set_dragging(target));
+        // Wait a frame (the browser renders the drag image first), unless the drag ended by then.
+        let generation = native.start();
+        let target = event_target_element(&e);
+        let native = native.clone();
+        request_animation_frame(move || {
+            if native.is_current(generation) {
+                set_dragging(target);
+            }
+        });
     };
 
+    // Chromium keeps sending `drag` and `dragend` to a drag source that was removed during its
+    // drag (moved to another list, a virtualized row scrolled away), after this hook's owner was
+    // disposed: these handlers only use `try_*` accessors.
     let on_drag = move |e: DragEvent| {
         e.stop_propagation();
         let current = (e.client_x(), e.client_y());
         #[allow(clippy::float_cmp)]
-        if current == position.get_value() {
+        if position
+            .try_get_value()
+            .is_none_or(|previous| previous == current)
+        {
             return;
         }
         if let Some(on_move) = on_drag_move {
-            on_move.run(DragMoveEvent {
+            on_move.try_run(DragMoveEvent {
                 x: current.0,
                 y: current.1,
             });
         }
-        position.set_value(current);
+        position.try_set_value(current);
     };
 
+    let native = native_drag.clone();
     let on_dragend = move |e: DragEvent| {
         e.stop_propagation();
+        // Unmounting the dragged element may have ended the drag already.
+        if !native.end() {
+            return;
+        }
         if let Some(on_end) = on_drag_end {
             let effect = global_drop_effect()
                 .map(ToOwned::to_owned)
                 .or_else(|| e.data_transfer().map(|dt| dt.drop_effect()));
-            on_end.run(DragEndEvent {
+            on_end.try_run(DragEndEvent {
                 x: e.client_x(),
                 y: e.client_y(),
                 drop_operation: DropOperation::from_drop_effect(
@@ -318,17 +379,18 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
             });
         }
         set_dragging(None);
-        drop_guard.set_value(None);
+        drop_guard.try_set_value(None);
         set_global_allowed_drop_operations(DropOperations::NONE);
         set_global_drop_effect(None);
     };
 
-    // Unmounting the dragged element ends its drag.
+    // Unmounting the dragged element ends its native drag (browsers may never send its
+    // `dragend`, https://bugzilla.mozilla.org/show_bug.cgi?id=460801).
+    let native = native_drag;
     on_cleanup(move || {
-        let dragged = dragging_element.try_get_value().flatten();
-        if dragged.is_some_and(|el| !el.is_connected()) {
+        if native.end() {
             if let Some(on_end) = on_drag_end {
-                on_end.run(DragEndEvent {
+                on_end.try_run(DragEndEvent {
                     x: 0.0,
                     y: 0.0,
                     drop_operation: DropOperation::from_drop_effect(
@@ -336,6 +398,8 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
                     ),
                 });
             }
+            set_dragging(None);
+            drop_guard.try_set_value(None);
             set_global_allowed_drop_operations(DropOperations::NONE);
             set_global_drop_effect(None);
         }
@@ -358,24 +422,27 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         }
         let virtual_pointer = is_virtual_pointer_event(&e)
             || (e.width() < 1 && e.height() < 1 && is_ios() && is_webkit());
-        let centered = e
-            .current_target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-            .is_some_and(|el| {
-                let rect = el.get_bounding_client_rect();
-                let offset_x = e.client_x() - rect.x();
-                let offset_y = e.client_y() - rect.y();
-                (offset_x - rect.width() / 2.0).abs() <= 0.5
-                    && (offset_y - rect.height() / 2.0).abs() <= 0.5
-            });
+        let centered = {
+            let rect = e
+                .expect_current_target()
+                .unchecked_into::<web_sys::Element>()
+                .get_bounding_client_rect();
+            let offset_x = e.client_x() - rect.x();
+            let offset_y = e.client_y() - rect.y();
+            (offset_x - rect.width() / 2.0).abs() <= 0.5
+                && (offset_y - rect.height() / 2.0).abs() <= 0.5
+        };
         modality_on_pointer_down.set_value(Some(if virtual_pointer || centered {
             PointerModality::Virtual
         } else {
             PointerModality::Other
         }));
     };
-    let on_target_itself =
-        |e: &web_sys::Event| e.target().is_some() && e.target() == e.current_target();
+    let on_target_itself = |e: &KeyboardEvent| {
+        event_target_element(e).is_some_and(|target| {
+            *target.unchecked_ref::<web_sys::EventTarget>() == e.expect_current_target()
+        })
+    };
     let on_keydown_capture = move |e: KeyboardEvent| {
         if is_disabled.get_untracked() {
             return;
@@ -392,10 +459,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         if on_target_itself(&e) && e.typed_key() == KeyboardKey::Enter {
             e.prevent_default();
             e.stop_propagation();
-            if let Some(target) = e
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-            {
+            if let Some(target) = event_target_element(&e) {
                 start_dragging(target);
             }
         }
@@ -409,10 +473,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         {
             e.prevent_default();
             e.stop_propagation();
-            if let Some(target) = e
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-            {
+            if let Some(target) = event_target_element(&e) {
                 start_dragging(target);
             }
         }

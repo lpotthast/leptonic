@@ -1,46 +1,72 @@
+// Upstream: react-aria-components/src/Table.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: react-aria/test/table/tableResizingTests.tsx @ 99e6102368
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 
 use leptos::{context::Provider, html, prelude::*};
+use leptos_classes::Classes;
 use leptos_use::use_resize_observer;
 
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
-        CellFocusMode, ColumnKind, ColumnSize, DisabledBehavior, GridFocusMode, IntoAttrs,
-        KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, SortDescriptor,
-        SortDirection, TableCollection, TableColumnResizeState, TableData, TableTreeInput,
-        UseButtonInput, UseFocusRingInput, UseFocusRingReturn, UseFocusVisibleInput, UseHoverInput,
-        UseTableCellInput, UseTableCellReturn, UseTableColumnHeaderInput,
-        UseTableColumnHeaderReturn, UseTableColumnResizeInput, UseTableColumnResizeReturn,
-        UseTableColumnResizeStateInput, UseTableHeaderPlaceholderInput, UseTableInput,
-        UseTableReturn, UseTableRowInput, UseTableRowReturn, UseTableSelectAllCheckboxInput,
-        UseTableSelectionCheckboxInput, UseTableStateInput,
+        button::{UseButtonInput, use_button},
         collections::{
-            CollectionOptions, EscapeKeyBehavior, Key, NodeKind, Selection, SelectionOptions,
+            CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key, NodeKind, Selection,
+            SelectionBehavior, SelectionMode, SelectionOptions,
         },
-        use_button, use_checkbox, use_focus_ring, use_focus_visible, use_grid_row_group, use_hover,
-        use_table, use_table_cell, use_table_column_header, use_table_column_resize,
-        use_table_column_resize_state, use_table_header_placeholder, use_table_header_row,
-        use_table_row, use_table_select_all_checkbox, use_table_selection_checkbox,
-        use_table_state,
+        focus::{UseFocusRingInput, UseFocusRingReturn, is_focus_visible, use_focus_ring},
+        form::use_checkbox,
+        grid::{CellFocusMode, GridFocusMode, use_grid_row_group},
+        gridlist::KeyboardNavigationBehavior,
+        interactions::{UseHoverInput, use_hover},
+        table::{
+            ColumnKind, ColumnSize, SortDescriptor, SortDirection, TableCollection,
+            TableColumnResizeState, TableData, TableTreeInput, UseTableCellInput,
+            UseTableCellReturn, UseTableColumnHeaderInput, UseTableColumnHeaderReturn,
+            UseTableColumnResizeInput, UseTableColumnResizeReturn, UseTableColumnResizeStateInput,
+            UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn, UseTableRowInput,
+            UseTableRowReturn, UseTableSelectAllCheckboxInput, UseTableSelectionCheckboxInput,
+            UseTableStateInput, use_table, use_table_cell, use_table_column_header,
+            use_table_column_resize, use_table_column_resize_state, use_table_header_placeholder,
+            use_table_header_row, use_table_row, use_table_select_all_checkbox,
+            use_table_selection_checkbox, use_table_state,
+        },
     },
     utils::{
-        CapturedElement, ValueBinding,
-        classes::Classes,
-        css::{Size, computed_px, computed_size},
         data_attributes::flag,
         default_class::with_default_class,
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
         intl_strings::{AtomStrings, use_localized_strings},
-        locale::WritingDirection,
         scoped_context::scoped_view,
-        style::WidthProperty,
-        styles::Styles,
+        styles::{
+            Styles,
+            css::{Size, computed_px, computed_size},
+            property::WidthProperty,
+        },
     },
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Columns and rows come from a `TableCollection`; `TableHeader` renders the column headers
+//   itself, `TableRow` the selection checkbox cell (`show_selection_checkboxes`).
+//
+// ## DIFFERENT BEHAVIOR
+// - A column resizer is labelled by "Resizer" and the column's name element, not the whole column
+//   header (which contains the resizer: browsers would name it "Resizer Name Resizer").
+//
+// ## OMITTED FEATURES
+// - Custom column header content (and so a column header inside a `TooltipTrigger`),
+//   virtualization, drag and drop, `renderEmptyState`, load more.
+//
+// =============================================================================
 
 /// The size of each column, by column key, as [`ResizableTableContainer`]'s resize callbacks
 /// report them.
@@ -132,7 +158,7 @@ pub fn ResizableTableContainer(
 ///
 /// A tree table (`tree_column`): rows with child rows (`ItemBuilder::children`) expand and
 /// collapse. Render every row, child rows after their parent (in collection order); rows under a
-/// collapsed row are `hidden`. Put a [`TableExpandButton`] into the tree column's cells. Rows
+/// collapsed row are built once shown, and `hidden` while collapsed. Put a [`TableExpandButton`] into the tree column's cells. Rows
 /// and cells carry `data-expanded`, `data-has-child-items` and `data-level`, rows the
 /// `--table-row-level` style (for indenting), tree column cells `data-tree-column`.
 ///
@@ -143,15 +169,19 @@ pub fn Table(
     /// The columns and rows.
     #[prop(into)]
     table: Memo<Arc<TableCollection>>,
+    /// Add a first column of checkboxes selecting the rows (and all rows, in its header), while
+    /// `selection_mode` isn't `None`.
+    #[prop(into, optional)]
+    show_selection_checkboxes: Signal<bool>,
     /// Whether arrow keys focus rows (and then cells) or only cells.
     #[prop(optional)]
     focus_mode: GridFocusMode,
     #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
-    #[prop(optional)] selection_behavior: SelectionBehavior,
+    #[prop(into, optional)] selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected rows.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
+    default_selection: Selection,
+    /// The selection (controlled), replacing `default_selection`: a value or any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -162,7 +192,7 @@ pub fn Table(
     /// Defaults to `DisabledBehavior::Selection`: disabled rows can be focused, not selected.
     #[prop(default = DisabledBehavior::Selection)]
     disabled_behavior: DisabledBehavior,
-    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(optional)] escape_key_behavior: EscapeKeyBehavior,
     /// The initial sorting. Ignored with `sort_descriptor`.
     #[prop(optional)]
@@ -175,7 +205,7 @@ pub fn Table(
     set_sort_descriptor: Option<Out<Option<SortDescriptor>>>,
     /// Called when the user sorts the table. Sort the rows accordingly.
     #[prop(into, optional)]
-    on_sort_change: Option<Callback<SortDescriptor>>,
+    on_sort_descriptor_change: Option<Callback<Option<SortDescriptor>>>,
     #[prop(optional)] keyboard_navigation_behavior: KeyboardNavigationBehavior,
     /// Select rows when a press ends instead of when it starts (e.g. for draggable rows).
     #[prop(optional)]
@@ -201,7 +231,9 @@ pub fn Table(
     set_expanded_keys: Option<Out<HashSet<Key>>>,
     #[prop(into, optional)] on_expanded_change: Option<Callback<HashSet<Key>>>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Ids of elements labelling it.
+    #[prop(into, optional)]
+    aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -217,43 +249,39 @@ pub fn Table(
             on_expanded_change,
         }
     });
-    // Without `sort_descriptor`, the table owns the sorting and `set_sort_descriptor` receives
-    // each change, like `on_sort_change`.
-    let on_sort_change = match (sort_descriptor, set_sort_descriptor) {
-        (None, Some(set_sort_descriptor)) => Some(Callback::new(move |sort: SortDescriptor| {
-            set_sort_descriptor.set(Some(sort.clone()));
-            if let Some(on_sort_change) = on_sort_change {
-                on_sort_change.run(sort);
-            }
-        })),
-        _ => on_sort_change,
-    };
+    let (sort_descriptor, on_sort_descriptor_change) = ValueBinding::from_state_props(
+        sort_descriptor,
+        set_sort_descriptor,
+        on_sort_descriptor_change,
+    );
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let state = use_table_state(UseTableStateInput {
         tree,
         selection: SelectionOptions {
             selection_mode,
-            selection_behavior: Signal::stored(selection_behavior),
-            default_selection: Selection::keys(default_selected_keys),
+            selection_behavior,
+            default_selection,
             selection,
             on_selection_change,
-            disallow_empty_selection: Signal::stored(disallow_empty_selection),
+            disallow_empty_selection,
             disabled_keys: disabled_keys.unwrap_or_default(),
             disabled_behavior,
             ..SelectionOptions::default()
         },
         focus_mode,
         default_sort_descriptor,
-        sort_descriptor: sort_descriptor
-            .map(|value| ValueBinding::from_props(value, set_sort_descriptor)),
-        on_sort_change,
+        sort_descriptor,
+        // The user's sorting is never `None`.
+        on_sort_change: on_sort_descriptor_change
+            .map(|on_change| Callback::new(move |sort| on_change.run(Some(sort)))),
         table,
+        show_selection_checkboxes,
     });
 
     let UseTableReturn { props, data } = use_table(UseTableInput {
         aria_label,
-        aria_labelledby,
+        aria_labelledby: Signal::derive(move || aria_labelledby.get()),
         options: CollectionOptions {
             escape_key_behavior,
             ..CollectionOptions::default()
@@ -287,9 +315,7 @@ pub fn Table(
     };
 
     // One keyboard-modality signal for the rows and column headers.
-    let focus_visible = TableFocusVisible(
-        use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible,
-    );
+    let focus_visible = TableFocusVisible(Signal::derive(is_focus_visible));
     scoped_view(
         move || {
             provide_context(data);
@@ -316,7 +342,7 @@ struct TableFocusVisible(Signal<bool>);
 /// The header of a [`Table`]: its header rows with the column headers (and, for a selection
 /// checkbox column, a "select all" checkbox in multiple selection mode).
 ///
-/// Column headers expose `data-allows-sorting`, `data-sort-direction` (`ascending` /
+/// The header exposes `data-hovered`. Column headers expose `data-allows-sorting`, `data-sort-direction` (`ascending` /
 /// `descending`), `data-focused`, `data-focus-visible`, `data-hovered` (sortable columns) and
 /// `data-pressed` for styling.
 ///
@@ -327,11 +353,22 @@ pub fn TableHeader(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableHeader", classes);
-    let data = expect_context::<TableData>();
+    let Some(data) = use_context::<TableData>() else {
+        crate::utils::dev_warn!("a <TableHeader> belongs in a <Table>");
+        return ().into_any();
+    };
     let row_group = use_grid_row_group();
     let rows = data.state.table;
+    // react-aria-components' `TableHeader` reports hover.
+    let hover = use_hover(UseHoverInput::default());
     view! {
-        <thead {..row_group.row_group_props.into_attrs()} class=classes style=styles>
+        <thead
+            {..row_group.row_group_props.into_attrs()}
+            {..hover.props.into_attrs()}
+            class=classes
+            style=styles
+            data-hovered=flag(hover.is_hovered)
+        >
             <For
                 each=move || rows.with(|t| t.header_rows().to_vec())
                 key=Clone::clone
@@ -368,6 +405,7 @@ pub fn TableHeader(
             />
         </thead>
     }
+    .into_any()
 }
 
 /// A column header of a [`Table`], rendered by [`TableHeader`].
@@ -381,16 +419,18 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let column = {
         let key = key.clone();
         Memo::new(move |_| {
-            state.table.with(|t| {
-                t.column(&key)
-                    .map_or((Arc::from(""), ColumnKind::Data, false, false), |c| {
+            state.columns.with(|columns| {
+                columns.iter().find(|c| c.key == key).map_or(
+                    (Arc::from(""), ColumnKind::Data, false, false),
+                    |c| {
                         (
                             c.text_value.clone(),
                             c.kind,
                             c.allows_sorting,
                             c.allows_resizing,
                         )
-                    })
+                    },
+                )
             })
         })
     };
@@ -409,7 +449,7 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let selection = state.grid.list.selection;
     let focus_key = key.clone();
     let is_focused =
-        Signal::derive(move || selection.is_focused() && selection.is_focused_key(&focus_key));
+        Signal::derive(move || selection.is_focused_key(&focus_key) && selection.is_focused());
     let focus_visible = expect_context::<TableFocusVisible>().0;
     let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
     // Sortable headers show hover (react-aria-components' `Column`).
@@ -423,6 +463,10 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
         is_selection_column.get() && selection.selection_mode() == SelectionMode::Multiple
     });
     let select_all_table = data.clone();
+    // The column's name, in an element of its own: the resizer is labelled by it (not by the
+    // whole header, which contains the resizer itself).
+    let text_id = crate::utils::id::use_id("table-column-name");
+    let name_id = text_id.clone();
     let content = move || {
         if is_selection_column.get() {
             shows_select_all
@@ -438,7 +482,8 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
                 })
                 .into_any()
         } else {
-            (move || column.with(|c| c.0.to_string())).into_any()
+            view! { <span id=name_id.clone()>{move || column.with(|c| c.0.to_string())}</span> }
+                .into_any()
         }
     };
     // With column resizing: the column's width, and its resizer.
@@ -447,7 +492,14 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let resizer_key = key.clone();
     let resizer = move || {
         resize.filter(|_| allows_resizing.get()).map(|resize| {
-            view! { <ColumnResizer resize column=resizer_key.clone() trigger=header /> }
+            view! {
+                <ColumnResizer
+                    resize
+                    column=resizer_key.clone()
+                    trigger=header
+                    name_id=text_id.clone()
+                />
+            }
         })
     };
     let resizing_key = key.clone();
@@ -509,6 +561,8 @@ fn ColumnResizer(
     resize: ColumnResizeContext,
     column: Key,
     trigger: CapturedElement,
+    /// The id of the element holding the column's name.
+    name_id: String,
 ) -> impl IntoView {
     let data = expect_context::<TableData>();
     let state = resize.state;
@@ -546,7 +600,11 @@ fn ColumnResizer(
         }
     };
     let (attrs, styles) = resizer_props.into_parts();
-    let (input_attrs, input_styles) = input_props.into_parts();
+    // Labelled "Resizer" plus the column's name (react-aria: plus the column header, which
+    // contains the resizer, so browsers name it "Resizer Name Resizer").
+    let (mut input_props, input_styles) = input_props.into_inner();
+    input_props.aria_labelledby = format!("{} {name_id}", input_props.id);
+    let input_attrs = input_props.into_attrs();
     view! {
         <div
             role="presentation"
@@ -598,6 +656,9 @@ struct RowContext {
 /// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-hovered` (rows that can
 /// be selected or have an action), `data-disabled` and `data-pressed` for styling.
 ///
+/// In a tree table, a row under a collapsed row is built (its hooks and children) only once it is
+/// shown, and `hidden` while collapsed again.
+///
 /// Default class: `leptonic-TableRow`.
 #[component]
 pub fn TableRow(
@@ -609,7 +670,41 @@ pub fn TableRow(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableRow", classes);
-    let data = expect_context::<TableData>();
+    let Some(data) = use_context::<TableData>() else {
+        crate::utils::dev_warn!("a <TableRow> belongs in a <Table>");
+        return ().into_any();
+    };
+    if data.state.tree.is_none() {
+        return table_row(data, key, classes, styles, children);
+    }
+    // A tree table: build the row the first time it is shown (react-aria-components renders only
+    // the rows of expanded rows), then keep it.
+    let rows = data.state.grid.list.collection;
+    let row_key = StoredValue::new(key.clone());
+    let mounted = Memo::new(move |was: Option<&bool>| {
+        was.copied().unwrap_or(false)
+            || row_key.with_value(|key| rows.with(|rows| rows.contains_key(key)))
+    });
+    let parts = std::sync::Mutex::new(Some((data, key, classes, styles, children)));
+    (move || {
+        if !mounted.get() {
+            return None;
+        }
+        let (data, key, classes, styles, children) = parts.lock().ok()?.take()?;
+        Some(table_row(data, key, classes, styles, children))
+    })
+    .into_any()
+}
+
+/// A [`TableRow`] in `data`'s table.
+#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
+fn table_row(
+    data: TableData,
+    key: Key,
+    classes: Classes,
+    styles: Styles,
+    children: Children,
+) -> AnyView {
     let table = data.state.table;
     let data_rows = data.state.grid.list.collection;
     // Follows the table (the selection column can come and go).
@@ -691,6 +786,7 @@ pub fn TableRow(
             </tr>
         </Provider>
     }
+    .into_any()
 }
 
 /// A cell of a [`TableRow`], in the column `column`. Cells of the selection checkbox column
@@ -720,8 +816,11 @@ pub fn TableCell(
     #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableCell", classes);
-    let data = expect_context::<TableData>();
-    let row_context = expect_context::<RowContext>();
+    let (Some(data), Some(row_context)) = (use_context::<TableData>(), use_context::<RowContext>())
+    else {
+        crate::utils::dev_warn!("a <TableCell> belongs in a <TableRow>");
+        return ().into_any();
+    };
     let row = row_context.key.clone();
     let (row_expanded, row_has_child_rows, row_level) = (
         row_context.is_expanded,
@@ -742,14 +841,12 @@ pub fn TableCell(
                 .column(&column)
                 .map_or((0, ColumnKind::Data), |c| (c.index, c.kind));
             let key = t
-                .collection()
-                .cells(&row)
-                .find(|n| n.col_index.unwrap_or(n.index) == index)
-                .map_or_else(|| Key::cell(&row, index), |n| n.key.clone());
+                .cell_key(&row, index)
+                .unwrap_or_else(|| Key::cell(&row, index));
             (key, kind)
         })
     });
-    move || {
+    (move || {
         let (key, kind) = cell.get();
         let content = if kind == ColumnKind::SelectionCheckbox {
             let checkbox = use_checkbox(use_table_selection_checkbox(
@@ -801,7 +898,8 @@ pub fn TableCell(
                 {content}
             </td>
         }
-    }
+    })
+    .into_any()
 }
 
 /// The expand button of a tree table's row (react-aria-components' `Button slot="chevron"`):

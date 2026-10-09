@@ -1,9 +1,6 @@
 use leptonic::{
-    hooks::{IntoAttrs, KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
-    utils::{
-        keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
-        propagation_control::Propagation,
-    },
+    IntoAttrs, KeyboardKey, KeyboardShortcuts, Propagation, Shortcut, ShortcutOutcome,
+    hooks::interactions::{KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
 };
 use leptos::{prelude::*, web_sys};
 
@@ -71,7 +68,7 @@ pub fn PageHookKeyboard() -> impl IntoView {
                 on_key_down: handler("shortcut", false),
                 on_key_up: handler("shortcut", false),
                 shortcuts: Some(KeyboardShortcuts::new().on(
-                    Shortcut::key("a"),
+                    Shortcut::new(KeyboardKey::A),
                     action("shortcut", ShortcutOutcome::Handled),
                 )),
                 ..UseKeyboardInput::default()
@@ -82,7 +79,7 @@ pub fn PageHookKeyboard() -> impl IntoView {
             "repeats",
             UseKeyboardInput {
                 shortcuts: Some(KeyboardShortcuts::new().on(
-                    Shortcut::key("a"),
+                    Shortcut::new(KeyboardKey::A),
                     action("repeats", ShortcutOutcome::Handled),
                 )),
                 allow_repeats: true,
@@ -94,7 +91,7 @@ pub fn PageHookKeyboard() -> impl IntoView {
             "composing",
             UseKeyboardInput {
                 shortcuts: Some(KeyboardShortcuts::new().on(
-                    Shortcut::key("a"),
+                    Shortcut::new(KeyboardKey::A),
                     action("composing", ShortcutOutcome::Handled),
                 )),
                 allow_composing: true,
@@ -107,7 +104,7 @@ pub fn PageHookKeyboard() -> impl IntoView {
             "ignored",
             UseKeyboardInput {
                 shortcuts: Some(KeyboardShortcuts::new().on(
-                    Shortcut::key("Escape"),
+                    Shortcut::new(KeyboardKey::Escape),
                     action("ignored", ShortcutOutcome::Ignored),
                 )),
                 ..UseKeyboardInput::default()
@@ -119,7 +116,7 @@ pub fn PageHookKeyboard() -> impl IntoView {
             "custom",
             UseKeyboardInput {
                 shortcuts: Some(KeyboardShortcuts::new().on(
-                    Shortcut::key("Escape"),
+                    Shortcut::new(KeyboardKey::Escape),
                     action(
                         "custom",
                         ShortcutOutcome::Custom {
@@ -137,35 +134,41 @@ pub fn PageHookKeyboard() -> impl IntoView {
             "stop-other-key",
             shortcut_input(
                 action("stop-other-key", ShortcutOutcome::Handled),
-                "ArrowLeft",
+                KeyboardKey::ArrowLeft,
             ),
             Some(shortcut_input(
                 action("stop-other-key", ShortcutOutcome::Handled),
-                "Enter",
+                KeyboardKey::Enter,
             )),
         ),
         (
             "continue-other-key",
-            shortcut_input(action("continue-other-key", continue_only), "ArrowLeft"),
+            shortcut_input(
+                action("continue-other-key", continue_only),
+                KeyboardKey::ArrowLeft,
+            ),
             Some(shortcut_input(
                 action("continue-other-key", ShortcutOutcome::Handled),
-                "Enter",
+                KeyboardKey::Enter,
             )),
         ),
         (
             "stop-any",
-            shortcut_input(action("stop-any", continue_only), "ArrowLeft"),
+            shortcut_input(action("stop-any", continue_only), KeyboardKey::ArrowLeft),
             Some(shortcut_input(
                 action("stop-any", ShortcutOutcome::Handled),
-                "ArrowLeft",
+                KeyboardKey::ArrowLeft,
             )),
         ),
         (
             "continue-all",
-            shortcut_input(action("continue-all", continue_only), "ArrowLeft"),
+            shortcut_input(
+                action("continue-all", continue_only),
+                KeyboardKey::ArrowLeft,
+            ),
             Some(shortcut_input(
                 action("continue-all", continue_only),
-                "ArrowLeft",
+                KeyboardKey::ArrowLeft,
             )),
         ),
     ];
@@ -180,7 +183,7 @@ pub fn PageHookKeyboard() -> impl IntoView {
                     let props = match second {
                         Some(second) => {
                             let second = use_keyboard(second).props;
-                            leptonic::hooks::UseKeyboardProps {
+                            leptonic::hooks::interactions::UseKeyboardProps {
                                 on_keydown: first.on_keydown.chain(second.on_keydown),
                                 on_keyup: first.on_keyup.chain(second.on_keyup),
                             }
@@ -213,10 +216,10 @@ pub fn PageHookKeyboard() -> impl IntoView {
 /// An input with one shortcut.
 fn shortcut_input(
     action: impl Fn(&web_sys::KeyboardEvent) -> ShortcutOutcome + Send + Sync + 'static,
-    key: &'static str,
+    key: KeyboardKey,
 ) -> UseKeyboardInput {
     UseKeyboardInput {
-        shortcuts: Some(KeyboardShortcuts::new().on(Shortcut::key(key), action)),
+        shortcuts: Some(KeyboardShortcuts::new().on(Shortcut::new(key), action)),
         ..UseKeyboardInput::default()
     }
 }

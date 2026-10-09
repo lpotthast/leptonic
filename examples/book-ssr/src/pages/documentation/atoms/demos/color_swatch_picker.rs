@@ -1,9 +1,10 @@
 use leptonic::{
-    atoms::prelude::{ColorSwatch, ColorSwatchPicker, ColorSwatchPickerItems},
-    utils::{
-        color::{ColorValue, RGB8},
-        i18n::use_locale,
+    ColorValue, RGB8,
+    atoms::{
+        color_swatch::ColorSwatch,
+        color_swatch_picker::{ColorSwatchPicker, ColorSwatchPickerItems},
     },
+    use_locale,
 };
 use leptos::prelude::*;
 

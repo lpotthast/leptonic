@@ -1,6 +1,6 @@
-use leptonic::atoms::{
-    prelude as atoms,
-    prelude::{CurrentMatch, Link},
+use leptonic::{
+    atoms,
+    atoms::link::{CurrentMatch, Link},
 };
 use leptos::prelude::*;
 use leptos_router::{components::Outlet, hooks::use_location};
@@ -109,30 +109,30 @@ fn SidebarGroup(group: &'static NavGroup, part: PartKind) -> impl IntoView {
         // The toggle sits next to the overview link, so it needs a name of its own ("Fields pages", next to the link
         // "Fields").
         Some(link) => view! {
-            <atoms::DisclosureTrigger>
-                <atoms::Button classes="book-nav-group-toggle" attr:aria-label=format!("{} pages", group.title)>
+            <atoms::disclosure::DisclosureTrigger>
+                <atoms::button::Button classes="book-nav-group-toggle" attr:aria-label=format!("{} pages", group.title)>
                     <Icon icon=icondata::BsChevronRight classes="book-nav-group-chevron"/>
-                </atoms::Button>
-            </atoms::DisclosureTrigger>
+                </atoms::button::Button>
+            </atoms::disclosure::DisclosureTrigger>
             {link}
         }
         .into_any(),
         None => view! {
-            <atoms::DisclosureTrigger>
-                <atoms::Button classes=["book-nav-group-toggle", "book-nav-group-title"]>
+            <atoms::disclosure::DisclosureTrigger>
+                <atoms::button::Button classes=["book-nav-group-toggle", "book-nav-group-title"]>
                     <Icon icon=icondata::BsChevronRight classes="book-nav-group-chevron"/>
                     {title()}
-                </atoms::Button>
-            </atoms::DisclosureTrigger>
+                </atoms::button::Button>
+            </atoms::disclosure::DisclosureTrigger>
         }
         .into_any(),
     }
     };
 
     view! {
-        <atoms::Disclosure is_expanded=expanded set_expanded=expanded classes="book-nav-group">
+        <atoms::disclosure::Disclosure is_expanded=expanded set_expanded=expanded classes="book-nav-group">
             <div class="book-nav-group-header">{header()}</div>
-            <atoms::DisclosurePanel>
+            <atoms::disclosure::DisclosurePanel>
                 <ul>
                     {group
                         .entries
@@ -140,8 +140,8 @@ fn SidebarGroup(group: &'static NavGroup, part: PartKind) -> impl IntoView {
                         .map(|entry| view! { <li><SidebarEntry entry part/></li> })
                         .collect_view()}
                 </ul>
-            </atoms::DisclosurePanel>
-        </atoms::Disclosure>
+            </atoms::disclosure::DisclosurePanel>
+        </atoms::disclosure::Disclosure>
     }
     .into_any()
 }

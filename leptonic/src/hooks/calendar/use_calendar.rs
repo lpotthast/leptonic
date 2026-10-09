@@ -1,12 +1,19 @@
 // Upstream: react-aria/src/calendar/useCalendarBase.ts @ 99e6102368
 // Upstream: react-aria/src/calendar/useCalendar.ts @ 99e6102368
 // Upstream: react-aria/src/calendar/useRangeCalendar.ts @ 99e6102368
+// Upstream: react-aria/test/calendar/useCalendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/RangeCalendar.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/CalendarBase.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/Calendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
-use web_sys::FocusEvent;
+use wasm_bindgen::JsCast;
+use web_sys::{FocusEvent, HtmlButtonElement};
 
 use super::{
     states::{
@@ -17,10 +24,12 @@ use super::{
     use_range_calendar_state::RangeCalendarState,
 };
 use crate::{
-    hooks::{IntoAttrs, UseButtonInput, form::use_label::labels},
+    CapturedElement, EventHandler, IntoAttrs, OnEvent,
+    hooks::button::UseButtonInput,
+    labels,
     utils::{
-        CapturedElement, EventHandler,
         aria::AriaRole,
+        dom_ext::EventAccessors,
         i18n::use_locale,
         id::use_id,
         intl_strings::{CalendarStrings, use_localized_strings},
@@ -122,7 +131,7 @@ pub struct UseCalendarProps {
     pub aria_describedby: Option<String>,
     pub aria_details: Option<String>,
     pub on_focusout: EventHandler<FocusEvent>,
-    pub element_capture: crate::utils::ElementCaptureAttr,
+    pub element_capture: crate::ElementCaptureAttr,
 }
 
 pub type UseCalendarAttrs = (
@@ -132,8 +141,8 @@ pub type UseCalendarAttrs = (
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaDetails, Option<String>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    crate::utils::ElementCaptureAttr,
+    OnEvent<ev::focusout>,
+    crate::ElementCaptureAttr,
 );
 
 impl IntoAttrs for UseCalendarProps {
@@ -229,8 +238,6 @@ fn use_calendar_base(
         }
     });
 
-    let own_id = id.clone();
-    let labelledby = aria_labelledby.clone();
     let label = Signal::derive(move || {
         let label = [aria_label.get(), Some(title.get())]
             .into_iter()
@@ -238,9 +245,10 @@ fn use_calendar_base(
             .filter(|label| !label.is_empty())
             .collect::<Vec<_>>()
             .join(", ");
-        labels(&own_id, Some(label), labelledby.clone()).0
+        Some(label)
     });
-    let (_, aria_labelledby) = labels(&id, Some(String::new()), aria_labelledby);
+    let aria_labelledby =
+        labels(&id, Some(String::new()), aria_labelledby.as_deref()).aria_labelledby;
 
     UseCalendarReturn {
         calendar_props: UseCalendarProps {
@@ -257,14 +265,30 @@ fn use_calendar_base(
             on_press: Some(Callback::new(move |_| calendar.focus_previous_page())),
             aria_label: Signal::derive(move || Some(strings.read().previous())).into(),
             is_disabled: previous_disabled,
-            on_focus_change: Some(Callback::new(move |focused| previous_focused.set(focused))),
+            on_focus_change: Some(Callback::new(move |focused| {
+                previous_focused.set(focused);
+                if !focused
+                    && previous_disabled.get_untracked()
+                    && !calendar.is_disabled.get_untracked()
+                {
+                    calendar.set_focused(true);
+                }
+            })),
             ..UseButtonInput::default()
         },
         next_button: UseButtonInput {
             on_press: Some(Callback::new(move |_| calendar.focus_next_page())),
             aria_label: Signal::derive(move || Some(strings.read().next())).into(),
             is_disabled: next_disabled,
-            on_focus_change: Some(Callback::new(move |focused| next_focused.set(focused))),
+            on_focus_change: Some(Callback::new(move |focused| {
+                next_focused.set(focused);
+                if !focused
+                    && next_disabled.get_untracked()
+                    && !calendar.is_disabled.get_untracked()
+                {
+                    calendar.set_focused(true);
+                }
+            })),
             ..UseButtonInput::default()
         },
         error_message_props: error.props,
@@ -334,7 +358,6 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
             UseEventListenerOptions, use_event_listener, use_event_listener_with_options,
             use_window,
         };
-        use wasm_bindgen::JsCast;
 
         use crate::utils::shadow_dom::{get_active_element, node_contains};
 
@@ -420,6 +443,17 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
         let related = e
             .related_target()
             .and_then(|target| wasm_bindgen::JsCast::dyn_into::<web_sys::Node>(target).ok());
+        // Chrome blurs a navigation button synchronously when paging disables it. Focus is
+        // being handed to the grid, so this is not a departure that commits the range.
+        if related.is_none()
+            && e.expect_target()
+                .dyn_ref::<HtmlButtonElement>()
+                .is_some_and(HtmlButtonElement::disabled)
+            && !state.calendar.is_disabled.get_untracked()
+        {
+            state.calendar.set_focused(true);
+            return;
+        }
         let leaves = related.is_none_or(|related| {
             !crate::utils::shadow_dom::node_contains(calendar_element.as_ref(), &related)
         });

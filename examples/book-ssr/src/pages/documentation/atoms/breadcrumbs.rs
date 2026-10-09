@@ -40,7 +40,7 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{Breadcrumb, Breadcrumbs, Link};
+                        use leptonic::{atoms::{breadcrumbs::{Breadcrumb, Breadcrumbs}, link::Link}};
 
                         view! {
                             <nav aria-label="Breadcrumbs">
@@ -88,7 +88,7 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
                 </p>
                 <Section title="Props" id="breadcrumb-props">
                     <ApiTable kind=ApiKind::Props of="atoms::breadcrumbs::Breadcrumb">
-                        <ApiRow name="id" ty="Option<Key>" default="generated">"The item\u{2019}s key for "<Code inline=true>"on_action"</Code>"."</ApiRow>
+                        <ApiRow name="key" ty="Option<Key>" default="generated">"The item\u{2019}s key for "<Code inline=true>"on_action"</Code>"."</ApiRow>
                         <ApiRow name="is_current" ty="Signal<bool>" default="false">"Whether the item is the current page."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the item."</ApiRow>
                         <ApiRow name="children" ty="Children">"The item\u{2019}s "<Code inline=true>"Link"</Code>". Required."</ApiRow>

@@ -277,6 +277,7 @@ fn type_name(ty: &Type) -> String {
             if ty.mutability.is_some() { "mut " } else { "" },
             type_name(&ty.elem)
         ),
+        Type::Slice(ty) => format!("[{}]", type_name(&ty.elem)),
         Type::Tuple(ty) => format!("({})", list(ty.elems.iter().map(type_name).collect())),
         Type::TraitObject(ty) => format!("dyn {}", bounds(&ty.bounds)),
         Type::ImplTrait(ty) => format!("impl {}", bounds(&ty.bounds)),

@@ -1,6 +1,8 @@
 use leptonic::{
     atoms::listbox::{ListBox, ListBoxItems},
-    hooks::{Key, SelectionMode, collections::Selection, use_list_collection},
+    hooks::collections::{
+        Key, Selection, SelectionMode, UseListCollectionInput, use_list_collection,
+    },
 };
 use leptos::prelude::*;
 
@@ -9,11 +11,11 @@ const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Grape", "Orange"];
 #[component]
 pub fn ListboxConceptDemo() -> impl IntoView {
     // The options: a key and a text (for type-ahead) each.
-    let fruits = use_list_collection(
-        Signal::stored(FRUITS.to_vec()),
-        |fruit| Key::from(*fruit),
-        |fruit| (*fruit).to_owned(),
-    );
+    let fruits = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FRUITS.to_vec()),
+        key: |fruit| Key::from(*fruit),
+        text_value: |fruit| (*fruit).to_owned(),
+    });
     // App state: the selected fruits.
     let selection = RwSignal::new(Selection::keys([Key::from("Cherry")]));
 

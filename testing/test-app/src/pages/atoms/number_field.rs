@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
+    I18nProvider, Locale, NumberFormatOptions, NumberStyle,
     atoms::{
         field::{Description, FieldError, Label},
         form::Form,
@@ -9,11 +10,7 @@ use leptonic::{
             NumberField, NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton,
         },
     },
-    hooks::CommitBehavior,
-    utils::{
-        i18n::{I18nProvider, Locale},
-        number_formatter::{NumberFormatOptions, NumberStyle},
-    },
+    hooks::form::{CommitBehavior, ValidationBehavior, ValidationResult},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -94,14 +91,16 @@ pub fn PageAtomNumberField() -> impl IntoView {
                 </NumberField>
             </div>
 
+            // The fields outside the form they belong to.
+            <form id="nf-form"></form>
             <div id="nf-form-value">
-                <NumberField default_value=25_i32 name="test" form="test" format_options=currency()>
+                <NumberField default_value=25_i32 name="test" form="nf-form" format_options=currency()>
                     <Label>"Price"</Label>
                     <Steppers />
                 </NumberField>
             </div>
             <div id="nf-form-value-disabled">
-                <NumberField default_value=25_i32 name="test" form="test" is_disabled=true>
+                <NumberField default_value=25_i32 name="test" form="nf-form" is_disabled=true>
                     <Label>"Price"</Label>
                     <Steppers />
                 </NumberField>
@@ -146,13 +145,6 @@ pub fn PageAtomNumberField() -> impl IntoView {
             </div>
             <div>"Wheel changes: " <span id="nf-wheel-changes">{move || wheel_changes.get().join(" ")}</span></div>
 
-            <div id="nf-currency">
-                <NumberField default_value=200_i32 format_options=currency()>
-                    <Label>"Price"</Label>
-                    <Steppers />
-                </NumberField>
-            </div>
-
             // A value without a setter rejects every change (react-aria: a controlled `value`).
             <div id="nf-rejecting">
                 <NumberField value=Some(200)>
@@ -169,24 +161,11 @@ pub fn PageAtomNumberField() -> impl IntoView {
                 </NumberField>
             </Form>
 
-            <form id="nf-validate">
+            // Validate mode in a form: values out of range or off step are kept and invalid, and
+            // Enter submits once the value is valid.
+            <form id="nf-validate" on:submit=on_submit>
                 <NumberField
                     is_required=true
-                    default_value=20_i32
-                    min_value=10
-                    step=10
-                    max_value=50
-                    commit_behavior=CommitBehavior::Validate
-                >
-                    <Label>"Width"</Label>
-                    <Steppers />
-                    <FieldError />
-                </NumberField>
-            </form>
-
-            // Validate mode in a form: Enter submits once the value is valid.
-            <form id="nf-validate-submit" on:submit=on_submit>
-                <NumberField
                     default_value=20_i32
                     min_value=10
                     step=10
@@ -200,6 +179,8 @@ pub fn PageAtomNumberField() -> impl IntoView {
                 <button type="submit">"Submit"</button>
             </form>
             <div>"Submits: " <span id="nf-validate-submits">{submits}</span></div>
+
+            <NumberFieldValidation />
 
             // Typed values.
             <div id="nf-u64">
@@ -215,5 +196,89 @@ pub fn PageAtomNumberField() -> impl IntoView {
                 </NumberField<u8>>
             </div>
         </div>
+    }
+}
+
+/// Number fields with form reset, validators, server errors and custom messages, with native and
+/// ARIA validation (react-spectrum's `NumberField.test.js` validation cases).
+#[component]
+fn NumberFieldValidation() -> impl IntoView {
+    let bound = RwSignal::new(Some(10_i32));
+    let server_errors = RwSignal::new(HashMap::<String, Vec<String>>::new());
+    let on_submit = move |e: SubmitEvent| {
+        e.prevent_default();
+        server_errors.set(HashMap::from([(
+            "value".to_owned(),
+            vec!["Invalid value.".to_owned()],
+        )]));
+    };
+    view! {
+        <form id="nfv-reset">
+            <NumberField value=bound set_value=bound>
+                <Label>"Value"</Label>
+                <Steppers />
+            </NumberField>
+            <input type="reset" id="nfv-reset-button" />
+        </form>
+        <Form attr:id="nfv-validate">
+            <NumberField
+                default_value=2_i32
+                step=2
+                validate={Arc::new(|v: &Option<i32>| {
+                    if *v == Some(4) { Ok(()) } else { Err(vec!["Invalid value".to_owned()]) }
+                })}
+            >
+                <Label>"Value"</Label>
+                <Steppers />
+                <FieldError />
+            </NumberField>
+        </Form>
+        <Form attr:id="nfv-server" validation_errors=server_errors on:submit=on_submit>
+            <NumberField<i32> name="value">
+                <Label>"Value"</Label>
+                <Steppers />
+                <FieldError />
+            </NumberField<i32>>
+            <button id="nfv-server-submit" type="submit">"Submit"</button>
+        </Form>
+        <Form attr:id="nfv-custom">
+            <NumberField<i32> is_required=true>
+                <Label>"Value"</Label>
+                <Steppers />
+                <FieldError message=Arc::new(|result: &ValidationResult| {
+                    result
+                        .validation_details
+                        .value_missing
+                        .then(|| "Please enter a value".to_owned())
+                }) />
+            </NumberField<i32>>
+        </Form>
+        <div id="nfv-aria-validate">
+            <NumberField
+                default_value=2_i32
+                validation_behavior=ValidationBehavior::Aria
+                validate={Arc::new(|v: &Option<i32>| {
+                    if *v == Some(2) { Err(vec!["Invalid value".to_owned()]) } else { Ok(()) }
+                })}
+            >
+                <Label>"Value"</Label>
+                <Steppers />
+                <FieldError />
+            </NumberField>
+        </div>
+        <Form
+            attr:id="nfv-aria-server"
+            validation_behavior=ValidationBehavior::Aria
+            validation_errors=Signal::stored(HashMap::from([(
+                "value".to_owned(),
+                vec!["Invalid value".to_owned()],
+            )]))
+        >
+            <NumberField<i32> name="value">
+                <Label>"Value"</Label>
+                <Steppers />
+                <FieldError />
+            </NumberField<i32>>
+        </Form>
     }
 }

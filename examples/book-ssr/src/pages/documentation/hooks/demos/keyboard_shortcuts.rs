@@ -1,6 +1,6 @@
 use leptonic::{
-    hooks::*,
-    utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    hooks::interactions::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
 };
 use leptos::prelude::*;
 
@@ -10,14 +10,14 @@ pub fn KeyboardShortcutsDemo() -> impl IntoView {
     let saves = RwSignal::new(0u32);
 
     let shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("ArrowRight"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| {
             position.update(|p| *p += 1);
         })
-        .on(Shortcut::key("ArrowLeft"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| {
             position.update(|p| *p -= 1);
         })
         // `primary()` is Command on Apple platforms and Control everywhere else.
-        .on(Shortcut::key("s").primary(), move |e| {
+        .on(Shortcut::new(KeyboardKey::S).primary(), move |e| {
             // Repeats are allowed (for the arrow keys), so ignore them here: holding the keys
             // should save once, not over and over.
             if !e.repeat() {
@@ -25,7 +25,7 @@ pub fn KeyboardShortcutsDemo() -> impl IntoView {
             }
         })
         // Returning `false` leaves the event alone (no `preventDefault`, it keeps bubbling).
-        .on(Shortcut::key("Home"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Home), move |_| {
             if position.get_untracked() == 0 {
                 return false;
             }

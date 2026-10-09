@@ -1,15 +1,31 @@
 // Upstream: react-aria/src/interactions/useFocusable.tsx @ 99e6102368
+// Upstream: react-aria/test/interactions/Focusable.test.js @ 99e6102368
 use leptos::{attr::Attr, ev, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::FocusEvent;
 
 use crate::{
+    CapturedElement, IdRefs,
     hooks::{
-        FocusableContextAttr, KeyboardEventWrapper, UseFocusableInput, UseFocusableProps,
-        use_focusable,
+        focus::{FocusableContextAttr, UseFocusableInput, UseFocusableProps, use_focusable},
+        interactions::KeyboardEventWrapper,
     },
-    utils::{CapturedElement, aria::AriaDescribedby},
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## DIFFERENT BEHAVIOR
+// - The child's `tabindex` is set on the client, in an Effect, once the child element is known
+//   (react-aria merges `tabIndex={0}` into the child's props, so it is in the server HTML too):
+//   the atom takes any child view, whose own `tabindex` it can only see on the element. The
+//   server HTML has no `tabindex` (until hydration, the child is focusable only if it is
+//   natively).
+// - The development checks (an element child with an interactive role) run when the child is
+//   mounted and warn (`dev_warn!`) instead of throwing for a missing ref.
+//
+// =============================================================================
 
 /// Makes its child element focusable (react-aria's `Focusable`): the focus and keyboard handlers
 /// go onto the child itself, which gets a `tabindex` where it has none and must have an
@@ -25,7 +41,7 @@ use crate::{
 /// </TooltipTrigger>
 /// ```
 ///
-/// [`FocusableContext`]: crate::hooks::FocusableContext
+/// [`FocusableContext`]: crate::hooks::focus::FocusableContext
 #[component]
 pub fn Focusable<V>(
     /// Whether the element can't be focused.
@@ -189,10 +205,10 @@ fn check_role(kind: ChildKind, el: &web_sys::Element) {
 pub(crate) fn focusable_child_attrs(
     focusable: UseFocusableProps,
     element: CapturedElement,
-    press_describedby: Option<Signal<Option<AriaDescribedby>>>,
+    press_describedby: Option<Signal<Option<String>>>,
 ) -> (
     impl leptos::tachys::html::attribute::Attribute,
-    crate::utils::EventHandler<web_sys::KeyboardEvent>,
+    crate::EventHandler<web_sys::KeyboardEvent>,
 ) {
     (
         (
@@ -201,23 +217,14 @@ pub(crate) fn focusable_child_attrs(
             focusable.on_focus.into_on(ev::focus),
             focusable.on_blur.into_on(ev::blur),
             // The press' long-press description and the context's, as `use_button` merges them.
-            Attr(leptos::attr::AriaDescribedby, {
-                let context = focusable.context_aria_describedby;
-                Signal::derive(move || {
-                    let ids: Vec<String> = press_describedby
-                        .and_then(|press| {
-                            press.with(|d| {
-                                d.as_ref()
-                                    .map(|d| d.ids().map(str::to_owned).collect::<Vec<_>>())
-                            })
-                        })
-                        .unwrap_or_default()
+            Attr(
+                leptos::attr::AriaDescribedby,
+                IdRefs::derive(
+                    press_describedby
                         .into_iter()
-                        .chain(context.get())
-                        .collect();
-                    (!ids.is_empty()).then(|| ids.join(" "))
-                })
-            }),
+                        .chain([focusable.context_aria_describedby]),
+                ),
+            ),
             FocusableContextAttr(focusable.context_attrs),
         ),
         focusable.on_keydown,

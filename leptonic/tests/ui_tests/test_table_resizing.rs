@@ -7,17 +7,21 @@
 //! the column header focuses its resizer).
 
 use assertr::{matchers::eq, prelude::*};
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions, xpath};
+use crate::pages::{ElementActions, Page, css, role};
 
 const PATH: &str = "/atoms/table-resizing";
 
 /// Opens the fixture in a window with room for the 900 pixel wide tables and the drags across
 /// them.
 async fn open(page: &Page<'_>) -> Result<(), Report> {
-    page.driver.set_window_rect(0, 0, 1400, 1000).await?;
+    page.low_level()
+        .driver()
+        .set_window_rect(0, 0, 1400, 1000)
+        .await?;
     page.goto_path(PATH).await?;
     Ok(())
 }
@@ -27,11 +31,12 @@ async fn widths(page: &Page<'_>, label: &str) -> Result<Vec<f64>, Report> {
     let header_row = page
         .element(format!("[role=grid][aria-label='{label}'] thead tr"))
         .await?;
-    page.eval(
-        "return Array.from(arguments[0].children).map(cell => parseFloat(cell.style.width));",
-        vec![header_row.to_json()?],
-    )
-    .await
+    page.low_level()
+        .eval(
+            "return Array.from(arguments[0].children).map(cell => parseFloat(cell.style.width));",
+            vec![header_row.to_json()?],
+        )
+        .await
 }
 
 /// Wait until the column headers of the table `label` have the widths `expected`.
@@ -47,9 +52,7 @@ async fn expect_widths(page: &Page<'_>, label: &str, expected: &[f64]) -> Result
 async fn column_header(page: &Page<'_>, label: &str, column: &str) -> Result<WebElement, Report> {
     page.element(format!("[role=grid][aria-label='{label}']"))
         .await?
-        .element(xpath(format!(
-            ".//*[@role='columnheader'][normalize-space(.)='{column}']"
-        )))
+        .element(role(AriaRole::Columnheader).text(column))
         .await
 }
 
@@ -65,7 +68,8 @@ async fn resize_col(page: &Page<'_>, label: &str, column: &str, delta: i64) -> R
     let resizer = resizer(page, label, column).await?;
     resizer.scroll_into_view().await?;
     let chain = page
-        .driver
+        .low_level()
+        .driver()
         .action_chain()
         .move_to_element_center(&resizer)
         .click_and_hold();
@@ -78,44 +82,62 @@ async fn resize_col(page: &Page<'_>, label: &str, column: &str, delta: i64) -> R
     Ok(())
 }
 
+/// Columns initially share the 900px table width by their fractions, also with minimum widths;
+/// each resizer is a range input labelled "Resizer" and its column's name, with the width as value
+/// text ("100 pixels"), the column's minimum and maximum and `data-resizable-direction="both"`.
+#[browser_test]
 pub async fn initial_widths(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     expect_widths(page, "Pokemon", &[100.0, 100.0, 100.0, 100.0, 500.0]).await?;
     expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
     expect_widths(page, "Minimums", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
 
-    // The resizers are range inputs labelled by themselves and their column header.
+    // The resizers are range inputs labelled by themselves and their column's name (not the whole
+    // header, which contains the resizer: browsers would name it "Resizer Name Resizer").
     let header = column_header(page, "Pokemon", "Name").await?;
     let input = header.element("input[type=range]").await?;
     let input_id = input.attr("id").await?.unwrap_or_default();
-    let header_id = header.attr("id").await?.unwrap_or_default();
-    assert_that!(input.attr("aria-labelledby").await?)
-        .get_some()
-        .is_equal_to(format!("{input_id} {header_id}"));
-    assert_that!(input.attr("aria-label").await?)
-        .get_some()
+    let name_id = header
+        .element(css("span[id]").text("Name"))
+        .await?
+        .attr("id")
+        .await?
+        .unwrap_or_default();
+    assert_that!(input)
+        .has_attribute("aria-labelledby")
+        .await
+        .is_equal_to(format!("{input_id} {name_id}"));
+    assert_that!(input)
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("Resizer");
-    assert_that!(input.attr("aria-valuetext").await?)
-        .get_some()
+    assert_that!(input)
+        .accessible_name()
+        .await
+        .is_equal_to("Resizer Name");
+    assert_that!(input)
+        .has_attribute("aria-valuetext")
+        .await
         .is_equal_to("100 pixels");
-    assert_that!(input.attr("min").await?)
-        .get_some()
+    assert_that!(input)
+        .has_attribute("min")
+        .await
         .is_equal_to("75");
-    assert_that!(input.attr("max").await?)
-        .get_some()
+    assert_that!(input)
+        .has_attribute("max")
+        .await
         .is_equal_to("9007199254740991");
-    assert_that!(
-        resizer(page, "Pokemon", "Name")
-            .await?
-            .attr("data-resizable-direction")
-            .await?
-    )
-    .get_some()
-    .is_equal_to("both");
+    assert_that!(resizer(page, "Pokemon", "Name").await?)
+        .has_attribute("data-resizable-direction")
+        .await
+        .is_equal_to("both");
     Ok(())
 }
 
-/// react-aria: "can resize $col to be $delta px different".
+/// Dragging any column's resizer 50px left or right resizes that column (not below its 75px
+/// minimum), redistributes the fr columns after it and reports the new sizes once to `on_resize`
+/// and `on_resize_end` ("can resize $col to be $delta px different").
+#[browser_test]
 pub async fn resizing_each_column(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     let cases: [(&str, i64, [f64; 5], &str); 10] = [
@@ -204,18 +226,23 @@ pub async fn resizing_each_column(page: &Page<'_>) -> Result<(), Report> {
         let inputs = grid.elements("input[type=range]").await?;
         assert_that!(inputs.as_slice()).has_length(expected.len());
         for (input, width) in inputs.iter().zip(expected) {
-            assert_that!(input.attr("value").await?)
-                .get_some()
+            assert_that!(input)
+                .has_attribute("value")
+                .await
                 .is_equal_to(width.to_string());
-            assert_that!(input.attr("min").await?)
-                .get_some()
+            assert_that!(input)
+                .has_attribute("min")
+                .await
                 .is_equal_to("75");
         }
     }
     Ok(())
 }
 
-/// react-aria: "cannot resize to be less than a minWidth, from start to end".
+/// Dragging the columns, first to last, below their 100px minimum width stops each at 100px, and a
+/// column at its minimum can only grow ("cannot resize to be less than a minWidth, from start to
+/// end").
+#[browser_test]
 pub async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     let steps: [(&str, i64, [f64; 5], &str); 5] = [
@@ -264,23 +291,23 @@ pub async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Re
     }
     let grid = page.element("[role=grid][aria-label='Minimums']").await?;
     for input in grid.elements("input[type=range]").await? {
-        assert_that!(input.attr("min").await?)
-            .get_some()
+        assert_that!(input)
+            .has_attribute("min")
+            .await
             .is_equal_to("100");
     }
     // At its minimum width, a column can only grow.
-    assert_that!(
-        resizer(page, "Minimums", "Name")
-            .await?
-            .attr("data-resizable-direction")
-            .await?
-    )
-    .get_some()
-    .is_equal_to("left");
+    assert_that!(resizer(page, "Minimums", "Name").await?)
+        .has_attribute("data-resizable-direction")
+        .await
+        .is_equal_to("left");
     Ok(())
 }
 
-/// react-aria: "resizing the starter column will preserve fr column ratios to the right".
+/// Resizing the first column keeps the ratios of the fr columns after it, and resizing it back
+/// restores the initial widths ("resizing the starter column will preserve fr column ratios to the
+/// right").
+#[browser_test]
 pub async fn resizing_the_first_column_preserves_fr_ratios(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     resize_col(page, "Ratios", "Name", -50).await?;
@@ -290,7 +317,9 @@ pub async fn resizing_the_first_column_preserves_fr_ratios(page: &Page<'_>) -> R
     Ok(())
 }
 
-/// react-aria: "resizing the last column will lock columns to pixels to the left".
+/// Narrowing and widening the last column keeps the columns before it at their pixel widths
+/// ("resizing the last column will lock columns to pixels to the left").
+#[browser_test]
 pub async fn resizing_the_last_column_locks_the_columns_before_it(
     page: &Page<'_>,
 ) -> Result<(), Report> {
@@ -302,17 +331,24 @@ pub async fn resizing_the_last_column_locks_the_columns_before_it(
     Ok(())
 }
 
-/// react-aria: "onResizeStart called with expected values" and "onResize end called with values
-/// even if no resizing took place".
-pub async fn on_resize_start_and_end_without_moving(page: &Page<'_>) -> Result<(), Report> {
+/// Starting a drag reports the sizes with the columns up to the resized one in pixels and the
+/// others as they were ("onResizeStart called with expected values").
+#[browser_test]
+pub async fn on_resize_start_reports_the_sizes(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     resize_col(page, "Ratios", "Height", -50).await?;
     page.element("#test-ratios-resize-start")
         .await?
         .wait_for_inner_text("113 112 113 1fr 4fr")
         .await?;
+    Ok(())
+}
 
-    page.goto_path(PATH).await?;
+/// A press on a resizer without moving calls `on_resize_end` but not `on_resize`, and keeps the
+/// widths ("onResize end called with values even if no resizing took place").
+#[browser_test]
+pub async fn on_resize_end_without_moving(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     resize_col(page, "Minimums", "Type", 0).await?;
     page.element("#test-minimums-resize-end")
         .await?
@@ -348,7 +384,10 @@ async fn press(page: &Page<'_>, key: Key, times: usize) -> Result<(), Report> {
     Ok(())
 }
 
-/// react-spectrum: "arrow keys the resizer works - desktop".
+/// Enter on a focused resizer starts resizing, in which Right and Up widen the column by 10px and
+/// Left and Down narrow it; Escape ends it with `on_resize_end`, keeping focus on the resizer
+/// ("arrow keys the resizer works - desktop").
+#[browser_test]
 pub async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     let input = focus_first_resizer(page).await?;
@@ -387,7 +426,9 @@ pub async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// react-spectrum: "can exit resize via Enter / Tab / shift Tab", and blurring the resizer.
+/// Enter or Tab ends keyboard resizing with `on_resize_end` and keeps focus on the resizer, and
+/// moving focus away ends it too ("can exit resize via Enter", "can exit resize via Tab").
+#[browser_test]
 pub async fn exiting_keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
     open(page).await?;
     for exit in [Key::Enter, Key::Tab] {

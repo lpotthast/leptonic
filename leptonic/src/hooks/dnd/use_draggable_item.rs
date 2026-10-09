@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/dnd/useDraggableItem.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDraggableCollection.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use super::{
@@ -12,9 +13,12 @@ use super::{
     },
 };
 use crate::{
-    hooks::{SelectionMode, UseButtonInput, collections::Key},
+    EventHandler,
+    hooks::{
+        button::UseButtonInput,
+        collections::{Key, SelectionMode},
+    },
     utils::{
-        EventHandler,
         intl_strings::{DndStrings, use_localized_strings},
         use_description::use_description,
     },
@@ -71,7 +75,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     let UseDragReturn {
         mut drag_props,
         drag_button,
-        is_dragging,
+        is_dragging: _,
     } = use_drag(UseDragInput {
         items: Signal::derive(move || item_key.with_value(|k| state.items(k))),
         allowed_drop_operations: state.allowed_drop_operations,
@@ -91,13 +95,9 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
         is_disabled,
     });
 
-    let keys_for_drag = Signal::derive(move || {
-        selection.selected_keys();
-        item_key.with_value(|k| state.keys_for_drag(k).len())
-    });
-    let is_selected = Signal::derive(move || {
-        keys_for_drag.get() > 1 && item_key.with_value(|k| selection.is_selected(k))
-    });
+    // The state computes the dragged keys once per selection change, for all items.
+    let drag_count = Memo::new(move |_| item_key.with_value(|k| state.drag_count(k)));
+    let is_selected = Signal::derive(move || drag_count.get() > 1);
     let modality = use_drag_modality();
     let strings = use_localized_strings::<DndStrings>();
     // The item itself starts drags (no drag button) in a selectable collection: describe how; it
@@ -107,7 +107,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
         describes().then(|| {
             let modality = modality.get();
             let alt = has_action && modality == DragModality::Keyboard;
-            let count = is_selected.get().then(|| keys_for_drag.get());
+            let count = is_selected.get().then(|| drag_count.get());
             messages::drag_item_description(&strings.read(), modality, count, alt)
         })
     }));
@@ -147,7 +147,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     let collection = state.list.collection;
     let label = Signal::derive(move || {
         if is_selected.get() {
-            strings.read().drag_selected_items(keys_for_drag.get())
+            strings.read().drag_selected_items(drag_count.get())
         } else {
             let text = item_key.with_value(|k| {
                 collection.with(|c| {
@@ -167,6 +167,6 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
             ..drag_button
         },
         drag_button_label: label,
-        is_dragging,
+        is_dragging: Signal::derive(move || item_key.with_value(|key| state.is_dragging(key))),
     }
 }

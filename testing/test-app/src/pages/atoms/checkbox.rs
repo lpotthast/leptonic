@@ -1,11 +1,20 @@
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
+
 use leptonic::{
     atoms::{
         checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         field::{Description, FieldError, Label},
+        form::Form,
     },
-    hooks::{ValidationBehavior, collections::Key},
+    hooks::{
+        collections::Key,
+        form::{ValidateFn, ValidationBehavior, ValidationResult},
+    },
 };
-use leptos::prelude::*;
+use leptos::{ev::SubmitEvent, prelude::*};
 
 /// A checkbox labelled `label`; its selection is shown in `#test-cb-{name}-value`.
 #[component]
@@ -42,7 +51,7 @@ pub fn PageAtomCheckbox() -> impl IntoView {
     let bound_reported = RwSignal::new(false);
     let reported = RwSignal::new(String::new());
     let group_value = RwSignal::new(String::new());
-    let show_group = move |keys: Vec<Key>| {
+    let show_group = move |keys: HashSet<Key>| {
         let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
         keys.sort();
         group_value.set(keys.join(","));
@@ -87,10 +96,12 @@ pub fn PageAtomCheckbox() -> impl IntoView {
         <CheckboxGroup<Key> aria_label="Disabled group" is_disabled=true>
             <CheckboxField value="a"><CheckboxButton>"Disabled group A"</CheckboxButton></CheckboxField>
         </CheckboxGroup<Key>>
-        <CheckboxGroup aria_label="Read-only group" is_read_only=true default_value=vec![Key::from("a")]>
+        <CheckboxGroup aria_label="Read-only group" is_read_only=true default_value=HashSet::from([Key::from("a")])>
             <CheckboxField value="a"><CheckboxButton>"Read-only group A"</CheckboxButton></CheckboxField>
             <CheckboxField value="b"><CheckboxButton>"Read-only group B"</CheckboxButton></CheckboxField>
         </CheckboxGroup>
+
+        <GroupValidation />
 
         <form id="test-cb-group-form">
             <CheckboxGroup<Key> is_required=true validation_behavior=ValidationBehavior::Native>
@@ -100,5 +111,99 @@ pub fn PageAtomCheckbox() -> impl IntoView {
                 <FieldError />
             </CheckboxGroup<Key>>
         </form>
+    }
+}
+
+/// Three terms the group's validator requires all of.
+fn terms_group(prefix: &'static str, behavior: ValidationBehavior) -> impl IntoView {
+    let all_terms: ValidateFn<HashSet<Key>> = Arc::new(|terms: &HashSet<Key>| {
+        if terms.len() < 3 {
+            Err(vec!["You must accept all terms".to_owned()])
+        } else {
+            Ok(())
+        }
+    });
+    view! {
+        <CheckboxGroup<Key> validate=all_terms validation_behavior=behavior>
+            <Label>"Agree to the following"</Label>
+            <CheckboxField value="terms"><CheckboxButton>{format!("{prefix} terms")}</CheckboxButton></CheckboxField>
+            <CheckboxField value="cookies"><CheckboxButton>{format!("{prefix} cookies")}</CheckboxButton></CheckboxField>
+            <CheckboxField value="privacy"><CheckboxButton>{format!("{prefix} privacy")}</CheckboxButton></CheckboxField>
+            <FieldError />
+        </CheckboxGroup<Key>>
+    }
+}
+
+/// Three terms, two of which validate themselves.
+fn terms_items(prefix: &'static str, behavior: ValidationBehavior) -> impl IntoView {
+    let accepted = |message: &'static str| -> ValidateFn<bool> {
+        Arc::new(move |checked: &bool| {
+            if *checked {
+                Ok(())
+            } else {
+                Err(vec![message.to_owned()])
+            }
+        })
+    };
+    view! {
+        <CheckboxGroup<Key> validation_behavior=behavior>
+            <Label>"Agree to the following"</Label>
+            <CheckboxField value="terms" validate=accepted("You must accept the terms.")><CheckboxButton>{format!("{prefix} terms")}</CheckboxButton></CheckboxField>
+            <CheckboxField value="cookies" validate=accepted("You must accept the cookies.")><CheckboxButton>{format!("{prefix} cookies")}</CheckboxButton></CheckboxField>
+            <CheckboxField value="privacy"><CheckboxButton>{format!("{prefix} privacy")}</CheckboxButton></CheckboxField>
+            <FieldError />
+        </CheckboxGroup<Key>>
+    }
+}
+
+/// Checkbox groups validated by a function (the group's or the checkboxes' own), by the server
+/// and with a custom message, with native and ARIA validation (react-spectrum's
+/// `CheckboxGroup.test.js` validation cases).
+#[component]
+fn GroupValidation() -> impl IntoView {
+    let server_errors = RwSignal::new(HashMap::<String, Vec<String>>::new());
+    let on_submit = move |e: SubmitEvent| {
+        e.prevent_default();
+        server_errors.set(HashMap::from([(
+            "terms".to_owned(),
+            vec!["You must accept the terms.".to_owned()],
+        )]));
+    };
+    view! {
+        <Form attr:id="gv-native-group">{terms_group("Native group", ValidationBehavior::Native)}</Form>
+        <Form attr:id="gv-native-items">{terms_items("Native items", ValidationBehavior::Native)}</Form>
+        <Form attr:id="gv-native-server" validation_errors=server_errors on:submit=on_submit>
+            <CheckboxGroup<Key> name="terms">
+                <Label>"Server terms"</Label>
+                <CheckboxField value="terms"><CheckboxButton>"Server terms A"</CheckboxButton></CheckboxField>
+                <CheckboxField value="cookies"><CheckboxButton>"Server terms B"</CheckboxButton></CheckboxField>
+                <FieldError />
+            </CheckboxGroup<Key>>
+            <button id="gv-native-server-submit" type="submit">"Submit"</button>
+        </Form>
+        <Form attr:id="gv-custom-message">
+            <CheckboxGroup<Key> is_required=true>
+                <Label>"Custom message"</Label>
+                <CheckboxField value="terms"><CheckboxButton>"Custom message terms"</CheckboxButton></CheckboxField>
+                <FieldError message=Arc::new(|result: &ValidationResult| {
+                    result
+                        .validation_details
+                        .value_missing
+                        .then(|| "Please select at least one item".to_owned())
+                }) />
+            </CheckboxGroup<Key>>
+        </Form>
+        <div id="gv-aria-group">{terms_group("Aria group", ValidationBehavior::Aria)}</div>
+        <div id="gv-aria-items">{terms_items("Aria items", ValidationBehavior::Aria)}</div>
+        <Form attr:id="gv-aria-server" validation_behavior=ValidationBehavior::Aria validation_errors=Signal::stored(HashMap::from([(
+            "terms".to_owned(),
+            vec!["You must accept the terms".to_owned()],
+        )]))>
+            <CheckboxGroup<Key> name="terms">
+                <Label>"Aria server terms"</Label>
+                <CheckboxField value="terms"><CheckboxButton>"Aria server terms A"</CheckboxButton></CheckboxField>
+                <FieldError />
+            </CheckboxGroup<Key>>
+        </Form>
     }
 }

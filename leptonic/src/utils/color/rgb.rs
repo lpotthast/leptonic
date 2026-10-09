@@ -6,7 +6,10 @@ use super::{
     AreaGradient, BlendMode, ColorChannelRange, ColorSpaceAxes, ColorValue, ParseColorError,
     axes_of, line_end,
 };
-use crate::utils::{i18n::Locale, locale::WritingDirection, number_formatter::NumberFormatOptions};
+use crate::utils::{
+    i18n::{Locale, WritingDirection},
+    number_formatter::NumberFormatOptions,
+};
 
 /// A channel of the RGB color space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -152,23 +155,22 @@ impl ColorValue for RGB8 {
             max_value: 255.0,
             step: 1.0,
             page_size: 17.0,
-            gradient_stops: None,
         }
     }
 
-    fn channels() -> Vec<RgbChannel> {
-        vec![RgbChannel::Red, RgbChannel::Green, RgbChannel::Blue]
+    fn channels() -> [RgbChannel; 3] {
+        [RgbChannel::Red, RgbChannel::Green, RgbChannel::Blue]
+    }
+
+    fn gradient_stops(_channel: RgbChannel) -> &'static [f64] {
+        &[0.0, 255.0]
     }
 
     fn color_space_axes(
         x_channel: Option<RgbChannel>,
         y_channel: Option<RgbChannel>,
     ) -> ColorSpaceAxes<RgbChannel> {
-        axes_of(
-            [RgbChannel::Red, RgbChannel::Green, RgbChannel::Blue],
-            x_channel,
-            y_channel,
-        )
+        axes_of(Self::channels(), x_channel, y_channel)
     }
 
     fn to_css_string(&self) -> String {

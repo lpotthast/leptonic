@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::tabs::{Tab, TabList, TabPanel, TabPanels, Tabs},
-    hooks::use_collection,
+    hooks::collections::use_collection,
 };
 use leptos::prelude::*;
 

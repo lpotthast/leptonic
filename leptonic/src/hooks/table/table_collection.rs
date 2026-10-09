@@ -1,4 +1,6 @@
 // Upstream: react-stately/src/table/TableCollection.ts @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TableTests.js @ 99e6102368
 use std::{collections::HashMap, sync::Arc};
 
 use super::table_utils::{ColumnBound, ColumnSize};
@@ -36,7 +38,8 @@ pub enum ColumnKind {
     Data,
     /// A group of columns: a header spanning its columns, in the header row above them.
     Group,
-    /// The column of row selection checkboxes (`TableOptions::show_selection_checkboxes`).
+    /// The column of row selection checkboxes ([`TableCollection::with_selection_column`]; the
+    /// table state adds it while rows can be selected).
     SelectionCheckbox,
 }
 
@@ -70,13 +73,6 @@ pub struct Column {
     pub children: Vec<Key>,
 }
 
-/// Options for building a [`TableCollection`].
-#[derive(Debug, Clone, Copy, Default)]
-pub struct TableOptions {
-    /// Add a first column of checkboxes selecting the rows (and selecting all, in its header).
-    pub show_selection_checkboxes: bool,
-}
-
 /// The rows and columns of a table.
 ///
 /// Its [`collection`](TableCollection::collection) holds the header rows (of column headers and
@@ -90,13 +86,15 @@ pub struct TableCollection {
     column_info: HashMap<Key, Column>,
     header_rows: Vec<Key>,
     row_header_columns: Vec<Key>,
+    /// The columns as built, to rebuild the table with a selection column.
+    column_defs: Arc<[ColumnDef]>,
 }
 
 impl TableCollection {
     /// Build a table: its columns and rows.
     ///
     /// ```
-    /// # use leptonic::hooks::TableCollection;
+    /// # use leptonic::hooks::table::TableCollection;
     /// let table = TableCollection::build(|t| {
     ///     t.column("name", "Name").row_header().allows_sorting();
     ///     t.column_group("contact", "Contact", |g| {
@@ -113,23 +111,35 @@ impl TableCollection {
     /// assert_eq!(table.header_rows().len(), 2);
     /// ```
     pub fn build(f: impl FnOnce(&mut TableBuilder)) -> Self {
-        Self::build_with(TableOptions::default(), f)
-    }
-
-    /// [`TableCollection::build`] with options.
-    pub fn build_with(options: TableOptions, f: impl FnOnce(&mut TableBuilder)) -> Self {
         let mut builder = TableBuilder {
             columns: ColumnsBuilder::default(),
-            rows: {
-                // The selection checkbox cell, in every row (child rows too).
-                let mut rows = CollectionBuilder::default();
-                rows.leading_empty_cells = usize::from(options.show_selection_checkboxes);
-                rows
-            },
-            show_selection_checkboxes: options.show_selection_checkboxes,
+            rows: CollectionBuilder::default(),
         };
         f(&mut builder);
-        builder.finish()
+        assemble(builder.columns.defs.into(), builder.rows, false)
+    }
+
+    /// This table with a first column of checkboxes selecting the rows (and all rows, in its
+    /// header): a column of kind [`ColumnKind::SelectionCheckbox`] and an empty first cell in
+    /// every row, so the cells' keys count it as cell `0`. The table state adds it while
+    /// `show_selection_checkboxes` is set and rows can be selected (react-stately).
+    #[must_use]
+    pub fn with_selection_column(&self) -> Self {
+        if self.has_selection_column() {
+            return self.clone();
+        }
+        assemble(
+            self.column_defs.clone(),
+            CollectionBuilder::rows_with_leading_cells(&self.collection, 1),
+            true,
+        )
+    }
+
+    /// Whether the table has a selection checkbox column (see
+    /// [`with_selection_column`](Self::with_selection_column)).
+    pub fn has_selection_column(&self) -> bool {
+        self.column_at(0)
+            .is_some_and(|c| c.kind == ColumnKind::SelectionCheckbox)
     }
 
     /// The header rows and the body rows.
@@ -178,6 +188,25 @@ impl TableCollection {
             .flatten()
     }
 
+    /// The key of the cell of `row` that starts at the data column `column_index`; `None` where
+    /// no cell starts (under a cell spanning columns, or past the row's cells). Constant time for
+    /// rows without spanning cells.
+    pub fn cell_key(&self, row: &Key, column_index: usize) -> Option<Key> {
+        let starts_here = |node: &Node| node.col_index.unwrap_or(node.index) == column_index;
+        let key = Key::cell(row, column_index);
+        if self
+            .collection
+            .get(&key)
+            .is_some_and(|node| node.kind == NodeKind::Cell && starts_here(node))
+        {
+            return Some(key);
+        }
+        self.collection
+            .cells(row)
+            .find(|node| starts_here(node))
+            .map(|node| node.key.clone())
+    }
+
     /// The keys of the header rows, top to bottom.
     pub fn header_rows(&self) -> &[Key] {
         &self.header_rows
@@ -195,7 +224,6 @@ impl TableCollection {
 pub struct TableBuilder {
     columns: ColumnsBuilder,
     rows: CollectionBuilder,
-    show_selection_checkboxes: bool,
 }
 
 impl TableBuilder {
@@ -219,7 +247,8 @@ impl TableBuilder {
     }
 
     /// Add a body row with one cell per data column. Cell keys are generated:
-    /// `Key::cell(row, i)`, counting the selection checkbox cell (if any) as cell `0`. Child rows
+    /// `Key::cell(row, i)` (with a selection column, see
+    /// [`TableCollection::with_selection_column`], counting its cell as cell `0`). Child rows
     /// (a tree table, see `UseTableStateInput::tree`) go into the returned row's `children`.
     pub fn row(
         &mut self,
@@ -235,160 +264,171 @@ impl TableBuilder {
     pub fn rows(&mut self, rows: impl FnOnce(&mut CollectionBuilder)) {
         rows(&mut self.rows);
     }
+}
 
-    fn finish(self) -> TableCollection {
-        let mut leaves: Vec<(ColumnDef, Vec<Key>)> = Vec::new();
-        let mut column_info: HashMap<Key, Column> = HashMap::new();
-        if self.show_selection_checkboxes {
-            let key = Key::generated("selection-column", 0);
-            leaves.push((
-                ColumnDef::new(key, Arc::from(""), ColumnKind::SelectionCheckbox),
-                Vec::new(),
-            ));
-        }
-        for def in self.columns.defs {
-            flatten(def, &mut Vec::new(), &mut leaves, &mut column_info);
-        }
+/// The table of the columns `column_defs` and the body `rows`, with a selection checkbox column
+/// first when `selection_column` is set (the rows' first cells are its cells then).
+fn assemble(
+    column_defs: Arc<[ColumnDef]>,
+    rows_builder: CollectionBuilder,
+    selection_column: bool,
+) -> TableCollection {
+    let mut leaves: Vec<(ColumnDef, Vec<Key>)> = Vec::new();
+    let mut column_info: HashMap<Key, Column> = HashMap::new();
+    if selection_column {
+        let key = Key::generated("selection-column", 0);
+        leaves.push((
+            ColumnDef::new(key, Arc::from(""), ColumnKind::SelectionCheckbox),
+            Vec::new(),
+        ));
+    }
+    for def in column_defs.iter() {
+        flatten(def.clone(), &mut Vec::new(), &mut leaves, &mut column_info);
+    }
 
-        // Each data column's stack of header cells, bottom to top: the column, then its groups
-        // (innermost first), `None` where it has no header cell. A group shared with a later,
-        // taller column moves up to that column's level (react-stately's `buildHeaderRows`).
-        let mut stacks: Vec<Vec<Option<Key>>> = Vec::with_capacity(leaves.len());
-        // Where each group's header cell is: its stack and position in it.
-        let mut seen: HashMap<Key, (usize, usize)> = HashMap::new();
-        for (def, ancestors) in &leaves {
-            let mut stack = vec![Some(def.key.clone())];
-            // Once a shared group is above this column's top, its outer groups are too: they only
-            // span this column as well (react-stately stops there and doesn't count them).
-            let mut above = false;
-            for parent in ancestors {
-                if let Some(&(earlier, position)) = seen.get(parent) {
-                    if let Some(group) = column_info.get_mut(parent) {
-                        group.col_span += 1;
-                    }
-                    if above || position > stack.len() {
-                        above = true;
-                        continue;
-                    }
-                    // Shift the group (and what is above it) up to this column's level.
-                    let shift = stack.len() - position;
-                    let earlier_stack = &mut stacks[earlier];
-                    earlier_stack.splice(position..position, std::iter::repeat_n(None, shift));
-                    for (moved, entry) in earlier_stack.iter().enumerate().skip(stack.len()) {
-                        if let Some(key) = entry
-                            && let Some(place) = seen.get_mut(key)
-                        {
-                            place.1 = moved;
-                        }
-                    }
-                } else {
-                    if let Some(group) = column_info.get_mut(parent) {
-                        group.col_span = 1;
-                    }
-                    stack.push(Some(parent.clone()));
-                    seen.insert(parent.clone(), (stacks.len(), stack.len() - 1));
+    // Each data column's stack of header cells, bottom to top: the column, then its groups
+    // (innermost first), `None` where it has no header cell. A group shared with a later,
+    // taller column moves up to that column's level (react-stately's `buildHeaderRows`).
+    let mut stacks: Vec<Vec<Option<Key>>> = Vec::with_capacity(leaves.len());
+    // Where each group's header cell is: its stack and position in it.
+    let mut seen: HashMap<Key, (usize, usize)> = HashMap::new();
+    for (def, ancestors) in &leaves {
+        let mut stack = vec![Some(def.key.clone())];
+        // Once a shared group is above this column's top, its outer groups are too: they only
+        // span this column as well (react-stately stops there and doesn't count them).
+        let mut above = false;
+        for parent in ancestors {
+            if let Some(&(earlier, position)) = seen.get(parent) {
+                if let Some(group) = column_info.get_mut(parent) {
+                    group.col_span += 1;
                 }
-            }
-            stacks.push(stack);
-        }
-        let header_row_count = stacks.iter().map(Vec::len).max().unwrap_or(0);
-
-        let mut columns = Vec::with_capacity(leaves.len());
-        for (index, (def, ancestors)) in leaves.iter().enumerate() {
-            columns.push(def.key.clone());
-            column_info.insert(
-                def.key.clone(),
-                Column {
-                    key: def.key.clone(),
-                    text_value: def.text_value.clone(),
-                    kind: def.kind,
-                    is_row_header: def.is_row_header,
-                    allows_sorting: def.allows_sorting,
-                    allows_resizing: def.allows_resizing,
-                    default_width: def.default_width,
-                    min_width: def.min_width,
-                    max_width: def.max_width,
-                    index,
-                    col_span: 1,
-                    level: header_row_count - 1,
-                    parent: ancestors.first().cloned(),
-                    children: Vec::new(),
-                },
-            );
-        }
-
-        // Header rows, top to bottom: data columns are in the bottom row, each group above its
-        // columns. Placeholders fill the gaps (adjacent gaps are one placeholder).
-        let mut cells: Vec<Vec<HeaderCell>> = (0..header_row_count).map(|_| Vec::new()).collect();
-        // The number of columns each row covers so far.
-        let mut covered = vec![0_usize; header_row_count];
-        let mut placeholders = 0;
-        let mut placeholder = |col_span: usize| {
-            let cell = HeaderCell {
-                key: Key::generated("placeholder", placeholders),
-                kind: NodeKind::Placeholder,
-                text_value: Arc::from(""),
-                col_span: (col_span > 1).then_some(col_span),
-            };
-            placeholders += 1;
-            cell
-        };
-        for (index, stack) in stacks.iter().enumerate() {
-            for (height, entry) in stack.iter().enumerate() {
-                let Some(key) = entry else {
+                if above || position > stack.len() {
+                    above = true;
                     continue;
-                };
-                let level = header_row_count - 1 - height;
-                if covered[level] < index {
-                    cells[level].push(placeholder(index - covered[level]));
-                    covered[level] = index;
                 }
-                let column = column_info.get_mut(key).expect("flattened above");
-                column.level = level;
-                column.index = index;
-                cells[level].push(HeaderCell {
-                    key: key.clone(),
-                    kind: NodeKind::Column,
-                    text_value: column.text_value.clone(),
-                    col_span: (column.col_span > 1).then_some(column.col_span),
-                });
-                covered[level] += column.col_span;
+                // Shift the group (and what is above it) up to this column's level.
+                let shift = stack.len() - position;
+                let earlier_stack = &mut stacks[earlier];
+                earlier_stack.splice(position..position, std::iter::repeat_n(None, shift));
+                for (moved, entry) in earlier_stack.iter().enumerate().skip(stack.len()) {
+                    if let Some(key) = entry
+                        && let Some(place) = seen.get_mut(key)
+                    {
+                        place.1 = moved;
+                    }
+                }
+            } else {
+                if let Some(group) = column_info.get_mut(parent) {
+                    group.col_span = 1;
+                }
+                stack.push(Some(parent.clone()));
+                seen.insert(parent.clone(), (stacks.len(), stack.len() - 1));
             }
         }
-        let mut rows = CollectionBuilder::default();
-        let mut header_rows = Vec::with_capacity(header_row_count);
-        for (level, mut cells) in cells.into_iter().enumerate() {
-            if covered[level] < leaves.len() {
-                cells.push(placeholder(leaves.len() - covered[level]));
+        stacks.push(stack);
+    }
+    let header_row_count = stacks.iter().map(Vec::len).max().unwrap_or(0);
+
+    let mut columns = Vec::with_capacity(leaves.len());
+    for (index, (def, ancestors)) in leaves.iter().enumerate() {
+        columns.push(def.key.clone());
+        column_info.insert(
+            def.key.clone(),
+            Column {
+                key: def.key.clone(),
+                text_value: def.text_value.clone(),
+                kind: def.kind,
+                is_row_header: def.is_row_header,
+                allows_sorting: def.allows_sorting,
+                allows_resizing: def.allows_resizing,
+                default_width: def.default_width,
+                min_width: def.min_width,
+                max_width: def.max_width,
+                index,
+                col_span: 1,
+                level: header_row_count - 1,
+                parent: ancestors.first().cloned(),
+                children: Vec::new(),
+            },
+        );
+    }
+
+    // Header rows, top to bottom: data columns are in the bottom row, each group above its
+    // columns. Placeholders fill the gaps (adjacent gaps are one placeholder).
+    let mut cells: Vec<Vec<HeaderCell>> = (0..header_row_count).map(|_| Vec::new()).collect();
+    // The number of columns each row covers so far.
+    let mut covered = vec![0_usize; header_row_count];
+    let mut placeholders = 0;
+    let mut placeholder = |col_span: usize| {
+        let cell = HeaderCell {
+            key: Key::generated("placeholder", placeholders),
+            kind: NodeKind::Placeholder,
+            text_value: Arc::from(""),
+            col_span: (col_span > 1).then_some(col_span),
+        };
+        placeholders += 1;
+        cell
+    };
+    for (index, stack) in stacks.iter().enumerate() {
+        for (height, entry) in stack.iter().enumerate() {
+            let Some(key) = entry else {
+                continue;
+            };
+            let level = header_row_count - 1 - height;
+            if covered[level] < index {
+                cells[level].push(placeholder(index - covered[level]));
+                covered[level] = index;
             }
-            let key = Key::generated("headerrow", level);
-            header_rows.push(key.clone());
-            rows.header_row(key, cells);
+            let column = column_info.get_mut(key).expect("flattened above");
+            column.level = level;
+            column.index = index;
+            cells[level].push(HeaderCell {
+                key: key.clone(),
+                kind: NodeKind::Column,
+                text_value: column.text_value.clone(),
+                col_span: (column.col_span > 1).then_some(column.col_span),
+            });
+            covered[level] += column.col_span;
         }
-        rows.append(self.rows);
+    }
+    let mut rows = CollectionBuilder::default();
+    let mut header_rows = Vec::with_capacity(header_row_count);
+    for (level, mut cells) in cells.into_iter().enumerate() {
+        if covered[level] < leaves.len() {
+            cells.push(placeholder(leaves.len() - covered[level]));
+        }
+        let key = Key::generated("headerrow", level);
+        header_rows.push(key.clone());
+        rows.header_row(key, cells);
+    }
+    rows.append(rows_builder);
 
-        let mut row_header_columns: Vec<Key> = columns
-            .iter()
-            .filter(|key| column_info.get(*key).is_some_and(|c| c.is_row_header))
-            .cloned()
-            .collect();
-        if row_header_columns.is_empty()
-            && let Some(first) = columns.iter().find(|key| {
-                column_info
-                    .get(*key)
-                    .is_some_and(|c| c.kind == ColumnKind::Data)
-            })
-        {
-            row_header_columns.push(first.clone());
-        }
+    let mut row_header_columns: Vec<Key> = columns
+        .iter()
+        .filter(|key| column_info.get(*key).is_some_and(|c| c.is_row_header))
+        .cloned()
+        .collect();
+    if row_header_columns.is_empty()
+        && let Some(first) = columns.iter().find(|key| {
+            column_info
+                .get(*key)
+                .is_some_and(|c| c.kind == ColumnKind::Data)
+        })
+    {
+        row_header_columns.push(first.clone());
+    }
 
-        TableCollection {
-            collection: Arc::new(rows.build()),
-            columns,
-            column_info,
-            header_rows,
-            row_header_columns,
-        }
+    let collection = rows.build();
+    if cfg!(debug_assertions) {
+        warn_about_malformed_tables(&collection, &leaves);
+    }
+    TableCollection {
+        collection: Arc::new(collection),
+        columns,
+        column_info,
+        header_rows,
+        row_header_columns,
+        column_defs,
     }
 }
 
@@ -475,7 +515,7 @@ impl ColumnBuilder<'_> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 struct ColumnDef {
     key: Key,
     text_value: Arc<str>,
@@ -502,6 +542,39 @@ impl ColumnDef {
             min_width: None,
             max_width: None,
             children: Vec::new(),
+        }
+    }
+}
+
+/// Warns (in debug builds) about rows whose cells don't cover every column (react-aria-components
+/// throws: their cells can't be reached by keyboard, and `TableCell` then falls back to a cell of
+/// the row that doesn't exist) and about columns sharing a key.
+fn warn_about_malformed_tables(collection: &Collection, leaves: &[(ColumnDef, Vec<Key>)]) {
+    let mut keys = std::collections::HashSet::new();
+    for (def, _) in leaves {
+        if !keys.insert(&def.key) {
+            crate::utils::dev_warn!(
+                "Duplicate column key {:?} in table; every column needs a unique key.",
+                def.key
+            );
+        }
+    }
+    let columns = leaves.len();
+    for row in collection.nodes_in_order() {
+        if row.kind != NodeKind::Item {
+            continue;
+        }
+        // Rows without cells are left alone (as upstream).
+        let Some(last) = collection.cells(&row.key).last() else {
+            continue;
+        };
+        let cells = last.col_index.unwrap_or(last.index) + last.col_span.unwrap_or(1);
+        if cells != columns {
+            crate::utils::dev_warn!(
+                "Cell count must match column count. Found {cells} cells and {columns} columns \
+                 in row {:?}.",
+                row.key
+            );
         }
     }
 }
@@ -557,26 +630,22 @@ mod tests {
     /// their cells, only their child rows are hidden.
     #[test]
     fn tree_rows_nest_and_collapse() {
-        let table = TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("name", "Name");
-                let _ = t
-                    .row("docs", "Documents", |r| {
-                        r.cell("Documents");
-                    })
-                    .children(|b| {
-                        b.row("cv", "CV", |r| {
-                            r.cell("CV");
-                        });
+        let table = TableCollection::build(|t| {
+            t.column("name", "Name");
+            let _ = t
+                .row("docs", "Documents", |r| {
+                    r.cell("Documents");
+                })
+                .children(|b| {
+                    b.row("cv", "CV", |r| {
+                        r.cell("CV");
                     });
-                t.row("photos", "Photos", |r| {
-                    r.cell("Photos");
                 });
-            },
-        );
+            t.row("photos", "Photos", |r| {
+                r.cell("Photos");
+            });
+        })
+        .with_selection_column();
         let rows = |c: &Collection| c.items().map(|n| n.key.to_string()).collect::<Vec<_>>();
         // Without a tree view (no tree column), child rows aren't part of the table.
         assert_that!(rows(table.collection()))
@@ -765,17 +834,14 @@ mod tests {
 
     #[test]
     fn selection_checkboxes_add_a_first_column_and_cell() {
-        let table = TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("name", "Name");
-                t.row("alice", "Alice", |r| {
-                    r.cell("Alice");
-                });
-            },
-        );
+        let table = TableCollection::build(|t| {
+            t.column("name", "Name");
+            t.row("alice", "Alice", |r| {
+                r.cell("Alice");
+            });
+        })
+        .with_selection_column();
+        assert_that!(table.has_selection_column()).is_true();
         let first = table.column_at(0).expect("checkbox column");
         assert_that!(first.kind).is_equal_to(ColumnKind::SelectionCheckbox);
         assert_that!(table.row_header_columns().to_vec()).is_equal_to(vec![k("name")]);
@@ -789,5 +855,51 @@ mod tests {
                 .map(|n| n.text_value.to_string())
         )
         .is_equal_to(Some("Alice".to_owned()));
+        assert_that!(table.collection().cells(&k("alice")).count()).is_equal_to(2);
+    }
+
+    #[test]
+    fn the_selection_column_keeps_header_rows_spans_and_child_rows() {
+        let table = TableCollection::build(|t| {
+            t.column_group("person", "Person", |g| {
+                g.column("name", "Name");
+                g.column("age", "Age");
+            });
+            let _ = t
+                .row("alice", "Alice", |r| {
+                    let _ = r.cell("Alice, 30").col_span(2);
+                })
+                .children(|b| {
+                    b.row("bob", "Bob", |r| {
+                        r.cell("Bob");
+                        r.cell("5");
+                    });
+                });
+        });
+        let with = table.with_selection_column();
+        assert_that!(with.column_count()).is_equal_to(3);
+        assert_that!(with.header_rows().len()).is_equal_to(2);
+        assert_that!(header_row(&with, 1)).is_equal_to(vec![
+            column("selection-column-0"),
+            column("name"),
+            column("age"),
+        ]);
+        let c = with.collection();
+        // The spanning cell moved to cell 1 and still spans the two data columns.
+        let spanning = c
+            .get(&Key::cell(&k("alice"), 1))
+            .expect("the spanning cell");
+        assert_that!(spanning.text_value.to_string()).is_equal_to("Alice, 30".to_owned());
+        assert_that!(spanning.col_span).is_equal_to(Some(2));
+        assert_that!(spanning.col_index).is_equal_to(Some(1));
+        // No cell starts under the spanning cell.
+        assert_that!(with.cell_key(&k("alice"), 1)).is_equal_to(Some(Key::cell(&k("alice"), 1)));
+        assert_that!(with.cell_key(&k("alice"), 2)).is_none();
+        assert_that!(with.cell_key(&k("bob"), 2)).is_equal_to(Some(Key::cell(&k("bob"), 2)));
+        // Child rows get their selection cell too.
+        assert_that!(c.cells(&k("bob")).count()).is_equal_to(3);
+        assert_that!(c.get(&k("bob")).map(|n| n.level)).is_equal_to(Some(1));
+        // Built again from the table without the column: the same.
+        assert_that!(with.with_selection_column()).is_equal_to(with.clone());
     }
 }

@@ -1,4 +1,7 @@
-use leptonic::hooks::*;
+use leptonic::{
+    IntoAttrs,
+    hooks::focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+};
 use leptos::prelude::*;
 
 #[component]
@@ -8,7 +11,7 @@ pub fn FocusRingWithinDemo() -> impl IntoView {
         is_focus_visible,
         ..
     } = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..Default::default()
     });
 

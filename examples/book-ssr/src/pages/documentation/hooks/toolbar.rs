@@ -29,6 +29,7 @@ pub fn PageUseToolbar() -> impl IntoView {
                     <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
                         "The id of an element naming the toolbar. Ignored when "<Code inline=true>"aria_label"</Code>" is set."
                     </ApiRow>
+                    <ApiRow name="element" ty="CapturedElement" default="CapturedElement::new()">"Capture of the element receiving the hook props."</ApiRow>
                 </ApiTable>
                 <p><Code inline=true>"UseToolbarInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
             </Section>
@@ -45,7 +46,7 @@ pub fn PageUseToolbar() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::toolbar::{UseToolbarInput, use_toolbar};
 
                         let toolbar = use_toolbar(UseToolbarInput {
                             aria_label: "Text formatting".into(),
@@ -98,7 +99,7 @@ pub fn PageUseToolbar() -> impl IntoView {
                 <li><Link href=routes::doc::toolbar::Atom.materialize()>"Toolbar Atom"</Link></li>
                 <li><Link href=routes::doc::separator::Hook.materialize()>"use_separator"</Link></li>
                 <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -1,17 +1,20 @@
 // Upstream: react-aria-components/src/Button.tsx @ 99e6102368
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 use web_sys::FocusEvent;
 
 use super::progress_bar::ProgressBarIdContext;
 use crate::{
-    hooks::*,
+    IdRefs,
+    hooks::{
+        button::{ButtonFormAttributes, ButtonType, UseButtonInput, UseButtonReturn, use_button},
+        interactions::{HoverEndEvent, HoverStartEvent, KeyboardEventWrapper, PressEvent},
+    },
     utils::{
-        CapturedElement,
         aria::{AriaCurrent, AriaExpanded, AriaHasPopup, AriaPressed},
-        classes::Classes,
         data_attributes::flag,
         default_class::with_default_class,
-        id::{ensure_element_id, use_id},
+        id::use_id,
         live_announcer::{Announcement, Assertiveness, announce},
         styles::Styles,
     },
@@ -23,9 +26,10 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - Render props become `data-*` attributes plus plain children.
-// - The id is set with `attr:id` (react-aria-components: `id`, else generated). A pending button
-//   with `aria_label` is named by its own id plus its progress bar's, so it then gets a generated
-//   id unless it has one.
+// - The button always has an id, known while rendering (its `id` prop, else a generated one):
+//   a pending button with `aria_label` is named by its own id plus its progress bar's, and an
+//   overlay trigger's references (a disclosure panel's label, an untitled dialog's) follow it, in
+//   the server's HTML too (react-aria-components: `id` if given; ids merged with `mergeIds`).
 // - The ARIA props (`aria_haspopup`, `aria_current`, ...) are typed (`utils::aria`).
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
@@ -67,6 +71,10 @@ pub fn Button(
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] on_key_down: Option<Callback<KeyboardEventWrapper>>,
     #[prop(into, optional)] on_key_up: Option<Callback<KeyboardEventWrapper>>,
+    /// The button's id. Default: a generated one (inside an overlay trigger, the trigger's
+    /// references follow it).
+    #[prop(into, optional)]
+    id: Option<String>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Whether an action the button started is in progress: the button stays focusable but
     /// can't be pressed. Default: `false`.
@@ -76,8 +84,8 @@ pub fn Button(
     #[prop(optional)]
     auto_focus: bool,
     /// Don't move focus to the button when it is pressed.
-    #[prop(optional)]
-    prevent_focus_on_press: bool,
+    #[prop(into, optional)]
+    prevent_focus_on_press: Signal<bool>,
     /// The `type` of the button. Defaults to `button`, so that buttons in forms don't submit them
     /// unless asked to.
     #[prop(optional)]
@@ -105,9 +113,11 @@ pub fn Button(
     let classes = with_default_class("leptonic-Button", classes);
     let progress_id = use_id("button-progress");
     let generated_id = use_id("button");
-    let element = CapturedElement::new();
-    // The button's rendered id, once needed (pending, it names the button).
-    let own_id = RwSignal::new(None::<String>);
+    // Always an id (known while rendering): pending, it names the button; in an overlay trigger,
+    // the trigger adopts it.
+    let id = id.unwrap_or(generated_id);
+    let own_id = id.clone();
+    let announced_id = id.clone();
     let has_aria_label = Signal::derive(move || aria_label.read().is_some());
     let labelled_by = aria_labelledby.clone();
     let label_progress = progress_id.clone();
@@ -120,6 +130,7 @@ pub fn Button(
         is_focused,
         ..
     } = use_button(UseButtonInput {
+        id: Some(id),
         button_type,
         is_disabled,
         is_pending,
@@ -138,9 +149,7 @@ pub fn Button(
             }
             match &labelled_by {
                 Some(ids) => Some(format!("{ids} {label_progress}")),
-                None if has_aria_label.get() => {
-                    own_id.get().map(|id| format!("{id} {label_progress}"))
-                }
+                None if has_aria_label.get() => Some(format!("{own_id} {label_progress}")),
                 None => None,
             }
         }),
@@ -171,30 +180,19 @@ pub fn Button(
         let pending = is_pending.get();
         let focused = is_focused.get();
         let changed = was_pending.is_some_and(|was_pending| was_pending != pending);
-        // Named by its own id: pending with an `aria-label`, or announced. Only then does a
-        // button without an id get one.
-        if aria_labelledby.is_none()
-            && (pending || (changed && focused))
-            && own_id.get_untracked().is_none()
-        {
-            own_id.set(ensure_element_id(&element, &generated_id));
-        }
         if changed && focused {
-            let ids: Vec<String> = match (&aria_labelledby, own_id.get_untracked()) {
-                (Some(ids), _) => ids
-                    .split_whitespace()
-                    .map(str::to_owned)
-                    .chain(pending.then(|| progress.clone()))
-                    .collect(),
-                (None, Some(id)) if pending && has_aria_label.get_untracked() => {
-                    vec![id, progress.clone()]
-                }
-                (None, Some(id)) => vec![id],
-                (None, None) => Vec::new(),
-            };
-            if !ids.is_empty() {
-                announce(Announcement::LabelledBy(ids), Assertiveness::Assertive);
+            let mut ids = IdRefs::default();
+            match &aria_labelledby {
+                Some(labelledby) => ids.push(labelledby),
+                None => ids.push(&announced_id),
             }
+            if pending && (aria_labelledby.is_some() || has_aria_label.get_untracked()) {
+                ids.push(&progress);
+            }
+            announce(
+                Announcement::LabelledBy(ids.ids().map(str::to_owned).collect()),
+                Assertiveness::Assertive,
+            );
         }
         pending
     });
@@ -205,7 +203,6 @@ pub fn Button(
     view! {
         <button
             {..button_attrs}
-            {..element.attr()}
             class=classes
             style=styles
             data-pressed=flag(is_pressed)

@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::grid::{Grid, GridCell, GridRow, GridRowGroup},
-    hooks::{Key, SelectionMode, collections::Selection, use_collection},
+    hooks::collections::{Key, Selection, SelectionMode, use_collection},
 };
 use leptos::prelude::*;
 

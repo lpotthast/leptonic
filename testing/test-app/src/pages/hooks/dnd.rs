@@ -1,28 +1,31 @@
 use std::{collections::HashSet, sync::Arc};
 
-use leptonic::hooks::FocusMode;
-use leptonic::hooks::KeyboardNavigationBehavior;
-use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
+    CapturedElement, IntoAttrs, Orientation, flag,
     hooks::{
-        DragEndEvent, DragItem, DropEnterEvent, DropEvent, DropExitEvent, DropItem, DropPosition,
-        DropTarget, DroppableCollectionData, DroppableCollectionOptions,
-        DroppableCollectionReorderEvent, GridListData, IntoAttrs, ListDropTargetDelegate,
-        Orientation, UseDragInput, UseDragReturn, UseDraggableCollectionInput,
-        UseDraggableCollectionStateInput, UseDraggableItemInput, UseDraggableItemReturn,
-        UseDropIndicatorInput, UseDropIndicatorReturn, UseDropInput, UseDropReturn,
-        UseDroppableCollectionInput, UseDroppableCollectionReturn,
-        UseDroppableCollectionStateInput, UseDroppableItemInput, UseDroppableItemReturn,
-        UseGridListInput, UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
         collections::{
-            Key, ListLayout, ListState, SelectionOptions, UseListKeyboardDelegateInput,
-            UseListStateInput, use_list_collection, use_list_keyboard_delegate, use_list_state,
+            CollectionOptions, Key, ListLayout, ListState, SelectionOptions,
+            UseListCollectionInput, UseListKeyboardDelegateInput, UseListStateInput,
+            use_list_collection, use_list_keyboard_delegate, use_list_state,
         },
-        use_drag, use_draggable_collection, use_draggable_collection_state, use_draggable_item,
-        use_drop, use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
-        use_droppable_item, use_grid_list, use_grid_list_item,
+        dnd::{
+            DragEndEvent, DragItem, DropEnterEvent, DropEvent, DropExitEvent, DropItem,
+            DropPosition, DropTarget, DroppableCollectionData, DroppableCollectionOptions,
+            DroppableCollectionReorderEvent, ListDropTargetDelegate, UseDragInput, UseDragReturn,
+            UseDraggableCollectionInput, UseDraggableCollectionStateInput, UseDraggableItemInput,
+            UseDraggableItemReturn, UseDropIndicatorInput, UseDropIndicatorReturn, UseDropInput,
+            UseDropReturn, UseDroppableCollectionInput, UseDroppableCollectionReturn,
+            UseDroppableCollectionStateInput, UseDroppableItemInput, UseDroppableItemReturn,
+            use_drag, use_draggable_collection, use_draggable_collection_state, use_draggable_item,
+            use_drop, use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
+            use_droppable_item,
+        },
+        gridlist::{
+            FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
+            UseGridListItemInput, UseGridListItemReturn, UseGridListReturn, use_grid_list,
+            use_grid_list_item,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::{context::Provider, prelude::*};
 
@@ -71,7 +74,7 @@ fn Draggable(log: impl Fn(String) + Copy + Send + Sync + 'static) -> impl IntoVi
             id="test-dnd-draggable"
             tabindex="0"
             {..drag_props.into_attrs()}
-            data-dragging=move || is_dragging.get().to_string()
+            data-dragging=flag(is_dragging)
         >
             "Drag me"
         </div>
@@ -121,7 +124,7 @@ fn Droppable(
             tabindex="0"
             class="test-dnd-droppable"
             {..drop_props.into_attrs()}
-            data-droptarget=move || is_drop_target.get().to_string()
+            data-drop-target=flag(is_drop_target)
         >
             {label}
         </div>
@@ -134,7 +137,7 @@ const LETTERS: [&str; 4] = ["A", "B", "C", "D"];
 #[derive(Clone)]
 struct ListContext {
     list: GridListData,
-    drag_state: leptonic::hooks::DraggableCollectionState,
+    drag_state: leptonic::hooks::dnd::DraggableCollectionState,
     drop: DroppableCollectionData,
 }
 
@@ -142,11 +145,11 @@ struct ListContext {
 #[component]
 fn ReorderableList() -> impl IntoView {
     let letters = RwSignal::new(LETTERS.to_vec());
-    let collection = use_list_collection(
-        letters.into(),
-        |letter| Key::from(*letter),
-        |letter| (*letter).to_owned(),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: letters.into(),
+        key: |letter| Key::from(*letter),
+        text_value: |letter| (*letter).to_owned(),
+    });
     let list: ListState = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions::default(),
@@ -225,7 +228,7 @@ fn ReorderableList() -> impl IntoView {
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
             element,
-            orientation: Orientation::Vertical,
+            orientation: Orientation::Vertical.into(),
             layout: ListLayout::Stack,
             layout_delegate: None,
         }),
@@ -251,7 +254,12 @@ fn ReorderableList() -> impl IntoView {
                     key=|letter| *letter
                     children=move |letter: &'static str| view! { <Row letter /> }
                 />
-                {move || last().map(|letter| view! { <DropIndicator letter position=DropPosition::After /> })}
+                {move || {
+                    last()
+                        .map(|letter| {
+                            view! { <DropIndicator letter position=DropPosition::After /> }
+                        })
+                }}
             </div>
         </Provider>
         <div>"Order: " <span id="test-dnd-order">{move || letters.get().join("")}</span></div>
@@ -315,7 +323,7 @@ fn Row(letter: &'static str) -> impl IntoView {
             {..element.attr()}
             style=row_styles
             aria-hidden=move || aria_hidden.get()
-            data-dragging=move || is_dragging.get().then_some("")
+            data-dragging=flag(is_dragging)
         >
             <div {..grid_cell_props.into_attrs()}>{letter}</div>
         </div>
@@ -339,8 +347,8 @@ fn DropIndicator(letter: &'static str, position: DropPosition) -> impl IntoView 
             <div
                 role="gridcell"
                 {..drop_indicator_props.into_attrs()}
-                data-drop-target=move || is_drop_target.get().then_some("")
-                data-hidden=move || is_hidden.get().then_some("")
+                data-drop-target=flag(is_drop_target)
+                data-hidden=flag(is_hidden)
             ></div>
         </div>
     }

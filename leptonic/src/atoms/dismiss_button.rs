@@ -1,10 +1,14 @@
 // Upstream: react-aria/src/overlays/DismissButton.tsx @ 99e6102368
+// Upstream: react-aria/test/overlays/DismissButton.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use super::visually_hidden::VisuallyHidden;
-use crate::utils::{
-    id::use_id,
-    intl_strings::{OverlayStrings, use_localized_strings},
+use crate::{
+    labels,
+    utils::{
+        id::use_id,
+        intl_strings::{OverlayStrings, use_localized_strings},
+    },
 };
 
 // =============================================================================
@@ -14,6 +18,10 @@ use crate::utils::{
 // ## API DIFFERENCES
 // - `on_dismiss` is required: a dismiss button that dismisses nothing is a trap for screen reader
 //   users.
+//
+// ## ADDITIONS
+// - `type="button"`: upstream's dismiss button submits an enclosing form (and Enter in a field
+//   "dismisses" through implicit submission).
 //
 // =============================================================================
 
@@ -41,37 +49,29 @@ pub fn DismissButton(
     id: Option<String>,
 ) -> impl IntoView {
     let id = id.unwrap_or_else(|| use_id("dismiss-button"));
-    let labelledby = aria_labelledby.map(|ids| {
-        ids.split_whitespace()
-            .map(str::to_owned)
-            .collect::<Vec<_>>()
-    });
-    let has_labelledby = labelledby.as_ref().is_some_and(|ids| !ids.is_empty());
     let strings = use_localized_strings::<OverlayStrings>();
+    // With both a label and labelling ids, labelled by itself (first) and the referenced
+    // elements; without either, "Dismiss" (react-aria's `useLabels` with a default label).
+    let labelling = {
+        let id = id.clone();
+        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.as_deref()))
+    };
     let label = move || {
-        aria_label
-            .get()
-            .or_else(|| (!has_labelledby).then(|| strings.read().dismiss()))
+        labelling.with(|labelling| {
+            labelling.aria_label.clone().or_else(|| {
+                labelling
+                    .aria_labelledby
+                    .is_none()
+                    .then(|| strings.read().dismiss())
+            })
+        })
     };
-    // Labelled by other elements and its own label: its own id comes first.
-    let own_id = id.clone();
-    let labelledby = move || {
-        let ids = labelledby.clone().filter(|ids| !ids.is_empty())?;
-        let mut all = Vec::with_capacity(ids.len() + 1);
-        if aria_label.read().is_some() {
-            all.push(own_id.clone());
-        }
-        for id in ids {
-            if !all.contains(&id) {
-                all.push(id);
-            }
-        }
-        Some(all.join(" "))
-    };
+    let labelledby = move || labelling.with(|labelling| labelling.aria_labelledby.clone());
 
     view! {
         <VisuallyHidden>
             <button
+                type="button"
                 id=id
                 aria-label=label
                 aria-labelledby=labelledby

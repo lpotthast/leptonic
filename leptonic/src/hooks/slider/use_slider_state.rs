@@ -1,13 +1,18 @@
 // Upstream: react-stately/src/slider/useSliderState.ts @ 99e6102368
+// Upstream: react-stately/test/slider/useSliderState.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/slider/Slider.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::{
+use crate::{
     ValueBinding,
-    i18n::{Locale, use_locale},
-    list_formatter::{ListFormatOptions, ListFormatType, ListFormatter},
-    number_formatter::{NumberFormatOptions, NumberFormatter, use_number_formatter},
-    number_value::NumberValue,
-    orientation::Orientation,
+    utils::{
+        fraction::Fraction,
+        i18n::{Locale, use_locale},
+        list_formatter::{ListFormatOptions, ListFormatType, ListFormatter},
+        number_formatter::{NumberFormatOptions, NumberFormatter, use_number_formatter},
+        number_value::NumberValue,
+        orientation::Orientation,
+    },
 };
 
 // =============================================================================
@@ -19,7 +24,8 @@ use crate::utils::{
 // - Hook-owned values (C4): `default_values` + `on_change`, or `value` bound to app state.
 // - `min_value`, `max_value` and `step` are signals; the number format is `NumberFormatOptions`
 //   with the locale from the i18n context.
-// - A `Copy` struct with methods (C3); thumbs are addressed by `usize` index.
+// - A `Copy` struct with methods (C3); thumbs are addressed by `usize` index; positions in the
+//   range are `Fraction`s (C13; react-aria: percentages as plain numbers).
 //
 // ## DIFFERENT BEHAVIOR
 // - Two values are formatted "a – b" (react-aria: `Intl.NumberFormat.formatRange`, which ICU4X
@@ -114,9 +120,15 @@ impl<T: NumberValue> SliderState<T> {
 
     /// The smallest value thumb `index` can take: the previous thumb's value or `min_value`.
     pub fn thumb_min_value(&self, index: usize) -> T {
-        index
-            .checked_sub(1)
-            .and_then(|previous| self.values.with(|values| values.get(previous).copied()))
+        self.values
+            .with(|values| {
+                // A missing thumb uses the slider minimum as its fallback value. Applying a
+                // preceding thumb's bound would make that fallback invalid for the native input.
+                values.get(index)?;
+                index
+                    .checked_sub(1)
+                    .and_then(|previous| values.get(previous).copied())
+            })
             .unwrap_or_else(|| self.min_value.get())
     }
 
@@ -156,42 +168,41 @@ impl<T: NumberValue> SliderState<T> {
         self.binding.set(values);
     }
 
-    /// Sets thumb `index` to the value at `percent` (0.0 to 1.0) of the range.
-    pub fn set_thumb_percent(&self, index: usize, percent: f64) {
+    /// Sets thumb `index` to the value at `percent` of the range.
+    pub fn set_thumb_percent(&self, index: usize, percent: Fraction) {
         if let Some(value) = untrack(|| self.percent_value(percent)) {
             self.set_thumb_value(index, value);
         }
     }
 
-    /// Where thumb `index` is in the range, from 0.0 to 1.0 (tracked).
-    pub fn thumb_percent(&self, index: usize) -> f64 {
+    /// Where thumb `index` is in the range (tracked).
+    pub fn thumb_percent(&self, index: usize) -> Fraction {
         self.value_percent(self.thumb_value(index))
     }
 
-    /// Where `value` is in the range, from 0.0 to 1.0 (tracked).
-    pub fn value_percent(&self, value: T) -> f64 {
+    /// Where `value` is in the range (tracked; values outside it at its ends).
+    pub fn value_percent(&self, value: T) -> Fraction {
         let min = self.min_value.get().to_f64();
         let max = self.max_value.get().to_f64();
         if max == min {
-            return 0.0;
+            return Fraction::ZERO;
         }
-        (value.to_f64() - min) / (max - min)
+        Fraction::new((value.to_f64() - min) / (max - min))
     }
 
-    /// The value at `percent` (0.0 to 1.0) of the range, rounded to the step (tracked).
-    pub fn percent_value(&self, percent: f64) -> Option<T> {
+    /// The value at `percent` of the range, rounded to the step then clamped to the bounds (tracked).
+    pub fn percent_value(&self, percent: Fraction) -> Option<T> {
         let min = self.min_value.get();
         let max = self.max_value.get();
         let step = self.step.get();
         let (min_f, max_f, step_f) = (min.to_f64(), max.to_f64(), step.to_f64());
-        let value = percent.mul_add(max_f - min_f, min_f);
+        let value = percent.get().mul_add(max_f - min_f, min_f);
         let rounded = if step_f > 0.0 {
             ((value - min_f) / step_f).round().mul_add(step_f, min_f)
         } else {
             value
         };
         T::from_f64(rounded.clamp(min_f.min(max_f), max_f.max(min_f)))
-            .map(|value| value.snap_to_step(Some(min), Some(max), step))
     }
 
     /// Whether thumb `index` is being dragged (tracked).
@@ -330,7 +341,7 @@ impl<T: NumberValue> SliderState<T> {
                     let list = ListFormatter::new(
                         &self.locale.get(),
                         &ListFormatOptions {
-                            r#type: ListFormatType::Unit,
+                            kind: ListFormatType::Unit,
                             ..ListFormatOptions::default()
                         },
                     );
@@ -448,14 +459,236 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::{testing::with_owner, utils::number_formatter::NumberStyle};
 
     fn state<T: NumberValue>(input: UseSliderStateInput<T>) -> SliderState<T> {
         use_slider_state(input)
     }
 
+    /// A horizontal slider from `min` to `max` in steps of `step`, one thumb at `min`.
+    fn input<T: NumberValue>(min: T, max: T, step: T) -> UseSliderStateInput<T> {
+        UseSliderStateInput {
+            default_values: None,
+            value: None,
+            min_value: Signal::stored(min),
+            max_value: Signal::stored(max),
+            step: Signal::stored(step),
+            is_disabled: Signal::default(),
+            orientation: Signal::stored(Orientation::Horizontal),
+            format_options: Signal::default(),
+            value_label: None,
+            page_size: None,
+            on_change: None,
+            on_change_end: None,
+        }
+    }
+
+    /// A callback recording the values it is called with.
+    fn recorder<T: NumberValue>() -> (RwSignal<Vec<Vec<T>>>, Callback<Vec<T>>) {
+        let calls = RwSignal::new(Vec::new());
+        (
+            calls,
+            Callback::new(move |values| calls.update(|c| c.push(values))),
+        )
+    }
+
+    /// Upstream: "should allow setting and reading values, percentages, and labels".
+    #[test]
+    fn values_percentages_and_labels() {
+        with_owner(|| {
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![50]),
+                format_options: Signal::stored(NumberFormatOptions {
+                    style: NumberStyle::Currency,
+                    currency: Some("USD".to_owned()),
+                    ..NumberFormatOptions::default()
+                }),
+                ..input(10, 200, 10)
+            });
+            let percent = |n: f64| Fraction::new(n / 190.0);
+            assert_that!(slider.thumb_value(0)).is_equal_to(50);
+            assert_that!(slider.thumb_percent(0)).is_equal_to(percent(40.0));
+            assert_that!(slider.value_percent(50)).is_equal_to(percent(40.0));
+            assert_that!(slider.thumb_value_label(0)).is_equal_to("$50.00".to_owned());
+            slider.set_thumb_value(0, 100);
+            assert_that!(slider.thumb_percent(0)).is_equal_to(percent(90.0));
+            assert_that!(slider.thumb_value_label(0)).is_equal_to("$100.00".to_owned());
+            slider.set_thumb_value(0, 500);
+            assert_that!(slider.thumb_value(0)).is_equal_to(200);
+            assert_that!(slider.thumb_percent(0)).is_equal_to(Fraction::ONE);
+            assert_that!(slider.thumb_value_label(0)).is_equal_to("$200.00".to_owned());
+            slider.set_thumb_value(0, 0);
+            assert_that!(slider.thumb_value(0)).is_equal_to(10);
+            assert_that!(slider.thumb_percent(0)).is_equal_to(Fraction::ZERO);
+            assert_that!(slider.thumb_value_label(0)).is_equal_to("$10.00".to_owned());
+            slider.set_thumb_value(0, 7);
+            assert_that!(slider.thumb_value(0)).is_equal_to(10);
+            slider.set_thumb_percent(0, Fraction::new(0.13));
+            assert_that!(slider.thumb_value(0)).is_equal_to(30);
+            assert_that!(slider.thumb_percent(0)).is_equal_to(percent(20.0));
+        });
+    }
+
+    /// Upstream: "should enforce maxValue and minValue for multiple thumbs".
+    #[test]
+    fn thumbs_are_bounded_by_their_neighbors() {
+        with_owner(|| {
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![50, 70, 90]),
+                ..input(10, 200, 1)
+            });
+            let bounds = |index| (slider.thumb_min_value(index), slider.thumb_max_value(index));
+            assert_that!(bounds(0)).is_equal_to((10, 70));
+            assert_that!(bounds(1)).is_equal_to((50, 90));
+            assert_that!(bounds(2)).is_equal_to((70, 200));
+            slider.set_thumb_value(1, 80);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![50, 80, 90]);
+            assert_that!(slider.thumb_min_value(2)).is_equal_to(80);
+            slider.set_thumb_value(1, 100);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![50, 90, 90]);
+            assert_that!(slider.thumb_min_value(2)).is_equal_to(90);
+        });
+    }
+
+    /// Upstream: "should round values to nearest step with two thumbs".
+    #[test]
+    fn two_thumbs_round_to_the_step_from_their_neighbors() {
+        with_owner(|| {
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![1.0, 13.0]),
+                ..input(1.0, 15.0, 2.5)
+            });
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![1.0, 13.5]);
+            assert_that!(slider.thumb_min_value(1)).is_equal_to(1.0);
+            slider.set_thumb_value(0, 3.0);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![3.5, 13.5]);
+            assert_that!(slider.thumb_min_value(1)).is_equal_to(3.5);
+            assert_that!(slider.thumb_max_value(0)).is_equal_to(13.5);
+            slider.set_thumb_value(1, 5.0);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![3.5, 6.0]);
+            assert_that!(slider.thumb_max_value(0)).is_equal_to(6.0);
+        });
+    }
+
+    /// Upstream: "should round values to nearest step with three thumbs".
+    #[test]
+    fn three_thumbs_round_to_the_step_from_their_neighbors() {
+        with_owner(|| {
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![1.0, 6.0, 13.0]),
+                ..input(1.0, 15.0, 2.5)
+            });
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![1.0, 6.0, 13.5]);
+            assert_that!(slider.thumb_min_value(1)).is_equal_to(1.0);
+            assert_that!(slider.thumb_min_value(2)).is_equal_to(6.0);
+            slider.set_thumb_value(0, 3.0);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![3.5, 6.0, 13.5]);
+            assert_that!(slider.thumb_min_value(2)).is_equal_to(6.0);
+            assert_that!(slider.thumb_min_value(1)).is_equal_to(3.5);
+            assert_that!(slider.thumb_max_value(0)).is_equal_to(6.0);
+            assert_that!(slider.thumb_max_value(1)).is_equal_to(13.5);
+            slider.set_thumb_value(2, 5.0);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![3.5, 6.0, 6.0]);
+            assert_that!(slider.thumb_max_value(0)).is_equal_to(6.0);
+            assert_that!(slider.thumb_max_value(1)).is_equal_to(6.0);
+        });
+    }
+
+    /// Upstream: "should call onChange and onChangeEnd appropriately": every change of a drag is
+    /// reported, its end once, with the last values.
+    #[test]
+    fn on_change_per_change_and_on_change_end_per_drag() {
+        with_owner(|| {
+            let (changes, on_change) = recorder();
+            let (ends, on_change_end) = recorder();
+            let slider = state(UseSliderStateInput {
+                on_change: Some(on_change),
+                on_change_end: Some(on_change_end),
+                ..input(0, 100, 1)
+            });
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![0]);
+            slider.set_thumb_dragging(0, true);
+            slider.set_thumb_value(0, 50);
+            slider.set_thumb_dragging(0, false);
+            assert_that!(changes.get_untracked()).is_equal_to(vec![vec![50]]);
+            assert_that!(ends.get_untracked()).is_equal_to(vec![vec![50]]);
+
+            slider.set_thumb_dragging(0, true);
+            assert_that!(slider.is_thumb_dragging(0)).is_true();
+            slider.set_thumb_value(0, 55);
+            slider.set_thumb_value(0, 60);
+            assert_that!(ends.get_untracked()).has_length(1);
+            slider.set_thumb_value(0, 65);
+            slider.set_thumb_dragging(0, false);
+            assert_that!(changes.get_untracked().last()).is_equal_to(Some(&vec![65]));
+            assert_that!(changes.get_untracked()).has_length(4);
+            assert_that!(ends.get_untracked()).is_equal_to(vec![vec![50], vec![65]]);
+        });
+    }
+
+    /// Upstream: "should not call onChange and onChangeEnd if not being moved".
+    #[test]
+    fn setting_the_same_value_reports_nothing() {
+        with_owner(|| {
+            let (changes, on_change) = recorder();
+            let (ends, on_change_end) = recorder();
+            let slider = state(UseSliderStateInput {
+                on_change: Some(on_change),
+                on_change_end: Some(on_change_end),
+                ..input(0, 100, 1)
+            });
+            slider.set_thumb_value(0, 0);
+            assert_that!(changes.get_untracked()).is_empty();
+            assert_that!(ends.get_untracked()).is_empty();
+        });
+    }
+
+    /// react-spectrum's `Slider.test.tsx` "sets page size to a multiple of step": a tenth of the
+    /// range, rounded to the step, at least the step.
+    #[test]
+    fn the_page_size_is_a_multiple_of_the_step() {
+        with_owner(|| {
+            let page_size =
+                |min: i32, max: i32, step: i32| state(input(min, max, step)).page_size();
+            assert_that!(page_size(0, 100, 20)).is_equal_to(20);
+            assert_that!(page_size(0, 230, 10)).is_equal_to(20);
+            assert_that!(page_size(50, 75, 2)).is_equal_to(2);
+            assert_that!(page_size(-50, -15, 2)).is_equal_to(4);
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![60]),
+                ..input(50, 75, 2)
+            });
+            slider.increment_thumb(0, Some(slider.page_size()));
+            assert_that!(slider.thumb_value(0)).is_equal_to(62);
+        });
+    }
+
+    /// react-spectrum's `Slider.test.tsx` "clamps value & defaultValue to the allowed range":
+    /// own and bound values are kept in the range, on the step.
+    #[test]
+    fn values_are_clamped_to_the_range_on_the_step() {
+        with_owner(|| {
+            let clamped = |min: i32, max: i32, step: i32| {
+                let own = state(UseSliderStateInput {
+                    default_values: Some(vec![20]),
+                    ..input(min, max, step)
+                });
+                let bound = state(UseSliderStateInput {
+                    value: Some(ValueBinding::from(RwSignal::new(vec![20]))),
+                    ..input(min, max, step)
+                });
+                (own.values.get_untracked(), bound.values.get_untracked())
+            };
+            assert_that!(clamped(50, 100, 1)).is_equal_to((vec![50], vec![50]));
+            assert_that!(clamped(0, 10, 1)).is_equal_to((vec![10], vec![10]));
+            assert_that!(clamped(50, 100, 3)).is_equal_to((vec![50], vec![50]));
+            assert_that!(clamped(0, 10, 3)).is_equal_to((vec![9], vec![9]));
+        });
+    }
+
     #[test]
     fn snaps_and_clamps_values() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let slider = state(UseSliderStateInput {
                 step: Signal::stored(5),
                 default_values: Some(vec![12, 90]),
@@ -483,7 +716,7 @@ mod tests {
 
     #[test]
     fn a_bound_slider_resets_to_its_initial_values_and_follows_the_app() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(vec![20, 80]);
             let slider = state(UseSliderStateInput {
                 value: Some(ValueBinding::from(app)),
@@ -509,7 +742,7 @@ mod tests {
 
     #[test]
     fn steps_by_at_least_the_step_and_pages_by_a_tenth() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let slider = state(UseSliderStateInput {
                 step: Signal::stored(2.0),
                 default_values: None,
@@ -536,7 +769,7 @@ mod tests {
 
     #[test]
     fn percent_conversions_round_to_the_step() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let slider = state(UseSliderStateInput {
                 step: Signal::stored(10u8),
                 default_values: None,
@@ -551,15 +784,44 @@ mod tests {
                 on_change: None,
                 on_change_end: None,
             });
-            assert_that!(slider.percent_value(0.26)).is_equal_to(Some(50));
-            slider.set_thumb_percent(0, 0.5);
-            assert_that!(slider.thumb_percent(0)).is_equal_to(0.5);
+            assert_that!(slider.percent_value(Fraction::new(0.26))).is_equal_to(Some(50));
+            slider.set_thumb_percent(0, Fraction::new(0.5));
+            assert_that!(slider.thumb_percent(0)).is_equal_to(Fraction::new(0.5));
+        });
+    }
+
+    #[test]
+    fn percent_conversions_clamp_integer_values_after_rounding() {
+        with_owner(|| {
+            let slider = state(input(0, 230, 20));
+            assert_that!(slider.percent_value(Fraction::ONE)).is_equal_to(Some(230));
+
+            // Updating a thumb still snaps to a valid step, as upstream's updateValue does.
+            slider.set_thumb_percent(0, Fraction::ONE);
+            assert_that!(slider.thumb_value(0)).is_equal_to(220);
+
+            let slider = state(input(0, 229, 20));
+            assert_that!(slider.percent_value(Fraction::ONE)).is_equal_to(Some(220));
+        });
+    }
+
+    #[test]
+    fn percent_conversions_clamp_fractional_values_after_rounding() {
+        with_owner(|| {
+            let slider = state(input(0.0, 5.75, 0.5));
+            assert_that!(slider.percent_value(Fraction::ONE)).is_equal_to(Some(5.75));
+
+            slider.set_thumb_percent(0, Fraction::ONE);
+            assert_that!(slider.thumb_value(0)).is_equal_to(5.5);
+
+            let slider = state(input(0.0, 5.625, 0.5));
+            assert_that!(slider.percent_value(Fraction::ONE)).is_equal_to(Some(5.5));
         });
     }
 
     #[test]
     fn on_change_end_after_the_last_drag() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let ended = RwSignal::new(None::<Vec<i32>>);
             let slider = state(UseSliderStateInput {
                 default_values: Some(vec![10, 20]),
@@ -585,7 +847,7 @@ mod tests {
 
     #[test]
     fn disabled_and_non_editable_thumbs_ignore_changes() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let disabled = RwSignal::new(false);
             let slider = state(UseSliderStateInput {
                 is_disabled: disabled.into(),
@@ -613,7 +875,7 @@ mod tests {
 
     #[test]
     fn bound_values_are_restricted_to_the_range_and_order() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(vec![-20, 150]);
             let slider = state(UseSliderStateInput {
                 value: Some(ValueBinding::from(app)),
@@ -639,7 +901,7 @@ mod tests {
 
     #[test]
     fn a_thumb_without_a_value_does_not_panic() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let slider = state(UseSliderStateInput {
                 default_values: Some(vec![30, 60]),
                 value: None,
@@ -654,6 +916,12 @@ mod tests {
                 on_change: None,
                 on_change_end: None,
             });
+            // The first missing thumb still has a preceding thumb, whose value must not
+            // become its minimum: its native range input falls back to the slider minimum.
+            assert_that!(slider.thumb_value(2)).is_equal_to(0);
+            assert_that!(slider.thumb_min_value(2)).is_equal_to(0);
+            assert_that!(slider.thumb_max_value(2)).is_equal_to(100);
+            slider.set_thumb_value(2, 80);
             assert_that!(slider.thumb_value(5)).is_equal_to(0);
             assert_that!(slider.thumb_min_value(5)).is_equal_to(0);
             assert_that!(slider.thumb_max_value(5)).is_equal_to(100);

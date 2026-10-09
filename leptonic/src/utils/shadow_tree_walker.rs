@@ -1,13 +1,15 @@
 // Upstream: react-aria/src/utils/shadowdom/ShadowTreeWalker.ts @ 99e6102368
+// Upstream: react-aria/test/utils/shadowTreeWalker.test.tsx @ 99e6102368
 //! A tree walker that descends into shadow roots.
 //!
 //! The native `TreeWalker` API does not cross shadow DOM boundaries. `ShadowTreeWalker` keeps a
 //! stack of native walkers, one per shadow tree, so that iteration enters and leaves shadow
 //! roots seamlessly.
 //!
-//! As in react-aria, every native walker gets the filter as its `acceptNode` callback: rejected
-//! nodes are *skipped* (their descendants are still visited), and the browser keeps
-//! `first_child`/`last_child` inside the current node's subtree.
+//! As in react-aria, every native walker gets the filter as its `acceptNode` callback: skipped
+//! nodes aren't visited but their descendants are, rejected nodes are left out with their
+//! descendants, and the browser keeps `first_child`/`last_child` inside the current node's
+//! subtree.
 
 use std::{
     cell::RefCell,
@@ -17,7 +19,33 @@ use std::{
 use wasm_bindgen::{JsCast, closure::Closure};
 
 const FILTER_ACCEPT: u32 = 1;
+const FILTER_REJECT: u32 = 2;
 const FILTER_SKIP: u32 = 3;
+
+/// What a [`ShadowTreeWalker`]'s filter decides for a node (`NodeFilter.FILTER_*`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeFilterResult {
+    /// The walker visits the node.
+    Accept,
+    /// The walker visits neither the node nor its descendants.
+    Reject,
+    /// The walker doesn't visit the node, but its descendants.
+    Skip,
+}
+
+impl NodeFilterResult {
+    fn code(self) -> u32 {
+        match self {
+            Self::Accept => FILTER_ACCEPT,
+            Self::Reject => FILTER_REJECT,
+            Self::Skip => FILTER_SKIP,
+        }
+    }
+}
+
+/// A [`ShadowTreeWalker`]'s filter: decides for a node, given the node the walker is at (react-aria
+/// filters read `walker.currentNode`).
+pub type NodeFilterFn = Box<dyn Fn(&web_sys::Node, &web_sys::Node) -> NodeFilterResult>;
 
 /// A tree walker that crosses shadow DOM boundaries.
 pub struct ShadowTreeWalker {
@@ -28,8 +56,7 @@ struct Inner {
     doc: web_sys::Document,
     root: web_sys::Node,
     what_to_show: u32,
-    /// `true`: visit the node; `false`: skip it (but visit its descendants).
-    filter: Option<Box<dyn Fn(&web_sys::Node) -> bool>>,
+    filter: Option<NodeFilterFn>,
     /// The native walkers, innermost (current shadow tree) first.
     walkers: RefCell<Vec<web_sys::TreeWalker>>,
     current: RefCell<web_sys::Node>,
@@ -49,10 +76,7 @@ impl Inner {
                 }
                 return FILTER_ACCEPT;
             }
-            return match &self.filter {
-                Some(filter) if !filter(node) => FILTER_SKIP,
-                _ => FILTER_ACCEPT,
-            };
+            return self.filter_node(node).code();
         }
         FILTER_SKIP
     }
@@ -84,8 +108,19 @@ impl Inner {
         }
     }
 
+    fn filter_node(&self, node: &web_sys::Node) -> NodeFilterResult {
+        match &self.filter {
+            Some(filter) => {
+                // Cloned: the filter runs while the walker moves, before `current` changes.
+                let current = self.current.borrow().clone();
+                filter(node, &current)
+            }
+            None => NodeFilterResult::Accept,
+        }
+    }
+
     fn passes_filter(&self, node: &web_sys::Node) -> bool {
-        self.filter.as_ref().is_none_or(|filter| filter(node))
+        self.filter_node(node) == NodeFilterResult::Accept
     }
 }
 
@@ -132,11 +167,6 @@ impl ShadowTreeWalker {
         }
         *inner.walkers.borrow_mut() = walkers;
         *inner.current_set_for.borrow_mut() = current_set_for;
-    }
-
-    /// Whether `node` passes the filter.
-    pub fn matches_filter(&self, node: &web_sys::Node) -> bool {
-        self.inner.passes_filter(node)
     }
 
     /// Moves to the first (filtered) descendant of the current node.
@@ -256,11 +286,11 @@ fn shadow_contains(ancestor: &web_sys::Node, node: &web_sys::Node) -> bool {
 /// Create a `ShadowTreeWalker` rooted at the given node.
 ///
 /// `what_to_show` is the `NodeFilter.SHOW_*` bitmask (e.g., `0x1` for elements). `filter` decides
-/// which nodes are visited; nodes it rejects are skipped, but their descendants are not.
+/// which nodes are visited (see [`NodeFilterResult`]).
 pub fn create_shadow_tree_walker(
     root: &web_sys::Node,
     what_to_show: u32,
-    filter: Option<Box<dyn Fn(&web_sys::Node) -> bool>>,
+    filter: Option<NodeFilterFn>,
 ) -> Option<ShadowTreeWalker> {
     let doc = root.owner_document()?;
     let inner = Rc::new(Inner {

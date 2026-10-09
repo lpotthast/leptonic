@@ -12,11 +12,11 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                // What the page reports, for `BaseActions::diagnostics` (each list separately):
+                // What the page reports, for `PageActions::diagnostics` (each list separately):
                 // Rust panics (the panic hook logs them with `console.error` before the wasm
                 // traps), uncaught errors and unhandled rejections, every other `console.error`,
-                // and `console.warn`. `BaseActions::expect_no_page_errors` fails a test on the
-                // first three.
+                // and `console.warn`. `PageActions::expect_no_page_errors` fails a test on any of
+                // them (tests expecting a warning clear them).
                 <script>
                     "window.__panics = [];
                     window.__uncaughtErrors = [];
@@ -66,8 +66,14 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/") view=PageIndex />
                     // One route per group: a generic `/:group/:name` route would also match the
                     // static assets under `/pkg/...` and serve HTML in their place.
-                    <Route path=path!("/atoms/:name") view=|| view! { <PageFixture group="atoms" /> } />
-                    <Route path=path!("/hooks/:name") view=|| view! { <PageFixture group="hooks" /> } />
+                    <Route
+                        path=path!("/atoms/:name")
+                        view=|| view! { <PageFixture group="atoms" /> }
+                    />
+                    <Route
+                        path=path!("/hooks/:name")
+                        view=|| view! { <PageFixture group="hooks" /> }
+                    />
                 </Routes>
             </Router>
         </ThemeProvider>
@@ -86,9 +92,21 @@ fn PageIndex() -> impl IntoView {
                     .map(|fixture| {
                         view! {
                             <li>
-                                <a href=fixture.path()>
-                                    {format!("{}: {}", fixture.group, fixture.title)}
-                                </a>
+                                <a href=fixture
+                                    .path()>{format!("{}: {}", fixture.group, fixture.title)}</a>
+                            </li>
+                        }
+                    })
+                    .collect_view()}
+            </ul>
+            <p>"Fixtures with query parameters:"</p>
+            <ul id="test-index-variants">
+                {QUERY_VARIANTS
+                    .iter()
+                    .map(|path| {
+                        view! {
+                            <li>
+                                <a href=*path>{*path}</a>
                             </li>
                         }
                     })
@@ -97,6 +115,33 @@ fn PageIndex() -> impl IntoView {
         </div>
     }
 }
+
+/// The fixtures' variants the browser tests load with query parameters (the fixtures read them
+/// with `use_query_map`). Linked from the index, so that the hydration test
+/// (`leptonic/tests/ui_tests/test_hydration_ids.rs`) checks them like every fixture: add a variant
+/// here when a test loads a new one.
+const QUERY_VARIANTS: &[&str] = &[
+    "/hooks/dnd-targets?allowed=link&op=copy",
+    "/hooks/dnd-targets?ancestor",
+    "/hooks/dnd-targets?cancel-2",
+    "/hooks/dnd-targets?disabled-drag",
+    "/hooks/dnd-targets?disabled-drop",
+    "/hooks/dnd-targets?hidden-tree",
+    "/hooks/dnd-targets?op=copy",
+    "/hooks/dnd-collection?items=6",
+    "/hooks/dnd-collection?items=6&only-on&cancel=1,4",
+    "/hooks/dnd-collection?only-on&cancel=",
+    "/hooks/clipboard?cut",
+    "/hooks/clipboard?cut&items=none",
+    "/hooks/clipboard?items=action",
+    "/hooks/clipboard?items=action&cut",
+    "/hooks/clipboard?items=custom&paste",
+    "/hooks/clipboard?items=multiple&paste",
+    "/hooks/clipboard?items=multiple-types&paste",
+    "/hooks/clipboard?items=none",
+    "/hooks/clipboard?items=types&paste",
+    "/hooks/clipboard?paste",
+];
 
 #[component]
 fn PageFixture(group: &'static str) -> impl IntoView {

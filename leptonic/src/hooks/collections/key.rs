@@ -4,9 +4,11 @@ use std::{fmt, sync::Arc};
 /// Identifies an item (or section, header, ...) in a [`Collection`](super::Collection).
 ///
 /// A `Key` is an opaque, cheap-to-clone identifier. Create it from your own ids: integers and
-/// strings convert with `Key::from` / `.into()`; for your own types, implement [`ToKey`].
-/// Keys created from different kinds of values never compare equal (`Key::from(1)` is not
-/// `Key::from("1")`).
+/// strings convert with `Key::from` / `.into()`; for your own types, implement `From<T> for Key`
+/// (or [`SelectionValue`], e.g. with [`selection_value!`](crate::selection_value)). Integer keys
+/// of different integer types are equal when their values are (`Key::from(1_u8)` is
+/// `Key::from(1_i64)`); keys created from different kinds of values never are (`Key::from(1)` is
+/// not `Key::from("1")`).
 ///
 /// Collection hooks use this one concrete key type instead of being generic over your item type:
 /// they only need identity and order, and a concrete type keeps the large hook bodies from being
@@ -17,7 +19,8 @@ pub struct Key(Repr);
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 enum Repr {
-    Int(i64),
+    /// Every integer type's values (`u64` and `i64` included).
+    Int(i128),
     Str(Arc<str>),
     /// A generated cell key: the row's key and the column index.
     Cell(Arc<(Key, usize)>),
@@ -47,11 +50,55 @@ impl Key {
         }
     }
 
-    /// The key as an integer, if it is an integer key.
+    /// The key as an integer, if it is an integer key in the range of `i64`.
     pub fn as_i64(&self) -> Option<i64> {
+        self.as_integer().and_then(|i| i64::try_from(i).ok())
+    }
+
+    /// The key as an integer, if it is an integer key.
+    fn as_integer(&self) -> Option<i128> {
         match self.0 {
             Repr::Int(i) => Some(i),
             Repr::Str(_) | Repr::Cell(_) | Repr::Generated(..) => None,
+        }
+    }
+}
+
+impl Key {
+    /// The key as part of an element id: different keys always give different fragments
+    /// (`Key::from(1)` and `Key::from("1")` too, which [`Display`](fmt::Display) prints alike),
+    /// and fragments contain no whitespace. String keys keep their text, with whitespace and `%`
+    /// escaped (`"Ice cream"` → `Ice%20;cream`); other kinds start with `%` and a letter
+    /// (`Key::from(1)` → `%i1`).
+    pub fn id_fragment(&self) -> String {
+        let mut fragment = String::new();
+        self.write_id_fragment(&mut fragment);
+        fragment
+    }
+
+    fn write_id_fragment(&self, out: &mut String) {
+        use std::fmt::Write as _;
+        match &self.0 {
+            Repr::Str(s) => {
+                for c in s.chars() {
+                    if c.is_whitespace() || c == '%' {
+                        let _ = write!(out, "%{:X};", u32::from(c));
+                    } else {
+                        out.push(c);
+                    }
+                }
+            }
+            Repr::Int(i) => {
+                let _ = write!(out, "%i{i}");
+            }
+            Repr::Cell(cell) => {
+                out.push_str("%c");
+                cell.0.write_id_fragment(out);
+                let _ = write!(out, "%{}", cell.1);
+            }
+            Repr::Generated(kind, index) => {
+                let _ = write!(out, "%g{kind}%{index}");
+            }
         }
     }
 }
@@ -102,25 +149,65 @@ impl From<Arc<str>> for Key {
     }
 }
 
-macro_rules! key_from_int {
-    ($($t:ty),*) => {$(
-        impl From<$t> for Key {
-            fn from(i: $t) -> Self {
-                Self(Repr::Int(i64::from(i)))
-            }
-        }
-    )*};
+impl From<i8> for Key {
+    fn from(i: i8) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
 }
-key_from_int!(i8, i16, i32, i64, u8, u16, u32);
+
+impl From<i16> for Key {
+    fn from(i: i16) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
+
+impl From<i32> for Key {
+    fn from(i: i32) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
+
+impl From<i64> for Key {
+    fn from(i: i64) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
+
+impl From<isize> for Key {
+    fn from(i: isize) -> Self {
+        // `isize` has at most 64 bits on every Rust target.
+        Self(Repr::Int(i as i128))
+    }
+}
+
+impl From<u8> for Key {
+    fn from(i: u8) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
+
+impl From<u16> for Key {
+    fn from(i: u16) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
+
+impl From<u32> for Key {
+    fn from(i: u32) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
+
+impl From<u64> for Key {
+    fn from(i: u64) -> Self {
+        Self(Repr::Int(i128::from(i)))
+    }
+}
 
 impl From<usize> for Key {
-    /// # Panics
-    ///
-    /// Panics if `i` does not fit into an `i64`.
     fn from(i: usize) -> Self {
-        Self(Repr::Int(
-            i64::try_from(i).expect("collection key out of i64 range"),
-        ))
+        // `usize` has at most 64 bits on every Rust target.
+        Self(Repr::Int(i as i128))
     }
 }
 
@@ -162,12 +249,12 @@ macro_rules! selection_value_int {
             }
 
             fn from_key(key: &Key) -> Option<Self> {
-                key.as_i64().and_then(|i| <$t>::try_from(i).ok())
+                key.as_integer().and_then(|i| <$t>::try_from(i).ok())
             }
         }
     )*};
 }
-selection_value_int!(i8, i16, i32, i64, u8, u16, u32, usize);
+selection_value_int!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize);
 
 /// Implements [`SelectionValue`] (and `From<T> for Key`, so that items take the values as their
 /// `value`/`key`) for a fieldless enum, each variant identified by a string key. The keys are
@@ -223,6 +310,8 @@ macro_rules! selection_value {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use assertr::prelude::*;
 
     use super::*;
@@ -249,6 +338,32 @@ mod tests {
         assert_that!(u8::from_key(&Key::from(300))).is_none();
         assert_that!(String::from_key(&Key::from(3))).is_none();
         assert_that!(i32::from_key(&7_i32.to_key())).is_equal_to(Some(7));
+        assert_that!(u64::from_key(&u64::MAX.to_key())).is_equal_to(Some(u64::MAX));
+        assert_that!(i64::from_key(&u64::MAX.to_key())).is_none();
+        assert_that!(Key::from(1_u64)).is_equal_to(Key::from(1_i8));
+    }
+
+    #[test]
+    fn id_fragments_are_unambiguous_and_without_whitespace() {
+        let keys = [
+            Key::from(1),
+            Key::from("1"),
+            Key::from("%i1"),
+            Key::from("Ice cream"),
+            Key::from("Icecream"),
+            Key::from("Ice\tcream"),
+            Key::from("Ice%20;cream"),
+            Key::cell(&Key::from(1), 2),
+            Key::cell(&Key::from("1"), 2),
+            Key::generated("row", 1),
+        ];
+        let fragments: Vec<String> = keys.iter().map(Key::id_fragment).collect();
+        let distinct: HashSet<&String> = fragments.iter().collect();
+        assert_that!(distinct).has_length(keys.len());
+        assert_that!(fragments.iter().any(|f| f.chars().any(char::is_whitespace))).is_false();
+        assert_that!(Key::from("Apple").id_fragment()).is_equal_to("Apple".to_owned());
+        assert_that!(Key::from("Ice cream").id_fragment()).is_equal_to("Ice%20;cream".to_owned());
+        assert_that!(Key::from(7).id_fragment()).is_equal_to("%i7".to_owned());
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::Link;
+use leptonic::atoms::link::Link;
 use leptos::prelude::*;
 use leptos_meta::{Meta, Title};
 

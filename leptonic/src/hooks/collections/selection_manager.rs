@@ -1,13 +1,14 @@
 // Upstream: react-stately/src/selection/SelectionManager.ts @ 99e6102368
 // Upstream: react-stately/src/selection/useMultipleSelectionState.ts @ 99e6102368
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use leptos::prelude::*;
+use leptos::{prelude::*, reactive::graph::Observer};
 
 use super::{CollectionMemo, Key, NodeKind, SelectedKeys, Selection};
 use crate::{
+    ValueBinding,
     hooks::collections::{DisabledBehavior, FocusStrategy, SelectionBehavior, SelectionMode},
-    utils::{ValueBinding, pointer_type::PointerType},
+    utils::pointer_type::PointerType,
 };
 
 // =============================================================================
@@ -95,9 +96,98 @@ struct SelectionStateSignals {
     selection: Signal<Selection>,
     selection_binding: ValueBinding<Selection>,
     on_selection_change: Option<Callback<Selection>>,
+    /// Readers of single keys' selection ([`SelectionManager::is_selected`]).
+    selected_subscribers: KeySubscribers,
+    /// The selection those readers were last notified of.
+    notified_selection: StoredValue<Selection>,
+    is_empty: Memo<bool>,
     focused_key: RwSignal<Option<Key>>,
+    /// Readers of single keys' focus ([`SelectionManager::is_focused_key`]).
+    focused_subscribers: KeySubscribers,
+    has_focused_key: Memo<bool>,
     child_focus_strategy: RwSignal<Option<FocusStrategy>>,
     is_focused: RwSignal<bool>,
+}
+
+/// Per-key change notification: a reader of one key's state (an item asking whether it is
+/// focused or selected) subscribes to that key only, so a focus move notifies two items and a
+/// selection change the items whose selection changed, not every item (react-aria re-renders
+/// every item on each change; leptonic's items would otherwise re-run their derived state).
+///
+/// Notification is synchronous: a reader that reads again right after a change sees it (unlike a
+/// per-key `Selector`, which updates in an effect).
+#[derive(Debug, Clone, Copy)]
+struct KeySubscribers(StoredValue<HashMap<Key, KeySubscription>>);
+
+#[derive(Debug)]
+struct KeySubscription {
+    trigger: ArcTrigger,
+    /// The reactive computations currently subscribed: the entry goes when the last one re-runs
+    /// or is disposed.
+    readers: usize,
+}
+
+impl KeySubscribers {
+    fn new() -> Self {
+        Self(StoredValue::new(HashMap::new()))
+    }
+
+    /// Subscribes the running reactive computation (if any) to changes of `key`.
+    fn track(self, key: &Key) {
+        if Observer::get().is_none() {
+            return;
+        }
+        let Some(trigger) = self.0.try_update_value(|subscriptions| {
+            let subscription =
+                subscriptions
+                    .entry(key.clone())
+                    .or_insert_with(|| KeySubscription {
+                        trigger: ArcTrigger::new(),
+                        readers: 0,
+                    });
+            subscription.readers += 1;
+            subscription.trigger.clone()
+        }) else {
+            return;
+        };
+        trigger.track();
+        // Runs when the reader re-runs (and subscribes again) or is disposed.
+        let (subscribers, key) = (self.0, key.clone());
+        on_cleanup(move || {
+            subscribers.try_update_value(|subscriptions| {
+                if let Some(subscription) = subscriptions.get_mut(&key) {
+                    subscription.readers = subscription.readers.saturating_sub(1);
+                    if subscription.readers == 0 {
+                        subscriptions.remove(&key);
+                    }
+                }
+            });
+        });
+    }
+
+    /// Notifies the readers of `keys`.
+    fn notify<'a>(self, keys: impl IntoIterator<Item = &'a Key>) {
+        let triggers: Vec<ArcTrigger> = self
+            .0
+            .try_with_value(|subscriptions| {
+                keys.into_iter()
+                    .filter_map(|key| subscriptions.get(key).map(|s| s.trigger.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        triggers.notify();
+    }
+
+    /// Notifies the readers of every key.
+    fn notify_all(self) {
+        let triggers: Vec<ArcTrigger> = self
+            .0
+            .try_with_value(|subscriptions| {
+                subscriptions.values().map(|s| s.trigger.clone()).collect()
+            })
+            .unwrap_or_default();
+        triggers.notify();
+    }
 }
 
 impl SelectionManager {
@@ -116,6 +206,7 @@ impl SelectionManager {
         } = options;
         let selection_binding =
             selection.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_selection)));
+        let focused_key = RwSignal::new(None::<Key>);
         let state = SelectionStateSignals {
             selection_mode,
             selection_behavior: RwSignal::new(selection_behavior.get_untracked()),
@@ -126,10 +217,22 @@ impl SelectionManager {
             selection: selection_binding.value,
             selection_binding,
             on_selection_change,
-            focused_key: RwSignal::new(None),
+            selected_subscribers: KeySubscribers::new(),
+            notified_selection: StoredValue::new(selection_binding.value.get_untracked()),
+            is_empty: Memo::new(move |_| selection_binding.value.with(Selection::is_empty)),
+            focused_key,
+            focused_subscribers: KeySubscribers::new(),
+            has_focused_key: Memo::new(move |_| focused_key.with(Option::is_some)),
             child_focus_strategy: RwSignal::new(None),
             is_focused: RwSignal::new(false),
         };
+
+        // A bound selection the app changes (not through the manager): tell the readers of the
+        // keys that changed. Changes through the manager are told right away.
+        Effect::new(move |_| {
+            state.selection.track();
+            notify_selection_change(&state);
+        });
 
         // A changed `selection_behavior` applies (react-aria: `useMultipleSelectionState`).
         Effect::new(move |previous: Option<SelectionBehavior>| {
@@ -186,6 +289,8 @@ impl SelectionManager {
             },
         );
         group.state.focused_key = self.state.focused_key;
+        group.state.focused_subscribers = self.state.focused_subscribers;
+        group.state.has_focused_key = self.state.has_focused_key;
         group.state.child_focus_strategy = self.state.child_focus_strategy;
         group.state.is_focused = self.state.is_focused;
         group.full_collection = self.full_collection;
@@ -285,22 +390,30 @@ impl SelectionManager {
         if self.state.child_focus_strategy.get_untracked() != child_focus_strategy {
             self.state.child_focus_strategy.set(child_focus_strategy);
         }
-        if self
+        let previous = self
             .state
             .focused_key
-            .with_untracked(|focused| *focused != key)
-        {
-            self.state.focused_key.set(key);
+            .with_untracked(|focused| (*focused != key).then(|| focused.clone()));
+        if let Some(previous) = previous {
+            self.state.focused_key.set(key.clone());
+            self.state
+                .focused_subscribers
+                .notify(previous.iter().chain(key.iter()));
         }
     }
 
-    /// Whether `key` is the focused item. Tracks the focused key: a reader re-runs whenever the
-    /// focused key changes, also for other items (a per-key `Selector` would update
-    /// asynchronously, so a read right after `set_focused_key` would be stale).
+    /// Whether `key` is the focused item. Tracks only this key's focus: a reader re-runs when
+    /// `key` gains or loses focus, not when focus moves between other items.
     pub fn is_focused_key(&self, key: &Key) -> bool {
+        self.state.focused_subscribers.track(key);
         self.state
             .focused_key
-            .with(|focused| focused.as_ref() == Some(key))
+            .with_untracked(|focused| focused.as_ref() == Some(key))
+    }
+
+    /// Whether any item is focused. Tracks only that, not which item.
+    pub fn has_focused_key(&self) -> bool {
+        self.state.has_focused_key.get()
     }
 
     // ---- Selection queries ----
@@ -318,6 +431,9 @@ impl SelectionManager {
         }
     }
 
+    /// Whether `key` (or, for a node that isn't an item, the item it belongs to) is selected.
+    /// Tracks only this key's selection: a reader re-runs when the key is selected or
+    /// deselected, not on every selection change.
     pub fn is_selected(&self, key: &Key) -> bool {
         if self.selection_mode() == SelectionMode::None {
             return false;
@@ -325,14 +441,17 @@ impl SelectionManager {
         let Some(key) = self.item_key(key) else {
             return false;
         };
-        match &*self.state.selection.read() {
-            Selection::All => self.can_select_item(&key),
-            Selection::Keys(keys) => keys.contains(&key),
-        }
+        self.state.selected_subscribers.track(&key);
+        let all = match &*self.state.selection.read_untracked() {
+            Selection::All => true,
+            Selection::Keys(keys) => return keys.contains(&key),
+        };
+        all && self.can_select_item(&key)
     }
 
+    /// Whether nothing is selected. Tracks only that, not which keys are selected.
     pub fn is_empty(&self) -> bool {
-        self.state.selection.with(Selection::is_empty)
+        self.state.is_empty.get()
     }
 
     /// Whether every selectable item is selected.
@@ -387,9 +506,6 @@ impl SelectionManager {
         })
     }
 
-    /// Whether `key` is disabled for interaction: with `DisabledBehavior::All`, disabled items
-    /// can't be focused or used. With `DisabledBehavior::Selection`, they only can't be
-    /// selected, so this is `false`.
     /// Whether `key` is disabled (in `disabled_keys`, or the item itself), whatever the
     /// disabled behavior.
     pub fn is_item_disabled(&self, key: &Key) -> bool {
@@ -399,7 +515,10 @@ impl SelectionManager {
                 .with(|c| c.get(key).is_some_and(|node| node.is_disabled))
     }
 
-    /// An item's own `disabled_behavior` overrides the collection's.
+    /// Whether `key` is disabled for interaction: with `DisabledBehavior::All`, disabled items
+    /// can't be focused or used. With `DisabledBehavior::Selection`, they only can't be
+    /// selected, so this is `false`. An item's own `disabled_behavior` overrides the
+    /// collection's.
     pub fn is_disabled(&self, key: &Key) -> bool {
         if self.state.disabled_behavior != DisabledBehavior::All {
             return false;
@@ -595,6 +714,7 @@ impl SelectionManager {
             return;
         }
         self.state.selection_binding.set(selection.clone());
+        notify_selection_change(&self.state);
         if let Some(on_selection_change) = self.state.on_selection_change {
             on_selection_change.run(selection);
         }
@@ -627,6 +747,30 @@ impl SelectionManager {
         keys.into_iter()
             .filter(|key| self.can_select_item_in(key, collection))
             .collect()
+    }
+}
+
+/// Tells the readers of single keys' selection about the keys whose selection changed since
+/// they were last told (`All` and back: every key).
+fn notify_selection_change(state: &SelectionStateSignals) {
+    let current = state.selection.get_untracked();
+    let Some(previous) = state
+        .notified_selection
+        .try_update_value(|notified| std::mem::replace(notified, current.clone()))
+    else {
+        return;
+    };
+    match (&previous, &current) {
+        (Selection::Keys(previous), Selection::Keys(current)) => {
+            state.selected_subscribers.notify(
+                previous
+                    .iter()
+                    .filter(|key| !current.contains(key))
+                    .chain(current.iter().filter(|key| !previous.contains(key))),
+            );
+        }
+        (Selection::All, Selection::All) => {}
+        _ => state.selected_subscribers.notify_all(),
     }
 }
 
@@ -677,7 +821,7 @@ mod tests {
 
     #[test]
     fn a_group_has_its_own_selection_and_shares_focus_and_disabled_keys() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let menu = manager(multiple());
             let group = menu.with_own_selection(SelectionOptions {
                 selection_mode: Signal::stored(SelectionMode::Single),
@@ -700,7 +844,7 @@ mod tests {
 
     #[test]
     fn nothing_is_selectable_in_selection_mode_none() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(SelectionOptions::default());
             m.select(&k("apple"), None);
             assert_that!(m.is_selected(&k("apple"))).is_false();
@@ -710,7 +854,7 @@ mod tests {
 
     #[test]
     fn single_selection_replaces_and_toggles_off() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(SelectionOptions {
                 selection_mode: Signal::stored(SelectionMode::Single),
                 ..Default::default()
@@ -723,9 +867,24 @@ mod tests {
         });
     }
 
+    // Upstream: ListBox.test.js "does not select all with Mod+A when selection mode is single".
+    #[test]
+    fn select_all_selects_nothing_in_single_selection() {
+        crate::testing::with_owner(|| {
+            let m = manager(SelectionOptions {
+                selection_mode: Signal::stored(SelectionMode::Single),
+                ..Default::default()
+            });
+            m.select(&k("apple"), None);
+            m.select_all();
+            assert_that!(selected(&m)).is_equal_to(vec!["apple".to_owned()]);
+            assert_that!(m.raw_selection()).is_not_equal_to(Selection::All);
+        });
+    }
+
     #[test]
     fn single_selection_keeps_the_last_item_when_empty_selection_is_disallowed() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(SelectionOptions {
                 selection_mode: Signal::stored(SelectionMode::Single),
                 disallow_empty_selection: Signal::stored(true),
@@ -739,7 +898,7 @@ mod tests {
 
     #[test]
     fn multiple_selection_toggles_or_replaces_by_behavior() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(multiple());
             m.select(&k("apple"), None);
             m.select(&k("banana"), None);
@@ -760,7 +919,7 @@ mod tests {
 
     #[test]
     fn disabled_items_cannot_be_selected() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(SelectionOptions {
                 disabled_keys: Signal::stored(HashSet::from([k("durian")])),
                 ..multiple()
@@ -776,7 +935,7 @@ mod tests {
 
     #[test]
     fn disabled_behavior_selection_keeps_items_usable() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(SelectionOptions {
                 disabled_behavior: DisabledBehavior::Selection,
                 ..multiple()
@@ -788,7 +947,7 @@ mod tests {
 
     #[test]
     fn extend_selection_selects_ranges_across_sections_and_skips_disabled() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(multiple());
             m.replace_selection(&k("apple"));
             m.extend_selection(&k("durian"));
@@ -810,7 +969,7 @@ mod tests {
 
     #[test]
     fn select_all_and_toggling_out_of_it() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(SelectionOptions {
                 disabled_keys: Signal::stored(HashSet::from([k("durian")])),
                 ..multiple()
@@ -838,7 +997,7 @@ mod tests {
 
     #[test]
     fn first_and_last_selected_follow_collection_order() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(multiple());
             m.set_selected_keys([k("elderberry"), k("banana"), k("apple")]);
             assert_that!(m.first_selected_key()).is_equal_to(Some(k("apple")));
@@ -848,7 +1007,7 @@ mod tests {
 
     #[test]
     fn selection_change_events_skip_unchanged_selections_by_default() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let events = RwSignal::new(0);
             let m = manager(SelectionOptions {
                 on_selection_change: Some(Callback::new(move |_| events.update(|e| *e += 1))),
@@ -898,7 +1057,7 @@ mod tests {
     // Upstream: SelectionManager.isDisabled (an item's `disabledBehavior: 'selection'`).
     #[test]
     fn an_item_can_stay_focusable_while_disabled() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let collection = Memo::new(|_| {
                 Arc::new(Collection::build(|b| {
                     b.item("apple", "Apple").disabled(true);
@@ -916,9 +1075,95 @@ mod tests {
         });
     }
 
+    /// Runs an Effect per key reading the key's focus and selection; returns how often each ran
+    /// since the last `flush_and_take`.
+    fn count_item_runs(
+        m: &SelectionManager,
+        keys: &'static [&'static str],
+    ) -> impl Fn() -> Vec<(&'static str, usize)> {
+        let m = *m;
+        let runs = StoredValue::new(vec![0_usize; keys.len()]);
+        for (i, key) in keys.iter().enumerate() {
+            Effect::new(move |_| {
+                m.is_focused_key(&k(key));
+                m.is_selected(&k(key));
+                runs.update_value(|runs| runs[i] += 1);
+            });
+        }
+        move || {
+            crate::testing::flush_effects();
+            let counts = runs.get_value();
+            runs.set_value(vec![0; keys.len()]);
+            keys.iter()
+                .copied()
+                .zip(counts)
+                .filter(|(_, n)| *n > 0)
+                .collect()
+        }
+    }
+
+    #[test]
+    fn readers_of_a_key_rerun_only_when_that_key_changes() {
+        crate::testing::with_owner(|| {
+            let m = manager(multiple());
+            let runs = count_item_runs(&m, &["apple", "banana", "durian", "elderberry"]);
+            assert_that!(runs()).has_length(4);
+
+            m.set_focused_key(Some(k("apple")), None);
+            assert_that!(runs()).is_equal_to(vec![("apple", 1)]);
+            m.set_focused_key(Some(k("banana")), None);
+            assert_that!(runs()).is_equal_to(vec![("apple", 1), ("banana", 1)]);
+            m.set_focused_key(Some(k("banana")), None);
+            assert_that!(runs()).is_empty();
+
+            m.toggle_selection(&k("durian"));
+            assert_that!(runs()).is_equal_to(vec![("durian", 1)]);
+            m.replace_selection(&k("elderberry"));
+            assert_that!(runs()).is_equal_to(vec![("durian", 1), ("elderberry", 1)]);
+            // `All` (and back) concerns every key.
+            m.select_all();
+            assert_that!(runs()).has_length(4);
+            m.clear_selection();
+            assert_that!(runs()).has_length(4);
+        });
+    }
+
+    #[test]
+    fn readers_of_a_key_see_changes_of_a_bound_selection() {
+        crate::testing::with_owner(|| {
+            let bound = RwSignal::new(Selection::default());
+            let m = manager(SelectionOptions {
+                selection: Some(bound.into()),
+                ..multiple()
+            });
+            let runs = count_item_runs(&m, &["apple", "banana"]);
+            runs();
+            // The app changes its state: the readers of the changed key re-run.
+            bound.set(Selection::keys([k("banana")]));
+            assert_that!(runs()).is_equal_to(vec![("banana", 1)]);
+            assert_that!(m.is_selected(&k("banana"))).is_true();
+        });
+    }
+
+    #[test]
+    fn a_key_read_right_after_a_change_is_current() {
+        crate::testing::with_owner(|| {
+            let m = manager(multiple());
+            let apple_selected = Memo::new(move |_| m.is_selected(&k("apple")));
+            let apple_focused = Memo::new(move |_| m.is_focused_key(&k("apple")));
+            assert_that!(apple_selected.get_untracked()).is_false();
+            assert_that!(apple_focused.get_untracked()).is_false();
+            // No Effects run in between: the memos are notified synchronously.
+            m.toggle_selection(&k("apple"));
+            m.set_focused_key(Some(k("apple")), None);
+            assert_that!(apple_selected.get_untracked()).is_true();
+            assert_that!(apple_focused.get_untracked()).is_true();
+        });
+    }
+
     #[test]
     fn focused_key_must_exist() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(multiple());
             m.set_focused_key(Some(k("banana")), None);
             m.set_focused_key(Some(k("missing")), None);
@@ -931,7 +1176,7 @@ mod tests {
 
     #[test]
     fn selecting_a_header_selects_nothing() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let m = manager(multiple());
             m.toggle_selection(&k("h"));
             assert_that!(m.is_empty()).is_true();

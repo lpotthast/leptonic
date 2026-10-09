@@ -85,7 +85,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                 <ReactAriaSource path="toggle/useToggle.ts"/>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::form::{ToggleOptions, UseToggleInput, UseToggleStateInput, use_toggle, use_toggle_state};
                         use leptos::prelude::*;
 
                         let state = use_toggle_state(UseToggleStateInput::default());

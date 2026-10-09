@@ -1,4 +1,7 @@
-use leptonic::{hooks::*, utils::color::RGB8};
+use leptonic::{
+    IntoAttrs, RGB8,
+    hooks::color::{UseColorSwatchInput, use_color_swatch},
+};
 use leptos::prelude::*;
 
 const BLUE: RGB8 = RGB8 {
@@ -17,7 +20,7 @@ const GREEN: RGB8 = RGB8 {
 fn Swatch(color: RGB8, #[prop(optional, into)] color_name: MaybeProp<String>) -> impl IntoView {
     let swatch = use_color_swatch(UseColorSwatchInput {
         color_name,
-        color: Into::<leptonic::utils::color::ColorProp>::into(Signal::stored(color)).0,
+        color: Into::<leptonic::ColorProp>::into(Signal::stored(color)).0,
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         id: None,

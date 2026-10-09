@@ -36,8 +36,13 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            utils::color::{HSV, HsvChannel},
+                            HSV,
+                            HsvChannel,
+                            atoms::{
+                                color_slider::{ColorSlider, ColorSliderOutput, ColorSliderTrack},
+                                color_thumb::ColorThumb,
+                                field::Label,
+                            },
                         };
                         use leptos::prelude::*;
 
@@ -93,11 +98,11 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                 <Section title="Props" id="color-slider-props">
                     <ApiTable kind=ApiKind::Props of="ColorSlider">
                         <ApiRow name="channel" ty="Ch">"The channel the slider changes. Required."</ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Ch::Color>>" default="None">"The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "<Code inline=true>"ColorPicker"</Code>" around it, if any."</ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Ch::Color>>" default="None">"Receives the new color: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"</ApiRow>
-                        <ApiRow name="default_value" ty="Option<Ch::Color>" default="Ch::Color::default()">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Ch::Color>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
-                        <ApiRow name="on_change_end" ty="Option<Callback<Ch::Color>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
+                        <ApiRow name="value" ty="Option<Signal<Color>>" default="None">"The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "<Code inline=true>"ColorPicker"</Code>" around it, if any."</ApiRow>
+                        <ApiRow name="set_value" ty="Option<Out<Color>>" default="None">"Receives the new color: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"</ApiRow>
+                        <ApiRow name="default_value" ty="Option<Color>" default="Ch::Color::default()">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<Color>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
+                        <ApiRow name="on_change_end" ty="Option<Callback<Color>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Orientation::Horizontal">"The direction of the track."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables pointer and keyboard interaction and the input."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
@@ -108,6 +113,8 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the input belongs to."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the slider element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The label, output and track. Required."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing this control."</ApiRow>
+                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements providing additional details."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

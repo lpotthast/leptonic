@@ -1,14 +1,16 @@
 // Upstream: react-stately/src/tabs/useTabListState.ts @ 99e6102368
+// Upstream: react-aria/src/tabs/utils.ts @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::collections::{
         Collection, CollectionMemo, Key, SingleSelectListState, UseSingleSelectListStateInput,
         use_single_select_list_state,
     },
-    utils::ValueBinding,
+    utils::id::use_id,
 };
 
 // =============================================================================
@@ -16,6 +18,9 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
+// - The state also holds the base of the tab and panel ids and the tab list's collection id
+//   (react-aria: `WeakMap`s keyed by the state, filled by `useTabList`), so that tabs and panels
+//   need nothing but the state, also a panel rendered before the tab list.
 // - Hook-owned state (C4): `default_selected_key` and `on_selection_change`, or `selected_key`
 //   bound to app state, instead of a controlled `selectedKey`. Without a default, the first
 //   enabled tab is selected.
@@ -46,18 +51,50 @@ pub struct UseTabListStateInput {
     pub is_disabled: Signal<bool>,
 }
 
-/// The state of a tab list: its tabs, the selected tab and keyboard focus.
+/// The state of a tab list: its tabs, the selected tab and keyboard focus, and the ids of its
+/// tabs and panels.
 #[derive(Debug, Clone, Copy)]
 pub struct TabListState {
     pub list: SingleSelectListState,
     /// All tabs are disabled.
     pub is_disabled: Signal<bool>,
+    /// The base of the tab and panel ids.
+    id: StoredValue<String>,
+    /// The id of the tab list's collection, once `use_tab_list` created it.
+    collection_id: StoredValue<Option<String>>,
 }
 
 impl TabListState {
     /// The selected tab.
     pub fn selected_key(&self) -> Option<Key> {
         self.list.selected_key()
+    }
+
+    /// The id of the tab `key`.
+    pub fn tab_id(&self, key: &Key) -> String {
+        self.id
+            .with_value(|id| format!("{id}-tab-{}", key.id_fragment()))
+    }
+
+    /// The id of the panel of the tab `key`.
+    pub fn tab_panel_id(&self, key: &Key) -> String {
+        self.id
+            .with_value(|id| format!("{id}-tabpanel-{}", key.id_fragment()))
+    }
+
+    /// The tab list's collection id (`data-collection` on the list and its tabs), set by
+    /// `use_tab_list`.
+    pub(crate) fn collection_id(&self) -> Option<String> {
+        self.collection_id.get_value()
+    }
+
+    pub(crate) fn set_collection_id(&self, collection_id: String) {
+        self.collection_id.set_value(Some(collection_id));
+    }
+
+    /// The base of the tab and panel ids (the tab list's id).
+    pub(crate) fn id(&self) -> String {
+        self.id.get_value()
     }
 }
 
@@ -159,7 +196,12 @@ pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
         selected
     });
 
-    TabListState { list, is_disabled }
+    TabListState {
+        list,
+        is_disabled,
+        id: StoredValue::new(use_id("tabs")),
+        collection_id: StoredValue::new(None),
+    }
 }
 
 /// The first enabled tab (or the first tab, if all are disabled).
@@ -182,6 +224,7 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::{flush_effects, with_owner};
 
     fn tabs(keys: &'static [&'static str]) -> CollectionMemo {
         Memo::new(move |_| {
@@ -197,7 +240,7 @@ mod tests {
     /// the default selection.
     #[test]
     fn the_default_skips_tabs_disabled_while_rendering() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let disabled = RwSignal::new(HashSet::new());
             let state = use_tab_list_state(UseTabListStateInput {
                 selected_key: None,
@@ -209,17 +252,20 @@ mod tests {
             });
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("a")));
             disabled.set(HashSet::from([Key::from("a")]));
+            // Still before the first render's effects.
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
             // Selecting replaces the default.
             state.list.list.selection.select(&Key::from("c"), None);
+            flush_effects();
             disabled.set(HashSet::from([Key::from("a"), Key::from("b")]));
+            flush_effects();
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("c")));
         });
     }
 
     #[test]
     fn a_disabled_bound_key_stays_selected() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let selected = RwSignal::new(Key::from("b"));
             let state = use_tab_list_state(UseTabListStateInput {
                 selected_key: Some(selected.into()),
@@ -229,6 +275,7 @@ mod tests {
                 disabled_keys: Signal::stored(HashSet::from([Key::from("b")])),
                 is_disabled: Signal::stored(false),
             });
+            flush_effects();
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
             assert_that!(selected.get_untracked()).is_equal_to(Key::from("b"));
         });
@@ -236,7 +283,7 @@ mod tests {
 
     #[test]
     fn a_bound_selected_key_is_shown_and_written() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let selected = RwSignal::new(Key::from("b"));
             let state = use_tab_list_state(UseTabListStateInput {
                 selected_key: Some(selected.into()),
@@ -246,12 +293,15 @@ mod tests {
                 disabled_keys: Signal::default(),
                 is_disabled: Signal::stored(false),
             });
+            flush_effects();
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
             // Selecting writes the app state.
             state.list.list.selection.select(&Key::from("c"), None);
+            flush_effects();
             assert_that!(selected.get_untracked()).is_equal_to(Key::from("c"));
             // Changes of the app state are shown.
             selected.set(Key::from("a"));
+            flush_effects();
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("a")));
         });
     }

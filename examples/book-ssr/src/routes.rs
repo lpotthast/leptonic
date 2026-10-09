@@ -1106,7 +1106,9 @@ pub mod routes {
         // The alert is a recipe of the Status overview.
         #[route("/alert")]
         mod moved_alert {
-            page!(|| view! { <Redirect path=format!("{}#alert", crate::routes::doc::Status.materialize())/> });
+            page!(
+                || view! { <Redirect path=format!("{}#alert", crate::routes::doc::Status.materialize())/> }
+            );
         }
 
         #[route("/meter")]
@@ -1225,7 +1227,9 @@ pub mod routes {
 
         #[route("/card-and-tile")]
         mod moved_card_and_tile {
-            page!(|| view! { <Redirect path=format!("{}#card", crate::routes::doc::Layout.materialize())/> });
+            page!(
+                || view! { <Redirect path=format!("{}#card", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         // The Chip became the Tag Group concept.
@@ -1235,7 +1239,9 @@ pub mod routes {
 
             #[route("/hook")]
             mod hook {
-                page!(|| view! { <Redirect path=crate::routes::doc::tag_group::Hook.materialize()/> });
+                page!(
+                    || view! { <Redirect path=crate::routes::doc::tag_group::Hook.materialize()/> }
+                );
             }
 
             #[route("/component")]
@@ -1255,7 +1261,9 @@ pub mod routes {
 
         #[route("/icon")]
         mod moved_icon {
-            page!(|| view! { <Redirect path=format!("{}#icons", crate::routes::doc::Layout.materialize())/> });
+            page!(
+                || view! { <Redirect path=format!("{}#icons", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         // A single page: the Kbd concept has only atoms.
@@ -1270,7 +1278,9 @@ pub mod routes {
 
             #[route("/component")]
             mod moved_component {
-                page!(|| view! { <Redirect path=format!("{}#styling", crate::routes::doc::Kbd.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::Kbd.materialize())/> }
+                );
             }
         }
 
@@ -1314,7 +1324,9 @@ pub mod routes {
 
         #[route("/stack")]
         mod moved_stack {
-            page!(|| view! { <Redirect path=format!("{}#stack", crate::routes::doc::Layout.materialize())/> });
+            page!(
+                || view! { <Redirect path=format!("{}#stack", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         #[route("/toolbar")]
@@ -1796,29 +1808,35 @@ pub mod routes {
         mod moved_components {
             #[route("/transitions")]
             mod transitions {
-                page!(
-                    || view! { <Redirect path=crate::routes::doc::Animation.materialize()/> }
-                );
+                page!(|| view! { <Redirect path=crate::routes::doc::Animation.materialize()/> });
             }
 
             #[route("/stack")]
             mod stack {
-                page!(|| view! { <Redirect path=format!("{}#stack", crate::routes::doc::Layout.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#stack", crate::routes::doc::Layout.materialize())/> }
+                );
             }
 
             #[route("/skeleton")]
             mod skeleton {
-                page!(|| view! { <Redirect path=format!("{}#skeleton", crate::routes::doc::Layout.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#skeleton", crate::routes::doc::Layout.materialize())/> }
+                );
             }
 
             #[route("/app-bar")]
             mod app_bar {
-                page!(|| view! { <Redirect path=format!("{}#app-bar", crate::routes::doc::Layout.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#app-bar", crate::routes::doc::Layout.materialize())/> }
+                );
             }
 
             #[route("/drawer")]
             mod drawer {
-                page!(|| view! { <Redirect path=format!("{}#drawer", crate::routes::doc::modal::Atom.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#drawer", crate::routes::doc::modal::Atom.materialize())/> }
+                );
             }
 
             #[route("/date-time")]
@@ -1837,7 +1855,9 @@ pub mod routes {
 
             #[route("/alert")]
             mod alert {
-                page!(|| view! { <Redirect path=format!("{}#alert", crate::routes::doc::Status.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#alert", crate::routes::doc::Status.materialize())/> }
+                );
             }
 
             #[route("/toast")]
@@ -1854,12 +1874,16 @@ pub mod routes {
 
             #[route("/typography")]
             mod typography {
-                page!(|| view! { <Redirect path=format!("{}#typography", crate::routes::doc::Layout.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#typography", crate::routes::doc::Layout.materialize())/> }
+                );
             }
 
             #[route("/icon")]
             mod icon {
-                page!(|| view! { <Redirect path=format!("{}#icons", crate::routes::doc::Layout.materialize())/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#icons", crate::routes::doc::Layout.materialize())/> }
+                );
             }
 
             #[route("/callback")]

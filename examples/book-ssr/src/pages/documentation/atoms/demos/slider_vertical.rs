@@ -1,9 +1,9 @@
 use leptonic::{
+    Orientation,
     atoms::{
         field::Label,
         slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
     },
-    utils::orientation::Orientation,
 };
 use leptos::prelude::*;
 

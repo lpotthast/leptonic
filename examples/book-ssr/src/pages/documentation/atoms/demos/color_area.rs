@@ -1,9 +1,12 @@
 use leptonic::{
-    atoms::prelude::{CheckboxButton, CheckboxField, ColorArea, ColorSwatch, ColorThumb},
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        i18n::use_locale,
+    ColorValue, HSV, HsvChannel,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        color_area::ColorArea,
+        color_swatch::ColorSwatch,
+        color_thumb::ColorThumb,
     },
+    use_locale,
 };
 use leptos::prelude::*;
 

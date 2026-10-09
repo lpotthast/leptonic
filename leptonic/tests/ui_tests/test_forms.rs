@@ -9,10 +9,11 @@
 //! realtime re-validation of a checkbox group, and the `CheckboxField`/`SwitchField`/`RadioField`
 //! atoms.
 use assertr::{matchers::eq, prelude::*};
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions, css, xpath};
+use crate::pages::{ElementActions, Page, css, role};
 
 const PATH: &str = "/atoms/forms";
 
@@ -33,7 +34,9 @@ async fn wait_for_checked(label: &WebElement, expected: bool) -> Result<(), Repo
         .wait_for_attr("data-selected", expected.then_some("true"))
         .await?;
     let text = label.inner_text().await?;
-    assert_that!(input(label).await?.is_selected().await?)
+    assert_that!(input(label).await?)
+        .selected()
+        .await
         .with_detail_message(format!("checked: {text}"))
         .is_equal_to(expected);
     Ok(())
@@ -49,7 +52,9 @@ async fn reset_form_values(page: &Page<'_>) -> Result<Vec<Vec<String>>, Report> 
     Ok(values)
 }
 
-/// "should call onReset on reset" (react-aria `useFormReset`), for each control.
+/// Resetting the form restores the default of its checkbox, checkbox group, radio group and
+/// switch, in their state and in the submitted values ("should call onReset on reset").
+#[browser_test]
 pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let initial = [vec![], vec!["cats"], vec!["m"], vec!["on"]];
@@ -83,7 +88,10 @@ pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should not call onReset if reset is cancelled" (react-aria `useFormReset`).
+/// A form reset that the form's own listener cancels leaves the checked checkbox and switch
+/// checked (upstream skips this case, "should not call onReset if reset is cancelled": leptonic
+/// also respects a reset canceled by a listener registered before the field's).
+#[browser_test]
 pub async fn canceled_form_reset(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let kept = label(page, "Kept").await?;
@@ -98,16 +106,84 @@ pub async fn canceled_form_reset(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     // Nothing changes.
-    kept.attr_stays("data-selected", Some("true")).await?;
+    kept.attr_stays(
+        "data-selected",
+        Some("true"),
+        std::time::Duration::from_millis(100),
+    )
+    .await?;
     kept_switch
-        .attr_stays("data-selected", Some("true"))
+        .attr_stays(
+            "data-selected",
+            Some("true"),
+            std::time::Duration::from_millis(100),
+        )
         .await?;
     wait_for_checked(&kept, true).await?;
     wait_for_checked(&kept_switch, true).await?;
     Ok(())
 }
 
-/// "should support implicit form submission from a focused checkbox/radio/switch on Enter".
+/// A reset whose event the form's listener stops from propagating still resets every field
+/// ("should call onReset on reset even if event is stopped", "should call every onReset on
+/// reset").
+#[browser_test]
+pub async fn form_reset_with_stopped_propagation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let stopped = label(page, "Stopped").await?;
+    let stopped_switch = label(page, "Stopped switch").await?;
+    stopped.click().await?;
+    stopped_switch.click().await?;
+    wait_for_checked(&stopped, true).await?;
+    wait_for_checked(&stopped_switch, true).await?;
+
+    page.element("#fm-reset-stopped-button")
+        .await?
+        .click()
+        .await?;
+    wait_for_checked(&stopped, false).await?;
+    wait_for_checked(&stopped_switch, false).await?;
+    Ok(())
+}
+
+/// A reset canceled in the capture phase resets none of the form's fields ("should not call
+/// onReset if reset is cancelled in capture phase", "should not call any onReset if reset is
+/// cancelled").
+#[browser_test]
+pub async fn form_reset_canceled_in_capture_phase(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let captured = label(page, "Captured").await?;
+    let captured_switch = label(page, "Captured switch").await?;
+    captured.click().await?;
+    captured_switch.click().await?;
+    wait_for_checked(&captured, true).await?;
+    wait_for_checked(&captured_switch, true).await?;
+
+    page.element("#fm-reset-capture-button")
+        .await?
+        .click()
+        .await?;
+    captured
+        .attr_stays(
+            "data-selected",
+            Some("true"),
+            std::time::Duration::from_millis(100),
+        )
+        .await?;
+    captured_switch
+        .attr_stays(
+            "data-selected",
+            Some("true"),
+            std::time::Duration::from_millis(100),
+        )
+        .await?;
+    Ok(())
+}
+
+/// Enter on a focused checkbox, radio or switch submits its form without toggling it ("should
+/// support implicit form submission from a focused checkbox on Enter", "... radio ...", "...
+/// switch ...").
+#[browser_test]
 pub async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     for (submits, text) in [
@@ -120,6 +196,7 @@ pub async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Repor
         let input = input(&label).await?;
         label.click().await?;
         page.wait_for_focus(&input).await?;
+        page.settle().await?;
         let before = input.is_selected().await?;
         page.send_keys(Key::Enter).await?;
         page.element("#fm-submits")
@@ -127,16 +204,21 @@ pub async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Repor
             .wait_for_inner_text(submits)
             .await?;
         // Enter doesn't toggle.
-        assert_that!(input.is_selected().await?)
-            .with_detail_message(text)
-            .is_equal_to(before);
+        page.settle().await?;
+        assert_that!(|| input.is_selected())
+            .with_subject_name(format!("{text}: selected"))
+            .consistently_ok()
+            .for_at_least(std::time::Duration::from_millis(100))
+            .matches(eq(before))
+            .await;
     }
     Ok(())
 }
 
-/// Right to left: in a horizontal group ArrowRight selects the previous radio and ArrowLeft the
-/// next; a vertical group keeps them (react-spectrum `Radio.test.js`, "rtl + horizontal" and
-/// "rtl + vertical").
+/// In a right-to-left horizontal radio group ArrowRight selects the previous radio and ArrowLeft
+/// the next, while a vertical one keeps their direction ("(left/right arrows, rtl + horizontal)
+/// RadioGroup", "(left/right arrows, rtl + vertical) RadioGroup").
+#[browser_test]
 pub async fn right_to_left_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     for (group, right_selects, left_selects) in
@@ -162,14 +244,13 @@ pub async fn right_to_left_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should re-validate in realtime" (react-aria `useCheckboxGroup`): checking a checkbox of a
-/// required group makes it valid, unchecking it invalid again.
+/// Checking a checkbox of a required checkbox group makes the group valid, and unchecking it makes
+/// it invalid again ("should re-validate in realtime").
+#[browser_test]
 pub async fn checkbox_group_realtime_validation(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let group = page
-        .element(xpath(
-            "//*[@role='group'][.//span[normalize-space(.)='Favorite pet']]",
-        ))
+        .element(role(AriaRole::Group).has(css("span").text("Favorite pet")))
         .await?;
     let dragons = label(page, "Realtime dragons").await?;
 
@@ -189,48 +270,56 @@ pub async fn checkbox_group_realtime_validation(page: &Page<'_>) -> Result<(), R
 
 /// Waits until the input's description (the texts `aria-describedby` refers to) is `expected`.
 async fn wait_for_description(input: &WebElement, expected: &str) -> Result<(), Report> {
-    assert_that!(|| input.referenced_text("aria-describedby"))
+    assert_that!(|| input.accessible_description())
         .eventually_ok()
         .matches(eq(expected))
         .await;
     Ok(())
 }
 
-/// react-aria-components' `CheckboxField` tests ("should render a checkbox with default class",
-/// "should support DOM props", "supports help text", "should support required state"), and
-/// `SwitchField`/`RadioField` with descriptions.
+/// The `CheckboxField`, `SwitchField` and `RadioField` atoms render their default class, DOM props
+/// and description, and when required are invalid after a submit until checked ("should render a
+/// checkbox with default class", "should support DOM props", "should support description", "should
+/// support required state").
+#[browser_test]
 pub async fn field_atoms(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let checkbox = label(page, "Field checkbox").await?;
     let field = checkbox.parent().await?;
     assert_that!(field.tag_name().await?).is_equal_to("div");
-    assert_that!(field.class_name().await?)
-        .get_some()
+    assert_that!(field)
+        .has_attribute("class")
+        .await
         .contains("leptonic-CheckboxField");
-    assert_that!(checkbox.class_name().await?)
-        .get_some()
+    assert_that!(checkbox)
+        .has_attribute("class")
+        .await
         .contains("leptonic-CheckboxButton");
-    assert_that!(field.attr("data-foo").await?)
-        .get_some()
+    assert_that!(field)
+        .has_attribute("data-foo")
+        .await
         .is_equal_to("bar");
-    assert_that!(field.attr("data-required").await?)
-        .get_some()
+    assert_that!(field)
+        .has_attribute("data-required")
+        .await
         .is_equal_to("true");
     let checkbox_input = input(&checkbox).await?;
     wait_for_description(&checkbox_input, "Checkbox help").await?;
 
     let switch = label(page, "Field switch").await?;
     let switch_field = switch.parent().await?;
-    assert_that!(switch_field.class_name().await?)
-        .get_some()
+    assert_that!(switch_field)
+        .has_attribute("class")
+        .await
         .contains("leptonic-SwitchField");
     let switch_input = input(&switch).await?;
     wait_for_description(&switch_input, "Switch help").await?;
 
     let radio = label(page, "Field radio A").await?;
     let radio_field = radio.parent().await?;
-    assert_that!(radio_field.class_name().await?)
-        .get_some()
+    assert_that!(radio_field)
+        .has_attribute("class")
+        .await
         .contains("leptonic-RadioField");
     let radio_input = input(&radio).await?;
     wait_for_description(&radio_input, "Radio A help").await?;
@@ -253,9 +342,12 @@ pub async fn field_atoms(page: &Page<'_>) -> Result<(), Report> {
         (&checkbox_input, "Checkbox help"),
         (&switch_input, "Switch help"),
     ] {
-        let description = input.referenced_text("aria-describedby").await?;
-        assert_that!(&description).starts_with(format!("{help} "));
-        assert_that!(description.len()).is_greater_than(help.len() + 1);
+        assert_that!(input)
+            .accessible_description()
+            .await
+            .starts_with(format!("{help} "))
+            .derive_owned(String::len)
+            .is_greater_than(help.len() + 1);
     }
     checkbox.click().await?;
     switch.click().await?;

@@ -1,19 +1,17 @@
 // Upstream: react-aria/src/listbox/useListBoxSection.ts @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use web_sys::MouseEvent;
 
 use super::ListBoxData;
 use crate::{
-    hooks::{
-        IntoAttrs,
-        collections::{Key, NodeKind, use_node_aria_label},
-    },
-    utils::{EventHandler, aria::AriaRole, id::use_id},
+    EventHandler, IntoAttrs, OnEvent,
+    hooks::collections::{Key, NodeKind, use_node_aria_label},
+    utils::{aria::AriaRole, id::use_id},
 };
 
 // =============================================================================
@@ -43,8 +41,8 @@ pub struct UseListBoxSectionReturn {
     pub heading_props: Option<UseListBoxSectionHeadingProps>,
     /// For the element containing the section's options.
     pub group_props: UseListBoxSectionGroupProps,
-    /// The header text, if any.
-    pub heading: Option<String>,
+    /// The header text, if any (follows the collection).
+    pub heading: Signal<Option<String>>,
 }
 
 #[derive(Debug)]
@@ -73,7 +71,7 @@ pub struct UseListBoxSectionHeadingProps {
 pub type UseListBoxSectionHeadingAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+    OnEvent<ev::mousedown>,
 );
 
 impl IntoAttrs for UseListBoxSectionHeadingProps {
@@ -118,22 +116,26 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
     let UseListBoxSectionInput { list, key } = input;
     let heading_id = use_id("listbox-section-heading");
 
-    // Whether the section has a heading is read once (it decides what renders); its label
-    // follows the collection.
-    let heading = untrack(|| {
-        list.state.collection.with(|c| {
-            c.children(&key)
-                .find(|n| n.kind == NodeKind::Header)
-                .map(|n| n.text_value.to_string())
+    // Whether the section has a heading is read once (it decides what renders); its text and
+    // the section's label follow the collection.
+    let heading = {
+        let (collection, key) = (list.state.collection, key.clone());
+        Memo::new(move |_| {
+            collection.with(|c| {
+                c.children(&key)
+                    .find(|n| n.kind == NodeKind::Header)
+                    .map(|n| n.text_value.to_string())
+            })
         })
-    });
+    };
+    let has_heading = heading.with_untracked(Option::is_some);
     let aria_label = use_node_aria_label(list.state.collection, key);
 
     UseListBoxSectionReturn {
         item_props: UseListBoxSectionItemProps {
             role: AriaRole::Presentation,
         },
-        heading_props: heading.as_ref().map(|_| UseListBoxSectionHeadingProps {
+        heading_props: has_heading.then(|| UseListBoxSectionHeadingProps {
             id: heading_id.clone(),
             role: AriaRole::Presentation,
             on_mousedown: EventHandler::new(|e: MouseEvent| e.prevent_default()),
@@ -141,8 +143,8 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
         group_props: UseListBoxSectionGroupProps {
             role: AriaRole::Group,
             aria_label: aria_label.into(),
-            aria_labelledby: heading.as_ref().map(|_| heading_id),
+            aria_labelledby: has_heading.then_some(heading_id),
         },
-        heading,
+        heading: heading.into(),
     }
 }

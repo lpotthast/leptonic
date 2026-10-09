@@ -1,18 +1,23 @@
 // Upstream: react-aria-components/src/SearchField.tsx @ 99e6102368
+// Upstream: react-aria-components/test/SearchField.test.js @ 99e6102368
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use super::{form::use_validation_behavior, text_field::provide_text_field_contexts};
 use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement, UseButtonInput,
-        UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput, UseTextFieldStateInput,
-        ValidateFn, ValidationBehavior, use_button, use_search_field, use_text_field_state,
+        button::{UseButtonInput, use_button},
+        form::{
+            AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement,
+            UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput, UseTextFieldStateInput,
+            ValidateFn, ValidationBehavior, use_search_field, use_text_field_state,
+        },
     },
     utils::{
-        classes::Classes, data_attributes::flag, default_class::with_default_class,
-        scoped_context::scoped_view, styles::Styles,
+        data_attributes::flag, default_class::with_default_class, scoped_context::scoped_view,
+        styles::Styles,
     },
 };
 
@@ -32,7 +37,7 @@ use crate::{
 
 /// Context from [`SearchField`] to its [`SearchFieldClearButton`].
 #[derive(Clone)]
-struct SearchFieldCtx {
+struct SearchFieldContext {
     clear_button: StoredValue<UseButtonInput>,
 }
 
@@ -103,8 +108,7 @@ pub fn SearchField(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SearchField", classes);
-    let (value, on_change) =
-        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
+    let (value, on_change) = crate::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_text_field_state(UseTextFieldStateInput {
         default_value,
         value,
@@ -138,7 +142,7 @@ pub fn SearchField(
             auto_capitalize,
             auto_correct,
             spell_check,
-            input_mode,
+            input_mode: Signal::stored(input_mode),
             enter_key_hint,
             auto_focus,
             has_label,
@@ -171,7 +175,7 @@ pub fn SearchField(
     scoped_view(
         move || {
             provide_text_field_contexts(text_field, label_presence);
-            provide_context(SearchFieldCtx {
+            provide_context(SearchFieldContext {
                 clear_button: StoredValue::new(clear_button),
             });
         },
@@ -208,7 +212,7 @@ pub fn SearchFieldClearButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SearchFieldClearButton", classes);
-    let ctx = expect_context::<SearchFieldCtx>();
+    let ctx = expect_context::<SearchFieldContext>();
     let input = ctx.clear_button.get_value();
     let button = use_button(input);
     let (attrs, button_styles) = button.props.into_parts();

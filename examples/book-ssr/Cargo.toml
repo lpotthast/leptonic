@@ -13,8 +13,6 @@ assets-dir = "public"
 site-addr = "127.0.0.1:4100"
 reload-port = 4101
 browserquery = "defaults"
-watch = false
-env = "DEV"
 bin-features = ["ssr"]
 bin-default-features = false
 lib-features = ["hydrate"]
@@ -33,10 +31,13 @@ hydrate = ["leptos/hydrate", "leptonic/hydrate", "leptos-element-capture/hydrate
 ssr = [
     "dep:axum",
     "dep:axum-server",
+    "dep:brotli",
+    "dep:flate2",
     "dep:htmd",
     "dep:markup5ever_rcdom",
     "dep:rustls",
     "dep:scraper",
+    "dep:tempfile",
     "dep:tokio",
     "dep:tower",
     "dep:tower-http",
@@ -55,8 +56,10 @@ ssr = [
 [dependencies]
 axum = { version = "0.8.9", default-features = false, optional = true }
 axum-server = { version = "0.8.0", default-features = false, features = ["tls-rustls-no-provider"], optional = true }
+brotli = { version = "9.0.0", default-features = false, features = ["std"], optional = true }
 codee = { version = "0.3.5", default-features = false }
 console_error_panic_hook = { version = "0.1.7", default-features = false }
+flate2 = { version = "1.1.10", default-features = false, features = ["zlib-rs"], optional = true }
 htmd = { version = "0.5.5", default-features = false, optional = true }
 icondata = { version = "0.7.0", default-features = false, features = ["bootstrap-icons", "vs-code-icons"] }
 indoc = { version = "2.0.7", default-features = false }
@@ -88,6 +91,7 @@ rustls = { version = "0.23.45", default-features = false, features = ["ring", "s
 scraper = { version = "0.27.0", default-features = false, optional = true }
 send_wrapper = { version = "0.6.0", default-features = false }
 serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
+tempfile = { version = "3.27.0", default-features = false, optional = true }
 tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt-multi-thread", "signal", "sync"], optional = true }
 tower = { version = "0.5.3", default-features = false, features = ["util"], optional = true }
 tower-http = { version = "0.7.1", default-features = false, features = ["compression-br", "compression-deflate", "compression-gzip"], optional = true }

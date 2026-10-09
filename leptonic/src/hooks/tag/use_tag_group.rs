@@ -1,4 +1,7 @@
 // Upstream: react-aria/src/tag/useTagGroup.ts @ 99e6102368
+// Upstream: react-aria/test/tag/useTagGroup.test.js @ 99e6102368
+// Upstream: react-aria-components/test/TagGroup.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/tag/TagGroup.test.js @ 99e6102368
 use std::{collections::HashSet, sync::Arc};
 
 use leptos::{
@@ -7,8 +10,8 @@ use leptos::{
 };
 
 use crate::{
+    CapturedElement, IntoAttrs, SlotProps,
     hooks::{
-        IntoAttrs,
         collections::{
             CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
             UseListKeyboardDelegateInput, use_list_keyboard_delegate,
@@ -26,8 +29,7 @@ use crate::{
         },
     },
     utils::{
-        CapturedElement, SlotProps,
-        aria::{AriaLive, AriaRole},
+        aria::{AriaAtomic, AriaLive, AriaRelevant, AriaRole},
         focus::focus_safely,
         orientation::Orientation,
     },
@@ -88,8 +90,8 @@ pub struct UseTagGroupReturn {
 pub struct UseTagGroupProps {
     pub grid: UseGridListProps,
     pub aria_describedby: Signal<Option<String>>,
-    pub aria_atomic: &'static str,
-    pub aria_relevant: &'static str,
+    pub aria_atomic: AriaAtomic,
+    pub aria_relevant: AriaRelevant,
     /// Announces added tags while focus is in the group.
     pub aria_live: Signal<AriaLive>,
     pub focus_within: UseFocusWithinProps,
@@ -98,8 +100,8 @@ pub struct UseTagGroupProps {
 pub type UseTagGroupAttrs = (
     UseGridListAttrs,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaAtomic, &'static str>,
-    Attr<attr::AriaRelevant, &'static str>,
+    Attr<attr::AriaAtomic, AriaAtomic>,
+    Attr<attr::AriaRelevant, AriaRelevant>,
     Attr<attr::AriaLive, Signal<AriaLive>>,
     UseFocusWithinAttrs,
 );
@@ -139,7 +141,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state,
             element,
-            orientation: Orientation::Horizontal,
+            orientation: Orientation::Horizontal.into(),
             layout: ListLayout::Stack,
             layout_delegate: None,
         })
@@ -170,7 +172,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         keyboard_delegate: Some(delegate),
         options: CollectionOptions {
             should_focus_wrap: true,
-            link_behavior: LinkBehavior::Override,
+            link_behavior: Signal::stored(LinkBehavior::Override),
             ..CollectionOptions::default()
         },
         keyboard_navigation_behavior: KeyboardNavigationBehavior::Tab,
@@ -181,7 +183,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         should_select_on_press_up: false,
         tree: None,
     });
-    let is_empty = Signal::derive(move || state.collection.with(|c| c.size() == 0));
+    let is_empty = Signal::derive(move || state.collection.with(|c| c.is_empty()));
     grid.role = Signal::derive(move || {
         if is_empty.get() {
             AriaRole::Group
@@ -211,8 +213,8 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         grid_props: UseTagGroupProps {
             grid,
             aria_describedby: field_props.aria_describedby,
-            aria_atomic: "false",
-            aria_relevant: "additions",
+            aria_atomic: AriaAtomic::False,
+            aria_relevant: AriaRelevant::Additions,
             aria_live: Signal::derive(move || {
                 if is_focus_within.get() {
                     AriaLive::Polite

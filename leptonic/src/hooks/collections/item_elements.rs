@@ -1,10 +1,12 @@
+// No upstream: the registry of rendered item elements, replacing react-aria's `[data-key]` DOM queries.
+
 use std::collections::HashMap;
 
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 
 use super::Key;
-use crate::utils::CapturedElement;
+use crate::CapturedElement;
 
 /// Maps the keys of a collection to their rendered elements.
 ///

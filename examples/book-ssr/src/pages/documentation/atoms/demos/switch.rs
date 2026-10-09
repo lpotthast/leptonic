@@ -1,4 +1,7 @@
-use leptonic::atoms::{checkbox::{CheckboxButton, CheckboxField}, switch};
+use leptonic::atoms::{
+    checkbox::{CheckboxButton, CheckboxField},
+    switch,
+};
 use leptos::prelude::*;
 
 #[component]

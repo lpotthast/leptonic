@@ -1,10 +1,10 @@
 use leptonic::{
+    Color, RGB8,
     atoms::{
         color_picker::ColorPicker,
         color_swatch::ColorSwatch,
         color_swatch_picker::{ColorSwatchPicker, ColorSwatchPickerItem, ColorSwatchPickerItems},
     },
-    utils::color::{Color, RGB8},
 };
 use leptos::prelude::*;
 

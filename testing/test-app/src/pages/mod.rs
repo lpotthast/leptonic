@@ -2,11 +2,16 @@
 //!
 //! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms` or `hooks`. To add one, create a module with a page component and register it in
 //! [`FIXTURES`].
+//!
+//! A fixture with several independent parts wraps each in a [`Section`]: loaded with
+//! `?only=<name>,...`, the page renders only the sections named, so a test of one part renders
+//! and hydrates only that part.
 
 pub mod atoms;
 pub mod hooks;
 
 use leptos::{prelude::*, web_sys};
+use leptos_router::hooks::use_query_map;
 
 /// A test page, reachable at `/{group}/{name}`.
 pub struct Fixture {
@@ -28,6 +33,20 @@ pub const FIXTURES: &[Fixture] = &[
         name: "overlay-position",
         title: "Overlay position",
         view: || view! { <atoms::overlay_position::PageAtomOverlayPosition /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "overlay-position-options",
+        title: "Overlay position options",
+        view: || {
+            view! { <atoms::overlay_position_options::PageAtomOverlayPositionOptions /> }.into_any()
+        },
+    },
+    Fixture {
+        group: "atoms",
+        name: "overlay-state",
+        title: "Overlay state",
+        view: || view! { <atoms::overlay_state::PageAtomOverlayState /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -121,6 +140,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "menu-states",
+        title: "Menus without a trigger",
+        view: || view! { <atoms::menu_states::PageAtomMenuStates /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "toast",
         title: "Toast",
         view: || view! { <atoms::toast::PageAtomToast /> }.into_any(),
@@ -133,7 +158,7 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
-        name: "virtual_list",
+        name: "virtual-list",
         title: "VirtualList",
         view: || view! { <atoms::virtual_list::PageAtomVirtualList /> }.into_any(),
     },
@@ -262,6 +287,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "scroll",
         title: "Scroll utilities",
         view: || view! { <hooks::scroll::PageHookScroll /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "scroll-wheel",
+        title: "Scroll wheel",
+        view: || view! { <hooks::scroll_wheel::PageHookScrollWheel /> }.into_any(),
     },
     Fixture {
         group: "hooks",
@@ -475,9 +506,21 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "listbox-selection",
+        title: "ListBox selection",
+        view: || view! { <atoms::listbox_selection::PageAtomListBoxSelection /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "select",
         title: "Select",
         view: || view! { <atoms::select::PageAtomSelect /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "select-behavior",
+        title: "Select behavior",
+        view: || view! { <atoms::select_behavior::PageAtomSelectBehavior /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -490,6 +533,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "grid-list",
         title: "GridList",
         view: || view! { <atoms::grid_list::PageAtomGridList /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "grid-list-cases",
+        title: "GridList cases",
+        view: || view! { <atoms::grid_list_cases::PageAtomGridListCases /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -589,6 +638,20 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "hooks",
+        name: "dnd-draggable-collection",
+        title: "Draggable collections",
+        view: || {
+            view! { <hooks::dnd_draggable_collection::PageHookDndDraggableCollection /> }.into_any()
+        },
+    },
+    Fixture {
+        group: "hooks",
+        name: "dnd-native",
+        title: "Native drag and drop",
+        view: || view! { <hooks::dnd_native::PageHookDndNative /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
         name: "dnd-collection",
         title: "Droppable collection",
         view: || view! { <hooks::dnd_collection::PageHookDndCollection /> }.into_any(),
@@ -611,6 +674,21 @@ pub fn find_fixture(group: &str, name: &str) -> Option<&'static Fixture> {
     FIXTURES
         .iter()
         .find(|fixture| fixture.group == group && fixture.name == name)
+}
+
+/// One part of a fixture page with several, named `name`. Rendered unless the page was loaded
+/// with `?only=<name>,...` naming other sections only (`PageActions::goto_sections` in the tests).
+/// Without `only` every section renders: the hydration test and manual inspection see the whole
+/// page.
+#[component]
+pub fn Section(name: &'static str, children: Children) -> impl IntoView {
+    // The query is read once: a section doesn't come and go while the page is open.
+    let shown = use_query_map().with_untracked(|query| {
+        query
+            .get_str("only")
+            .is_none_or(|only| only.split(',').any(|only| only == name))
+    });
+    shown.then(children)
 }
 
 /// Prevent mousedown from stealing focus (used on control buttons in focus-manager tests).

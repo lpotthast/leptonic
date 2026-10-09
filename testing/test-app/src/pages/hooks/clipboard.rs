@@ -1,5 +1,9 @@
-use leptonic::hooks::{
-    ClipboardAction, DragItem, DropItem, IntoAttrs, UseClipboardInput, use_clipboard,
+use leptonic::{
+    IntoAttrs,
+    hooks::{
+        clipboard::{ClipboardAction, UseClipboardInput, use_clipboard},
+        dnd::{DragItem, DropItem},
+    },
 };
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;

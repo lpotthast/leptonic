@@ -1,3 +1,7 @@
+// Upstream: react-aria/src/interactions/createEventHandler.ts @ 99e6102368
+//! Stopping propagation by default, with `continue_propagation()` to opt out (react-aria's
+//! `createEventHandler`), for press and keyboard events.
+
 use std::{
     fmt,
     sync::{
@@ -6,58 +10,38 @@ use std::{
     },
 };
 
-/// Controls whether an event should continue propagating to parent handlers.
+/// Whether an event continues propagating to its target's ancestors once its handlers ran: by
+/// default it doesn't; a handler calls [`Propagation::continue_propagation`] to let it bubble.
 ///
-/// By default, events in Leptonic stop propagation. Handlers must call
-/// [`Propagation::continue_propagation`] to opt in to bubbling.
-///
-/// This type is publicly visible but cannot be constructed outside the crate.
+/// Public so that [`Propagation`] can name it; only the crate creates one. Clones share the state:
+/// the hook keeps one and hands a clone to the user's handler.
+#[derive(Clone, Default)]
 pub struct PropagationControl {
-    state: Arc<AtomicBool>,
-    trigger: Arc<dyn Fn() + Send + Sync + 'static>,
+    continued: Arc<AtomicBool>,
 }
 
 impl PropagationControl {
-    /// Create a new propagation control.
-    ///
-    /// Returns the control together with a shared [`AtomicBool`] that the caller
-    /// can inspect *after* running the user's handler to decide whether native
-    /// propagation should be stopped.
-    pub(crate) fn new() -> (Self, Arc<AtomicBool>) {
-        let state = Arc::new(AtomicBool::new(false));
-        let state_for_trigger = state.clone();
-        let trigger = Arc::new(move || {
-            state_for_trigger.store(true, Ordering::Release);
-        });
-        let state_clone = state.clone();
-        (Self { state, trigger }, state_clone)
+    /// A control whose event stops propagating unless a handler continues it.
+    pub(crate) fn new() -> Self {
+        Self::default()
     }
 
-    /// Allow parent handlers to also handle this event.
+    /// Lets the event propagate.
     pub(crate) fn continue_propagation(&self) {
-        (self.trigger)();
+        self.continued.store(true, Ordering::Release);
     }
 
-    /// Returns `true` when propagation will be stopped (the default).
+    /// Whether the event stops propagating (the default).
     pub(crate) fn is_propagation_stopped(&self) -> bool {
-        !self.state.load(Ordering::Acquire)
+        !self.continued.load(Ordering::Acquire)
     }
 }
 
 impl fmt::Debug for PropagationControl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PropagationControl")
-            .field("state", &self.state)
-            .finish_non_exhaustive()
-    }
-}
-
-impl Clone for PropagationControl {
-    fn clone(&self) -> Self {
-        Self {
-            state: self.state.clone(),
-            trigger: self.trigger.clone(),
-        }
+            .field("is_propagation_stopped", &self.is_propagation_stopped())
+            .finish()
     }
 }
 
@@ -67,13 +51,11 @@ mod sealed {
 
 pub(crate) use sealed::Sealed;
 
-/// Trait for event types that support propagation control.
+/// Events whose propagation the user's handler controls (press and keyboard events, as
+/// react-aria's `continuePropagation()`): they stop propagating by default; a handler calls
+/// [`continue_propagation()`](Propagation::continue_propagation) to let them bubble.
 ///
-/// Events in Leptonic stop propagation by default. Handlers must call
-/// [`continue_propagation()`](Propagation::continue_propagation) to opt in to
-/// bubbling — the same model used by react-aria.
-///
-/// This trait is sealed — it cannot be implemented outside the crate.
+/// This trait is sealed: it cannot be implemented outside the crate.
 #[allow(private_bounds)]
 pub trait Propagation: sealed::Sealed {
     /// Access the underlying propagation control.

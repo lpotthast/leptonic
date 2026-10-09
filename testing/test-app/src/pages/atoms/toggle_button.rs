@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    Orientation,
     atoms::toggle_button::{ToggleButton, ToggleButtonGroup},
-    hooks::{Orientation, ToggleGroupSelectionMode, collections::Key},
+    hooks::{button::ToggleGroupSelectionMode, collections::Key},
 };
 use leptos::prelude::*;
 

@@ -1,5 +1,16 @@
-// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/@internationalized/number/src/NumberFormatter.ts
-// Provides plural category lookup for building locale-correct ARIA labels.
+// Upstream: @internationalized/string/src/LocalizedStringFormatter.ts @ 99e6102368
+//! Plural categories of numbers, for locale-correct labels ("1 item", "2 items").
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - A function returning the cardinal plural category of a non-negative integer, with ICU4X's
+//   `PluralRules` (works during SSR); react-aria selects a message's plural form inside its
+//   string formatter with `Intl.PluralRules#select`.
+//
+// =============================================================================
 
 use icu_plurals::{PluralCategory, PluralOperands, PluralRules};
 

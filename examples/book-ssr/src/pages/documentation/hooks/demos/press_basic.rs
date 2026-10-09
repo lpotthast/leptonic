@@ -1,6 +1,10 @@
 use std::collections::VecDeque;
 
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*, utils::data_attributes::flag};
+use leptonic::{
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    flag,
+    hooks::interactions::{PressEvent, UsePressInput, UsePressReturn, use_press},
+};
 use leptos::prelude::*;
 
 #[component]
@@ -14,8 +18,8 @@ pub fn PressBasicDemo() -> impl IntoView {
     let log = move |name: &'static str, e: &PressEvent| {
         set_events.update(|events| {
             events.push_front(format!(
-                "{name}: pointer_type={:?}, key={:?}, x={:?}, y={:?}",
-                e.pointer_type, e.key, e.x, e.y,
+                "{name}: pointer_type={:?}, key={:?}, x={}, y={}",
+                e.pointer_type, e.key, e.point.x, e.point.y,
             ));
             events.truncate(50);
         });

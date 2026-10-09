@@ -1,8 +1,10 @@
 // Upstream: react-aria/src/menu/useMenuItem.ts @ 99e6102368
+// Upstream: react-aria/test/menu/useMenu.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
@@ -10,28 +12,27 @@ use web_sys::{KeyboardEvent, MouseEvent};
 
 use super::{MenuData, SubmenuTriggerItem};
 use crate::{
+    CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
     hooks::{
-        IntoAttrs, PropsWithStyles,
         collections::{
             CloseOnSelect, Key, LinkBehavior, SelectionMode, UseSelectableItemAttrs,
             UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
             use_node_aria_label, use_selectable_item,
         },
-        focus::use_focus_visible::{
-            Modality, UseFocusVisibleInput, get_modality, set_modality, use_focus_visible,
-        },
+        focus::use_focus_visible::{Modality, get_modality, is_focus_visible, set_modality},
         interactions::{
             use_hover::{UseHoverAttrs, UseHoverInput, UseHoverProps, use_hover},
             use_keyboard::{UseKeyboardAttrs, UseKeyboardInput, UseKeyboardProps, use_keyboard},
             use_press::{PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press},
         },
     },
+    use_slot,
     utils::{
-        CapturedElement, EventAccessors, EventHandler, SlotProps,
         aria::{AriaChecked, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
+        dom_ext::EventAccessors,
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         pointer_type::PointerType,
-        use_slot,
     },
 };
 
@@ -81,6 +82,7 @@ pub struct UseMenuItemReturn {
     pub is_focus_visible: Signal<bool>,
     pub is_selected: Signal<bool>,
     pub is_pressed: Signal<bool>,
+    pub is_hovered: Signal<bool>,
     pub is_disabled: Signal<bool>,
 }
 
@@ -123,8 +125,8 @@ pub type UseMenuItemAttrs = (
     UsePressAttrs,
     UseHoverAttrs,
     UseKeyboardAttrs,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+    OnEvent<ev::click>,
+    OnEvent<ev::mousedown>,
 );
 
 impl IntoAttrs for UseMenuItemProps {
@@ -156,7 +158,7 @@ impl IntoAttrs for UseMenuItemProps {
 /// How an item was activated, for deciding whether to close the menu.
 #[derive(Debug, Clone, PartialEq)]
 enum Interaction {
-    Keyboard { key: &'static str },
+    Keyboard { key: KeyboardKey },
     Pointer(PointerType),
 }
 
@@ -165,7 +167,7 @@ enum Interaction {
 /// closes the menu (see [`UseMenuItemInput::should_close_on_select`]).
 #[allow(clippy::too_many_lines)]
 pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
-    crate::hooks::track_interaction_modality();
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseMenuItemInput {
         menu,
         key,
@@ -181,6 +183,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         collection_id,
         on_action,
         on_close,
+        ..
     } = menu;
     let selection = state.selection;
 
@@ -212,7 +215,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         should_select_on_press_up: true,
         allows_different_press_origin: true,
         on_action: Signal::stored(None),
-        link_behavior: LinkBehavior::None,
+        link_behavior: Signal::stored(LinkBehavior::None),
         focus: None,
         should_use_virtual_focus: false,
         on_context_menu: None,
@@ -252,7 +255,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         on_press: submenu_trigger.as_ref().map(|trigger| trigger.on_press),
         on_press_up: Some(Callback::new(move |e: PressEvent| {
             if e.pointer_type != PointerType::Keyboard {
-                interaction.set_value(Some(Interaction::Pointer(e.pointer_type.clone())));
+                interaction.set_value(Some(Interaction::Pointer(e.pointer_type)));
             }
             if e.pointer_type == PointerType::Mouse
                 && !is_pressed_now.get_value()
@@ -268,26 +271,23 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     });
     let (press_props, press_styles) = press.props.into_inner();
 
-    // Hovering moves focus, unless the keyboard is in use (or it would leave an open subdialog).
-    let is_subdialog_trigger = submenu_trigger
-        .as_ref()
-        .is_some_and(|trigger| trigger.aria_haspopup.get_untracked() == Some(AriaHasPopup::Dialog));
+    // Hovering moves focus, unless the keyboard is in use, or the item is the trigger of the
+    // open submenu (focus stays in the submenu).
     let hover = use_hover(UseHoverInput {
         is_disabled,
         on_hover_change: submenu_trigger
             .as_ref()
             .map(|trigger| trigger.on_hover_change),
         on_hover_start: Some(Callback::new(move |_| {
-            if get_modality() == Modality::Pointer
-                && !(is_subdialog_trigger && is_trigger_expanded.get_untracked())
-            {
+            if get_modality() == Some(Modality::Pointer) && !is_trigger_expanded.get_untracked() {
                 selection.set_focused(true);
                 selection.set_focused_key(Some(key.get_value()), None);
             }
         })),
         ..UseHoverInput::default()
-    })
-    .props;
+    });
+    let is_hovered = hover.is_hovered;
+    let hover = hover.props;
 
     // Enter and Space activate the item through a click, like a native control.
     let click_target =
@@ -297,15 +297,19 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
             KeyboardShortcuts::new()
                 // The click counts as virtual: the modality is the keyboard's again afterwards
                 // (focus moves into an opened submenu, focus rings show).
-                .on(Shortcut::key(" "), move |e| {
-                    interaction.set_value(Some(Interaction::Keyboard { key: " " }));
+                .on(Shortcut::new(KeyboardKey::Space), move |e| {
+                    interaction.set_value(Some(Interaction::Keyboard {
+                        key: KeyboardKey::Space,
+                    }));
                     if let Some(target) = click_target(e) {
                         target.click();
                     }
                     set_modality(Modality::Keyboard);
                 })
-                .on(Shortcut::key("Enter"), move |e| {
-                    interaction.set_value(Some(Interaction::Keyboard { key: "Enter" }));
+                .on(Shortcut::new(KeyboardKey::Enter), move |e| {
+                    interaction.set_value(Some(Interaction::Keyboard {
+                        key: KeyboardKey::Enter,
+                    }));
                     let outcome = match click_target(e) {
                         // A link navigates by itself on Enter.
                         Some(target) if target.tag_name().eq_ignore_ascii_case("a") => {
@@ -359,7 +363,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         let should_close = should_close_on_select.resolve(|| match interaction.get_value() {
             // Enter always closes; Space only where it doesn't toggle a selection.
             Some(Interaction::Keyboard { key }) => {
-                key == "Enter" || mode == SelectionMode::None || is_link
+                key == KeyboardKey::Enter || mode == SelectionMode::None || is_link
             }
             _ => mode != SelectionMode::Multiple || is_link,
         });
@@ -369,7 +373,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         interaction.set_value(None);
     });
 
-    let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
+    let focus_visible = Signal::derive(is_focus_visible);
 
     let (aria_haspopup, aria_expanded, aria_controls) = match &submenu_trigger {
         Some(trigger) => {
@@ -404,13 +408,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                 }),
                 aria_label: aria_label.into(),
                 aria_labelledby: label.referenced_id,
-                aria_describedby: Signal::derive(move || {
-                    let ids: Vec<String> = [description_id.get(), keyboard_id.get()]
-                        .into_iter()
-                        .flatten()
-                        .collect();
-                    (!ids.is_empty()).then(|| ids.join(" "))
-                }),
+                aria_describedby: IdRefs::derive([description_id, keyboard_id]),
                 item: item_props,
                 press: press_props,
                 hover,
@@ -436,6 +434,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         }),
         is_selected,
         is_pressed: press.is_pressed,
+        is_hovered,
         is_disabled,
     }
 }

@@ -7,9 +7,11 @@ use super::{
     use_toggle_group_state::{ToggleGroupSelectionMode, ToggleGroupState},
 };
 use crate::{
+    IntoAttrs, ValueBinding,
     hooks::{
-        IntoAttrs, UseToolbarAttrs, UseToolbarInput, UseToolbarProps, collections::Key,
-        form::ToggleState, use_toolbar,
+        collections::Key,
+        form::{UseToggleStateInput, use_toggle_state},
+        toolbar::{UseToolbarAttrs, UseToolbarInput, UseToolbarProps, use_toolbar},
     },
     utils::aria::{AriaChecked, AriaDisabled, AriaRole},
 };
@@ -101,11 +103,13 @@ pub fn use_toggle_button_group_item(input: UseToggleButtonGroupItemInput) -> Use
     } = input;
     let selected_key = key.clone();
     let is_selected = Signal::derive(move || group.is_selected(&selected_key));
-    let state = ToggleState::new(
-        is_selected,
-        false,
-        Callback::new(move |selected: bool| group.set_selected(&key, selected)),
-    );
+    let state = use_toggle_state(UseToggleStateInput {
+        value: Some(ValueBinding::new(
+            is_selected,
+            Callback::new(move |selected: bool| group.set_selected(&key, selected)),
+        )),
+        ..UseToggleStateInput::default()
+    });
     let is_disabled = button.is_disabled;
     button.is_disabled = Signal::derive(move || is_disabled.get() || group.is_disabled.get());
     let mut button = use_toggle_button(UseToggleButtonInput { state, button });

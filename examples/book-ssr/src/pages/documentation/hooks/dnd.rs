@@ -208,7 +208,7 @@ fn UseDragSection() -> impl IntoView {
             <Section title="Example" id="use-drag-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::dnd::{DragEndEvent, DragItem, DropOperation, UseDragInput, UseDragReturn, use_drag};
 
                         let UseDragReturn { drag_props, is_dragging, .. } = use_drag(UseDragInput {
                             items: Signal::derive(|| vec![DragItem::text("Hello")]),
@@ -227,7 +227,7 @@ fn UseDragSection() -> impl IntoView {
 
                         view! {
                             <div {..drag_props.into_attrs()} role="button" tabindex="0"
-                                data-dragging=move || is_dragging.get().then_some("")>
+                                data-dragging=move || is_dragging.get().then_some("true")>
                                 "Drag me"
                             </div>
                         }
@@ -298,7 +298,10 @@ fn UseDropSection() -> impl IntoView {
             <Section title="Example" id="use-drop-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::dnd::{DragType, DropEvent, DropItem, DropOperation, DropOperationQuery, UseDropInput, UseDropReturn, use_drop},
+                        };
 
                         let UseDropReturn { drop_props, is_drop_target, .. } = use_drop(UseDropInput {
                             element: CapturedElement::new(),
@@ -328,7 +331,7 @@ fn UseDropSection() -> impl IntoView {
 
                         view! {
                             <div {..drop_props.into_attrs()} role="button" tabindex="0"
-                                data-drop-target=move || is_drop_target.get().then_some("")>
+                                data-drop-target=move || is_drop_target.get().then_some("true")>
                                 "Drop images here"
                             </div>
                         }
@@ -437,8 +440,38 @@ fn CollectionsExample() -> impl IntoView {
                     use std::{collections::HashSet, sync::Arc};
 
                     use leptonic::{
-                        hooks::{collections::*, *},
-                        utils::CapturedElement,
+                        CapturedElement,
+                        hooks::{
+                            collections::{
+                                *,
+                                Key,
+                                UseListKeyboardDelegateInput,
+                                use_list_keyboard_delegate,
+                                use_list_state,
+                            },
+                            dnd::{
+                                DragItem,
+                                DropPosition,
+                                DropTarget,
+                                DroppableCollectionOptions,
+                                ListDropTargetDelegate,
+                                UseDraggableCollectionInput,
+                                UseDraggableCollectionStateInput,
+                                UseDraggableItemInput,
+                                UseDropIndicatorInput,
+                                UseDroppableCollectionInput,
+                                UseDroppableCollectionReturn,
+                                UseDroppableCollectionStateInput,
+                                UseDroppableItemInput,
+                                use_draggable_collection,
+                                use_draggable_collection_state,
+                                use_draggable_item,
+                                use_drop_indicator,
+                                use_droppable_collection,
+                                use_droppable_collection_state,
+                                use_droppable_item,
+                            },
+                        },
                     };
 
                     // Once, for the collection (`list` from `use_list_state`, `element` captured by the grid list's props):
@@ -466,7 +499,7 @@ fn CollectionsExample() -> impl IntoView {
                             keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
                                 state: list,
                                 element,
-                                orientation: Orientation::Vertical,
+                                orientation: Orientation::Vertical.into(),
                                 layout: ListLayout::Stack,
                                 layout_delegate: None,
                             }),
@@ -552,6 +585,10 @@ fn DraggableCollectionHooks() -> impl IntoView {
                         <TableCell>"Whether an item is being dragged."</TableCell>
                     </TableRow>
                     <TableRow>
+                        <TableCell><Code inline=true>"drag_count(&Key) -> usize"</Code></TableCell>
+                        <TableCell>"The tracked count of items a drag from this key would carry."</TableCell>
+                    </TableRow>
+                    <TableRow>
                         <TableCell><Code inline=true>"keys_for_drag(&Key) -> HashSet<Key>"</Code></TableCell>
                         <TableCell>
                             "What a drag starting at an item drags: the selection if the item is selected (without items whose "
@@ -560,6 +597,15 @@ fn DraggableCollectionHooks() -> impl IntoView {
                     </TableRow>
                 </DocTable>
             </Section>
+        </Section>
+
+        <Section title="Drop Target Delegates">
+            <p>
+                "Implement "<Code inline=true>"DropTargetDelegate::drop_target_from_point(x, y, direction, is_valid)"</Code>
+                " for a custom layout. Use the supplied writing direction and return a target accepted by "
+                <Code inline=true>"is_valid"</Code>". "<Code inline=true>"ListDropTargetDelegate::new"</Code>
+                " is a plain constructor; its result is "<Code inline=true>"Clone"</Code>"."
+            </p>
         </Section>
 
         <Section title="use_draggable_collection">
@@ -666,6 +712,13 @@ fn DroppableCollectionStateSection() -> impl IntoView {
 
             <Section title="Return" id="use-droppable-collection-state-return">
                 <p>"Returns a "<Code inline=true>"DroppableCollectionState"</Code>" ("<Code inline=true>"Copy"</Code>")."</p>
+                <p>
+                    <Code inline=true>"get_drop_operation(&DropOperationEvent)"</Code>" chooses the operation for a target. "
+                    "The event borrows its "<Code inline=true>"target"</Code>", "<Code inline=true>"types"</Code>", "
+                    <Code inline=true>"allowed_operations"</Code>" slice and "<Code inline=true>"dragging_keys"</Code>" set; "
+                    <Code inline=true>"is_internal"</Code>" identifies a drag from this collection. App callbacks, including "
+                    "operation queries and drop handlers, run untracked, so reading app state does not subscribe the hooks to it."
+                </p>
                 <ApiTable kind=ApiKind::Fields of="DroppableCollectionState">
                     <ApiRow name="list" ty="ListState">"The collection."</ApiRow>
                     <ApiRow name="target" ty="Signal<Option<DropTarget>>">"The current drop target."</ApiRow>
@@ -706,7 +759,7 @@ fn DroppableCollectionHooks() -> impl IntoView {
                     <ApiRow name="drop_target_delegate" ty="Arc<dyn DropTargetDelegate>">
                         "The drop target under the pointer. "<Code inline=true>"ListDropTargetDelegate::new(collection, item_elements, element)"</Code>
                         " covers lists and grids ("<Code inline=true>"with_layout"</Code>", "<Code inline=true>"with_orientation"</Code>
-                        "; the writing direction comes from the locale): before or after an item by the pointer\u{2019}s half, or on "
+                        "; the collection passes its writing direction): before or after an item by the pointer\u{2019}s half, or on "
                         "it when the item accepts drops, with its edges still before and after. Required."
                     </ApiRow>
                     <ApiRow name="on_key_down" ty="Option<Callback<DropTargetKeyDownEvent>>">
@@ -819,7 +872,106 @@ fn UseAutoScrollSection() -> impl IntoView {
             </DocTable>
             <Code language=Language::Rust>
                 {indoc!(r"
-                    use leptonic::{hooks::*, utils::CapturedElement};
+                    use leptonic::{
+                        CapturedElement,
+                        hooks::{
+                            button::{UseButtonInput, use_button},
+                            clipboard::use_clipboard,
+                            collections::{
+                                Collection,
+                                Key,
+                                KeyboardDelegate,
+                                ListState,
+                                UseListKeyboardDelegateInput,
+                                use_list_keyboard_delegate,
+                                use_list_state,
+                            },
+                            dnd::{
+                                AcceptedDragTypes,
+                                AutoScroll,
+                                CollectionDropOperationQuery,
+                                DirectoryDropItem,
+                                DragEndEvent,
+                                DragItem,
+                                DragModality,
+                                DragMoveEvent,
+                                DragPreview,
+                                DragSessionInfo,
+                                DragStartEvent,
+                                DragType,
+                                DragTypes,
+                                DraggableCollectionEndEvent,
+                                DraggableCollectionMoveEvent,
+                                DraggableCollectionStartEvent,
+                                DraggableCollectionState,
+                                DropActivateEvent,
+                                DropEnterEvent,
+                                DropEvent,
+                                DropExitEvent,
+                                DropItem,
+                                DropMoveEvent,
+                                DropOperation,
+                                DropOperationPointQuery,
+                                DropOperationQuery,
+                                DropPosition,
+                                DropTarget,
+                                DropTargetDelegate,
+                                DropTargetKeyDownEvent,
+                                DroppableCollectionActivateEvent,
+                                DroppableCollectionData,
+                                DroppableCollectionDropEvent,
+                                DroppableCollectionEnterEvent,
+                                DroppableCollectionExitEvent,
+                                DroppableCollectionInsertDropEvent,
+                                DroppableCollectionOnItemDropEvent,
+                                DroppableCollectionOptions,
+                                DroppableCollectionReorderEvent,
+                                DroppableCollectionRootDropEvent,
+                                DroppableCollectionState,
+                                FileDropItem,
+                                ItemDropQuery,
+                                ItemDropTarget,
+                                ListDropTargetDelegate,
+                                TextDropItem,
+                                UseDragInput,
+                                UseDragProps,
+                                UseDragReturn,
+                                UseDraggableCollectionInput,
+                                UseDraggableCollectionStateInput,
+                                UseDraggableItemInput,
+                                UseDraggableItemReturn,
+                                UseDropIndicatorInput,
+                                UseDropIndicatorProps,
+                                UseDropIndicatorReturn,
+                                UseDropInput,
+                                UseDropProps,
+                                UseDropReturn,
+                                UseDroppableCollectionInput,
+                                UseDroppableCollectionReturn,
+                                UseDroppableCollectionStateInput,
+                                UseDroppableItemInput,
+                                UseDroppableItemProps,
+                                UseDroppableItemReturn,
+                                get_drag_modality,
+                                is_virtual_dragging,
+                                use_auto_scroll,
+                                use_drag,
+                                use_drag_modality,
+                                use_drag_session,
+                                use_draggable_collection,
+                                use_draggable_collection_state,
+                                use_draggable_item,
+                                use_drop,
+                                use_drop_indicator,
+                                use_droppable_collection,
+                                use_droppable_collection_state,
+                                use_droppable_item,
+                                use_virtual_drop,
+                            },
+                            gridlist::{use_grid_list, use_grid_list_item},
+                            interactions::use_move,
+                        },
+                    };
 
                     let element = CapturedElement::new();
                     let auto_scroll = use_auto_scroll(element);
@@ -857,7 +1009,7 @@ fn UseVirtualDropSection() -> impl IntoView {
             </p>
             <Code language=Language::Rust>
                 {indoc!(r#"
-                    use leptonic::hooks::use_virtual_drop;
+                    use leptonic::hooks::dnd::use_virtual_drop;
 
                     let description = use_virtual_drop();
                     view! { <button aria-describedby=move || description.get()>"Drop here"</button> }
@@ -1001,6 +1153,7 @@ fn DragSessionSection() -> impl IntoView {
                 <ApiTable kind=ApiKind::Fields of="DragSessionInfo">
                     <ApiRow name="items" ty="Vec<DragItem>">"The dragged data."</ApiRow>
                     <ApiRow name="allowed_drop_operations" ty="Vec<DropOperation>">"The operations the drag allows, in order of preference."</ApiRow>
+                    <ApiRow name="types" ty="DragTypes">"The formats available in this drag session."</ApiRow>
                 </ApiTable>
             </Section>
 

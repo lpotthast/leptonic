@@ -1,4 +1,6 @@
 // Upstream: react-stately/src/datepicker/useTimeFieldState.ts @ 99e6102368
+// Upstream: react-aria-components/test/TimeField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/TimeField.test.js @ 99e6102368
 use std::sync::Arc;
 
 use jiff::civil::{Date, Time};
@@ -9,8 +11,9 @@ use super::{
     use_date_field_state::{DateFieldState, UseDateFieldStateInput, use_date_field_state},
 };
 use crate::{
+    ValueBinding,
     hooks::form::{ValidateFn, ValidationBehavior},
-    utils::{ValueBinding, date::today},
+    utils::date::today,
 };
 
 // =============================================================================
@@ -23,6 +26,8 @@ use crate::{
 //   is `field` (react-aria: one merged state).
 // - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
 // - The format options are signals (C11), as in `use_date_field_state`.
+// - `min_value`/`max_value` are times of day (`civil::Time`), applied on the value's day
+//   (react-aria: `TimeValue`s, a time converted onto the value's day).
 //
 // =============================================================================
 
@@ -34,8 +39,10 @@ pub struct UseTimeFieldStateInput<T: TimeValue> {
     pub on_change: Option<Callback<Option<T>>>,
     /// The time the segments start from when edited. Default: midnight.
     pub placeholder_value: Signal<Option<T>>,
-    pub min_value: Signal<Option<T>>,
-    pub max_value: Signal<Option<T>>,
+    /// The earliest time of day (on the value's day for values with a date).
+    pub min_value: Signal<Option<Time>>,
+    /// The latest time of day (on the value's day for values with a date).
+    pub max_value: Signal<Option<Time>>,
     /// The finest unit: hour, minute (default) or second.
     pub granularity: Signal<Option<Granularity>>,
     /// 12 or 24 hours. Default: the locale's.
@@ -148,18 +155,30 @@ pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> T
         Arc::new(move |field: &Option<T::Field>| validate(&field.clone().map(T::from_field)))
             as ValidateFn<Option<T::Field>>
     });
+    let placeholder = Signal::derive(move || {
+        placeholder_value.get().map_or_else(
+            || T::Field::today(time_zone.as_ref()).with_fields(day, Time::midnight(), None),
+            |placeholder| placeholder.to_field(day),
+        )
+    });
+    // A time of day as a bound: on the value's day (else the placeholder's), in its zone
+    // (react-aria's `convertValue(minValue, day)`).
+    let bound = move |time: Option<Time>| {
+        time.map(|time| {
+            let base = field_binding
+                .value
+                .get()
+                .unwrap_or_else(|| placeholder.get());
+            base.with_fields(base.date(), time, None)
+        })
+    };
     let field = use_date_field_state(UseDateFieldStateInput {
         default_value: None,
         value: Some(field_binding),
         on_change: None,
-        placeholder_value: Signal::derive(move || {
-            Some(placeholder_value.get().map_or_else(
-                || T::Field::today(time_zone.as_ref()).with_fields(day, Time::midnight(), None),
-                |placeholder| placeholder.to_field(day),
-            ))
-        }),
-        min_value: Signal::derive(move || to_field(min_value.get())),
-        max_value: Signal::derive(move || to_field(max_value.get())),
+        placeholder_value: Signal::derive(move || Some(placeholder.get())),
+        min_value: Signal::derive(move || bound(min_value.get())),
+        max_value: Signal::derive(move || bound(max_value.get())),
         is_date_unavailable: None,
         granularity: Signal::derive(move || Some(granularity.get().unwrap_or(Granularity::Minute))),
         max_granularity: Signal::stored(MaxGranularity::Hour),
@@ -191,15 +210,42 @@ pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> T
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
-    use jiff::civil::time;
+    use jiff::civil::{DateTime, date, time};
 
     use super::*;
-    use crate::hooks::datepicker::DateSegmentType;
+    use crate::{hooks::datepicker::DateSegmentType, testing::with_owner};
+
+    /// A time field of date-times bounded by times of day: "not before 9:00" on any day
+    /// (react-stately's `useTimeFieldState`, `convertValue(minValue, day)`).
+    #[test]
+    fn bounds_are_times_of_the_values_day() {
+        with_owner(|| {
+            let value = RwSignal::new(Some(date(2024, 6, 5).at(8, 0, 0, 0)));
+            let state = use_time_field_state(UseTimeFieldStateInput::<DateTime> {
+                value: Some(ValueBinding::from(value)),
+                min_value: Signal::stored(Some(time(9, 0, 0, 0))),
+                max_value: Signal::stored(Some(time(17, 0, 0, 0))),
+                ..UseTimeFieldStateInput::default()
+            });
+            let is_invalid = || {
+                state
+                    .field
+                    .validation
+                    .realtime_validation
+                    .get_untracked()
+                    .is_invalid
+            };
+            assert_that!(is_invalid()).is_true();
+            value.set(Some(date(2030, 1, 1).at(10, 0, 0, 0)));
+            assert_that!(is_invalid()).is_false();
+            value.set(Some(date(2030, 1, 1).at(17, 30, 0, 0)));
+            assert_that!(is_invalid()).is_true();
+        });
+    }
 
     #[test]
     fn edits_a_time() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_time_field_state(UseTimeFieldStateInput::<Time> {
                 hour_cycle: Signal::stored(Some(HourCycle::H24)),
                 ..UseTimeFieldStateInput::default()

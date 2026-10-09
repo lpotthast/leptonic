@@ -2,24 +2,24 @@
 use std::collections::HashSet;
 
 use leptos::{context::Provider, ev, prelude::*};
+use leptos_classes::Classes;
 
 use super::press::{PressResponder, PressResponderProps};
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
-        DisclosureGroupExpansion, DisclosureGroupState, DisclosureState, IntoAttrs, PressEvent,
-        PressResponderTrigger, UseDisclosureGroupStateInput, UseDisclosureInput,
-        UseDisclosurePanelAttrs, UseDisclosureReturn, UseDisclosureStateInput, UseFocusRingInput,
-        collections::Key, use_disclosure, use_disclosure_group_state, use_disclosure_state,
-        use_focus_ring,
+        collections::Key,
+        disclosure::{
+            DisclosureGroupExpansion, DisclosureGroupState, DisclosureState,
+            UseDisclosureGroupStateInput, UseDisclosureInput, UseDisclosurePanelProps,
+            UseDisclosureReturn, UseDisclosureStateInput, use_disclosure,
+            use_disclosure_group_state, use_disclosure_state,
+        },
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
+        interactions::{PressEvent, PressResponderTrigger},
     },
     utils::{
-        CapturedElement, ValueBinding,
-        aria::AriaRole,
-        classes::Classes,
-        data_attributes::flag,
-        default_class::with_default_class,
-        id::{ensure_element_id, use_id},
+        aria::AriaRole, data_attributes::flag, default_class::with_default_class, id::use_id,
         styles::Styles,
     },
 };
@@ -32,7 +32,7 @@ use crate::{
 // - The trigger is the pressable atom (a `Button`) inside a `DisclosureTrigger`, which hands it
 //   the props through a `PressResponder` (react-aria-components: a `Button` with `slot="trigger"`
 //   through `ButtonContext`).
-// - The panel is named by the trigger's rendered id (its own `attr:id`, else the hook's).
+// - The panel is named by the trigger's id (the trigger `Button`'s, known while rendering).
 // - Expanded state (C4): `default_expanded` + `on_expanded_change`, or `is_expanded` +
 //   `set_expanded`; the group's `expanded_keys` likewise.
 // - Render props become `data-*` attributes plus plain children.
@@ -43,9 +43,8 @@ use crate::{
 #[derive(Clone)]
 struct DisclosureContext {
     /// Cloned for each rendering of the panel.
-    panel_attrs: StoredValue<UseDisclosurePanelAttrs>,
-    /// Set by the panel before it renders.
-    panel_role: RwSignal<AriaRole>,
+    panel_props: StoredValue<UseDisclosurePanelProps>,
+    state: DisclosureState,
     trigger: TriggerPress,
 }
 
@@ -59,7 +58,7 @@ struct TriggerPress {
 }
 
 /// A group of [`Disclosure`]s (an accordion): by default, expanding one collapses the others.
-/// Give each disclosure an `id` to address it in `default_expanded_keys` and `expanded_keys`.
+/// Give each disclosure a `key` to address it in `default_expanded_keys` and `expanded_keys`.
 ///
 /// Data attributes: `data-disabled`.
 ///
@@ -68,14 +67,14 @@ struct TriggerPress {
 #[allow(clippy::implicit_hasher)]
 pub fn DisclosureGroup(
     /// Whether one or several disclosures can be expanded at once.
-    #[prop(optional)]
-    expansion: DisclosureGroupExpansion,
+    #[prop(into, optional)]
+    expansion: Signal<DisclosureGroupExpansion>,
     /// Whether all disclosures of the group are disabled.
     #[prop(into, optional)]
     is_disabled: Signal<bool>,
-    /// The initially expanded disclosures (their `id`s). Ignored with `expanded_keys`.
+    /// The initially expanded disclosures (their `key`s). Ignored with `expanded_keys`.
     #[prop(into, optional)]
-    default_expanded_keys: Vec<Key>,
+    default_expanded_keys: HashSet<Key>,
     /// The expanded disclosures (controlled): a value or any signal.
     #[prop(into, optional)]
     expanded_keys: Option<Signal<HashSet<Key>>>,
@@ -117,6 +116,9 @@ pub fn DisclosureGroup(
 /// </Disclosure>
 /// ```
 ///
+/// Its [`DisclosureState`] is in the context of its children (react-aria-components'
+/// `DisclosureStateContext`), e.g. for a custom part: `use_context::<DisclosureState>()`.
+///
 /// Data attributes: `data-expanded`, `data-disabled`, `data-focus-visible-within`.
 ///
 /// Default class: `leptonic-Disclosure`.
@@ -124,7 +126,7 @@ pub fn DisclosureGroup(
 pub fn Disclosure(
     /// The disclosure's key in a surrounding [`DisclosureGroup`].
     #[prop(into, optional)]
-    id: Option<Key>,
+    key: Option<Key>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Whether the panel starts expanded. Ignored with `is_expanded` or in a group.
     #[prop(optional)]
@@ -142,12 +144,14 @@ pub fn Disclosure(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Disclosure", classes);
     let group = use_context::<DisclosureGroupState>();
-    let key = id.unwrap_or_else(|| Key::from(use_id("disclosure")));
+    let key = key.unwrap_or_else(|| Key::from(use_id("disclosure")));
     // In a group, the group's expanded keys hold the state.
     let value = group.map(|group| {
         let key = StoredValue::new(key.clone());
         ValueBinding::new(
-            Signal::derive(move || key.with_value(|key| group.is_expanded(key))),
+            // A memo: every toggle of the group changes its key set, but only this disclosure's
+            // own changes may reach its panel.
+            Memo::new(move |_| key.with_value(|key| group.is_expanded(key))).into(),
             Callback::new(move |expanded: bool| {
                 key.with_value(|key| {
                     if group
@@ -182,18 +186,14 @@ pub fn Disclosure(
         state: disclosure_state,
     });
 
-    // The panel is named by the trigger: its own id, else the hook's, which it gets once rendered
-    // (so the server renders no reference to an id the button doesn't have yet).
+    // The panel is named by the trigger: the hook's id, or the trigger button's own, which it
+    // writes into `trigger_id` while rendering (react-aria-components merges both ids).
     let trigger = CapturedElement::new();
-    let labelled_by = RwSignal::new(None);
-    Effect::new(move |_| {
-        if let Some(id) = ensure_element_id(&trigger, &trigger_id) {
-            labelled_by.set(Some(id));
-        }
-    });
+    let trigger_id = RwSignal::new(trigger_id);
+    let labelled_by = Signal::derive(move || Some(trigger_id.get()));
 
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let focus_within = (
@@ -201,15 +201,9 @@ pub fn Disclosure(
         focus_ring.props.on_focusout.into_on(ev::focusout),
     );
     let is_expanded = disclosure_state.is_expanded;
-    let panel_role = RwSignal::new(AriaRole::Group);
     let context = DisclosureContext {
-        panel_attrs: StoredValue::new(
-            panel_props
-                .labelled_by(labelled_by.into())
-                .with_role(panel_role.into())
-                .into_attrs(),
-        ),
-        panel_role,
+        panel_props: StoredValue::new(panel_props.labelled_by(labelled_by)),
+        state: disclosure_state,
         trigger: TriggerPress {
             on_press: button.on_press,
             on_press_start: button.on_press_start,
@@ -219,12 +213,14 @@ pub fn Disclosure(
                 aria_expanded: button.aria_expanded,
                 aria_controls: button.aria_controls,
                 element: trigger,
+                id: trigger_id,
             },
         },
     };
 
     view! {
         <Provider value=context>
+            <Provider value=disclosure_state>
             <div
                 class=classes
                 style=styles
@@ -235,6 +231,7 @@ pub fn Disclosure(
             >
                 {children()}
             </div>
+            </Provider>
         </Provider>
     }
 }
@@ -260,10 +257,7 @@ pub fn DisclosureTrigger(children: Children) -> impl IntoView {
         on_press_end: None,
         on_press_up: None,
         on_press_change: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_accessibility_description: MaybeProp::default(),
+        long_press: None,
         is_disabled: Some(is_disabled),
         force_is_pressed: None,
         prevent_focus_on_press: None,
@@ -299,10 +293,15 @@ pub fn DisclosurePanel(
         crate::utils::dev_warn!("A <DisclosurePanel> must be inside a <Disclosure>.");
         return ().into_any();
     };
-    context.panel_role.set(role.as_aria_role());
-    let attrs = context.panel_attrs.get_value();
+    let attrs = UseDisclosurePanelProps {
+        // Collapsed as rendered now (the panel may render again, e.g. inside a `Show`).
+        hidden_until_found: !context.state.is_expanded.get_untracked(),
+        ..context.panel_props.get_value()
+    }
+    .with_role(Signal::stored(role.as_aria_role()))
+    .into_attrs();
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let focus_within = (

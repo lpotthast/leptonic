@@ -1,14 +1,14 @@
-use leptonic::hooks::KeyboardActivation;
-use leptonic::hooks::Orientation;
-use leptonic::hooks::collections::SelectOnPressUp;
 use leptonic::{
+    CapturedElement, IntoAttrs, Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
-        IntoAttrs, Key, TabListData, TabListItemData, UseTabInput, UseTabListInput,
-        UseTabListReturn, UseTabListStateInput, UseTabPanelInput, UseTabReturn, use_collection,
-        use_tab, use_tab_list, use_tab_list_state, use_tab_panel,
+        collections::{Key, SelectOnPressUp, use_collection},
+        tabs::{
+            KeyboardActivation, TabListState, UseTabInput, UseTabListInput, UseTabListReturn,
+            UseTabListStateInput, UseTabPanelInput, UseTabReturn, use_tab, use_tab_list,
+            use_tab_list_state, use_tab_panel,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -21,12 +21,17 @@ const TABS: [(&str, &str); 4] = [
 
 /// One tab, rendered with `use_tab`. Its state shows in `aria-selected` and `aria-disabled`.
 #[component]
-fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-    let UseTabReturn { props: tab_props, .. } = use_tab(UseTabInput {
-        list,
+fn DemoTab(state: TabListState, key: &'static str, label: &'static str) -> impl IntoView {
+    let UseTabReturn {
+        props: tab_props, ..
+    } = use_tab(UseTabInput {
+        state,
         key: Key::from(key),
         is_disabled: Signal::stored(false),
         should_select_on_press_up: SelectOnPressUp::Auto,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
     let (attrs, styles) = tab_props.into_parts();
 
@@ -52,18 +57,23 @@ pub fn TabsDemo() -> impl IntoView {
         on_selection_change: None,
         disabled_keys: Signal::default(),
     });
-    let tabs = TabListData::new(state);
 
-    let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
+    let UseTabListReturn { props } = use_tab_list(UseTabListInput {
         aria_label: "Product".into(),
-        tabs: tabs.clone(),
+        state,
         element: CapturedElement::new(),
         orientation: Orientation::Horizontal.into(),
         keyboard_activation: KeyboardActivation::Automatic,
         aria_labelledby: None,
     });
     // `key: None`: one panel that always shows the selected tab.
-    let panel = use_tab_panel(UseTabPanelInput { tabs, key: None, aria_describedby: None, aria_details: None });
+    let panel = use_tab_panel(UseTabPanelInput {
+        state,
+        key: None,
+        aria_label: MaybeProp::default(),
+        aria_describedby: None,
+        aria_details: None,
+    });
 
     let content = move || {
         match state.selected_key().map(|key| key.to_string()).as_deref() {
@@ -94,7 +104,7 @@ pub fn TabsDemo() -> impl IntoView {
     view! {
         <div {..props.into_attrs()} class="demo-tab-list">
             {TABS
-                .map(|(key, label)| view! { <DemoTab list=data.clone() key=key label=label/> })
+                .map(|(key, label)| view! { <DemoTab state=state key=key label=label/> })
                 .collect_view()}
         </div>
         <div {..panel.props.into_attrs()} class="demo-tab-panel">{content}</div>

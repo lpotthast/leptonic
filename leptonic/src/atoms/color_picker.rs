@@ -4,12 +4,9 @@
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
-    Out,
-    hooks::{ColorPickerState, UseColorPickerStateInput, use_color_picker_state},
-    utils::{
-        ValueBinding,
-        color::{Color, ColorValue},
-    },
+    Out, ValueBinding,
+    hooks::color::{ColorPickerState, UseColorPickerStateInput, use_color_picker_state},
+    utils::color::{Color, ColorValue},
 };
 
 // =============================================================================

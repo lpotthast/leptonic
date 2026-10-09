@@ -2,6 +2,8 @@
 // Upstream: react-aria/src/utils/isScrollable.ts @ 99e6102368
 // Upstream: react-aria/src/utils/getScrollParent.ts @ 99e6102368
 // Upstream: react-aria/src/utils/getScrollParents.ts @ 99e6102368
+// Upstream: react-aria/test/utils/scrollIntoView.test.ts @ 99e6102368
+// Upstream: react-aria/test/utils/getScrollParents.test.ts @ 99e6102368
 //! Scroll parents and scrolling elements into view (react-aria's `scrollIntoView`,
 //! `scrollIntoViewport`, `getScrollParent(s)` and `isScrollable`).
 

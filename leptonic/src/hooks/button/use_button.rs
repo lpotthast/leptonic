@@ -6,30 +6,29 @@ use leptos::{
         custom::{CustomAttr, custom_attribute},
     },
     ev,
-    ev::{On, SharedEventCallback},
     oco::Oco,
     prelude::*,
 };
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
+    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        FocusHandle, FocusableContextAttr, FocusableContextAttrs, HoverEndEvent, HoverStartEvent,
-        IntoAttrs, LinkRel, LinkTarget, LongPressEvent, PressEvent, PropsWithStyles,
-        UseFocusRingReturn, UseFocusableReturn, UseHoverReturn, UsePressReturn,
         focus::{
+            FocusHandle, FocusableContextAttr, FocusableContextAttrs, UseFocusRingReturn,
+            UseFocusableReturn,
             use_focus_ring::{UseFocusRingInput, use_focus_ring},
             use_focusable::{UseFocusableInput, use_focusable},
         },
         interactions::{
+            HoverEndEvent, HoverStartEvent, LongPress, PressEvent, UseHoverReturn, UsePressReturn,
             use_hover::{UseHoverInput, use_hover},
             use_keyboard::KeyboardEventWrapper,
             use_press::{UsePressInput, use_press},
         },
-        link_rel_to_string,
+        link::{LinkRel, LinkTarget, link_rel},
     },
     utils::{
-        ElementCaptureAttr, EventHandler,
         aria::{
             AriaChecked, AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaPressed,
             AriaRole,
@@ -53,8 +52,8 @@ use crate::{
 //   return a `UseButtonInput` instead of DOM props, mirroring how react-aria passes
 //   `AriaButtonProps` around. Combine them with struct update syntax:
 //   `use_button(UseButtonInput { on_press_end: .., ..trigger.button })`.
-// - Long press callbacks are part of the input, because leptonic's `use_press` handles long
-//   presses itself (react-aria uses a separate `useLongPress`).
+// - Long presses are part of the input (`long_press`), because leptonic's `use_press` handles
+//   long presses itself (react-aria uses a separate `useLongPress`).
 // - Of the DOM props react-aria forwards via `filterDOMProps`, only `id`, `aria-label` and
 //   `aria-labelledby` are part of the input (hooks configuring a button need them). Set others
 //   directly on the element.
@@ -65,8 +64,25 @@ use crate::{
 //   propagation by default; react-aria has no such default.
 //
 // ## ADDITIONS
-// - For `ButtonElementType::Anchor`, `rel="noopener"` is added for `LinkTarget::Blank`, so that
-//   the new browsing context gets no access to this one. React-aria: `rel` as given.
+// - For `ButtonElementType::Anchor`, `rel="noopener"` is added for `LinkTarget::Blank` (unless
+//   `rel` has `Opener`), so that the new browsing context gets no access to this one.
+//   React-aria: `rel` as given.
+// - `is_pending` (react-aria-components' `Button` handles it, with `useDisableInteractions`):
+//   pending, the button keeps its focus but ignores presses, hover, keyboard handlers and
+//   context menu requests, is `aria-disabled`, a submit button becomes a plain one and an
+//   anchor drops its `href` and `target`.
+// - `role` and `aria_checked` override the element's role (e.g. the radios of a single-selection
+//   toggle button group; react-aria passes them as DOM props).
+// - `shortcuts` (keyboard shortcuts while focused) and `on_context_menu` (`use_context_menu`),
+//   both also from a surrounding `PressResponder`.
+// - The hook merges a surrounding `PressResponder`'s props, as react-aria's `usePress` does for
+//   any pressable: its press handlers, disabled state, shortcuts, context menu handler and
+//   trigger props (`aria-haspopup`, `aria-expanded`, `aria-controls`, the element capture and
+//   the trigger's id, which the button takes or replaces with its own; react-aria: `mergeIds`).
+// - `allow_focus_when_disabled` (undocumented in react-aria) is a signal; so are
+//   `prevent_focus_on_press` and `target`.
+// - `aria_disabled` overrides the computed `aria-disabled` (react-aria passes `aria-disabled`
+//   through).
 //
 // ## OMITTED FEATURES
 // - `onClick` (deprecated in react-aria; use `on_press`).
@@ -182,7 +198,8 @@ pub struct UseButtonInput {
     /// The `type` of a `<button>` or `<input>` element. Defaults to `button`.
     pub button_type: ButtonType,
 
-    /// The element's id.
+    /// The element's id. Inside an overlay trigger (`PressResponder` with a trigger) the button
+    /// gets the trigger's id without one, and its own becomes the trigger's.
     pub id: Option<String>,
 
     /// An accessible name, for buttons without visible text (e.g. icon buttons).
@@ -202,7 +219,7 @@ pub struct UseButtonInput {
     pub is_pending: Signal<bool>,
 
     /// Keep the button focusable (but out of the tab order) while disabled.
-    pub allow_focus_when_disabled: bool,
+    pub allow_focus_when_disabled: Signal<bool>,
 
     /// Remove the button from the tab order. It stays focusable programmatically and by pointer.
     pub exclude_from_tab_order: Signal<bool>,
@@ -211,16 +228,16 @@ pub struct UseButtonInput {
     pub auto_focus: bool,
 
     /// Don't move focus to the button when it is pressed.
-    pub prevent_focus_on_press: bool,
+    pub prevent_focus_on_press: Signal<bool>,
 
-    /// For `ButtonElementType::Anchor`: the link target. Removed while disabled.
+    /// For `ButtonElementType::Anchor`: the link target. Removed while disabled or pending.
     pub href: Signal<Option<String>>,
 
-    /// For `ButtonElementType::Anchor`: where to open the link.
-    pub target: LinkTarget,
+    /// For `ButtonElementType::Anchor`: where to open the link. Rendered with the `href`.
+    pub target: Signal<LinkTarget>,
 
     /// For `ButtonElementType::Anchor`: the link relationship. `NoOpener` is added for
-    /// `LinkTarget::Blank`.
+    /// `LinkTarget::Blank` (unless it has `Opener`).
     pub rel: Vec<LinkRel>,
 
     /// For `ButtonElementType::Button`: form attributes.
@@ -243,6 +260,9 @@ pub struct UseButtonInput {
     pub role: Option<AriaRole>,
     /// Whether the button represents the current item of a set.
     pub aria_current: Signal<Option<AriaCurrent>>,
+    /// Overrides the computed `aria-disabled` (e.g. a button that announces itself disabled but
+    /// stays interactive). `None`: `true` while disabled (non-native buttons) or pending.
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
 
     pub on_press: Option<Callback<PressEvent>>,
     pub on_press_start: Option<Callback<PressEvent>>,
@@ -250,11 +270,8 @@ pub struct UseButtonInput {
     pub on_press_up: Option<Callback<PressEvent>>,
     pub on_press_change: Option<Callback<bool>>,
 
-    pub on_long_press_start: Option<Callback<LongPressEvent>>,
-    pub on_long_press: Option<Callback<LongPressEvent>>,
-    pub on_long_press_end: Option<Callback<LongPressEvent>>,
-    /// Describes the long press action to assistive technology, e.g. "Long press to open menu".
-    pub long_press_accessibility_description: MaybeProp<String>,
+    /// Long press handling (see `use_press`). `None`: no long presses.
+    pub long_press: Option<LongPress>,
 
     pub on_hover_start: Option<Callback<HoverStartEvent>>,
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
@@ -272,7 +289,7 @@ pub struct UseButtonInput {
 
     /// Called when a context menu is requested on the button (right click, Shift+F10, long press
     /// on iOS, ...; see `use_context_menu`).
-    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
+    pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_button`].
@@ -303,8 +320,8 @@ pub struct UseButtonProps {
     pub disabled: Signal<bool>,
     pub tabindex: Signal<Option<i32>>,
     pub href: Signal<Option<String>>,
-    pub target: Option<Oco<'static, str>>,
-    pub rel: Option<String>,
+    pub target: Signal<Option<Oco<'static, str>>>,
+    pub rel: Signal<Option<String>>,
     pub form: ButtonFormAttributes,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
@@ -342,8 +359,8 @@ pub type UseButtonAttrs = (
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::Href, Signal<Option<String>>>,
-        Attr<attr::Target, Option<Oco<'static, str>>>,
-        Attr<attr::Rel, Option<String>>,
+        Attr<attr::Target, Signal<Option<Oco<'static, str>>>>,
+        Attr<attr::Rel, Signal<Option<String>>>,
     ),
     (
         Attr<attr::Form, Option<String>>,
@@ -370,19 +387,19 @@ pub type UseButtonAttrs = (
         ElementCaptureAttr,
     ),
     (
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
-        On<ev::click, SharedEventCallback<MouseEvent>>,
-        On<ev::dblclick, SharedEventCallback<MouseEvent>>,
-        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-        On<ev::contextmenu, SharedEventCallback<MouseEvent>>,
-        On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-        On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-        On<ev::dragstart, SharedEventCallback<DragEvent>>,
-        On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
+        OnEvent<ev::click>,
+        OnEvent<ev::dblclick>,
+        OnEvent<ev::pointerdown>,
+        OnEvent<ev::contextmenu>,
+        OnEvent<ev::pointerup>,
+        OnEvent<ev::mousedown>,
+        OnEvent<ev::dragstart>,
+        OnEvent<ev::pointerenter>,
+        OnEvent<ev::pointerleave>,
     ),
     FocusableContextAttr,
 );
@@ -493,15 +510,13 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         aria_checked,
         role,
         aria_current,
+        aria_disabled,
         on_press,
         on_press_start,
         on_press_end,
         on_press_up,
         on_press_change,
-        on_long_press_start,
-        on_long_press,
-        on_long_press_end,
-        long_press_accessibility_description,
+        long_press,
         on_hover_start,
         on_hover_end,
         on_hover_change,
@@ -516,7 +531,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
 
     // An overlay trigger's props from a `PressResponder` (`DialogTrigger`); the button's own win
     // (react-aria-components merges `triggerProps` into the pressable child).
-    let responder = use_context::<crate::hooks::PressResponderContext>();
+    let responder = use_context::<crate::hooks::interactions::PressResponderContext>();
     let trigger = responder.as_ref().and_then(|ctx| ctx.trigger);
     // A disabled responder (a disabled `MenuTrigger` or `Disclosure`) disables the button itself:
     // its `disabled` attribute, focus, hover and shortcuts, not only its presses.
@@ -538,18 +553,23 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     };
     // Context menu requests: the responder's (a `MenuTrigger`'s) and the button's own. On iOS a
     // long press requests it.
-    let context_menu = crate::hooks::use_context_menu(crate::hooks::UseContextMenuInput {
-        on_context_menu: crate::hooks::chain_optional_callbacks(
-            responder.as_ref().and_then(|ctx| ctx.on_context_menu),
-            on_context_menu,
-        ),
-    });
-    let on_long_press_start = crate::hooks::chain_optional_callbacks(
-        context_menu.on_long_press_start,
-        on_long_press_start,
+    let context_menu = crate::hooks::interactions::use_context_menu(
+        crate::hooks::interactions::UseContextMenuInput {
+            on_context_menu: crate::hooks::interactions::chain_optional_callbacks(
+                responder.as_ref().and_then(|ctx| ctx.on_context_menu),
+                on_context_menu,
+            ),
+        },
     );
-    let on_long_press =
-        crate::hooks::chain_optional_callbacks(context_menu.on_long_press, on_long_press);
+    let long_press = crate::hooks::interactions::use_press::merge_long_press(
+        context_menu.long_press,
+        long_press,
+    );
+    // Inside a trigger, the button has an id while rendering: its own, else the trigger's.
+    let id = match trigger {
+        Some(trigger) => Some(trigger.element_id(id)),
+        None => id,
+    };
     let (aria_haspopup, aria_expanded, aria_controls) = match trigger {
         Some(trigger) => (
             Signal::derive(move || aria_haspopup.get().or_else(|| trigger.aria_haspopup.get())),
@@ -571,20 +591,17 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         // Client-side routers (like leptos_router) handle link clicks in a document-level
         // listener, so clicks on anchors must bubble.
         propagation: if element_type == ButtonElementType::Anchor {
-            crate::hooks::PressPropagation::Continue
+            crate::hooks::interactions::PressPropagation::Continue
         } else {
-            crate::hooks::PressPropagation::Stop
+            crate::hooks::interactions::PressPropagation::Stop
         },
-        prevent_focus_on_press: Signal::stored(prevent_focus_on_press),
+        prevent_focus_on_press,
         on_press,
         on_press_start,
         on_press_end,
         on_press_up,
         on_press_change,
-        on_long_press_start,
-        on_long_press,
-        on_long_press_end,
-        long_press_accessibility_description,
+        long_press,
         ..UsePressInput::default()
     });
 
@@ -605,7 +622,6 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         allow_shortcut_repeats: false,
     });
     let context_attrs = focusable_props.context_attrs.clone();
-    let context_describedby = focusable_props.context_aria_describedby;
 
     let UseHoverReturn {
         props: hover_props,
@@ -633,20 +649,22 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         element_type,
         ButtonElementType::Button | ButtonElementType::Input
     );
-    let tabindex = if allow_focus_when_disabled {
-        let focusable_tabindex = focusable_props.tabindex;
-        Signal::derive(move || {
-            if disabled.get() {
-                Some(-1)
-            } else {
-                focusable_tabindex.get()
-            }
-        })
-    } else {
-        focusable_props.tabindex
-    };
+    let focusable_tabindex = focusable_props.tabindex;
+    let tabindex = Signal::derive(move || {
+        if allow_focus_when_disabled.get() && disabled.get() {
+            Some(-1)
+        } else {
+            focusable_tabindex.get()
+        }
+    });
 
     let is_anchor = element_type == ButtonElementType::Anchor;
+    // The anchor's link, while it can be followed.
+    let href = if is_anchor {
+        Signal::derive(move || href.get().filter(|_| !disabled.get() && !is_pending.get()))
+    } else {
+        Signal::stored(None)
+    };
     let props = UseButtonProps {
         id,
         aria_label,
@@ -655,31 +673,41 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             ButtonElementType::Button => None,
             _ => Some(AriaRole::Button),
         }),
-        button_type: Signal::derive(move || match element_type {
-            ButtonElementType::Button | ButtonElementType::Input => {
-                // Pending, a submit button must not submit the form, also not implicitly (Enter
-                // in a text field).
-                let button_type = match button_type {
-                    ButtonType::Submit if is_pending.get() => ButtonType::Button,
-                    button_type => button_type,
-                };
-                Some(button_type.as_str())
+        button_type: match (element_type, button_type) {
+            // Pending, a submit button must not submit the form, also not implicitly (Enter in a
+            // text field).
+            (ButtonElementType::Button | ButtonElementType::Input, ButtonType::Submit) => {
+                Signal::derive(move || {
+                    Some(if is_pending.get() {
+                        ButtonType::Button.as_str()
+                    } else {
+                        ButtonType::Submit.as_str()
+                    })
+                })
             }
-            _ => None,
-        }),
-        disabled: Signal::derive(move || has_disabled_attr && disabled.get()),
+            (ButtonElementType::Button | ButtonElementType::Input, button_type) => {
+                Signal::stored(Some(button_type.as_str()))
+            }
+            _ => Signal::stored(None),
+        },
+        disabled: if has_disabled_attr {
+            disabled
+        } else {
+            Signal::stored(false)
+        },
         tabindex,
-        href: Signal::derive(move || {
-            href.get()
-                .filter(|_| is_anchor && !disabled.get() && !is_pending.get())
+        href,
+        target: Signal::derive(move || {
+            href.with(Option::is_some)
+                .then(|| {
+                    target.with(|target| (*target != LinkTarget::Same).then(|| target.to_oco()))
+                })
+                .flatten()
         }),
-        target: (is_anchor && target != LinkTarget::Same).then(|| target.to_oco()),
-        rel: {
-            let mut rel = rel;
-            if target == LinkTarget::Blank && !rel.contains(&LinkRel::NoOpener) {
-                rel.push(LinkRel::NoOpener);
-            }
-            link_rel_to_string(&rel).filter(|_| is_anchor)
+        rel: if is_anchor {
+            Signal::derive(move || target.with(|target| link_rel(target, rel.clone())))
+        } else {
+            Signal::stored(None)
         },
         form: if element_type == ButtonElementType::Button {
             form
@@ -687,8 +715,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             ButtonFormAttributes::default()
         },
         aria_disabled: Signal::derive(move || {
-            ((!has_disabled_attr && disabled.get()) || is_pending.get())
-                .then_some(AriaDisabled::True)
+            aria_disabled.get().or_else(|| {
+                ((!has_disabled_attr && disabled.get()) || is_pending.get())
+                    .then_some(AriaDisabled::True)
+            })
         }),
         aria_haspopup,
         aria_expanded,
@@ -696,25 +726,13 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         aria_pressed,
         aria_checked,
         aria_current,
-        aria_describedby: {
-            // The long press description (from `use_press`) adds to the caller's.
-            let press_describedby = press_props.aria_describedby;
-            Signal::derive(move || {
-                let press_ids: Vec<String> = press_describedby
-                    .with(|d| {
-                        d.as_ref()
-                            .map(|d| d.ids().map(str::to_owned).collect::<Vec<_>>())
-                    })
-                    .unwrap_or_default();
-                let ids: Vec<String> = aria_describedby
-                    .get()
-                    .into_iter()
-                    .chain(press_ids)
-                    .chain(context_describedby.get())
-                    .collect();
-                (!ids.is_empty()).then(|| ids.join(" "))
-            })
-        },
+        // The long press description (from `use_press`) and a `FocusableContext`'s (a
+        // tooltip's) add to the caller's.
+        aria_describedby: IdRefs::derive([
+            aria_describedby,
+            press_props.aria_describedby,
+            focusable_props.context_aria_describedby,
+        ]),
         data_focus_visible: focus_ring_props.data_focus_visible,
         element_capture: match trigger {
             Some(trigger) => focusable_props

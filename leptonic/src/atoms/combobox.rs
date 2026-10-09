@@ -1,7 +1,11 @@
 // Upstream: react-aria-components/src/ComboBox.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ComboBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ComboBox.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ComboBox.ssr.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     field::{FieldContext, LabelContext},
@@ -12,19 +16,28 @@ use super::{
     typed_values::{KeyedStateProps, SelectedValues, selected_state_props},
 };
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     atoms::field::LabelPresence,
     hooks::{
-        ComboBoxFilter, ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxOpenChange, ComboBoxState,
-        ComboBoxValue, IntoAttrs, Placement, PopoverModality, UseButtonInput, UseComboBoxInput,
-        UseComboBoxReturn, UseComboBoxStateInput, UseHoverInput, UsePopoverInput, UsePopoverReturn,
-        UseTextFieldReturn, ValidateFn, ValidationBehavior,
+        button::{UseButtonInput, use_button},
         collections::{CollectionMemo, Key},
-        use_button, use_combobox, use_combobox_state, use_hover, use_popover, use_text_field,
+        combobox::{
+            ComboBoxFilter, ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxOpenChange,
+            ComboBoxState, ComboBoxValue, UseComboBoxInput, UseComboBoxReturn,
+            UseComboBoxStateInput, use_combobox, use_combobox_state,
+        },
+        form::{UseTextFieldReturn, ValidateFn, ValidationBehavior, use_text_field},
+        overlay::{
+            OverlayPositionOptions, Placement, PopoverModality, UsePopoverInput, UsePopoverReturn,
+            use_popover,
+        },
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
+        data_attributes::flag,
+        default_class::with_default_class,
+        list_formatter::{ListFormatOptions, ListFormatter},
+        scoped_context::{ClearContexts, clear_context},
+        styles::Styles,
     },
 };
 
@@ -34,25 +47,36 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The value is typed and its type is the selection mode (`S: SelectedValues`: `Option<V>`
-//   selects one value, `Vec<V>` several; react-aria: `selectionMode` with `Key | null` or
+//   selects one value, `HashSet<V>` several; react-aria: `selectionMode` with `Key | null` or
 //   `Key[]`); the collection's keys are the values'. `validate` gets both the input text and the
 //   typed value (`ComboBoxValue<S>`).
 // - State (C4): `default_value` + `on_change`, or `value` + `set_value`; the input text's
-//   `default_input_value` + `on_input_change`, or `input_value` + `set_input_value`.
-// - The parts are atoms reading the combo box's context (`ComboBoxButton`, `ComboBoxPopover`, the
-//   `Input`; react-aria-components: contexts consumed by `Button`, `Popover`, `Input`).
+//   `default_input_value` + `on_input_value_change`, or `input_value` + `set_input_value`.
+// - The parts are atoms reading the combo box's context (`ComboBoxButton`, `ComboBoxPopover`,
+//   `ComboBoxValue`, the `Input`; react-aria-components: contexts consumed by `Button`,
+//   `Popover`, `Input`, `ComboBoxValue`). `ComboBoxValue` renders the selected texts or its
+//   `placeholder` (no render function of the selected items).
+//
+// ## DIFFERENT BEHAVIOR
+// - The popover is positioned at the input and as wide as the input and the button together
+//   (react-aria-components: at the `Group` around them if there is one; leptonic has no `Group`
+//   atom yet).
 //
 // =============================================================================
 
 /// Context from [`ComboBox`] to its parts.
 #[derive(Clone)]
-pub struct ComboBoxCtx {
+pub struct ComboBoxContext {
     pub state: ComboBoxState,
     pub is_disabled: Signal<bool>,
     /// The element the popover is positioned at (the input).
     pub anchor: CapturedElement,
     /// The popover element.
     pub popover: CapturedElement,
+    /// The button element (the popover is as wide as the input and the button together).
+    pub button: CapturedElement,
+    /// The list box's element: the popover keeps its focused option in place when it moves.
+    pub listbox: CapturedElement,
     parts: StoredValue<Parts>,
 }
 
@@ -88,7 +112,7 @@ pub fn ComboBox<S: SelectedValues>(
     /// All options; their keys are the values' (`SelectionValue::to_key`).
     #[prop(into)]
     collection: CollectionMemo,
-    /// Shows the options matching the input (e.g. [`use_contains_filter`](crate::hooks::use_contains_filter)).
+    /// Shows the options matching the input (e.g. [`use_contains_filter`](crate::hooks::combobox::use_contains_filter)).
     /// Without a filter, all options are shown.
     #[prop(optional)]
     filter: Option<ComboBoxFilter>,
@@ -96,7 +120,7 @@ pub fn ComboBox<S: SelectedValues>(
     #[prop(optional)]
     default_value: S,
     /// The selected value(s) (controlled): a value or any signal. `Option<V>` selects one value,
-    /// `Vec<V>` several.
+    /// `HashSet<V>` several.
     #[prop(into, optional)]
     value: Option<Signal<S>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -113,11 +137,22 @@ pub fn ComboBox<S: SelectedValues>(
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
     set_input_value: Option<Out<String>>,
-    #[prop(into, optional)] on_input_change: Option<Callback<String>>,
+    #[prop(into, optional)] on_input_value_change: Option<Callback<String>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
-    #[prop(optional)] menu_trigger: ComboBoxMenuTrigger,
-    #[prop(optional)] allows_empty_collection: bool,
-    #[prop(optional)] allows_custom_value: bool,
+    /// When the popover opens: when the user types (default), when the input gets focus, or
+    /// only by the button and the arrow keys.
+    #[prop(into, optional)]
+    menu_trigger: Signal<ComboBoxMenuTrigger>,
+    /// Open the popover even without options (e.g. to show the `ListBox`'s empty state).
+    #[prop(into, optional)]
+    allows_empty_collection: Signal<bool>,
+    /// Keep typed text that matches no option (clearing the value) instead of reverting it.
+    /// Whether the form gets the text or the key is decided when the combo box is created.
+    #[prop(into, optional)]
+    allows_custom_value: Signal<bool>,
+    /// Whether the arrow keys wrap around at the ends of the options.
+    #[prop(optional)]
+    should_focus_wrap: bool,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] is_required: Signal<bool>,
@@ -149,7 +184,7 @@ pub fn ComboBox<S: SelectedValues>(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ComboBox", classes);
     let (input_value, on_input_change) =
-        ValueBinding::from_state_props(input_value, set_input_value, on_input_change);
+        ValueBinding::from_state_props(input_value, set_input_value, on_input_value_change);
     let KeyedStateProps {
         default_value,
         value,
@@ -191,6 +226,7 @@ pub fn ComboBox<S: SelectedValues>(
     });
 
     let popover = CapturedElement::new();
+    let button_element = CapturedElement::new();
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     let has_label = label_presence.has_label;
@@ -211,10 +247,11 @@ pub fn ComboBox<S: SelectedValues>(
         form_value,
         form: form.clone(),
         popover,
+        button_element,
         state,
         id: None,
         aria_describedby: None,
-        should_focus_wrap: false,
+        should_focus_wrap,
         keyboard_delegate: None,
         on_focus: None,
         on_blur: None,
@@ -233,11 +270,13 @@ pub fn ComboBox<S: SelectedValues>(
     } = use_text_field(input);
 
     let anchor = CapturedElement::new();
-    let ctx = ComboBoxCtx {
+    let ctx = ComboBoxContext {
         state,
         is_disabled,
         anchor,
         popover,
+        button: button_element,
+        listbox: listbox.element,
         parts: StoredValue::new(Parts { button }),
     };
     // The input: the text field's and the combo box's props, and the popover's anchor.
@@ -274,47 +313,51 @@ pub fn ComboBox<S: SelectedValues>(
     view! {
         <Provider value=ctx>
             <Provider value=listbox_parent>
-                <Provider value=label><Provider value=field>
-                    <Provider value=input>
-                    <div
-                        class=classes
-                        style=styles
-                        data-open=flag(is_open)
-                        data-focused=flag(is_focused)
-                        data-invalid=flag(state.validation.is_invalid)
-                        data-disabled=flag(is_disabled)
-                        data-readonly=flag(is_read_only)
-                        data-required=flag(is_required)
-                    >
-                        {children()}
-                        // The selected keys for the form (react-aria-components' `ComboBox`).
-                        {move || {
-                            form_values
-                                .get()
-                                .into_iter()
-                                .map(|value| {
-                                    view! {
-                                        <input
-                                            type="hidden"
-                                            name=hidden_name.clone()
-                                            form=form.clone()
-                                            value=value
-                                        />
-                                    }
-                                })
-                                .collect_view()
-                        }}
-                    </div>
+                <Provider value=label>
+                    <Provider value=field>
+                        <Provider value=input>
+                            <div
+                                class=classes
+                                style=styles
+                                data-open=flag(is_open)
+                                data-focused=flag(is_focused)
+                                data-invalid=flag(state.validation.is_invalid)
+                                data-disabled=flag(is_disabled)
+                                data-readonly=flag(is_read_only)
+                                data-required=flag(is_required)
+                            >
+                                {children()}
+                                // The selected keys for the form (react-aria-components' `ComboBox`).
+                                {move || {
+                                    form_values
+                                        .get()
+                                        .into_iter()
+                                        .map(|value| {
+                                            view! {
+                                                <input
+                                                    type="hidden"
+                                                    name=hidden_name.clone()
+                                                    form=form.clone()
+                                                    value=value
+                                                />
+                                            }
+                                        })
+                                        .collect_view()
+                                }}
+                            </div>
+                        </Provider>
                     </Provider>
-                </Provider></Provider>
+                </Provider>
             </Provider>
         </Provider>
     }
 }
 
 /// The button opening the popover (not in the tab order: the keyboard uses ArrowDown on the
-/// input). Data attributes: `data-open`, `data-pressed`, `data-hovered`, `data-disabled`,
-/// `data-focus-visible`.
+/// input). It counts as pressed while the popover is open (react-aria-components).
+///
+/// Data attributes: `data-open`, `data-pressed`, `data-hovered`, `data-focused`,
+/// `data-focus-visible`, `data-disabled`.
 ///
 /// Default class: `leptonic-ComboBoxButton`.
 #[component]
@@ -324,32 +367,81 @@ pub fn ComboBoxButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ComboBoxButton", classes);
-    let ctx = expect_context::<ComboBoxCtx>();
+    let Some(ctx) = use_context::<ComboBoxContext>() else {
+        crate::utils::dev_warn!("A <ComboBoxButton> must be inside a <ComboBox>.");
+        return None;
+    };
     let input = ctx.parts.with_value(|p| p.button.clone());
     let is_disabled = input.is_disabled;
     let button = use_button(input);
-    let hover = use_hover(UseHoverInput {
-        is_disabled,
-        ..UseHoverInput::default()
-    });
     let (attrs, button_styles) = button.props.into_parts();
     let styles = button_styles.merge(styles);
     let state = ctx.state;
+    let is_open = Signal::derive(move || state.is_open());
 
-    view! {
+    Some(view! {
         <button
             {..attrs}
-            {..hover.props.into_attrs()}
+            {..ctx.button.attr()}
             class=classes
             style=styles
-            data-open=flag(Signal::derive(move || state.is_open()))
-            data-pressed=flag(button.is_pressed)
-            data-hovered=flag(hover.is_hovered)
+            data-open=flag(is_open)
+            data-pressed=flag(is_open)
+            data-hovered=flag(button.is_hovered)
+            data-focused=flag(button.is_focused)
+            data-focus-visible=flag(button.is_focus_visible)
             data-disabled=flag(is_disabled)
         >
             {children()}
         </button>
-    }
+    })
+}
+
+/// The text of the selected options (of a combo box selecting several), or `placeholder`, listed
+/// in the locale's way ("Cat, Dog, and Kangaroo"). Exposes `data-placeholder` while nothing is
+/// selected.
+///
+/// Default class: `leptonic-ComboBoxValue`.
+#[component]
+pub fn ComboBoxValue(
+    /// Shown while nothing is selected.
+    #[prop(into, optional)]
+    placeholder: MaybeProp<String>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-ComboBoxValue", classes);
+    let Some(ctx) = use_context::<ComboBoxContext>() else {
+        crate::utils::dev_warn!("A <ComboBoxValue> must be inside a <ComboBox>.");
+        return None;
+    };
+    let state = ctx.state;
+    let locale = crate::utils::i18n::use_locale();
+    let selected_text = Memo::new(move |_| {
+        let items = state.selected_items();
+        let texts: Vec<&str> = items
+            .iter()
+            .map(|node| &*node.text_value)
+            .filter(|text| !text.is_empty())
+            .collect();
+        locale
+            .with(|locale| ListFormatter::new(locale, &ListFormatOptions::default()).format(&texts))
+    });
+    let is_placeholder = Signal::derive(move || state.value().is_empty());
+    let text = move || {
+        let text = selected_text.get();
+        if text.is_empty() {
+            placeholder.get().unwrap_or_default()
+        } else {
+            text
+        }
+    };
+
+    Some(view! {
+        <div class=classes style=styles data-placeholder=flag(is_placeholder)>
+            {text}
+        </div>
+    })
 }
 
 /// The popover with the options' [`ListBox`](super::listbox::ListBox), positioned at the input
@@ -381,7 +473,7 @@ pub fn ComboBoxPopover(
     children: ChildrenFn,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ComboBoxPopover", classes);
-    let ctx = expect_context::<ComboBoxCtx>();
+    let ctx = expect_context::<ComboBoxContext>();
     let UsePopoverReturn {
         props,
         arrow_props,
@@ -390,18 +482,19 @@ pub fn ComboBoxPopover(
         ..
     } = use_popover(UsePopoverInput {
         trigger: ctx.anchor,
-        placement,
-        max_height,
-        offset,
-        cross_offset,
-        container_padding,
-        should_flip,
+        position: OverlayPositionOptions {
+            placement,
+            offset,
+            cross_offset,
+            container_padding,
+            should_flip,
+            max_height,
+            ..OverlayPositionOptions::default()
+        },
         modality: PopoverModality::NonModal,
         state: ctx.state,
-        arrow_size: Signal::stored(None),
-        arrow_boundary_offset: Signal::stored(0.0),
-        boundary: None,
         target_rect: Signal::stored(None),
+        scroll: Some(ctx.listbox),
         is_keyboard_dismiss_disabled: Signal::stored(false),
         should_close_on_interact_outside: None,
         group: None,
@@ -416,6 +509,16 @@ pub fn ComboBoxPopover(
             trigger_anchor_point,
             trigger: ctx.anchor,
             trigger_name: Some("ComboBox"),
+            on_enter: None,
+            on_exit: None,
+            width_with: Some(ctx.button),
+            // A label, input or text inside the popover isn't the combo box's
+            // (react-aria-components' `clearContexts`).
+            clear_contexts: ClearContexts(&[
+                clear_context::<LabelContext>,
+                clear_context::<FieldContext>,
+                clear_context::<InputContext>,
+            ]),
         },
         PopoverModality::NonModal,
         ctx.popover,

@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/selection/useTypeSelect.ts @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use std::{sync::Arc, time::Duration};
 
 use leptos::prelude::*;
@@ -6,10 +7,12 @@ use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 
 use super::{Key, KeyboardDelegate, SelectionManager};
-use crate::utils::{
-    EventAccessors, EventHandler,
-    key::{KeyboardEventKey, KeyboardKey},
-    node_contains,
+use crate::{
+    EventHandler,
+    utils::{
+        dom_ext::{EventAccessors, node_contains},
+        key::{KeyboardEventKey, KeyboardKey},
+    },
 };
 
 // =============================================================================

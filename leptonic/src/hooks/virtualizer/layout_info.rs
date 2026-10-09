@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/virtualizer/LayoutInfo.ts @ 99e6102368
+// Upstream: react-stately/test/virtualizer/LayoutInfo.test.tsx @ 99e6102368
 use std::sync::Arc;
 
 use crate::hooks::collections::{Key, NodeKind, Rect};
@@ -51,7 +52,6 @@ mod tests {
 
     use super::*;
 
-    // Upstream: react-stately/test/virtualizer/LayoutInfo.test.tsx
     #[test]
     fn copies_all_fields() {
         let mut info = LayoutInfo::new(

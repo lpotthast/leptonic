@@ -1,20 +1,22 @@
 // Upstream: react-aria/src/combobox/useComboBox.ts @ 99e6102368
+// Upstream: react-aria/test/combobox/useComboBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ComboBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ComboBox.browser.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/combobox/ComboBox.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::use_document;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, Propagation,
     hooks::{
-        InputType, IntoAttrs, TextFieldElement,
         button::use_button::UseButtonInput,
         collections::{
             AutoFocus, CollectionOptions, FocusStrategy, Key, KeyboardDelegate, LinkBehavior,
@@ -22,9 +24,10 @@ use crate::{
             use_list_keyboard_delegate, use_selectable_collection,
         },
         form::{
+            InputType, TextFieldElement,
             use_form_reset::{UseFormResetInput, use_form_reset},
             use_text_field::UseTextFieldInput,
-            use_text_field_state::TextFieldState,
+            use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
         },
         interactions::{use_keyboard::KeyboardEventWrapper, use_press::PressEvent},
         listbox::{UseListBoxInput, option_id},
@@ -33,15 +36,16 @@ use crate::{
         select::SelectMode,
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventHandler, Propagation,
         aria::{AriaAutocomplete, AriaExpanded, AriaRole},
         focus::focus_element,
         id::use_id,
         intl_strings::{ComboBoxStrings, FocusAnnouncementArgs, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        labels::labels,
         orientation::Orientation,
         pointer_type::PointerType,
-        shadow_dom::get_active_element,
+        shadow_dom::{get_active_element, get_event_target},
         virtual_focus::dispatch_virtual_focus,
     },
 };
@@ -57,7 +61,10 @@ use crate::{
 // - `has_label` says whether a visible label is rendered.
 // - `name`, `is_read_only` and `validation_behavior` are read from the state (C8).
 // - `form_value` and the values of the hidden inputs (`form_values`) come from the hook
-//   (react-aria-components renders them in `ComboBox`).
+//   (react-aria-components renders them in `ComboBox`). Whether the input or the hidden inputs
+//   carry the name is decided when the hook is created (`allows_custom_value` then).
+// - Element references are `CapturedElement`s: the caller attaches `popover` and
+//   `button_element` (react-aria: `popoverRef`, `buttonRef`).
 //
 // ## DIFFERENT BEHAVIOR
 // - The group size in the focus announcement counts the section's options (react-aria counts its
@@ -104,6 +111,9 @@ pub struct UseComboBoxInput {
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// The popover element (focus moving into it doesn't blur the combo box).
     pub popover: CapturedElement,
+    /// The trigger button element: attach it to the button rendered with `button` (focus moving
+    /// to it doesn't blur the combo box).
+    pub button_element: CapturedElement,
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
 }
@@ -146,7 +156,7 @@ pub struct UseComboBoxInputProps {
 pub type UseComboBoxInputAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-    On<ev::touchend, SharedEventCallback<TouchEvent>>,
+    OnEvent<ev::touchend>,
     ElementCaptureAttr,
 );
 
@@ -183,12 +193,14 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         should_focus_wrap,
         keyboard_delegate,
         popover,
+        button_element,
         on_focus,
         on_blur,
     } = input;
 
     let is_read_only = state.is_read_only_signal();
-    let form_value = if state.allows_custom_value() {
+    // Where the form value goes (the input's name or hidden inputs) is decided once.
+    let form_value = if untrack(|| state.allows_custom_value()) {
         ComboBoxFormValue::Text
     } else {
         form_value
@@ -197,10 +209,12 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     let input_id = id.unwrap_or_else(|| use_id("combobox-input"));
     let label_id = use_id("combobox-label");
     let listbox_element = CapturedElement::new();
-    let find_by_id = |id: &str| {
-        use_document()
-            .as_ref()
-            .and_then(|d| d.get_element_by_id(id))
+    // The input (for form reset, focusing it, and hiding the rest of the page).
+    let input_element = CapturedElement::new();
+    let focus_input = move || {
+        if let Some(input) = input_element.get_untracked() {
+            focus_element(&input, false);
+        }
     };
 
     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
@@ -215,7 +229,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: state.list,
             element: listbox_element,
-            orientation: Orientation::Vertical,
+            orientation: Orientation::Vertical.into(),
             layout: ListLayout::Stack,
             layout_delegate: None,
         })
@@ -236,11 +250,9 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     .props;
     let collection_keydown = collection.on_keydown;
 
+    // Shortcuts ignore auto-repeated key presses (`use_keyboard`); the arrow keys below don't.
     let shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("Enter"), move |e| {
-            if e.repeat() {
-                return ShortcutOutcome::Ignored;
-            }
+        .on(Shortcut::new(KeyboardKey::Enter), move |_| {
             let was_open = untrack(|| state.is_open());
             state.commit();
             // Enter submits forms only while the popover is closed.
@@ -249,7 +261,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 continue_propagation: false,
             }
         })
-        .on(Shortcut::key("Tab"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Tab), move |_| {
             if untrack(|| state.is_open()) {
                 state.commit();
             }
@@ -258,41 +270,40 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 continue_propagation: true,
             }
         })
-        .on(Shortcut::key("Escape"), move |e| {
-            if e.repeat() {
-                return ShortcutOutcome::Ignored;
-            }
+        .on(Shortcut::new(KeyboardKey::Escape), move |_| {
             let continue_propagation = !untrack(|| state.list.selection.is_empty())
                 || untrack(|| state.input_value()).is_empty()
-                || state.allows_custom_value();
+                || untrack(|| state.allows_custom_value());
             state.revert();
             ShortcutOutcome::Custom {
-                prevent_default: true,
+                prevent_default: false,
                 continue_propagation,
             }
-        })
-        .on(Shortcut::key("ArrowDown"), move |_| {
+        });
+    // The arrow keys also act on auto-repeated key presses (react-aria: `allowRepeats`).
+    let arrow_shortcuts = KeyboardShortcuts::new()
+        .on(Shortcut::new(KeyboardKey::ArrowDown), move |_| {
             state.open(Some(FocusStrategy::First), MenuTriggerAction::Manual);
             ShortcutOutcome::Custom {
                 prevent_default: false,
                 continue_propagation: false,
             }
         })
-        .on(Shortcut::key("ArrowUp"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowUp), move |_| {
             state.open(Some(FocusStrategy::Last), MenuTriggerAction::Manual);
             ShortcutOutcome::Custom {
                 prevent_default: false,
                 continue_propagation: false,
             }
         })
-        .on(Shortcut::key("ArrowLeft"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| {
             state.list.selection.set_focused_key(None, None);
             ShortcutOutcome::Custom {
                 prevent_default: false,
                 continue_propagation: false,
             }
         })
-        .on(Shortcut::key("ArrowRight"), move |_| {
+        .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| {
             state.list.selection.set_focused_key(None, None);
             ShortcutOutcome::Custom {
                 prevent_default: false,
@@ -302,7 +313,6 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 
     // Focus moving between the input, the button and the popover keeps the combo box focused.
     let button_id = menu_trigger.button.id.clone().unwrap_or_default();
-    let blur_button_id = button_id.clone();
     let on_input_blur = Callback::new(move |e: FocusEvent| {
         let related = e
             .related_target()
@@ -310,7 +320,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         let within = |element: Option<web_sys::Element>| {
             element.is_some_and(|el| related.as_ref().is_some_and(|r| el.contains(Some(r))))
         };
-        if within(find_by_id(&blur_button_id))
+        if within(button_element.get_untracked().map(|el| (*el).clone()))
             || within(popover.get_untracked().map(|el| (*el).clone()))
         {
             return;
@@ -346,7 +356,6 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     let controls_id = listbox_id.clone();
 
     // Form reset restores the default value.
-    let input_element = CapturedElement::new();
     use_form_reset(UseFormResetInput {
         element: input_element,
         initial_value: state.default_value(),
@@ -378,10 +387,14 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 
     announce_changes(&state);
 
-    let text_field_state = TextFieldState::new(
-        state.input_value_signal(),
-        Callback::new(move |value| state.set_input_value(value)),
-    );
+    let text_field_state = use_text_field_state(UseTextFieldStateInput {
+        default_value: String::new(),
+        value: Some(crate::ValueBinding::new(
+            state.input_value_signal(),
+            Callback::new(move |value| state.set_input_value(value)),
+        )),
+        on_change: None,
+    });
     let text_field = UseTextFieldInput {
         id: Some(input_id.clone()),
         is_disabled,
@@ -419,6 +432,12 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             if untrack(|| state.is_open()) {
                 collection_keydown.call(e.event().clone());
             }
+            if arrow_shortcuts
+                .handle(e.event())
+                .is_some_and(|outcome| !outcome.continue_propagation())
+            {
+                return;
+            }
             e.continue_propagation();
         })),
         shortcuts: Some(shortcuts),
@@ -436,7 +455,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         min_length: None,
         max_length: None,
         auto_capitalize: None,
-        input_mode: None,
+        input_mode: Signal::stored(None),
         enter_key_hint: None,
         auto_focus: false,
         exclude_from_tab_order: false,
@@ -447,13 +466,6 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     };
 
     // Pressing the button focuses the input and toggles the popover.
-    let focus_input_id = input_id.clone();
-    let focus_input = move || {
-        if let Some(input) = find_by_id(&focus_input_id) {
-            focus_element(&input, false);
-        }
-    };
-    let focus_for_press_start = focus_input.clone();
     // The button and the listbox are named by the field's labels: the visible label only while
     // there is one.
     let field_labelledby = {
@@ -465,19 +477,29 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         })
     };
     let strings = use_localized_strings::<ComboBoxStrings>();
+    // Named by their own label and the field's (react-aria: `useLabels`).
+    let button_labels = Memo::new(move |_| {
+        labels(
+            &button_id,
+            Some(strings.read().button_label()),
+            field_labelledby.read().as_deref(),
+        )
+    });
+    let listbox_labels = {
+        let listbox_id = listbox_id.clone();
+        Memo::new(move |_| {
+            labels(
+                &listbox_id,
+                Some(strings.read().listbox_label()),
+                field_labelledby.read().as_deref(),
+            )
+        })
+    };
     let button = UseButtonInput {
-        aria_label: Signal::derive(move || Some(strings.read().button_label())).into(),
-        aria_labelledby: {
-            let button_id = button_id.clone();
-            Signal::derive(move || {
-                Some(match field_labelledby.get() {
-                    Some(labelledby) => format!("{button_id} {labelledby}"),
-                    None => button_id.clone(),
-                })
-            })
-        },
+        aria_label: Signal::derive(move || button_labels.read().aria_label.clone()).into(),
+        aria_labelledby: Signal::derive(move || button_labels.read().aria_labelledby.clone()),
         exclude_from_tab_order: Signal::stored(true),
-        prevent_focus_on_press: true,
+        prevent_focus_on_press: true.into(),
         is_disabled: Signal::derive(move || is_disabled.get() || is_read_only.get()),
         on_press: Some(Callback::new(move |e: PressEvent| {
             if e.pointer_type == PointerType::Touch {
@@ -487,7 +509,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         })),
         on_press_start: Some(Callback::new(move |e: PressEvent| {
             if e.pointer_type != PointerType::Touch {
-                focus_for_press_start();
+                focus_input();
                 let strategy =
                     matches!(e.pointer_type, PointerType::Keyboard | PointerType::Virtual)
                         .then_some(FocusStrategy::First);
@@ -498,25 +520,17 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     };
 
     // Tapping the center of the input (what assistive technology does) toggles the popover.
-    let touch_input_id = input_id.clone();
     let last_touch = StoredValue::new(0.0_f64);
     let on_touchend = EventHandler::new(move |e: TouchEvent| {
         if is_disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
-        let focus = || {
-            if let Some(input) = find_by_id(&touch_input_id) {
-                focus_element(&input, false);
-            }
-        };
         if e.time_stamp() - last_touch.get_value() < 500.0 {
             e.prevent_default();
-            focus();
+            focus_input();
             return;
         }
-        let Some(target) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+        let Some(target) = get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Element>().ok())
         else {
             return;
         };
@@ -528,7 +542,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         let center_y = (rect.top() + 0.5 * rect.height()).ceil();
         if f64::from(touch.client_x()) == center_x && f64::from(touch.client_y()) == center_y {
             e.prevent_default();
-            focus();
+            focus_input();
             state.toggle(None, MenuTriggerAction::Manual);
             last_touch.set_value(e.time_stamp());
         }
@@ -541,7 +555,6 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 
         use crate::utils::aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside};
 
-        let hide_input_id = input_id.clone();
         let undo: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
             StoredValue::new_local(None);
         let restore = move || {
@@ -557,7 +570,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 return;
             }
             let targets: Vec<web_sys::Element> = [
-                find_by_id(&hide_input_id),
+                input_element.get().map(|el| (*el).clone()),
                 popover.get().map(|el| (*el).clone()),
             ]
             .into_iter()
@@ -575,8 +588,8 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 
     let listbox = UseListBoxInput {
         id: Some(listbox_id),
-        aria_label: Signal::derive(move || Some(strings.read().listbox_label())).into(),
-        aria_labelledby: field_labelledby,
+        aria_label: Signal::derive(move || listbox_labels.read().aria_label.clone()).into(),
+        aria_labelledby: Signal::derive(move || listbox_labels.read().aria_labelledby.clone()),
         options: CollectionOptions {
             auto_focus: Signal::derive(move || {
                 Some(match state.focus_strategy() {
@@ -586,14 +599,14 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 })
             }),
             should_use_virtual_focus: true,
-            link_behavior: LinkBehavior::Selection,
+            link_behavior: Signal::stored(LinkBehavior::Selection),
             ..CollectionOptions::default()
         },
         should_select_on_press_up: true,
         should_focus_on_hover: true,
         state: state.list,
         element: listbox_element,
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
         layout_delegate: None,
         is_virtualized: false,

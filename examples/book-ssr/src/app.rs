@@ -2,19 +2,22 @@ use std::time::Duration;
 
 use codee::string::FromToStringCodec;
 use leptonic::{
-    atoms::prelude::{
-        AnchorLink, Button, Dialog, LeptonicTheme, Link, ModalBackdrop, ModalContent, SwitchButton,
-        SwitchField, Theme, ThemeProvider, Toast, ToastCloseButton, ToastContent, ToastDescription,
-        ToastRegion, ToastTitle, VisuallyHidden, use_theme,
+    AriaExpanded, AriaHasPopup, CapturedElement, IntoAttrs,
+    atoms::{
+        button::Button,
+        dialog::Dialog,
+        link::{AnchorLink, Link},
+        modal::{ModalBackdrop, ModalContent},
+        switch::{SwitchButton, SwitchField},
+        theme::{LeptonicTheme, Theme, ThemeProvider, use_theme},
+        toast::{Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle},
+        visually_hidden::VisuallyHidden,
     },
+    focus_element,
     hooks::{
-        IntoAttrs, LandmarkController, LandmarkRole, LinkTarget, ToastOptions, ToastQueue,
-        UseLandmarkInput, use_landmark,
-    },
-    utils::{
-        CapturedElement,
-        aria::{AriaExpanded, AriaHasPopup},
-        focus::focus_element,
+        landmark::{LandmarkController, LandmarkRole, UseLandmarkInput, use_landmark},
+        link::LinkTarget,
+        toast::{ToastOptions, ToastQueue},
     },
 };
 use leptos::prelude::*;

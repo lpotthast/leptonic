@@ -38,7 +38,10 @@ pub fn PageAtomPressResponder() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::*, hooks::PressEvent};
+                        use leptonic::{
+                            atoms::{button::Button, press::PressResponder},
+                            hooks::interactions::PressEvent,
+                        };
                         use leptos::{logging::log, prelude::*};
 
                         let is_dialog_open = RwSignal::new(false);
@@ -96,12 +99,6 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                         <ApiRow name="on_press_change" ty="Option<Callback<bool>>" default="None">
                             "Called when the pressed state changes."
                         </ApiRow>
-                        <ApiRow name="on_long_press_start, on_long_press, on_long_press_end" ty="Option<Callback<LongPressEvent>>" default="None">
-                            "Called when a long press starts, completes or ends, chained like the press callbacks."
-                        </ApiRow>
-                        <ApiRow name="long_press_accessibility_description" ty="MaybeProp<String>" default="None">
-                            "Describes the long-press action to assistive technology (the element\u{2019}s own description wins)."
-                        </ApiRow>
                         <ApiRow name="is_disabled" ty="Option<Signal<bool>>" default="None">
                             "Disables pressing the descendants."
                         </ApiRow>
@@ -127,6 +124,7 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                             <Code inline=true>"MenuTrigger"</Code>"\u{2019}s: the arrow keys open the menu)."
                         </ApiRow>
                         <ApiRow name="children" ty="Children">"Required. Content containing the pressable descendants."</ApiRow>
+                        <ApiRow name="long_press" ty="Option<LongPress>" default="None">"Long-press handlers and options, including the threshold and accessible description."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -205,6 +203,12 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                         <ApiRow name="on_press_up" ty="Option<Callback<PressEvent>>" default="None">"Called when the press is released over the element."</ApiRow>
                         <ApiRow name="on_press_change" ty="Option<Callback<bool>>" default="None">"Called when the pressed state changes."</ApiRow>
                         <ApiRow name="children" ty="TypedChildren<V>">"Required. The pressable element."</ApiRow>
+                        <ApiRow name="allow_text_selection_on_press" ty="Signal<bool>" default="false">"Allow text selection during a press."</ApiRow>
+                        <ApiRow name="force_is_pressed" ty="Signal<bool>" default="false">"Show the pressed state independently of the current interaction."</ApiRow>
+                        <ApiRow name="long_press" ty="Option<LongPress>" default="None">"Long-press handlers and options, including the threshold and accessible description."</ApiRow>
+                        <ApiRow name="on_double_press" ty="Option<Callback<PressEvent>>" default="None">"Called for a double press."</ApiRow>
+                        <ApiRow name="prevent_focus_on_press" ty="Signal<bool>" default="false">"Keep focus where it is when this element is pressed."</ApiRow>
+                        <ApiRow name="should_cancel_on_pointer_exit" ty="Signal<bool>" default="false">"Cancel a press when the pointer leaves the element."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -241,7 +245,7 @@ pub fn PageAtomPressResponder() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::PressResponderContext;
+                        use leptonic::hooks::interactions::PressResponderContext;
                         use leptos::prelude::*;
 
                         provide_context(PressResponderContext {

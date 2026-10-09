@@ -9,7 +9,7 @@ pub fn PageFocusability() -> impl IntoView {
     view! {
         <DocPage title="focusability">
             <p>
-                "The functions of "<Code inline=true>"leptonic::utils::focusability"</Code>" tell whether an element can take "
+                "The functions of "<Code inline=true>"leptonic"</Code>" tell whether an element can take "
                 "focus, whether "<Keys keys="Tab"/>" reaches it, and whether keys pressed there are typing. Focus scopes, focus managers and "
                 <Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link>
                 " decide with them; use them when you move focus yourself. See the "
@@ -21,7 +21,7 @@ pub fn PageFocusability() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::focusability::{is_tabbable, TABBABLE_SELECTOR};
+                        use leptonic::{TABBABLE_SELECTOR, is_tabbable};
                         use wasm_bindgen::JsCast;
 
                         // The first element of a container that Tab would reach.
@@ -96,7 +96,7 @@ pub fn PageFocusability() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::focusability::prevent_focus_attr;
+                        use leptonic::prevent_focus_attr;
 
                         view! { <button {..prevent_focus_attr()} tabindex="-1">"Expand"</button> }
                     "#)}
@@ -105,7 +105,7 @@ pub fn PageFocusability() -> impl IntoView {
 
             <Section title="will_open_keyboard">
                 <p>
-                    <Code inline=true>"leptonic::utils::will_open_keyboard(&Element) -> bool"</Code>" tells whether focusing "
+                    <Code inline=true>"leptonic::will_open_keyboard(&Element) -> bool"</Code>" tells whether focusing "
                     "the element opens the on-screen keyboard of a touch device: text-like inputs, "
                     <Code inline=true>"textarea"</Code>" and editable content do; checkboxes, radios, ranges, color and file "
                     "inputs and buttons don\u{2019}t. Use it to avoid moving focus to a text field after a touch, which would "
@@ -134,7 +134,7 @@ pub fn PageFocusability() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::focusability::is_typing_target;
+                        use leptonic::is_typing_target;
                         use wasm_bindgen::JsCast;
 
                         // In a keydown handler: leave the key to the field the user types in.
@@ -148,7 +148,7 @@ pub fn PageFocusability() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
                 <li><Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link></li>
                 <li><Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link></li>
                 <li><Link href=format!("{}#focus-safely", routes::doc::focus::UseFocusable.materialize())>"focus_safely"</Link></li>

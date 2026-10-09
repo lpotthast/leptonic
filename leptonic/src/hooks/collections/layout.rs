@@ -2,7 +2,7 @@
 use wasm_bindgen::JsCast;
 
 use super::{ItemElements, Key};
-use crate::utils::CapturedElement;
+use crate::CapturedElement;
 
 /// A rectangle in the collection's content coordinates (scroll offsets included).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

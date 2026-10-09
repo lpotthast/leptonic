@@ -5,7 +5,7 @@ use leptonic::{
         button::Button,
         toast::{Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle},
     },
-    hooks::{ToastOptions, ToastQueue},
+    hooks::toast::{ToastOptions, ToastQueue},
 };
 use leptos::prelude::*;
 

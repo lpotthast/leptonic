@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/i18n/useDateFormatter.ts @ 99e6102368
+// Upstream: @internationalized/date/src/DateFormatter.ts @ 99e6102368
+// Upstream: @internationalized/date/tests/DateFormatter.test.js @ 99e6102368
 //! Locale-aware formatting of dates and times with ICU4X (react-aria's `useDateFormatter`, a
 //! cached `Intl.DateTimeFormat`).
 
@@ -316,9 +318,11 @@ impl DateTimeFormatter {
         let mut prefs = DateTimeFormatterPreferences::from(&self.locale);
         prefs.calendar_algorithm = Some(CalendarAlgorithm::Gregory);
         if let Some(hour_cycle) = self.options.hour_cycle {
+            // The locale's own 12- or 24-hour clock (`Intl`'s `hour12`): a 12-hour clock is h11
+            // in Japan, h12 elsewhere.
             prefs.hour_cycle = Some(match hour_cycle {
-                HourCycle::H12 => IcuHourCycle::H12,
-                HourCycle::H24 => IcuHourCycle::H23,
+                HourCycle::H12 => IcuHourCycle::Clock12,
+                HourCycle::H24 => IcuHourCycle::Clock24,
             });
         }
         prefs
@@ -639,6 +643,22 @@ mod tests {
                 .as_str()
         )
         .starts_with("3:09");
+    }
+
+    /// A 12-hour clock is the locale's (`Intl`'s `hour12: true`): Japan counts 0 to 11
+    /// ("午前0:30"), not 12 to 11.
+    #[test]
+    fn formats_the_locales_own_twelve_hour_clock() {
+        let options = DateTimeFormatOptions {
+            hour: Some(NumericFormat::Numeric),
+            minute: Some(NumericFormat::TwoDigit),
+            hour_cycle: Some(HourCycle::H12),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(formatter("ja-JP", options.clone()).format(&date(2001, 1, 1).at(0, 30, 0, 0)))
+            .is_equal_to("午前0:30".to_owned());
+        assert_that!(formatter("en-US", options).format(&date(2001, 1, 1).at(0, 30, 0, 0)))
+            .is_equal_to("12:30\u{202f}AM".to_owned());
     }
 
     #[test]

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use leptonic::{
     atoms::{
         field::Label,
@@ -38,8 +40,8 @@ pub fn SelectMultipleAtomDemo() -> impl IntoView {
             b.item(topping, text);
         }
     });
-    // A `Vec` makes it a multiple select: the popover stays open while you pick.
-    let chosen = RwSignal::new(vec![Topping::Basil]);
+    // A `HashSet` makes it a multiple select: the popover stays open while you pick.
+    let chosen = RwSignal::new(HashSet::from([Topping::Basil]));
 
     view! {
         <Select collection=toppings value=chosen set_value=chosen classes="demo-sel">

@@ -50,7 +50,7 @@ pub fn PageUseButton() -> impl IntoView {
                         "button turns into a plain button (so that the form can\u{2019}t be submitted again), and an anchor loses its "
                         <Code inline=true>"href"</Code>"."
                     </ApiRow>
-                    <ApiRow name="allow_focus_when_disabled" ty="bool" default="false">
+                    <ApiRow name="allow_focus_when_disabled" ty="Signal<bool>" default="false">
                         "Keeps a disabled button focusable, but out of the tab order, so that focus isn\u{2019}t lost when the "
                         "focused button becomes disabled."
                     </ApiRow>
@@ -58,14 +58,14 @@ pub fn PageUseButton() -> impl IntoView {
                         "Skips the button when tabbing. Pointers and code can still focus it."
                     </ApiRow>
                     <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the button when it mounts."</ApiRow>
-                    <ApiRow name="prevent_focus_on_press" ty="bool" default="false">
+                    <ApiRow name="prevent_focus_on_press" ty="Signal<bool>" default="false">
                         "Doesn\u{2019}t move focus to the button when it is pressed, e.g. for toolbar buttons next to a text editor."
                     </ApiRow>
                     <ApiRow name="href" ty="Signal<Option<String>>" default="None">
                         "The link target of a "<Code inline=true>"ButtonElementType::Anchor"</Code>
                         ". Removed while the button is disabled."
                     </ApiRow>
-                    <ApiRow name="target" ty="LinkTarget" default="Same">
+                    <ApiRow name="target" ty="Signal<LinkTarget>" default="Same">
                         "Where a "<Code inline=true>"ButtonElementType::Anchor"</Code>" opens its link."
                     </ApiRow>
                     <ApiRow name="rel" ty="Vec<LinkRel>" default="Vec::new()">
@@ -109,12 +109,6 @@ pub fn PageUseButton() -> impl IntoView {
                     <ApiRow name="on_press_change" ty="Option<Callback<bool>>" default="None">
                         "Called when the pressed state changes."
                     </ApiRow>
-                    <ApiRow name="on_long_press_start, on_long_press, on_long_press_end" ty="Option<Callback<LongPressEvent>>" default="None">
-                        "Long press callbacks. Setting any of them turns on long press detection."
-                    </ApiRow>
-                    <ApiRow name="long_press_accessibility_description" ty="MaybeProp<String>" default="None">
-                        "Describes the long press action to assistive technology, e.g. \u{201c}Long press to open menu\u{201d}."
-                    </ApiRow>
                     <ApiRow name="on_hover_start, on_hover_end" ty="Option<Callback<HoverStartEvent>>, Option<Callback<HoverEndEvent>>" default="None">
                         "Called when a mouse or pen starts or stops hovering the button, as in "
                         <Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>"."
@@ -140,6 +134,8 @@ pub fn PageUseButton() -> impl IntoView {
                         ", the context menu key or a long press on a touch screen. See "
                         <Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>"."
                     </ApiRow>
+                    <ApiRow name="aria_disabled" ty="Signal<Option<AriaDisabled>>" default="None">"Overrides the disabled ARIA state without changing interaction behavior."</ApiRow>
+                    <ApiRow name="long_press" ty="Option<LongPress>" default="None">"Long-press handlers and options, including the threshold and accessible description."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -171,7 +167,7 @@ pub fn PageUseButton() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::button::{UseButtonInput, UseButtonReturn, use_button};
                         use leptos::{logging::log, prelude::*};
 
                         let UseButtonReturn { props, .. } = use_button(UseButtonInput {
@@ -253,7 +249,19 @@ pub fn PageUseButton() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                button::{UseButtonInput, use_button},
+                                menu::{
+                                    MenuTriggerType,
+                                    UseMenuTriggerInput,
+                                    UseMenuTriggerStateInput,
+                                    use_menu_trigger,
+                                    use_menu_trigger_state,
+                                },
+                                overlay::OverlayTriggerType,
+                            },
+                        };
                         use leptos::{logging::log, prelude::*};
 
                         let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());

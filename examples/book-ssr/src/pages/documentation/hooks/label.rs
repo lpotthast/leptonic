@@ -61,7 +61,7 @@ pub fn PageUseLabel() -> impl IntoView {
                 <Section title="Example" id="use-label-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::*;
+                            use leptonic::hooks::form::{UseLabelInput, UseLabelReturn, use_label};
 
                             let UseLabelReturn { label_props, field_props } = use_label(UseLabelInput {
                                 has_label: true.into(),

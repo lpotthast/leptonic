@@ -1,19 +1,17 @@
 // Upstream: react-aria/src/tooltip/useTooltip.ts @ 99e6102368
+// Upstream: react-aria/test/tooltip/useTooltip.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use web_sys::PointerEvent;
 
 use super::use_tooltip_trigger_state::{TooltipTiming, TooltipTriggerState};
 use crate::{
-    hooks::{
-        IntoAttrs,
-        interactions::use_hover::{UseHoverInput, use_hover},
-    },
-    utils::{EventHandler, aria::AriaRole},
+    EventHandler, IntoAttrs, OnEvent,
+    hooks::interactions::use_hover::{UseHoverInput, use_hover},
+    utils::aria::AriaRole,
 };
 
 // =============================================================================
@@ -67,8 +65,8 @@ impl IntoAttrs for UseTooltipProps {
 /// These attributes must be spread onto the tooltip element.
 pub type UseTooltipAttrs = (
     Attr<attr::Role, AriaRole>,
-    On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
+    OnEvent<ev::pointerenter>,
+    OnEvent<ev::pointerleave>,
 );
 
 /// Provides the accessibility implementation for a tooltip: `role="tooltip"`, and with the

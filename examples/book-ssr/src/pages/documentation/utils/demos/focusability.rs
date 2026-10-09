@@ -1,4 +1,4 @@
-use leptonic::utils::focusability::{is_focusable, is_tabbable};
+use leptonic::{is_focusable, is_tabbable};
 use leptos::{html, prelude::*};
 use wasm_bindgen::JsCast;
 

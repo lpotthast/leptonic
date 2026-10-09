@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::{CurrentMatch, Link};
+use leptonic::atoms::link::{CurrentMatch, Link};
 use leptos::prelude::*;
 use leptos_router::{components::Outlet, hooks::use_location};
 

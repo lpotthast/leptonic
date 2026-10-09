@@ -1,10 +1,10 @@
 use leptonic::{
+    Orientation,
     atoms::{
         checkbox::{CheckboxButton, CheckboxField},
         field::{Description, Label},
         radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::Orientation,
     selection_value,
 };
 use leptos::prelude::*;
@@ -19,7 +19,11 @@ enum Plan {
 
 selection_value!(Plan { Free = "free", Pro = "pro", Team = "team" });
 
-const PLANS: [(Plan, &str); 3] = [(Plan::Free, "Free"), (Plan::Pro, "Pro"), (Plan::Team, "Team")];
+const PLANS: [(Plan, &str); 3] = [
+    (Plan::Free, "Free"),
+    (Plan::Pro, "Pro"),
+    (Plan::Team, "Team"),
+];
 
 #[component]
 pub fn RadioAtomDemo() -> impl IntoView {

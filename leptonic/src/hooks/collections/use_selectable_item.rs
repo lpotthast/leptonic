@@ -1,11 +1,12 @@
 // Upstream: react-aria/src/selection/useSelectableItem.ts @ 99e6102368
+// Upstream: react-aria/test/selection/useSelectableCollection.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use leptos::{
     attr::{
         self, Attr,
         custom::{CustomAttr, custom_attribute},
     },
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
@@ -16,23 +17,23 @@ use super::{
     modifiers::{is_ctrl_key_pressed, is_non_contiguous_selection_modifier},
 };
 use crate::{
-    hooks::{
-        IntoAttrs, PropsWithStyles,
-        interactions::{
-            use_context_menu::{
-                ContextMenuEvent, UseContextMenuAttrs, UseContextMenuInput, UseContextMenuProps,
-                UseContextMenuReturn, use_context_menu,
-            },
-            use_press::{
-                LongPressEvent, PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press,
-            },
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, Modifiers, OnEvent,
+    PropsWithStyles,
+    hooks::interactions::{
+        use_context_menu::{
+            ContextMenuEvent, UseContextMenuAttrs, UseContextMenuInput, UseContextMenuProps,
+            UseContextMenuReturn, use_context_menu,
+        },
+        use_press::{
+            LongPress, LongPressEvent, PressEvent, UsePressAttrs, UsePressInput, UsePressProps,
+            use_press,
         },
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler, Modifiers,
-        focus::focus_safely, focusability::is_tabbable, id::use_id, key::KeyboardKey,
-        modifiers::EventModifiers, open_link::is_opening_link, pointer_type::PointerType,
-        shadow_dom::get_active_element, virtual_focus::move_virtual_focus,
+        dom_ext::EventAccessors, focus::focus_safely, focusability::is_tabbable, id::use_id,
+        key::KeyboardKey, modifiers::EventModifiers, open_link::is_opening_link,
+        pointer_type::PointerType, shadow_dom::get_active_element,
+        virtual_focus::move_virtual_focus,
     },
 };
 
@@ -112,7 +113,8 @@ pub struct UseSelectableItemInput {
     /// it; with one, double-click / Enter does (in `Replace` behavior). Reactive: an item can gain
     /// or lose its action (a tree row toggling once it has children).
     pub on_action: Signal<Option<Callback<()>>>,
-    pub link_behavior: LinkBehavior,
+    /// Reactive: e.g. a listbox's follows its selection behavior.
+    pub link_behavior: Signal<LinkBehavior>,
     /// Focuses the item when it becomes the focused key. `None`: focusing the element.
     pub focus: Option<FocusItem>,
     /// DOM focus stays elsewhere (e.g. in a combo box input); the item is focused virtually.
@@ -157,8 +159,8 @@ pub type UseSelectableItemAttrs = (
     CustomAttr<&'static str, String>,
     ElementCaptureAttr,
     UsePressAttrs,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::Capture<ev::dragstart>, SharedEventCallback<DragEvent>>,
+    OnEvent<ev::focus>,
+    OnEvent<ev::Capture<ev::dragstart>>,
     UseContextMenuAttrs,
 );
 
@@ -203,34 +205,41 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     } = input;
     let UseContextMenuReturn {
         props: context_menu_props,
-        on_long_press_start: context_menu_long_press_start,
-        on_long_press: context_menu_long_press,
+        long_press: context_menu_long_press,
     } = use_context_menu(UseContextMenuInput { on_context_menu });
 
     let id = id.unwrap_or_else(|| use_id("item"));
     item_elements.register(key.clone(), element);
     let key = StoredValue::new(key);
 
+    // The item's state, as memos: a change of the collection or the selection re-runs only the
+    // readers of what actually changed for this item.
     let is_disabled =
-        Signal::derive(move || is_disabled.get() || key.with_value(|k| selection.is_disabled(k)));
+        Memo::new(move |_| is_disabled.get() || key.with_value(|k| selection.is_disabled(k)));
     let is_selected = Signal::derive(move || key.with_value(|k| selection.is_selected(k)));
+    // Only the focused item tracks whether the collection has focus.
     let is_focused = Signal::derive(move || {
-        selection.is_focused() && key.with_value(|k| selection.is_focused_key(k))
+        key.with_value(|k| selection.is_focused_key(k)) && selection.is_focused()
     });
-    let is_link = move || key.with_value(|k| selection.is_link(k));
+    let is_link = Memo::new(move |_| key.with_value(|k| selection.is_link(k)));
 
     // -- Which interactions the item supports (react-aria's primary/secondary action model) --
-    let allows_selection = Signal::derive(move || {
+    let allows_selection = Memo::new(move |_| {
         !is_disabled.get()
             && key.with_value(|k| selection.can_select_item(k))
-            && !(is_link() && link_behavior == LinkBehavior::Override)
+            && !(is_link.get() && link_behavior.get() == LinkBehavior::Override)
     });
-    let has_link_action =
-        move || is_link() && !matches!(link_behavior, LinkBehavior::Selection | LinkBehavior::None);
+    let has_link_action = move || {
+        is_link.get()
+            && !matches!(
+                link_behavior.get(),
+                LinkBehavior::Selection | LinkBehavior::None
+            )
+    };
     let allows_actions =
         move || (on_action.with(Option::is_some) || has_link_action()) && !is_disabled.get();
     // An action performed by a plain press (instead of selecting).
-    let has_primary_action = Signal::derive(move || {
+    let has_primary_action = Memo::new(move |_| {
         allows_actions()
             && if selection.selection_behavior() == SelectionBehavior::Replace {
                 !allows_selection.get()
@@ -239,21 +248,22 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             }
     });
     // An action next to selection: double-click or Enter.
-    let has_secondary_action = Signal::derive(move || {
+    let has_secondary_action = Memo::new(move |_| {
         allows_actions()
             && allows_selection.get()
             && selection.selection_behavior() == SelectionBehavior::Replace
     });
-    let has_action = Signal::derive(move || has_primary_action.get() || has_secondary_action.get());
-    let long_press_enabled = Signal::derive(move || has_action.get() && allows_selection.get());
+    let has_action = Memo::new(move |_| has_primary_action.get() || has_secondary_action.get());
+    let long_press_enabled = Memo::new(move |_| has_action.get() && allows_selection.get());
 
     // -- DOM focus follows the focused key --
     Effect::new(move |_| {
-        let focused = selection.is_focused() && key.with_value(|k| selection.is_focused_key(k));
-        selection.child_focus_strategy();
+        let focused = key.with_value(|k| selection.is_focused_key(k)) && selection.is_focused();
         if !focused {
             return;
         }
+        // Focusing the item again moves focus to its other end (a grid row's first or last cell).
+        selection.child_focus_strategy();
         if should_use_virtual_focus {
             if let Some(el) = element.get_untracked() {
                 move_virtual_focus(Some(&el));
@@ -287,10 +297,10 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         if mode == SelectionMode::None {
             return;
         }
-        if untrack(is_link) {
-            match link_behavior {
+        if is_link.get_untracked() {
+            match link_behavior.get_untracked() {
                 LinkBehavior::Selection => {
-                    open_link_of(element, selection, &key, modifiers);
+                    open_link_of(element, &selection, &key, modifiers);
                     // Report the (unchanged) selection, e.g. so a menu closes.
                     selection.set_selected_keys(untrack(|| selection.selected_keys()));
                     return;
@@ -331,7 +341,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             }
         }
         if untrack(has_link_action) {
-            open_link_of(element, selection, &key.get_value(), modifiers);
+            open_link_of(element, &selection, &key.get_value(), modifiers);
         }
     };
 
@@ -344,7 +354,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
 
     let (on_press_start, on_press, on_press_up) = if should_select_on_press_up {
         let on_press_start = Callback::new(move |e: PressEvent| {
-            modality.set_value(Some(e.pointer_type.clone()));
+            modality.set_value(Some(e.pointer_type));
             long_press_enabled_on_press_start.set_value(long_press_enabled.get_untracked());
             if e.pointer_type == PointerType::Keyboard
                 && (!has_action.get_untracked() || is_selection_key(&e))
@@ -391,7 +401,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         }
     } else {
         let on_press_start = Callback::new(move |e: PressEvent| {
-            modality.set_value(Some(e.pointer_type.clone()));
+            modality.set_value(Some(e.pointer_type));
             long_press_enabled_on_press_start.set_value(long_press_enabled.get_untracked());
             let primary = has_primary_action.get_untracked();
             had_primary_action_on_press_start.set_value(primary);
@@ -409,7 +419,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 PointerType::Touch | PointerType::Pen | PointerType::Virtual => true,
                 PointerType::Keyboard => has_action && is_action_key(&e),
                 PointerType::Mouse => had_primary_action_on_press_start.get_value(),
-                PointerType::Other(_) => false,
+                PointerType::Unknown => false,
             };
             if !applies {
                 return;
@@ -432,13 +442,13 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     };
     // Without selection or a primary action, pressing does nothing (except focusing the item
     // virtually).
-    let press_disabled = Signal::derive(move || {
+    let press_disabled = Memo::new(move |_| {
         !(allows_selection.get()
             || has_primary_action.get()
             || (should_use_virtual_focus && !is_disabled.get()))
     });
     let press = use_press(UsePressInput {
-        is_disabled: press_disabled,
+        is_disabled: press_disabled.into(),
         prevent_focus_on_press: Signal::stored(should_use_virtual_focus),
         on_press: Some(Callback::new(move |e: PressEvent| {
             virtually_focus(&e, true);
@@ -450,25 +460,32 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         })),
         on_press_up,
         // A long press selects (touch selection mode); else, on iOS, it requests the context menu.
-        on_long_press_start: context_menu_long_press_start.map(|on_start| {
-            Callback::new(move |e: LongPressEvent| {
-                if !long_press_enabled.get_untracked() {
-                    on_start.run(e);
+        long_press: Some(LongPress {
+            on_long_press_start: context_menu_long_press
+                .and_then(|context_menu| context_menu.on_long_press_start)
+                .map(|on_start| {
+                    Callback::new(move |e: LongPressEvent| {
+                        if !long_press_enabled.get_untracked() {
+                            on_start.run(e);
+                        }
+                    })
+                }),
+            on_long_press: Some(Callback::new(move |e: LongPressEvent| {
+                if long_press_enabled.get_untracked() {
+                    if e.pointer_type == PointerType::Touch {
+                        on_select(&e.pointer_type, e.modifiers);
+                        selection.set_selection_behavior(SelectionBehavior::Toggle);
+                    }
+                } else if let Some(on_context_menu) =
+                    context_menu_long_press.and_then(|context_menu| context_menu.on_long_press)
+                {
+                    on_context_menu.run(e);
                 }
-            })
-        }),
-        on_long_press: Some(Callback::new(move |e: LongPressEvent| {
-            if long_press_enabled.get_untracked() {
-                if e.pointer_type == PointerType::Touch {
-                    on_select(&e.pointer_type, e.modifiers);
-                    selection.set_selection_behavior(SelectionBehavior::Toggle);
-                }
-            } else if let Some(on_context_menu) = context_menu_long_press {
-                on_context_menu.run(e);
-            }
-        })),
-        long_press_disabled: Signal::derive(move || {
-            !long_press_enabled.get() && context_menu_long_press.is_none()
+            })),
+            is_disabled: Signal::derive(move || {
+                !long_press_enabled.get() && context_menu_long_press.is_none()
+            }),
+            ..LongPress::default()
         }),
         ..UsePressInput::default()
     });
@@ -487,7 +504,10 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     // Link items open through `perform_action`; the native click must not open them a second
     // time.
     let on_click = press_props.on_click.chain(move |e: MouseEvent| {
-        if link_behavior != LinkBehavior::None && untrack(is_link) && !is_opening_link() {
+        if link_behavior.get_untracked() != LinkBehavior::None
+            && is_link.get_untracked()
+            && !is_opening_link()
+        {
             e.prevent_default();
         }
     });
@@ -599,19 +619,19 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         is_pressed: press.is_pressed,
         is_selected,
         is_focused,
-        is_disabled,
-        allows_selection,
-        has_action,
+        is_disabled: is_disabled.into(),
+        allows_selection: allows_selection.into(),
+        has_action: has_action.into(),
     }
 }
 
 /// Dispatched (bubbling) on the item element after its action ran.
 pub const ITEM_ACTION_EVENT: &str = "leptonic-item-action";
 
-/// Whether the platform's "control" modifier is held: Cmd on Apple devices, else Ctrl.
+/// Opens the link of the item `key` (if it has one) as a click on `element` with `modifiers` would.
 fn open_link_of(
     element: CapturedElement,
-    selection: SelectionManager,
+    selection: &SelectionManager,
     key: &Key,
     modifiers: Modifiers,
 ) {

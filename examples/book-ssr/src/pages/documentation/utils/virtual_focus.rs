@@ -12,7 +12,7 @@ pub fn PageVirtualFocus() -> impl IntoView {
                 "With virtual focus, DOM focus stays on one element, e.g. a combobox\u{2019}s text input, while another "
                 "element, e.g. an option of its listbox, is the focused one for assistive technology: the input points at it "
                 "with "<Code inline=true>"aria-activedescendant"</Code>". The functions of "
-                <Code inline=true>"leptonic::utils::virtual_focus"</Code>" move this focus and send synthetic "
+                <Code inline=true>"leptonic"</Code>" move this focus and send synthetic "
                 <Code inline=true>"focus"</Code>" and "<Code inline=true>"blur"</Code>" events, so that the elements involved "
                 "can react as if focus had really moved. See the "
                 <Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for the other focus building blocks."
@@ -74,9 +74,18 @@ pub fn PageVirtualFocus() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::{
-                            collections::{CollectionOptions, ListLayout},
-                            *,
+                        use leptonic::{
+                            hooks::{
+                                collections::{
+                                    Collection,
+                                    CollectionOptions,
+                                    ListLayout,
+                                    use_selectable_item,
+                                },
+                                combobox::use_combobox,
+                                focus::{use_focus, use_focus_within},
+                                listbox::{UseListBoxInput, use_listbox, use_option},
+                            },
                         };
 
                         let listbox = use_listbox(UseListBoxInput {
@@ -89,7 +98,7 @@ pub fn PageVirtualFocus() -> impl IntoView {
                             id: None,
                             aria_label: MaybeProp::default(),
                             aria_labelledby: Signal::stored(None),
-                            orientation: Orientation::Vertical,
+                            orientation: Orientation::Vertical.into(),
                             layout: ListLayout::Stack,
                             keyboard_delegate: None,
                             layout_delegate: None,
@@ -204,7 +213,7 @@ pub fn PageVirtualFocus() -> impl IntoView {
                 <li><Link href=routes::doc::combobox::Hook.materialize()>"Combobox Hooks"</Link></li>
                 <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
             </SeeAlso>
         </DocPage>
     }

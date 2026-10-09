@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude::Link, hooks::LinkTarget};
+use leptonic::{atoms::link::Link, hooks::link::LinkTarget};
 use leptos::prelude::*;
 
 #[component]

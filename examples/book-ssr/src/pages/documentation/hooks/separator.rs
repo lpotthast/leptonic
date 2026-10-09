@@ -54,7 +54,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator};
 
                         // Using an <hr> element (no role needed)
                         let hr_sep = use_separator(UseSeparatorInput::default());

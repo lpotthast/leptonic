@@ -1,9 +1,10 @@
 use leptonic::{
-    atoms::prelude::*,
+    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    atoms::{button::Button, focus_manager::FocusManagerProvider},
     hooks::{
-        FocusManager as Manager, FocusManagerOptions, IntoAttrs, UseKeyboardInput, use_keyboard,
+        focus::{FocusManager as Manager, FocusManagerOptions},
+        interactions::{UseKeyboardInput, use_keyboard},
     },
-    utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
 };
 use leptos::prelude::*;
 
@@ -33,21 +34,21 @@ fn EditButtons(manager: Manager, set_action: WriteSignal<Option<&'static str>>) 
         ..FocusManagerOptions::default()
     };
     let (next, previous, first, last) =
-        (manager.clone(), manager.clone(), manager.clone(), manager);
+        (manager, manager, manager, manager);
 
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(
             KeyboardShortcuts::new()
-                .on(Shortcut::key("ArrowRight"), move |_| {
+                .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| {
                     next.focus_next(wrap());
                 })
-                .on(Shortcut::key("ArrowLeft"), move |_| {
+                .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| {
                     previous.focus_previous(wrap());
                 })
-                .on(Shortcut::key("Home"), move |_| {
+                .on(Shortcut::new(KeyboardKey::Home), move |_| {
                     first.focus_first(FocusManagerOptions::default());
                 })
-                .on(Shortcut::key("End"), move |_| {
+                .on(Shortcut::new(KeyboardKey::End), move |_| {
                     last.focus_last(FocusManagerOptions::default());
                 }),
         ),

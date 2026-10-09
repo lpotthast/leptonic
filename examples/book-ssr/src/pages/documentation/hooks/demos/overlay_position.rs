@@ -1,11 +1,20 @@
 use leptonic::{
+    IntoAttrs,
     atoms::{
         button::Button,
         field::Label,
         focus_scope::FocusScope,
         radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::*,
+    hooks::{
+        button::{UseButtonInput, UseButtonReturn, use_button},
+        overlay::{
+            InteractOutsideFilter, OverlayPositionOptions, OverlayTriggerType, Placement,
+            UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseOverlayReturn,
+            UseOverlayTriggerInput, UseOverlayTriggerReturn, use_overlay, use_overlay_position,
+            use_overlay_trigger,
+        },
+    },
 };
 use leptos::{portal::Portal, prelude::*};
 use leptos_element_capture::CapturedElement;
@@ -60,18 +69,13 @@ pub fn PositioningDemo() -> impl IntoView {
         placement: opened_on,
         ..
     } = use_overlay_position(UseOverlayPositionInput {
-        placement,
-        offset: Signal::stored(8.0),
+        position: OverlayPositionOptions {
+            placement,
+            offset: Signal::stored(8.0),
+            ..OverlayPositionOptions::default()
+        },
         target,
         is_open: is_open.into(),
-        container_padding: Signal::stored(12.0),
-        cross_offset: Signal::stored(0.0),
-        should_flip: Signal::stored(true),
-        boundary: None,
-        max_height: Signal::stored(None),
-        arrow_size: Signal::stored(None),
-        arrow_boundary_offset: Signal::stored(0.0),
-        should_update_position: Signal::stored(true),
         target_rect: Signal::stored(None),
         scroll: None,
         on_close: None,

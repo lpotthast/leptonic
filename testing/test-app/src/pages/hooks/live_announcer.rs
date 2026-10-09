@@ -1,4 +1,4 @@
-use leptonic::utils::live_announcer::{
+use leptonic::{
     Assertiveness, announce_assertive, announce_polite, announce_with_timeout, clear_announcer,
 };
 use leptos::prelude::*;

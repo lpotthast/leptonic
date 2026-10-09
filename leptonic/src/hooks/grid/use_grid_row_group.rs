@@ -1,7 +1,7 @@
 // Upstream: react-aria/src/grid/useGridRowGroup.ts @ 99e6102368
 use leptos::attr::{self, Attr};
 
-use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
+use crate::{IntoAttrs, utils::aria::AriaRole};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

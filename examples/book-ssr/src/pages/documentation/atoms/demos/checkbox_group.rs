@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
     atoms::{
         checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         field::{Description, FieldError, Label},
     },
-    hooks::Key,
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 
@@ -13,7 +13,7 @@ const DAYS: [&str; 5] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
 #[component]
 pub fn CheckboxGroupAtomDemo() -> impl IntoView {
-    let days = RwSignal::new(vec![Key::from("Monday")]);
+    let days = RwSignal::new(HashSet::from([Key::from("Monday")]));
     let disabled = RwSignal::new(false);
 
     view! {
@@ -21,7 +21,7 @@ pub fn CheckboxGroupAtomDemo() -> impl IntoView {
             value=days
             set_value=days
             is_required=true
-            validate=Arc::new(|days: &Vec<Key>| {
+            validate=Arc::new(|days: &HashSet<Key>| {
                 if days.is_empty() { Err(vec!["Choose at least one day.".to_owned()]) } else { Ok(()) }
             })
             is_disabled=disabled
@@ -48,7 +48,8 @@ pub fn CheckboxGroupAtomDemo() -> impl IntoView {
 
         <p class="demo-status">
             {move || {
-                let days = days.get().iter().map(ToString::to_string).collect::<Vec<_>>();
+                let mut days = days.get().iter().map(ToString::to_string).collect::<Vec<_>>();
+                days.sort_by_key(|day| DAYS.iter().position(|d| d == day));
                 if days.is_empty() { "No office days.".to_owned() } else { format!("Office days: {}.", days.join(", ")) }
             }}
         </p>

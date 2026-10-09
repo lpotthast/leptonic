@@ -6,10 +6,11 @@
 // (Row-level context menus are a leptonic addition; the menu behavior mirrors MenuTrigger
 // trigger="contextMenu" in Menu.test.tsx.)
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions, role};
+use crate::pages::{ElementActions, Page, role};
 
 const PATH: &str = "/atoms/context-menu";
 
@@ -17,12 +18,13 @@ const MENU: &str = "[role=menu]";
 
 /// The row with the text `text`.
 async fn row(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
-    page.element(role("row").text(text)).await
+    page.element(role(AriaRole::Row).text(text)).await
 }
 
 /// A right click on `element` with the pointer.
 async fn context_click(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    page.driver
+    page.low_level()
+        .driver()
         .action_chain()
         .context_click_element(element)
         .perform()
@@ -30,8 +32,9 @@ async fn context_click(page: &Page<'_>, element: &WebElement) -> Result<(), Repo
     Ok(())
 }
 
-/// A right click on "Pictures" opens the menu at the pointer (the row's center, not its start),
-/// labelled by the row; an action knows its row; the focus returns to the row.
+/// A right click on a row opens the menu at the pointer, labelled by the row; choosing an action
+/// runs it for that row and returns focus to the row ("should support a context menu trigger").
+#[browser_test]
 pub async fn right_click_opens_at_the_pointer(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     assert_that!(page.count(MENU).await?).is_equal_to(0);
@@ -39,12 +42,15 @@ pub async fn right_click_opens_at_the_pointer(page: &Page<'_>) -> Result<(), Rep
     context_click(page, &pictures).await?;
     let menu = page.element(MENU).await?;
     let row_id = pictures.id().await?;
-    assert_that!(menu.attr("aria-labelledby").await?).is_equal_to(row_id);
+    assert_that!(menu)
+        .attribute("aria-labelledby")
+        .await
+        .is_equal_to(row_id);
     let row_rect = pictures.client_rect().await?;
     let menu_rect = menu.client_rect().await?;
     assert_that!(menu_rect.left).is_greater_than(row_rect.left + 10.0);
 
-    page.element(role("menuitem").text("Rename"))
+    page.element(role(AriaRole::Menuitem).text("Rename"))
         .await?
         .click()
         .await?;
@@ -57,7 +63,8 @@ pub async fn right_click_opens_at_the_pointer(page: &Page<'_>) -> Result<(), Rep
     Ok(())
 }
 
-/// Escape closes it; the focus returns to the row it opened on.
+/// Escape closes a row's context menu and returns focus to the row it opened on.
+#[browser_test]
 pub async fn escape_returns_focus_to_the_row(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let music = row(page, "Music").await?;
@@ -69,7 +76,9 @@ pub async fn escape_returns_focus_to_the_row(page: &Page<'_>) -> Result<(), Repo
     Ok(())
 }
 
-/// From the keyboard: Shift+F10 on the focused row.
+/// Shift+F10 on the focused row opens its context menu, labelled by the row; Escape closes it and
+/// returns focus to the row.
+#[browser_test]
 pub async fn shift_f10_opens_it(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     // Tab into the list (its first row), then down to "Music".
@@ -84,7 +93,10 @@ pub async fn shift_f10_opens_it(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Shift + Key::F10).await?;
     let menu = page.element(MENU).await?;
     let row_id = music.id().await?;
-    assert_that!(menu.attr("aria-labelledby").await?).is_equal_to(row_id);
+    assert_that!(menu)
+        .attribute("aria-labelledby")
+        .await
+        .is_equal_to(row_id);
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(MENU, 0).await?;
     page.wait_for_focus(&music).await?;

@@ -1,5 +1,8 @@
-use leptonic::hooks::{IntoAttrs, UseInteractOutsideInput, use_interact_outside};
-use leptos::{prelude::*, web_sys};
+use leptonic::{
+    IntoAttrs,
+    hooks::interactions::{InteractOutsideEvent, UseInteractOutsideInput, use_interact_outside},
+};
+use leptos::prelude::*;
 
 /// `use_interact_outside` (react-aria's `useInteractOutside.test.js`): a target and a toggle
 /// disabling the hook. Callbacks are appended to `#test-interact-outside-log`.
@@ -9,10 +12,10 @@ pub fn PageHookInteractOutside() -> impl IntoView {
     let disabled = RwSignal::new(false);
     let outside = use_interact_outside(UseInteractOutsideInput {
         is_disabled: disabled.into(),
-        on_interact_outside_start: Some(Callback::new(move |_: web_sys::MouseEvent| {
+        on_interact_outside_start: Some(Callback::new(move |_: InteractOutsideEvent| {
             log.update(|l| l.push("start".to_owned()));
         })),
-        on_interact_outside: Some(Callback::new(move |_: web_sys::MouseEvent| {
+        on_interact_outside: Some(Callback::new(move |_: InteractOutsideEvent| {
             log.update(|l| l.push("outside".to_owned()));
         })),
         element: None,

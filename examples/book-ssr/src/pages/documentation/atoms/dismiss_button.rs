@@ -48,7 +48,7 @@ pub fn PageAtomDismissButton() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::DismissButton;
+                        use leptonic::atoms::dismiss_button::DismissButton;
 
                         let close = Callback::new(move |()| set_is_open.set(false));
 

@@ -1,13 +1,12 @@
 // Upstream: react-aria/src/landmark/useLandmark.ts @ 99e6102368
+// Upstream: react-aria/test/landmark/useLandmark.test.tsx @ 99e6102368
+// Upstream: react-aria/test/landmark/useLandmark.ssr.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
 };
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{CapturedElement, aria::AriaRole},
-};
+use crate::{CapturedElement, IntoAttrs, utils::aria::AriaRole};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -340,7 +339,7 @@ mod manager {
         let start = index;
         while ids[index.cast_unsigned()]
             .1
-            .closest("[aria-hidden=true]")
+            .closest("[aria-hidden=true], [inert]")
             .ok()
             .flatten()
             .is_some()
@@ -578,6 +577,7 @@ pub struct UseLandmarkInput {
 }
 
 /// Return value of [`use_landmark`].
+#[derive(Debug)]
 pub struct UseLandmarkReturn {
     pub props: UseLandmarkProps,
 }

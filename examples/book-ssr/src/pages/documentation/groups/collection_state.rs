@@ -115,7 +115,7 @@ pub fn PageCollectionState() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::use_collection;
+                        use leptonic::hooks::collections::use_collection;
 
                         let collection = use_collection(move |b| {
                             for fruit in fruits.read().iter() {
@@ -220,13 +220,14 @@ pub fn PageCollectionState() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::{Key, use_list_collection};
+                        use leptonic::hooks::collections::{Key, UseListCollectionInput, use_list_collection};
 
-                        let collection = use_list_collection(
-                            fruits,                     // Signal<Vec<Fruit>>
+                        let collection = use_list_collection(UseListCollectionInput {
+                            items: fruits,
+                            key: // Signal<Vec<Fruit>>
                             |fruit| Key::from(fruit.id),
-                            |fruit| fruit.name.clone(),
-                        );
+                            text_value: |fruit| fruit.name.clone(),
+                        });
                     ")}
                 </Code>
             </Section>
@@ -238,7 +239,9 @@ pub fn PageCollectionState() -> impl IntoView {
                     "; keys from different kinds of values never compare equal ("<Code inline=true>"Key::from(1)"</Code>
                     " is not "<Code inline=true>"Key::from(\"1\")"</Code>"). Read them back with "
                     <Code inline=true>"as_str()"</Code>" or "<Code inline=true>"as_i64()"</Code>"; "
-                    <Code inline=true>"Display"</Code>" prints the value."
+                    <Code inline=true>"Display"</Code>" prints the value. Integer keys also accept "<Code inline=true>"u64"</Code>
+                    ". For a DOM id use "<Code inline=true>"id_fragment()"</Code>" instead: it escapes whitespace and keeps "
+                    "integer and string keys distinct."
                 </p>
                 <p>
                     "The hooks use this one key type instead of being generic over your item type: they only need identity "
@@ -336,10 +339,7 @@ pub fn PageCollectionState() -> impl IntoView {
                 <Section title="Example" id="use-list-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{
-                                Key, SelectionMode, use_list_state,
-                                collections::{Selection, SelectionOptions, UseListStateInput},
-                            };
+                            use leptonic::hooks::collections::{Key, Selection, SelectionMode, SelectionOptions, UseListStateInput, use_list_state};
                             use leptos::prelude::*;
 
                             // App state: the selected fruits.
@@ -419,7 +419,8 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="collection" ty="CollectionMemo">"The items."</ApiRow>
                         <ApiRow name="selection" ty="SelectionManager">
                             "Selection and focus: queries like "<Code inline=true>"is_selected"</Code>", "
-                            <Code inline=true>"selected_keys"</Code>", "<Code inline=true>"focused_key"</Code>" and "
+                            <Code inline=true>"selected_keys"</Code>", "<Code inline=true>"focused_key"</Code>", "
+                            <Code inline=true>"has_focused_key"</Code>" and "
                             <Code inline=true>"is_disabled"</Code>" (tracked; disabled for interaction, by the disabled behavior), "
                             <Code inline=true>"is_item_disabled"</Code>" (disabled at all, whatever the behavior), and mutations like "
                             <Code inline=true>"select"</Code>", "<Code inline=true>"toggle_selection"</Code>", "
@@ -482,7 +483,7 @@ pub fn PageCollectionState() -> impl IntoView {
                     {indoc!(r"
                         use std::sync::Arc;
 
-                        use leptonic::hooks::collections::use_list_state_view;
+                        use leptonic::hooks::collections::{UseListStateViewInput, use_list_state_view};
                         use leptos::prelude::*;
 
 
@@ -494,7 +495,7 @@ pub fn PageCollectionState() -> impl IntoView {
                                 Arc::new(c.filter(|_, node| keys.contains(&node.key)))
                             })
                         });
-                        let page = use_list_state_view(state, first_page);
+                        let page = use_list_state_view(UseListStateViewInput { state, collection: first_page });
                     ")}
                 </Code>
             </Section>
@@ -535,7 +536,7 @@ pub fn PageCollectionState() -> impl IntoView {
                         <Code inline=true>"aria-activedescendant"</Code>" (see "
                         <Link href=routes::doc::focus::VirtualFocus.materialize()>"virtual_focus"</Link>")."
                     </ApiRow>
-                    <ApiRow name="link_behavior" ty="LinkBehavior" default="Action">
+                    <ApiRow name="link_behavior" ty="Signal<LinkBehavior>" default="Action">
                         "How link items behave: "<Code inline=true>"Action"</Code>" (a press opens the link), "
                         <Code inline=true>"Selection"</Code>" (selecting opens it), "<Code inline=true>"Override"</Code>
                         " (a press opens it and never selects) or "<Code inline=true>"None"</Code>"."
@@ -616,7 +617,7 @@ pub fn PageCollectionState() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseSelectableListInput">
                         <ApiRow name="state" ty="ListState">"From "<Code inline=true>"use_list_state"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The list element; the returned props capture it. Required."</ApiRow>
-                        <ApiRow name="orientation" ty="Orientation">
+                        <ApiRow name="orientation" ty="Signal<Orientation>">
                             "Whether the items are stacked vertically (up and down arrows) or horizontally (left and right). Required."
                         </ApiRow>
                         <ApiRow name="layout" ty="ListLayout">
@@ -674,7 +675,7 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>">
                             "Called when a context menu is requested on the item (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the item\u{2019}s menu then replaces the browser\u{2019}s. Required; "<Code inline=true>"None"</Code>" keeps the browser\u{2019}s menu."
                         </ApiRow>
-                        <ApiRow name="link_behavior" ty="LinkBehavior">
+                        <ApiRow name="link_behavior" ty="Signal<LinkBehavior>">
                             "See "<AnchorLink href="#collectionoptions">"CollectionOptions"</AnchorLink>". Required."
                         </ApiRow>
                         <ApiRow name="focus" ty="Option<FocusItem>">
@@ -763,7 +764,7 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="element" ty="CapturedElement">
                             "The list element, in which the rendered items are measured. Required."
                         </ApiRow>
-                        <ApiRow name="orientation" ty="Orientation">
+                        <ApiRow name="orientation" ty="Signal<Orientation>">
                             "The direction the items follow each other: "<Code inline=true>"Vertical"</Code>" or "
                             <Code inline=true>"Horizontal"</Code>". Required."
                         </ApiRow>
@@ -781,7 +782,7 @@ pub fn PageCollectionState() -> impl IntoView {
 
                 <Section title="use_grid_keyboard_delegate">
                     <p>
-                        <Code inline=true>"use_grid_keyboard_delegate(state: GridState, element: CapturedElement) -> Signal<Arc<dyn KeyboardDelegate>>"</Code>
+                        <Code inline=true>"use_grid_keyboard_delegate(UseGridKeyboardDelegateInput { state, element }) -> Signal<Arc<dyn KeyboardDelegate>>"</Code>
                     </p>
                     <p>
                         "Grids: up and down move between rows (or the cells of the same column), left and right between a "
@@ -792,7 +793,7 @@ pub fn PageCollectionState() -> impl IntoView {
 
                 <Section title="use_table_keyboard_delegate">
                     <p>
-                        <Code inline=true>"use_table_keyboard_delegate(state: TableState, element: CapturedElement) -> Signal<Arc<dyn KeyboardDelegate>>"</Code>
+                        <Code inline=true>"use_table_keyboard_delegate(UseTableKeyboardDelegateInput { state, element }) -> Signal<Arc<dyn KeyboardDelegate>>"</Code>
                     </p>
                     <p>
                         "Tables: the grid navigation, plus the column headers above the first row. See the "

@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude::ColorSwatch, utils::color::RGB8};
+use leptonic::{RGB8, atoms::color_swatch::ColorSwatch};
 use leptos::prelude::*;
 
 #[component]

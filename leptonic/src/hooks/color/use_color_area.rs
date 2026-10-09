@@ -4,7 +4,6 @@ use leptos::{
     attr,
     attr::Attr,
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
     tachys::html::property::{Property, prop},
 };
@@ -14,29 +13,41 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::use_color_area_state::ColorAreaState;
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        FocusWithinEvent, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
-        UseFocusInput, UseFocusWithinInput, UseFormResetInput, UseKeyboardInput, UseMoveInput,
-        use_focus, use_focus_within, use_form_reset, use_keyboard, use_move,
+        focus::{
+            FocusWithinEvent, UseFocusInput, UseFocusWithinInput, use_focus, use_focus_within,
+        },
+        form::{UseFormResetInput, use_form_reset},
+        interactions::{
+            MoveEndEvent, MoveEvent, MoveStartEvent, UseKeyboardInput, UseMoveInput, use_keyboard,
+            use_move,
+        },
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
-        aria::{AriaDisabled, AriaHidden, AriaOrientation, AriaRole},
+        aria::{AriaHidden, AriaOrientation, AriaRole},
         color::{BlendMode, ColorValue},
-        css::{ForcedColorAdjust, LengthPercentageAuto, TouchAction, computed_pct},
+        dom_ext::EventAccessors,
         event_listeners::{Listener, listen_to},
         focus::focus_element,
-        i18n::{use_direction, use_locale},
+        i18n::{WritingDirection, use_direction, use_locale},
         id::use_id,
         intl_strings::{
             ColorInputLabelArgs, ColorNameAndValueArgs, ColorStrings, use_localized_strings,
         },
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        locale::WritingDirection,
-        platform::device::{is_android, is_ios},
+        platform::{
+            device::{is_android, is_ios},
+            use_platform_check,
+        },
+        point::Point,
         pointer_type::PointerType,
-        style::{ForcedColorAdjustProperty, LeftProperty, TopProperty, TouchActionProperty},
-        styles::Styles,
+        styles::{
+            Styles,
+            css::{ForcedColorAdjust, LengthPercentageAuto, TouchAction, computed_pct},
+            property::{ForcedColorAdjustProperty, LeftProperty, TopProperty, TouchActionProperty},
+        },
         visually_hidden::visually_hidden_full_size_styles,
     },
 };
@@ -92,7 +103,6 @@ pub struct UseColorAreaProps {
     pub id: String,
     pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub element_capture: ElementCaptureAttr,
 }
@@ -102,8 +112,7 @@ pub type UseColorAreaAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    OnEvent<ev::pointerdown>,
     ElementCaptureAttr,
 );
 
@@ -116,7 +125,6 @@ impl IntoAttrs for UseColorAreaProps {
             Attr(attr::Role, AriaRole::Group),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDisabled, self.aria_disabled),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.element_capture,
         )
@@ -136,11 +144,11 @@ pub struct UseColorAreaThumbProps {
 
 pub type UseColorAreaThumbAttrs = (
     Attr<attr::Role, AriaRole>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::pointerdown>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::keyup>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
     ElementCaptureAttr,
 );
 
@@ -213,9 +221,9 @@ pub type UseColorAreaInputAttrs = (
         Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
     ),
     (
-        On<ev::input, SharedEventCallback<Event>>,
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::blur, SharedEventCallback<FocusEvent>>,
+        OnEvent<ev::input>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::blur>,
         ElementCaptureAttr,
     ),
 );
@@ -331,13 +339,13 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         is_disabled,
         shortcuts: Some(
             KeyboardShortcuts::new()
-                .on(Shortcut::key("PageUp"), move |_| {
+                .on(Shortcut::new(KeyboardKey::PageUp), move |_| {
                     keyboard_update(&|| state.increment_y(state.y_channel_page_step), Axis::Y);
                 })
-                .on(Shortcut::key("PageDown"), move |_| {
+                .on(Shortcut::new(KeyboardKey::PageDown), move |_| {
                     keyboard_update(&|| state.decrement_y(state.y_channel_page_step), Axis::Y);
                 })
-                .on(Shortcut::key("Home"), move |_| {
+                .on(Shortcut::new(KeyboardKey::Home), move |_| {
                     keyboard_update(
                         &|| {
                             if is_rtl() {
@@ -349,7 +357,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                         Axis::X,
                     );
                 })
-                .on(Shortcut::key("End"), move |_| {
+                .on(Shortcut::new(KeyboardKey::End), move |_| {
                     keyboard_update(
                         &|| {
                             if is_rtl() {
@@ -369,7 +377,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
 
     // -- Moving: dragging (pointer deltas over the area's size) and arrow keys (steps) --
     let press = StoredValue::new(None::<Press>);
-    let current_position = StoredValue::new(None::<(f64, f64)>);
+    let current_position = StoredValue::new(None::<Point>);
     let on_move_start = Callback::new(move |_: MoveStartEvent| {
         current_position.set_value(None);
         state.set_dragging(true);
@@ -411,17 +419,17 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 let rect = area.get_bounding_client_rect();
                 (rect.width(), rect.height())
             });
-            let (mut x, mut y) = current_position
+            let mut position = current_position
                 .get_value()
                 .unwrap_or_else(|| untrack(|| state.thumb_position()));
             if width > 0.0 {
-                x += if is_rtl() { -dx } else { dx } / width;
+                position.x += if is_rtl() { -dx } else { dx } / width;
             }
             if height > 0.0 {
-                y += dy / height;
+                position.y += dy / height;
             }
-            current_position.set_value(Some((x, y)));
-            state.set_color_from_point(x, y);
+            current_position.set_value(Some(position));
+            state.set_color_from_point(position);
         }
     });
     let on_move_end = Callback::new(move |_: MoveEndEvent| {
@@ -495,7 +503,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         }
     };
     let ignored = |e: &PointerEvent| {
-        PointerType::from(e.pointer_type()) == PointerType::Mouse
+        PointerType::of(e) == PointerType::Mouse
             && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
     };
     let on_thumb_down = EventHandler::new(move |e: PointerEvent| {
@@ -535,7 +543,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 on_area: true,
             }));
             changed_via_keyboard.set(false);
-            state.set_color_from_point(x, y);
+            state.set_color_from_point(Point::new(x, y));
             focus_input(Axis::X);
             state.set_dragging(true);
             listen_for_release();
@@ -601,7 +609,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         })
     };
 
-    let is_mobile = is_ios() || is_android();
+    let is_mobile = use_platform_check(|| is_ios() || is_android());
     let labelled_by = |own_id: &str| {
         aria_labelledby
             .as_ref()
@@ -625,7 +633,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         match aria_label.get() {
             Some(label) => Some(format!("{label}, {color_picker}")),
             // On touch devices, the area itself is announced (react-aria's default label).
-            None => (is_mobile && !has_labelledby).then_some(color_picker),
+            None => (is_mobile.get() && !has_labelledby).then_some(color_picker),
         }
     });
     let roledescription = Signal::derive(move || strings.read().two_dimensional_slider());
@@ -650,7 +658,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         form: form.clone(),
         tabindex: Signal::derive(move || {
             let focused = focused_input.get();
-            (!(is_mobile || focused.is_none() || focused == Some(Axis::X))).then_some(-1)
+            (!(is_mobile.get() || focused.is_none() || focused == Some(Axis::X))).then_some(-1)
         }),
         aria_label: input_label,
         aria_describedby: aria_describedby.clone(),
@@ -659,7 +667,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         aria_valuetext: value_text(x_channel),
         aria_hidden: Signal::derive(move || {
             let focused = focused_input.get();
-            let shown = is_mobile
+            let shown = is_mobile.get()
                 || focused.is_none()
                 || focused == Some(Axis::X)
                 || changed_via_keyboard.get();
@@ -682,7 +690,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         name: y_name,
         form,
         tabindex: Signal::derive(move || {
-            (!(is_mobile || focused_input.get() == Some(Axis::Y))).then_some(-1)
+            (!(is_mobile.get() || focused_input.get() == Some(Axis::Y))).then_some(-1)
         }),
         aria_label: input_label,
         aria_describedby,
@@ -690,8 +698,9 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         aria_orientation: AriaOrientation::Vertical,
         aria_valuetext: value_text(y_channel),
         aria_hidden: Signal::derive(move || {
-            let shown =
-                is_mobile || focused_input.get() == Some(Axis::Y) || changed_via_keyboard.get();
+            let shown = is_mobile.get()
+                || focused_input.get() == Some(Axis::Y)
+                || changed_via_keyboard.get();
             (!shown).then_some(AriaHidden::True)
         }),
         on_input,
@@ -717,19 +726,19 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             gradient.get().blend_mode.map(BlendMode::as_str)
         });
     let thumb_position = move || {
-        let (x, y) = state.thumb_position();
-        (if is_rtl() { 1.0 - x } else { x }, y)
+        let Point { x, y } = state.thumb_position();
+        Point::new(if is_rtl() { 1.0 - x } else { x }, y)
     };
     let thumb_styles = Styles::new()
         .add_unchecked("position", "absolute")
         .add_reactive(move || {
             LeftProperty.declare(LengthPercentageAuto::from(computed_pct(
-                thumb_position().0 * 100.0,
+                thumb_position().x * 100.0,
             )))
         })
         .add_reactive(move || {
             TopProperty.declare(LengthPercentageAuto::from(computed_pct(
-                thumb_position().1 * 100.0,
+                thumb_position().y * 100.0,
             )))
         })
         .add_unchecked("transform", "translate(-50%, -50%)")
@@ -755,11 +764,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 id: area_id,
                 aria_label: area_label,
                 aria_labelledby: area_labelledby,
-                aria_disabled: Signal::derive(move || {
-                    is_disabled.get().then_some(AriaDisabled::True)
-                }),
                 on_pointerdown: on_area_down.chain(area_move.on_pointerdown),
-                element_capture: area_element.attr().chain(area_move.element_capture),
+                element_capture: area_element.attr(),
             },
             area_styles,
         ),
@@ -770,7 +776,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 on_keyup: keyboard.on_keyup,
                 on_focusin: focus_within.on_focusin,
                 on_focusout: focus_within.on_focusout,
-                element_capture: thumb_element.attr().chain(thumb_move.element_capture),
+                element_capture: thumb_element.attr(),
             },
             thumb_styles,
         ),

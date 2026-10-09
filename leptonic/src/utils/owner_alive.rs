@@ -1,3 +1,6 @@
+// No upstream: telling deferred callbacks whether their reactive owner still lives (React has no
+// disposal of a component's state before its callbacks).
+
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},

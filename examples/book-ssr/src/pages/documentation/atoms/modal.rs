@@ -139,6 +139,8 @@ pub fn PageAtomModal() -> impl IntoView {
                         <ApiRow name="children" ty="ChildrenFn">
                             "A "<Code inline=true>"ModalContent"</Code>". Rendered anew each time the modal opens. Required."
                         </ApiRow>
+                        <ApiRow name="on_enter" ty="Option<Callback<SendWrapper<Element>>>" default="None">"Called with the element when its enter animation starts."</ApiRow>
+                        <ApiRow name="on_exit" ty="Option<Callback<SendWrapper<Element>>>" default="None">"Called with the element when its exit animation starts."</ApiRow>
                     </ApiTable>
                     <p>
                         "See "<Link href=hook_section("use-modal-backdrop-input")>"use_modal_backdrop"</Link>
@@ -179,6 +181,8 @@ pub fn PageAtomModal() -> impl IntoView {
                         <ApiRow name="children" ty="Children">
                             "The modal\u{2019}s content, typically a "<Code inline=true>"Dialog"</Code>". Required."
                         </ApiRow>
+                        <ApiRow name="on_enter" ty="Option<Callback<SendWrapper<Element>>>" default="None">"Called with the element when its enter animation starts."</ApiRow>
+                        <ApiRow name="on_exit" ty="Option<Callback<SendWrapper<Element>>>" default="None">"Called with the element when its exit animation starts."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

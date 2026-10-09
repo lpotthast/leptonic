@@ -1,6 +1,10 @@
 use std::time::Duration;
 
-use leptonic::atoms::prelude::{Focusable, Pressable, Tooltip, TooltipTrigger};
+use leptonic::atoms::{
+    focusable::Focusable,
+    press::Pressable,
+    tooltip::{Tooltip, TooltipTrigger},
+};
 use leptos::prelude::*;
 
 /// `Focusable` on its child (react-aria's `Focusable.test.js`), and `Focusable`/`Pressable` as
@@ -10,6 +14,8 @@ use leptos::prelude::*;
 pub fn PageAtomFocusable() -> impl IntoView {
     let log = RwSignal::new(Vec::<String>::new());
     let auto = RwSignal::new(false);
+    // A tooltip trigger that starts disabled.
+    let trigger_disabled = RwSignal::new(true);
     let entry = move |name: &'static str| move |_| log.update(|l| l.push(name.to_owned()));
 
     view! {
@@ -45,6 +51,19 @@ pub fn PageAtomFocusable() -> impl IntoView {
                 <span id="test-pressable-trigger" role="button">"Pressable trigger"</span>
             </Pressable>
             <Tooltip>"Pressable tooltip"</Tooltip>
+        </TooltipTrigger>
+        // A trigger enabled (and disabled again) after it rendered.
+        <button
+            id="test-focusable-toggle-disabled"
+            on:click=move |_| trigger_disabled.update(|disabled| *disabled = !*disabled)
+        >
+            {move || if trigger_disabled.get() { "Enable trigger" } else { "Disable trigger" }}
+        </button>
+        <TooltipTrigger delay=Duration::from_millis(100) close_delay=Duration::from_millis(0)>
+            <Focusable is_disabled=trigger_disabled>
+                <span id="test-focusable-toggled-trigger" role="button">"Toggled trigger"</span>
+            </Focusable>
+            <Tooltip>"Toggled tooltip"</Tooltip>
         </TooltipTrigger>
         // "supports autoFocus", on a child that only becomes focusable through the atom.
         <button id="test-focusable-mount-auto" on:click=move |_| auto.set(true)>

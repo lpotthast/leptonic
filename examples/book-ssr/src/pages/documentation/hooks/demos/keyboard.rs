@@ -1,7 +1,15 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    atoms::{checkbox::{CheckboxButton, CheckboxField}, focus_ring::FocusRing}, hooks::*, utils::Propagation,
+    IntoAttrs, Propagation,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        focus_ring::FocusRing,
+    },
+    hooks::{
+        focus::FocusRingTarget,
+        interactions::{KeyboardEventWrapper, UseKeyboardInput, UseKeyboardReturn, use_keyboard},
+    },
 };
 use leptos::prelude::*;
 
@@ -38,7 +46,7 @@ pub fn KeyboardDemo() -> impl IntoView {
     });
 
     view! {
-        <FocusRing is_disabled=disabled within=true>
+        <FocusRing is_disabled=disabled target=FocusRingTarget::Within>
             <div {..props.into_attrs()} tabindex="0" class="demo-keyboard-target">
                 "Focus me and press keys"
             </div>

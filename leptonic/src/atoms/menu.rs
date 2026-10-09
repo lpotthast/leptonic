@@ -1,7 +1,10 @@
 // Upstream: react-aria-components/src/Menu.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/AriaMenu.test-util.tsx @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     dialog::DialogTriggerContext,
@@ -10,25 +13,32 @@ use super::{
     separator::SeparatorContext,
 };
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, SlotAttrs, ValueBinding,
     hooks::{
-        ContextMenuEvent, IntoAttrs, MenuData, MenuTriggerState, MenuTriggerStateApi,
-        MenuTriggerType, OverlayTriggerType, Placement, PressResponderTrigger, SelectionBehavior,
-        SelectionMode, SeparatorElementType, SubmenuKind, SubmenuProps, SubmenuTriggerItem,
-        UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn, UseMenuSectionInput,
-        UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerMenuProps, UseMenuTriggerReturn,
-        UseMenuTriggerStateInput, UseSubmenuTriggerInput, UseSubmenuTriggerReturn,
-        UseSubmenuTriggerStateInput, close_context_menu_on_outside_right_click,
         collections::{
             AutoFocus, CloseOnSelect, CollectionMemo, CollectionOptions, FocusStrategy, Key,
-            ListState, Node, Selection, SelectionOptions, UseListStateInput, use_list_state,
+            ListState, Node, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
+            UseListStateInput, use_list_state,
         },
-        use_menu, use_menu_item, use_menu_section, use_menu_trigger, use_menu_trigger_state,
-        use_submenu_trigger, use_submenu_trigger_state,
+        interactions::{ContextMenuEvent, PressResponderTrigger},
+        menu::{
+            MenuData, MenuTriggerState, MenuTriggerStateApi, MenuTriggerType, SubmenuKind,
+            SubmenuProps, SubmenuTriggerItem, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
+            UseMenuReturn, UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput,
+            UseMenuTriggerReturn, UseMenuTriggerStateInput, UseSubmenuTriggerInput,
+            UseSubmenuTriggerReturn, UseSubmenuTriggerStateInput,
+            close_context_menu_on_outside_right_click, use_menu, use_menu_item, use_menu_section,
+            use_menu_trigger, use_menu_trigger_state, use_submenu_trigger,
+            use_submenu_trigger_state,
+        },
+        overlay::{OverlayTriggerType, Placement},
+        separator::SeparatorElementType,
     },
     utils::{
-        CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, point::Point, scoped_context::scoped_view,
+        data_attributes::flag,
+        default_class::with_default_class,
+        point::Point,
+        scoped_context::{ClearContexts, scoped_view},
         styles::Styles,
     },
 };
@@ -63,8 +73,15 @@ use crate::{
 /// Context from a [`MenuTrigger`] to its [`Menu`].
 #[derive(Debug, Clone)]
 struct MenuTriggerContext {
-    menu_props: UseMenuTriggerMenuProps,
+    /// The menu's id (the trigger's `aria-controls`).
+    menu_id: String,
+    /// Where focus goes when the menu opens.
+    auto_focus: Signal<Option<AutoFocus>>,
+    /// Closes the menu.
+    on_close: Callback<()>,
     trigger: DialogTriggerContext,
+    /// The menu's element: its popover's scroll element.
+    menu: CapturedElement,
 }
 
 /// The state of the menu tree's root: its trigger's, else the root menu's own
@@ -91,17 +108,18 @@ struct MenuCloseOnSelect(CloseOnSelect);
 struct SubmenuMenuContext(Option<(SubmenuProps, CapturedElement)>);
 
 /// Context from [`MenuItem`] to its label, description and shortcut, and its state for the item's
-/// content (e.g. a check mark while selected: `use_context::<MenuItemCtx>()`).
+/// content (e.g. a check mark while selected: `use_context::<MenuItemContext>()`).
 #[derive(Debug, Clone)]
-pub struct MenuItemCtx {
-    label: StoredValue<Option<SlotProps>>,
-    description: StoredValue<Option<SlotProps>>,
-    shortcut: StoredValue<Option<SlotProps>>,
+pub struct MenuItemContext {
+    label: StoredValue<SlotAttrs>,
+    description: StoredValue<SlotAttrs>,
+    shortcut: StoredValue<SlotAttrs>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
     pub is_focus_visible: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
+    pub is_hovered: Signal<bool>,
     /// The menu's selection mode (the item is a `menuitemcheckbox` or `menuitemradio` with one).
     pub selection_mode: Signal<SelectionMode>,
 }
@@ -163,14 +181,19 @@ pub fn MenuTrigger(
         aria_expanded: button.aria_expanded,
         aria_controls: button.aria_controls,
         element: overlay_trigger.trigger,
+        id: overlay_trigger.trigger_id,
     };
     // The button's press handlers, ARIA props and shortcuts (react-aria-components' `PressResponder`
     // with `menuTriggerProps`). Built from its props struct (`view!` can't pass `Option`s), inside
     // the contexts for the popover and the menu.
     let menu_context = MenuTriggerContext {
-        menu_props,
+        menu_id: menu_props.id,
+        auto_focus: menu_props.auto_focus,
+        on_close: menu_props.on_close,
         trigger: overlay_trigger,
+        menu: CapturedElement::new(),
     };
+    let menu = menu_context.menu;
     scoped_view(
         move || {
             provide_context(overlay_trigger);
@@ -185,6 +208,8 @@ pub fn MenuTrigger(
                 } else {
                     8.0
                 },
+                scroll: Some(menu),
+                clear_contexts: ClearContexts::default(),
             }));
         },
         move || {
@@ -194,13 +219,10 @@ pub fn MenuTrigger(
                 on_press_end: None,
                 on_press_up: None,
                 on_press_change: None,
-                on_long_press_start: button.on_long_press_start,
-                on_long_press: button.on_long_press,
-                on_long_press_end: button.on_long_press_end,
-                long_press_accessibility_description: button.long_press_accessibility_description,
+                long_press: button.long_press,
                 is_disabled: Some(is_disabled),
                 force_is_pressed: Some(menu_state.overlay.is_open),
-                prevent_focus_on_press: Some(Signal::stored(button.prevent_focus_on_press)),
+                prevent_focus_on_press: Some(button.prevent_focus_on_press),
                 should_cancel_on_pointer_exit: None,
                 allow_text_selection_on_press: None,
                 trigger: Some(press_trigger),
@@ -261,10 +283,10 @@ pub fn ContextMenuTrigger(
         ..UseMenuTriggerStateInput::default()
     });
     close_context_menu_on_outside_right_click(menu_state);
-    // The item the menu is for: its key, element (the popover's anchor) and id (the menu's name).
+    // The item the menu is for: its key and element (the popover's anchor and the menu's name).
     let target_key = RwSignal::new(None::<Key>);
-    let target_id = RwSignal::new(String::new());
     let target = CapturedElement::new();
+    let overlay_trigger = DialogTriggerContext::new(menu_state.overlay, target);
     let open = Callback::new(move |(key, e): (Key, ContextMenuEvent)| {
         if is_disabled.get_untracked() {
             return;
@@ -273,32 +295,32 @@ pub fn ContextMenuTrigger(
         // The focus returns to the item when the menu closes.
         crate::utils::focus::focus_element(element, true);
         target.set(element.clone());
-        target_id.set(element.id());
+        // Collection items already own their ids; no PressResponder assigns the generated
+        // dialog trigger id to this dynamically chosen row.
+        overlay_trigger.trigger_id.set(element.id());
         target_key.set(Some(key));
         let rect = element.get_bounding_client_rect();
         menu_state.set_point(Some(Point {
-            x: rect.x() + e.x,
-            y: rect.y() + e.y,
+            x: rect.x() + e.point.x,
+            y: rect.y() + e.point.y,
         }));
         menu_state.open(None);
     });
-    let overlay_trigger = DialogTriggerContext::new(menu_state.overlay, target);
     let menu_id = crate::utils::id::use_id("menu");
     let menu_context = MenuTriggerContext {
-        menu_props: UseMenuTriggerMenuProps {
-            id: menu_id,
-            aria_labelledby: target_id.into(),
-            auto_focus: Signal::derive(move || {
-                Some(match menu_state.focus_strategy() {
-                    Some(FocusStrategy::First) => AutoFocus::First,
-                    Some(FocusStrategy::Last) => AutoFocus::Last,
-                    None => AutoFocus::Selected,
-                })
-            }),
-            on_close: Callback::new(move |()| menu_state.close()),
-        },
+        menu_id,
+        auto_focus: Signal::derive(move || {
+            Some(match menu_state.focus_strategy() {
+                Some(FocusStrategy::First) => AutoFocus::First,
+                Some(FocusStrategy::Last) => AutoFocus::Last,
+                None => AutoFocus::Selected,
+            })
+        }),
+        on_close: Callback::new(move |()| menu_state.close()),
         trigger: overlay_trigger,
+        menu: CapturedElement::new(),
     };
+    let menu = menu_context.menu;
     scoped_view(
         move || {
             provide_context(overlay_trigger);
@@ -310,6 +332,8 @@ pub fn ContextMenuTrigger(
             provide_context(Some(PopoverDefaults {
                 placement: Placement::BottomStart,
                 offset: 0.0,
+                scroll: Some(menu),
+                clear_contexts: ClearContexts::default(),
             }));
         },
         children,
@@ -326,7 +350,8 @@ pub fn ContextMenuTrigger(
 /// the trigger and focuses its first, last or selected item when it opens.
 ///
 /// Data attributes: `data-empty` on the menu; on items `data-focused`, `data-focus-visible`,
-/// `data-selected`, `data-disabled`, `data-pressed`, `data-selection-mode` (`single`/`multiple`).
+/// `data-selected`, `data-disabled`, `data-pressed`, `data-hovered`, `data-selection-mode`
+/// (`single`/`multiple`).
 ///
 /// Default class: `leptonic-Menu`.
 #[component]
@@ -344,19 +369,29 @@ pub fn Menu(
     selection_mode: Signal<SelectionMode>,
     /// The initially selected keys.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
+    default_selection: Selection,
+    /// The selection (controlled), replacing `default_selection`: a value or any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
     set_selection: Option<Out<Selection>>,
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
+    /// Whether the selection can't become empty (the last selected item can't be unchecked).
+    #[prop(into, optional)]
+    disallow_empty_selection: Signal<bool>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
+    /// Whether the arrow keys wrap around at the ends of the menu.
+    #[prop(default = true)]
+    should_focus_wrap: bool,
+    /// Shown while the menu has no items, in a `role="menuitem"` element with
+    /// `display: contents` (react-aria-components' `renderEmptyState`).
+    #[prop(into, optional)]
+    empty_state: Option<ViewFn>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// The ids of the elements naming the menu. Default inside a `MenuTrigger`: the trigger.
     #[prop(into, optional)]
-    aria_labelledby: MaybeProp<String>,
+    aria_labelledby: Option<String>,
     /// Focus an item when the menu mounts. Default inside a `MenuTrigger`: as the trigger opened
     /// it (the first or last item by keyboard, else the menu).
     #[prop(optional)]
@@ -392,7 +427,13 @@ pub fn Menu(
     });
     let (submenu, element) = match submenu {
         Some((props, element)) => (Some(props), element),
-        None => (None, CapturedElement::new()),
+        // Inside a trigger: the element its popover keeps the focused item in place in.
+        None => (
+            None,
+            trigger_ctx
+                .as_ref()
+                .map_or_else(CapturedElement::new, |ctx| ctx.menu),
+        ),
     };
     let state = state.unwrap_or_else(|| {
         let collection = collection.unwrap_or_else(|| {
@@ -404,39 +445,33 @@ pub fn Menu(
             selection: SelectionOptions {
                 selection_mode,
                 selection_behavior: Signal::stored(SelectionBehavior::Toggle),
-                default_selection: Selection::keys(default_selected_keys),
+                default_selection,
                 selection,
                 on_selection_change,
+                disallow_empty_selection,
                 disabled_keys: disabled_keys.unwrap_or_default(),
                 ..SelectionOptions::default()
             },
         })
     });
 
-    // Inside a trigger: labelled by the trigger's rendered id, ensured once the menu is rendered
-    // (before `use_menu` checks that the menu has a name).
-    let trigger_id = RwSignal::new(None::<String>);
-    if let Some(trigger) = trigger_ctx.as_ref().map(|ctx| ctx.trigger) {
-        Effect::new(move |_| trigger_id.set(trigger.ensure_trigger_id()));
-    }
+    // Inside a trigger: labelled by the trigger.
+    let trigger_id = trigger_ctx.as_ref().map(|ctx| ctx.trigger.trigger_id);
     let labelledby = MaybeProp::derive(move || {
-        aria_labelledby.get().or_else(|| {
+        aria_labelledby.clone().or_else(|| {
             aria_label
                 .read()
                 .is_none()
-                .then(|| trigger_id.get())
+                .then(|| trigger_id.map(|id| id.get()))
                 .flatten()
         })
     });
     let auto_focus = match (auto_focus, trigger_ctx.as_ref()) {
         (Some(auto_focus), _) => Signal::stored(Some(auto_focus)),
-        (None, Some(ctx)) => ctx.menu_props.auto_focus,
+        (None, Some(ctx)) => ctx.auto_focus,
         (None, None) => Signal::stored(None),
     };
-    let on_close = match (
-        on_close,
-        trigger_ctx.as_ref().map(|ctx| ctx.menu_props.on_close),
-    ) {
+    let on_close = match (on_close, trigger_ctx.as_ref().map(|ctx| ctx.on_close)) {
         (Some(own), Some(trigger_close)) => Some(Callback::new(move |()| {
             own.run(());
             trigger_close.run(());
@@ -445,14 +480,24 @@ pub fn Menu(
     };
 
     let collection = state.collection;
-    let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
+    let is_empty = Signal::derive(move || collection.with(|c| c.is_empty()));
+    let empty = move || {
+        let empty_state = empty_state.clone()?;
+        is_empty.get().then(|| {
+            view! {
+                <div role="menuitem" style="display: contents">
+                    {empty_state.run()}
+                </div>
+            }
+        })
+    };
     let UseMenuReturn { props, data } = use_menu(UseMenuInput {
-        id: trigger_ctx.as_ref().map(|ctx| ctx.menu_props.id.clone()),
+        id: trigger_ctx.as_ref().map(|ctx| ctx.menu_id.clone()),
         aria_label,
         aria_labelledby: labelledby,
         options: CollectionOptions {
             auto_focus,
-            should_focus_wrap: true,
+            should_focus_wrap,
             ..CollectionOptions::default()
         },
         on_action,
@@ -465,23 +510,29 @@ pub fn Menu(
     view! {
         <Provider value=data>
             <Provider value=root>
-            <Provider value=ParentMenuElement(element)>
-            // The items of this menu don't belong to an outer submenu trigger.
-            <Provider value=SubmenuItemContext(None)>
-            <Provider value=SubmenuMenuContext(None)>
-            <Provider value=MenuCloseOnSelect(should_close_on_select)>
-            // Separators between the items are `<div role="separator">`s.
-            <Provider value=SeparatorContext {
-                element_type: SeparatorElementType::Div,
-            }>
-                <div {..props.into_attrs()} class=classes style=styles data-empty=flag(is_empty)>
-                    {children()}
-                </div>
-            </Provider>
-            </Provider>
-            </Provider>
-            </Provider>
-            </Provider>
+                <Provider value=ParentMenuElement(element)>
+                    // The items of this menu don't belong to an outer submenu trigger.
+                    <Provider value=SubmenuItemContext(None)>
+                        <Provider value=SubmenuMenuContext(None)>
+                            <Provider value=MenuCloseOnSelect(should_close_on_select)>
+                                // Separators between the items are `<div role="separator">`s.
+                                <Provider value=SeparatorContext {
+                                    element_type: SeparatorElementType::Div,
+                                }>
+                                    <div
+                                        {..props.into_attrs()}
+                                        class=classes
+                                        style=styles
+                                        data-empty=flag(is_empty)
+                                    >
+                                        {children()}
+                                        {empty}
+                                    </div>
+                                </Provider>
+                            </Provider>
+                        </Provider>
+                    </Provider>
+                </Provider>
             </Provider>
         </Provider>
     }
@@ -539,6 +590,7 @@ pub fn MenuItem(
         is_focus_visible,
         is_selected,
         is_pressed,
+        is_hovered,
         is_disabled,
     } = use_menu_item(UseMenuItemInput {
         menu,
@@ -546,15 +598,16 @@ pub fn MenuItem(
         should_close_on_select,
         submenu_trigger,
     });
-    let ctx = MenuItemCtx {
-        label: StoredValue::new(Some(label_props)),
-        description: StoredValue::new(Some(description_props)),
-        shortcut: StoredValue::new(Some(keyboard_shortcut_props)),
+    let ctx = MenuItemContext {
+        label: StoredValue::new(label_props.into_attrs()),
+        description: StoredValue::new(description_props.into_attrs()),
+        shortcut: StoredValue::new(keyboard_shortcut_props.into_attrs()),
         is_selected,
         is_focused,
         is_focus_visible,
         is_disabled,
         is_pressed,
+        is_hovered,
         selection_mode,
     };
     let data_selection_mode = move || match selection_mode.get() {
@@ -576,6 +629,7 @@ pub fn MenuItem(
                 data-selected=flag(is_selected)
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
+                data-hovered=flag(is_hovered)
                 data-has-submenu=has_submenu.then_some("true")
                 data-open=flag(is_open)
                 data-selection-mode=data_selection_mode
@@ -630,6 +684,7 @@ pub fn SubmenuTrigger(
     let state = use_submenu_trigger_state(UseSubmenuTriggerStateInput {
         trigger_key: key.clone(),
         root,
+        level: menu.submenu_level,
     });
     let (trigger, submenu) = (CapturedElement::new(), CapturedElement::new());
     let UseSubmenuTriggerReturn {
@@ -692,7 +747,11 @@ where
             {
                 let children = children.clone();
                 let key = node.key.clone();
-                view! { <MenuItem key=key classes=classes.clone()>{children(node)}</MenuItem> }
+                view! {
+                    <MenuItem key=key classes=classes.clone()>
+                        {children(node)}
+                    </MenuItem>
+                }
             }
         </For>
     }
@@ -708,8 +767,8 @@ pub fn MenuItemLabel(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItemLabel", classes);
-    let ctx = expect_context::<MenuItemCtx>();
-    slot(ctx.label, "MenuItemLabel", classes, styles, children)
+    let ctx = expect_context::<MenuItemContext>();
+    slot(ctx.label, classes, styles, children)
 }
 
 /// Secondary text of a [`MenuItem`] (describes the item).
@@ -722,14 +781,8 @@ pub fn MenuItemDescription(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItemDescription", classes);
-    let ctx = expect_context::<MenuItemCtx>();
-    slot(
-        ctx.description,
-        "MenuItemDescription",
-        classes,
-        styles,
-        children,
-    )
+    let ctx = expect_context::<MenuItemContext>();
+    slot(ctx.description, classes, styles, children)
 }
 
 /// The keyboard shortcut of a [`MenuItem`] (e.g. "Ctrl+C"), announced with the item.
@@ -742,33 +795,22 @@ pub fn MenuItemShortcut(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItemShortcut", classes);
-    let ctx = expect_context::<MenuItemCtx>();
-    slot(ctx.shortcut, "MenuItemShortcut", classes, styles, children)
+    let ctx = expect_context::<MenuItemContext>();
+    slot(ctx.shortcut, classes, styles, children)
 }
 
-/// Renders a label/description/shortcut slot. The slot's props go to the first such element only.
+/// Renders a label/description/shortcut slot (one of each per item: its id is the item's
+/// reference to it).
 fn slot(
-    props: StoredValue<Option<SlotProps>>,
-    component: &str,
+    attrs: StoredValue<SlotAttrs>,
     classes: Classes,
     styles: Styles,
     children: Children,
-) -> AnyView {
-    if let Some(props) = props.try_update_value(Option::take).flatten() {
-        view! {
-            <span {..props.into_attrs()} class=classes style=styles>
-                {children()}
-            </span>
-        }
-        .into_any()
-    } else {
-        crate::utils::dev_warn!("{component}: only one per MenuItem is supported");
-        view! {
-            <span class=classes style=styles>
-                {children()}
-            </span>
-        }
-        .into_any()
+) -> impl IntoView {
+    view! {
+        <span {..attrs.get_value()} class=classes style=styles>
+            {children()}
+        </span>
     }
 }
 
@@ -793,8 +835,8 @@ pub fn MenuSection(
     selection_mode: Option<SelectionMode>,
     /// The initially selected keys of the section's own selection.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The section's own selection (controlled), replacing `default_selected_keys`: a value or
+    default_selection: Selection,
+    /// The section's own selection (controlled), replacing `default_selection`: a value or
     /// any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
@@ -835,7 +877,7 @@ pub fn MenuSection(
         section_menu.state.selection = menu.state.selection.with_own_selection(SelectionOptions {
             selection_mode: Signal::stored(mode),
             selection_behavior: Signal::stored(SelectionBehavior::Toggle),
-            default_selection: Selection::keys(default_selected_keys),
+            default_selection,
             selection,
             on_selection_change,
             disallow_empty_selection,
@@ -849,18 +891,24 @@ pub fn MenuSection(
         }
         own => own,
     };
-    let heading = heading_props.map(|props| {
-        view! {
-            <header {..props.into_attrs()} class=heading_classes>
-                {heading}
-            </header>
-        }
-    });
+    // Rendered while the section has a header.
+    let heading_attrs = heading_props.into_attrs();
+    let heading = move || {
+        heading.get().map(|text| {
+            view! {
+                <header {..heading_attrs.clone()} class=heading_classes.clone()>
+                    {text}
+                </header>
+            }
+        })
+    };
 
     view! {
         <section {..group_props.into_attrs()} class=classes style=styles>
             {heading}
-            <Provider value=MenuCloseOnSelect(close_on_select)>
+            <Provider value=MenuCloseOnSelect(
+                close_on_select,
+            )>
                 {match section_menu {
                     Some(section_menu) => {
                         view! { <Provider value=section_menu>{children()}</Provider> }.into_any()

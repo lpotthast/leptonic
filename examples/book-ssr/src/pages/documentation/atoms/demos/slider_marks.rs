@@ -3,7 +3,7 @@ use leptonic::{
         field::Label,
         slider::{Slider, SliderFill, SliderMark, SliderMarks, SliderThumb, SliderTrack},
     },
-    hooks::SliderMarks as Marks,
+    hooks::slider::SliderMarkPlacement,
 };
 use leptos::prelude::*;
 
@@ -26,8 +26,8 @@ pub fn SliderMarksDemo() -> impl IntoView {
                 <SliderThumb index=1 aria_label="Highest" classes="demo-slider-thumb"/>
             </SliderTrack>
             // One mark per step, named by its value. The children receive the computed marks.
-            <SliderMarks marks=Marks::Automatic { create_names: true } classes="demo-slider-marks" let:marks>
-                <For each=move || marks.get() key=|mark| mark.percentage.to_bits() let:mark>
+            <SliderMarks marks=SliderMarkPlacement::Automatic { create_names: true } classes="demo-slider-marks" let:marks>
+                <For each=move || marks.get() key=|mark| mark.percentage.get().to_bits() let:mark>
                     <SliderMark mark=mark.clone() classes="demo-slider-mark">{mark.name.unwrap_or_default()}</SliderMark>
                 </For>
             </SliderMarks>

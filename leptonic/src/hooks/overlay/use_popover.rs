@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/overlays/usePopover.ts @ 99e6102368
+// Upstream: react-aria/test/overlays/usePopover.test.tsx @ 99e6102368
+// Upstream: react-aria/test/overlays/usePopover.shadow.test.tsx @ 99e6102368
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -7,8 +9,10 @@
 // ## API DIFFERENCES
 // - The trigger and popover elements are captured (`trigger_props`, `props`) instead of passing
 //   refs; `trigger` lets a caller that captures the trigger already (`DialogTrigger`) pass it.
-// - Positioning options are those of `use_overlay_position` (typed `Placement`); the arrow
-//   element is captured by the returned `arrow_props`.
+// - Positioning options are one `OverlayPositionOptions`, shared with `use_overlay_position`
+//   (react-aria: the `AriaPositionProps` spread into the props; typed `Placement`); the arrow
+//   element is captured by the returned `arrow_props`, the scroll element (`scrollRef`) is a
+//   `CapturedElement`.
 //
 // ## OMITTED FEATURES
 // - `useFocusWithin` props.
@@ -18,20 +22,19 @@
 use leptos::prelude::*;
 
 use super::{
-    use_overlay::{UseOverlayInput, use_overlay},
+    use_overlay::{UseOverlayAttrs, UseOverlayInput, UseOverlayProps, use_overlay},
     use_overlay_position::{
-        Placement, PlacementAxis, Rect, UseOverlayArrowProps, UseOverlayPositionInput,
-        use_overlay_position,
+        OverlayPositionOptions, PlacementAxis, Rect, UseOverlayArrowProps, UseOverlayPositionAttrs,
+        UseOverlayPositionInput, UseOverlayPositionProps, use_overlay_position,
     },
 };
 use crate::{
-    hooks::{
-        IntoAttrs, MergedOverlayOverlayPositionAttrs, OverlayState, OverlayTriggerState,
-        PropsWithStyles,
-        interactions::use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
-        merged::MergedOverlayOverlayPositionProps,
+    CapturedElement, ElementCaptureAttr, IntoAttrs, PropsWithStyles,
+    hooks::overlay::{
+        OverlayState, OverlayTriggerState,
+        use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
     },
-    utils::{CapturedElement, ElementCaptureAttr, MergeWith, point::Point},
+    utils::point::Point,
 };
 
 /// Input parameters for the `use_popover` hook.
@@ -44,40 +47,16 @@ pub struct UsePopoverInput<S: OverlayState = OverlayTriggerState> {
     /// The trigger the popover is positioned at, captured by `trigger_props` (or by the caller).
     pub trigger: CapturedElement,
 
-    /// Where the popover goes relative to the trigger. Default: [`Placement::Bottom`].
-    pub placement: Signal<Placement>,
-
-    /// Additional offset along the main axis (pushes the popover away from the trigger).
-    /// Default: 0.0
-    pub offset: Signal<f64>,
-
-    /// Additional offset along the cross axis.
-    /// Default: 0.0
-    pub cross_offset: Signal<f64>,
-
-    /// Minimum padding between the popover and the viewport edge.
-    /// Default: 12.0
-    pub container_padding: Signal<f64>,
-
-    /// Whether the popover should flip to the opposite side when there isn't enough space.
-    /// Default: true
-    pub should_flip: Signal<bool>,
-
-    /// The popover's maximum height. Default: the room available.
-    pub max_height: Signal<Option<f64>>,
-
-    /// The arrow's size across the main axis. Default: the width of the arrow element.
-    pub arrow_size: Signal<Option<f64>>,
-
-    /// The minimum distance between the arrow and the popover's edges. Default: 0.
-    pub arrow_boundary_offset: Signal<f64>,
-
-    /// The element the popover must stay within. Default: the document body.
-    pub boundary: Option<CapturedElement>,
+    /// Where and how the popover is placed.
+    pub position: OverlayPositionOptions,
 
     /// Replaces the trigger's bounding rectangle (viewport coordinates). Default: the state's
     /// `point` (where a context menu opened), else none.
     pub target_rect: Signal<Option<Rect>>,
+
+    /// The scrollable element inside the popover (a list box, a menu) whose focused content keeps
+    /// its place when the popover moves. Default: the popover.
+    pub scroll: Option<CapturedElement>,
 
     /// Whether the popover takes over the page while open. Default: modal.
     pub modality: PopoverModality,
@@ -89,7 +68,7 @@ pub struct UsePopoverInput<S: OverlayState = OverlayTriggerState> {
     /// return `true` if `on_close` should be called. This gives you a chance to
     /// filter out interaction with elements that should not dismiss the popover.
     /// By default, `on_close` will always be called on interaction outside the popover.
-    pub should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
+    pub should_close_on_interact_outside: Option<crate::hooks::overlay::InteractOutsideFilter>,
 
     /// The group the popover belongs to: a root popover's container, which also holds the
     /// popovers of its submenus. The overlay stack, outside interactions and hiding the rest of the
@@ -145,20 +124,19 @@ pub struct UsePopoverReturn {
     pub trigger_anchor_point: Signal<Option<Point>>,
 }
 
-/// Props from `use_popover` for the popover element that can be extracted and merged programmatically.
-///
-/// These merge overlay props (from `use_overlay`) with position props (from `use_overlay_position`)
-/// via `MergeWith`, stored in the `other` field.
+/// Props from `use_popover` for the popover element: those of `use_overlay` (dismissal) and of
+/// `use_overlay_position` (positioning), both spread onto it.
 #[derive(Debug)]
 pub struct UsePopoverProps {
-    pub other: MergedOverlayOverlayPositionProps,
+    pub overlay: UseOverlayProps,
+    pub position: UseOverlayPositionProps,
 }
 
 impl IntoAttrs for UsePopoverProps {
     type Attrs = UsePopoverAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        self.other.into_attrs()
+        (self.overlay.into_attrs(), self.position.into_attrs())
     }
 }
 
@@ -182,7 +160,7 @@ impl IntoAttrs for UsePopoverTriggerProps {
 pub type UsePopoverTriggerAttrs = (ElementCaptureAttr,);
 
 /// These attributes must be spread onto the popover element.
-pub type UsePopoverAttrs = MergedOverlayOverlayPositionAttrs;
+pub type UsePopoverAttrs = (UseOverlayAttrs, UseOverlayPositionAttrs);
 
 /// Provides the behavior and accessibility implementation for a popover component.
 ///
@@ -197,16 +175,12 @@ pub type UsePopoverAttrs = MergedOverlayOverlayPositionAttrs;
 /// let popover = use_popover(UsePopoverInput {
 ///     state,
 ///     trigger: CapturedElement::new(),
-///     placement: Signal::stored(Placement::Bottom),
-///     offset: Signal::stored(8.0),
-///     cross_offset: Signal::stored(0.0),
-///     container_padding: Signal::stored(12.0),
-///     should_flip: Signal::stored(true),
-///     max_height: Signal::stored(None),
-///     arrow_size: Signal::stored(None),
-///     arrow_boundary_offset: Signal::stored(0.0),
-///     boundary: None,
+///     position: OverlayPositionOptions {
+///         offset: Signal::stored(8.0),
+///         ..OverlayPositionOptions::default()
+///     },
 ///     target_rect: Signal::stored(None),
+///     scroll: None,
 ///     modality: PopoverModality::Modal,
 ///     is_keyboard_dismiss_disabled: Signal::stored(false),
 ///     should_close_on_interact_outside: None,
@@ -239,16 +213,9 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
     let UsePopoverInput {
         state,
         trigger: trigger_element,
-        placement,
-        offset,
-        cross_offset,
-        container_padding,
-        should_flip,
-        max_height,
-        arrow_size,
-        arrow_boundary_offset,
-        boundary,
+        position: position_options,
         target_rect,
+        scroll,
         modality,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
@@ -275,15 +242,7 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
     //    popover closes when the page scrolls; a modal one prevents scrolling.
     let point = state.point();
     let position = use_overlay_position(UseOverlayPositionInput {
-        placement,
-        container_padding,
-        offset,
-        cross_offset,
-        should_flip,
-        boundary,
-        max_height,
-        arrow_size,
-        arrow_boundary_offset,
+        position: position_options,
         target_rect: Signal::derive(move || {
             target_rect.get().or_else(|| {
                 point.get().map(|point| Rect {
@@ -298,8 +257,7 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
         on_close: (!modality.is_modal() && !is_submenu).then_some(on_close),
         target: trigger_element,
         is_open,
-        should_update_position: Signal::stored(true),
-        scroll: None,
+        scroll,
     });
 
     // 3. Scroll prevention (disabled when non-modal or not open).
@@ -311,13 +269,14 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
     let popover_element = overlay.overlay_element;
     use_popover_visibility(is_open, group.unwrap_or(popover_element), modality);
 
-    // 5. Return merged props.
+    // 5. Return the props.
     let id = overlay.id;
     let (position_props, position_styles) = position.props.into_inner();
     UsePopoverReturn {
         props: PropsWithStyles::new(
             UsePopoverProps {
-                other: overlay.props.merge_with(position_props),
+                overlay: overlay.props,
+                position: position_props,
             },
             position_styles,
         ),

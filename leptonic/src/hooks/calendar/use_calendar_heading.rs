@@ -1,6 +1,8 @@
 // Upstream: react-aria/src/calendar/useCalendarHeading.ts @ 99e6102368
 // Upstream: react-aria/src/calendar/useCalendarMonthPicker.ts @ 99e6102368
 // Upstream: react-aria/src/calendar/useCalendarYearPicker.ts @ 99e6102368
+// Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/RangeCalendar.test.tsx @ 99e6102368
 use jiff::civil::Date;
 use leptos::prelude::*;
 
@@ -11,7 +13,7 @@ use crate::utils::{
         DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
     },
     i18n::use_locale,
-    intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings},
+    intl_strings::{CalendarStrings, DatePickerStrings, DateRangeArgs, use_localized_strings},
 };
 
 // =============================================================================
@@ -25,9 +27,12 @@ use crate::utils::{
 //   props for a `Select`); the value of the year picker is the year (react-aria: the item index,
 //   as eras may change between years of other calendars).
 //
+// ## DIFFERENT BEHAVIOR
+// - The pickers' labels are the date picker's messages for the fields ("month", "Monat"),
+//   react-aria's fallback when the browser has no `Intl.DisplayNames` (ICU4X has no display
+//   names for date fields).
+//
 // ## OMITTED FEATURES
-// - Localized names: the pickers' labels are "month" and "year" (react-aria: the locale's names
-//   of the date fields, `Intl.DisplayNames`; ICU4X has none yet).
 // - The heading of several visible days is "May 20, 2024 to May 26, 2024" (react-aria: the
 //   locale's date range format).
 //
@@ -69,31 +74,39 @@ pub fn use_calendar_heading(input: UseCalendarHeadingInput) -> Signal<String> {
     } = input;
     let calendar = state.calendar();
     let locale = use_locale();
-    Memo::new(move |_| {
+    let is_days = Memo::new(move |_| {
         let duration = calendar.visible_duration.get();
-        let is_days = duration.days != 0 || duration.weeks != 0;
+        duration.days != 0 || duration.weeks != 0
+    });
+    // Kept while the locale and options stay (not rebuilt per focused date).
+    let options = Memo::new(move |_| {
         let range = calendar.visible_range.get();
         let start = range.start.add(offset);
-        let formatter = DateTimeFormatter::new(
-            &locale.get(),
-            DateTimeFormatOptions {
-                day: format
-                    .day
-                    .or_else(|| is_days.then_some(NumericFormat::Numeric)),
-                month: Some(format.month),
-                year: Some(format.year),
-                era: era_format(start).or_else(|| era_format(range.end)),
-                ..DateTimeFormatOptions::default()
-            },
-        );
-        if is_days {
-            CalendarStrings::for_locale(locale.get()).date_range(DateRangeArgs {
-                start_date: &formatter.format_date(start),
-                end_date: &formatter.format_date(range.end),
-            })
-        } else {
-            formatter.format_date(start)
+        DateTimeFormatOptions {
+            day: format
+                .day
+                .or_else(|| is_days.get().then_some(NumericFormat::Numeric)),
+            month: Some(format.month),
+            year: Some(format.year),
+            era: era_format(start).or_else(|| era_format(range.end)),
+            ..DateTimeFormatOptions::default()
         }
+    });
+    let formatter = Memo::new(move |_| DateTimeFormatter::new(&locale.get(), options.get()));
+    let strings = use_localized_strings::<CalendarStrings>();
+    Memo::new(move |_| {
+        let range = calendar.visible_range.get();
+        let start = range.start.add(offset);
+        formatter.with(|formatter| {
+            if is_days.get() {
+                strings.read().date_range(DateRangeArgs {
+                    start_date: &formatter.format_date(start),
+                    end_date: &formatter.format_date(range.end),
+                })
+            } else {
+                formatter.format_date(start)
+            }
+        })
     })
     .into()
 }
@@ -112,8 +125,8 @@ pub struct CalendarPickerItem {
 /// Return value of [`use_calendar_month_picker`] and [`use_calendar_year_picker`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseCalendarPickerReturn {
-    /// Names the picker: "month" or "year".
-    pub aria_label: &'static str,
+    /// Names the picker: "month" or "year", in the locale's language.
+    pub aria_label: Signal<String>,
     /// The focused date's month or year.
     pub value: Signal<i16>,
     /// The items to pick from.
@@ -159,8 +172,9 @@ pub fn use_calendar_month_picker(input: UseCalendarMonthPickerInput) -> UseCalen
                 .collect::<Vec<_>>()
         })
     });
+    let strings = use_localized_strings::<DatePickerStrings>();
     UseCalendarPickerReturn {
-        aria_label: "month",
+        aria_label: Signal::derive(move || strings.read().month()),
         value: Signal::derive(move || i16::from(calendar.focused_date.get().month())),
         items: items.into(),
         on_change: Callback::new(move |month: i16| {
@@ -210,16 +224,25 @@ pub fn use_calendar_year_picker(input: UseCalendarYearPickerInput) -> UseCalenda
     let calendar = state.calendar();
     let locale = use_locale();
     let visible_years = i32::from(visible_years.max(1));
-    let items = Memo::new(move |_| {
-        let focused = calendar.focused_date.get();
-        let formatter = DateTimeFormatter::new(
+    // Kept while the locale and era stay (not rebuilt per focused date).
+    let era = Memo::new(move |_| {
+        format
+            .era
+            .or_else(|| era_format(calendar.focused_date.get()))
+    });
+    let formatter = Memo::new(move |_| {
+        DateTimeFormatter::new(
             &locale.get(),
             DateTimeFormatOptions {
                 year: Some(format.year),
-                era: format.era.or_else(|| era_format(focused)),
+                era: era.get(),
                 ..DateTimeFormatOptions::default()
             },
-        );
+        )
+    });
+    let items = Memo::new(move |_| {
+        let focused = calendar.focused_date.get();
+        let formatter = formatter.get();
         let mut min = focused.subtract(DateDuration::years(visible_years / 2));
         let mut max = focused.add(DateDuration::years((visible_years + 1) / 2 - 1));
         if let Some(max_value) = calendar.max_value.get()
@@ -256,8 +279,9 @@ pub fn use_calendar_year_picker(input: UseCalendarYearPickerInput) -> UseCalenda
         }
         items
     });
+    let strings = use_localized_strings::<DatePickerStrings>();
     UseCalendarPickerReturn {
-        aria_label: "year",
+        aria_label: Signal::derive(move || strings.read().year()),
         value: Signal::derive(move || calendar.focused_date.get().year()),
         items: items.into(),
         on_change: Callback::new(move |year: i16| {
@@ -276,7 +300,10 @@ mod tests {
     use jiff::civil::date;
 
     use super::*;
-    use crate::hooks::calendar::{UseCalendarStateInput, use_calendar_state};
+    use crate::{
+        hooks::calendar::{UseCalendarStateInput, use_calendar_state},
+        testing::with_owner,
+    };
 
     fn calendar(focused: Date) -> CalendarStates {
         use_calendar_state(UseCalendarStateInput {
@@ -289,13 +316,13 @@ mod tests {
     /// RAC `Calendar.test.js`, "should support month and year dropdowns".
     #[test]
     fn picks_months_and_years() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = calendar(date(2026, 4, 1));
             let months = use_calendar_month_picker(UseCalendarMonthPickerInput {
                 state,
                 format: MonthFormat::Short,
             });
-            assert_that!(months.aria_label).is_equal_to("month");
+            assert_that!(months.aria_label.get_untracked()).is_equal_to("month".to_owned());
             assert_that!(months.value.get_untracked()).is_equal_to(4);
             let names: Vec<String> = months
                 .items
@@ -344,9 +371,69 @@ mod tests {
         });
     }
 
+    /// The years of a year picker of a calendar with limits.
+    fn limited_years(
+        min_value: Option<Date>,
+        max_value: Option<Date>,
+        focused: Date,
+        visible_years: u8,
+    ) -> Vec<CalendarPickerItem> {
+        let state: CalendarStates = use_calendar_state(UseCalendarStateInput {
+            default_focused_value: Some(focused),
+            min_value: Signal::stored(min_value),
+            max_value: Signal::stored(max_value),
+            ..UseCalendarStateInput::default()
+        })
+        .into();
+        use_calendar_year_picker(UseCalendarYearPickerInput {
+            state,
+            visible_years,
+            format: CalendarYearPickerFormat::default(),
+        })
+        .items
+        .get_untracked()
+    }
+
+    fn year_names(items: &[CalendarPickerItem]) -> Vec<String> {
+        items.iter().map(|item| item.formatted.clone()).collect()
+    }
+
+    /// RAC `Calendar.test.js`, "supports minValue and maxValue": the years end at max, start at
+    /// min, stay between both, and a year cut by a limit moves to it.
+    #[test]
+    fn year_pickers_stay_within_min_and_max() {
+        with_owner(|| {
+            let years = |range: std::ops::RangeInclusive<i32>| -> Vec<String> {
+                range.map(|year| year.to_string()).collect()
+            };
+            let today = crate::utils::date::today();
+            let items = limited_years(None, Some(date(2026, 6, 30)), today, 20);
+            assert_that!(year_names(&items)).is_equal_to(years(2007..=2026));
+            let items = limited_years(Some(date(2020, 6, 30)), None, today, 20);
+            assert_that!(year_names(&items)).is_equal_to(years(2020..=2039));
+            let items = limited_years(
+                Some(date(2020, 6, 30)),
+                Some(date(2026, 6, 30)),
+                date(2022, 6, 30),
+                20,
+            );
+            assert_that!(year_names(&items)).is_equal_to(years(2020..=2026));
+            let items = limited_years(
+                Some(date(2024, 8, 3)),
+                Some(date(2025, 2, 3)),
+                date(2025, 2, 1),
+                20,
+            );
+            assert_that!(year_names(&items)).is_equal_to(years(2024..=2025));
+            assert_that!(items[1].date).is_equal_to(date(2025, 2, 3));
+            let items = limited_years(None, None, date(2026, 6, 30), 1);
+            assert_that!(year_names(&items)).is_equal_to(years(2026..=2026));
+        });
+    }
+
     #[test]
     fn year_pickers_name_the_era_before_christ() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = calendar(date(-1, 4, 1));
             let years = use_calendar_year_picker(UseCalendarYearPickerInput {
                 state,

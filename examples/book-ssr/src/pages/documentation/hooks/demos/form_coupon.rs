@@ -1,13 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::button::Button,
     hooks::{
-        ButtonType, FormValidationContext, IntoAttrs, UseFieldInput, UseFieldReturn,
-        UseFormResetInput, UseFormValidationInput, UseFormValidationStateInput, ValidationBehavior,
-        use_field, use_form_reset, use_form_validation, use_form_validation_state,
+        button::ButtonType,
+        form::{
+            FormValidationContext, UseFieldInput, UseFieldReturn, UseFormResetInput,
+            UseFormValidationInput, UseFormValidationStateInput, ValidationBehavior, use_field,
+            use_form_reset, use_form_validation, use_form_validation_state,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -83,7 +86,7 @@ fn CouponField(code: RwSignal<String>) -> impl IntoView {
         })),
         validation_behavior: ValidationBehavior::Native,
         // Matches the server errors for this field.
-        name: Some("coupon".to_owned()),
+        names: vec!["coupon".to_owned()],
     });
     use_form_validation(UseFormValidationInput {
         element,

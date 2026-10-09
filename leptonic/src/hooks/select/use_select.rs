@@ -1,10 +1,12 @@
 // Upstream: react-aria/src/select/useSelect.ts @ 99e6102368
+// Upstream: react-aria-components/test/Select.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Select.ssr.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/picker/Picker.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use leptos_use::use_document;
@@ -12,8 +14,8 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::{SelectMode, SelectState, UseHiddenSelectInput};
 use crate::{
+    CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, Propagation, SlotProps,
     hooks::{
-        IntoAttrs,
         button::use_button::UseButtonInput,
         collections::{
             AutoFocus, CollectionOptions, FocusStrategy, KeyboardDelegate, LinkBehavior,
@@ -34,8 +36,10 @@ use crate::{
         overlay::use_overlay_trigger::OverlayTriggerType,
     },
     utils::{
-        CapturedElement, EventHandler, Propagation, SlotProps, focus::focus_element,
-        keyboard_shortcut::Shortcut, orientation::Orientation,
+        focus::focus_element,
+        key::KeyboardKey,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        orientation::Orientation,
     },
 };
 
@@ -50,8 +54,6 @@ use crate::{
 //   `hidden_select` the input of `use_hidden_select`.
 // - `has_label` says whether a visible label is rendered (react-aria: the `label` content).
 // - `name` and `validation_behavior` are read from the state (C8).
-// - ArrowLeft/ArrowRight on the trigger don't repeat while held (button shortcuts ignore key
-//   repeats).
 //
 // =============================================================================
 
@@ -106,10 +108,7 @@ pub struct UseSelectLabelProps {
     pub on_click: EventHandler<MouseEvent>,
 }
 
-pub type UseSelectLabelAttrs = (
-    Attr<attr::Id, String>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-);
+pub type UseSelectLabelAttrs = (Attr<attr::Id, String>, OnEvent<ev::click>);
 
 impl IntoAttrs for UseSelectLabelProps {
     type Attrs = UseSelectLabelAttrs;
@@ -126,8 +125,7 @@ pub struct UseSelectTriggerProps {
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
 }
 
-pub type UseSelectTriggerAttrs =
-    (On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,);
+pub type UseSelectTriggerAttrs = (OnEvent<ev::Capture<ev::keydown>>,);
 
 impl IntoAttrs for UseSelectTriggerProps {
     type Attrs = UseSelectTriggerAttrs;
@@ -179,7 +177,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: state.list,
             element: listbox_element,
-            orientation: Orientation::Vertical,
+            orientation: Orientation::Vertical.into(),
             layout: ListLayout::Stack,
             layout_delegate: None,
         })
@@ -209,13 +207,10 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         }
         true
     };
-    let shortcuts = menu_trigger
-        .button
-        .shortcuts
-        .clone()
-        .unwrap_or_default()
-        .on(Shortcut::key("ArrowLeft"), move |_| step(false))
-        .on(Shortcut::key("ArrowRight"), move |_| step(true));
+    // Also while an arrow key is held (the button's own shortcuts ignore key repeats).
+    let arrows = KeyboardShortcuts::new()
+        .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| step(false))
+        .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| step(true));
 
     let UseTypeSelectProps {
         on_keydown_capture,
@@ -253,10 +248,8 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     });
     let trigger_id = field_props.id.clone();
     let value_id = crate::utils::id::use_id("select-value");
-    let join = |ids: Vec<Option<String>>| {
-        let ids: Vec<String> = ids.into_iter().flatten().collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
-    };
+    let join =
+        |ids: Vec<Option<String>>| ids.into_iter().flatten().collect::<IdRefs>().into_value();
     // Labelled by aria-label (the trigger itself), unless other labels exist. Both follow the
     // field's labels (e.g. whether its label is rendered).
     let field_labelledby = field_props.aria_labelledby;
@@ -321,8 +314,12 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         aria_label,
         aria_labelledby: trigger_labelledby,
         aria_describedby: field_props.aria_describedby,
-        shortcuts: Some(shortcuts),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
+            if let Some(outcome) = arrows.handle(e.event())
+                && outcome.prevent_default()
+            {
+                e.event().prevent_default();
+            }
             type_select_keydown.call(e.event().clone());
             // The trigger's keys belong to the select.
             e.continue_propagation();
@@ -358,7 +355,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
                 })
             }),
             disallow_empty_selection: true,
-            link_behavior: LinkBehavior::Selection,
+            link_behavior: Signal::stored(LinkBehavior::Selection),
             ..CollectionOptions::default()
         },
         should_select_on_press_up: true,
@@ -367,7 +364,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         state: state.list,
         element: listbox_element,
         aria_label: MaybeProp::default(),
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
         layout_delegate: None,
         is_virtualized: false,

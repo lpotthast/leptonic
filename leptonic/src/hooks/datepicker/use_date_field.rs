@@ -1,12 +1,17 @@
 // Upstream: react-aria/src/datepicker/useDateField.ts @ 99e6102368
 // Upstream: react-aria/src/datepicker/useDatePickerGroup.ts @ 99e6102368
 // Upstream: react-aria/src/datepicker/useDisplayNames.ts @ 99e6102368
+// Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/TimeField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DateField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/TimeField.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
-use web_sys::{FocusEvent, KeyboardEvent};
+use send_wrapper::SendWrapper;
+use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use super::{
     types::{DateSegmentType, DateValue, MaxGranularity, TimeValue},
@@ -14,24 +19,27 @@ use super::{
     use_time_field_state::TimeFieldState,
 };
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        IntoAttrs, OverlayTriggerState, PressEvent, PropsWithStyles, UseKeyboardInput,
-        UsePressAttrs, UsePressInput, UsePressProps,
         focus::{FocusManager, FocusManagerOptions, UseFocusWithinInput, use_focus_within},
         form::{
             LabelElementType, UseFieldInput, UseFieldReturn, UseFormResetInput,
             UseFormValidationInput, UseLabelProps, ValidationBehavior, use_field, use_form_reset,
             use_form_validation,
         },
-        use_keyboard, use_press,
+        interactions::{
+            PressEvent, UseKeyboardInput, UsePressAttrs, UsePressInput, UsePressProps,
+            use_keyboard, use_press,
+        },
+        overlay::OverlayTriggerState,
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaRole},
-        i18n::use_direction,
+        dom_ext::EventAccessors,
+        i18n::{WritingDirection, use_direction},
         intl_strings::{DatePickerStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
-        locale::WritingDirection,
         pointer_type::PointerType,
         slot_id::SlotProps,
         use_description::use_description,
@@ -150,11 +158,7 @@ pub struct UseDatePickerGroupProps {
 }
 
 impl IntoAttrs for UseDatePickerGroupProps {
-    type Attrs = (
-        UsePressAttrs,
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-    );
+    type Attrs = (UsePressAttrs, OnEvent<ev::keydown>, OnEvent<ev::keyup>);
 
     fn into_attrs(self) -> Self::Attrs {
         (
@@ -222,18 +226,21 @@ pub fn use_date_picker_group(
     };
     let shortcuts = KeyboardShortcuts::new()
         .on(
-            Shortcut::key("ArrowDown").alt(),
+            Shortcut::new(KeyboardKey::ArrowDown).alt(),
             move |_: &KeyboardEvent| open_with(),
         )
-        .on(Shortcut::key("ArrowUp").alt(), move |_: &KeyboardEvent| {
-            open_with()
-        })
-        .on(Shortcut::key("ArrowLeft"), move |e: &KeyboardEvent| {
-            arrow(e, false)
-        })
-        .on(Shortcut::key("ArrowRight"), move |e: &KeyboardEvent| {
-            arrow(e, true)
-        });
+        .on(
+            Shortcut::new(KeyboardKey::ArrowUp).alt(),
+            move |_: &KeyboardEvent| open_with(),
+        )
+        .on(
+            Shortcut::new(KeyboardKey::ArrowLeft),
+            move |e: &KeyboardEvent| arrow(e, false),
+        )
+        .on(
+            Shortcut::new(KeyboardKey::ArrowRight),
+            move |e: &KeyboardEvent| arrow(e, true),
+        );
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(shortcuts),
         allow_repeats: true,
@@ -272,25 +279,43 @@ pub fn use_date_picker_group(
         }
         crate::utils::focus::focus_element(&segments[index], false);
     };
-    let press_target = |e: &PressEvent| {
-        wasm_bindgen::JsCast::dyn_into::<web_sys::Element>((*e.target).clone()).ok()
-    };
+    // PressEvent's target is the group that owns the press hook. Retain the DOM event's
+    // original target so a range separator resolves to the segments immediately before it
+    // (react-aria reads this from window.event while the press callback runs).
+    // SSR leaves this empty and can dispose its owner on a different executor thread.
+    let press_target = StoredValue::new(None::<SendWrapper<web_sys::Element>>);
     let press = use_press(UsePressInput {
         prevent_focus_on_press: Signal::stored(true),
         allow_text_selection_on_press: Signal::stored(true),
         on_press_start: Some(Callback::new(move |e: PressEvent| {
             if e.pointer_type == PointerType::Mouse {
-                focus_last(press_target(&e));
+                focus_last(press_target.get_value().map(SendWrapper::take));
             }
         })),
         on_press: Some(Callback::new(move |e: PressEvent| {
             if matches!(e.pointer_type, PointerType::Touch | PointerType::Pen) {
-                focus_last(press_target(&e));
+                focus_last(press_target.get_value().map(SendWrapper::take));
             }
         })),
         ..UsePressInput::default()
     });
-    let (press_props, press_styles) = press.props.into_inner();
+    let (mut press_props, press_styles) = press.props.into_inner();
+    press_props.on_pointerdown = EventHandler::new(move |e: PointerEvent| {
+        press_target.set_value(
+            wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target())
+                .ok()
+                .map(SendWrapper::new),
+        );
+    })
+    .chain(press_props.on_pointerdown);
+    press_props.on_click = EventHandler::new(move |e: MouseEvent| {
+        press_target.set_value(
+            wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target())
+                .ok()
+                .map(SendWrapper::new),
+        );
+    })
+    .chain(press_props.on_click);
     PropsWithStyles::new(
         UseDatePickerGroupProps {
             press: press_props,
@@ -339,6 +364,11 @@ pub struct DateFieldPicker {
     pub overlay: OverlayTriggerState,
     /// The picker's focus manager, when it spans more fields (a range picker's).
     pub focus_manager: Option<FocusManager>,
+    /// What labels the picker, and so the field's segments (`UseDatePickerReturn::labelledby`).
+    pub labelledby: Signal<Option<String>>,
+    /// What describes the picker, and so the field's first segment
+    /// (`UseDatePickerReturn::field_describedby`).
+    pub describedby: Signal<Option<String>>,
 }
 
 /// The options of a date or time field (the parts of [`UseDateFieldInput`] and
@@ -404,10 +434,7 @@ pub struct UseDateFieldLabelProps {
 }
 
 impl IntoAttrs for UseDateFieldLabelProps {
-    type Attrs = (
-        <UseLabelProps as IntoAttrs>::Attrs,
-        On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
-    );
+    type Attrs = (<UseLabelProps as IntoAttrs>::Attrs, OnEvent<ev::click>);
 
     fn into_attrs(self) -> Self::Attrs {
         (self.label.into_attrs(), self.on_click.into_on(ev::click))
@@ -435,15 +462,14 @@ pub type UseDateFieldAttrs = (
         Attr<attr::Role, AriaRole>,
         Attr<attr::AriaLabel, Signal<Option<String>>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     ),
     UsePressAttrs,
     (
-        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-        On<ev::focusin, SharedEventCallback<FocusEvent>>,
-        On<ev::focusout, SharedEventCallback<FocusEvent>>,
+        OnEvent<ev::keydown>,
+        OnEvent<ev::keyup>,
+        OnEvent<ev::focusin>,
+        OnEvent<ev::focusout>,
         ElementCaptureAttr,
     ),
 );
@@ -452,16 +478,19 @@ impl IntoAttrs for UseDateFieldProps {
     type Attrs = UseDateFieldAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
+        // Press props carry their own optional long-press description. Emit one merged
+        // attribute so an empty press description cannot erase the field's descriptions.
+        let mut press = self.group.press;
+        press.aria_describedby = IdRefs::derive([self.aria_describedby, press.aria_describedby]);
         (
             (
                 Attr(attr::Id, self.id),
                 Attr(attr::Role, self.role),
                 Attr(attr::AriaLabel, self.aria_label),
                 Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
                 Attr(attr::AriaDisabled, self.aria_disabled),
             ),
-            self.group.press.into_attrs(),
+            press.into_attrs(),
             (
                 self.group.on_keydown.into_on(ev::keydown),
                 self.group.on_keyup.into_on(ev::keyup),
@@ -537,10 +566,20 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
         picker,
     } = options;
     let is_in_picker = picker.is_some();
-    let (overlay, focus_manager) = picker
-        .map(|picker| (picker.overlay, picker.focus_manager))
-        .unzip();
-    let focus_manager = focus_manager.flatten();
+    let (overlay, focus_manager, picker_labels) = match picker {
+        Some(picker) => (
+            Some(picker.overlay),
+            picker.focus_manager,
+            Some((picker.labelledby, picker.describedby)),
+        ),
+        None => (None, None, None),
+    };
+    // Inside a picker, the picker's label labels the field (react-aria: `useDatePicker` gives
+    // its field `aria-labelledby`).
+    let has_label = match picker_labels {
+        Some((labelledby, _)) => Signal::derive(move || labelledby.with(Option::is_some)),
+        None => has_label,
+    };
     let validation = state.validation;
 
     let UseFieldReturn {
@@ -595,14 +634,14 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
     let description_id = use_description(description);
     let field_describedby = field_props.aria_describedby;
     let described_by = Signal::derive(move || {
-        if is_in_picker {
-            return field_describedby.get();
+        if let Some((_, picker_describedby)) = picker_labels {
+            return picker_describedby.get();
         }
-        let ids: Vec<String> = [description_id.get(), field_describedby.get()]
+        [description_id.get(), field_describedby.get()]
             .into_iter()
             .flatten()
-            .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
+            .collect::<IdRefs>()
+            .into_value()
     });
 
     let focus_manager =
@@ -619,14 +658,17 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
 
     let label_id = label_props.id.clone();
     let segments_labelledby = Signal::derive(move || {
-        let ids: Vec<String> = [
+        if let Some((picker_labelledby, _)) = picker_labels {
+            return picker_labelledby.get();
+        }
+        [
             has_label.get().then(|| label_id.clone()),
             aria_labelledby.clone(),
         ]
         .into_iter()
         .flatten()
-        .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
+        .collect::<IdRefs>()
+        .into_value()
     });
     let data = DateFieldData {
         state,
@@ -762,4 +804,30 @@ pub fn use_time_field<T: TimeValue>(input: UseTimeFieldInput<T>) -> UseDateField
             .unwrap_or_default()
     });
     field
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::testing::with_owner;
+
+    #[test]
+    fn date_picker_group_owner_can_be_cleaned_up_on_another_thread() {
+        with_owner(|| {
+            let owner = Owner::new();
+            owner.with(|| {
+                let _ = use_date_picker_group(UseDatePickerGroupInput {
+                    element: CapturedElement::new(),
+                    arrow_keys: GroupArrowKeys::MoveBetweenSegments,
+                    overlay: None,
+                });
+            });
+
+            // A streamed SSR response can finish on a different executor worker than the
+            // one that rendered the field. Its empty pointer state must be safe to dispose.
+            assert_that!(std::thread::spawn(move || owner.cleanup()).join()).is_ok();
+        });
+    }
 }

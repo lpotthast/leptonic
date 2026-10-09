@@ -8,7 +8,7 @@ use super::{
     Collection, CollectionMemo, ItemElements, Key, Node, NodeKind, Selection, SelectionManager,
     SelectionMode, SelectionOptions,
 };
-use crate::utils::ValueBinding;
+use crate::ValueBinding;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -50,7 +50,7 @@ pub fn use_list_state(input: UseListStateInput) -> ListState {
         selection,
     } = input;
     let selection = SelectionManager::new(collection, selection);
-    use_focused_key_reset(collection, selection);
+    use_focused_key_reset(collection, &selection);
     ListState {
         collection,
         selection,
@@ -58,12 +58,22 @@ pub fn use_list_state(input: UseListStateInput) -> ListState {
     }
 }
 
+/// Input of [`use_list_state_view`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseListStateViewInput {
+    /// The state whose selection and focus the view shares.
+    pub state: ListState,
+    /// What the view shows: a subset of the state's collection (e.g. its filtered items).
+    pub collection: CollectionMemo,
+}
+
 /// The same list state, showing `collection` (a subset of the state's collection, e.g. its
 /// filtered items). Selection and focus are shared with `state`; when the focused item leaves
 /// the view, focus moves to a neighbor.
-pub fn use_list_state_view(state: ListState, collection: CollectionMemo) -> ListState {
+pub fn use_list_state_view(input: UseListStateViewInput) -> ListState {
+    let UseListStateViewInput { state, collection } = input;
     let selection = state.selection.with_collection(collection);
-    use_focused_key_reset(collection, selection);
+    use_focused_key_reset(collection, &selection);
     ListState {
         collection,
         selection,
@@ -71,7 +81,8 @@ pub fn use_list_state_view(state: ListState, collection: CollectionMemo) -> List
     }
 }
 
-fn use_focused_key_reset(collection: CollectionMemo, selection: SelectionManager) {
+fn use_focused_key_reset(collection: CollectionMemo, selection: &SelectionManager) {
+    let selection = *selection;
     Effect::new(move |previous: Option<Arc<Collection>>| {
         let current = collection.get();
         if let Some(previous) = previous
@@ -242,7 +253,7 @@ mod tests {
 
     #[test]
     fn single_select_reports_reselection() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let changes = RwSignal::new(Vec::new());
             let collection: CollectionMemo = Memo::new(|_| Arc::new(letters(&["a", "b"])));
             let state = use_single_select_list_state(UseSingleSelectListStateInput {

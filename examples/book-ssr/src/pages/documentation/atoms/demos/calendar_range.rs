@@ -1,4 +1,5 @@
 use leptonic::{
+    DateDuration, DateRange,
     atoms::{
         calendar::{
             CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody, CalendarGridHeader,
@@ -8,7 +9,6 @@ use leptonic::{
         checkbox::{CheckboxButton, CheckboxField},
     },
     jiff::civil::date,
-    utils::date::{DateDuration, DateRange},
 };
 use leptos::prelude::*;
 

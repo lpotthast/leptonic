@@ -1,12 +1,15 @@
 use leptonic::{
+    ColorValue, HSV, HsvChannel, IntoAttrs, Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::*,
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        css::CssColor,
-        i18n::use_locale,
-        style::BackgroundColorProperty,
+    hooks::{
+        color::{
+            UseColorSliderInput, UseColorSliderReturn, UseColorSliderStateInput, use_color_slider,
+            use_color_slider_state,
+        },
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
     },
+    leptos_styles::{css::CssColor, property::BackgroundColorProperty},
+    use_locale,
 };
 use leptos::prelude::*;
 
@@ -40,6 +43,7 @@ pub fn ColorSliderDemo() -> impl IntoView {
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_details: None,
         name: None,
         form: None,
     });
@@ -47,7 +51,7 @@ pub fn ColorSliderDemo() -> impl IntoView {
     // The focus is on the hidden input inside the thumb: `within` reports it on the thumb as
     // `data-focus-visible`.
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
 

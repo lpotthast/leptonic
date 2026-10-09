@@ -1,6 +1,6 @@
 use leptonic::{
-    atoms::prelude::{Button, DialogTrigger, OverlayArrow, Popover},
-    hooks::{Placement, PopoverModality},
+    atoms::{button::Button, dialog::DialogTrigger, overlay_arrow::OverlayArrow, popover::Popover},
+    hooks::overlay::{Placement, PopoverModality},
 };
 use leptos::prelude::*;
 
@@ -21,7 +21,7 @@ pub fn PageAtomOverlayPosition() -> impl IntoView {
             </button>
             <div style:height=move || if shifted.get() { "400px" } else { "0px" }></div>
             <DialogTrigger>
-                <Button attr:id="test-op-flip-trigger">"Flip"</Button>
+                <Button id="test-op-flip-trigger">"Flip"</Button>
                 <Popover
                     placement=Placement::Top
                     modality=PopoverModality::NonModal
@@ -35,7 +35,7 @@ pub fn PageAtomOverlayPosition() -> impl IntoView {
             <div style="height: 400px;"></div>
             <div style="margin-left: 200px;">
             <DialogTrigger>
-                <Button attr:id="test-op-above-trigger" classes="test-op-above-button">"Above"</Button>
+                <Button id="test-op-above-trigger" classes="test-op-above-button">"Above"</Button>
                 <Popover
                     placement=Placement::Top
                     offset=10.0

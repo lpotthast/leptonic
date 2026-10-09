@@ -1,3 +1,6 @@
+// Upstream: react-aria/src/utils/useGlobalListeners.ts @ 99e6102368
+//! Listeners added for the duration of an interaction (react-aria's `useGlobalListeners`).
+
 use std::borrow::Cow;
 
 use leptos::ev::EventDescriptor;
@@ -43,17 +46,36 @@ pub(crate) fn listen(
     capture: bool,
     handler: impl Fn(web_sys::Event) + 'static,
 ) -> Listener {
+    listen_with_options(target, event, capture, None, handler)
+}
+
+/// The same listener, with the event descriptor's optional native listener options.
+pub(crate) fn listen_with_options(
+    target: &web_sys::EventTarget,
+    event: impl Into<Cow<'static, str>>,
+    capture: bool,
+    options: Option<&web_sys::AddEventListenerOptions>,
+    handler: impl Fn(web_sys::Event) + 'static,
+) -> Listener {
     let event = event.into();
     let closure = Closure::<dyn Fn(web_sys::Event)>::new(handler);
-    let _ = target.add_event_listener_with_callback_and_bool(
-        &event,
-        closure.as_ref().unchecked_ref(),
-        capture,
-    );
+    if let Some(options) = options {
+        let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
+            &event,
+            closure.as_ref().unchecked_ref(),
+            options,
+        );
+    } else {
+        let _ = target.add_event_listener_with_callback_and_bool(
+            &event,
+            closure.as_ref().unchecked_ref(),
+            capture,
+        );
+    }
     Listener {
         target: target.clone(),
         event,
-        capture,
+        capture: options.map_or(capture, |options| options.get_capture().unwrap_or(false)),
         closure,
     }
 }

@@ -28,7 +28,25 @@ pub fn PageToastHooks() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::{
+                                button::use_button,
+                                toast::{
+                                    QueuedToast,
+                                    ToastOptions,
+                                    ToastQueue,
+                                    UseToastInput,
+                                    UseToastRegionInput,
+                                    UseToastRegionReturn,
+                                    UseToastReturn,
+                                    UseToastStateInput,
+                                    use_toast,
+                                    use_toast_region,
+                                    use_toast_state,
+                                },
+                            },
+                        };
 
                         #[component]
                         fn Notifications(queue: ToastQueue<String>) -> impl IntoView {
@@ -73,7 +91,7 @@ pub fn PageToastHooks() -> impl IntoView {
                             }
                         }
 
-                        let queue = use_toast_state::<String>(None);
+                        let queue = use_toast_state::<String>(UseToastStateInput::default());
                         queue.add("Saved.".to_owned(), ToastOptions::default());
 
                         view! {
@@ -98,7 +116,7 @@ pub fn PageToastHooks() -> impl IntoView {
 
             <Section title="use_toast_state">
                 <p>
-                    <Code inline=true>"use_toast_state::<T>(max_visible_toasts)"</Code>" creates a "
+                    <Code inline=true>"use_toast_state::<T>(UseToastStateInput { max_visible_toasts })"</Code>" creates a "
                     <Code inline=true>"ToastQueue<T>"</Code>" showing up to "<Code inline=true>"max_visible_toasts"</Code>
                     " toasts at once (default 1). "<Code inline=true>"ToastQueue::new(max_visible_toasts)"</Code>" does the "
                     "same with a default of all toasts. "<Code inline=true>"T"</Code>" is the content of a toast: a message, "
@@ -147,7 +165,7 @@ pub fn PageToastHooks() -> impl IntoView {
 
                 <Section title="QueuedToast" id="use-toast-state-queued-toast">
                     <ApiTable kind=ApiKind::Fields of="QueuedToast">
-                        <ApiRow name="key" ty="String">"Identifies the toast, e.g. to close it."</ApiRow>
+                        <ApiRow name="key" ty="ToastKey">"Identifies the toast, e.g. to close it."</ApiRow>
                         <ApiRow name="content" ty="T">"What the toast shows."</ApiRow>
                         <ApiRow name="timeout" ty="Option<Duration>">"Its timeout, from its options."</ApiRow>
                         <ApiRow name="on_close" ty="Option<Callback<()>>">"Its close callback, from its options."</ApiRow>

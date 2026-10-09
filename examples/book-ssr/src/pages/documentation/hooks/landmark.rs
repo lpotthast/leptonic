@@ -55,7 +55,10 @@ pub fn PageUseLandmark() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::landmark::{LandmarkRole, UseLandmarkInput, UseLandmarkReturn, use_landmark},
+                        };
 
                         let element = CapturedElement::new();
                         let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {

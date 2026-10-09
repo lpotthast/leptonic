@@ -73,8 +73,12 @@ pub fn PageAtomMenu() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            hooks::{Key, use_collection},
+                            atoms::{
+                                button::Button,
+                                menu::{Menu, MenuItems, MenuTrigger},
+                                popover::Popover,
+                            },
+                            hooks::collections::{Key, use_collection},
                         };
                         use leptos::{logging::log, prelude::*};
 
@@ -209,9 +213,9 @@ pub fn PageAtomMenu() -> impl IntoView {
                         <Code inline=true>"Multiple"</Code>" for checkable items ("<Code inline=true>"menuitemradio"</Code>" / "
                         <Code inline=true>"menuitemcheckbox"</Code>")."
                     </ApiRow>
-                    <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">"The initially checked items."</ApiRow>
+                    <ApiRow name="default_selection" ty="Selection" default="empty">"The initially checked items."</ApiRow>
                     <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                        "The checked items (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                        "The checked items (controlled), replacing "<Code inline=true>"default_selection"</Code>": a value or any signal."
                     </ApiRow>
                     <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
                         "Receives the checked items: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>
@@ -220,7 +224,7 @@ pub fn PageAtomMenu() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">"Called when items are checked."</ApiRow>
                     <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"Items that can\u{2019}t be focused or activated."</ApiRow>
-                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
                         "Names the menu. Inside a "<Code inline=true>"MenuTrigger"</Code>" the button names it by default."
                     </ApiRow>
                     <ApiRow name="auto_focus" ty="Option<AutoFocus>" default="None">
@@ -238,6 +242,9 @@ pub fn PageAtomMenu() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the menu element."</ApiRow>
                     <ApiRow name="children" ty="Children">"The items and sections."</ApiRow>
+                    <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Keep at least one item selected."</ApiRow>
+                    <ApiRow name="empty_state" ty="Option<ViewFn>" default="None">"Content shown when there are no menu items."</ApiRow>
+                    <ApiRow name="should_focus_wrap" ty="bool" default="true">"Wrap keyboard focus from the last item to the first and back."</ApiRow>
                 </ApiTable>
                 </Section>
             </Section>
@@ -339,11 +346,11 @@ pub fn PageAtomMenu() -> impl IntoView {
                         "A selection mode of the section\u{2019}s own; its items then have their own selection. "
                         <Code inline=true>"None"</Code>": the menu\u{2019}s selection."
                     </ApiRow>
-                    <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">
+                    <ApiRow name="default_selection" ty="Selection" default="empty">
                         "The initially selected keys of the section\u{2019}s own selection."
                     </ApiRow>
                     <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                        "The section\u{2019}s own selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>
+                        "The section\u{2019}s own selection (controlled), replacing "<Code inline=true>"default_selection"</Code>
                         ": a value or any signal."
                     </ApiRow>
                     <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
@@ -465,7 +472,7 @@ pub fn PageAtomMenu() -> impl IntoView {
                     " with "<Code inline=true>"SubmenuKind::Dialog"</Code>", the popover holds a dialog with any content."
                 </p>
                 <p>
-                    <Code inline=true>"MenuItem"</Code>" provides its state as "<Code inline=true>"MenuItemCtx"</Code>" context "
+                    <Code inline=true>"MenuItem"</Code>" provides its state as "<Code inline=true>"MenuItemContext"</Code>" context "
                     "("<Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_focused"</Code>", "
                     <Code inline=true>"is_focus_visible"</Code>", "<Code inline=true>"is_disabled"</Code>", "
                     <Code inline=true>"is_pressed"</Code>", "<Code inline=true>"selection_mode"</Code>"). Leptos components "
@@ -473,11 +480,11 @@ pub fn PageAtomMenu() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::menu::MenuItemCtx;
+                        use leptonic::atoms::menu::MenuItemContext;
 
                         #[component]
                         fn CheckMark() -> impl IntoView {
-                            let item = expect_context::<MenuItemCtx>();
+                            let item = expect_context::<MenuItemContext>();
                             move || item.is_selected.get().then_some("\u{2713}")
                         }
                     "#)}

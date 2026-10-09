@@ -1,10 +1,11 @@
 // Upstream: react-stately/src/color/useColorSliderState.ts @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/color/ColorSlider.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::slider::{SliderState, UseSliderStateInput, use_slider_state},
     utils::{
-        ValueBinding,
         color::ColorValue,
         i18n::{Locale, use_locale},
         orientation::Orientation,
@@ -98,13 +99,9 @@ pub fn use_color_slider_state<C: ColorValue>(
     let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
     let default_value = StoredValue::new(binding.value.get_untracked());
     let color = binding.value;
-    // Several changes can come before the binding updates (dragging): the latest color.
-    let latest = StoredValue::new(color.get_untracked());
-    Effect::new(move || latest.set_value(color.get()));
     let binding = ValueBinding::new(
         color,
         Callback::new(move |new_color: C| {
-            latest.set_value(new_color);
             binding.set(new_color);
             if let Some(on_change) = on_change {
                 on_change.run(new_color);
@@ -117,9 +114,10 @@ pub fn use_color_slider_state<C: ColorValue>(
     let slider = use_slider_state(UseSliderStateInput {
         value: Some(ValueBinding::new(
             Signal::derive(move || vec![color.get().channel_value(channel)]),
+            // The other channels as the color has them now (react-stately: the rendered color).
             Callback::new(move |values: Vec<f64>| {
                 if let Some(&value) = values.first() {
-                    binding.set(latest.get_value().with_channel_value(channel, value));
+                    binding.set(color.get_untracked().with_channel_value(channel, value));
                 }
             }),
         )),
@@ -135,7 +133,7 @@ pub fn use_color_slider_state<C: ColorValue>(
         on_change_end: on_change_end.map(|on_change_end| {
             Callback::new(move |values: Vec<f64>| {
                 if let Some(&value) = values.first() {
-                    on_change_end.run(latest.get_value().with_channel_value(channel, value));
+                    on_change_end.run(color.get_untracked().with_channel_value(channel, value));
                 }
             })
         }),
@@ -159,13 +157,15 @@ pub fn use_color_slider_state<C: ColorValue>(
 
 #[cfg(test)]
 mod tests {
-    // Upstream: @adobe/react-spectrum/test/color/ColorSlider.test.tsx (the state's part of it).
     use assertr::prelude::*;
 
     use super::*;
     use crate::{
         testing::{flush_effects, with_owner},
-        utils::color::{Alpha, AlphaChannel, HSL, HslChannel, RGB8, RgbChannel},
+        utils::{
+            color::{Alpha, AlphaChannel, HSL, HslChannel, RGB8, RgbChannel},
+            fraction::Fraction,
+        },
     };
 
     const BLACK: RGB8 = RGB8 { r: 0, g: 0, b: 0 };
@@ -287,8 +287,8 @@ mod tests {
             });
             state.slider.set_thumb_dragging(0, true);
             assert_that!(state.is_dragging.get_untracked()).is_true();
-            state.slider.set_thumb_percent(0, 0.2);
-            state.slider.set_thumb_percent(0, 0.5);
+            state.slider.set_thumb_percent(0, Fraction::new(0.2));
+            state.slider.set_thumb_percent(0, Fraction::new(0.5));
             assert_that!(ends.get_untracked()).is_empty();
             state.slider.set_thumb_dragging(0, false);
             assert_that!(state.is_dragging.get_untracked()).is_false();
@@ -377,6 +377,48 @@ mod tests {
                 .is_equal_to(Alpha::new(color.color));
             // Alpha: the color as it is.
             assert_that!(display(AlphaChannel::Alpha)).is_equal_to(color);
+        });
+    }
+
+    /// A keyboard step right after the app changed another channel keeps that change, before any
+    /// Effect ran (react-stately computes from the rendered `color`).
+    #[test]
+    fn steps_keep_the_channels_the_app_set_last() {
+        with_owner(|| {
+            let app = RwSignal::new(BLACK);
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                value: Some(ValueBinding::from(app)),
+                ..input(BLACK, RgbChannel::Red)
+            });
+            flush_effects();
+            let set = RGB8 {
+                r: 10,
+                g: 20,
+                b: 30,
+            };
+            app.set(set);
+            key(&state, |s| s.increment_thumb(0, None));
+            assert_that!(app.get_untracked()).is_equal_to(RGB8 { r: 11, ..set });
+        });
+    }
+
+    /// `on_change_end` reports the color with the other channels as the app holds them.
+    #[test]
+    fn the_end_of_a_drag_keeps_the_channels_the_app_set() {
+        with_owner(|| {
+            let app = RwSignal::new(BLACK);
+            let (ends, on_change_end) = recorder();
+            let state = use_color_slider_state(UseColorSliderStateInput {
+                value: Some(ValueBinding::from(app)),
+                on_change_end: Some(on_change_end),
+                ..input(BLACK, RgbChannel::Red)
+            });
+            flush_effects();
+            let set = RGB8 { r: 0, g: 20, b: 30 };
+            app.set(set);
+            state.slider.set_thumb_dragging(0, true);
+            state.slider.set_thumb_dragging(0, false);
+            assert_that!(ends.get_untracked()).is_equal_to(vec![set]);
         });
     }
 }

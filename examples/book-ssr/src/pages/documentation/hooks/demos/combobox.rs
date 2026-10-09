@@ -1,16 +1,23 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
-        ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxState, IntoAttrs, ListBoxData, SelectMode, UseComboBoxInput,
-        UseComboBoxReturn, UseComboBoxStateInput, UseListBoxInput, UseListBoxReturn,
-        UseOptionInput, UseOptionReturn, UseTextFieldReturn, ValidationBehavior,
+        button::use_button,
         collections::{Node, use_collection},
-        use_button, use_combobox, use_combobox_state, use_contains_filter, use_listbox, use_option,
-        use_text_field,
+        combobox::{
+            ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxState, UseComboBoxInput,
+            UseComboBoxReturn, UseComboBoxStateInput, use_combobox, use_combobox_state,
+            use_contains_filter,
+        },
+        form::{UseTextFieldReturn, ValidationBehavior, use_text_field},
+        listbox::{
+            ListBoxData, UseListBoxInput, UseListBoxReturn, UseOptionInput, UseOptionReturn,
+            use_listbox, use_option,
+        },
+        select::SelectMode,
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -45,9 +52,9 @@ pub fn ComboboxDemo() -> impl IntoView {
         input_value: None,
         on_input_change: None,
         disabled_keys: Signal::stored(HashSet::new()),
-        menu_trigger: ComboBoxMenuTrigger::Input,
-        allows_empty_collection: false,
-        allows_custom_value: false,
+        menu_trigger: Signal::stored(ComboBoxMenuTrigger::Input),
+        allows_empty_collection: Signal::stored(false),
+        allows_custom_value: Signal::stored(false),
         should_close_on_blur: true,
         is_read_only: Signal::stored(false),
         on_open_change: None,
@@ -60,6 +67,7 @@ pub fn ComboboxDemo() -> impl IntoView {
 
     // The popover element: focus moving into it doesn't count as leaving the combobox.
     let popover = CapturedElement::new();
+    let button_element = CapturedElement::new();
     let UseComboBoxReturn {
         input,
         input_props,
@@ -71,6 +79,7 @@ pub fn ComboboxDemo() -> impl IntoView {
         placeholder: "Search fruits\u{2026}".into(),
         is_disabled: disabled.into(),
         popover,
+        button_element,
         state,
         id: None,
         is_required: Signal::stored(false),
@@ -101,7 +110,7 @@ pub fn ComboboxDemo() -> impl IntoView {
             </label>
             <div class="demo-combo-field">
                 <input {..field_props.into_attrs()} {..input_props.into_attrs()} class="demo-combo-input"/>
-                <button {..button_attrs} style=button_styles class="demo-combo-button">
+                <button {..button_attrs} {..button_element.attr()} style=button_styles class="demo-combo-button">
                     <span aria-hidden="true">"\u{25bc}"</span>
                 </button>
             </div>

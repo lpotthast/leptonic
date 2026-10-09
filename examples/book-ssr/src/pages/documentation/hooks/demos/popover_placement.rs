@@ -1,9 +1,22 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::prelude::{FocusScope, ToggleButton, ToggleButtonGroup},
-    hooks::{collections::Key, *},
-    utils::{CapturedElement, id::use_id},
+    CapturedElement, IntoAttrs,
+    atoms::{
+        focus_scope::FocusScope,
+        toggle_button::{ToggleButton, ToggleButtonGroup},
+    },
+    hooks::{
+        button::{ToggleGroupSelectionMode, UseButtonInput, UseButtonReturn, use_button},
+        collections::Key,
+        overlay::{
+            OverlayPositionOptions, OverlayTriggerType, Placement, PlacementAxis, PopoverModality,
+            UseOverlayTriggerInput, UseOverlayTriggerReturn, UseOverlayTriggerStateInput,
+            UsePopoverInput, UsePopoverReturn, use_overlay_trigger, use_overlay_trigger_state,
+            use_popover,
+        },
+    },
+    use_id,
 };
 use leptos::{portal::Portal, prelude::*};
 
@@ -40,23 +53,20 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
         placement: resolved_placement,
         ..
     } = use_popover(UsePopoverInput {
-        placement,
-        offset: Signal::stored(8.0),
+        position: OverlayPositionOptions {
+            placement,
+            offset: Signal::stored(8.0),
+            ..OverlayPositionOptions::default()
+        },
         state,
         trigger: CapturedElement::new(),
-        cross_offset: Signal::stored(0.0),
-        container_padding: Signal::stored(12.0),
-        should_flip: Signal::stored(true),
-        max_height: Signal::stored(None),
-        arrow_size: Signal::stored(None),
-        arrow_boundary_offset: Signal::stored(0.0),
-        boundary: None,
         target_rect: Signal::stored(None),
         modality: PopoverModality::Modal,
         is_keyboard_dismiss_disabled: Signal::stored(false),
         should_close_on_interact_outside: None,
         group: None,
         is_submenu: false,
+        scroll: None,
     });
 
     let UseOverlayTriggerReturn {

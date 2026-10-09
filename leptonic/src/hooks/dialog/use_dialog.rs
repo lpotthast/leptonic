@@ -1,19 +1,13 @@
 // Upstream: react-aria/src/dialog/useDialog.ts @ 99e6102368
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/dialog/useDialog.test.js @ 99e6102368
+use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use web_sys::FocusEvent;
 
 use crate::{
-    hooks::IntoAttrs,
+    EventHandler, IntoAttrs, OnEvent,
     utils::{
-        EventHandler,
         aria::AriaRole,
-        element_capture::{CapturedElement, ElementCaptureAttr},
         id::use_id,
         slot_id::{SlotProps, use_slot},
     },
@@ -34,6 +28,9 @@ use crate::{
 //
 // ## DIFFERENT BEHAVIOR
 // - The missing-title warning runs once after mount (`dev_warn!`), when the slots are known.
+// - The content element always gets an id, also when `aria_describedby` replaces it as the
+//   description (react-aria: no `contentProps.id` then); it is referenced only by an alert
+//   dialog without `aria_describedby`.
 //
 // =============================================================================
 
@@ -66,6 +63,7 @@ pub struct UseDialogInput {
 }
 
 /// The return value of [`use_dialog`].
+#[derive(Debug)]
 pub struct UseDialogReturn {
     /// Props for the dialog element (captures it for focusing on mount).
     pub dialog_props: UseDialogProps,
@@ -114,7 +112,7 @@ pub type UseDialogAttrs = (
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::Tabindex, i32>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::focusout>,
     ElementCaptureAttr,
 );
 
@@ -150,7 +148,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     } = input;
 
     // A dialog in a non-modal popover makes it contain focus.
-    crate::hooks::use_overlay_focus_contain();
+    crate::hooks::overlay::use_overlay_focus_contain();
 
     let dialog_id = use_id("dialog");
     let title = use_slot("dialog-title");

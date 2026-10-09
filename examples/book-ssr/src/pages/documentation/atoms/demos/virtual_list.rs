@@ -1,6 +1,10 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}, virtualizer::VirtualList},
-    hooks::{collections::Key, virtualizer::ListLayoutOptions},
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+        virtualizer::{VirtualList, VirtualListOptions},
+    },
+    hooks::{collections::Key, virtualizer::ItemSize},
 };
 use leptos::prelude::*;
 
@@ -42,10 +46,10 @@ pub fn VirtualListDemo() -> impl IntoView {
         <VirtualList
             items=lines
             key=|line: &LogLine| Key::from(line.number)
-            layout_options=ListLayoutOptions {
-                estimated_row_size: Some(24.0),
-                scroll_end_threshold: 8.0,
-                ..ListLayoutOptions::default()
+            layout_options=VirtualListOptions {
+                row_size: ItemSize::Estimated(24.0),
+                end_threshold: 8.0,
+                ..VirtualListOptions::default()
             }
             is_anchored_to_end=follow
             set_anchored_to_end=follow

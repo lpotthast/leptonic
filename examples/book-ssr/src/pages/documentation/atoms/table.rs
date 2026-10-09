@@ -83,7 +83,7 @@ pub fn PageAtomTable() -> impl IntoView {
 
                         use leptonic::{
                             atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
-                            hooks::{SelectionMode, TableCollection},
+                            hooks::{collections::SelectionMode, table::TableCollection},
                         };
                         use leptos::prelude::*;
 
@@ -143,18 +143,18 @@ pub fn PageAtomTable() -> impl IntoView {
                 <Section title="Props" id="table-props">
                     <ApiTable kind=ApiKind::Props of="atoms::table::Table">
                         <ApiRow name="table" ty="Memo<Arc<TableCollection>>">
-                            "The columns and rows. Required. Build it with "<Code inline=true>"TableCollection::build_with"</Code>" and "
-                            <Code inline=true>"show_selection_checkboxes: true"</Code>" for a checkbox column."
+                            "The columns and rows. Required. Build it with "<Code inline=true>"TableCollection::build"</Code>". "
+                            "Enable the "<Code inline=true>"show_selection_checkboxes"</Code>" prop for a checkbox column."
                         </ApiRow>
                         <ApiRow name="focus_mode" ty="GridFocusMode" default="Row">
                             <Code inline=true>"Row"</Code>": arrow keys move between rows, arrow right enters the cells. "
                             <Code inline=true>"Cell"</Code>": they move between cells."
                         </ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">"No selection when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">"Whether clicks toggle rows or replace the selection."</ApiRow>
-                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="empty">"The initially selected rows."</ApiRow>
+                        <ApiRow name="selection_behavior" ty="Signal<SelectionBehavior>" default="Toggle">"Whether clicks toggle rows or replace the selection."</ApiRow>
+                        <ApiRow name="default_selection" ty="Selection" default="empty">"The initially selected rows."</ApiRow>
                         <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                            "The selection (controlled), replacing "<Code inline=true>"default_selection"</Code>": a value or any signal."
                         </ApiRow>
                         <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
@@ -169,7 +169,7 @@ pub fn PageAtomTable() -> impl IntoView {
                             <Code inline=true>"Selection"</Code>": disabled rows can be focused, not selected. "
                             <Code inline=true>"All"</Code>": they can\u{2019}t be focused either."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">"What Escape does."</ApiRow>
                         <ApiRow name="default_sort_descriptor" ty="Option<SortDescriptor>" default="None">"The initial sorting."</ApiRow>
                         <ApiRow name="sort_descriptor" ty="Option<Signal<Option<SortDescriptor>>>" default="None">
@@ -178,7 +178,7 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="set_sort_descriptor" ty="Option<Out<Option<SortDescriptor>>>" default="None">
                             "Receives the new sorting: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
-                        <ApiRow name="on_sort_change" ty="Option<Callback<SortDescriptor>>" default="None">
+                        <ApiRow name="on_sort_descriptor_change" ty="Option<Callback<Option<SortDescriptor>>>" default="None">
                             "Called when the user sorts the table. Sort your rows accordingly."
                         </ApiRow>
                         <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">
@@ -200,9 +200,10 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="expanded_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"The expanded rows (controlled): a value or any signal."</ApiRow>
                         <ApiRow name="set_expanded_keys" ty="Option<Out<HashSet<Key>>>" default="None">"Receives the expanded rows."</ApiRow>
                         <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called when rows are expanded or collapsed."</ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the table."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">"Names the table."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<table>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"A "<Code inline=true>"TableHeader"</Code>" and a "<Code inline=true>"TableBody"</Code>". Required."</ApiRow>
+                        <ApiRow name="show_selection_checkboxes" ty="Signal<bool>" default="false">"Show the selection column while selection is enabled."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -518,7 +519,7 @@ pub fn PageAtomTable() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::TableData;
+                        use leptonic::hooks::table::TableData;
                         use leptos::prelude::*;
 
                         #[component]

@@ -1,9 +1,12 @@
 // Upstream: react-stately/src/color/useColorWheelState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::{
+use crate::{
     ValueBinding,
-    color::{Color, ColorChannelRange, ColorValue, HSL, HslChannel},
+    utils::{
+        color::{Color, ColorChannelRange, ColorValue, HSL, HslChannel},
+        point::Point,
+    },
 };
 
 // =============================================================================
@@ -17,7 +20,8 @@ use crate::utils::{
 //   last is remembered for the color it produced, so that the thumb stays put where RGB loses
 //   the hue (grays) or rounds it.
 // - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
-// - A `Copy` struct with signals and methods (C3).
+// - A `Copy` struct with signals and methods (C3); points relative to the center are `Point`s
+//   (C13).
 //
 // =============================================================================
 
@@ -51,6 +55,8 @@ pub struct ColorWheelState<C: ColorValue> {
     pub is_dragging: Signal<bool>,
     binding: ValueBinding<C>,
     default_value: StoredValue<C>,
+    /// The color the current drag (or keyboard change) set last, for `on_change_end`
+    /// (react-stately's `valueRef`).
     latest: StoredValue<C>,
     /// The color the wheel set last, with the hue it set.
     wheel_hue: RwSignal<Option<(C, f64)>>,
@@ -118,14 +124,14 @@ impl<C: ColorValue> ColorWheelState<C> {
 
     /// Sets the color.
     pub fn set_value(&self, color: C) {
-        if color != self.latest.get_value() {
-            self.latest.set_value(color);
+        self.latest.set_value(color);
+        if color != self.value.get_untracked() {
             self.binding.set(color);
         }
     }
 
     fn current_hue(&self) -> f64 {
-        untrack(|| remembered_hue(self.latest.get_value(), self.wheel_hue))
+        untrack(|| remembered_hue(self.value.get(), self.wheel_hue))
     }
 
     /// Sets the hue, snapped to the step (360 wraps around to 0).
@@ -133,23 +139,23 @@ impl<C: ColorValue> ColorWheelState<C> {
         let hue = if hue > 360.0 { 0.0 } else { hue };
         let hue = round_to_step(modulo(hue, 360.0), self.step);
         if hue != self.current_hue() {
-            let color = with_hue(self.latest.get_value(), hue);
+            let color = with_hue(self.value.get_untracked(), hue);
             self.wheel_hue.set(Some((color, hue)));
             self.set_value(color);
         }
     }
 
-    /// Sets the hue of the point (`x`, `y`) relative to the wheel's center (`y` down).
-    pub fn set_hue_from_point(&self, x: f64, y: f64, radius: f64) {
-        let degrees = (y / radius).atan2(x / radius).to_degrees();
+    /// Sets the hue of `point`, relative to the wheel's center (`y` down).
+    pub fn set_hue_from_point(&self, point: Point, radius: f64) {
+        let degrees = (point.y / radius).atan2(point.x / radius).to_degrees();
         self.set_hue((degrees + 360.0) % 360.0);
     }
 
     /// The thumb's position relative to the center on a circle of `radius` (0° at 3 o'clock,
     /// clockwise). Tracked.
-    pub fn thumb_position(&self, radius: f64) -> (f64, f64) {
+    pub fn thumb_position(&self, radius: f64) -> Point {
         let radians = (360.0 - self.hue.get() + 90.0).to_radians();
-        (radians.sin() * radius, radians.cos() * radius)
+        Point::new(radians.sin() * radius, radians.cos() * radius)
     }
 
     /// Increases the hue by `step` (at least the step), wrapping around.
@@ -178,6 +184,9 @@ impl<C: ColorValue> ColorWheelState<C> {
     /// Starts or ends dragging; ending it calls `on_change_end`.
     pub fn set_dragging(&self, dragging: bool) {
         let was_dragging = self.dragging.get_untracked();
+        if dragging && !was_dragging {
+            self.latest.set_value(self.value.get_untracked());
+        }
         self.dragging.set(dragging);
         if was_dragging
             && !dragging
@@ -209,8 +218,6 @@ pub fn use_color_wheel_state<C: ColorValue>(
     let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
     let default_value = StoredValue::new(binding.value.get_untracked());
     let latest = StoredValue::new(binding.value.get_untracked());
-    let bound = binding.value;
-    Effect::new(move || latest.set_value(bound.get()));
     let binding = ValueBinding::new(
         binding.value,
         Callback::new(move |color: C| {
@@ -245,7 +252,10 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::utils::color::{HSV, RGB8};
+    use crate::{
+        testing::{flush_effects, with_owner},
+        utils::color::{HSV, RGB8},
+    };
 
     fn wheel(hue: f64) -> ColorWheelState<HSV> {
         use_color_wheel_state(UseColorWheelStateInput {
@@ -263,7 +273,7 @@ mod tests {
 
     #[test]
     fn steps_wrap_around() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = wheel(359.0);
             state.increment(1.0);
             assert_that!(state.hue.get_untracked()).is_equal_to(0.0);
@@ -277,20 +287,20 @@ mod tests {
 
     #[test]
     fn zero_degrees_is_at_three_o_clock() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = wheel(0.0);
-            let (x, y) = state.thumb_position(100.0);
+            let Point { x, y } = state.thumb_position(100.0);
             assert_that!(x.round()).is_equal_to(100.0);
             assert_that!(y.round().abs()).is_equal_to(0.0);
             // Below the center: 90° (clockwise).
-            state.set_hue_from_point(0.0, 50.0, 50.0);
+            state.set_hue_from_point(Point::new(0.0, 50.0), 50.0);
             assert_that!(state.hue.get_untracked()).is_equal_to(90.0);
         });
     }
 
     #[test]
     fn rgb_colors_change_the_hue_of_their_hsl_form() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = use_color_wheel_state(UseColorWheelStateInput {
                 default_value: RGB8 { r: 255, g: 0, b: 0 },
                 value: None,
@@ -311,7 +321,7 @@ mod tests {
 
     #[test]
     fn a_gray_rgb_color_keeps_the_hue_the_wheel_set() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = use_color_wheel_state(UseColorWheelStateInput {
                 default_value: RGB8 {
                     r: 128,
@@ -325,7 +335,74 @@ mod tests {
             });
             state.set_hue(200.0);
             assert_that!(state.hue.get_untracked()).is_equal_to(200.0);
-            assert_that!(state.thumb_position(100.0).1.round()).is_equal_to(-34.0);
+            assert_that!(state.thumb_position(100.0).y.round()).is_equal_to(-34.0);
+        });
+    }
+
+    /// A keyboard step right after the app changed the color starts from the app's color, before
+    /// any Effect ran (react-stately computes from the rendered `value`).
+    #[test]
+    fn steps_start_from_the_color_the_app_set_last() {
+        with_owner(|| {
+            let app = RwSignal::new(HSV::from_hue_fully_saturated(10.0));
+            let state = use_color_wheel_state(UseColorWheelStateInput {
+                default_value: app.get_untracked(),
+                value: Some(ValueBinding::from(app)),
+                is_disabled: Signal::stored(false),
+                on_change: None,
+                on_change_end: None,
+            });
+            flush_effects();
+            app.set(HSV::from_hue_fully_saturated(100.0));
+            state.increment(1.0);
+            assert_that!(app.get_untracked()).is_equal_to(HSV::from_hue_fully_saturated(101.0));
+        });
+    }
+
+    /// A color the app's state rejected is sent again when set again.
+    #[test]
+    fn a_color_the_app_rejected_is_sent_again() {
+        with_owner(|| {
+            let start = HSV::from_hue_fully_saturated(10.0);
+            let sent = RwSignal::new(Vec::new());
+            let state = use_color_wheel_state(UseColorWheelStateInput {
+                default_value: start,
+                // App state that ignores every change.
+                value: Some(ValueBinding::new(
+                    Signal::stored(start),
+                    Callback::new(move |color| sent.update(|sent| sent.push(color))),
+                )),
+                is_disabled: Signal::stored(false),
+                on_change: None,
+                on_change_end: None,
+            });
+            state.set_hue(50.0);
+            state.set_hue(50.0);
+            let expected = HSV::from_hue_fully_saturated(50.0);
+            assert_that!(sent.get_untracked()).is_equal_to(vec![expected, expected]);
+        });
+    }
+
+    /// `on_change_end` reports the color the drag set last, even when the app changed the color
+    /// before the drag and no Effect ran since.
+    #[test]
+    fn the_end_of_a_drag_reports_its_last_color() {
+        with_owner(|| {
+            let app = RwSignal::new(HSV::from_hue_fully_saturated(10.0));
+            let ends = RwSignal::new(Vec::new());
+            let state = use_color_wheel_state(UseColorWheelStateInput {
+                default_value: app.get_untracked(),
+                value: Some(ValueBinding::from(app)),
+                is_disabled: Signal::stored(false),
+                on_change: None,
+                on_change_end: Some(Callback::new(move |c: HSV| ends.update(|e| e.push(c)))),
+            });
+            flush_effects();
+            app.set(HSV::from_hue_fully_saturated(100.0));
+            state.set_dragging(true);
+            state.set_dragging(false);
+            assert_that!(ends.get_untracked())
+                .is_equal_to(vec![HSV::from_hue_fully_saturated(100.0)]);
         });
     }
 }

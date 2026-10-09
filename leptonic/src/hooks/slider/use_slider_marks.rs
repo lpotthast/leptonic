@@ -2,9 +2,11 @@
 // application).
 use leptos::prelude::*;
 
-/// Which marks a slider shows.
+use crate::utils::fraction::Fraction;
+
+/// Which marks a slider shows (named apart from the `SliderMarks` atom that renders them).
 #[derive(Default, Debug, Clone)]
-pub enum SliderMarks {
+pub enum SliderMarkPlacement {
     /// No marks.
     #[default]
     None,
@@ -14,12 +16,13 @@ pub enum SliderMarks {
         create_names: bool,
     },
     /// The given marks.
-    Custom { marks: Vec<SliderMark> },
+    Custom { marks: Vec<CustomSliderMark> },
 }
 
-/// A mark on a slider's track.
+/// A mark on a slider's track, placed by the app (named apart from the `SliderMark` atom that
+/// renders a placed mark).
 #[derive(Debug, Clone)]
-pub struct SliderMark {
+pub struct CustomSliderMark {
     pub value: SliderMarkValue,
     /// A name shown next to the mark (C2: user-visible text, may change with the locale).
     pub name: MaybeProp<String>,
@@ -30,15 +33,15 @@ pub struct SliderMark {
 pub enum SliderMarkValue {
     /// At a value of the slider's range.
     Value(f64),
-    /// At a fraction (0.0 to 1.0) of the track.
-    Percentage(f64),
+    /// At a fraction of the track.
+    Fraction(Fraction),
 }
 
 /// A mark placed on the track.
 #[derive(Debug, Clone)]
 pub struct ComputedSliderMark {
-    /// Position along the track, 0.0 to 1.0.
-    pub percentage: f64,
+    /// Position along the track.
+    pub percentage: Fraction,
     /// The value of the range at the mark.
     pub value: f64,
     pub name: Option<String>,
@@ -62,7 +65,7 @@ impl ComputedSliderMark {
 
 impl PartialEq for ComputedSliderMark {
     fn eq(&self, other: &Self) -> bool {
-        self.percentage.to_bits() == other.percentage.to_bits()
+        self.percentage.get().to_bits() == other.percentage.get().to_bits()
             && self.value.to_bits() == other.value.to_bits()
             && self.name == other.name
     }
@@ -76,7 +79,7 @@ pub struct UseSliderMarksInput {
     pub step: Signal<f64>,
     /// The thumbs' values.
     pub values: Signal<Vec<f64>>,
-    pub marks: SliderMarks,
+    pub marks: SliderMarkPlacement,
     /// Formats a value for automatic names.
     pub format: Callback<f64, String>,
 }
@@ -84,6 +87,7 @@ pub struct UseSliderMarksInput {
 /// The most automatic marks (roughly): long ranges mark every n-th step.
 const MAX_AUTOMATIC_MARKS: f64 = 20.0;
 
+/// Where `value` is in the range `min..=max` (unclamped: a value outside lies outside 0..=1).
 fn percent(min: f64, max: f64, value: f64) -> f64 {
     if max == min {
         0.0
@@ -109,8 +113,8 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSlider
     Memo::new(move |_| {
         let (min, max, step) = (min_value.get(), max_value.get(), step.get());
         marks.with_value(|marks| match marks {
-            SliderMarks::None => Vec::new(),
-            SliderMarks::Automatic { create_names } => {
+            SliderMarkPlacement::None => Vec::new(),
+            SliderMarkPlacement::Automatic { create_names } => {
                 if step <= 0.0 || max <= min {
                     return Vec::new();
                 }
@@ -124,7 +128,7 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSlider
                         #[allow(clippy::cast_precision_loss)]
                         let value = (n as f64 * every).mul_add(step, min).min(max);
                         ComputedSliderMark {
-                            percentage: percent(min, max, value),
+                            percentage: Fraction::new(percent(min, max, value)),
                             value,
                             name: create_names.then(|| format.run(value)),
                             values,
@@ -132,21 +136,23 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSlider
                     })
                     .collect()
             }
-            SliderMarks::Custom { marks } => marks
+            SliderMarkPlacement::Custom { marks } => marks
                 .iter()
                 .filter_map(|mark| {
-                    let (value, percentage) = match mark.value {
-                        SliderMarkValue::Value(value) => (value, percent(min, max, value)),
-                        SliderMarkValue::Percentage(percentage) => {
-                            (percentage.mul_add(max - min, min), percentage)
+                    let percentage = match mark.value {
+                        SliderMarkValue::Value(value) => {
+                            let percentage = percent(min, max, value);
+                            if !(0.0..=1.0).contains(&percentage) {
+                                crate::utils::dev_warn!(
+                                    "A slider mark lies outside the slider's range: {mark:?}"
+                                );
+                                return None;
+                            }
+                            Fraction::new(percentage)
                         }
+                        SliderMarkValue::Fraction(fraction) => fraction,
                     };
-                    if !(0.0..=1.0).contains(&percentage) {
-                        crate::utils::dev_warn!(
-                            "A slider mark lies outside the slider's range: {mark:?}"
-                        );
-                        return None;
-                    }
+                    let value = percentage.get().mul_add(max - min, min);
                     Some(ComputedSliderMark {
                         percentage,
                         value,
@@ -165,9 +171,10 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
     fn marks(
-        marks: SliderMarks,
+        marks: SliderMarkPlacement,
         values: RwSignal<Vec<f64>>,
         step: f64,
     ) -> Signal<Vec<ComputedSliderMark>> {
@@ -183,11 +190,15 @@ mod tests {
 
     #[test]
     fn automatic_marks_per_step_with_names() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let values = RwSignal::new(vec![5.0]);
-            let marks =
-                marks(SliderMarks::Automatic { create_names: true }, values, 2.5).get_untracked();
-            let percentages: Vec<f64> = marks.iter().map(|m| m.percentage).collect();
+            let marks = marks(
+                SliderMarkPlacement::Automatic { create_names: true },
+                values,
+                2.5,
+            )
+            .get_untracked();
+            let percentages: Vec<f64> = marks.iter().map(|m| m.percentage.get()).collect();
             assert_that!(percentages).is_equal_to(vec![0.0, 0.25, 0.5, 0.75, 1.0]);
             assert_that!(marks[1].name.as_deref()).is_equal_to(Some("2.5"));
             assert_that!(marks[1].value).is_equal_to(2.5);
@@ -196,10 +207,10 @@ mod tests {
 
     #[test]
     fn long_ranges_mark_every_nth_step() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let values = RwSignal::new(vec![0.0]);
             let marks = marks(
-                SliderMarks::Automatic {
+                SliderMarkPlacement::Automatic {
                     create_names: false,
                 },
                 values,
@@ -213,10 +224,10 @@ mod tests {
 
     #[test]
     fn in_range_follows_the_thumbs() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let values = RwSignal::new(vec![5.0]);
             let marks = marks(
-                SliderMarks::Automatic {
+                SliderMarkPlacement::Automatic {
                     create_names: false,
                 },
                 values,
@@ -237,19 +248,19 @@ mod tests {
 
     #[test]
     fn custom_marks_outside_the_range_are_dropped() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let values = RwSignal::new(vec![0.0]);
-            let custom = SliderMarks::Custom {
+            let custom = SliderMarkPlacement::Custom {
                 marks: vec![
-                    SliderMark {
+                    CustomSliderMark {
                         value: SliderMarkValue::Value(5.0),
                         name: "Half".into(),
                     },
-                    SliderMark {
-                        value: SliderMarkValue::Percentage(0.1),
+                    CustomSliderMark {
+                        value: SliderMarkValue::Fraction(Fraction::new(0.1)),
                         name: MaybeProp::default(),
                     },
-                    SliderMark {
+                    CustomSliderMark {
                         value: SliderMarkValue::Value(11.0),
                         name: MaybeProp::default(),
                     },
@@ -257,8 +268,8 @@ mod tests {
             };
             let marks = marks(custom, values, 1.0).get_untracked();
             assert_that!(marks.len()).is_equal_to(2);
-            assert_that!(marks[0].percentage).is_equal_to(0.5);
-            assert_that!(marks[1].percentage).is_equal_to(0.1);
+            assert_that!(marks[0].percentage).is_equal_to(Fraction::new(0.5));
+            assert_that!(marks[1].percentage).is_equal_to(Fraction::new(0.1));
             assert_that!(marks[0].name.as_deref()).is_equal_to(Some("Half"));
         });
     }

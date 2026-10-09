@@ -5,7 +5,7 @@ use leptonic::{
         button::Button,
         tooltip::{Tooltip, TooltipTrigger},
     },
-    hooks::TooltipTriggerMode,
+    hooks::tooltip::TooltipTriggerMode,
 };
 use leptos::prelude::*;
 
@@ -13,7 +13,7 @@ use leptos::prelude::*;
 /// `TooltipTrigger.test.js` setups), with short delays, between focusable elements:
 /// - "Edit" and "Delete": animated in and out (`.test-tooltip`, 300 ms), closing 100 ms after the
 ///   pointer left.
-/// - "Save" (`#test-tooltip-save`): `should_close_on_press=false`, closing 800 ms after the pointer
+/// - "Save" (`#test-tooltip-save`): `should_close_on_press=false`, closing 400 ms after the pointer
 ///   left; presses count in `#test-tooltip-saves`.
 /// - "Focus only" (`#test-tooltip-focus-only`): `trigger=Focus`.
 /// - "Scrolled" (`#test-tooltip-scroll-trigger`) in a scrolling container
@@ -31,25 +31,25 @@ pub fn PageAtomTooltip() -> impl IntoView {
         <button id="test-tooltip-before">"Before"</button>
         <div style="display: flex; gap: 4em; margin: 6em 2em;">
             <TooltipTrigger delay=Duration::from_millis(300) close_delay=Duration::from_millis(100)>
-                <Button attr:id="test-tooltip-edit">"Edit"</Button>
+                <Button id="test-tooltip-edit">"Edit"</Button>
                 <Tooltip classes="test-tooltip">"Edit the entry"</Tooltip>
             </TooltipTrigger>
             <TooltipTrigger delay=Duration::from_millis(300) close_delay=Duration::from_millis(100)>
-                <Button attr:id="test-tooltip-delete">"Delete"</Button>
+                <Button id="test-tooltip-delete">"Delete"</Button>
                 <Tooltip classes="test-tooltip">"Delete the entry"</Tooltip>
             </TooltipTrigger>
             <TooltipTrigger
                 delay=Duration::from_millis(300)
-                close_delay=Duration::from_millis(800)
+                close_delay=Duration::from_millis(400)
                 should_close_on_press=false
             >
-                <Button attr:id="test-tooltip-save" on_press=move |_| saves.update(|n| *n += 1)>
+                <Button id="test-tooltip-save" on_press=move |_| saves.update(|n| *n += 1)>
                     "Save"
                 </Button>
                 <Tooltip>"Save the entry"</Tooltip>
             </TooltipTrigger>
             <TooltipTrigger delay=Duration::ZERO trigger=TooltipTriggerMode::Focus>
-                <Button attr:id="test-tooltip-focus-only">"Focus only"</Button>
+                <Button id="test-tooltip-focus-only">"Focus only"</Button>
                 <Tooltip>"Shown on focus"</Tooltip>
             </TooltipTrigger>
         </div>
@@ -61,7 +61,7 @@ pub fn PageAtomTooltip() -> impl IntoView {
         >
             <div style="height: 300px; padding-top: 2em;">
                 <TooltipTrigger delay=Duration::ZERO>
-                    <Button attr:id="test-tooltip-scroll-trigger">"Scrolled"</Button>
+                    <Button id="test-tooltip-scroll-trigger">"Scrolled"</Button>
                     <Tooltip>"In a scrolling container"</Tooltip>
                 </TooltipTrigger>
             </div>

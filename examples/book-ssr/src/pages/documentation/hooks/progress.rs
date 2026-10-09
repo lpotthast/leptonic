@@ -59,8 +59,10 @@ pub fn PageUseProgressBar() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::{css::{computed_pct, computed_size}, style::WidthProperty, styles::Styles},
+                            computed_pct,
+                            computed_size,
+                            hooks::progress::{UseProgressBarInput, use_progress_bar},
+                            leptos_styles::{Styles, property::WidthProperty},
                         };
 
                         let progress = use_progress_bar(UseProgressBarInput {

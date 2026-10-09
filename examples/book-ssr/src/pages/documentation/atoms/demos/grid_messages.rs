@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use leptonic::{
     atoms::grid::{Grid, GridCell, GridRow, GridRowGroup},
-    hooks::{Key, SelectionBehavior, SelectionMode, collections::Selection, use_collection},
+    hooks::collections::{Key, Selection, SelectionBehavior, SelectionMode, use_collection},
 };
 use leptos::prelude::*;
 

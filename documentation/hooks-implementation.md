@@ -1,6 +1,8 @@
 # Hook Implementation Patterns
 
-Implementation patterns for Leptonic's hooks.
+How Leptonic's hooks are shaped: types, props, events, state, ids and elements. Rules for any code running
+in Leptos and the browser (hooks and atoms): `leptos-and-dom.md`; porting from react-aria (upstream headers,
+deviation blocks): `porting.md`; tests: `testing.md`; atoms: `atoms-implementation.md`.
 
 ## Main Goal And Usage
 
@@ -39,7 +41,10 @@ Hooks follow the `use_*` naming convention.
 Each hook must be implemented in its own module (file). Do not combine multiple hooks in a single file,
 even when they are closely related (e.g., `use_grid_list` and `use_grid_list_item` belong in separate files).
 
-Related hooks are grouped under a common directory with a `mod.rs` that re-exports all public items via `pub use`.
+Related hooks are grouped under a common directory with a `mod.rs` that re-exports all public items via `pub use`
+(the hook files themselves are `pub(crate) mod`). That family module is the hook's only public path
+(`leptonic::hooks::button::use_button`): `hooks/mod.rs` re-exports the families only crate-internally, and there is no
+prelude (`conventions.md`, "No prelude; one path per public item").
 
 ## Hook `*Input`, `*Return`, `*Props` and `*Attrs` Types
 
@@ -97,9 +102,10 @@ We do not support a react-aria like generic `mergeProps` function.
 
 ### Props and Styles (`IntoAttrs`, `PropsWithStyles`)
 
-Every `*Props` type implements `hooks::IntoAttrs` (`fn into_attrs(self) -> Self::Attrs`). Hooks that also set inline
-styles (positions, `touch-action`, `user-select`, ...; e.g. `use_press`, `use_button`, `use_link`, `use_slider_thumb`,
-the grid/table/listbox items) return `PropsWithStyles<*Props>` instead (`hooks/mod.rs`). It deliberately has no
+Every `*Props` type implements `IntoAttrs` (`fn into_attrs(self) -> Self::Attrs`; `leptonic::IntoAttrs`, defined in
+`attrs.rs`). Hooks that also set inline styles (positions, `touch-action`, `user-select`, ...; e.g. `use_press`,
+`use_button`, `use_link`, `use_slider_thumb`, the grid/table/listbox items) return `PropsWithStyles<*Props>` instead
+(`attrs.rs`, `leptonic::PropsWithStyles`). It deliberately has no
 `into_attrs` and isn't an attribute itself, because a `style` attribute spread onto an element would be replaced by
 the caller's `style=`, or replace it. Split it and merge the styles with the caller's:
 
@@ -109,33 +115,14 @@ view! { <button {..attrs} style=hook_styles.merge(styles)>"Save"</button> }
 ```
 
 - `into_parts()` → `(Attrs, Styles)`: for spreading.
-- `into_inner()` → `(Props, Styles)`: to compose the props further first (e.g. `merge_with`, then `into_attrs`).
-- `PropsWithStyles<P>` implements `MergeWith<Other>` whenever `P` does, keeping its styles through the merge.
+- `into_inner()` → `(Props, Styles)`: to change the props further first (then `into_attrs`).
 
 ## API Conventions
 
-react-aria defines the behavior; the API shape is ours (see "Based On React-Aria"). These conventions apply to every
-hook input/return and atom prop. They are project-wide deviations from react-aria, recorded once as global entries
-in `leptonic/src/hooks/mod.rs`; a hook's own deviation block only lists what goes beyond them.
-
-| #   | Convention                                                                                                                                                                                                                                                                                 | Why                                                                                                                                                                      |
-|-----|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| C1  | State flags are `is_disabled`, `is_read_only`, `is_required`, `is_invalid: Signal<bool>` (default `false`), in hook inputs and atom props alike. DOM-level `*Props` keep DOM attribute names (`disabled`, `aria_disabled`).                                                                | react-aria's names (`isDisabled`); one name per concept across hooks and atoms.                                                                                          |
-| C2  | Ids, `name`, `form`: `Option<String>`. User-visible text (`aria_label`, placeholders, value labels): `MaybeProp<String>`.                                                                                                                                                                  | Text must be able to change at runtime (e.g. with the locale); `MaybeProp` accepts constants, `String`s and signals via `into`. `&'static str` rules out dynamic values. |
-| C3  | `use_foo_state(..) -> FooState`: a `Copy` struct with read-only `Signal`s and methods (`set_value`, `toggle`, ...).                                                                                                                                                                        | Methods are discoverable and typed; a struct of `Callback` fields with tuple arguments is a JavaScript props-bag shape.                                                  |
-| C4  | Hook-owned state: `default_*` + `on_*_change`, or a `ValueBinding` to app state; changes go through the state's methods (see "Hook-Owned State"). Atoms: `<x>` + `set_<x>: Out<T>`, or `default_<x>` + `on_<x>_change`. `is_invalid: Signal<bool>` is OR-ed into validation results. | Callers can't bypass the hook's invariants; change callbacks always fire.                                                                                               |
-| C5  | Hooks read locale and writing direction from the i18n context (`use_locale()`, `use_direction()`); they never take `is_rtl`, `writing_direction` or `locale` inputs. Locale-derived defaults are `Option<_>` meaning "from the locale".                                                    | react-aria's `useLocale()` does the same; per-hook flags drift apart from the actual locale.                                                                             |
-| C6  | One `Orientation` enum (no `Default`; callers name it, the docs give react-aria's default for each hook).                                                                                                                                                                                  | No near-identical per-module copies.                                                                                                                                     |
-| C7  | No constructors on `*Input` types: struct literals naming every field; `Default` (and struct update) only when everything has a meaningful default.                                                                                                                                        | Creation stays explicit, field names visible (the user's rule).                                                                                                          |
-| C8  | A hook takes one `*Input`; the state it works on goes into it (`UseFooInput { state, .. }`). Settings that live on the state are read from it, never repeated on the hook input.                                                                                                           | One place per setting; they can't disagree.                                                                                                                              |
-| C9  | The element the hook is named after gets `props`, other elements `<part>_props`. Label, description and error message come from `use_field` (`SlotProps`).                                                                                                                                 | Uniform shapes; no per-hook label/error variants.                                                                                                                        |
-| C10 | Callbacks: `Option<Callback<NamedEvent>>`. `Arc<dyn Fn(&T) -> R>` aliases only for predicates over borrowed data. No tuple arguments, no bools meaning modes, no `Callback<()>` for configuration. Delays are `Duration`; keys are `utils::key::KeyboardKey`, pointer types `PointerType`. | Typed, self-describing call sites; no string comparisons.                                                                                                                |
-| C11 | Anything a user could change at runtime is a `Signal<T>` with a default. `Option<Signal<T>>` only for "inherit vs. override", documented on the field.                                                                                                                                     | Reactivity is the Leptos way to change configuration.                                                                                                                    |
-| C12 | ARIA attributes use the typed enums from `utils/aria.rs`; `tabindex` is `i32`.                                                                                                                                                                                                             | See "ARIA Attribute Types".                                                                                                                                              |
-| C13 | Units: `Fraction` (0..=1) for percentages, `Point { x, y }` for coordinates, `Duration` for time.                                                                                                                                                                                          | Units in the type, not in naming conventions.                                                                                                                            |
-| C14 | One generic `Label`, `Description` and `FieldError` atom reading the `LabelContext`/`FieldContext` every field atom provides.                                                                                                                                                             | react-aria-components' `LabelContext`/`TextContext`/`FieldErrorContext`; no per-family parts.                                                                           |
-| C15 | Number values are generic over `NumberValue` (all primitive integers and floats), with ICU4X decimals for parsing and formatting.                                                                                                                                                         | Exact integer stepping and clamping, min/max from the type (react-aria: JS numbers).                                                                                    |
-| C16 | Selection atoms are generic over their value: `SelectionValue` (`Key`, `String`, integers, `selection_value!` enums); `Select`/`ComboBox` over `SelectedValues` (`Option<V>` / `Vec<V>`).                                                                                                 | Items take `Key`s; hooks stay key-based (react-aria: `Key` = `string | number`).                                                                                        |
+The conventions C1–C16 for every hook input/return and atom prop (state flags, strings, state shape, hook-owned
+state, locale, callbacks, reactivity, ARIA typing, units, field parts, number and selection values) are defined in
+`conventions.md`, "API conventions". They are project-wide deviations from react-aria, recorded once as global
+entries in `leptonic/src/hooks/mod.rs`; a hook's own deviation block only lists what goes beyond them.
 
 ## Input Destructuring
 
@@ -174,27 +161,12 @@ Many concepts, e.g. "sliders" with their respective `use_slider_*` hooks, need t
 Instead of adding the same fields to each hook's *Input type, create a `use_{concept_name}_state` hook returning
 a shared state struct. This can then be passed explicitly to dependent hooks.
 
-### Global State and SSR
-
-Page-wide state (the visible overlays stack, the focus scope tree, description elements, the prevent-scroll count,
-...) lives in `thread_local!`s. That is only sound in the browser, where one page runs on one thread. On the server,
-axum's work-stealing runtime interleaves many requests on one thread and moves a request's render between threads at
-every `.await` (Suspense, streaming), so a thread-local reached while rendering mixes requests and loses state.
-
-- Touch thread-locals (and `static` atomics or locks) only from client-only code: `Effect`s, event handlers,
-  `request_animation_frame`/timeouts, or code behind `#[cfg(not(feature = "ssr"))]`. Component and hook bodies
-  and `on_cleanup` run on the server: from there, only release what an effect acquired (track it in a
-  `StoredValue`, which stays empty on the server).
-- Per-request state goes into the reactive owner: `provide_context` at a root, or Leptos' shared context (as
-  `use_id` does for ids).
-- Immutable caches whose content doesn't depend on the request (syntax sets, ICU data) may be global.
-
 ## EventHandler Abstraction
 
 `EventHandler<E>` is a chainable and clonable wrapper for event handler functions.
 
 ```rust
-use leptonic::utils::EventHandler;
+use leptonic::EventHandler;
 
 fn main() {
     // Create single handler (no Vec allocation).
@@ -206,13 +178,14 @@ fn main() {
     // Add one additional handler using a convenience fn.
     let handler = handler.then(move |e: KeyboardEvent| { /* ... */ });
 
-    // Convert to `On<>` attribute for view spreading.
+    // The listener attribute for view spreading (`OnEvent<ev::keydown>`).
     let on_keydown = handler.into_on(ev::keydown);
 }
 ```
 
 `*Props` types store event handlers as `EventHandler` instances. This allows easy merges of different hook return
-values.
+values. `into_on` gives an `OnEvent<D>`: a DOM listener for a handler, nothing for an `EventHandler::empty()`, so a
+hook leaves handlers it doesn't need empty instead of attaching no-op listeners (also on the server).
 
 ## Event Propagation Control
 
@@ -227,7 +200,6 @@ behavior and has no `Propagation`.
 |------------|---------|------------------------|
 | `PressEvent` | `use_press` (and everything built on it: buttons, links, toggles, items, ...) | `PressEvent.continuePropagation()` (usePress) |
 | `KeyboardEventWrapper` | `use_keyboard` (and type select, toggles, the autocomplete, keyboard shortcuts) | `KeyboardEvent = BaseEvent<KeyboardEvent>` (`createEventHandler`) |
-| `EventWrapper<E>` | raw DOM events handed through such APIs | — (generic wrapper, `utils/event_wrapper.rs`) |
 
 ### Types That Deliberately Don't
 
@@ -257,15 +229,13 @@ There is no `stop_propagation()`: propagation is already stopped by default.
 
 ### How It Works
 
-1. Hook creates a `PropagationControl` (wraps `Arc<AtomicBool>` + callback).
-2. Hook constructs the event (e.g., `PressEvent`) with a shared reference to the `PropagationControl`.
+1. Hook creates a `PropagationControl` (wraps an `Arc<AtomicBool>`; clones share it).
+2. Hook constructs the event (e.g., `PressEvent`) with a clone of the `PropagationControl`.
 3. Hook runs the user's `on_press` handler, passing the event.
 4. After the handler returns, the hook checks `is_propagation_stopped()` on the shared control.
 5. If propagation was not continued, the hook calls `stop_propagation()` on the native DOM event.
 
 **Reference**: `PressEvent` in `hooks/interactions/use_press.rs`
-
----
 
 ## Combining Hooks
 
@@ -291,155 +261,30 @@ view! { <button {..attrs} style=styles>"Actions"</button> }
 This is how react-aria passes `AriaButtonProps` between hooks. It keeps exactly one press, focus and hover state
 machine per element. (Merging the DOM props of a menu trigger and a button used to attach two independent press
 handlers to the same element.) When a configuring hook needs to *add* to a callback the caller may also set, chain
-them, e.g. with `chain_optional_callbacks` from `use_press`.
+them (inside leptonic: `chain_optional_callbacks` from `use_press`; long press groups: `merge_long_press`).
 
 For this to be pleasant, input structs that are meant to be composed implement `Default` (all options off, no
 callbacks), so callers only name what they set.
 
-### Merging Props (`MergeWith`)
+### Independent Hooks on One Element
 
-When independent hooks add unrelated behavior to the same element (e.g., `use_press` + `use_hover` +
-`use_focus_ring`), their Props need to be merged. The `MergeWith` trait provides a type-safe way to combine Props from
-different hooks.
-
-### The `MergeWith` Trait
+When independent hooks add unrelated behavior to the same element (e.g. `use_press` + `use_hover`), spread each
+hook's attributes onto it; Leptos attaches every spread's listeners, in spread order:
 
 ```rust
-use leptonic::utils::MergeWith;
-
-// Trait definition
-pub trait MergeWith<Other>: Sized {
-    type Output;
-    fn merge_with(self, other: Other) -> Self::Output;
-}
-```
-
-### Merge Semantics
-
-Different field types are merged differently:
-
-| Field Type           | Merge Behavior                        |
-|----------------------|---------------------------------------|
-| `EventHandler<E>`    | Chained (both run in sequence)        |
-| `ElementCaptureAttr` | Both kept (both capture element refs) |
-| Other attributes     | "Last wins" (second overrides first)  |
-| Distinct fields      | Included in output as-is              |
-
-### Basic Usage
-
-```rust
-use leptonic::utils::MergeWith;
-use leptonic::hooks::{use_press, use_hover, UsePressInput, UseHoverInput};
-
 let press = use_press(press_input);
 let hover = use_hover(hover_input);
+let (press_attrs, styles) = press.props.into_parts();
 
-// Merge press and hover props. `use_press` returns `PropsWithStyles`, which keeps its styles through the merge.
-let (attrs, styles) = press.props.merge_with(hover.props).into_parts();
-
-view! {
-    <button {..attrs} style=styles>
-        "Hover and click me"
-    </button>
-}
+view! { <button {..press_attrs} {..hover.props.into_attrs()} style=styles>"Hover and click me"</button> }
 ```
 
-### Chained Merging
-
-Merged types also implement `MergeWith`, enabling chains:
-
-```rust
-use leptonic::utils::MergeWith;
-
-let press = use_press(press_input);
-let hover = use_hover(hover_input);
-let focus_ring = use_focus_ring(focus_ring_input);
-
-let (attrs, styles) = press
-    .props
-    .merge_with(hover.props)
-    .merge_with(focus_ring.props)
-    .into_parts();
-
-view! {
-    <button {..attrs} style=styles>
-        "Interactive button"
-    </button>
-}
-```
-
-### Available Merged Types
-
-Pre-defined merged types in `leptonic::hooks::merged`:
-
-| Merged Type                          | Source Hooks                                           |
-|--------------------------------------|--------------------------------------------------------|
-| `MergedPressHoverProps`              | `UsePressProps` + `UseHoverProps`                      |
-| `MergedPressFocusRingProps`          | `UsePressProps` + `UseFocusRingProps`                  |
-| `MergedHoverFocusRingProps`          | `UseHoverProps` + `UseFocusRingProps`                  |
-| `MergedPressHoverFocusRingProps`     | `MergedPressHoverProps` + `UseFocusRingProps`          |
-| `MergedFocusablePressProps`          | `UseFocusableProps` + `UsePressProps`                  |
-| `MergedFocusablePressFocusRingProps` | `MergedFocusablePressProps` + `UseFocusRingProps`      |
-| `MergedOverlayOverlayPositionProps`  | `UseOverlayProps` + `UseOverlayPositionProps`          |
-
-Each merge is implemented in both orders (`a.merge_with(b)` and `b.merge_with(a)`).
-
-### Why Not a Generic `mergeProps`?
-
-React-aria provides a generic `mergeProps` function that dynamically merges props objects at runtime.
-In Rust, this isn't possible because:
-
-1. `*Attrs` types are statically-sized tuples
-2. Merging two tuples produces a new tuple with a different size
-3. Rust requires compile-time knowledge of tuple sizes
-
-Instead, Leptonic uses explicit `MergeWith` implementations that define exactly which output type
-results from merging two input types. This provides full type safety at the cost of requiring
-explicit definitions for each useful combination.
-
-### Implementing Custom Merges
-
-For hook authors, implementing `MergeWith` for custom combinations:
-
-```rust
-use leptonic::utils::MergeWith;
-
-// Define the merged output type
-pub struct MergedFooBarProps {
-    // Fields from both hooks
-    pub from_foo: EventHandler<KeyboardEvent>,
-    pub from_bar: EventHandler<MouseEvent>,
-}
-
-// Implement the merge
-impl MergeWith<UseBarProps> for UseFooProps {
-    type Output = MergedFooBarProps;
-
-    fn merge_with(self, other: UseBarProps) -> Self::Output {
-        MergedFooBarProps {
-            from_foo: self.on_keydown,
-            from_bar: other.on_click,
-        }
-    }
-}
-```
-
-For overlapping event handlers, use `EventHandler::chain()`:
-
-```rust
-impl MergeWith<UseBarProps> for UseFooProps {
-    type Output = MergedFooBarProps;
-
-    fn merge_with(self, other: UseBarProps) -> Self::Output {
-        MergedFooBarProps {
-            // Chain overlapping handlers (both run in sequence)
-            on_keydown: self.on_keydown.chain(other.on_keydown),
-            // Include distinct fields directly
-            on_click: other.on_click,
-        }
-    }
-}
-```
+There is no merge mechanism (react-aria's runtime `mergeProps`; leptonic's typed `MergeWith` structs were removed
+2026-10-09: one struct per pair of hooks, and each spread works as well). Two hooks never set the same plain
+attribute on one element; where several contribute to one id reference list (`aria-describedby`,
+`aria-labelledby`), the hook that combines them joins the contributions with `IdRefs`
+(`IdRefs::derive([..])` for signals, `collect::<IdRefs>()` for values), never by hand. An element labelled by both
+an `aria-label` and other elements gets its labelling from `utils::labels` (react-aria's `useLabels`).
 
 ## Example
 
@@ -448,11 +293,12 @@ pub type UseFooAttrs = (
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::Tabindex, Signal<i32>>,
     ElementCaptureAttr,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::click>,
+    OnEvent<ev::pointerdown>,
 );
 
+#[derive(Debug)] // `IntoAttrs` requires `Debug`.
 pub struct UseFooProps {
     pub disabled: Signal<bool>,
     pub tabindex: Signal<i32>,
@@ -481,6 +327,7 @@ impl IntoAttrs for UseFooProps {
     }
 }
 
+#[derive(Debug)]
 pub struct UseFooReturn {
     pub props: UseFooProps,
     pub is_pressed: Signal<bool>,
@@ -519,8 +366,8 @@ When you need attrs inside a reactive closure (e.g., `<Show>`), convert to attrs
 and clone the attrs (which are Clone):
 
 ```rust
-let press = use_press(input);
-let attrs = press.props.into_attrs();  // Convert once
+let hover = use_hover(input);
+let attrs = hover.props.into_attrs();  // Convert once
 
 view! {
     <Show when=move || is_open.get()>
@@ -542,6 +389,7 @@ type UseFooAttrs = (
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
+#[derive(Debug)]
 struct UseFooProps {
     data_focus_visible: Signal<Option<&'static str>>,
 }
@@ -555,8 +403,8 @@ impl IntoAttrs for UseFooProps {
 }
 
 fn use_foo() -> UseFooReturn {
-    // Present and empty while true, absent otherwise (as `utils::data_attributes::flag` renders it).
-    let data_focus_visible = Signal::derive(move || is_focus_visible.get().then_some(""));
+    // `"true"` while true, absent otherwise (as `utils::data_attributes::flag` renders it).
+    let data_focus_visible = Signal::derive(move || is_focus_visible.get().then_some("true"));
 
     UseFooReturn {
         props: UseFooProps {
@@ -568,7 +416,7 @@ fn use_foo() -> UseFooReturn {
 
 ### ARIA Attribute Types
 
-ARIA attributes use the typed enums from `utils/aria.rs` (`AriaDisabled`, `AriaExpanded`, `AriaCheckedTristate`,
+ARIA attributes use the typed enums from `utils/aria.rs` (`AriaDisabled`, `AriaExpanded`, `AriaChecked`,
 `AriaRole`, ...), **never `bool`** (and no string literals).
 
 **Why:** Leptos renders `bool` values with standard HTML boolean-attribute semantics (attribute present when `true`,
@@ -601,7 +449,7 @@ let aria_selected = Signal::derive(move || {
 ### Typed ARIA Roles
 
 `utils/aria.rs` provides an `AriaRole` enum covering all WAI-ARIA roles, plus typed enums for other ARIA
-attributes (`AriaDisabled`, `AriaExpanded`, `AriaCheckedTristate`, etc.).
+attributes (`AriaDisabled`, `AriaExpanded`, `AriaChecked`, etc.).
 
 **Integration with Leptos:** The `impl_attribute_value_via_str!` macro implements `AttributeValue` for each
 type, enabling direct use in attribute tuples:
@@ -616,10 +464,12 @@ Attr<attr::Role, Signal<AriaRole> >,
 
 **Other typed ARIA types:**
 
-- Boolean: `AriaDisabled`, `AriaExpanded`, `AriaHidden`, `AriaPressed`, `AriaRequired`, `AriaSelected`, etc.
-- Tristate: `AriaCheckedTristate` (`True`, `False`, `Mixed`)
-- Multi-value enums: `AriaOrientation`, `AriaSort`, `AriaAutoComplete`, etc.
-- Reference IDs: `String` or `Signal<String>` for `aria-labelledby`, `aria-describedby`, etc.
+- Boolean: `AriaDisabled`, `AriaExpanded`, `AriaHidden`, `AriaModal`, `AriaReadonly`, `AriaRequired`,
+  `AriaSelected`, etc.
+- Tristate: `AriaChecked`, `AriaPressed` (`True`, `False`, `Mixed`)
+- Multi-value enums: `AriaOrientation`, `AriaSort`, `AriaAutocomplete`, `AriaHasPopup`, `AriaInvalid`, etc.
+- Reference IDs: `Option<String>` (`Signal<Option<String>>`) for `aria-labelledby`, `aria-describedby`, etc.; lists
+  joined with `IdRefs` (see "Independent Hooks on One Element").
 
 **Design principle:** No `Undefined` variants — optionality is expressed via `Option<T>`. An `Option<AriaRole>`
 that is `None` produces no `role` attribute in the DOM.
@@ -699,7 +549,7 @@ a separate `NodeRef`.
 ### Element Reference Pattern
 
 When hooks really need an element reference, and cannot use the `Element Capture Pattern`,
-use `IntoElementMaybeSignal<web_sys::Element, M>` from `leptos_use::core`:
+use `IntoElementMaybeSignal<web_sys::Element, M>` from `leptos_use::core` (no hook needs it today):
 
 ```rust
 use leptos_use::core::IntoElementMaybeSignal;
@@ -713,7 +563,7 @@ where
 }
 
 #[component]
-fn SomeComponent() {
+fn SomeComponent() -> impl IntoView {
     // Consumer passes NodeRef directly
     let el = NodeRef::<html::Div>::new();
     let UseHookReturn { props, .. } = use_hook(UseHookInput { element: el, phantom_data: PhantomData });
@@ -723,106 +573,6 @@ fn SomeComponent() {
     }
 }
 ```
-
-### Dynamic Event Listeners
-
-When event listeners must be attached dynamically, use `leptos_use::use_event_listener` (can be called from within other
-event handlers):
-
-```rust
-use leptos_use::use_event_listener;
-
-fn use_foo() {
-    type CleanupFn = Box<dyn Fn() + Send + Sync + 'static>;
-    type CleanupFns = (CleanupFn, CleanupFn, CleanupFn);
-    let cleanup_listeners: StoredValue<Option<CleanupFns>, LocalStorage> =
-        StoredValue::new_local(None);
-
-    let on_move = move |e: MouseEvent| {};
-    let on_up = move |e: PointerEvent| {};
-    let on_cancel = move |e: PointerEvent| {};
-
-    let on_pointer_down = move |e: PointerEvent| {
-        // Prefer using an event-target based "owner document" instead of a global document.
-        // This supports iframes and shadow-doms.
-        let doc = e.current_target().expect("has target").get_owner_document();
-
-        // Clone already existing handlers to enable repeated usage.
-        let move_cleanup = use_event_listener(doc.clone(), ev::pointermove, on_move.clone());
-        let up_cleanup = use_event_listener(doc.clone(), ev::pointerup, on_up.clone());
-        let cancel_cleanup = use_event_listener(doc.clone(), ev::pointercancel, on_cancel.clone());
-
-        // Store cleanup for later removal.
-        cleanup_listeners.set_value(Some((
-            Box::new(move_cleanup),
-            Box::new(up_cleanup),
-            Box::new(cancel_cleanup),
-        )));
-    };
-
-    let on_pointer_cancel = move |e: PointerEvent| {
-        if tracking_pointer.get_value().is_some_and(|id| id == e.pointer_id()) {
-            // other logic...
-
-            // Potentially clean up listeners on other events.
-            cleanup_listeners.with_value(|cleanup| {
-                if let Some((move_cleanup, up_cleanup, cancel_cleanup)) = cleanup {
-                    move_cleanup();
-                    up_cleanup();
-                    cancel_cleanup();
-                }
-            });
-            cleanup_listeners.set_value(None);
-        }
-    };
-}
-```
-
-Always prefer using `get_owner_document()` from `crate::utils::EventTargetExt`.
-
-Document "why", when deviating from this recommendation.
-
-**Reference**: `use_press`, `use_move`, `use_slider_thumb`
-
-### No Nested Dispatch of the Same Event Type
-
-Every `on:` handler (Leptos' event delegation feature is not enabled, so each handler is its own listener) and every
-`use_event_listener` handler is a wasm-bindgen `FnMut` closure, which can't be re-entered: when a handler synchronously causes another event of the same type, the nested dispatch throws
-"closure invoked recursively or after being dropped" (and the nested handler doesn't run). The classic case is
-moving focus inside a `focusin` handler: `element.focus()` dispatches a nested `focusin`.
-
-react-aria often does this synchronously (React's event system tolerates it). Port it by moving the action out of the
-dispatch with `queue_microtask` (wrap DOM values in `SendWrapper`), and say why in a comment. Browser tests fail on
-uncaught page errors, so the nested-dispatch error is caught by any test that triggers it.
-
-**Reference**: `use_selectable_collection` (`on_focusin`), `FocusScope` (focus containment)
-
-### Blur After Disposal
-
-Removing a focused element (a dismiss button removing its chip, a clear button hiding itself) makes the browser
-fire `blur`/`focusout` on it while Leptos unmounts it, after its owner and the callbacks and signals it owned were
-disposed. Blur and focus-out paths therefore run callbacks with `try_run` and read signals with `try_get_untracked`:
-nothing is left to notify then. (Other events can't reach a removed element, so they keep `run`.)
-
-**Reference**: `use_focus`, `use_focus_within`, `use_focus_ring`; `utils::owner_alive::OwnerAlive` for deferred
-callbacks (timeouts, animation frames, global listeners) that may run after disposal.
-
-### Effect Read Order
-
-An effect reading several memos must read upstream ones before memos derived from them (a collection before its
-filtered memo). reactive_graph 0.2 checks an effect's sources in read order, with the effect as observer: a memo
-that recomputes while a downstream memo is being checked doesn't mark the effect dirty (it assumes the observer
-triggered it), and when the effect checks that memo itself, it is already clean. If the downstream memo came out
-unchanged, the effect doesn't run, although an upstream value it reads changed. App values often reach a hook
-through memos (a value and a collection derived from one app memo), so this applies to every reconciling effect.
-
-So: read the app's inputs (bindings, collections, signals passed in) first, then the hook's own memos; read every
-source up front rather than only in some branches. No order helps when one input is an app memo and another a
-derived signal of the same upstream memo: there, read the inputs through hook-local memos, so that the effect isn't
-a direct subscriber of an app memo (the skip only spares direct subscribers).
-
-**Reference**: `use_combobox_state`'s reconciliation effect; browser test `combobox_tests` (agnite dev-ui's log
-source picker: value and items derived from one memo, with a filter).
 
 ## Hook-Owned State (React Aria Deviation)
 
@@ -867,14 +617,17 @@ The animation hooks (`hooks/animation/`) manage CSS animation lifecycles using t
 
 ### `use_enter_animation`
 
-- **Input**: `CapturedElement` + `is_ready: Signal<bool>`
-- **Output**: `is_entering: Signal<bool>`
-- Watches for CSS animations on the element when `is_ready` becomes true. Reports `true` while animations
-  are running, `false` when complete.
+- **Input**: `element: CapturedElement` + `is_ready: Signal<bool>` + `on_enter: Option<Callback<_>>` (called with
+  the element when the entry starts, e.g. to start a Web Animation)
+- **Output**: `is_entering: Signal<bool>`, `styles: Styles` (hide the element, without affecting layout, while it
+  isn't ready; merge them into the element's `style`)
+- Watches the element's animations once `is_ready` is true. Reports `true` while they are running, `false` when
+  complete.
 
 ### `use_exit_animation`
 
-- **Input**: `CapturedElement` + `is_open: Signal<bool>`
+- **Input**: `element: CapturedElement` + `is_open: Signal<bool>` + `on_exit: Option<Callback<_>>` (called with the
+  element when the exit starts)
 - **Output**: `is_exiting: Signal<bool>`, `exit_state: Signal<ExitState>`
 - `ExitState` transitions: `Open` → `Exiting` → `Closed`.
 - When `is_open` becomes `false`, transitions to `Exiting` and watches animations. Transitions to `Closed`
@@ -882,9 +635,10 @@ The animation hooks (`hooks/animation/`) manage CSS animation lifecycles using t
 
 ### Internal: `watch_animations()`
 
-Uses `Element.getAnimations()` + `Promise.all(animation.finished)` to detect animation completion. This is
-a Web Animations API feature — during SSR, no API calls are made; enter reports `false`, exit follows
-`is_open` directly.
+In `hooks/animation/use_animation.rs` (react-aria's `useAnimation`). Calls `on_enter`/`on_exit`, then uses
+`Element.getAnimations()` + `Promise.all(animation.finished)` over the running animations on the document timeline
+(CSS animations and transitions, Web Animations) to detect completion; it returns a cancel function. This is a Web
+Animations API feature — during SSR, no API calls are made; enter reports `false`, exit follows `is_open` directly.
 
 ### Usage Pattern (Overlays)
 
@@ -892,19 +646,18 @@ Exit animations require the element to stay mounted during the animation:
 
 ```rust
 let exit = use_exit_animation(UseExitAnimationInput {
-element: captured_element.clone(),
-is_open: is_open.into(),
+    element,
+    is_open: is_open.into(),
+    on_exit: None,
 });
 
 // Keep element mounted until exit animation completes
-let is_mounted = Signal::derive(move | | {
-is_open.get() | | exit.exit_state.get() == ExitState::Exiting
+let is_mounted = Signal::derive(move || {
+    is_open.get() || exit.exit_state.get() == ExitState::Exiting
 });
 ```
 
 **Reference**: `hooks/animation/use_enter_animation.rs`, `hooks/animation/use_exit_animation.rs`
-
----
 
 ## Localized Strings
 
@@ -939,14 +692,16 @@ checkbox, radio group, select, combo box, date field, ...).
 State management for multiple validation sources:
 
 - `is_invalid` (OR-ed with the rest), server errors (via `FormValidationContext`, the `Form` atom's
-  `validation_errors`), client-side `validate` functions, and native HTML5 validity (`builtin_validation`, read
-  back by `use_form_validation`).
+  `validation_errors`, under the field's `names`), client-side `validate` functions, the field's own validation
+  (`builtin_validation`, e.g. a date outside its range), and native HTML5 validity (read back by
+  `use_form_validation`).
 - `ValidationBehavior::Aria`: errors show in realtime through ARIA attributes, the form submits anyway.
 - `ValidationBehavior::Native`: errors show on commit (form submission, `change`), and the field's custom validity
   (`setCustomValidity()`) blocks submission.
-- Returns `UseFormValidationStateReturn`: `realtime_validation` and `display_validation` (`ValidationResult`:
-  `is_invalid`, `validation_errors`, `validation_details` as a `ValidityStateSnapshot`) plus `update`/`reset`/
-  `commit_validation` (still callbacks: moving them onto a state struct with methods is a C3 item in `PLAN.md`).
+- Returns `FormValidationState`, a `Copy` state struct (C3): the signals `realtime_validation` and
+  `display_validation` (`ValidationResult`: `is_invalid`, `validation_errors`, `validation_details` as a
+  `ValidityStateSnapshot`), `is_invalid` and `validation_errors` (of the displayed result), and the methods
+  `update_validation`, `reset_validation` and `commit_validation`.
 
 ### `use_form_validation`
 
@@ -970,134 +725,28 @@ Restores a field's initial value when its `<form>` is reset:
 Field hooks compose all three internally:
 
 ```rust
-let validation = use_form_validation_state(UseFormValidationStateInput { value, validate, .. });
+let validation = use_form_validation_state(UseFormValidationStateInput {
+    is_invalid,
+    value: state.value,
+    validate,
+    builtin_validation: Signal::default(),
+    validation_behavior,
+    names: name.clone().into_iter().collect(),
+});
+use_form_reset(UseFormResetInput {
+    element,
+    initial_value: state.value.get_untracked(),
+    on_reset: Callback::new(move |value| state.set_value(value)),
+});
 use_form_validation(UseFormValidationInput {
     element,
     state: validation,
     validation_behavior,
     focus: None,
 });
-use_form_reset(UseFormResetInput { element, initial_value, on_reset: state_reset });
 ```
 
 **Reference**: `hooks/form/use_form_validation_state.rs`, `hooks/form/use_text_field.rs`
-
----
-
-## Native Tests
-
-Pure logic and `*_state` hooks get native unit tests (`cargo test -p leptonic --features full --lib`), with
-`assertr`. A hook needs a reactive owner; run it through `crate::testing::with_owner` (`leptonic/src/testing.rs`,
-test builds only), which also makes Effects run:
-
-```rust
-use crate::testing::{flush_effects, with_owner};
-
-#[test]
-fn focus_moves_to_the_row_that_took_the_removed_rows_place() {
-    with_owner(|| {
-        let rows = RwSignal::new(vec!["alice", "bob", "carol"]);
-        let state = grid(rows, &[], GridFocusMode::Row); // calls `use_grid_state`
-        flush_effects(); // the Effects' first runs
-        state.list.selection.set_focused_key(Some(Key::from("bob")), None);
-        rows.update(|rows| rows.retain(|row| *row != "bob"));
-        flush_effects(); // the re-runs the change caused
-        assert_that!(state.list.selection.focused_key()).is_equal_to(Some(Key::from("carol")));
-    });
-}
-```
-
-- `with_owner(f)` runs `f` in a fresh `Owner` (as a component body runs), without Leptos' "read outside a tracking
-  context" warnings, and disposes the owner afterwards.
-- `flush_effects()` runs every pending Effect of the test's thread until none can make progress: the first runs of
-  new Effects, and the re-runs caused by signal changes. Effects never run on their own, so a test decides when (like
-  React's `act`); call it after creating the state and after each change whose Effects matter.
-- How: leptonic's dev-dependencies enable `reactive_graph`'s `effects` feature (Leptos enables it only for
-  `csr`/`hydrate`), and `with_owner` installs an `any_spawner` executor that queues every task on the spawning
-  thread, polled by `flush_effects`. Tests under a plain `Owner::new().with(..)` keep working; their Effects don't run
-  (`any_spawner`'s `tracing` feature drops tasks spawned before an executor exists instead of panicking).
-- Signals and memos work without `flush_effects`; only Effects need it. Code touching the DOM can't run natively:
-  that is the browser tests' job.
-
-**Reference**: `hooks/grid/use_grid_state.rs` (tests of the refocus Effect).
-
-## Based On React-Aria
-
-Most hooks are based on hooks from Adobe's `react-aria` library (part of `react-spectrum`), checked out at
-`{leptonic_root_dir}/../react-spectrum`. Since react-spectrum's package consolidation (2026-03), the sources live in
-`packages/react-aria/src/<package>/` and `packages/react-stately/src/<package>/`. The old `packages/@react-aria/*`
-packages only re-export them.
-
-### Tracking Upstream Changes
-
-react-aria keeps evolving, so every file that ports upstream code declares where it came from, at the very top:
-
-```rust
-// Upstream: react-aria/src/interactions/usePress.ts @ 6f664fe911
-// Upstream: react-stately/src/toggle/useToggleState.ts @ 6f664fe911
-```
-
-The path is relative to react-spectrum's `packages/` directory. The hash is the react-spectrum commit this file was
-last synced against: everything upstream up to that commit is either ported or consciously skipped (and then listed
-in the deviations block below).
-
-`scripts/upstream-drift.sh` turns these lines into a work list:
-
-```bash
-scripts/upstream-drift.sh                 # Files with unabsorbed upstream commits, most drifted first.
-scripts/upstream-drift.sh -v use_press    # The commits themselves, for files matching the filter.
-scripts/upstream-drift.sh --mark-synced leptonic/src/hooks/interactions/use_press.rs
-```
-
-Browser tests use the same header for the react-aria tests they mirror (e.g.
-`// Upstream: react-aria-components/test/ListBox.test.js @ <sha>` in `leptonic/tests/ui_tests/test_listbox.rs`), so
-new or changed upstream tests show up in the drift report too. react-aria's tests are the best specification of
-expected behavior: derive our test cases from them (and from the implementation), instead of inventing them.
-
-To re-sync a hook: read the listed upstream commits (`git -C ../react-spectrum show <hash>`), port what applies, add
-deviations for what doesn't, cover the behavior with tests, then run `--mark-synced` on the file. When you add a new
-hook, add its `// Upstream:` lines with react-spectrum's current HEAD (`git -C ../react-spectrum rev-parse
---short=10 HEAD`).
-
-### React-Aria Deviations
-
-Wherever we decided to deviate from the react-aria implementation of a hook, document these intentional differences
-at the top of hook files:
-
-```rust
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// ## API DIFFERENCES
-// - [What differs]: [why]. React-aria: [what it does].
-//
-// ## OMITTED FEATURES
-// - `featureName`: [why]. React-aria: [what it does].
-//
-// =============================================================================
-```
-
-Use exactly these categories, in this order, and only the ones that apply. **Every entry states its reason.**
-
-| Category                      | Use When                                                              |
-|-------------------------------|-----------------------------------------------------------------------|
-| `API DIFFERENCES`             | Naming or structural changes (Rust-native API shapes)                 |
-| `DIFFERENT BEHAVIOR`          | Same feature, different approach                                      |
-| `LEPTOS-SPECIFIC ADAPTATIONS` | Changes required by Rust/Leptos (event model, SSR, ownership)         |
-| `ADDITIONS`                   | Functionality react-aria doesn't have                                 |
-| `OMITTED FEATURES`            | Not implemented: intentionally (say why) or not yet (say what blocks) |
-
-A hook without deviations says so in one line: `// No deviations from react-aria beyond the project-wide API
-conventions.` Leptonic-only hooks (no upstream counterpart) start with `// No upstream: <what it is for>.` instead of
-an `// Upstream:` header. Project-wide deviations (the API conventions above, hook-owned state, `CapturedElement`
-instead of refs) are recorded once in `leptonic/src/hooks/mod.rs`; don't repeat them per hook.
-
-## Book-SSR Documentation Pages
-
-Every hook has a page in the book. Page structure, the page kit (`DocPage`, `Section`, `ApiTable`, `Demo`, ...) and
-how to register a page (route in `src/routes.rs`, entry in `src/nav.rs`) are described in
-`documentation/documentation-strategy.md`.
 
 ## Reference Implementations
 
@@ -1106,9 +755,9 @@ how to register a page (route in `src/routes.rs`, entry in `src/nav.rs`) are des
 | API conventions (state, input)    | `leptonic/src/hooks/tabs/use_tab_list_state.rs`, `leptonic/src/hooks/table/use_table_column_resize_state.rs` |
 | Hook composition, attrs           | `leptonic/src/hooks/button/use_button.rs`                                                                    |
 | Props pattern, mergeable handlers | `leptonic/src/hooks/interactions/use_press.rs`                                                               |
-| Props merging (`MergeWith`)       | `leptonic/src/hooks/merged/mod.rs`                                                                           |
+| Id reference lists (`IdRefs`)     | `leptonic/src/utils/id_refs.rs`                                                                              |
 | CustomAttr                        | `leptonic/src/hooks/focus/use_focus_ring.rs`                                                                 |
-| Element reference                 | `leptonic/src/hooks/overlay/use_overlay_position.rs`                                                         |
+| Element from another hook         | `leptonic/src/hooks/overlay/use_overlay_position.rs`                                                         |
 | Element capture                   | `leptonic/src/hooks/menu/use_menu_item.rs`                                                                   |
 | Dynamic listeners, drag           | `leptonic/src/hooks/interactions/use_press.rs`                                                               |
 | Slider drag                       | `leptonic/src/hooks/slider/use_slider.rs`                                                                    |

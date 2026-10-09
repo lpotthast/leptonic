@@ -1,14 +1,10 @@
 // Upstream: react-aria/src/overlays/useOverlayTrigger.ts @ 99e6102368
-use leptos::{
-    attr,
-    attr::{Attr, IntoAttributeValue},
-    prelude::*,
-};
+// Upstream: react-aria/test/overlays/useOverlayTrigger.test.js @ 99e6102368
+use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
-    hooks::IntoAttrs,
-    prelude::{AriaExpanded, AriaHasPopup},
-    utils::aria::AriaControls,
+    IntoAttrs,
+    utils::aria::{AriaExpanded, AriaHasPopup},
 };
 
 // =============================================================================
@@ -118,11 +114,7 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
         props: UseOverlayTriggerProps {
             aria_haspopup,
             aria_expanded: Signal::derive(move || Some(AriaExpanded::from(is_open.get()))),
-            aria_controls: Signal::derive(move || {
-                is_open
-                    .get()
-                    .then(|| AriaControls(vec![overlay_id.clone()]).into_attribute_value())
-            }),
+            aria_controls: Signal::derive(move || is_open.get().then(|| overlay_id.clone())),
         },
     }
 }

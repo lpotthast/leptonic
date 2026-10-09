@@ -4,10 +4,10 @@
 use std::time::Duration;
 
 use assertr::{matchers::eq, prelude::*};
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions};
+use crate::pages::{ElementActions, Page, Platform};
 
 const PATH: &str = "/hooks/number-field";
 
@@ -17,17 +17,23 @@ const INPUT: &str = "[data-testid=input]";
 const INCREMENT: &str = "#test-page-hook-number-field button[aria-label=Increase]";
 const DECREMENT: &str = "#test-page-hook-number-field button[aria-label=Decrease]";
 
+/// The stepper buttons control the input, have `tabindex="-1"` and are labelled by their own label
+/// followed by the field's visible label.
+#[browser_test]
 pub async fn stepper_buttons(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input_id = page.element(INPUT).await?.id().await?;
     for selector in [INCREMENT, DECREMENT] {
         let button = page.element(selector).await?;
-        assert_that!(button.attr("aria-controls").await?)
+        assert_that!(button)
+            .attribute("aria-controls")
+            .await
             .with_detail_message(selector)
             .is_equal_to(input_id.clone());
-        assert_that!(button.attr("tabindex").await?)
+        assert_that!(button)
             .with_detail_message(selector)
-            .get_some()
+            .has_attribute("tabindex")
+            .await
             .is_equal_to("-1");
     }
     // "Increase" + the visible label "Quantity" (through `aria-labelledby`).
@@ -37,13 +43,38 @@ pub async fn stepper_buttons(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .id()
         .await?;
-    let labelled_by = increment.attr("aria-labelledby").await?.unwrap_or_default();
-    assert_that!(labelled_by.split(' ').next_back()).is_equal_to(label_id.as_deref());
+    assert_that!(increment)
+        .attribute("aria-labelledby")
+        .await
+        .map_owned(Option::unwrap_or_default)
+        .derive_owned(|labelled_by| labelled_by.split(' ').next_back())
+        .is_equal_to(label_id.as_deref());
+    assert_that!(increment)
+        .accessible_name()
+        .await
+        .is_equal_to("Increase Quantity");
+    Ok(())
+}
+
+/// On an iPhone the input has no role description (VoiceOver then announces the required state)
+/// and the decimal keyboard of a field without negative values, also when the server rendered it
+/// for a desktop (useNumberField: `aria-roledescription` "not on iOS", `inputMode`).
+#[browser_test]
+pub async fn iphone_input(page: &Page<'_>) -> Result<(), Report> {
+    page.emulate_platform(Platform::IPhone).await?;
+    page.goto_path(PATH).await?;
+    let input = page.element(INPUT).await?;
+    input.wait_for_attr("aria-roledescription", None).await?;
+    assert_that!(input)
+        .has_attribute("inputmode")
+        .await
+        .is_equal_to("decimal");
     Ok(())
 }
 
 /// A click steps exactly once (no auto-repeat for a short press), and moves focus to the input
 /// when using a mouse.
+#[browser_test]
 pub async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let value = page.element(VALUE).await?;
@@ -64,23 +95,18 @@ pub async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), R
     Ok(())
 }
 
-/// Holding the increment button spins: one step, then repeated steps after a delay, until the
-/// maximum is reached. There the button disables itself, which ends the press, so spinning stops
-/// for good (react-spectrum #9813).
+/// Holding the increment button steps repeatedly up to the maximum, where the button disables
+/// itself and spinning stops for good ("stops spinning if the associated button is disabled").
+#[browser_test]
 pub async fn holding_spins_until_the_limit(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let value = page.element(VALUE).await?;
     let increment = page.element(INCREMENT).await?;
-    page.driver
-        .action_chain()
-        .move_to_element_center(&increment)
-        .click_and_hold()
-        .perform()
-        .await?;
+    let held = increment.press_and_hold().await?;
     value.wait_for_inner_text("5").await?;
     // A boolean attribute reads "true" while present.
     increment.wait_for_attr("disabled", Some("true")).await?;
-    page.driver.action_chain().release().perform().await?;
+    held.release().await?;
 
     // Back down with the decrement button; the increment button is enabled again.
     page.element(DECREMENT).await?.click().await?;
@@ -89,6 +115,9 @@ pub async fn holding_spins_until_the_limit(page: &Page<'_>) -> Result<(), Report
     Ok(())
 }
 
+/// In the focused input, Home steps to the minimum, Up one step up, End to the maximum and Down one
+/// step down.
+#[browser_test]
 pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let value = page.element(VALUE).await?;
@@ -106,6 +135,9 @@ pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
+/// Tab moves from the element before the field to its input and on to the element after it, past
+/// both stepper buttons.
+#[browser_test]
 pub async fn steppers_are_not_tab_stops(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-nf-before").await?.click().await?;
@@ -119,6 +151,7 @@ pub async fn steppers_are_not_tab_stops(page: &Page<'_>) -> Result<(), Report> {
 
 /// Enter commits the typed text and, as of react-spectrum #10200, keeps its default action:
 /// the surrounding form is submitted.
+#[browser_test]
 pub async fn enter_commits_and_submits(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element(INPUT).await?;

@@ -4,10 +4,10 @@
 //! The parts of a field named after its label follow whether the label is rendered: the
 //! select's trigger, the combo box's button, the number field's steppers and the slider's thumb.
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{Page, PageActions};
+use crate::pages::Page;
 
 const PATH: &str = "/atoms/label-slots";
 
@@ -19,26 +19,34 @@ const PARTS: [(&str, &str, &str); 4] = [
     ("slider", "input", "Volume"),
 ];
 
-/// Without labels, no part is named after one.
+/// Without rendered labels, the parts named after a label (select trigger, combo box button,
+/// number field steppers, slider thumb) have no `aria-labelledby` reference to a label or to a
+/// missing element.
+#[browser_test]
 pub async fn no_labels(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     expect_parts(page, false).await
 }
 
-/// Labels rendered later name the parts.
+/// Labels rendered after the fields are added to their parts' `aria-labelledby`.
+#[browser_test]
 pub async fn labels_added(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     toggle_labels(page).await?;
     expect_parts(page, true).await
 }
 
-/// Labels removed after they were rendered no longer name the parts.
+/// Labels removed after they were rendered drop out of their parts' `aria-labelledby`, leaving no
+/// reference to a missing element.
+#[browser_test]
 pub async fn labels_removed(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
+    crate::fixtures::take_warnings(page, "If you do not provide a visible label", 4).await?;
     toggle_labels(page).await?;
     expect_parts(page, true).await?;
     toggle_labels(page).await?;
-    expect_parts(page, false).await
+    expect_parts(page, false).await?;
+    crate::fixtures::take_warnings(page, "If you do not provide a visible label", 4).await
 }
 
 /// Render the labels if they aren't, remove them if they are.
@@ -66,31 +74,34 @@ async fn expect_parts(page: &Page<'_>, shown: bool) -> Result<(), Report> {
                 }
             })
             .await;
-        let part = page.element(format!("#test-ls-{field} {part}")).await?;
-        if let Some(label_id) = label_id(page, field, text).await? {
-            assert_that!(|| async {
-                let ids = labelled_by(&part).await?;
-                Ok::<_, Report>(ids.split(' ').map(str::to_owned).collect::<Vec<_>>())
-            })
-            .with_subject_name(format!("the ids of {field}'s aria-labelledby"))
-            .eventually_ok()
-            .satisfies(|ids| {
-                ids.contains(label_id.clone());
-            })
-            .await;
-        } else {
-            // Existing elements, none with the label's text.
-            assert_that!(|| async {
-                referenced_text_contents(page, &labelled_by(&part).await?).await
-            })
-            .with_subject_name(format!("the texts {field}'s aria-labelledby refers to"))
-            .eventually_ok()
-            .satisfies(|referenced| {
-                referenced
-                    .does_not_contain(None)
-                    .does_not_contain(Some(text.to_owned()));
-            })
-            .await;
+        let parts = page.elements(format!("#test-ls-{field} {part}")).await?;
+        assert_that!(&parts).has_length(if field == "number-field" { 2 } else { 1 });
+        for part in parts {
+            if let Some(label_id) = label_id(page, field, text).await? {
+                assert_that!(|| async {
+                    let ids = labelled_by(&part).await?;
+                    Ok::<_, Report>(ids.split(' ').map(str::to_owned).collect::<Vec<_>>())
+                })
+                .with_subject_name(format!("the ids of {field}'s aria-labelledby"))
+                .eventually_ok()
+                .satisfies(|ids| {
+                    ids.contains(label_id.clone());
+                })
+                .await;
+            } else {
+                // Existing elements, none with the label's text.
+                assert_that!(|| async {
+                    referenced_text_contents(page, &labelled_by(&part).await?).await
+                })
+                .with_subject_name(format!("the texts {field}'s aria-labelledby refers to"))
+                .eventually_ok()
+                .satisfies(|referenced| {
+                    referenced
+                        .does_not_contain(None)
+                        .does_not_contain(Some(text.to_owned()));
+                })
+                .await;
+            }
         }
     }
     Ok(())
@@ -114,7 +125,7 @@ async fn labelled_by(part: &WebElement) -> Result<String, Report> {
 }
 
 /// The text content of each element `ids` (space-separated) refers to; `None` for a missing one
-/// (unlike `ElementActions::referenced_text`, which fails on it).
+/// (unlike `::accessible_description`, which fails on it).
 async fn referenced_text_contents(
     page: &Page<'_>,
     ids: &str,

@@ -1,4 +1,4 @@
-use leptonic::hooks::LinkTarget;
+use leptonic::hooks::link::LinkTarget;
 use leptos::prelude::*;
 
 use super::{Link, Section};

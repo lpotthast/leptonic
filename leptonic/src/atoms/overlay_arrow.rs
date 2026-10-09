@@ -1,9 +1,13 @@
 // Upstream: react-aria-components/src/OverlayArrow.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Popover.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Tooltip.test.js @ 99e6102368
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use crate::{
-    hooks::{PlacementAxis, PropsWithStyles, UseOverlayArrowAttrs, UseOverlayArrowProps},
-    utils::{classes::Classes, default_class::with_default_class, styles::Styles},
+    PropsWithStyles,
+    hooks::overlay::{PlacementAxis, UseOverlayArrowAttrs, UseOverlayArrowProps},
+    utils::{default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================

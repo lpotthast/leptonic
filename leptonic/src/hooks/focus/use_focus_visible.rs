@@ -1,11 +1,11 @@
 // Upstream: react-aria/src/interactions/useFocusVisible.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/useFocusVisible.test.js @ 99e6102368
 #[cfg(not(feature = "ssr"))]
 use std::sync::{
     OnceLock, RwLock,
     atomic::{AtomicBool, Ordering},
 };
 
-use atomic_enum::atomic_enum;
 use leptos::prelude::*;
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
@@ -14,16 +14,15 @@ use web_sys::{KeyboardEvent, PointerEvent};
 
 use crate::utils::pointer_type::PointerType;
 #[cfg(not(feature = "ssr"))]
-use crate::{
-    Out,
-    utils::{
-        EventAccessors, focusability,
-        key::{KeyboardEventKey, KeyboardKey},
-        platform::device::is_mac,
-        prevent_focus::is_ignoring_focus_events,
-        shadow_dom::get_active_element,
-        virtual_click::is_virtual_click,
-    },
+use crate::utils::{
+    dom_ext::EventAccessors,
+    event_listeners::{Listener, listen, listen_to},
+    focusability,
+    key::{KeyboardEventKey, KeyboardKey},
+    platform::device::is_mac,
+    prevent_focus::is_ignoring_focus_events,
+    shadow_dom::get_active_element,
+    virtual_click::is_virtual_click,
 };
 
 // =============================================================================
@@ -31,17 +30,35 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `Modality::Unknown` before the first interaction (react-aria: `null`).
-// - `use_focus_visible` also returns the modality its subscriber saw, and takes `is_disabled`
-//   (react-aria's `useFocusVisibleListener` option `enabled`) to pause the subscription.
+// - The modality is `Option<Modality>`: `None` before the first interaction (react-aria: `null`).
+// - No change handlers (`changeHandlers`, `useFocusVisibleListener`): the modality lives in two
+//   global signals, written only when they change: the modality as of the last change
+//   notification ([`use_interaction_modality`], [`is_focus_visible`]), and per kind of listener
+//   (text input or not) the notifications that reached it. Hooks read them, so a key event costs
+//   one signal write instead of one call per mounted listener, and an unfocused `use_focus_ring`
+//   reads nothing (react-aria: `enabled: isFocused`; upstream's "does not call changeHandlers when
+//   unneeded" holds by construction).
 // - `get_modality`/`set_modality`/`get_pointer_type`: react-aria's `getInteractionModality`/
-//   `setInteractionModality`/`getPointerType`.
+//   `setInteractionModality`/`getPointerType`. `is_focus_visible` is tracked when read in a
+//   reactive context (react-aria's `isFocusVisible` reads a plain variable).
+// - `add_window_focus_tracking` returns a guard ([`WindowFocusTracking`]) whose drop stops the
+//   tracking (react-aria: a teardown function).
 //
 // ## DIFFERENT BEHAVIOR
 // - Tracking starts when the first hook reading the modality is created
 //   (`track_interaction_modality`), not on module load (`addWindowFocusTracking()` at the top
-//   level): Rust has no module initialization. Without it, a grid saw `Unknown` (treated as
+//   level): Rust has no module initialization. Without it, a grid saw no modality (treated as
 //   keyboard) for mouse presses and moved focus to its old focused cell.
+// - The default window's tracking is never torn down: react-aria removes it on `beforeunload`
+//   and sets it up again on the next render of any hook; here hooks set it up when created, so a
+//   `beforeunload` that doesn't unload (Chrome fires it for `mailto:` links and downloads) would
+//   freeze the modality. Other windows (iframes) are torn down on `beforeunload` as upstream.
+// - `use_interaction_modality` and `is_focus_visible` follow the modality of the last change
+//   notification; `pointermove`/`pointerup` and virtual clicks change the stored modality
+//   (`get_modality`) silently, as upstream, and show up there at the next notification.
+// - A `use_focus_visible` created after such a silent change starts with the modality stored
+//   then (react-aria: `autoFocus || isFocusVisible()`), and follows every later notification of
+//   its kind.
 //
 // ## OMITTED FEATURES
 // - The `mousedown`/`mousemove`/`mouseup` fallbacks for environments without `PointerEvent`
@@ -50,28 +67,16 @@ use crate::{
 // =============================================================================
 
 /// Input parameters for the `use_focus_visible` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UseFocusVisibleInput {
-    /// Whether to auto-focus the element (affects initial visibility).
+    /// Whether the element will be auto focused: focus counts as visible until the next change of
+    /// the modality.
     pub auto_focus: bool,
-    /// Stops tracking modality changes while `true` (e.g. while the element isn't focused),
-    /// saving signal updates. Tracking resumes with the current modality.
-    pub is_disabled: Signal<bool>,
     /// Whether the element is a text input. When `true`, only Tab/Escape keys
     /// trigger focus-visible; other keyboard events are suppressed. This is
     /// used for compound text-input components (e.g., a date picker where focus
     /// is on a button but the component should use text-input focus rules).
     pub is_text_input: bool,
-}
-
-impl Default for UseFocusVisibleInput {
-    fn default() -> Self {
-        Self {
-            auto_focus: false,
-            is_disabled: Signal::stored(false),
-            is_text_input: false,
-        }
-    }
 }
 
 /// The return value of the `use_focus_visible` hook.
@@ -80,22 +85,21 @@ pub struct UseFocusVisibleReturn {
     /// Whether the element should display a focus ring.
     /// True when the user is navigating via keyboard.
     pub focus_should_be_visible: Signal<bool>,
-
-    /// The current interaction modality, reactively updated.
-    pub modality: Signal<Modality>,
 }
 
 /// Tracks whether focus (of the currently focused element) should be made visible.
 ///
-/// This hook subscribes to the current interaction modality:
+/// This hook follows the current interaction modality:
 /// - When the user interacts with the keyboard or virtually (though assistive technology), focus
 ///   is made visible.
 /// - When they use a pointer (mouse, touch, ...), focus is hidden.
 ///
+/// For the modality itself, see [`use_interaction_modality`].
+///
 /// # Example
 ///
 /// ```ignore
-/// let UseFocusVisibleReturn { focus_should_be_visible, modality } = use_focus_visible(UseFocusVisibleInput::default());
+/// let UseFocusVisibleReturn { focus_should_be_visible } = use_focus_visible(UseFocusVisibleInput::default());
 ///
 /// view! {
 ///     <button class:focus-visible=move || focus_should_be_visible.get()>
@@ -106,105 +110,145 @@ pub struct UseFocusVisibleReturn {
 pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
     let UseFocusVisibleInput {
         auto_focus,
-        is_disabled,
         is_text_input,
     } = input;
 
     #[cfg(feature = "ssr")]
     {
-        let _ = is_disabled;
-        let _ = is_text_input;
-        let (is_focus_visible, _) = signal(auto_focus);
-        let (modality, _) = signal(Modality::Unknown);
+        // As on the client before any interaction: no modality yet, which shows focus.
+        let _ = (auto_focus, is_text_input);
         UseFocusVisibleReturn {
-            focus_should_be_visible: is_focus_visible.into(),
-            modality: modality.into(),
+            focus_should_be_visible: Signal::stored(true),
         }
     }
 
     #[cfg(not(feature = "ssr"))]
     {
-        use leptos::prelude::LocalStorage;
-
         let state = FocusState::get();
-
         // Set up global listeners for the default window (idempotent).
         setup_global_focus_events(None);
 
-        let is_focus_visible_for_modality = |modality: Modality| modality != Modality::Pointer;
-
-        let current_modality = state.modality();
-
-        let (is_focus_visible, set_is_focus_visible) =
-            signal(auto_focus || is_focus_visible_for_modality(current_modality));
-
-        let (modality, set_modality) = signal(current_modality);
-
-        // Track subscriber ID for reactive registration/unregistration.
-        let subscriber_id: StoredValue<Option<SubscriberId>, LocalStorage> =
-            StoredValue::new_local(None);
-
-        // Whether the hook was disabled since it was created: then the modality may have changed
-        // unseen. (On creation the state is current, including `auto_focus`.)
-        let was_disabled = StoredValue::new_local(false);
-        Effect::new(move |_| {
-            if is_disabled.get() {
-                // Unregister while disabled.
-                if let Some(old_id) = subscriber_id.get_value() {
-                    state.unregister(old_id);
-                    subscriber_id.set_value(None);
-                }
-                was_disabled.set_value(true);
-            } else {
-                if was_disabled.get_value() {
-                    let current = state.modality();
-                    set_is_focus_visible.set(is_focus_visible_for_modality(current));
-                    set_modality.set(current);
-                }
-
-                // Register for future updates. A re-run replaces the previous registration,
-                // whose callback belonged to the previous run (and is disposed now).
-                if let Some(old_id) = subscriber_id.get_value() {
-                    state.unregister(old_id);
-                }
-                let id = state.register(is_text_input, move |new_modality: Modality| {
-                    set_is_focus_visible.set(is_focus_visible_for_modality(new_modality));
-                    set_modality.set(new_modality);
-                });
-                subscriber_id.set_value(Some(id));
-            }
-        });
-
-        on_cleanup(move || {
-            if let Some(id) = subscriber_id.get_value() {
-                state.unregister(id);
-            }
-        });
-
+        let changes = state.changes.clone();
+        let kind = ListenerKind::from_is_text_input(is_text_input);
+        let since = FocusVisibleSince::now(state, kind, auto_focus || state.is_focus_visible());
         UseFocusVisibleReturn {
-            focus_should_be_visible: is_focus_visible.into(),
-            modality: modality.into(),
+            focus_should_be_visible: Memo::new(move |_| since.visible(&changes)).into(),
         }
     }
 }
 
-#[cfg(not(feature = "ssr"))]
-static FOCUS_STATE: OnceLock<FocusState> = OnceLock::new();
-
-#[cfg(not(feature = "ssr"))]
-type SubscriberId = u64;
-
 /// An input modality.
-#[derive(PartialEq, Eq)]
-#[atomic_enum]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Modality {
-    Unknown = 0,
     Pointer,
     Keyboard,
     Virtual,
 }
 
-/// What a keyboard event tells the subscribers (react-aria's `isKeyboardFocusEvent` inputs).
+#[cfg(not(feature = "ssr"))]
+/// Which listeners a change notification reaches (react-aria's `isKeyboardFocusEvent`): keys
+/// typed into a text input other than Tab and Escape reach no text input listener.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ListenerKind {
+    /// A listener of an element that isn't a text input.
+    Other,
+    /// A listener of a text input (`is_text_input`).
+    TextInput,
+}
+
+#[cfg(not(feature = "ssr"))]
+impl ListenerKind {
+    pub(crate) fn from_is_text_input(is_text_input: bool) -> Self {
+        if is_text_input {
+            Self::TextInput
+        } else {
+            Self::Other
+        }
+    }
+}
+
+#[cfg(not(feature = "ssr"))]
+/// The change notifications one kind of listener received.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Notifications {
+    /// How many notifications reached the kind.
+    pub(crate) count: u64,
+    /// Whether focus was visible after the last of them.
+    pub(crate) is_focus_visible: bool,
+}
+
+#[cfg(not(feature = "ssr"))]
+/// The change notifications so far, per kind of listener.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct FocusVisibleChanges {
+    other: Notifications,
+    text_input: Notifications,
+}
+
+#[cfg(not(feature = "ssr"))]
+impl FocusVisibleChanges {
+    const INITIAL: Self = Self {
+        other: Notifications {
+            count: 0,
+            is_focus_visible: true,
+        },
+        text_input: Notifications {
+            count: 0,
+            is_focus_visible: true,
+        },
+    };
+
+    pub(crate) fn of(&self, kind: ListenerKind) -> Notifications {
+        match kind {
+            ListenerKind::Other => self.other,
+            ListenerKind::TextInput => self.text_input,
+        }
+    }
+
+    fn of_mut(&mut self, kind: ListenerKind) -> &mut Notifications {
+        match kind {
+            ListenerKind::Other => &mut self.other,
+            ListenerKind::TextInput => &mut self.text_input,
+        }
+    }
+}
+
+#[cfg(not(feature = "ssr"))]
+/// Whether focus is visible for a listener that started at some point with a value of its own
+/// (react-aria's `useState(autoFocus || isFocusVisible())` followed by its change handler): the
+/// start value until the next notification of the listener's kind, then that notification's.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct FocusVisibleSince {
+    kind: ListenerKind,
+    start: u64,
+    is_focus_visible: bool,
+}
+
+#[cfg(not(feature = "ssr"))]
+impl FocusVisibleSince {
+    #[cfg(not(feature = "ssr"))]
+    pub(crate) fn now(state: &FocusState, kind: ListenerKind, is_focus_visible: bool) -> Self {
+        Self {
+            kind,
+            start: state
+                .changes
+                .with_untracked(|changes| changes.of(kind).count),
+            is_focus_visible,
+        }
+    }
+
+    /// Reads (and tracks) the notifications.
+    pub(crate) fn visible(&self, changes: &ArcRwSignal<FocusVisibleChanges>) -> bool {
+        let notifications = changes.with(|changes| changes.of(self.kind));
+        if notifications.count == self.start {
+            self.is_focus_visible
+        } else {
+            notifications.is_focus_visible
+        }
+    }
+}
+
+/// What a keyboard event tells the listeners (react-aria's `isKeyboardFocusEvent` inputs).
 #[cfg(not(feature = "ssr"))]
 #[derive(Debug, Clone, Copy)]
 struct KeyContext {
@@ -214,14 +258,15 @@ struct KeyContext {
     is_focus_key: bool,
 }
 
-/// Global focus state management, tracking:
-///
-/// - The current interaction modality (keyboard, pointer, or virtual) and pointer type.
-/// - Registered subscribers that are notified when the modality changes.
 #[cfg(not(feature = "ssr"))]
-struct FocusState {
-    /// The current interaction modality (Unknown, Pointer, Keyboard, or Virtual).
-    modality: AtomicModality,
+static FOCUS_STATE: OnceLock<FocusState> = OnceLock::new();
+
+/// Global focus state: the current interaction modality and pointer type, and the signals
+/// following its changes.
+#[cfg(not(feature = "ssr"))]
+pub(crate) struct FocusState {
+    /// The current interaction modality, also changed silently (react-aria's `currentModality`).
+    modality: RwLock<Option<Modality>>,
 
     /// The pointer type of the last interaction (react-aria's `currentPointerType`).
     pointer_type: RwLock<PointerType>,
@@ -234,56 +279,59 @@ struct FocusState {
     /// when returning to the tab.
     has_blurred_window_recently: AtomicBool,
 
-    /// Next unique ID for subscriber registration.
-    next_id: std::sync::atomic::AtomicU64,
+    /// The modality as of the last change notification, written only when it changes
+    /// (react-aria's `useInteractionModality` state).
+    notified_modality: ArcRwSignal<Option<Modality>>,
 
-    /// Registered subscribers that receive modality change notifications.
-    /// Each entry is `(id, is_text_input, Out<Modality>)`. The `is_text_input`
-    /// flag controls per-subscriber filtering of keyboard events.
-    subscribers: RwLock<Vec<(SubscriberId, bool, Out<Modality>)>>,
+    /// The change notifications per kind of listener, written only when one reaches a listener.
+    pub(crate) changes: ArcRwSignal<FocusVisibleChanges>,
 }
 
 #[cfg(not(feature = "ssr"))]
 impl FocusState {
     fn new() -> Self {
         Self {
-            modality: AtomicModality::new(Modality::Unknown),
+            modality: RwLock::new(None),
             pointer_type: RwLock::new(PointerType::Keyboard),
             has_event_before_focus: AtomicBool::new(false),
             has_blurred_window_recently: AtomicBool::new(false),
-            next_id: std::sync::atomic::AtomicU64::new(0),
-            subscribers: RwLock::new(Vec::new()),
+            notified_modality: ArcRwSignal::new(None),
+            changes: ArcRwSignal::new(FocusVisibleChanges::INITIAL),
         }
     }
 
-    fn get() -> &'static Self {
+    pub(crate) fn get() -> &'static Self {
         FOCUS_STATE.get_or_init(FocusState::new)
     }
 
-    fn modality(&self) -> Modality {
-        self.modality.load(Ordering::Acquire)
+    fn modality(&self) -> Option<Modality> {
+        *self.modality.read().expect("modality lock poisoned")
+    }
+
+    /// React-aria's `isFocusVisible()`: the stored modality isn't the pointer.
+    pub(crate) fn is_focus_visible(&self) -> bool {
+        self.modality() != Some(Modality::Pointer)
     }
 
     fn pointer_type(&self) -> PointerType {
-        self.pointer_type
+        *self
+            .pointer_type
             .read()
             .expect("pointer type lock poisoned")
-            .clone()
     }
 
-    /// Stores the modality and pointer type without notifying subscribers (react-aria's
+    /// Stores the modality and pointer type without notifying (react-aria's
     /// `pointermove`/`pointerup` and virtual clicks).
     fn set_modality_silently(&self, modality: Modality, pointer_type: PointerType) {
-        self.modality.store(modality, Ordering::Release);
+        *self.modality.write().expect("modality lock poisoned") = Some(modality);
         *self
             .pointer_type
             .write()
             .expect("pointer type lock poisoned") = pointer_type;
     }
 
-    /// Stores the modality and pointer type and notifies the subscribers (react-aria's
-    /// `triggerChangeHandlers`, which always notifies; subscribers' signals dedupe). `key` is the
-    /// keyboard event's context, `None` for other events and programmatic changes.
+    /// Stores the modality and pointer type and notifies (react-aria's `triggerChangeHandlers`).
+    /// `key` is the keyboard event's context, `None` for other events and programmatic changes.
     fn set_modality_and_notify(
         &self,
         modality: Modality,
@@ -291,7 +339,38 @@ impl FocusState {
         key: Option<KeyContext>,
     ) {
         self.set_modality_silently(modality, pointer_type);
-        self.notify_subscribers(modality, key);
+        self.notify(modality, key);
+    }
+
+    /// Updates the signals: the notified modality, and the notifications of the kinds of
+    /// listeners the change reaches. A keyboard event inside a text input (the listener's own
+    /// `is_text_input`, or the event's [`KeyContext`]) reaches them only for Tab and Escape.
+    fn notify(&self, modality: Modality, key: Option<KeyContext>) {
+        if self.notified_modality.get_untracked() != Some(modality) {
+            self.notified_modality.set(Some(modality));
+        }
+
+        let reaches = |kind: ListenerKind| {
+            modality != Modality::Keyboard
+                || key.is_none_or(|key| {
+                    key.is_focus_key || !(kind == ListenerKind::TextInput || key.is_text_input)
+                })
+        };
+        let reached: Vec<ListenerKind> = [ListenerKind::Other, ListenerKind::TextInput]
+            .into_iter()
+            .filter(|kind| reaches(*kind))
+            .collect();
+        if reached.is_empty() {
+            return;
+        }
+        let is_focus_visible = modality != Modality::Pointer;
+        self.changes.update(|changes| {
+            for kind in reached {
+                let notifications = changes.of_mut(kind);
+                notifications.count = notifications.count.wrapping_add(1);
+                notifications.is_focus_visible = is_focus_visible;
+            }
+        });
     }
 
     fn has_event_before_focus(&self) -> bool {
@@ -310,130 +389,34 @@ impl FocusState {
         self.has_blurred_window_recently
             .store(value, Ordering::Release);
     }
-
-    /// Notify the registered subscribers of the given modality.
-    ///
-    /// Per-subscriber text input filtering (react-aria's `isKeyboardFocusEvent`): a keyboard
-    /// event inside a text input (the subscriber's own `is_text_input`, or the event's
-    /// [`KeyContext`]) notifies only for Tab and Escape.
-    fn notify_subscribers(&self, modality: Modality, key: Option<KeyContext>) {
-        // Collect first and notify without holding the lock: a subscriber may (un)register
-        // synchronously, which would deadlock (and panic on wasm).
-        let to_notify: Vec<Out<Modality>> = {
-            let subscribers = self.subscribers.read().expect("subscriber lock poisoned");
-            subscribers
-                .iter()
-                .filter(|(_, sub_is_text_input, _)| {
-                    modality != Modality::Keyboard
-                        || key.is_none_or(|key| {
-                            key.is_focus_key || !(*sub_is_text_input || key.is_text_input)
-                        })
-                })
-                .map(|(_, _, subscriber)| *subscriber)
-                .collect()
-        };
-        for subscriber in to_notify {
-            subscriber.set(modality);
-        }
-    }
-
-    /// Register a subscriber. Returns a unique ID for unregistration.
-    ///
-    /// `is_text_input`: when `true`, only Tab/Escape keyboard events trigger
-    /// notifications for this subscriber (other keys are suppressed).
-    fn register(&self, is_text_input: bool, subscriber: impl Into<Out<Modality>>) -> SubscriberId {
-        // Wrapping around on overflow. Ensures endless usage.
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let mut subscribers = self.subscribers.write().expect("subscriber lock poisoned");
-        subscribers.push((id, is_text_input, subscriber.into()));
-        id
-    }
-
-    /// Unregister a subscriber by its unique ID.
-    fn unregister(&self, id: SubscriberId) {
-        let mut subscribers = self.subscribers.write().expect("subscriber lock poisoned");
-        if let Some(pos) = subscribers.iter().position(|(sid, _, _)| *sid == id) {
-            subscribers.swap_remove(pos);
-        }
-    }
 }
 
-/// Stores listener data for a single window's focus tracking setup.
+/// The tracking of one window: its listeners (removed when dropped) and the replaced
+/// `HTMLElement.prototype.focus`.
 #[cfg(not(feature = "ssr"))]
-struct WindowListenerData {
-    /// The original `HTMLElement.prototype.focus` function and the closure its replacement calls,
-    /// kept for restoration (`None` when the prototype couldn't be patched).
+struct WindowTracking {
+    window: wasm_bindgen::JsValue,
+    /// The original `HTMLElement.prototype.focus` and the closure its replacement calls, kept for
+    /// restoration (`None` when the prototype couldn't be patched).
     focus_override: Option<FocusOverride>,
-    /// Registered event listener handles. Each is auto-removed on drop (via
-    /// `ListenerRegistration::Drop`). Not read directly — stored for its side effect.
-    _listeners: Vec<ListenerRegistration>,
-}
-
-/// An event listener registration that auto-removes on drop.
-#[cfg(not(feature = "ssr"))]
-struct ListenerRegistration {
-    target: web_sys::EventTarget,
-    event_name: &'static str,
-    callback_js: js_sys::Function,
-    capture: bool,
-    /// Prevents the `Closure` from being dropped (which would invalidate `callback_js`).
-    _closure: Box<dyn std::any::Any>,
+    _listeners: Vec<Listener>,
 }
 
 #[cfg(not(feature = "ssr"))]
-impl Drop for ListenerRegistration {
+impl Drop for WindowTracking {
     fn drop(&mut self) {
-        let _ = self.target.remove_event_listener_with_callback_and_bool(
-            self.event_name,
-            &self.callback_js,
-            self.capture,
-        );
+        if let Some(focus_override) = &self.focus_override {
+            focus_override.uninstall();
+        }
     }
 }
 
-// Per-window tracking of focus event listeners.
-//
-// Maps window identity (as `JsValue`) to listener data. Uses a `Vec` since
-// there are typically only 1-2 windows (main + possibly an iframe).
+// The tracked windows (react-aria's `hasSetupGlobalListeners`): the default one, plus iframes
+// added with `add_window_focus_tracking`.
 #[cfg(not(feature = "ssr"))]
 thread_local! {
-    static WINDOW_LISTENERS: std::cell::RefCell<Vec<(wasm_bindgen::JsValue, WindowListenerData)>>
+    static TRACKED_WINDOWS: std::cell::RefCell<Vec<WindowTracking>>
         = const { std::cell::RefCell::new(Vec::new()) };
-}
-
-/// Helper to register an event listener and produce a `ListenerRegistration`.
-#[cfg(not(feature = "ssr"))]
-fn register_listener<E>(
-    target: &web_sys::EventTarget,
-    event_name: &'static str,
-    callback: impl FnMut(E) + 'static,
-    capture: bool,
-) -> ListenerRegistration
-where
-    E: wasm_bindgen::convert::FromWasmAbi + 'static,
-{
-    use wasm_bindgen::closure::Closure;
-
-    let closure: Closure<dyn FnMut(E)> = Closure::wrap(Box::new(callback));
-    let callback_js: js_sys::Function =
-        closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
-
-    let options = web_sys::AddEventListenerOptions::new();
-    options.set_capture(capture);
-
-    let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
-        event_name,
-        &callback_js,
-        &options,
-    );
-
-    ListenerRegistration {
-        target: target.clone(),
-        event_name,
-        callback_js,
-        capture,
-        _closure: Box::new(closure),
-    }
 }
 
 /// Returns true for any key except modifiers.
@@ -449,6 +432,12 @@ fn is_valid_key(e: &KeyboardEvent, is_mac: bool) -> bool {
         ))
 }
 
+/// Whether the window of `document` is tracked.
+#[cfg(not(feature = "ssr"))]
+fn is_tracked(window: &wasm_bindgen::JsValue) -> bool {
+    TRACKED_WINDOWS.with_borrow(|tracked| tracked.iter().any(|t| t.window == *window))
+}
+
 /// Set up global focus event listeners for a window, identified by an element within it.
 ///
 /// Pass `None` for the default window. This is idempotent: calling it multiple times
@@ -456,40 +445,40 @@ fn is_valid_key(e: &KeyboardEvent, is_mac: bool) -> bool {
 ///
 /// Based on react-aria's `setupGlobalFocusEvents`.
 #[cfg(not(feature = "ssr"))]
-fn setup_global_focus_events(element: Option<&web_sys::HtmlElement>) {
-    let (window, document) = resolve_window_and_document(element);
-    let (Some(window), Some(document)) = (window, document) else {
-        tracing::warn!("use_focus_visible: window or document not available");
+fn setup_global_focus_events(element: Option<&web_sys::Element>) {
+    let (Some(window), Some(document)) = resolve_window_and_document(element) else {
         return;
     };
-
-    // Check if already set up for this window.
     let window_js: wasm_bindgen::JsValue = window.clone().into();
-    let already_setup =
-        WINDOW_LISTENERS.with(|wl| wl.borrow().iter().any(|(w, _)| *w == window_js));
-
-    if already_setup {
+    if is_tracked(&window_js) {
         return;
     }
 
     let state = FocusState::get();
-
     let mut listeners = Vec::new();
     register_document_listeners(state, &document, &mut listeners);
-    register_window_listeners(state, &window, &window_js, &mut listeners);
+    register_window_listeners(state, &window, &mut listeners);
+    // Only other windows are torn down when they unload (see the deviations).
+    let is_default_window = leptos_use::use_window()
+        .as_ref()
+        .is_some_and(|default| wasm_bindgen::JsValue::from(default.clone()) == window_js);
+    if !is_default_window {
+        let window_key = window_js.clone();
+        listeners.push(listen(window.as_ref(), "beforeunload", false, move |_| {
+            tear_down_window(&window_key);
+        }));
+    }
 
     // Programmatic `focus()` calls shouldn't change the modality, while other focus events
     // without a preceding user event (e.g. screen reader focus) switch it to virtual.
     let focus_override = FocusOverride::install(&window, state);
 
-    WINDOW_LISTENERS.with(|wl| {
-        wl.borrow_mut().push((
-            window_js,
-            WindowListenerData {
-                focus_override,
-                _listeners: listeners,
-            },
-        ));
+    TRACKED_WINDOWS.with_borrow_mut(|tracked| {
+        tracked.push(WindowTracking {
+            window: window_js,
+            focus_override,
+            _listeners: listeners,
+        });
     });
 }
 
@@ -498,7 +487,7 @@ fn setup_global_focus_events(element: Option<&web_sys::HtmlElement>) {
 fn register_document_listeners(
     state: &'static FocusState,
     document: &web_sys::Document,
-    listeners: &mut Vec<ListenerRegistration>,
+    listeners: &mut Vec<Listener>,
 ) {
     let is_mac = is_mac();
 
@@ -515,100 +504,97 @@ fn register_document_listeners(
             state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, Some(key));
         }
     };
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "keydown",
-        handle_keyboard,
+        leptos::ev::keydown,
         true,
+        handle_keyboard,
     ));
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "keyup",
-        handle_keyboard,
+        leptos::ev::keyup,
         true,
+        handle_keyboard,
     ));
 
     // Virtual (screen reader) clicks.
-    let handle_click = move |e: web_sys::MouseEvent| {
-        if !crate::utils::open_link::is_opening_link() && is_virtual_click(&e) {
-            state.set_has_event_before_focus(true);
-            state.set_modality_silently(Modality::Virtual, PointerType::Virtual);
-        }
-    };
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "click",
-        handle_click,
+        leptos::ev::click,
         true,
+        move |e: web_sys::MouseEvent| {
+            if !crate::utils::open_link::is_opening_link() && is_virtual_click(&e) {
+                state.set_has_event_before_focus(true);
+                state.set_modality_silently(Modality::Virtual, PointerType::Virtual);
+            }
+        },
     ));
 
     // A focus move right after a form became invalid is a forms library (or the browser) focusing
     // the first invalid field: show the focus ring there.
-    let handle_invalid = move |e: web_sys::Event| {
-        let Some(document) = e
-            .expect_target()
-            .dyn_into::<web_sys::Node>()
-            .ok()
-            .and_then(|node| node.owner_document())
-        else {
-            return;
-        };
-        let starting_active_element = get_active_element(&document);
-        let document = send_wrapper::SendWrapper::new(document);
-        let starting_active_element = send_wrapper::SendWrapper::new(starting_active_element);
-        queue_microtask(move || {
-            if get_active_element(&document) != *starting_active_element {
-                set_modality(Modality::Keyboard);
-            }
-        });
-    };
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "invalid",
-        handle_invalid,
+        leptos::ev::invalid,
         true,
+        |e: web_sys::Event| {
+            let Some(document) = e
+                .expect_target()
+                .dyn_into::<web_sys::Node>()
+                .ok()
+                .and_then(|node| node.owner_document())
+            else {
+                return;
+            };
+            let starting_active_element = get_active_element(&document);
+            let document = send_wrapper::SendWrapper::new(document);
+            let starting_active_element = send_wrapper::SendWrapper::new(starting_active_element);
+            queue_microtask(move || {
+                if get_active_element(&document) != *starting_active_element {
+                    set_modality(Modality::Keyboard);
+                }
+            });
+        },
     ));
 
     // `pointerdown` changes the modality and notifies, `pointermove`/`pointerup` only change it.
-    let handle_pointer_down = move |e: PointerEvent| {
-        state.set_has_event_before_focus(true);
-        state.set_modality_and_notify(Modality::Pointer, PointerType::from(e.pointer_type()), None);
-    };
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "pointerdown",
-        handle_pointer_down,
+        leptos::ev::pointerdown,
         true,
+        move |e: PointerEvent| {
+            state.set_has_event_before_focus(true);
+            state.set_modality_and_notify(Modality::Pointer, PointerType::of(&e), None);
+        },
     ));
     let handle_pointer_silent = move |e: PointerEvent| {
-        state.set_modality_silently(Modality::Pointer, PointerType::from(e.pointer_type()));
+        state.set_modality_silently(Modality::Pointer, PointerType::of(&e));
     };
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "pointermove",
-        handle_pointer_silent,
+        leptos::ev::pointermove,
         true,
+        handle_pointer_silent,
     ));
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         document.as_ref(),
-        "pointerup",
-        handle_pointer_silent,
+        leptos::ev::pointerup,
         true,
+        handle_pointer_silent,
     ));
 }
 
-/// Register window-level listeners for blur, focus, and beforeunload events.
+/// Register window-level listeners for blur and focus events.
 #[cfg(not(feature = "ssr"))]
 fn register_window_listeners(
     state: &'static FocusState,
     window: &web_sys::Window,
-    window_js: &wasm_bindgen::JsValue,
-    listeners: &mut Vec<ListenerRegistration>,
+    listeners: &mut Vec<Listener>,
 ) {
     // Reset state when tabbing away from the page.
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         window.as_ref(),
-        "blur",
+        leptos::ev::blur,
+        false,
         move |_: web_sys::FocusEvent| {
             // Focus moved back by `prevent_focus` (react-aria's `ignoreFocusEvent`).
             if is_ignoring_focus_events() {
@@ -617,13 +603,13 @@ fn register_window_listeners(
             state.set_has_event_before_focus(false);
             state.set_has_blurred_window_recently(true);
         },
-        false,
     ));
 
     // Detect a return to the tab.
-    listeners.push(register_listener(
+    listeners.push(listen_to(
         window.as_ref(),
-        "focus",
+        leptos::ev::focus,
+        true,
         move |e: web_sys::FocusEvent| {
             // Focus moved back by `prevent_focus` (react-aria's `ignoreFocusEvent`).
             if is_ignoring_focus_events() {
@@ -652,26 +638,14 @@ fn register_window_listeners(
             state.set_has_event_before_focus(false);
             state.set_has_blurred_window_recently(false);
         },
-        true,
-    ));
-
-    // --- beforeunload: auto-cleanup when window is destroyed ---
-    let window_js_for_cleanup = window_js.clone();
-    listeners.push(register_listener(
-        window.as_ref(),
-        "beforeunload",
-        move |_: web_sys::Event| {
-            tear_down_window_by_key(&window_js_for_cleanup);
-        },
-        false,
     ));
 }
 
 /// Resolve the window and document for an optional element.
-/// Falls back to `web_sys::window()` / `window.document()` when `element` is `None`.
+/// Falls back to the default window and its document when `element` is `None`.
 #[cfg(not(feature = "ssr"))]
 fn resolve_window_and_document(
-    element: Option<&web_sys::HtmlElement>,
+    element: Option<&web_sys::Element>,
 ) -> (Option<web_sys::Window>, Option<web_sys::Document>) {
     if let Some(el) = element {
         let doc = el.owner_document();
@@ -744,101 +718,119 @@ fn define_focus(prototype: &js_sys::Object, value: &wasm_bindgen::JsValue) -> bo
     Reflect::define_property(prototype, &"focus".into(), &descriptor).unwrap_or(false)
 }
 
-/// Tear down focus tracking for a window identified by its `JsValue`.
+/// Stops tracking a window (its listeners are removed and the original `focus` restored when its
+/// tracking drops).
 #[cfg(not(feature = "ssr"))]
-fn tear_down_window_by_key(window_key: &wasm_bindgen::JsValue) {
-    WINDOW_LISTENERS.with(|wl| {
-        let mut listeners = wl.borrow_mut();
-        if let Some(pos) = listeners.iter().position(|(w, _)| w == window_key) {
-            let (_, data) = listeners.swap_remove(pos);
-            if let Some(focus_override) = &data.focus_override {
-                focus_override.uninstall();
-            }
-            // Listeners are auto-removed when `data._listeners` is dropped.
-            drop(data);
-        }
+fn tear_down_window(window: &wasm_bindgen::JsValue) {
+    // Dropped outside the borrow: dropping a listener may run JavaScript.
+    let removed = TRACKED_WINDOWS.with_borrow_mut(|tracked| {
+        tracked
+            .iter()
+            .position(|t| t.window == *window)
+            .map(|pos| tracked.swap_remove(pos))
     });
+    drop(removed);
 }
 
-/// Add focus tracking for a window containing the given element.
+/// Focus-visible tracking of another window (an iframe), started by
+/// [`add_window_focus_tracking`] and stopped when dropped.
+#[must_use = "dropping the guard stops tracking the window"]
+pub struct WindowFocusTracking {
+    #[cfg(not(feature = "ssr"))]
+    window: Option<wasm_bindgen::JsValue>,
+    /// Waits for `DOMContentLoaded` of a document still loading.
+    #[cfg(not(feature = "ssr"))]
+    _load_listener: Option<Listener>,
+}
+
+impl std::fmt::Debug for WindowFocusTracking {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WindowFocusTracking")
+            .finish_non_exhaustive()
+    }
+}
+
+impl Drop for WindowFocusTracking {
+    fn drop(&mut self) {
+        #[cfg(not(feature = "ssr"))]
+        if let Some(window) = &self.window {
+            tear_down_window(window);
+        }
+    }
+}
+
+/// Tracks the interaction modality in the window containing `element` (an iframe's window) until
+/// the returned guard is dropped (or the window unloads). The default window is always tracked;
+/// for it, this does nothing.
 ///
-/// This is the public API for multi-window/iframe support. Call this with
-/// an element inside an iframe to enable focus-visible tracking for that
-/// iframe's window.
+/// Apps rendering parts of their UI into an iframe call this with an element inside it, so focus
+/// rings there follow the interactions in the iframe. A document still loading is set up once its
+/// `DOMContentLoaded` fired.
 ///
-/// Returns a cleanup function that tears down listeners for that window.
-///
-/// During SSR, returns a no-op cleanup function.
+/// During SSR, this does nothing.
 ///
 /// # Example
 ///
 /// ```ignore
-/// // Inside a component that manages an iframe:
-/// let cleanup = add_window_focus_tracking(Some(&iframe_element));
-/// // When done:
-/// cleanup();
+/// // Inside a component that manages an iframe, once its document has an element:
+/// let tracking = StoredValue::new_local(Some(add_window_focus_tracking(&iframe_body)));
+/// on_cleanup(move || tracking.set_value(None));
 /// ```
-pub fn add_window_focus_tracking(element: Option<&web_sys::HtmlElement>) -> Box<dyn FnOnce()> {
+pub fn add_window_focus_tracking(element: &web_sys::Element) -> WindowFocusTracking {
     #[cfg(feature = "ssr")]
     {
         let _ = element;
-        Box::new(|| {})
+        WindowFocusTracking {}
     }
 
     #[cfg(not(feature = "ssr"))]
     {
-        setup_global_focus_events(element);
+        let (Some(window), Some(document)) = resolve_window_and_document(Some(element)) else {
+            return WindowFocusTracking {
+                window: None,
+                _load_listener: None,
+            };
+        };
+        let window_js: wasm_bindgen::JsValue = window.into();
+        let is_default_window = leptos_use::use_window()
+            .as_ref()
+            .is_some_and(|default| wasm_bindgen::JsValue::from(default.clone()) == window_js);
+        if is_default_window {
+            setup_global_focus_events(None);
+            return WindowFocusTracking {
+                window: None,
+                _load_listener: None,
+            };
+        }
 
-        let window_key = element
-            .and_then(|el| el.owner_document())
-            .and_then(|d| d.default_view())
-            .map_or_else(
-                || {
-                    leptos_use::use_window()
-                        .as_ref()
-                        .map_or(wasm_bindgen::JsValue::UNDEFINED, |w| w.clone().into())
+        let is_loading = js_sys::Reflect::get(&document, &"readyState".into())
+            .ok()
+            .and_then(|state| state.as_string())
+            .is_some_and(|state| state == "loading");
+        let load_listener = if is_loading {
+            let element = send_wrapper::SendWrapper::new(element.clone());
+            Some(listen(
+                document.as_ref(),
+                "DOMContentLoaded",
+                false,
+                move |_| {
+                    setup_global_focus_events(Some(&element));
                 },
-                wasm_bindgen::JsValue::from,
-            );
-
-        Box::new(move || {
-            tear_down_window_by_key(&window_key);
-        })
+            ))
+        } else {
+            setup_global_focus_events(Some(element));
+            None
+        };
+        WindowFocusTracking {
+            window: Some(window_js),
+            _load_listener: load_listener,
+        }
     }
 }
 
-/// Tear down focus tracking for a window containing the given element.
-///
-/// This is the public API for explicit teardown. In most cases, the cleanup
-/// function returned by [`add_window_focus_tracking`] is preferred.
-///
-/// During SSR, this is a no-op.
-pub fn tear_down_window_focus_tracking(element: Option<&web_sys::HtmlElement>) {
-    #[cfg(feature = "ssr")]
-    {
-        let _ = element;
-    }
-
-    #[cfg(not(feature = "ssr"))]
-    {
-        let window_key = element
-            .and_then(|el| el.owner_document())
-            .and_then(|d| d.default_view())
-            .map_or_else(
-                || {
-                    leptos_use::use_window()
-                        .as_ref()
-                        .map_or(wasm_bindgen::JsValue::UNDEFINED, |w| w.clone().into())
-                },
-                wasm_bindgen::JsValue::from,
-            );
-
-        tear_down_window_by_key(&window_key);
-    }
-}
-
-/// The current interaction modality, updated as it changes (react-aria's
-/// `useInteractionModality`). `None` during server-side rendering.
+/// The current interaction modality (react-aria's `useInteractionModality`): `None` before the
+/// first interaction and during server-side rendering. It changes with every change
+/// notification (key presses, pointer presses, focus without a preceding event, [`set_modality`]).
 pub fn use_interaction_modality() -> Signal<Option<Modality>> {
     #[cfg(feature = "ssr")]
     {
@@ -846,13 +838,25 @@ pub fn use_interaction_modality() -> Signal<Option<Modality>> {
     }
     #[cfg(not(feature = "ssr"))]
     {
-        let modality = use_focus_visible(UseFocusVisibleInput {
-            auto_focus: false,
-            is_disabled: Signal::stored(false),
-            is_text_input: false,
-        })
-        .modality;
-        Signal::derive(move || Some(modality.get()))
+        setup_global_focus_events(None);
+        FocusState::get().notified_modality.clone().into()
+    }
+}
+
+/// Whether keyboard focus is visible: the modality isn't the pointer (react-aria's
+/// `isFocusVisible`). Tracked when read in a reactive context (changing with
+/// [`use_interaction_modality`]), so per-item hooks can derive their focus ring from it without a
+/// listener of their own. `true` during server-side rendering.
+pub fn is_focus_visible() -> bool {
+    #[cfg(feature = "ssr")]
+    {
+        true
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        FocusState::get()
+            .notified_modality
+            .with(|modality| *modality != Some(Modality::Pointer))
     }
 }
 
@@ -864,17 +868,13 @@ pub(crate) fn track_interaction_modality() {
     setup_global_focus_events(None);
 }
 
-/// Returns the current input modality.
-///
-/// This is a convenience function for checking the current modality
-/// without setting up a reactive hook. Before any hook started tracking it (see
-/// `track_interaction_modality`), it is `Modality::Unknown`.
-///
-/// During SSR, always returns `Modality::Unknown`.
-pub fn get_modality() -> Modality {
+/// Returns the current input modality, without tracking (react-aria's `getInteractionModality`).
+/// `None` before any interaction (or before any hook started tracking it, see
+/// `track_interaction_modality`) and during SSR.
+pub fn get_modality() -> Option<Modality> {
     #[cfg(feature = "ssr")]
     {
-        Modality::Unknown
+        None
     }
     #[cfg(not(feature = "ssr"))]
     {
@@ -898,7 +898,7 @@ pub fn set_modality(modality: Modality) {
         let pointer_type = match modality {
             Modality::Pointer => PointerType::Mouse,
             Modality::Virtual => PointerType::Virtual,
-            Modality::Keyboard | Modality::Unknown => PointerType::Keyboard,
+            Modality::Keyboard => PointerType::Keyboard,
         };
         FocusState::get().set_modality_and_notify(modality, pointer_type, None);
     }
@@ -920,24 +920,9 @@ pub fn get_pointer_type() -> PointerType {
 
 #[cfg(all(test, not(feature = "ssr")))]
 mod tests {
-    use std::sync::{
-        Arc, Mutex,
-        atomic::{AtomicU32, Ordering},
-    };
-
     use assertr::prelude::*;
 
     use super::*;
-
-    /// A subscriber recording the modalities it was notified of.
-    fn record(state: &FocusState, is_text_input: bool) -> Arc<Mutex<Vec<Modality>>> {
-        let seen = Arc::new(Mutex::new(Vec::new()));
-        let sink = Arc::clone(&seen);
-        state.register(is_text_input, move |m: Modality| {
-            sink.lock().unwrap().push(m);
-        });
-        seen
-    }
 
     const TYPING: Option<KeyContext> = Some(KeyContext {
         is_text_input: true,
@@ -952,81 +937,132 @@ mod tests {
         is_focus_key: false,
     });
 
+    fn notifications(state: &FocusState, kind: ListenerKind) -> Notifications {
+        state.changes.with_untracked(|changes| changes.of(kind))
+    }
+
     #[test]
     fn pointerdown_notifies_after_silent_pointer_update() {
         let state = FocusState::new();
 
-        let count = Arc::new(AtomicU32::new(0));
-        let count_clone = Arc::clone(&count);
-        let id = state.register(false, move |_: Modality| {
-            count_clone.fetch_add(1, Ordering::Relaxed);
-        });
-
         state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, ARROW);
-        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(1);
+        assert_that!(notifications(&state, ListenerKind::Other).count).is_equal_to(1);
 
         // pointermove: stored silently.
         state.set_modality_silently(Modality::Pointer, PointerType::Touch);
-        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(1);
-        assert_that!(state.modality()).is_equal_to(Modality::Pointer);
+        assert_that!(notifications(&state, ListenerKind::Other).count).is_equal_to(1);
+        assert_that!(state.notified_modality.get_untracked()).is_equal_to(Some(Modality::Keyboard));
+        assert_that!(state.modality()).is_equal_to(Some(Modality::Pointer));
         assert_that!(state.pointer_type()).is_equal_to(PointerType::Touch);
 
         // pointerdown: always notifies.
         state.set_modality_and_notify(Modality::Pointer, PointerType::Pen, None);
-        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(2);
+        assert_that!(notifications(&state, ListenerKind::Other)).is_equal_to(Notifications {
+            count: 2,
+            is_focus_visible: false,
+        });
+        assert_that!(state.notified_modality.get_untracked()).is_equal_to(Some(Modality::Pointer));
         assert_that!(state.pointer_type()).is_equal_to(PointerType::Pen);
-
-        state.unregister(id);
-        state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, ARROW);
-        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(2);
     }
 
     /// useFocusVisible.test.js, "emits on modality change (non-text input)".
     #[test]
-    fn non_text_input_subscribers_see_every_key() {
+    fn non_text_input_listeners_see_every_key() {
         let state = FocusState::new();
-        let seen = record(&state, false);
 
         state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, ARROW);
+        assert_that!(notifications(&state, ListenerKind::Other)).is_equal_to(Notifications {
+            count: 1,
+            is_focus_visible: true,
+        });
         state.set_modality_and_notify(Modality::Pointer, PointerType::Mouse, None);
-
-        assert_that!(seen.lock().unwrap().clone())
-            .is_equal_to(vec![Modality::Keyboard, Modality::Pointer]);
+        assert_that!(notifications(&state, ListenerKind::Other)).is_equal_to(Notifications {
+            count: 2,
+            is_focus_visible: false,
+        });
     }
 
     /// useFocusVisible.test.js, "emits on modality change (text input)": typing in a text input
     /// doesn't make focus visible, Tab and Escape do; the stored modality changes regardless.
     #[test]
-    fn text_input_subscribers_see_only_focus_keys() {
+    fn text_input_listeners_see_only_focus_keys() {
         let state = FocusState::new();
-        let text_input = record(&state, true);
-        let other = record(&state, false);
+        state.set_modality_and_notify(Modality::Pointer, PointerType::Mouse, None);
 
         state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, ARROW);
-        assert_that!(text_input.lock().unwrap().len()).is_equal_to(0);
-        assert_that!(other.lock().unwrap().len()).is_equal_to(1);
+        assert_that!(notifications(&state, ListenerKind::TextInput)).is_equal_to(Notifications {
+            count: 1,
+            is_focus_visible: false,
+        });
+        assert_that!(notifications(&state, ListenerKind::Other).count).is_equal_to(2);
 
         // Typing where the active element is a text input reaches no one.
         state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, TYPING);
-        assert_that!(other.lock().unwrap().len()).is_equal_to(1);
-        assert_that!(state.modality()).is_equal_to(Modality::Keyboard);
+        assert_that!(notifications(&state, ListenerKind::Other).count).is_equal_to(2);
+        assert_that!(state.modality()).is_equal_to(Some(Modality::Keyboard));
 
         state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, TAB_IN_TEXT_INPUT);
-        assert_that!(text_input.lock().unwrap().clone()).is_equal_to(vec![Modality::Keyboard]);
-        assert_that!(other.lock().unwrap().len()).is_equal_to(2);
+        assert_that!(notifications(&state, ListenerKind::TextInput)).is_equal_to(Notifications {
+            count: 2,
+            is_focus_visible: true,
+        });
+        assert_that!(notifications(&state, ListenerKind::Other).count).is_equal_to(3);
     }
 
     /// A programmatic keyboard modality (`set_modality`, the `invalid` handler) reaches text input
-    /// subscribers too (react-aria: no event, so `isKeyboardFocusEvent` is true).
+    /// listeners too (react-aria: no event, so `isKeyboardFocusEvent` is true).
     #[test]
     fn programmatic_keyboard_modality_reaches_text_inputs() {
         let state = FocusState::new();
-        let text_input = record(&state, true);
 
         state.set_modality_and_notify(Modality::Pointer, PointerType::Mouse, None);
         state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, None);
 
-        assert_that!(text_input.lock().unwrap().clone())
-            .is_equal_to(vec![Modality::Pointer, Modality::Keyboard]);
+        assert_that!(notifications(&state, ListenerKind::TextInput)).is_equal_to(Notifications {
+            count: 2,
+            is_focus_visible: true,
+        });
+    }
+
+    /// A listener keeps its start value until the next notification of its kind, then follows
+    /// the notifications (react-aria's `useFocusVisible` with `autoFocus`).
+    #[test]
+    fn a_listener_starts_with_its_own_value() {
+        let state = FocusState::new();
+        state.set_modality_and_notify(Modality::Pointer, PointerType::Mouse, None);
+
+        let auto_focused = FocusVisibleSince::now(&state, ListenerKind::Other, true);
+        assert_that!(auto_focused.visible(&state.changes)).is_true();
+
+        // Typing in a text input reaches no listener: the start value stays.
+        state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, TYPING);
+        assert_that!(auto_focused.visible(&state.changes)).is_true();
+
+        state.set_modality_and_notify(Modality::Pointer, PointerType::Mouse, None);
+        assert_that!(auto_focused.visible(&state.changes)).is_false();
+    }
+
+    /// Only changes write the notified modality: listeners of it (per-item hooks) don't rerun on
+    /// every key.
+    #[test]
+    fn the_notified_modality_is_written_only_on_change() {
+        crate::testing::with_owner(|| {
+            let state = FocusState::new();
+            let modality = state.notified_modality.clone();
+            let runs = ArcRwSignal::new(0);
+            let counter = runs.clone();
+            Effect::new(move |_| {
+                modality.track();
+                *counter.write_untracked() += 1;
+            });
+            crate::testing::flush_effects();
+            assert_that!(runs.get_untracked()).is_equal_to(1);
+
+            for _ in 0..3 {
+                state.set_modality_and_notify(Modality::Keyboard, PointerType::Keyboard, ARROW);
+                crate::testing::flush_effects();
+            }
+            assert_that!(runs.get_untracked()).is_equal_to(2);
+        });
     }
 }

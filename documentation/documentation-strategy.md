@@ -126,8 +126,8 @@ layer, but its introduction explains the concept, as there is no overview to lin
 tabs once it gains a second layer.
 
 **Building-block pages** follow the structure of their layer; their introduction explains the behavior and links
-the area overview. Closely related hooks share one page (`use_enter_animation` and `use_exit_animation`), each with
-its own section.
+the area overview. Closely related hooks share one page (`use_virtualizer_state` with `use_scroll_view` and
+`use_virtualizer_item`), each with its own section.
 
 ## Writing Pages
 
@@ -142,48 +142,50 @@ pub fn PageUseButton() -> impl IntoView {
     view! {
         <DocPage title="use_button">
             <p>"The "<Code inline=true>"use_button"</Code>" hook makes ... See the "
-               <Link href=routes::doc::Button.materialize()>"Button overview"</Link>"."</p>
+               <Link href=routes::doc::Button.materialize()>"Button overview"</Link>
+               " for concept guidance and keyboard interaction."</p>
             <ReactAria hook="useButton"/>
 
             <Section title="Input">
-                <ApiTable kind=ApiKind::Input>
-                    <ApiRow name="disabled" ty="Signal<bool>" default="false">"Whether the button is disabled."</ApiRow>
+                <ApiTable kind=ApiKind::Input of="UseButtonInput">
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the button is disabled."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Demo">
-                <Demo description="Press count tracking" source=include_str!("demos/button_basic.rs")>
+                <Demo description="A div made a button, counting presses" source=include_str!("demos/button_basic.rs")>
                     <BasicButtonDemo/>
                 </Demo>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Enter / Space">"Press the button."</KeyRow>
-                </KeyboardTable>
-            </Section>
-
             <SeeAlso>
-                <li><Link href=routes::doc::button::Atom.materialize()>"Button atom"</Link></li>
+                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atom"</Link></li>
             </SeeAlso>
         </DocPage>
     }
 }
 ```
 
-| Kit piece                       | Purpose                                                                                      |
-|---------------------------------|----------------------------------------------------------------------------------------------|
-| `DocPage title`                 | The page: `<h1>`, the `<article>` exported as Markdown, the generated table of contents.     |
-| `Section title [id]`            | A titled section. Nesting gives `<h2>`, `<h3>`, ... All headings land in the TOC.            |
-| `ApiTable kind` + `ApiRow`      | Input, Return, Fields, Props and Data Attributes tables. `name` may list several.            |
-| `ApiTable of`                   | The documented struct (Input/Return/Fields) or atom (Props). A test checks rows and types.   |
-| `KeyboardTable` + `KeyRow keys` | Keyboard interaction. `keys="Shift + Tab"`, alternatives as `"Enter / Space"`.               |
-| `DocTable headers`              | Any other table; rows are plain `<tr><td>`.                                                  |
-| `Demo description source`       | Frame for an interactive demo with collapsible source. `source_open` expands it.             |
-| `ReactAria hook`                | "Based on react-aria's useX." with a link.                                                   |
-| `ReactAriaSource path`          | The same for parts without a react-aria docs page, linking the source file.                  |
-| `SectionMembers overview`       | Table of a navigation section's pages (name, layers, summary), generated from `nav.rs`.      |
-| `SeeAlso`                       | The closing "See Also" section; children are `<li>` links.                                   |
+| Kit piece                        | Purpose                                                                                      |
+|----------------------------------|----------------------------------------------------------------------------------------------|
+| `DocPage title [id]`             | The page: `<h1>`, the `<article>` exported as Markdown, the generated table of contents.     |
+| `Section title [id]`             | A titled section. Nesting gives `<h2>`, `<h3>`, ... All headings land in the TOC.            |
+| `ApiTable kind` + `ApiRow`       | Input, Return, Fields, Props and Data Attributes tables. `name` may list several.            |
+| `ApiTable of`                    | The documented struct (Input/Return/Fields) or atom (Props). A test checks rows and types.   |
+| `KeyboardTable` + `KeyRow keys`  | Keyboard interaction. `keys="Shift + Tab"`, alternatives as `"Enter / Space"`.               |
+| `Keys keys`                      | Keys in prose, as key caps. Keys are `KeyboardKey` names (`"ArrowDown"`); a test checks it.  |
+| `DocTable headers`               | Any other table; rows are `TableRow`s of `TableCell`s.                                       |
+| `Demo description source`        | Frame for an interactive demo with collapsible source and styles. `source_open` expands it.  |
+| `Code [inline] [language]`       | Inline code, or a code block (highlighted when it has a `Language`, with a copy button).     |
+| `Link href`, `AnchorLink href`   | A link to a page or URL, and to an anchor of the same page, in the book's link style.        |
+| `ReactAria hook`                 | "Based on react-aria's useX." with a link. A test checks that the docs page exists.          |
+| `ReactAriaSource path [package]` | The same for parts without a react-aria docs page, linking the source file.                  |
+| `SectionMembers overview`        | Table of a navigation group's pages (name, layers, summary), generated from `nav.rs`.        |
+| `SeeAlso`                        | The closing "See Also" section; children are `<li>` links.                                   |
+
+Without an `id`, a section whose title is already used on the page gets its parent's id as prefix (the second
+"Input" below `use_option` becomes `use-option-input`). `Keys` and `KeyRow` also accept a few descriptions of key
+groups (`"Arrow keys"`, `"Letter keys"`), shown as text.
 
 ### Prose
 
@@ -191,11 +193,12 @@ pub fn PageUseButton() -> impl IntoView {
   closely related concepts or building blocks.
 - Link texts of layer pages are their titles ("Slider Hooks", "Slider Atoms"), in layer tables, See Also and prose
   alike.
-- In-page links use leptonic's `AnchorLink` (`<AnchorLink href="#marks">"Marks"</AnchorLink>`), never a raw `<a>`.
+- In-page links use the kit's `AnchorLink` (leptonic's `AnchorLink` atom in the book's link style:
+  `<AnchorLink href="#marks">"Marks"</AnchorLink>`), never a raw `<a>`.
 - Keys are always `Keys`/`KeyRow`. A shortcut with the platform's primary modifier names both:
   `<Keys keys="Control + A"/>" (" <Keys keys="Meta + A"/>" on macOS)"` — leptonic matches `Command` on Apple devices.
-- Code examples compile against the current API: include imports that aren't in the preludes, and never use book
-  helpers in them.
+- Code examples compile against the current API: include their leptonic imports (leptonic has no prelude), and never
+  use book helpers in them.
 - Input and Props tables fill the Default column from the `Default` implementation (for inputs without one: the value
   a caller writes when they don't need the field) and mark required fields with "Required." in the description.
   Inputs have no constructors: samples write them as struct literals with every field named, or with
@@ -239,24 +242,27 @@ pub fn PageUseButton() -> impl IntoView {
 
 - Book code follows the library's quality bar: zero clippy findings (`all` + `pedantic`), SSR-safe browser access
   (`leptos_use::use_window()`), no `unwrap()` on fallible operations.
-- Imports: `use crate::{kit::*, routes};` for pages; leptonic through its preludes.
+- Imports: `use crate::{kit::*, routes};` for pages; leptonic by module path (`use leptonic::atoms;`,
+  `use leptonic::hooks::button::{UseButtonInput, use_button};`), as it has no prelude.
 
 ## Navigation
 
 `src/nav.rs` defines all pages: the sidebar parts, their groups and entries, and the tabs of concepts. It drives the
 sidebar, the concept tabs, the member tables of group overviews and the page kinds of the Markdown export. Adding a
 page means adding its route in `src/routes.rs` and its entry in `src/nav.rs`; a page missing from the navigation is
-logged as a warning at startup. Every entry has a one-line `summary` (no trailing period), shown in the
-`SectionMembers` table of its group's overview page; a unit test enforces it.
+logged as a warning at startup (when the Markdown export converts it). Every entry has a one-line `summary` (no
+trailing period), shown in the `SectionMembers` table of its group's overview page and used as the page's meta
+description; a unit test enforces it.
 
 ### Sidebar parts
 
 A reader arrives with one of two questions: "which UI element do I need?" or "how do I give my own element a
-behavior?". The sidebar answers each in its own part, framed by the guides:
+behavior?". The sidebar answers each in its own part, framed by the guides (Getting started and Guides are the two
+groups of the sidebar's first part, which has no heading):
 
 1. **Getting started**: what leptonic is, installing it, the changelog.
 2. **Guides**: topics every page builds on (the layers and styling atoms, event propagation, classes and styles,
-   themes and the atom theme, forms and validation, SSR, accessibility, compile times and binary sizes).
+   callbacks, themes and the atom theme, forms and validation, SSR, accessibility, compile times and binary sizes).
 3. **Concepts**: every concept, in groups by purpose: Buttons, Fields, Pickers, Collections, Date & Time, Color,
    Overlays, Navigation, Status, Content & Layout. The groups follow react-aria-components' catalog, so readers
    who know it find things where they expect them.
@@ -293,16 +299,19 @@ A concept with many hooks is one of two cases:
 
 ### Concept tabs
 
-A concept with both layers has the tabs **Overview · Hook(s) · Atom(s)**, in this order. The labels follow from the page kind and the number of documented items (`Hook` / `Hooks`), never
-from free text. Several hooks of one concept are sections of the one Hooks tab, not tabs of their own.
+A concept with both layers has the tabs **Overview · Hook(s) · Atom(s)**, in this order. The labels follow from the
+page kind and the number of documented items (`Hook` / `Hooks`), never from free text. Several hooks of one concept are sections of the one Hooks tab, not tabs of their own.
 
 ### Enforced by `nav.rs`
 
 The rules above are checked, not just written down:
 
-- Tab labels derive from `PageKind`; a sidebar part decides whether its entries show layer markers or badges.
-- Unit tests fail when a concept group contains a building block or the other way around, when a hook and an atom of
-  the same name are separate entries instead of one concept, and when entries are out of order.
+- Tab labels derive from the tab's layer and whether it documents several items (`NavTab::label`); a sidebar part
+  decides whether its entries show layer markers or badges.
+- Unit tests fail when an entry doesn't fit its part (a guide that isn't a `Guide`, a concept without one tab per
+  layer in the order hook, atom, a building block with tabs or without a badge), when a hook and an atom of the same
+  name are separate entries instead of one concept, when the entries of a concept group are out of order, when a page
+  is listed twice and when an entry lacks a one-line summary.
 
 ### URL structure
 
@@ -323,15 +332,18 @@ component-only pages to their recipe or replacement.
 
 ## Verification
 
-- `cargo test --features ssr --lib` in `examples/book-ssr`: unit tests of the kit, the navigation (every entry has
-  a summary) and `kit::api_check` (API tables against the library source).
+- `cargo test --features ssr --lib` in `examples/book-ssr`: unit tests of the kit (`kit::api_check`: API tables
+  against the library source; key names; react-aria links; `SectionMembers` overviews; every page has a description),
+  the navigation rules, the Markdown conversion and the contrast of the theme tokens (`contrast_check`).
 - `just book-browser-test` (`examples/book-ssr/tests/`): visits every page of the navigation and fails on page
   errors, demos unreadable in the dark theme, internal links or anchors that don't resolve, pages wider than a 390px
-  screen, and pages missing from the Markdown export. Add checks there, in Rust, in the style of the library's browser
-  tests: every case a `pub async fn` that loads its page itself, registered in `ui_tests::all()` and run as a test of
-  its own in a fresh or reset browser (no state of other tests; set the theme with `BookPage::set_theme`).
-  `BROWSER_TEST_FILTER=<text>` runs the matching tests (`shell::`, `/doc/table`), `BOOK_TEST_PAGES=<text>` limits the
-  page checks to matching pages. Never run two book suites at the same time: they share the app's build directory.
+  screen, and pages missing from the Markdown export; further cases check the shell (search, theme toggle, phone
+  layout, copy buttons), the sidebar and the contrast of the book's chrome in both themes. Add checks there, in Rust,
+  in the style of the library's browser tests: every case a `pub async fn` that loads its page itself, registered in
+  `ui_tests::checks()` (`tests/ui_tests/mod.rs`) and run as a test of its own in a fresh or reset browser (no state
+  of other tests; set the theme with `BookPage::set_theme`). `BROWSER_TEST_FILTER=<text>` runs the matching tests
+  (`shell::`, `/doc/table`; several texts separated by commas), `BOOK_TEST_PAGES=<text>` limits the page checks to
+  matching pages. Never run two book suites at the same time: they share the app's build directory.
 - Clippy for both builds, zero findings: `cargo clippy --features ssr --tests` and
   `cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown`.
 - Screenshots of the affected pages when changing visuals (`just book-serve-isolated` serves a second instance).
@@ -340,17 +352,18 @@ component-only pages to their recipe or replacement.
 ## Markdown Export (LLM-native docs)
 
 Every `/doc/...` page is also served as Markdown at `/doc/....md`, and `/doc/llm-index.md` lists all pages with
-their sections, in the order of the sidebar (generated from `nav.rs`): Getting started, Guides, the concepts by group
-and the building blocks by area. Content is defined once, in the Leptos page; the Markdown is derived from it
+their descriptions and sections, in the order of the sidebar (generated from `nav.rs`): Getting started, Guides, the
+concepts by group and the building blocks by area. Content is defined once, in the Leptos page; the Markdown is derived from it
 (`src/markdown/`):
 
 - The middleware renders the page through SSR, converts its `<article>` with `htmd` and caches the result. All pages
-  are converted at startup, which also feeds the book's search (which matches the plain text of the article, without
-  frontmatter and demos).
+  are converted at startup, which also feeds the book's search (which matches the title, the indexed sections and
+  the plain text of the article, without frontmatter and demos).
 - Frontmatter: title (`<h1>`), kind (page kind from `nav.rs`: `guide`, `overview`, `concept`, `hook`, `atom` or
   `utility`), path, description (first paragraph) and related pages (the See Also links).
 - Demos become `*[Interactive Demo: <description>]*` followed by their Rust source.
-- Links to other pages point to their Markdown export.
+- Links to other pages point to their Markdown export. Keys (`Keys`, `KeyRow`) become inline code.
+- Every page has a "Copy as Markdown" button next to its title, which downloads the export only when pressed.
 - Every hook or atom documented on a page must appear by name in a section title, or it is invisible to
   the index and the search. The index lists a page's `##` sections and, nested under them, the `###` sections whose
   title names an item (one word with an underscore or an inner capital, `use_drag_session`, `ListState`) that no

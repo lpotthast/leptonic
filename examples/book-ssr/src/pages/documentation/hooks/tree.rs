@@ -70,8 +70,11 @@ pub fn PageUseTree() -> impl IntoView {
                         {indoc!(r#"
                             use std::collections::HashSet;
 
-                            use leptonic::hooks::{
-                                Key, UseTreeStateInput, collections::SelectionOptions, use_collection, use_tree_state,
+                            use leptonic::{
+                                hooks::{
+                                    collections::{Key, SelectionOptions, use_collection},
+                                    tree::{UseTreeStateInput, use_tree_state},
+                                },
                             };
 
 
@@ -106,11 +109,13 @@ pub fn PageUseTree() -> impl IntoView {
                         <ApiRow name="element" ty="CapturedElement">"The tree element; the props capture it. Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the tree."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the tree."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id(s) of elements naming the tree."</ApiRow>
                         <ApiRow name="options" ty="CollectionOptions" default="CollectionOptions::default()">
                             "Keyboard and focus behavior, see "<Link href=format!("{}#collectionoptions", routes::doc::CollectionState.materialize())>"CollectionOptions"</Link>"."
                         </ApiRow>
                         <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated item."</ApiRow>
+                        <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="KeyboardNavigationBehavior::Arrow">"How keyboard focus moves between interactive children."</ApiRow>
+                        <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends instead of when it starts."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -128,6 +133,9 @@ pub fn PageUseTree() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseTreeItemInput">
                         <ApiRow name="tree" ty="GridListData">"From "<Code inline=true>"use_tree"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The item\u{2019}s key. Required."</ApiRow>
+                        <ApiRow name="allows_arrow_navigation" ty="bool" default="false">"Allow arrow navigation between items while an interactive child has focus."</ApiRow>
+                        <ApiRow name="focus_mode" ty="FocusMode" default="FocusMode::Row">"Whether an item focuses its row or its first focusable child."</ApiRow>
+                        <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>" default="None">"Called when a context menu is requested."</ApiRow>
                     </ApiTable>
                 </Section>
 

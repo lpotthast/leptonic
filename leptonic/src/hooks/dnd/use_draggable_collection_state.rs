@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/dnd/useDraggableCollectionState.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDraggableCollection.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::prelude::*;
@@ -47,6 +48,9 @@ pub struct DraggableCollectionState {
     /// All dragged items.
     pub dragging_keys: Signal<HashSet<Key>>,
     pub is_disabled: Signal<bool>,
+    /// The selected items without those whose parent is selected too: what dragging a selected
+    /// item drags.
+    selected_drag_keys: Memo<HashSet<Key>>,
     pub(crate) preview: Option<Callback<Vec<DragItem>, Option<DragPreview>>>,
     pub(crate) allowed_drop_operations: Option<Signal<Vec<DropOperation>>>,
     get_items: Callback<HashSet<Key>, Vec<DragItem>>,
@@ -72,36 +76,22 @@ impl DraggableCollectionState {
     }
 
     /// The items a drag starting at `key` drags: all selected items if `key` is selected (but
-    /// not those whose parent is selected too), else only `key`.
+    /// not those whose parent is selected too), else only `key`. Untracked.
     pub fn keys_for_drag(&self, key: &Key) -> HashSet<Key> {
-        let selection = self.list.selection;
-        untrack(|| {
-            if !selection.is_selected(key) {
-                return std::iter::once(key.clone()).collect();
-            }
-            let selected = selection.selected_keys();
-            self.list.collection.with(|c| {
-                selected
-                    .iter()
-                    .filter(|key| {
-                        let Some(mut node) = c.get(key) else {
-                            return false;
-                        };
-                        while let Some(parent) = node.parent_key.as_ref() {
-                            if selected.contains(parent) {
-                                return false;
-                            }
-                            match c.get(parent) {
-                                Some(parent) => node = parent,
-                                None => break,
-                            }
-                        }
-                        true
-                    })
-                    .cloned()
-                    .collect()
-            })
-        })
+        if untrack(|| self.list.selection.is_selected(key)) {
+            self.selected_drag_keys.get_untracked()
+        } else {
+            std::iter::once(key.clone()).collect()
+        }
+    }
+
+    /// How many items a drag starting at `key` drags (tracked: follows the selection).
+    pub fn drag_count(&self, key: &Key) -> usize {
+        if self.list.selection.is_selected(key) {
+            self.selected_drag_keys.with(HashSet::len)
+        } else {
+            1
+        }
     }
 
     /// The data of a drag starting at `key`.
@@ -164,11 +154,38 @@ pub fn use_draggable_collection_state(
     } = input;
     let (dragged_key, set_dragged_key) = signal(None);
     let (dragging_keys, set_dragging_keys) = signal(HashSet::new());
+    let selection = list.selection;
+    let collection = list.collection;
+    let selected_drag_keys = Memo::new(move |_| {
+        let selected = selection.selected_keys();
+        collection.with(|c| {
+            selected
+                .iter()
+                .filter(|key| {
+                    let Some(mut node) = c.get(key) else {
+                        return false;
+                    };
+                    while let Some(parent) = node.parent_key.as_ref() {
+                        if selected.contains(parent) {
+                            return false;
+                        }
+                        match c.get(parent) {
+                            Some(parent) => node = parent,
+                            None => break,
+                        }
+                    }
+                    true
+                })
+                .cloned()
+                .collect()
+        })
+    });
     DraggableCollectionState {
         list,
         dragged_key: dragged_key.into(),
         dragging_keys: dragging_keys.into(),
         is_disabled,
+        selected_drag_keys,
         preview,
         allowed_drop_operations,
         get_items,
@@ -187,14 +204,13 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::hooks::{
-        SelectionMode,
-        collections::{Collection, Selection, SelectionOptions, UseListStateInput, use_list_state},
+    use crate::hooks::collections::{
+        Collection, Selection, SelectionMode, SelectionOptions, UseListStateInput, use_list_state,
     };
 
     #[test]
     fn dragging_a_selected_item_drags_the_selection_without_nested_items() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let collection = Memo::new(|_| {
                 Arc::new(Collection::build(|b| {
                     b.item("a", "A").children(|c| {
@@ -239,6 +255,13 @@ mod tests {
             assert_that!(keys).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
             assert_that!(state.keys_for_drag(&Key::from("c")).len()).is_equal_to(1);
             assert_that!(state.items(&Key::from("c")).len()).is_equal_to(1);
+            assert_that!(state.drag_count(&Key::from("b"))).is_equal_to(2);
+            assert_that!(state.drag_count(&Key::from("c"))).is_equal_to(1);
+
+            // The dragged keys follow the selection.
+            list.selection.toggle_selection(&Key::from("c"));
+            crate::testing::flush_effects();
+            assert_that!(state.drag_count(&Key::from("b"))).is_equal_to(3);
         });
     }
 }

@@ -6,36 +6,45 @@
 //! only while a dialog is inside, decided per opening). A popover keeps the direction of the
 //! subtree its trigger is in.
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, role};
+use crate::pages::{ElementActions, EventKind, GlobalTarget, Page, SyntheticEvent, role};
 
 const PATH: &str = "/atoms/popover";
 
 const DIALOG: &str = "[role=dialog]";
 
-/// Works with a dialog: the trigger controls the dialog, which its title names (Dialog.test.js)
-/// and which takes the focus. Pressing a button inside doesn't toggle the popover through the
-/// trigger; Escape closes it and focus returns to the trigger.
+/// The trigger opens and controls a focused dialog named by its title, presses inside keep it open,
+/// and Escape closes it with the focus back on the trigger ("works with a dialog").
+#[browser_test]
 pub async fn trigger_controls_the_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let trigger = page.element("#test-popover-trigger").await?;
-    assert_that!(trigger.attr("aria-expanded").await?)
-        .get_some()
+    assert_that!(trigger)
+        .has_attribute("aria-expanded")
+        .await
         .is_equal_to("false");
     assert_that!(page.count(DIALOG).await?).is_equal_to(0);
 
     trigger.click().await?;
     let dialog = page.element(DIALOG).await?;
     let dialog_id = dialog.id().await?;
-    assert_that!(trigger.attr("aria-controls").await?).is_equal_to(dialog_id);
-    assert_that!(trigger.attr("aria-expanded").await?)
-        .get_some()
+    assert_that!(trigger)
+        .attribute("aria-controls")
+        .await
+        .is_equal_to(dialog_id);
+    assert_that!(trigger)
+        .has_attribute("aria-expanded")
+        .await
         .is_equal_to("true");
     page.element("[data-placement]").await?;
     let title_id = dialog.element("h2").await?.id().await?;
-    assert_that!(dialog.attr("aria-labelledby").await?).is_equal_to(title_id);
+    assert_that!(dialog)
+        .attribute("aria-labelledby")
+        .await
+        .is_equal_to(title_id);
     page.wait_for_focus(&dialog).await?;
 
     page.element("#test-popover-inner").await?.click().await?;
@@ -54,36 +63,33 @@ pub async fn trigger_controls_the_dialog(page: &Page<'_>) -> Result<(), Report> 
     Ok(())
 }
 
-/// A click outside a modal popover (on its underlay, which covers the page) closes it.
+/// A click outside a modal popover (on its underlay) closes it and returns the focus to the
+/// trigger.
+#[browser_test]
 pub async fn outside_click_closes(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let trigger = page.element("#test-popover-trigger").await?;
     trigger.click().await?;
     page.element(DIALOG).await?;
-    page.driver
-        .action_chain()
-        .move_to(5, 5)
-        .click()
-        .perform()
-        .await?;
+    page.click_at(5, 5).await?;
     page.wait_for_count(DIALOG, 0).await?;
     page.wait_for_focus(&trigger).await?;
     Ok(())
 }
 
-/// A non-modal popover leaves the page usable and closes when focus moves out. With a dialog
-/// inside, it contains focus (react-aria's `useOverlayFocusContain`): Tab wraps around instead of
-/// leaving (which would close it).
+/// A non-modal popover with a dialog inside contains the focus (Tab wraps around), and a click on
+/// the still usable page outside closes it and focuses the clicked element.
+#[browser_test]
 pub async fn non_modal_contains_focus_with_a_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    page.element("#test-popover-non-modal-trigger")
+    page.element("#test-popover-toggled-trigger")
         .await?
         .click()
         .await?;
-    let info = page.element("[role=dialog][aria-label=Info]").await?;
+    let info = page.element("[role=dialog][aria-label=Toggled]").await?;
     page.wait_for_focus(&info).await?;
-    let first = page.element("#test-popover-non-modal-first").await?;
-    let second = page.element("#test-popover-non-modal-second").await?;
+    let first = page.element("#test-popover-toggled-first").await?;
+    let second = page.element("#test-popover-toggled-second").await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&first).await?;
     page.send_keys(Key::Tab).await?;
@@ -98,37 +104,53 @@ pub async fn non_modal_contains_focus_with_a_dialog(page: &Page<'_>) -> Result<(
     Ok(())
 }
 
-/// "should get default aria label from trigger": without a title, the trigger names the dialog;
-/// the trigger gets an id for it.
+/// A dialog without a title is labelled by its trigger, which gets an id for it ("should get
+/// default aria label from trigger").
+#[browser_test]
 pub async fn trigger_names_an_untitled_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    let untitled = page.element(role("button").text("Untitled")).await?;
+    let untitled = page
+        .element(role(AriaRole::Button).text("Untitled"))
+        .await?;
     untitled.click().await?;
     let dialog = page.element(DIALOG).await?;
-    let untitled_id = untitled.id().await?;
-    assert_that!(untitled_id.as_deref())
-        .get_some()
-        .is_not_empty();
-    assert_that!(dialog.attr("aria-labelledby").await?).is_equal_to(untitled_id);
+    let untitled_id = assert_that!(untitled)
+        .has_attribute("id")
+        .await
+        .is_not_empty()
+        .actual()
+        .clone();
+    assert_that!(dialog)
+        .has_attribute("aria-labelledby")
+        .await
+        .is_equal_to(untitled_id);
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(DIALOG, 0).await?;
     Ok(())
 }
 
-/// "applies overlay id to standalone popover", "should handle focus": without a dialog inside,
-/// the modal popover is the dialog: the trigger controls it, it is focused and named by the
-/// trigger, and focus returns to the trigger when it closes.
+/// A modal popover without a dialog inside is itself the dialog, controlled and labelled by the
+/// trigger and focused, and the focus returns to the trigger on close ("applies overlay id to
+/// standalone popover", "should handle focus").
+#[browser_test]
 pub async fn standalone_popover_is_the_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let standalone = page.element("#test-popover-standalone-trigger").await?;
     standalone.click().await?;
     let dialog = page.element(DIALOG).await?;
     let dialog_id = dialog.id().await?;
-    assert_that!(standalone.attr("aria-controls").await?).is_equal_to(dialog_id);
-    assert_that!(dialog.attr("aria-labelledby").await?)
-        .get_some()
+    assert_that!(standalone)
+        .attribute("aria-controls")
+        .await
+        .is_equal_to(dialog_id);
+    assert_that!(dialog)
+        .has_attribute("aria-labelledby")
+        .await
         .is_equal_to("test-popover-standalone-trigger");
-    assert_that!(dialog.inner_text().await?).is_equal_to("Standalone content");
+    assert_that!(dialog)
+        .inner_text()
+        .await
+        .is_equal_to("Standalone content");
     page.wait_for_focus(&dialog).await?;
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(DIALOG, 0).await?;
@@ -136,8 +158,9 @@ pub async fn standalone_popover_is_the_dialog(page: &Page<'_>) -> Result<(), Rep
     Ok(())
 }
 
-/// "supports isEntering and isExiting props", with CSS animations: entering while its animation
-/// runs, then exiting (and still rendered) until the exit animation ended.
+/// An animated popover has `data-entering` while its entry animation runs and stays rendered with
+/// `data-exiting` until its exit animation ends ("supports isEntering and isExiting props").
+#[browser_test]
 pub async fn animated(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let trigger = page.element("#test-popover-animated-trigger").await?;
@@ -153,32 +176,75 @@ pub async fn animated(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// useOverlayPosition.test.tsx: a non-modal popover stays open when an adjacent region scrolls
-/// ("should not close the overlay when an adjacent scrollable region scrolls"), and closes when
-/// the page scrolls ("should close the overlay when the body scrolls"). `scroll` events don't
-/// bubble.
+/// A non-modal popover stays open when an adjacent region scrolls and closes when the page scrolls
+/// (useOverlayPosition.test.tsx "should not close the overlay when an adjacent scrollable region
+/// scrolls", "should close the overlay when the body scrolls").
+#[browser_test]
 pub async fn scrolling(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    page.element("#test-popover-non-modal-trigger")
+    page.element("#test-popover-toggled-trigger")
         .await?
         .click()
         .await?;
     page.element(DIALOG).await?;
     page.element("#test-popover-adjacent-scroll")
         .await?
-        .dispatch(SyntheticEvent::plain("scroll").with("bubbles", false))
+        .dispatch(SyntheticEvent::plain(EventKind::Scroll).bubbles(false))
         .await?;
-    page.count_stays(DIALOG, 1).await?;
+    page.count_stays(DIALOG, 1, std::time::Duration::from_millis(100))
+        .await?;
     page.element("body")
         .await?
-        .dispatch(SyntheticEvent::plain("scroll").with("bubbles", false))
+        .dispatch(SyntheticEvent::plain(EventKind::Scroll).bubbles(false))
         .await?;
     page.wait_for_count(DIALOG, 0).await?;
     Ok(())
 }
 
-/// A non-modal popover contains the focus while a dialog is inside; reopened without one, it
-/// doesn't (the containment starts over with each opening): Shift+Tab leaves it, which closes it.
+/// A non-modal popover closes when the document or the window scrolls ("should close the overlay
+/// when the document scrolls", "should close the overlay when target is window in a scroll event",
+/// useOverlayPosition.test.tsx).
+#[browser_test]
+pub async fn closes_on_document_and_window_scroll(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let trigger = page.element("#test-popover-toggled-trigger").await?;
+    for target in [GlobalTarget::Document, GlobalTarget::Window] {
+        trigger.click().await?;
+        page.element(DIALOG).await?;
+        page.dispatch_to(
+            target,
+            SyntheticEvent::plain(EventKind::Scroll).bubbles(false),
+        )
+        .await?;
+        page.wait_for_count(DIALOG, 0).await?;
+    }
+    Ok(())
+}
+
+/// A modal popover stays open when the page scrolls (usePopover.test.tsx "should not close popover
+/// on scroll").
+#[browser_test]
+pub async fn modal_stays_open_on_scroll(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-popover-trigger").await?.click().await?;
+    page.element(DIALOG).await?;
+    page.element("body")
+        .await?
+        .dispatch(SyntheticEvent::plain(EventKind::Scroll).bubbles(false))
+        .await?;
+    page.dispatch_to(
+        GlobalTarget::Document,
+        SyntheticEvent::plain(EventKind::Scroll).bubbles(false),
+    )
+    .await?;
+    page.count_stays(DIALOG, 1, std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
+}
+
+/// A non-modal popover contains the focus while a dialog is inside, but reopened without one it
+/// doesn't, so Shift+Tab leaves and closes it.
+#[browser_test]
 pub async fn containment_per_opening(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let trigger = page.element("#test-popover-toggled-trigger").await?;
@@ -214,7 +280,9 @@ pub async fn containment_per_opening(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// The portalled popover renders `dir` from its trigger's locale (react-aria-components).
+/// The portalled popover gets the `dir` of its trigger's locale: `rtl` in a right-to-left subtree,
+/// `ltr` elsewhere.
+#[browser_test]
 pub async fn direction(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-popover-rtl-trigger")
@@ -222,16 +290,18 @@ pub async fn direction(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     let popover = page.element(".test-popover-rtl").await?;
-    assert_that!(popover.attr("dir").await?)
-        .get_some()
+    assert_that!(popover)
+        .has_attribute("dir")
+        .await
         .is_equal_to("rtl");
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(".test-popover-rtl", 0).await?;
 
     page.element("#test-popover-trigger").await?.click().await?;
     let popover = page.element(".leptonic-Popover").await?;
-    assert_that!(popover.attr("dir").await?)
-        .get_some()
+    assert_that!(popover)
+        .has_attribute("dir")
+        .await
         .is_equal_to("ltr");
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(".leptonic-Popover", 0).await?;

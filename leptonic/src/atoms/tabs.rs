@@ -6,20 +6,28 @@ use leptos::{
     context::Provider,
     prelude::*,
 };
+use leptos_classes::Classes;
 use wasm_bindgen::JsCast;
 
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Orientation, Out, ValueBinding,
     hooks::{
-        IntoAttrs, KeyboardActivation, Orientation, TabListData, TabListItemData,
-        UseFocusRingInput, UseFocusRingReturn, UseHoverInput, UseTabInput, UseTabListInput,
-        UseTabListReturn, UseTabListStateInput, UseTabPanelInput, UseTabReturn,
+        animation::{
+            UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
+            use_enter_animation, use_exit_animation,
+        },
         collections::{CollectionMemo, Key, SelectOnPressUp},
-        use_focus_ring, use_hover, use_tab, use_tab_list, use_tab_list_state, use_tab_panel,
+        focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        interactions::{HoverEndEvent, HoverStartEvent, UseHoverInput, use_hover},
+        tabs::{
+            KeyboardActivation, TabListState, UseTabInput, UseTabListInput, UseTabListReturn,
+            UseTabListStateInput, UseTabPanelInput, UseTabReturn, use_tab, use_tab_list,
+            use_tab_list_state, use_tab_panel,
+        },
     },
     utils::{
-        CapturedElement, ValueBinding, aria::AriaRole, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
+        aria::AriaRole, data_attributes::flag, default_class::with_default_class, dev_warn,
+        styles::Styles,
     },
 };
 
@@ -33,9 +41,12 @@ use crate::{
 //   an item aren't reachable by the keyboard, items without a tab are skipped invisibly. Reason:
 //   leptonic's collections are built before rendering (the keyboard delegate, the default
 //   selection and the server-rendered selection need them up front).
-// - Selected key (C4): `default_selected_key` + `on_selection_change`, or `selected_key` +
+// - Selected key (C4): `default_selected_key` + `on_selected_key_change`, or `selected_key` +
 //   `set_selected_key`.
-// - Render props become `data-*` attributes plus plain children.
+// - Render props become `data-*` attributes plus plain children. The parts read the tab list's
+//   `TabListState` from the context (react-aria-components' `TabListStateContext`).
+// - `Tab` has no press callbacks (`onPress*`): the collection item hook doesn't take an item's
+//   own press handlers yet.
 //
 // ## DIFFERENT BEHAVIOR
 // - A `Tab`'s `is_disabled` is known only once the tab renders. The first enabled tab selected
@@ -50,7 +61,7 @@ use crate::{
 // ## OMITTED FEATURES
 // - `SelectionIndicator` (an indicator sliding between the tabs, built on
 //   `SharedElementTransition`) and tabs as links (`href` on `Tab`): not ported yet.
-// - Slots, the `render` prop and `TabListStateContext`.
+// - Slots and the `render` prop.
 //
 // =============================================================================
 
@@ -67,8 +78,10 @@ struct TabsConfig {
 /// tab showing the selected tab's content.
 ///
 /// The tabs come from `collection`: render one [`Tab`] per collection item, in collection order.
+/// The parts (and custom ones) read the [`TabListState`] from the context.
 ///
-/// Data attributes: `data-orientation`.
+/// Data attributes: `data-orientation`, `data-focused` (focus within), `data-focus-visible`
+/// (keyboard focus within), `data-disabled`.
 ///
 /// Default class: `leptonic-Tabs`.
 #[component]
@@ -89,7 +102,7 @@ pub fn Tabs(
     set_selected_key: Option<Out<Key>>,
     /// Called with the key of the tab the user selects.
     #[prop(into, optional)]
-    on_selection_change: Option<Callback<Key>>,
+    on_selected_key_change: Option<Callback<Key>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     /// Disables all tabs.
     #[prop(into, optional)]
@@ -106,18 +119,19 @@ pub fn Tabs(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Tabs", classes);
     let (selected_key, on_selection_change) =
-        ValueBinding::from_state_props(selected_key, set_selected_key, on_selection_change);
+        ValueBinding::from_state_props(selected_key, set_selected_key, on_selected_key_change);
     let disabled_tabs = RwSignal::new(HashSet::new());
     let disabled_keys = disabled_keys.unwrap_or_default();
     let state = use_tab_list_state(UseTabListStateInput {
         default_selected_key,
         selected_key,
         on_selection_change,
-        disabled_keys: Signal::derive(move || {
+        disabled_keys: Memo::new(move |_| {
             let mut keys = disabled_keys.get();
             keys.extend(disabled_tabs.get());
             keys
-        }),
+        })
+        .into(),
         is_disabled,
         collection,
     });
@@ -127,11 +141,28 @@ pub fn Tabs(
         keyboard_activation,
         disabled_tabs,
     };
+    // As react-aria-components' `Tabs`: focus (and keyboard focus) within.
+    let UseFocusRingReturn {
+        props: focus_ring,
+        is_focused,
+        is_focus_visible,
+    } = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Within,
+        ..UseFocusRingInput::default()
+    });
 
     view! {
-        <Provider value=TabListData::new(state)>
+        <Provider value=state>
             <Provider value=config>
-                <div class=classes style=styles data-orientation=data_orientation>
+                <div
+                    {..focus_ring.into_attrs()}
+                    class=classes
+                    style=styles
+                    data-orientation=data_orientation
+                    data-focused=flag(is_focused)
+                    data-focus-visible=flag(is_focus_visible)
+                    data-disabled=flag(is_disabled)
+                >
                     {children()}
                 </div>
             </Provider>
@@ -139,7 +170,18 @@ pub fn Tabs(
     }
 }
 
-/// The tab list of [`Tabs`]: holds the [`Tab`]s.
+/// The tab list's state and the settings of the surrounding [`Tabs`], or `None` (with a warning
+/// in debug builds) outside of one.
+fn tabs_context(part: &str) -> Option<(TabListState, TabsConfig)> {
+    let context = use_context::<TabListState>().zip(use_context::<TabsConfig>());
+    if context.is_none() {
+        dev_warn!("A <{part}> must be inside <Tabs>.");
+    }
+    context
+}
+
+/// The tab list of [`Tabs`]: holds the [`Tab`]s. Name it with `aria_label` or `aria_labelledby`
+/// (with both, it is labelled by itself and the referenced elements).
 ///
 /// Data attributes: `data-orientation`.
 ///
@@ -153,31 +195,23 @@ pub fn TabList(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TabList", classes);
-    let tabs = expect_context::<TabListData>();
-    let config = expect_context::<TabsConfig>();
+    let (state, config) = tabs_context("TabList")?;
     let orientation = config.orientation;
     let data_orientation = move || orientation.get().as_str();
-    let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
+    let UseTabListReturn { props } = use_tab_list(UseTabListInput {
         orientation: config.orientation,
         keyboard_activation: config.keyboard_activation,
         aria_label,
         aria_labelledby,
-        tabs,
+        state,
         element: CapturedElement::new(),
     });
 
-    view! {
-        <Provider value=data>
-            <div
-                {..props.into_attrs()}
-                class=classes
-                style=styles
-                data-orientation=data_orientation
-            >
-                {children()}
-            </div>
-        </Provider>
-    }
+    Some(view! {
+        <div {..props.into_attrs()} class=classes style=styles data-orientation=data_orientation>
+            {children()}
+        </div>
+    })
 }
 
 /// A tab of a [`TabList`], for the collection item `key`. Disable it with `is_disabled`, in the
@@ -196,14 +230,32 @@ pub fn Tab(
     /// Whether the tab is disabled.
     #[prop(into, optional)]
     is_disabled: Signal<bool>,
+    /// Called when the pointer starts hovering the (enabled) tab.
+    #[prop(into, optional)]
+    on_hover_start: Option<Callback<HoverStartEvent>>,
+    /// Called when the pointer stops hovering the tab.
+    #[prop(into, optional)]
+    on_hover_end: Option<Callback<HoverEndEvent>>,
+    /// Called when the hover state changes.
+    #[prop(into, optional)]
+    on_hover_change: Option<Callback<bool>>,
+    /// Called when the tab receives focus.
+    #[prop(into, optional)]
+    on_focus: Option<Callback<web_sys::FocusEvent>>,
+    /// Called when the tab loses focus.
+    #[prop(into, optional)]
+    on_blur: Option<Callback<web_sys::FocusEvent>>,
+    /// Called when the tab's focus changes.
+    #[prop(into, optional)]
+    on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Tab", classes);
-    let list = expect_context::<TabListItemData>();
+    let (state, config) = tabs_context("Tab")?;
     // Disabled tabs join the tab list's disabled keys, so that the keyboard skips them.
-    let disabled_tabs = expect_context::<TabsConfig>().disabled_tabs;
+    let disabled_tabs = config.disabled_tabs;
     let tab_key = StoredValue::new(key.clone());
     let set_disabled = move |disabled: bool| {
         let changed = tab_key
@@ -234,10 +286,13 @@ pub fn Tab(
         is_pressed,
         ..
     } = use_tab(UseTabInput {
-        list,
+        state,
         key,
         is_disabled,
         should_select_on_press_up: SelectOnPressUp::Auto,
+        on_focus,
+        on_blur,
+        on_focus_change,
     });
     let (attrs, tab_styles) = props.into_parts();
     let styles = tab_styles.merge(styles);
@@ -249,10 +304,12 @@ pub fn Tab(
     } = use_focus_ring(UseFocusRingInput::default());
     let hover = use_hover(UseHoverInput {
         is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start,
+        on_hover_end,
+        on_hover_change,
     });
 
-    view! {
+    Some(view! {
         <div
             {..attrs}
             {..focus_ring.into_attrs()}
@@ -268,15 +325,18 @@ pub fn Tab(
         >
             {children()}
         </div>
-    }
+    })
 }
 
-/// The content of the tab `key` of [`Tabs`], rendered while that tab is selected, or always with
-/// `should_force_mount`: then, while its tab isn't selected, it is inert and no tab panel (no
-/// role, id, label or tab stop), as in react-aria-components; style `[data-inert]` to hide it.
+/// The content of the tab `key` of [`Tabs`], rendered while that tab is selected (and while its
+/// exit animation runs), or always with `should_force_mount`. While its tab isn't selected, the
+/// panel is inert and no tab panel (no role, id, label or tab stop), as in
+/// react-aria-components; style `[data-inert]` to hide a force-mounted one.
 ///
 /// Data attributes: `data-focused`, `data-focus-visible` (the panel is focusable without
-/// focusable content), `data-inert`.
+/// focusable content), `data-inert`, `data-entering` (while the enter animation of a panel
+/// mounted by a selection change runs), `data-exiting` (while the exit animation of a panel whose
+/// tab was deselected runs; it stays mounted until it finished).
 ///
 /// Default class: `leptonic-TabPanel`.
 #[component]
@@ -288,6 +348,9 @@ pub fn TabPanel(
     /// with `data-inert` (react-aria-components' `shouldForceMount`).
     #[prop(optional)]
     should_force_mount: bool,
+    /// Names the panel, next to its tab.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: Option<String>,
     #[prop(into, optional)] aria_details: Option<String>,
     #[prop(into, optional)] classes: Classes,
@@ -295,31 +358,67 @@ pub fn TabPanel(
     children: ChildrenFn,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TabPanel", classes);
-    let tabs = expect_context::<TabListData>();
-    let state = tabs.state;
+    let Some(state) = use_context::<TabListState>() else {
+        dev_warn!("A <TabPanel> must be inside <Tabs>.");
+        return None;
+    };
     let panel_key = key.clone();
-    let is_selected = Signal::derive(move || state.selected_key().as_ref() == Some(&panel_key));
+    let is_selected = Memo::new(move |_| state.selected_key().as_ref() == Some(&panel_key)).into();
+    let element = CapturedElement::new();
+    let is_exiting = use_exit_animation(UseExitAnimationInput {
+        element,
+        is_open: is_selected,
+        on_exit: None,
+    })
+    .is_exiting;
+    // Selected when first rendered: no enter animation (react-aria-components).
+    let initially_selected = StoredValue::new(is_selected.get_untracked());
+    Effect::new(move || {
+        if !is_selected.get() {
+            initially_selected.set_value(false);
+        }
+    });
     let panel = move || {
         let panel = use_tab_panel(UseTabPanelInput {
-            tabs: tabs.clone(),
+            state,
             key: Some(key.clone()),
+            aria_label,
             aria_describedby: aria_describedby.clone(),
             aria_details: aria_details.clone(),
         });
         let focus_ring = use_focus_ring(UseFocusRingInput::default());
+        let UseEnterAnimationReturn {
+            is_entering,
+            styles: hiding,
+        } = use_enter_animation(UseEnterAnimationInput {
+            element,
+            is_ready: Signal::stored(true),
+            on_enter: None,
+        });
+        let animates_entry = !initially_selected.get_value();
+        let is_entering = Signal::derive(move || animates_entry && is_entering.get());
         let props = panel.props;
-        // While its tab isn't selected (force-mounted), the panel is no tab panel.
+        // While its tab isn't selected (force-mounted or exiting), the panel is no tab panel.
         let selected = move |value| Signal::derive(move || is_selected.get().then_some(value));
-        let (id, labelled_by, tabindex) = (props.id, props.aria_labelledby, props.tabindex);
+        let (id, label, labelled_by, tabindex) = (
+            props.id,
+            props.aria_label,
+            props.aria_labelledby,
+            props.tabindex,
+        );
         let attrs = (
             Attr(
                 attr::Id,
-                Signal::derive(move || is_selected.get().then(|| id.get())),
+                Signal::derive(move || id.get().filter(|_| is_selected.get())),
             ),
             Attr(attr::Role, selected(AriaRole::Tabpanel)),
             Attr(
+                attr::AriaLabel,
+                Signal::derive(move || label.get().filter(|_| is_selected.get())),
+            ),
+            Attr(
                 attr::AriaLabelledby,
-                Signal::derive(move || is_selected.get().then(|| labelled_by.get())),
+                Signal::derive(move || labelled_by.get().filter(|_| is_selected.get())),
             ),
             Attr(
                 attr::Tabindex,
@@ -331,52 +430,31 @@ pub fn TabPanel(
         );
         let is_focused = focus_ring.is_focused;
         let is_focus_visible = focus_ring.is_focus_visible;
-        (
-            attrs,
-            focus_ring.props.into_attrs(),
-            is_focused,
-            is_focus_visible,
-        )
-    };
-    if should_force_mount {
-        let (attrs, focus_attrs, is_focused, is_focus_visible) = panel();
         let inert = move || (!is_selected.get()).then_some("");
-        return view! {
+        view! {
             <div
                 {..attrs}
-                {..focus_attrs}
-                class=classes
-                style=styles
+                {..focus_ring.props.into_attrs()}
+                {..element.attr()}
+                class=classes.clone()
+                style=hiding.merge(styles.clone())
                 inert=inert
                 data-inert=flag(Signal::derive(move || !is_selected.get()))
                 data-focused=flag(is_focused)
                 data-focus-visible=flag(is_focus_visible)
+                data-entering=flag(is_entering)
+                data-exiting=flag(is_exiting)
             >
                 {children()}
             </div>
         }
-        .into_any();
-    }
-    view! {
-        <Show when=move || is_selected.get()>
-            {
-                let (attrs, focus_attrs, is_focused, is_focus_visible) = panel();
-                view! {
-                    <div
-                        {..attrs}
-                        {..focus_attrs}
-                        class=classes.clone()
-                        style=styles.clone()
-                        data-focused=flag(is_focused)
-                        data-focus-visible=flag(is_focus_visible)
-                    >
-                        {children()}
-                    </div>
-                }
-            }
+    };
+
+    Some(view! {
+        <Show when=move || should_force_mount || is_selected.get() || is_exiting.get()>
+            {panel()}
         </Show>
-    }
-    .into_any()
+    })
 }
 
 /// Groups the [`TabPanel`]s of [`Tabs`] and animates its size when the selected tab changes:
@@ -392,7 +470,10 @@ pub fn TabPanels(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TabPanels", classes);
-    let state = expect_context::<TabListData>().state;
+    let Some(state) = use_context::<TabListState>() else {
+        dev_warn!("A <TabPanels> must be inside <Tabs>.");
+        return None;
+    };
     let element = CapturedElement::new();
     // The size after the last selection change (or mount), to animate from.
     let size = StoredValue::new(None::<(f64, f64)>);
@@ -481,9 +562,9 @@ pub fn TabPanels(
         selected
     });
 
-    view! {
+    Some(view! {
         <div {..element.attr()} class=classes style=styles>
             {children()}
         </div>
-    }
+    })
 }

@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/gridlist/useGridList.ts @ 99e6102368
 // Upstream: react-aria/src/gridlist/utils.ts @ 99e6102368
+// Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
+// Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use std::{collections::HashMap, sync::Arc};
 
 use leptos::{
@@ -8,8 +10,8 @@ use leptos::{
 };
 
 use crate::{
+    CapturedElement, IntoAttrs, Orientation,
     hooks::{
-        IntoAttrs, Orientation,
         collections::{
             Collection, CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout,
             ListState, Node, SelectionMode, UseSelectableCollectionAttrs,
@@ -26,7 +28,6 @@ use crate::{
         tree::TreeExpansion,
     },
     utils::{
-        CapturedElement,
         aria::{AriaMultiselectable, AriaRole},
         id::use_id,
     },
@@ -91,7 +92,7 @@ pub struct GridListData {
     /// See `UseSelectableItemInput::collection_id`.
     pub collection_id: String,
     pub on_action: Option<Callback<Key>>,
-    pub link_behavior: LinkBehavior,
+    pub link_behavior: Signal<LinkBehavior>,
     pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
     pub should_select_on_press_up: bool,
     /// Expansion of tree rows (`None` for flat lists).
@@ -141,15 +142,9 @@ pub fn tree_row_positions(collection: &Collection) -> HashMap<Key, TreeRowPositi
     positions
 }
 
-/// The element id of the row `key` in the grid list `list_id` (whitespace removed from the
-/// key).
+/// The element id of the row `key` in the grid list `list_id` (see [`Key::id_fragment`]).
 pub fn grid_list_row_id(list_id: &str, key: &Key) -> String {
-    let key: String = key
-        .to_string()
-        .chars()
-        .filter(|c| !c.is_whitespace())
-        .collect();
-    format!("{list_id}-{key}")
+    format!("{list_id}-{}", key.id_fragment())
 }
 
 /// Return value of [`use_grid_list`].
@@ -235,7 +230,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
     let mut collection = use_selectable_list(UseSelectableListInput {
         state,
         element,
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         layout,
         layout_delegate: None,
         keyboard_delegate,

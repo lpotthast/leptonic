@@ -54,8 +54,8 @@ pub fn PageModalOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell><Link href=routes::doc::modal::Hook.materialize()>"Modal Hooks"</Link></TableCell>
                         <TableCell>
-                            <Code inline=true>"use_modal_backdrop"</Code>" and "<Code inline=true>"use_modal"</Code>": dismissal, "
-                            "scroll lock, an inert page and "<Code inline=true>"aria-modal"</Code>" for elements you render yourself."
+                            <Code inline=true>"use_modal_backdrop"</Code>": dismissal, scroll lock and an inert page "
+                            "for elements you render yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>

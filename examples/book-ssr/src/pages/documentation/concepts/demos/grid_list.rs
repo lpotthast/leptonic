@@ -1,6 +1,9 @@
 use leptonic::{
     atoms::grid_list::{GridList, GridListItem},
-    hooks::{Key, SelectionBehavior, SelectionMode, collections::Selection, use_list_collection},
+    hooks::collections::{
+        Key, Selection, SelectionBehavior, SelectionMode, UseListCollectionInput,
+        use_list_collection,
+    },
 };
 use leptos::prelude::*;
 
@@ -13,11 +16,11 @@ const FILES: [(&str, &str); 3] = [
 #[component]
 pub fn GridListConceptDemo() -> impl IntoView {
     // A key and a text value (for type-ahead) per file.
-    let files = use_list_collection(
-        Signal::stored(FILES.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, name)| (*name).to_owned(),
-    );
+    let files = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FILES.to_vec()),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, name)| (*name).to_owned(),
+    });
     let selection = RwSignal::new(Selection::default());
     let opened = RwSignal::new(None::<Key>);
 

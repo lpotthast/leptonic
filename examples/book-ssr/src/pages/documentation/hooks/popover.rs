@@ -39,24 +39,6 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         "The trigger the popover is positioned at. Spread "<Code inline=true>"trigger_props"</Code>
                         " onto it, or pass an element you capture already."
                     </ApiRow>
-                    <ApiRow name="placement" ty="Signal<Placement>" default="Bottom">
-                        "Where the popover goes relative to the trigger, see "<Link href=format!("{}#placements", routes::doc::overlay_behavior::UseOverlayPosition.materialize())>"Placements"</Link>"."
-                    </ApiRow>
-                    <ApiRow name="offset" ty="Signal<f64>" default="0.0">"Distance from the trigger along the main axis, in pixels."</ApiRow>
-                    <ApiRow name="cross_offset" ty="Signal<f64>" default="0.0">"Shift along the cross axis, in pixels."</ApiRow>
-                    <ApiRow name="container_padding" ty="Signal<f64>" default="12.0">"Minimum distance from the viewport edges, in pixels."</ApiRow>
-                    <ApiRow name="should_flip" ty="Signal<bool>" default="true">"Flip to the opposite side when there is not enough room."</ApiRow>
-                    <ApiRow name="max_height" ty="Signal<Option<f64>>" default="None">"A maximum height; the room available limits it further."</ApiRow>
-                    <ApiRow name="arrow_size" ty="Signal<Option<f64>>" default="None">
-                        "The arrow\u{2019}s size across the main axis. "<Code inline=true>"None"</Code>
-                        " measures the element captured by "<Code inline=true>"arrow_props"</Code>"."
-                    </ApiRow>
-                    <ApiRow name="arrow_boundary_offset" ty="Signal<f64>" default="0.0">
-                        "The minimum distance between the arrow and the popover\u{2019}s edges."
-                    </ApiRow>
-                    <ApiRow name="boundary" ty="Option<CapturedElement>" default="None">
-                        "The element the popover must stay within. "<Code inline=true>"None"</Code>": the document body."
-                    </ApiRow>
                     <ApiRow name="target_rect" ty="Signal<Option<Rect>>" default="None">
                         "Replaces the trigger\u{2019}s rectangle (viewport coordinates). "<Code inline=true>"None"</Code>
                         ": the state\u{2019}s "<Code inline=true>"point"</Code>" (where a context menu opened), else the trigger."
@@ -80,6 +62,8 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                     <ApiRow name="is_submenu" ty="bool" default="false">
                         "Whether this is a submenu\u{2019}s popover: closed by outside presses although non-modal."
                     </ApiRow>
+                    <ApiRow name="position" ty="OverlayPositionOptions" default="OverlayPositionOptions::default()">"Placement, offsets, boundary and update behavior for the overlay."</ApiRow>
+                    <ApiRow name="scroll" ty="Option<CapturedElement>" default="None">"Capture of the scrollable content whose focused item stays in place during positioning."</ApiRow>
                 </ApiTable>
             </Section>
 

@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/dnd/useDropIndicator.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -11,12 +12,9 @@ use super::{
     use_droppable_item::{UseDroppableItemInput, UseDroppableItemReturn, use_droppable_item},
 };
 use crate::{
-    hooks::{
-        IntoAttrs,
-        collections::{Collection, Key, NodeKind},
-    },
+    CapturedElement, ElementCaptureAttr, IntoAttrs,
+    hooks::collections::{Collection, Key, NodeKind},
     utils::{
-        CapturedElement, ElementCaptureAttr,
         aria::AriaHidden,
         id::use_id,
         intl_strings::{DndStrings, InsertBetweenArgs, use_localized_strings},

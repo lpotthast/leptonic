@@ -1,4 +1,4 @@
-use leptonic::hooks::*;
+use leptonic::hooks::link::{LinkElementType, UseLinkInput, use_link};
 use leptos::prelude::*;
 
 #[component]
@@ -7,7 +7,7 @@ pub fn LinkSpanDemo() -> impl IntoView {
 
     let link = use_link(UseLinkInput {
         // Adds `role="link"` and `tabindex="0"`, so the span is announced and reachable as a link.
-        element_type: LinkElementType::Other,
+        element_type: LinkElementType::Other.into(),
         on_press: Some(Callback::new(move |_| presses.update(|n| *n += 1))),
         ..UseLinkInput::default()
     });

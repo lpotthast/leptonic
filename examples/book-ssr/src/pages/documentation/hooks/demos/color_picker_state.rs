@@ -1,13 +1,17 @@
 use leptonic::{
+    Color, ColorValue, HSV, HsvChannel, IntoAttrs, Orientation, RGB8, ValueBinding,
     atoms::button::Button,
-    hooks::*,
-    utils::{
-        ValueBinding,
-        color::{Color, ColorValue, HSV, HsvChannel, RGB8},
-        css::CssColor,
-        i18n::use_locale,
-        style::BackgroundColorProperty,
+    hooks::{
+        color::{
+            UseColorAreaInput, UseColorAreaStateInput, UseColorPickerStateInput,
+            UseColorSliderInput, UseColorSliderStateInput, UseColorSwatchInput, use_color_area,
+            use_color_area_state, use_color_picker_state, use_color_slider, use_color_slider_state,
+            use_color_swatch,
+        },
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
     },
+    leptos_styles::{css::CssColor, property::BackgroundColorProperty},
+    use_locale,
 };
 use leptos::prelude::*;
 
@@ -69,6 +73,7 @@ pub fn ColorPickerStateDemo() -> impl IntoView {
         aria_label: "Hue".into(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_details: None,
         name: None,
         form: None,
     });
@@ -84,16 +89,17 @@ pub fn ColorPickerStateDemo() -> impl IntoView {
 
     // The thumbs hold the focused (hidden) inputs: `within` reports their focus as `data-focus-visible`.
     let area_focus = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let hue_focus = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
 
     let color = picker.color;
-    let thumb_fill = move || BackgroundColorProperty.declare(CssColor::from(color.get().to::<RGB8>()));
+    let thumb_fill =
+        move || BackgroundColorProperty.declare(CssColor::from(color.get().to::<RGB8>()));
     let (area_attrs, area_styles) = area.color_area_props.into_parts();
     let (area_thumb_attrs, area_thumb_styles) = area.thumb_props.into_parts();
     let (x_attrs, x_styles) = area.x_input_props.into_parts();
@@ -101,8 +107,9 @@ pub fn ColorPickerStateDemo() -> impl IntoView {
     let (hue_track_attrs, hue_track_styles) = hue.slider.track_props.into_parts();
     let (hue_thumb_attrs, hue_thumb_styles) = hue.thumb.thumb_props.into_parts();
     let hue_display = hue_state.display_color();
-    let hue_thumb_styles = hue_thumb_styles
-        .add_reactive(move || BackgroundColorProperty.declare(CssColor::from(hue_display.get().to_rgb8())));
+    let hue_thumb_styles = hue_thumb_styles.add_reactive(move || {
+        BackgroundColorProperty.declare(CssColor::from(hue_display.get().to_rgb8()))
+    });
     let (swatch_attrs, swatch_styles) = swatch.color_swatch_props.into_parts();
 
     view! {

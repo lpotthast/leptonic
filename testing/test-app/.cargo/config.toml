@@ -1,4 +1,11 @@
-# `build.rustflags` come from the repository's `.cargo/config.toml`.
+# `build.rustflags` come from the repository's `.cargo/config.toml`; cargo appends the ones below.
+
+[build]
+# ICU4X uses the test-app's own data (`ICU4X_DATA_DIR` below) instead of the data of every locale.
+rustflags = ["--cfg=icu4x_custom_data"]
 
 [env]
 LEPTOS_OUTPUT_NAME = "leptonic-test-app"
+# The locales the fixtures format with (`just test-app-icu-data` regenerates it, see
+# `documentation/build-performance.md`). Server and wasm both use it: hydration needs both to format alike.
+ICU4X_DATA_DIR = { value = "icu4x-data", relative = true }

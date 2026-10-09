@@ -22,6 +22,8 @@ pub mod test_disclosure;
 pub mod test_dismiss_button;
 pub mod test_dnd;
 pub mod test_dnd_collection;
+pub mod test_dnd_draggable_collection;
+pub mod test_dnd_native;
 pub mod test_focus;
 pub mod test_focus_manager;
 pub mod test_focus_ring;
@@ -35,8 +37,10 @@ pub mod test_forms;
 pub mod test_global_shortcuts;
 pub mod test_grid;
 pub mod test_grid_list;
+pub mod test_grid_list_cases;
 pub mod test_grid_list_features;
 pub mod test_has_tabbable_child;
+pub mod test_helpers;
 pub mod test_hover;
 pub mod test_hydration_ids;
 pub mod test_interact_outside;
@@ -46,6 +50,7 @@ pub mod test_landmark;
 pub mod test_link;
 pub mod test_listbox;
 pub mod test_listbox_features;
+pub mod test_listbox_selection;
 pub mod test_live_announcer;
 pub mod test_localized_atoms;
 pub mod test_long_press;
@@ -57,14 +62,17 @@ pub mod test_number_field;
 pub mod test_number_field_atoms;
 pub mod test_overlay;
 pub mod test_overlay_position;
+pub mod test_overlay_state;
 pub mod test_popover;
 pub mod test_press;
 pub mod test_pressable;
 pub mod test_progress_bar;
 pub mod test_radio_group;
 pub mod test_scroll;
+pub mod test_scroll_wheel;
 pub mod test_search_field;
 pub mod test_select;
+pub mod test_select_behavior;
 pub mod test_select_forms;
 pub mod test_separator;
 pub mod test_server_panics;
@@ -93,973 +101,2664 @@ pub mod test_virtual_list;
 pub mod test_virtualizer;
 pub mod test_visually_hidden;
 
-use std::{borrow::Cow, panic::AssertUnwindSafe};
+use browser_test::{BrowserTests, InvalidEnvVar, Parallelism, TestFilter, TestGroup};
 
-use browser_test::{
-    BrowserTest, BrowserTests, ElementQueryWait, Parallelism, async_trait, thirtyfour::WebDriver,
-};
-use futures::FutureExt as _;
-use rootcause::{Report, prelude::ResultExt};
+use crate::harness::fixture_test;
 
-use crate::{
-    cases::{Case, CaseFn},
-    pages::{Page, PageActions},
-};
-
-/// Every browser test: the UI tests at `parallelism` at once, then the checks of the whole run
-/// ([`after_all`]).
-pub fn all(parallelism: Parallelism) -> BrowserTests<str> {
-    BrowserTests::sequential()
-        .with_group(ui_tests(BrowserTests::parallel(parallelism)))
-        .with_group(after_all(
-            BrowserTests::sequential().named("after all").run_always(),
-        ))
+/// All registrations and logical groups live here, independently of implementation modules.
+/// Group members share the suite's parallelism limit. Known issues are a separate opt-in suite.
+pub fn all(parallelism: Parallelism) -> Result<BrowserTests<str>, InvalidEnvVar> {
+    let known_issues = std::env::var("BROWSER_TEST_KNOWN_ISSUES").is_ok_and(|value| value == "1");
+    let tests = if known_issues {
+        known_issues_tests(parallelism)
+    } else {
+        regular_tests(parallelism)
+    };
+    let after = BrowserTests::sequential().named("after all").run_always();
+    let after = if known_issues {
+        after
+    } else {
+        after.with(fixture_test(test_server_panics::ServerPanicTests {}))
+    };
+    Ok(BrowserTests::sequential()
+        .with_group(tests.filter(&TestFilter::from_env()?))
+        .with_group(after))
 }
 
-/// The UI tests, each loading its own page. Register new tests here.
-///
-/// With `BROWSER_TEST_KNOWN_ISSUES=1`, only the checks for known, not yet fixed bugs run instead.
-/// With `BROWSER_TEST_FILTER=<text>`, only the tests whose name contains `<text>` run (several
-/// texts separated by commas: any of them).
-fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
-    let tests = Selected::new(group);
-    if std::env::var("BROWSER_TEST_KNOWN_ISSUES").is_ok_and(|v| v == "1") {
-        // Register the cases of known, not yet fixed bugs here (and only here).
-        return tests
-            .case(test_virtual_list::rebuilt_component_spread_drops_the_old_handlers)
-            .case(test_tree::expand_button)
-            .tests;
-    }
-    tests
-        .case(test_table_resizing::initial_widths)
-        .case(test_table_resizing::resizing_each_column)
-        .case(test_table_resizing::cannot_resize_below_the_min_width)
-        .case(test_table_resizing::resizing_the_first_column_preserves_fr_ratios)
-        .case(test_table_resizing::resizing_the_last_column_locks_the_columns_before_it)
-        .case(test_table_resizing::on_resize_start_and_end_without_moving)
-        .case(test_table_resizing::keyboard_resizing)
-        .case(test_table_resizing::exiting_keyboard_resizing)
-        .case(test_button::presses_and_props)
-        .case(test_button::state_attributes)
-        .case(test_button::pending)
-        .case(test_button::pending_form_submission)
-        .case(test_button::pending_labelled)
-        .case(test_button::pending_trigger)
-        .case(test_focus::basic_focus)
-        .case(test_focus::tab_focus)
-        .case(test_focus::focus_change_count)
-        .case(test_focus::child_focus_does_not_trigger_parent)
-        .case(test_focus::blur_when_disabled_while_focused)
-        .case(test_focus_within::basic_focus_within)
-        .case(test_focus_within::disabled)
-        .case(test_focus_within::change_callback)
-        .case(test_focus_within::tab_into_and_out_of_container)
-        .case(test_focus_within::nested_focus_within)
-        .case(test_focus_within::focus_outside_after_a_hidden_blur)
-        .case(test_focus_within::removal_of_the_focused_child)
-        .case(test_focus_within::disabling_the_focused_element)
-        .case(test_focus_ring::basic_click_focus)
-        .case(test_focus_ring::basic_tab_focus)
-        .case(test_focus_ring::within_click_focus)
-        .case(test_focus_ring::within_tab_focus)
-        .case(test_focus_ring::modality_switch)
-        .case(test_focus_ring::arrow_key_keyboard_modality)
-        .case(test_focus_ring::disabled_focus_ring)
-        .case(test_focus_ring::atom_text_input)
-        .case(test_focus_safely::connected)
-        .case(test_focus_safely::no_longer_connected)
-        .case(test_focus_safely::svg)
-        .case(test_scroll::scroll_parents)
-        .case(test_scroll::scroll_into_view)
-        .case(test_hover::target_is_the_hooked_element)
-        .case(test_hover::no_hover_by_touch)
-        .case(test_hover::hover_ends_when_disabled)
-        .case(test_hover::hover_ends_when_the_element_is_removed)
-        .case(test_hover::hoverable_atom)
-        .case(test_move::responds_to_pointer_events)
-        .case(test_move::ends_with_pointercancel)
-        .case(test_move::ignores_right_clicks_and_taps)
-        .case(test_move::ignores_additional_pointers)
-        .case(test_move::doesnt_bubble_to_a_movable_parent)
-        .case(test_move::responds_to_keys)
-        .case(test_keyboard::handlers_and_propagation)
-        .case(test_keyboard::repeats_and_composing)
-        .case(test_keyboard::no_shortcuts_on_keyup)
-        .case(test_color_area::input_props)
-        .case(test_color_area::keyboard)
-        .case(test_color_area::keyboard_steps)
-        .case(test_color_area::press_and_drag)
-        .case(test_color_area::disabled)
-        .case(test_color_area::labelling)
-        .case(test_color_area::forms)
-        .case(test_color_area::hsv)
-        .case(test_color_area::gradients)
-        .case(test_color_area::right_to_left)
-        .case(test_color_area::input_event)
-        .case(test_color_area::thumb_without_alpha)
-        .case(test_color_area::mounted_again)
-        .case(test_color_field::defaults)
-        .case(test_color_field::uncontrolled_state)
-        .case(test_color_field::invalid_characters)
-        .case(test_color_field::stepping)
-        .case(test_color_field::mouse_wheel)
-        .case(test_color_field::flags)
-        .case(test_color_field::form_reset)
-        .case(test_color_field::channel)
-        .case(test_color_picker::shared_color)
-        .case(test_color_picker::alpha)
-        .case(test_color_slider::input_props)
-        .case(test_color_slider::hue_value_text_and_label)
-        .case(test_color_slider::keyboard)
-        .case(test_color_slider::track_click)
-        .case(test_color_slider::disabled)
-        .case(test_color_slider::forms)
-        .case(test_color_slider::default_label)
-        .case(test_color_slider::drag_thumb)
-        .case(test_color_slider::drag_thumb_vertical)
-        .case(test_color_slider::drag_track_vertical)
-        .case(test_color_slider::mounted_again)
-        .case(test_color_swatch::swatches)
-        .case(test_color_swatch::picker_default_value)
-        .case(test_color_swatch::picker_keyboard)
-        .case(test_color_swatch::picker_disabled_items)
-        .case(test_color_swatch::swatch_in_item)
-        .case(test_color_wheel::input_props)
-        .case(test_color_wheel::keyboard)
-        .case(test_color_wheel::ring_press)
-        .case(test_color_wheel::disabled)
-        .case(test_color_wheel::forms)
-        .case(test_color_wheel::drag_thumb)
-        .case(test_color_wheel::input_event)
-        .case(test_color_wheel::rgb_colors)
-        .case(test_color_wheel::mounted_again)
-        .case(test_label_slots::no_labels)
-        .case(test_label_slots::labels_added)
-        .case(test_label_slots::labels_removed)
-        .case(test_context_menu::right_click_requests_the_menu)
-        .case(test_context_menu::without_a_handler_nothing_happens)
-        .case(test_context_menu::ctrl_enter_is_mac_only)
-        .case(test_interact_outside::pointer_events)
-        .case(test_interact_outside::left_button_only)
-        .case(test_interact_outside::disabled)
-        .case(test_long_press::long_press)
-        .case(test_long_press::cancelled_when_released_early)
-        .case(test_long_press::cancels_other_press_events)
-        .case(test_long_press::keeps_press_events_when_released_early)
-        .case(test_long_press::custom_threshold)
-        .case(test_long_press::accessibility_description)
-        .case(test_long_press::prevents_context_menu_during_touch)
-        .case(test_long_press::no_long_press_by_keyboard)
-        .case(test_focusable_atoms::focusable_child)
-        .case(test_focusable_atoms::disabled_and_excluded)
-        .case(test_focusable_atoms::focusable_tooltip_trigger)
-        .case(test_focusable_atoms::merged_props)
-        .case(test_focusable_atoms::pressable_tooltip_trigger)
-        .case(test_focusable_atoms::auto_focus)
-        .case(test_focusable::tabindex_attributes)
-        .case(test_focusable::keyboard_events)
-        .case(test_focusable::tab_skip)
-        .case(test_focusable::focus_handle)
-        .case(test_focusable::dynamic_disabled_transition)
-        .case(test_focus_manager::basic_navigation)
-        .case(test_focus_manager::wrap_next)
-        .case(test_focus_manager::wrap_prev)
-        .case(test_focus_manager::nowrap_boundary_next)
-        .case(test_focus_manager::nowrap_boundary_prev)
-        .case(test_focus_manager::tabbable_skip)
-        .case(test_focus_manager::nontabbable_include)
-        .case(test_focus_manager::accept_filter)
-        .case(test_focus_manager::radio_group_checked)
-        .case(test_focus_manager::radio_group_none_checked)
-        .case(test_focus_manager::radio_group_wrap_next)
-        .case(test_focus_manager::radio_group_wrap_prev)
-        .case(test_focus_manager::hidden_elements_skipped)
-        .case(test_focus_manager::inert_elements_skipped)
-        .case(test_focus_manager::focus_next_from_outside_scope)
-        .case(test_focus_manager::focus_previous_from_outside_scope)
-        .case(test_focus_visible::click_sets_pointer_modality)
-        .case(test_focus_visible::tab_sets_keyboard_modality)
-        .case(test_focus_visible::arrow_key_sets_keyboard_modality)
-        .case(test_focus_visible::typing_on_non_text_input_sets_keyboard_modality)
-        .case(test_focus_visible::typing_in_text_input_does_not_set_keyboard_modality)
-        .case(test_focus_visible::typing_in_text_input_silently_updates_stored_modality)
-        .case(test_focus_visible::pointer_after_keyboard)
-        .case(test_focus_visible::escape_sets_keyboard_modality)
-        .case(test_focus_visible::enter_sets_keyboard_modality)
-        .case(test_focus_visible::space_sets_keyboard_modality)
-        .case(test_focus_visible::focus_without_a_preceding_event_is_virtual)
-        .case(test_focus_visible::programmatic_focus_keeps_the_modality)
-        .case(test_focus_visible::window_refocus_keeps_the_modality)
-        .case(test_focus_visible::safari_window_refocus_keeps_the_modality)
-        .case(test_focus_visible::focus_moved_after_invalid_shows_focus)
-        .case(test_has_tabbable_child::with_tabbable_child)
-        .case(test_has_tabbable_child::child_removed_and_re_added)
-        .case(test_has_tabbable_child::no_tabbable_children)
-        .case(test_has_tabbable_child::deeply_nested_tabbable_child)
-        .case(test_has_tabbable_child::child_disabled_attribute_change)
-        .case(test_focus_scope::auto_focus)
-        .case(test_focus_scope::tab_wrapping)
-        .case(test_focus_scope::shift_tab_wrapping)
-        .case(test_focus_scope::focus_restoration)
-        .case(test_focus_scope::nested_scopes)
-        .case(test_focus_scope::containment_blocks_escape)
-        .case(test_focus_scope::outer_to_inner_navigation)
-        .case(test_focus_scope::nested_restore_focuses_outermost)
-        .case(test_focus_scope::restore_fallback)
-        .case(test_focus_scope::dialog_from_menu)
-        .case(test_focus_scope::restore_on_blur)
-        .case(test_focus_scope::select_on_tab)
-        .case(test_focus_scope::tab_outside_the_scope_is_native)
-        .case(test_focus_scope::runtime_contain)
-        .case(test_focus_scope::cancelled_restore)
-        .case(test_focus_scope::tab_out_of_restoring_scope)
-        .case(test_press::mouse_click_fires_all_events_in_order)
-        .case(test_press::keyboard_enter_and_space_press)
-        .case(test_press::releasing_outside_does_not_press)
-        .case(test_press::disabled_element_ignores_presses)
-        .case(test_press::becoming_disabled_cancels_active_press)
-        .case(test_press::enter_on_checkbox_submits_form)
-        .case(test_press::prevent_focus_on_press_keeps_the_focus)
-        .case(test_press::nested_press_stops_by_default)
-        .case(test_press::nested_press_propagates_when_continued)
-        .case(test_press::keyboard_press_ends_when_key_up_is_stopped)
-        .case(test_press::a_drag_inside_cancels_the_press)
-        .case(test_press::a_child_stopping_the_click_cancels_the_press)
-        .case(test_press::focus_moving_before_key_up_ends_without_press)
-        .case(test_press::repeating_key_downs_are_ignored)
-        .case(test_press::dragging_out_and_back_in)
-        .case(test_press::cancel_on_pointer_exit)
-        .case(test_press::pointer_cancel_cancels_the_press)
-        .case(test_press::space_on_a_link_with_button_role)
-        .case(test_press::double_press)
-        .case(test_press::press_propagation_continue)
-        .case(test_press::virtual_click)
-        .case(test_press::removed_while_pressed)
-        .case(test_press::meta_release_ends_held_key_presses)
-        .case(test_use_button::attributes_depend_on_element_type)
-        .case(test_use_button::native_and_custom_elements_press)
-        .case(test_use_button::tab_order)
-        .case(test_use_button::disabled_buttons)
-        .case(test_use_button::form_submission)
-        .case(test_use_button::hover_and_focus_visible)
-        .case(test_menu_trigger::aria_attributes)
-        .case(test_menu_trigger::mouse_press_opens_once)
-        .case(test_menu_trigger::keyboard_opens_with_focus_strategy)
-        .case(test_number_field::stepper_buttons)
-        .case(test_number_field::click_steps_once_and_focuses_input)
-        .case(test_number_field::holding_spins_until_the_limit)
-        .case(test_number_field::keyboard)
-        .case(test_number_field::steppers_are_not_tab_stops)
-        .case(test_number_field::enter_commits_and_submits)
-        .case(test_number_field_atoms::provides_slots)
-        .case(test_number_field_atoms::hover_and_focus_visible_state)
-        .case(test_number_field_atoms::read_only_state)
-        .case(test_number_field_atoms::form_value)
-        .case(test_number_field_atoms::validation_errors)
-        .case(test_number_field_atoms::arrow_keys)
-        .case(test_number_field_atoms::programmatic_clicks_on_steppers)
-        .case(test_number_field_atoms::deleting_the_first_digit_before_a_group_separator)
-        .case(test_number_field_atoms::typing_and_enter_commit)
-        .case(test_number_field_atoms::no_grouping_characters_without_grouping)
-        .case(test_number_field_atoms::no_grouping_characters_in_german)
-        .case(test_number_field_atoms::scroll_wheel)
-        .case(test_number_field_atoms::pasting_into_a_format)
-        .case(test_number_field_atoms::rejected_values_keep_the_text)
-        .case(test_number_field_atoms::server_errors_survive_an_unchanged_blur)
-        .case(test_number_field_atoms::validate_commit_behavior)
-        .case(test_number_field_atoms::validate_commit_behavior_and_enter_submit)
-        .case(test_number_field_atoms::typed_values)
-        .case(test_live_announcer::announcements)
-        .case(test_live_announcer::clear)
-        .case(test_live_announcer::timeout)
-        .case(test_listbox::aria_structure)
-        .case(test_listbox::keyboard_navigation_skips_disabled_items)
-        .case(test_listbox::selection)
-        .case(test_listbox::tab_in_and_out)
-        .case(test_listbox::type_ahead)
-        .case(test_listbox::select_all_and_clear)
-        .case(test_listbox::shift_arrow_extends_selection)
-        .case(test_listbox_features::sections_and_separators)
-        .case(test_listbox_features::arrow_keys_cross_sections)
-        .case(test_listbox_features::hover)
-        .case(test_listbox_features::replace_selection_by_press)
-        .case(test_listbox_features::replace_selection_by_keyboard)
-        .case(test_listbox_features::actions_without_selection)
-        .case(test_listbox_features::links)
-        .case(test_listbox_features::links_with_single_selection)
-        .case(test_listbox_features::arrow_keys_per_layout)
-        .case(test_listbox_features::page_down_and_up)
-        .case(test_listbox_features::disabled_selection_behavior)
-        .case(test_listbox_features::empty_state)
-        .case(test_listbox_features::removing_the_focused_option)
-        .case(test_listbox_features::labels_follow_the_collection)
-        .case(test_select::initial_state)
-        .case(test_select::opening_focuses_the_selected_option)
-        .case(test_select::escape_closes_and_restores_focus)
-        .case(test_select::escape_after_opening_with_the_keyboard)
-        .case(test_select::bound_select)
-        .case(test_select::selecting_an_option)
-        .case(test_select::trigger_keyboard)
-        .case(test_select::labelling)
-        .case(test_select::form_reset)
-        .case(test_select_forms::trigger_hover_and_placeholder)
-        .case(test_select_forms::multiple_selection)
-        .case(test_select_forms::open_state_bound_to_app_state)
-        .case(test_select_forms::native_validation)
-        .case(test_select_forms::required_blocks_submission)
-        .case(test_select_forms::disabled)
-        .case(test_select_forms::autofill)
-        .case(test_select_forms::no_items)
-        .case(test_select_forms::empty_state)
-        .case(test_select_forms::many_items_validation)
-        .case(test_select_forms::many_items_selection_and_reset)
-        .case(test_menu::closed_trigger)
-        .case(test_menu::open_menu_aria_structure)
-        .case(test_menu::keyboard_opening_focuses_first_or_last_item)
-        .case(test_menu::keyboard_navigation_skips_disabled_items)
-        .case(test_menu::keyboard_activation_closes_and_restores_focus)
-        .case(test_menu::type_ahead)
-        .case(test_menu::clicking_an_item)
-        .case(test_menu::mouse_opening_focuses_the_menu)
-        .case(test_menu::type_ahead_skips_disabled_items)
-        .case(test_menu::selection_menu)
-        .case(test_menu_atoms::menu_trigger)
-        .case(test_menu_atoms::keyboard_opening)
-        .case(test_menu_atoms::selection_menu)
-        .case(test_menu_atoms::long_press_trigger)
-        .case(test_menu_atoms::section_selection)
-        .case(test_menu_atoms::close_on_select)
-        .case(test_grid::aria_structure)
-        .case(test_grid::row_focus_cell_focus)
-        .case(test_grid::row_focus_child_focus)
-        .case(test_grid::cell_focus_child_focus)
-        .case(test_grid::cell_focus_cell_focus)
-        .case(test_grid::restores_the_last_focused_child)
-        .case(test_grid::focusing_a_child_from_outside_keeps_it)
-        .case(test_grid::two_dimensional_navigation)
-        .case(test_grid::row_selection)
-        .case(test_grid::cell_focus_mode_selects_rows)
-        .case(test_grid::cell_actions)
-        .case(test_grid_list::aria_structure)
-        .case(test_grid_list::tab_into_the_list_focuses_the_first_row)
-        .case(test_grid_list::keyboard_navigation_skips_disabled_rows)
-        .case(test_grid_list::tab_out_and_back_restores_the_focused_row)
-        .case(test_grid_list::select_all_and_clear)
-        .case(test_grid_list::space_toggles_selection)
-        .case(test_grid_list::click_selection)
-        .case(test_grid_list::disabled_row_is_marked)
-        .case(test_grid_list::select_all_skips_disabled_row)
-        .case(test_grid_list::shift_arrow_extends_selection)
-        .case(test_grid_list::selection_announcements)
-        .case(test_grid_list_features::arrows_cycle_through_children_and_row)
-        .case(test_grid_list_features::arrows_are_mirrored_right_to_left)
-        .case(test_grid_list_features::tab_walks_the_children)
-        .case(test_grid_list_features::arrows_move_between_children_of_rows)
-        .case(test_grid_list_features::text_input_keeps_its_keys)
-        .case(test_grid_list_features::hover_on_rows_with_an_action)
-        .case(test_grid_list_features::actions_without_selection)
-        .case(test_grid_list_features::replace_selection_behavior)
-        .case(test_grid_list_features::links_open_on_press)
-        .case(test_grid_list_features::sections_and_descriptions)
-        .case(test_table::aria_structure)
-        .case(test_table::column_groups)
-        .case(test_table::navigation_into_the_column_headers)
-        .case(test_table::sorting)
-        .case(test_table::select_all)
-        .case(test_table::disabled_rows)
-        .case(test_table::type_ahead)
-        .case(test_table::removing_the_focused_row)
-        .case(test_table::localized)
-        .case(test_table_navigation::tab_from_a_cell_focuses_its_first_tabbable_child)
-        .case(test_table_navigation::tab_from_a_cell_without_children_exits_the_table)
-        .case(test_table_navigation::shift_tab_from_a_child_returns_to_the_cell)
-        .case(test_table_navigation::keys_in_a_text_input_stay_there)
-        .case(test_table_navigation::clicking_a_child_or_a_row)
-        .case(test_table_navigation::child_focus_mode_in_tab_navigation)
-        .case(test_table_navigation::arrow_navigation_through_cell_children)
-        .case(test_table_navigation::arrow_navigation_with_cell_focus_mode)
-        .case(test_table_navigation::right_to_left)
-        .case(test_table_navigation::page_up_reaches_the_column_headers)
-        .case(test_table_navigation::column_spans)
-        .case(test_table_navigation::an_empty_table)
-        .case(test_table_navigation::enter_on_a_button_that_is_not_the_first_child)
-        .case(test_table_selection::replace_selection_with_the_mouse)
-        .case(test_table_selection::replace_selection_in_single_mode)
-        .case(test_table_selection::replace_selection_with_the_keyboard)
-        .case(test_table_selection::escape_without_clearing)
-        .case(test_table_selection::select_on_press_down_or_up)
-        .case(test_table_selection::row_actions)
-        .case(test_table_selection::changing_columns)
-        .case(test_table_selection::hover_and_focus_states)
-        .case(test_table_tree::renders_a_treegrid)
-        .case(test_table_tree::expands_a_row_with_the_mouse)
-        .case(test_table_tree::expands_a_row_with_the_keyboard)
-        .case(test_table_tree::expands_a_row_with_the_keyboard_rtl)
-        .case(test_table_tree::default_expanded_keys)
-        .case(test_table_tree::controlled_expanded_keys)
-        .case(test_table_tree::keyboard_navigation_of_flattened_rows)
-        .case(test_table_tree::keyboard_navigation_of_cells)
-        .case(test_table_tree::selection)
-        .case(test_table_tree::type_ahead_searches_the_rows_shown)
-        .case(test_table_tree::arrow_left_moves_from_a_child_row_to_its_parent)
-        .case(test_table_tree::collapsing_from_outside_moves_focus_to_the_parent)
-        .case(test_table_tree::leaf_rows_are_never_expanded)
-        .case(test_tabs::aria_structure)
-        .case(test_tabs::selection_by_press)
-        .case(test_tabs::keyboard_navigation)
-        .case(test_tabs::disabled_tab)
-        .case(test_tabs::disabled_first_tab)
-        .case(test_tabs::all_tabs_disabled)
-        .case(test_tabs::vertical)
-        .case(test_tabs::manual_activation)
-        .case(test_tabs::rtl_vertical)
-        .case(test_tabs::data_attributes)
-        .case(test_tabs::force_mount)
-        .case(test_tabs::tab_is_disabled)
-        .case(test_tabs::controlled)
-        .case(test_tabs::dynamic)
-        .case(test_tabs::nested)
-        .case(test_tabs::tab_panels)
-        .case(test_calendar::structure)
-        .case(test_calendar::selection_by_press)
-        .case(test_calendar::keyboard_navigation)
-        .case(test_calendar::previous_next_buttons)
-        .case(test_calendar::min_max)
-        .case(test_calendar::unavailable)
-        .case(test_calendar::disabled)
-        .case(test_calendar::read_only)
-        .case(test_calendar::invalid)
-        .case(test_calendar::two_months)
-        .case(test_calendar::week_view)
-        .case(test_calendar::day_view)
-        .case(test_calendar::first_day_of_week)
-        .case(test_calendar::labelled_by_another_element)
-        .case(test_calendar::right_to_left)
-        .case(test_calendar::setting_the_focused_date_keeps_the_focus)
-        .case(test_calendar::range_by_press)
-        .case(test_calendar::range_by_keyboard)
-        .case(test_calendar::range_by_dragging)
-        .case(test_calendar::range_committed_by_an_outside_press)
-        .case(test_calendar::controlled_range_cleared)
-        .case(test_calendar::unavailable_dates_depending_on_the_anchor)
-        .case(test_calendar::range_unavailable)
-        .case(test_calendar::range_by_touch_taps)
-        .case(test_calendar::range_by_touch_dragging)
-        .case(test_calendar::range_kept_when_a_touch_scrolls)
-        .case(test_calendar::today_in_the_browsers_time_zone)
-        .case(test_calendar::page_behavior_single)
-        .case(test_calendar::two_weeks)
-        .case(test_calendar::weeks_in_month)
-        .case(test_calendar::held_arrow_keys)
-        .case(test_calendar::changing_the_visible_duration)
-        .case(test_calendar::month_and_year_pickers)
-        .case(test_calendar::announcements)
-        .case(test_calendar::commit_behaviors)
-        .case(test_date_field::structure)
-        .case(test_date_field::typing)
-        .case(test_date_field::arrows_and_backspace)
-        .case(test_date_field::invalid_date_committed_when_left)
-        .case(test_date_field::form_reset)
-        .case(test_date_field::min_validation)
-        .case(test_date_field::disabled_and_read_only)
-        .case(test_date_field::date_and_time)
-        .case(test_date_field::zoned)
-        .case(test_date_field::time_field)
-        .case(test_date_field::date_picker)
-        .case(test_date_field::date_range_picker)
-        .case(test_date_field::group_states)
-        .case(test_date_picker::close_on_select)
-        .case(test_date_picker::disabled_picker)
-        .case(test_date_picker::programmatic_value)
-        .case(test_date_picker::required_picker)
-        .case(test_date_picker::required_time_field)
-        .case(test_date_picker::range_placeholder_times)
-        .case(test_date_picker::enter_does_nothing)
-        .case(test_date_picker::held_keys)
-        .case(test_date_picker::deleting_a_partial_field)
-        .case(test_date_picker::autofill)
-        .case(test_date_picker::selection_while_elsewhere)
-        .case(test_date_picker::german_order)
-        .case(test_date_picker::twelve_hour_clocks)
-        .case(test_date_picker::right_to_left)
-        .case(test_date_picker::switching_to_right_to_left)
-        .case(test_slider::labelled_group)
-        .case(test_slider::fill)
-        .case(test_slider::keyboard)
-        .case(test_slider::track_click)
-        .case(test_slider::dragging_state)
-        .case(test_slider::two_thumbs)
-        .case(test_slider::orientation)
-        .case(test_slider::disabled_state)
-        .case(test_slider::tooltips)
-        .case(test_slider::closest_thumb_by_click)
-        .case(test_slider::closest_thumb_by_drag)
-        .case(test_slider::stacked_thumbs)
-        .case(test_slider::many_stacked_thumbs)
-        .case(test_slider::disabled_track)
-        .case(test_slider::vertical_drag)
-        .case(test_slider::right_to_left)
-        .case(test_slider::keys)
-        .case(test_slider::keys_vertical)
-        .case(test_slider::repeated_page_keys)
-        .case(test_slider::input_event)
-        .case(test_slider::disabled_thumb)
-        .case(test_slider::form_prop)
-        .case(test_slider::thumb_labels)
-        .case(test_slider::attributes)
-        .case(test_slider::three_thumbs)
-        .case(test_slider::controlled_thumbs)
-        .case(test_slider::restricted_values)
-        .case(test_slider::missing_value)
-        .case(test_dnd::basic_drag_and_drop)
-        .case(test_dnd::escape_cancels)
-        .case(test_dnd::reorder_a_list)
-        .case(test_dnd::native_basic_drag_and_drop)
-        .case(test_dnd::tab_forward_skips_non_drop_targets)
-        .case(test_dnd::tab_backward_skips_non_drop_targets)
-        .case(test_dnd::prefers_an_ancestor_drop_target)
-        .case(test_dnd::enter_on_the_drag_source_cancels)
-        .case(test_dnd::ignores_drop_targets_in_hidden_trees)
-        .case(test_dnd::a_removed_drop_target)
-        .case(test_dnd::a_drop_target_hidden_during_the_drag)
-        .case(test_dnd::an_added_drop_target_keeps_the_current_target)
-        .case(test_dnd::a_hidden_drag_source_is_skipped)
-        .case(test_dnd::escape_with_a_hidden_drag_source)
-        .case(test_dnd::disabled_drag)
-        .case(test_dnd::disabled_drop)
-        .case(test_dnd::drop_operation_override)
-        .case(test_dnd::allowed_drop_operations)
-        .case(test_dnd::canceled_targets_are_hidden)
-        .case(test_dnd::alt_enter_activates)
-        .case(test_dnd::native_disabled)
-        .case(test_dnd::navigating_with_focus_events_only)
-        .case(test_dnd::hides_everything_but_drop_targets)
-        .case(test_dnd::clicking_the_drag_source_cancels)
-        .case(test_dnd::restores_focus_from_non_drop_targets)
-        .case(test_dnd::ignores_clicks_not_from_screen_readers)
-        .case(test_dnd_collection::basic_drag_and_drop)
-        .case(test_dnd_collection::arrow_key_navigation)
-        .case(test_dnd_collection::home_and_end)
-        .case(test_dnd_collection::page_up_and_page_down)
-        .case(test_dnd_collection::page_up_and_page_down_skip_invalid_targets)
-        .case(test_dnd_collection::after_the_last_focused_item)
-        .case(test_dnd_collection::after_the_selected_items)
-        .case(test_dnd_collection::before_the_selected_items)
-        .case(test_dnd_collection::on_the_first_selected_item)
-        .case(test_dnd_collection::on_the_last_selected_item)
-        .case(test_dnd_collection::native_basic_drag_and_drop)
-        .case(test_dnd_collection::native_drop_on_an_item)
-        .case(test_clipboard::copies)
-        .case(test_clipboard::copies_only_when_focused)
-        .case(test_clipboard::no_copy_without_items)
-        .case(test_clipboard::cuts)
-        .case(test_clipboard::cuts_only_when_focused)
-        .case(test_clipboard::no_cut_without_items)
-        .case(test_clipboard::no_cut_without_on_cut)
-        .case(test_clipboard::pastes)
-        .case(test_clipboard::pastes_only_when_focused)
-        .case(test_clipboard::no_paste_without_on_paste)
-        .case(test_clipboard::custom_types)
-        .case(test_clipboard::multiple_items_of_a_custom_type)
-        .case(test_clipboard::items_of_multiple_types)
-        .case(test_clipboard::multiple_items_of_multiple_types)
-        .case(test_clipboard::the_action_of_a_cut)
-        .case(test_clipboard::the_action_of_a_copy)
-        .case(test_clipboard_write::writes_text)
-        .case(test_clipboard_write::writes_text_loaded_later)
-        .case(test_clipboard_write::writes_nothing_without_text)
-        .case(test_text_field::labelling)
-        .case(test_text_field::typing_updates_the_state)
-        .case(test_text_field::validation)
-        .case(test_text_field::programmatic_changes_update_the_input)
-        .case(test_text_field::form_reset_restores_the_default)
-        .case(test_text_field_atoms::provides_slots_input)
-        .case(test_text_field_atoms::provides_slots_textarea)
-        .case(test_text_field_atoms::hover_state)
-        .case(test_text_field_atoms::focus_visible_state)
-        .case(test_text_field_atoms::read_only_and_required_state)
-        .case(test_text_field_atoms::native_validation_errors_input)
-        .case(test_text_field_atoms::native_validation_errors_textarea)
-        .case(test_text_field_atoms::customized_validation_errors)
-        .case(test_text_field_atoms::invalid_without_message_renders_no_error)
-        .case(test_text_field_atoms::id_goes_on_the_input)
-        .case(test_text_field_atoms::form_attribute)
-        .case(test_text_field_atoms::server_validation_errors)
-        .case(test_text_field_atoms::bound_values_keep_the_dom_in_sync)
-        .case(test_text_field_atoms::form_validation_behavior)
-        .case(test_search_field::provides_slots)
-        .case(test_search_field::enter_submits)
-        .case(test_search_field::escape_clears_once)
-        .case(test_search_field::clear_button_clears_and_focuses_the_input)
-        .case(test_search_field::enter_without_on_submit_submits_the_form)
-        .case(test_search_field::validation_errors)
-        .case(test_search_field::read_only)
-        .case(test_search_field::form_attribute)
-        .case(test_search_field::input_type)
-        .case(test_combobox::aria_structure)
-        .case(test_combobox::typing_filters_and_keyboard_selects)
-        .case(test_combobox::escape_reverts_the_input)
-        .case(test_combobox::button_shows_all_options_and_click_selects)
-        .case(test_combobox::arrow_down_opens_with_the_selected_option_focused)
-        .case(test_combobox::clearing_the_input_clears_the_value)
-        .case(test_combobox::externally_changed_value_shows_in_the_input)
-        .case(test_combobox::popover_in_a_modal_stays_interactive)
-        .case(test_combobox_forms::select_an_option)
-        .case(test_combobox_forms::custom_text_on_blur)
-        .case(test_combobox_forms::escape_keeps_custom_text)
-        .case(test_combobox_forms::enter_commits_custom_text)
-        .case(test_combobox_forms::native_validation)
-        .case(test_combobox_forms::aria_validation)
-        .case(test_combobox_forms::multiple_selection)
-        .case(test_combobox_forms::multiple_form_reset)
-        .case(test_combobox_forms::required_with_multiple_selection)
-        .case(test_combobox_forms::form_value)
-        .case(test_combobox_forms::focus_trigger)
-        .case(test_combobox_forms::manual_trigger)
-        .case(test_combobox_forms::filtering_sections)
-        .case(test_combobox_forms::disabled_option_is_skipped)
-        .case(test_combobox_forms::enter_without_a_focused_option)
-        .case(test_checkbox::selected_state)
-        .case(test_checkbox::keyboard_and_focus_ring)
-        .case(test_checkbox::virtual_label_click)
-        .case(test_checkbox::hover)
-        .case(test_checkbox::indeterminate_state)
-        .case(test_checkbox::disabled_state)
-        .case(test_checkbox::read_only_state)
-        .case(test_checkbox::invalid_state)
-        .case(test_checkbox::required_state)
-        .case(test_checkbox::bound_state)
-        .case(test_checkbox::bound_read_only_and_on_change)
-        .case(test_checkbox::group)
-        .case(test_checkbox::group_disabled_and_read_only)
-        .case(test_checkbox::group_validation)
-        .case(test_forms::form_reset)
-        .case(test_forms::canceled_form_reset)
-        .case(test_forms::implicit_submission_with_enter)
-        .case(test_forms::right_to_left_arrow_keys)
-        .case(test_forms::checkbox_group_realtime_validation)
-        .case(test_forms::field_atoms)
-        .case(test_radio_group::structure)
-        .case(test_radio_group::tab_enters_and_leaves_the_group)
-        .case(test_radio_group::selection_by_press)
-        .case(test_radio_group::virtual_label_click)
-        .case(test_radio_group::arrow_keys)
-        .case(test_radio_group::selected_radio_is_the_tab_stop)
-        .case(test_radio_group::skips_disabled_radios)
-        .case(test_radio_group::horizontal)
-        .case(test_radio_group::disabled_group)
-        .case(test_radio_group::read_only_group)
-        .case(test_radio_group::validation)
-        .case(test_radio_group::controlled)
-        .case(test_radio_group::label_context_stays_inside)
-        .case(test_radio_group::typed_values)
-        .case(test_switch::selected_state)
-        .case(test_switch::keyboard)
-        .case(test_switch::virtual_label_click)
-        .case(test_switch::disabled_state)
-        .case(test_switch::read_only_state)
-        .case(test_switch::bound_state)
-        .case(test_switch::bound_read_only)
-        .case(test_toggle_button::toggle_button)
-        .case(test_toggle_button::disabled_toggle_button)
-        .case(test_toggle_button::single_selection)
-        .case(test_toggle_button::multiple_selection)
-        .case(test_toggle_button::horizontal_navigation)
-        .case(test_toggle_button::tab_leaves_and_restores)
-        .case(test_toggle_button::vertical_navigation)
-        .case(test_toggle_button::disabled_group)
-        .case(test_aria_hide_outside::hides_everything_but_the_target)
-        .case(test_aria_hide_outside::hides_the_cells_of_a_hidden_row)
-        .case(test_aria_hide_outside::nested_hides_restored_out_of_order)
-        .case(test_aria_hide_outside::nested_hides_restored_in_order)
-        .case(test_aria_hide_outside::hides_a_root_without_the_target)
-        .case(test_aria_hide_outside::shows_overlays_registered_late)
-        .case(test_aria_hide_outside::mutations)
-        .case(test_aria_hide_outside::unhide_after_reorder)
-        .case(test_dialog::dismiss_button_closes)
-        .case(test_dialog::escape_closes)
-        .case(test_dialog::alert_dialog)
-        .case(test_dialog::keyboard_open_and_close_from_inside)
-        .case(test_dialog::keyboard_open_and_escape)
-        .case(test_dialog::nested_modals)
-        .case(test_dialog::animated_modal)
-        .case(test_dialog::auto_focus)
-        .case(test_toolbar::structure)
-        .case(test_toolbar::keyboard_navigation)
-        .case(test_toolbar::tab_leaves_and_reenters)
-        .case(test_toolbar::no_wrapping)
-        .case(test_toolbar::vertical)
-        .case(test_toolbar::right_to_left)
-        .case(test_toolbar::right_to_left_vertical)
-        .case(test_toolbar::aria_example_children)
-        .case(test_progress_bar::renders)
-        .case(test_progress_bar::follows_its_value)
-        .case(test_progress_bar::custom_range)
-        .case(test_progress_bar::empty_range)
-        .case(test_progress_bar::indeterminate)
-        .case(test_progress_bar::custom_text_value)
-        .case(test_progress_bar::label_follows_the_rendered_label)
-        .case(test_progress_bar::meter)
-        .case(test_pressable::merges_with_the_childs_handlers)
-        .case(test_pressable::makes_the_child_focusable)
-        .case(test_pressable::disabled)
-        .case(test_pressable::press_responder)
-        .case(test_pressable::press_responder_warns_without_pressable)
-        .case(test_spin_button::aria_props)
-        .case(test_spin_button::disabled_and_read_only)
-        .case(test_spin_button::keys_call_their_callbacks)
-        .case(test_spin_button::read_only_and_disabled_ignore_keys)
-        .case(test_spin_button::announces_value_changes)
-        .case(test_submenu::supports_a_submenu_trigger)
-        .case(test_submenu::supports_nested_submenu_triggers)
-        .case(test_submenu::keyboard)
-        .case(test_submenu::focusing_another_item_closes_the_submenu)
-        .case(test_submenu::interacting_outside_closes_all)
-        .case(test_submenu::context_menu)
-        .case(test_submenu::subdialog)
-        .case(test_submenu::subdialog_with_dialog)
-        .case(test_submenu::right_to_left)
-        .case(test_submenu::safe_triangle)
-        .case(test_link::current_page)
-        .case(test_link::new_tab)
-        .case(test_link::trigger_props)
-        .case(test_link::disabled)
-        .case(test_link::state_attributes)
-        .case(test_link::disabled_hook_anchor)
-        .case(test_link::anchor_link)
-        .case(test_link::replace)
-        .case(test_link::client_side_navigation)
-        .case(test_localized_atoms::search_field)
-        .case(test_localized_atoms::number_field)
-        .case(test_localized_atoms::tag)
-        .case(test_localized_atoms::select)
-        .case(test_breadcrumbs::current_item)
-        .case(test_breadcrumbs::dynamic_collections)
-        .case(test_breadcrumbs::disabled)
-        .case(test_breadcrumbs::hooks)
-        .case(test_breadcrumbs::press)
-        .case(test_disclosure::trigger_controls_its_panel)
-        .case(test_disclosure::adjacent_interactive_elements)
-        .case(test_disclosure::toggles_by_press_and_enter)
-        .case(test_disclosure::find_in_page_expands)
-        .case(test_disclosure::nested_disclosures)
-        .case(test_disclosure::one_expanded_at_a_time)
-        .case(test_disclosure::multiple_expanded)
-        .case(test_disclosure::panel_as_landmark)
-        .case(test_disclosure::repeated_keydown_toggles_once)
-        .case(test_disclosure::disabled_group)
-        .case(test_disclosure::focus_ring)
-        .case(test_disclosure::controlled)
-        .case(test_disclosure::groups)
-        .case(test_popover::trigger_controls_the_dialog)
-        .case(test_popover::outside_click_closes)
-        .case(test_popover::non_modal_contains_focus_with_a_dialog)
-        .case(test_popover::trigger_names_an_untitled_dialog)
-        .case(test_popover::standalone_popover_is_the_dialog)
-        .case(test_popover::animated)
-        .case(test_popover::scrolling)
-        .case(test_popover::containment_per_opening)
-        .case(test_popover::direction)
-        .case(test_dismiss_button::default_label)
-        .case(test_dismiss_button::aria_label)
-        .case(test_dismiss_button::aria_labelledby)
-        .case(test_dismiss_button::aria_labelledby_and_label)
-        .case(test_dismiss_button::activating_dismisses)
-        .case(test_overlay::dismissable)
-        .case(test_overlay::not_dismissable)
-        .case(test_overlay::keyboard_dismiss_disabled)
-        .case(test_overlay::top_most_only)
-        .case(test_overlay::nested_modals)
-        .case(test_overlay_position::placed_above)
-        .case(test_overlay_position::reopened_with_arrow)
-        .case(test_overlay_position::flips_below)
-        .case(test_overlay_position::reopened_unplaced)
-        .case(test_context_menu_atoms::right_click_opens_at_the_pointer)
-        .case(test_context_menu_atoms::escape_returns_focus_to_the_row)
-        .case(test_context_menu_atoms::shift_f10_opens_it)
-        .case(test_global_shortcuts::slash_outside_text_fields)
-        .case(test_global_shortcuts::slash_in_text_field)
-        .case(test_global_shortcuts::mod_k_anywhere)
-        .case(test_global_shortcuts::shift_key)
-        .case(test_global_shortcuts::later_binding_wins)
-        .case(test_global_shortcuts::shortcut_keys)
-        .case(test_landmark::navigation_order)
-        .case(test_landmark::restores_last_focused)
-        .case(test_landmark::alt_f6_to_main)
-        .case(test_landmark::added_and_removed)
-        .case(test_landmark::wrap_event)
-        .case(test_landmark::label_updates)
-        .case(test_landmark::nested_order)
-        .case(test_landmark::controller)
-        .case(test_landmark::duplicate_role_warnings)
-        .case(test_toast::trigger_and_close)
-        .case(test_toast::timeouts)
-        .case(test_toast::keyboard_focus)
-        .case(test_toast::programmatic_close)
-        .case(test_toast::remaining_time_after_pause)
-        .case(test_toast::one_at_a_time)
-        .case(test_toast::focused_toast_after_new_toast)
-        .case(test_tooltip::shows_on_hover)
-        .case(test_tooltip::warm_tooltip_replaces_without_animation)
-        .case(test_tooltip::shows_on_focus)
-        .case(test_tooltip::close_on_press_disabled_and_close_delay)
-        .case(test_tooltip::focus_trigger_mode)
-        .case(test_tooltip::hide_on_scroll)
-        .case(test_tag_group_atoms::default_classes_and_slots)
-        .case(test_tag_group_atoms::label_context_ends_with_the_group)
-        .case(test_tag_group_atoms::focus_ring)
-        .case(test_tag_group_atoms::tabbing_to_remove_buttons)
-        .case(test_tag_group_atoms::selection_state)
-        .case(test_tag_group_atoms::empty_state)
-        .case(test_tag_group_atoms::focus_moves_to_the_grid_when_no_tag_can_take_it)
-        .case(test_virtual_list::follows_its_end)
-        .case(test_virtual_list::appended_lines_come_into_view)
-        .case(test_virtual_list::page_scroll_keeps_following)
-        .case(test_virtual_list::scroll_jumps_render_rows_in_order)
-        .case(test_virtual_list::scrolling_away_stops_following)
-        .case(test_virtual_list::selected_row_stays_rendered)
-        .case(test_virtual_list::turning_following_on_scrolls_to_the_end)
-        .case(test_virtual_list::rebuilt_views_drop_the_old_handlers)
-        .case(test_virtual_list::follow_toggle_keeps_measured_sizes)
-        .case(test_virtualizer::renders_the_visible_options)
-        .case(test_virtualizer::scrolling_renders_other_options)
-        .case(test_virtualizer::focused_option_scrolls_into_view)
-        .case(test_virtualizer::log_stays_at_its_end)
-        .case(test_virtualizer::plain_list_box_is_not_virtualized)
-        .case(test_tag_group::aria_structure)
-        .case(test_tag_group::keyboard_navigation)
-        .case(test_tag_group::removing_with_the_keyboard_moves_focus_on)
-        .case(test_tag_group::remove_button)
-        .case(test_tag_group::removing_every_tag_focuses_the_group)
-        .case(test_tree::aria_structure)
-        .case(test_tree::keyboard_expansion)
-        .case(test_tree::arrow_right_on_an_expanded_row_keeps_the_focus)
-        .case(test_tree::pressing_a_parent_toggles_it)
-        .case(test_tree::disabled_items_can_be_expanded_but_not_selected)
-        .case(test_tree::disabled_items_cannot_be_used)
-        .case(test_tree::right_to_left_expansion_keys)
-        .case(test_tree::collapsing_the_parent_of_the_focused_row)
-        .case(test_tree::an_item_getting_children)
-        .case(test_visually_hidden::hides_element)
-        .case(test_visually_hidden::unhides_focused_focusable)
-        .case(test_visually_hidden::reactive_is_focusable)
-        .case(test_separator::default_class)
-        .case(test_separator::accessibility_props)
-        .case(test_separator::orientation)
-        .case(test_theme::context)
-        .case(test_theme::switching)
-        .with(test_hydration_ids::HydrationIdTests {
-            shard: 0,
-            shards: 4,
-        })
-        .with(test_hydration_ids::HydrationIdTests {
-            shard: 1,
-            shards: 4,
-        })
-        .with(test_hydration_ids::HydrationIdTests {
-            shard: 2,
-            shards: 4,
-        })
-        .with(test_hydration_ids::HydrationIdTests {
-            shard: 3,
-            shards: 4,
-        })
-        .tests
+fn known_issues_tests(parallelism: Parallelism) -> BrowserTests<str> {
+    BrowserTests::parallel(parallelism).with_test_group(TestGroup::new("virtual_list").with(
+        fixture_test(test_virtual_list::RebuiltComponentSpreadDropsTheOldHandlers {}),
+    ))
 }
 
-/// The checks of the whole run, after the UI tests (they must not overlap with other tests). They
-/// run even when a UI test failed.
-fn after_all(group: BrowserTests<str>) -> BrowserTests<str> {
-    let tests = Selected::new(group);
-    if std::env::var("BROWSER_TEST_KNOWN_ISSUES").is_ok_and(|v| v == "1") {
-        return tests.tests;
-    }
-    // Checks that none of the pages visited before made the server panic.
-    tests.with(test_server_panics::ServerPanicTests {}).tests
-}
-
-/// The tests matching `BROWSER_TEST_FILTER`.
-struct Selected {
-    tests: BrowserTests<str>,
-    filter: Option<String>,
-}
-
-impl Selected {
-    fn new(tests: BrowserTests<str>) -> Self {
-        Self {
-            tests,
-            filter: std::env::var("BROWSER_TEST_FILTER").ok(),
-        }
-    }
-
-    fn case(self, case: impl for<'a> CaseFn<'a>) -> Self {
-        self.with(Case(case))
-    }
-
-    fn with(mut self, test: impl BrowserTest<str> + 'static) -> Self {
-        if self
-            .filter
-            .as_deref()
-            .is_none_or(|filter| filter.split(',').any(|part| test.name().contains(part)))
-        {
-            self.tests = self.tests.with(CheckPageErrors(test));
-        }
-        self
-    }
-}
-
-/// Runs a test, then checks what the page reported (panics, uncaught errors, console errors,
-/// literal `attr:` attributes; see `PageActions::expect_no_page_errors`; `goto_path` checks the
-/// page it leaves):
-/// - the test passed: page errors fail it;
-/// - the test failed: page errors are added to its failure, as they are often the cause (a panic
-///   in an event handler shows as a wait that times out);
-/// - an assertion panicked: page errors are logged, then the panic continues.
-struct CheckPageErrors<T>(T);
-
-#[async_trait]
-impl<T: BrowserTest<str>> BrowserTest<str> for CheckPageErrors<T> {
-    fn name(&self) -> Cow<'_, str> {
-        self.0.name()
-    }
-
-    fn timeouts(&self) -> Option<browser_test::Timeouts> {
-        self.0.timeouts()
-    }
-
-    fn element_query_wait(&self) -> Option<ElementQueryWait> {
-        self.0.element_query_wait()
-    }
-
-    fn fresh_session(&self) -> bool {
-        self.0.fresh_session()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        let outcome = AssertUnwindSafe(self.0.run(driver, base_url))
-            .catch_unwind()
-            .await;
-        let page_errors = page.expect_no_page_errors().await;
-        match (outcome, page_errors) {
-            (Ok(Ok(())), page_errors) => {
-                page_errors.context("the page reported problems after the test passed")?;
-                Ok(())
-            }
-            (Ok(Err(failure)), Ok(())) => Err(failure),
-            (Ok(Err(failure)), Err(page_errors)) => Err(failure
-                .context(format!(
-                    "the page also reported problems, possibly the cause:\n{page_errors}"
+fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
+    let tests = BrowserTests::parallel(parallelism)
+        .with_test_group(
+            TestGroup::new("helpers")
+                .with(fixture_test(test_helpers::LookupContract {}))
+                .with(fixture_test(test_helpers::AccessibilityContract {}))
+                .with(fixture_test(test_helpers::ReplacementContract {}))
+                .with(fixture_test(test_helpers::StabilityContract {}))
+                .with(fixture_test(test_helpers::RecordingContract {}))
+                .with(fixture_test(test_helpers::DiagnosticsContract {}))
+                .with(fixture_test(test_helpers::EventContract {})),
+        )
+        .with_test_group(
+            TestGroup::new("table")
+                .with(fixture_test(test_table_resizing::InitialWidths {}))
+                .with(fixture_test(test_table_resizing::ResizingEachColumn {}))
+                .with(fixture_test(
+                    test_table_resizing::CannotResizeBelowTheMinWidth {},
                 ))
-                .into_dynamic()),
-            (Err(panic), page_errors) => {
-                if let Err(page_errors) = page_errors {
-                    tracing::error!(
-                        "The page reported problems, possibly the cause of the panic:\n{page_errors}"
-                    );
-                }
-                std::panic::resume_unwind(panic)
-            }
-        }
+                .with(fixture_test(
+                    test_table_resizing::ResizingTheFirstColumnPreservesFrRatios {},
+                ))
+                .with(fixture_test(
+                    test_table_resizing::ResizingTheLastColumnLocksTheColumnsBeforeIt {},
+                ))
+                .with(fixture_test(
+                    test_table_resizing::OnResizeStartReportsTheSizes {},
+                ))
+                .with(fixture_test(
+                    test_table_resizing::OnResizeEndWithoutMoving {},
+                ))
+                .with(fixture_test(test_table_resizing::KeyboardResizing {}))
+                .with(fixture_test(
+                    test_table_resizing::ExitingKeyboardResizing {},
+                ))
+                .with(fixture_test(test_table::AriaStructure {}))
+                .with(fixture_test(test_table::ColumnGroups {}))
+                .with(fixture_test(test_table::NavigationIntoTheColumnHeaders {}))
+                .with(fixture_test(test_table::Sorting {}))
+                .with(fixture_test(test_table::SortableColumnsAreDescribed {}))
+                .with(fixture_test(test_table::HoverOnTheTableHeader {}))
+                .with(fixture_test(test_table::SelectAll {}))
+                .with(fixture_test(test_table::DisabledRows {}))
+                .with(fixture_test(test_table::TypeAhead {}))
+                .with(fixture_test(test_table::RemovingTheFocusedRow {}))
+                .with(fixture_test(test_table::Localized {}))
+                .with(fixture_test(
+                    test_table_navigation::TabFromACellFocusesItsFirstTabbableChild {},
+                ))
+                .with(fixture_test(
+                    test_table_navigation::TabFromACellWithoutChildrenExitsTheTable {},
+                ))
+                .with(fixture_test(
+                    test_table_navigation::ShiftTabFromAChildReturnsToTheCell {},
+                ))
+                .with(fixture_test(
+                    test_table_navigation::KeysInATextInputStayThere {},
+                ))
+                .with(fixture_test(test_table_navigation::ClickingAChildOrARow {}))
+                .with(fixture_test(
+                    test_table_navigation::ChildFocusModeInTabNavigation {},
+                ))
+                .with(fixture_test(
+                    test_table_navigation::ArrowNavigationThroughCellChildren {},
+                ))
+                .with(fixture_test(
+                    test_table_navigation::ArrowNavigationWithCellFocusMode {},
+                ))
+                .with(fixture_test(test_table_navigation::RightToLeft {}))
+                .with(fixture_test(
+                    test_table_navigation::PageUpReachesTheColumnHeaders {},
+                ))
+                .with(fixture_test(test_table_navigation::ColumnSpans {}))
+                .with(fixture_test(test_table_navigation::AnEmptyTable {}))
+                .with(fixture_test(
+                    test_table_navigation::EnterOnAButtonThatIsNotTheFirstChild {},
+                ))
+                .with(fixture_test(
+                    test_table_selection::ReplaceSelectionWithTheMouse {},
+                ))
+                .with(fixture_test(
+                    test_table_selection::ReplaceSelectionInSingleMode {},
+                ))
+                .with(fixture_test(
+                    test_table_selection::ReplaceSelectionWithTheKeyboard {},
+                ))
+                .with(fixture_test(test_table_selection::EscapeWithoutClearing {}))
+                .with(fixture_test(test_table_selection::SelectOnPressDownOrUp {}))
+                .with(fixture_test(test_table_selection::RowActions {}))
+                .with(fixture_test(test_table_selection::ChangingColumns {}))
+                .with(fixture_test(
+                    test_table_selection::TheSelectionColumnFollowsTheSelectionMode {},
+                ))
+                .with(fixture_test(
+                    test_table_selection::RemovingTheFocusedColumnHeader {},
+                ))
+                .with(fixture_test(
+                    test_table_selection::SelectAllShortcutInSingleMode {},
+                ))
+                .with(fixture_test(test_table_selection::HoverAndFocusStates {}))
+                .with(fixture_test(test_table_tree::RendersATreegrid {}))
+                .with(fixture_test(test_table_tree::ExpandsARowWithTheMouse {}))
+                .with(fixture_test(test_table_tree::ExpandsARowWithTheKeyboard {}))
+                .with(fixture_test(
+                    test_table_tree::ExpandsARowWithTheKeyboardRtl {},
+                ))
+                .with(fixture_test(test_table_tree::DefaultExpandedKeys {}))
+                .with(fixture_test(test_table_tree::ControlledExpandedKeys {}))
+                .with(fixture_test(
+                    test_table_tree::KeyboardNavigationOfFlattenedRows {},
+                ))
+                .with(fixture_test(test_table_tree::KeyboardNavigationOfCells {}))
+                .with(fixture_test(test_table_tree::Selection {}))
+                .with(fixture_test(
+                    test_table_tree::TypeAheadSearchesTheRowsShown {},
+                ))
+                .with(fixture_test(
+                    test_table_tree::ArrowLeftMovesFromAChildRowToItsParent {},
+                ))
+                .with(fixture_test(
+                    test_table_tree::CollapsingFromOutsideMovesFocusToTheParent {},
+                ))
+                .with(fixture_test(test_table_tree::LeafRowsAreNeverExpanded {})),
+        )
+        .with_test_group(
+            TestGroup::new("button")
+                .with(fixture_test(test_button::PressesAndProps {}))
+                .with(fixture_test(test_button::StateAttributes {}))
+                .with(fixture_test(test_button::Pending {}))
+                .with(fixture_test(test_button::PendingFormSubmission {}))
+                .with(fixture_test(test_button::PendingLabelled {}))
+                .with(fixture_test(test_button::PendingTrigger {})),
+        )
+        .with_test_group(
+            TestGroup::new("focus")
+                .with(fixture_test(test_focus::BasicFocus {}))
+                .with(fixture_test(test_focus::TabFocus {}))
+                .with(fixture_test(test_focus::FocusChangeCount {}))
+                .with(fixture_test(test_focus::ChildFocusDoesNotTriggerParent {}))
+                .with(fixture_test(test_focus::BlurWhenDisabledWhileFocused {}))
+                .with(fixture_test(test_focus::ShadowDomFocusEvents {}))
+                .with(fixture_test(test_focus::ShadowDomDisabled {}))
+                .with(fixture_test(test_focus_within::BasicFocusWithin {}))
+                .with(fixture_test(test_focus_within::Disabled {}))
+                .with(fixture_test(test_focus_within::ChangeCallback {}))
+                .with(fixture_test(test_focus_within::TabIntoAndOutOfContainer {}))
+                .with(fixture_test(test_focus_within::NestedFocusWithin {}))
+                .with(fixture_test(
+                    test_focus_within::FocusOutsideAfterAHiddenBlur {},
+                ))
+                .with(fixture_test(test_focus_within::RemovalOfTheFocusedChild {}))
+                .with(fixture_test(
+                    test_focus_within::DisablingTheFocusedElement {},
+                ))
+                .with(fixture_test(test_focus_ring::BasicClickFocus {}))
+                .with(fixture_test(test_focus_ring::BasicTabFocus {}))
+                .with(fixture_test(test_focus_ring::WithinClickFocus {}))
+                .with(fixture_test(test_focus_ring::WithinTabFocus {}))
+                .with(fixture_test(test_focus_ring::ModalitySwitch {}))
+                .with(fixture_test(test_focus_ring::ArrowKeyKeyboardModality {}))
+                .with(fixture_test(test_focus_ring::DisabledFocusRing {}))
+                .with(fixture_test(test_focus_ring::AtomTextInput {}))
+                .with(fixture_test(test_focus_safely::Connected {}))
+                .with(fixture_test(test_focus_safely::NoLongerConnected {}))
+                .with(fixture_test(test_focus_safely::Svg {}))
+                .with(fixture_test(test_focus_safely::ConnectedInShadowDom {}))
+                .with(fixture_test(
+                    test_focus_safely::NoLongerConnectedInShadowDom {},
+                ))
+                .with(fixture_test(test_focusable_atoms::FocusableChild {}))
+                .with(fixture_test(test_focusable_atoms::DisabledAndExcluded {}))
+                .with(fixture_test(
+                    test_focusable_atoms::FocusableTooltipTrigger {},
+                ))
+                .with(fixture_test(test_focusable_atoms::MergedProps {}))
+                .with(fixture_test(
+                    test_focusable_atoms::PressableTooltipTrigger {},
+                ))
+                .with(fixture_test(test_focusable_atoms::AutoFocus {}))
+                .with(fixture_test(
+                    test_focusable_atoms::TooltipFollowsDisabled {},
+                ))
+                .with(fixture_test(test_focusable::TabindexAttributes {}))
+                .with(fixture_test(test_focusable::KeyboardEvents {}))
+                .with(fixture_test(test_focusable::TabSkip {}))
+                .with(fixture_test(test_focusable::FocusHandle {}))
+                .with(fixture_test(test_focusable::DynamicDisabledTransition {}))
+                .with(fixture_test(test_focus_manager::BasicNavigation {}))
+                .with(fixture_test(test_focus_manager::WrapNext {}))
+                .with(fixture_test(test_focus_manager::WrapPrev {}))
+                .with(fixture_test(test_focus_manager::NowrapBoundaryNext {}))
+                .with(fixture_test(test_focus_manager::NowrapBoundaryPrev {}))
+                .with(fixture_test(test_focus_manager::TabbableSkip {}))
+                .with(fixture_test(test_focus_manager::NontabbableInclude {}))
+                .with(fixture_test(test_focus_manager::AcceptFilter {}))
+                .with(fixture_test(test_focus_manager::RadioGroupChecked {}))
+                .with(fixture_test(test_focus_manager::RadioGroupNoneChecked {}))
+                .with(fixture_test(test_focus_manager::RadioGroupWrapNext {}))
+                .with(fixture_test(test_focus_manager::RadioGroupWrapPrev {}))
+                .with(fixture_test(test_focus_manager::HiddenElementsSkipped {}))
+                .with(fixture_test(test_focus_manager::InertElementsSkipped {}))
+                .with(fixture_test(
+                    test_focus_manager::FocusNextFromOutsideScope {},
+                ))
+                .with(fixture_test(
+                    test_focus_manager::FocusPreviousFromOutsideScope {},
+                ))
+                .with(fixture_test(test_focus_manager::ScopeManager {}))
+                .with(fixture_test(test_focus_manager::FromAContainer {}))
+                .with(fixture_test(
+                    test_focus_visible::ClickSetsPointerModality {},
+                ))
+                .with(fixture_test(test_focus_visible::TabSetsKeyboardModality {}))
+                .with(fixture_test(
+                    test_focus_visible::ArrowKeySetsKeyboardModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::TypingOnNonTextInputSetsKeyboardModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::TypingInTextInputDoesNotShowFocus {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::TypingInTextInputSilentlyUpdatesStoredModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::BeforeunloadKeepsTracking {},
+                ))
+                .with(fixture_test(test_focus_visible::OtherWindowTracking {}))
+                .with(fixture_test(test_focus_visible::OtherWindowBeforeunload {}))
+                .with(fixture_test(test_focus_visible::OtherWindowTeardown {}))
+                .with(fixture_test(
+                    test_focus_visible::OtherWindowPointerThenEscape {},
+                ))
+                .with(fixture_test(test_focus_visible::PointerAfterKeyboard {}))
+                .with(fixture_test(
+                    test_focus_visible::EscapeSetsKeyboardModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::EnterSetsKeyboardModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::SpaceSetsKeyboardModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::FocusWithoutAPrecedingEventIsVirtual {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::ProgrammaticFocusKeepsTheModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::WindowRefocusKeepsTheModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::SafariWindowRefocusKeepsTheModality {},
+                ))
+                .with(fixture_test(
+                    test_focus_visible::FocusMovedAfterInvalidShowsFocus {},
+                ))
+                .with(fixture_test(test_has_tabbable_child::WithTabbableChild {}))
+                .with(fixture_test(
+                    test_has_tabbable_child::ChildRemovedAndReAdded {},
+                ))
+                .with(fixture_test(test_has_tabbable_child::NoTabbableChildren {}))
+                .with(fixture_test(
+                    test_has_tabbable_child::DeeplyNestedTabbableChild {},
+                ))
+                .with(fixture_test(
+                    test_has_tabbable_child::ChildDisabledAttributeChange {},
+                ))
+                .with(fixture_test(test_focus_scope::AutoFocus {}))
+                .with(fixture_test(test_focus_scope::TabWrapping {}))
+                .with(fixture_test(test_focus_scope::ShiftTabWrapping {}))
+                .with(fixture_test(test_focus_scope::FocusRestoration {}))
+                .with(fixture_test(test_focus_scope::NestedScopes {}))
+                .with(fixture_test(test_focus_scope::ContainmentBlocksEscape {}))
+                .with(fixture_test(test_focus_scope::OuterToInnerNavigation {}))
+                .with(fixture_test(
+                    test_focus_scope::NestedRestoreFocusesOutermost {},
+                ))
+                .with(fixture_test(test_focus_scope::RestoreFallback {}))
+                .with(fixture_test(
+                    test_focus_scope::RestoreFallbackWithoutTabbables {},
+                ))
+                .with(fixture_test(test_focus_scope::DialogFromMenu {}))
+                .with(fixture_test(test_focus_scope::RestoreOnBlur {}))
+                .with(fixture_test(test_focus_scope::SelectOnTab {}))
+                .with(fixture_test(
+                    test_focus_scope::TabOutsideTheScopeIsNative {},
+                ))
+                .with(fixture_test(test_focus_scope::RuntimeContain {}))
+                .with(fixture_test(test_focus_scope::CancelledRestore {}))
+                .with(fixture_test(
+                    test_focus_scope::RestoreEventStaysInNestedScopes {},
+                ))
+                .with(fixture_test(test_focus_scope::TabOutOfRestoringScope {}))
+                .with(fixture_test(test_focus_scope::MultipleFocusScopes {}))
+                .with(fixture_test(test_focus_scope::SkipsNonTabbableElements {}))
+                .with(fixture_test(
+                    test_focus_scope::SkipsOnlyNonEditableContent {},
+                ))
+                .with(fixture_test(test_focus_scope::ModifierTabDoesNothing {}))
+                .with(fixture_test(
+                    test_focus_scope::RestoreAfterChildrenChange {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::TabSkipsTheScopeAfterItsTrigger {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::NoTabHandlingWithoutRestore {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::DomOrderWithoutNodeToRestore {},
+                ))
+                .with(fixture_test(test_focus_scope::AutoFocusKeepsFocusInside {}))
+                .with(fixture_test(
+                    test_focus_scope::AutoFocusFallsBackToFocusable {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::FocusFallsBackToTheFirstFocusable {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::PortalChildScopeWithoutContain {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::PortalChildScopeWithContain {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::ChildScopeActiveRegardlessOfDom {},
+                ))
+                .with(fixture_test(
+                    test_focus_scope::RestoresToTheCorrectScopeOnUnmount {},
+                ))
+                .with(fixture_test(test_focus_scope::StackedDialogsInline {}))
+                .with(fixture_test(
+                    test_focus_scope::StackedDialogsInlineContaining {},
+                ))
+                .with(fixture_test(test_focus_scope::StackedDialogsPortaled {}))
+                .with(fixture_test(
+                    test_focus_scope::StackedDialogsPortaledContaining {},
+                ))
+                .with(fixture_test(test_focus_scope::ShadowDomContainment {}))
+                .with(fixture_test(test_focus_scope::ShadowDomLockBackwards {}))
+                .with(fixture_test(test_focus_scope::NestedShadowDom {}))
+                .with(fixture_test(
+                    test_focus_scope::ShadowDomUnmountKeepsOutsideFocus {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("scroll")
+                .with(fixture_test(test_scroll::ScrollParents {}))
+                .with(fixture_test(test_scroll::ScrollIntoView {})),
+        )
+        .with_test_group(
+            TestGroup::new("scroll_wheel")
+                .with(fixture_test(test_scroll_wheel::PixelDeltas {}))
+                .with(fixture_test(test_scroll_wheel::LineDeltasInPixels {}))
+                .with(fixture_test(test_scroll_wheel::ControlWheelZooms {})),
+        )
+        .with_test_group(
+            TestGroup::new("hover")
+                .with(fixture_test(test_hover::TargetIsTheHookedElement {}))
+                .with(fixture_test(test_hover::NoHoverByTouch {}))
+                .with(fixture_test(test_hover::HoverEndsWhenDisabled {}))
+                .with(fixture_test(
+                    test_hover::HoverEndsWhenTheElementIsRemoved {},
+                ))
+                .with(fixture_test(test_hover::HoverableAtom {}))
+                .with(fixture_test(
+                    test_hover::IgnoresEmulatedMouseEventsAfterTouch {},
+                ))
+                .with(fixture_test(test_hover::MouseHoversAgainAfterATouch {})),
+        )
+        .with_test_group(
+            TestGroup::new("move")
+                .with(fixture_test(test_move::RespondsToPointerEvents {}))
+                .with(fixture_test(test_move::EndsWithPointercancel {}))
+                .with(fixture_test(test_move::IgnoresRightClicksAndTaps {}))
+                .with(fixture_test(test_move::IgnoresAdditionalPointers {}))
+                .with(fixture_test(test_move::DoesntBubbleToAMovableParent {}))
+                .with(fixture_test(test_move::RespondsToKeys {})),
+        )
+        .with_test_group(
+            TestGroup::new("keyboard")
+                .with(fixture_test(test_keyboard::HandlesKeyboardEvents {}))
+                .with(fixture_test(test_keyboard::Disabled {}))
+                .with(fixture_test(test_keyboard::ContinuePropagation {}))
+                .with(fixture_test(test_keyboard::ShortcutChainedWithHandlers {}))
+                .with(fixture_test(test_keyboard::UnhandledShortcutContinues {}))
+                .with(fixture_test(
+                    test_keyboard::PreventDefaultAndPropagationControlled {},
+                ))
+                .with(fixture_test(test_keyboard::StopIfAShortcutOfTheKeyStops {}))
+                .with(fixture_test(
+                    test_keyboard::ContinueIfAllShortcutsOfTheKeyContinue {},
+                ))
+                .with(fixture_test(test_keyboard::StopIfAnyShortcutStops {}))
+                .with(fixture_test(
+                    test_keyboard::ContinueIfAllShortcutsContinue {},
+                ))
+                .with(fixture_test(test_keyboard::UnhandledKeyBubbles {}))
+                .with(fixture_test(test_keyboard::IgnoresRepeatsByDefault {}))
+                .with(fixture_test(test_keyboard::HandlesRepeatsWhenAllowed {}))
+                .with(fixture_test(test_keyboard::IgnoresComposingByDefault {}))
+                .with(fixture_test(test_keyboard::HandlesComposingWhenAllowed {}))
+                .with(fixture_test(test_keyboard::NoShortcutsOnKeyup {})),
+        )
+        .with_test_group(
+            TestGroup::new("color_area")
+                .with(fixture_test(test_color_area::InputProps {}))
+                .with(fixture_test(
+                    test_color_area::BothInputsReachableOnPhones {},
+                ))
+                .with(fixture_test(test_color_area::Keyboard {}))
+                .with(fixture_test(test_color_area::KeyboardSteps {}))
+                .with(fixture_test(test_color_area::PressAndDragThumb {}))
+                .with(fixture_test(test_color_area::Disabled {}))
+                .with(fixture_test(test_color_area::Labelling {}))
+                .with(fixture_test(test_color_area::Forms {}))
+                .with(fixture_test(test_color_area::Hsv {}))
+                .with(fixture_test(test_color_area::Gradients {}))
+                .with(fixture_test(test_color_area::RightToLeft {}))
+                .with(fixture_test(test_color_area::InputEvent {}))
+                .with(fixture_test(test_color_area::ThumbWithoutAlpha {}))
+                .with(fixture_test(test_color_area::MountedAgain {}))
+                .with(fixture_test(test_color_area::WhiteByDefault {}))
+                .with(fixture_test(test_color_area::ChannelOrderInValueTexts {}))
+                .with(fixture_test(test_color_area::Focusable {}))
+                .with(fixture_test(test_color_area::PressAndDragArea {}))
+                .with(fixture_test(test_color_area::ThumbPressFocuses {}))
+                .with(fixture_test(test_color_area::DisabledDrag {}))
+                .with(fixture_test(test_color_area::RepeatedPageKeys {}))
+                .with(fixture_test(test_color_area::ThumbFocusRing {}))
+                .with(fixture_test(test_color_area::ThumbHover {}))
+                .with(fixture_test(test_color_area::ThumbDragging {}))
+                .with(fixture_test(test_color_area::ClassesAttributesAndForm {}))
+                .with(fixture_test(test_color_area::RightToLeftKeys {})),
+        )
+        .with_test_group(
+            TestGroup::new("color_field")
+                .with(fixture_test(test_color_field::Defaults {}))
+                .with(fixture_test(test_color_field::UncontrolledState {}))
+                .with(fixture_test(test_color_field::InvalidCharacters {}))
+                .with(fixture_test(test_color_field::Stepping {}))
+                .with(fixture_test(test_color_field::MouseWheel {}))
+                .with(fixture_test(test_color_field::Flags {}))
+                .with(fixture_test(test_color_field::FormReset {}))
+                .with(fixture_test(test_color_field::Channel {})),
+        )
+        .with_test_group(
+            TestGroup::new("color_picker")
+                .with(fixture_test(test_color_picker::SharedColor {}))
+                .with(fixture_test(test_color_picker::Alpha {})),
+        )
+        .with_test_group(
+            TestGroup::new("color_slider")
+                .with(fixture_test(test_color_slider::InputProps {}))
+                .with(fixture_test(test_color_slider::HueValueTextAndLabel {}))
+                .with(fixture_test(test_color_slider::Keyboard {}))
+                .with(fixture_test(test_color_slider::TrackClick {}))
+                .with(fixture_test(test_color_slider::Disabled {}))
+                .with(fixture_test(test_color_slider::Forms {}))
+                .with(fixture_test(test_color_slider::DefaultLabel {}))
+                .with(fixture_test(test_color_slider::DragThumb {}))
+                .with(fixture_test(test_color_slider::DragThumbVertical {}))
+                .with(fixture_test(test_color_slider::DragTrackVertical {}))
+                .with(fixture_test(test_color_slider::MountedAgain {}))
+                .with(fixture_test(
+                    test_color_slider::ValueTextNamesTheDisplayColor {},
+                ))
+                .with(fixture_test(test_color_slider::Output {}))
+                .with(fixture_test(test_color_slider::AriaLabel {}))
+                .with(fixture_test(test_color_slider::AriaLabelledby {}))
+                .with(fixture_test(test_color_slider::DisabledDrag {}))
+                .with(fixture_test(test_color_slider::Focusable {}))
+                .with(fixture_test(test_color_slider::DragTrack {}))
+                .with(fixture_test(test_color_slider::ThumbFocusRing {}))
+                .with(fixture_test(test_color_slider::ThumbHover {}))
+                .with(fixture_test(test_color_slider::ThumbDragging {}))
+                .with(fixture_test(test_color_slider::ClassesAttributesAndForm {}))
+                .with(fixture_test(test_color_slider::TrackGradients {})),
+        )
+        .with_test_group(
+            TestGroup::new("color_swatch")
+                .with(fixture_test(test_color_swatch::Swatches {}))
+                .with(fixture_test(test_color_swatch::PickerDefaultValue {}))
+                .with(fixture_test(test_color_swatch::PickerKeyboard {}))
+                .with(fixture_test(test_color_swatch::PickerDisabledItems {}))
+                .with(fixture_test(test_color_swatch::SwatchInItem {})),
+        )
+        .with_test_group(
+            TestGroup::new("color_wheel")
+                .with(fixture_test(test_color_wheel::InputProps {}))
+                .with(fixture_test(test_color_wheel::Keyboard {}))
+                .with(fixture_test(test_color_wheel::RingPress {}))
+                .with(fixture_test(test_color_wheel::Disabled {}))
+                .with(fixture_test(test_color_wheel::Forms {}))
+                .with(fixture_test(test_color_wheel::DragThumb {}))
+                .with(fixture_test(test_color_wheel::InputEvent {}))
+                .with(fixture_test(test_color_wheel::RgbColors {}))
+                .with(fixture_test(test_color_wheel::MountedAgain {}))
+                .with(fixture_test(test_color_wheel::Focusable {}))
+                .with(fixture_test(test_color_wheel::RepeatedPageKeys {}))
+                .with(fixture_test(test_color_wheel::RingDrag {}))
+                .with(fixture_test(test_color_wheel::PressInsideTheRing {}))
+                .with(fixture_test(test_color_wheel::DisabledDrag {}))
+                .with(fixture_test(test_color_wheel::ThumbFocusRing {}))
+                .with(fixture_test(test_color_wheel::ThumbHover {}))
+                .with(fixture_test(test_color_wheel::ThumbDragging {}))
+                .with(fixture_test(test_color_wheel::Labelledby {}))
+                .with(fixture_test(test_color_wheel::ThumbWithoutAlpha {}))
+                .with(fixture_test(test_color_wheel::ClassesAttributesAndForm {}))
+                .with(fixture_test(test_color_wheel::RadiiChange {})),
+        )
+        .with_test_group(
+            TestGroup::new("label_slots")
+                .with(fixture_test(test_label_slots::NoLabels {}))
+                .with(fixture_test(test_label_slots::LabelsAdded {}))
+                .with(fixture_test(test_label_slots::LabelsRemoved {})),
+        )
+        .with_test_group(
+            TestGroup::new("context_menu")
+                .with(fixture_test(
+                    test_context_menu::RightClickRequestsTheMenu {},
+                ))
+                .with(fixture_test(
+                    test_context_menu::WithoutAHandlerNothingHappens {},
+                ))
+                .with(fixture_test(test_context_menu::CtrlEnterIsMacOnly {}))
+                .with(fixture_test(test_context_menu::CtrlEnterOnMac {}))
+                .with(fixture_test(
+                    test_context_menu::CtrlEnterWithAContextmenuEventFiresOnce {},
+                ))
+                .with(fixture_test(test_context_menu::EnterWithoutCtrlOnMac {}))
+                .with(fixture_test(test_context_menu::LongPressOnIos {}))
+                .with(fixture_test(test_context_menu::CancelledLongPressOnIos {}))
+                .with(fixture_test(
+                    test_context_menu::LongPressOnAndroidRequestsOnce {},
+                ))
+                .with(fixture_test(
+                    test_context_menu_atoms::RightClickOpensAtThePointer {},
+                ))
+                .with(fixture_test(
+                    test_context_menu_atoms::EscapeReturnsFocusToTheRow {},
+                ))
+                .with(fixture_test(test_context_menu_atoms::ShiftF10OpensIt {})),
+        )
+        .with_test_group(
+            TestGroup::new("interact_outside")
+                .with(fixture_test(test_interact_outside::PointerEvents {}))
+                .with(fixture_test(test_interact_outside::LeftButtonOnly {}))
+                .with(fixture_test(
+                    test_interact_outside::PointerUpWithoutPointerDown {},
+                ))
+                .with(fixture_test(test_interact_outside::Disabled {})),
+        )
+        .with_test_group(
+            TestGroup::new("long_press")
+                .with(fixture_test(test_long_press::LongPress {}))
+                .with(fixture_test(test_long_press::CancelledWhenReleasedEarly {}))
+                .with(fixture_test(test_long_press::CancelsOtherPressEvents {}))
+                .with(fixture_test(
+                    test_long_press::KeepsPressEventsWhenReleasedEarly {},
+                ))
+                .with(fixture_test(test_long_press::CustomThreshold {}))
+                .with(fixture_test(test_long_press::AccessibilityDescription {}))
+                .with(fixture_test(
+                    test_long_press::PreventsContextMenuDuringTouch {},
+                ))
+                .with(fixture_test(test_long_press::NoLongPressByKeyboard {}))
+                .with(fixture_test(
+                    test_long_press::PreventsTheClickAfterALongPress {},
+                ))
+                .with(fixture_test(test_long_press::DraggingOutAndBackIn {})),
+        )
+        .with_test_group(
+            TestGroup::new("press")
+                .with(fixture_test(test_press::MouseClickFiresAllEventsInOrder {}))
+                .with(fixture_test(
+                    test_press::TextSelectionDisabledWhilePressed {},
+                ))
+                .with(fixture_test(test_press::EnterPresses {}))
+                .with(fixture_test(test_press::SpacePresses {}))
+                .with(fixture_test(test_press::ReleasingOutsideDoesNotPress {}))
+                .with(fixture_test(test_press::DisabledElementIgnoresPresses {}))
+                .with(fixture_test(
+                    test_press::BecomingDisabledCancelsActivePress {},
+                ))
+                .with(fixture_test(test_press::EnterOnCheckboxSubmitsForm {}))
+                .with(fixture_test(
+                    test_press::PreventFocusOnPressKeepsTheFocus {},
+                ))
+                .with(fixture_test(test_press::NestedPressStopsByDefault {}))
+                .with(fixture_test(
+                    test_press::NestedPressPropagatesWhenContinued {},
+                ))
+                .with(fixture_test(
+                    test_press::KeyboardPressEndsWhenKeyUpIsStopped {},
+                ))
+                .with(fixture_test(test_press::ADragInsideCancelsThePress {}))
+                .with(fixture_test(
+                    test_press::AChildStoppingTheClickCancelsThePress {},
+                ))
+                .with(fixture_test(
+                    test_press::FocusMovingBeforeKeyUpEndsWithoutPress {},
+                ))
+                .with(fixture_test(test_press::RepeatingKeyDownsAreIgnored {}))
+                .with(fixture_test(test_press::DraggingOutAndBackIn {}))
+                .with(fixture_test(test_press::CancelOnPointerExit {}))
+                .with(fixture_test(test_press::PointerCancelCancelsThePress {}))
+                .with(fixture_test(test_press::SpaceOnALinkWithButtonRole {}))
+                .with(fixture_test(test_press::DoublePress {}))
+                .with(fixture_test(test_press::DoublePressWithHover {}))
+                .with(fixture_test(test_press::TouchPressWithoutAClick {}))
+                .with(fixture_test(test_press::OnlyThePrimaryButtonPresses {}))
+                .with(fixture_test(test_press::PointerModifierKeys {}))
+                .with(fixture_test(test_press::KeyboardModifierKeys {}))
+                .with(fixture_test(test_press::MouseCoordinates {}))
+                .with(fixture_test(test_press::TouchCoordinates {}))
+                .with(fixture_test(test_press::KeyboardCoordinates {}))
+                .with(fixture_test(test_press::CancelCoordinates {}))
+                .with(fixture_test(test_press::ClickFocusesTheElement {}))
+                .with(fixture_test(test_press::VirtualPointerEventsAreIgnored {}))
+                .with(fixture_test(test_press::ZeroSizedPointersPressOnAndroid {}))
+                .with(fixture_test(test_press::TalkbackDoubleTap {}))
+                .with(fixture_test(test_press::PressureZeroPressesElsewhere {}))
+                .with(fixture_test(test_press::RealPointerAfterAVirtualOne {}))
+                .with(fixture_test(test_press::VirtualClickDuringAPointerPress {}))
+                .with(fixture_test(
+                    test_press::TypingInATextInputPressesNothing {},
+                ))
+                .with(fixture_test(test_press::TwoPressHooksOpenALinkOnce {}))
+                .with(fixture_test(test_press::ClicksDuringPressUpAreIgnored {}))
+                .with(fixture_test(
+                    test_press::IosPressStartDisablesPageSelection {},
+                ))
+                .with(fixture_test(
+                    test_press::PressStartLeavesPageSelectionElsewhere {},
+                ))
+                .with(fixture_test(
+                    test_press::IosPressEndRestoresPageSelection {},
+                ))
+                .with(fixture_test(
+                    test_press::IosQuickSecondPressKeepsPageSelectionDisabled {},
+                ))
+                .with(fixture_test(test_press::IosUnmountRestoresPageSelection {}))
+                .with(fixture_test(
+                    test_press::TwoPressesRestoreTheirOwnSelection {},
+                ))
+                .with(fixture_test(test_press::StyleChangesDuringAPressStay {}))
+                .with(fixture_test(test_press::UserSelectSetDuringAPressStays {}))
+                .with(fixture_test(test_press::SpaceOnACheckbox {}))
+                .with(fixture_test(test_press::EnterOnALink {}))
+                .with(fixture_test(test_press::EnterOnALinkRole {}))
+                .with(fixture_test(test_press::PressPropagationContinue {}))
+                .with(fixture_test(test_press::VirtualClick {}))
+                .with(fixture_test(test_press::RemovedWhilePressed {}))
+                .with(fixture_test(test_press::MetaReleaseEndsHeldKeyPresses {})),
+        )
+        .with_test_group(
+            TestGroup::new("use_button")
+                .with(fixture_test(
+                    test_use_button::AttributesDependOnElementType {},
+                ))
+                .with(fixture_test(
+                    test_use_button::NativeAndCustomElementsPress {},
+                ))
+                .with(fixture_test(test_use_button::TabOrder {}))
+                .with(fixture_test(test_use_button::DisabledButtons {}))
+                .with(fixture_test(test_use_button::FormSubmission {}))
+                .with(fixture_test(test_use_button::HoverAndFocusVisible {})),
+        )
+        .with_test_group(
+            TestGroup::new("menu_trigger")
+                .with(fixture_test(test_menu_trigger::AriaAttributes {}))
+                .with(fixture_test(test_menu_trigger::MousePressOpensOnce {}))
+                .with(fixture_test(
+                    test_menu_trigger::ArrowDownOpensOnTheFirstItem {},
+                ))
+                .with(fixture_test(
+                    test_menu_trigger::ArrowUpOpensOnTheLastItem {},
+                ))
+                .with(fixture_test(test_menu_trigger::EnterOpensOnTheFirstItem {}))
+                .with(fixture_test(test_menu_trigger::SpaceOpensOnTheFirstItem {}))
+                .with(fixture_test(
+                    test_menu_trigger::DisabledTriggerDoesntOpen {},
+                ))
+                .with(fixture_test(
+                    test_menu_trigger::LongPressOpensOnTheFirstItem {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("number_field")
+                .with(fixture_test(test_number_field::StepperButtons {}))
+                .with(fixture_test(test_number_field::IphoneInput {}))
+                .with(fixture_test(
+                    test_number_field::ClickStepsOnceAndFocusesInput {},
+                ))
+                .with(fixture_test(
+                    test_number_field::HoldingSpinsUntilTheLimit {},
+                ))
+                .with(fixture_test(test_number_field::Keyboard {}))
+                .with(fixture_test(test_number_field::SteppersAreNotTabStops {}))
+                .with(fixture_test(test_number_field::EnterCommitsAndSubmits {}))
+                .with(fixture_test(test_number_field_atoms::ProvidesSlots {}))
+                .with(fixture_test(
+                    test_number_field_atoms::HoverAndFocusVisibleState {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::SteppersShowFocusVisible {},
+                ))
+                .with(fixture_test(test_number_field_atoms::ReadOnlyState {}))
+                .with(fixture_test(test_number_field_atoms::FormValue {}))
+                .with(fixture_test(test_number_field_atoms::ValidationErrors {}))
+                .with(fixture_test(test_number_field_atoms::FormReset {}))
+                .with(fixture_test(
+                    test_number_field_atoms::SteppersCommitValidation {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::OnlyCommitsOnBlurIfTheValueChanged {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::NativeValidateFunction {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::NativeServerValidation {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::CustomNativeErrorMessage {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::AriaValidateFunction {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::AriaServerValidation {},
+                ))
+                .with(fixture_test(test_number_field_atoms::ArrowKeys {}))
+                .with(fixture_test(
+                    test_number_field_atoms::ProgrammaticClicksOnSteppers {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::DeletingTheFirstDigitBeforeAGroupSeparator {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::TypingAndEnterCommit {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::NoGroupingCharactersWithoutGrouping {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::NoGroupingCharactersInGerman {},
+                ))
+                .with(fixture_test(test_number_field_atoms::ScrollWheel {}))
+                .with(fixture_test(test_number_field_atoms::PastingIntoAFormat {}))
+                .with(fixture_test(
+                    test_number_field_atoms::RejectedValuesKeepTheText {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::ServerErrorsSurviveAnUnchangedBlur {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::ValidateCommitBehavior {},
+                ))
+                .with(fixture_test(
+                    test_number_field_atoms::ValidateCommitBehaviorAndEnterSubmit {},
+                ))
+                .with(fixture_test(test_number_field_atoms::TypedValues {})),
+        )
+        .with_test_group(
+            TestGroup::new("live_announcer")
+                .with(fixture_test(test_live_announcer::Announcements {}))
+                .with(fixture_test(test_live_announcer::Clear {}))
+                .with(fixture_test(test_live_announcer::Timeout {})),
+        )
+        .with_test_group(
+            TestGroup::new("listbox")
+                .with(fixture_test(test_listbox::AriaStructure {}))
+                .with(fixture_test(
+                    test_listbox::KeyboardNavigationSkipsDisabledItems {},
+                ))
+                .with(fixture_test(test_listbox::Selection {}))
+                .with(fixture_test(test_listbox::TabInAndOut {}))
+                .with(fixture_test(test_listbox::TypeAhead {}))
+                .with(fixture_test(test_listbox::SelectAllAndClear {}))
+                .with(fixture_test(test_listbox::ShiftArrowExtendsSelection {}))
+                .with(fixture_test(
+                    test_listbox_features::SectionsAndSeparators {},
+                ))
+                .with(fixture_test(
+                    test_listbox_features::ArrowKeysCrossSections {},
+                ))
+                .with(fixture_test(test_listbox_features::Hover {}))
+                .with(fixture_test(
+                    test_listbox_features::ReplaceSelectionByPress {},
+                ))
+                .with(fixture_test(
+                    test_listbox_features::ReplaceSelectionByKeyboard {},
+                ))
+                .with(fixture_test(
+                    test_listbox_features::ActionsWithoutSelection {},
+                ))
+                .with(fixture_test(test_listbox_features::Links {}))
+                .with(fixture_test(
+                    test_listbox_features::LinksWithSingleSelection {},
+                ))
+                .with(fixture_test(test_listbox_features::ArrowKeysPerLayout {}))
+                .with(fixture_test(test_listbox_features::PageDownAndUp {}))
+                .with(fixture_test(
+                    test_listbox_features::DisabledSelectionBehavior {},
+                ))
+                .with(fixture_test(test_listbox_features::EmptyState {}))
+                .with(fixture_test(
+                    test_listbox_features::RemovingTheFocusedOption {},
+                ))
+                .with(fixture_test(
+                    test_listbox_features::LabelsFollowTheCollection {},
+                ))
+                .with(fixture_test(test_listbox_features::RenamedItemsUpdate {}))
+                .with(fixture_test(test_listbox_selection::SingleSelection {}))
+                .with(fixture_test(
+                    test_listbox_selection::FixedSingleSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::SelectAllDoesNothingWithSingleSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::MultipleDefaultSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::FixedMultipleSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::EscapeKeyBehaviorNone {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::ReplaceSelectionOnEntryAndHomeEnd {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::EnteringFocusesTheSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::SpaceReplacesAfterMovingFocusOnly {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::PressingTheSelectedOptionKeepsIt {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::ReplaceBehaviorWithSingleSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::TouchAndScreenReaderPressesToggle {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::LongPressSelectsNextToAnAction {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::LinksWithMultipleSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::LinksWithReplaceSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::LabelAndDescriptionSlots {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::OptionsFollowTheCollection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::GridSelectionAndEdges {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::TypeAheadSpacesTimeoutAndWrap {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::ClassesAndAttributes {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::AutoFocusWithoutSelection {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::AutoFocusFirstAndLast {},
+                ))
+                .with(fixture_test(
+                    test_listbox_selection::AutoFocusKeepsTheSelection {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("select")
+                .with(fixture_test(
+                    test_select::PartsWithoutParentWarnAndRenderNothing {},
+                ))
+                .with(fixture_test(test_select::InitialState {}))
+                .with(fixture_test(
+                    test_select::OpeningFocusesTheSelectedOption {},
+                ))
+                .with(fixture_test(test_select::EscapeClosesAndRestoresFocus {}))
+                .with(fixture_test(
+                    test_select::EscapeAfterOpeningWithTheKeyboard {},
+                ))
+                .with(fixture_test(test_select::BoundSelect {}))
+                .with(fixture_test(test_select::SelectingAnOption {}))
+                .with(fixture_test(test_select::TriggerKeyboard {}))
+                .with(fixture_test(test_select::Labelling {}))
+                .with(fixture_test(test_select::FormReset {}))
+                .with(fixture_test(
+                    test_select_forms::TriggerHoverAndPlaceholder {},
+                ))
+                .with(fixture_test(test_select_forms::MultipleSelection {}))
+                .with(fixture_test(test_select_forms::OpenStateBoundToAppState {}))
+                .with(fixture_test(test_select_forms::NativeValidation {}))
+                .with(fixture_test(test_select_forms::RequiredBlocksSubmission {}))
+                .with(fixture_test(test_select_forms::Disabled {}))
+                .with(fixture_test(test_select_forms::Autofill {}))
+                .with(fixture_test(test_select_forms::NoItems {}))
+                .with(fixture_test(test_select_forms::EmptyState {}))
+                .with(fixture_test(test_select_forms::ManyItemsValidation {}))
+                .with(fixture_test(
+                    test_select_forms::ManyItemsSelectionAndReset {},
+                ))
+                .with(fixture_test(
+                    test_select_forms::ValueOutsideTheOptionsIsSubmitted {},
+                ))
+                .with(fixture_test(
+                    test_select_forms::ValueOutsideTheOptionsShowsThePlaceholder {},
+                ))
+                .with(fixture_test(
+                    test_select_behavior::PopoverContentIsntPartOfTheSelect {},
+                ))
+                .with(fixture_test(test_select_behavior::LabelledByAriaLabel {}))
+                .with(fixture_test(
+                    test_select_behavior::LabelledByAriaLabelledby {},
+                ))
+                .with(fixture_test(test_select_behavior::LabelledByBoth {}))
+                .with(fixture_test(
+                    test_select_behavior::DescribedAndPressedWhileOpen {},
+                ))
+                .with(fixture_test(test_select_behavior::OpensOnPointerDown {}))
+                .with(fixture_test(test_select_behavior::OpensByKeys {}))
+                .with(fixture_test(
+                    test_select_behavior::ClosesByTriggerAndDismissButton {},
+                ))
+                .with(fixture_test(
+                    test_select_behavior::TabKeepsThePopoverOpen {},
+                ))
+                .with(fixture_test(
+                    test_select_behavior::ShouldCloseOnSelectOverridesTheMode {},
+                ))
+                .with(fixture_test(
+                    test_select_behavior::SpaceSelectsInThePopover {},
+                ))
+                .with(fixture_test(test_select_behavior::HoverFocusesOptions {}))
+                .with(fixture_test(test_select_behavior::TypeAheadInThePopover {}))
+                .with(fixture_test(
+                    test_select_behavior::PressingTheSelectedOptionKeepsIt {},
+                ))
+                .with(fixture_test(test_select_behavior::TriggerArrowKeys {}))
+                .with(fixture_test(test_select_behavior::FixedValues {}))
+                .with(fixture_test(test_select_behavior::FocusChanges {}))
+                .with(fixture_test(test_select_behavior::HiddenSelectMarkup {}))
+                .with(fixture_test(
+                    test_select_behavior::NativeValidateFunction {},
+                ))
+                .with(fixture_test(test_select_behavior::AriaValidateFunction {}))
+                .with(fixture_test(test_select_behavior::ServerValidation {}))
+                .with(fixture_test(test_select_behavior::DefaultOpen {}))
+                .with(fixture_test(test_select_behavior::FixedOpenState {}))
+                .with(fixture_test(
+                    test_select_behavior::SectionsAndComplexOptions {},
+                ))
+                .with(fixture_test(
+                    test_select_behavior::OpeningScrollsToTheSelectedOption {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("menu")
+                .with(fixture_test(test_menu::ClosedTrigger {}))
+                .with(fixture_test(test_menu::OpenMenuAriaStructure {}))
+                .with(fixture_test(
+                    test_menu::KeyboardOpeningFocusesFirstOrLastItem {},
+                ))
+                .with(fixture_test(
+                    test_menu::KeyboardNavigationSkipsDisabledItems {},
+                ))
+                .with(fixture_test(
+                    test_menu::KeyboardActivationClosesAndRestoresFocus {},
+                ))
+                .with(fixture_test(test_menu::TypeAhead {}))
+                .with(fixture_test(test_menu::ClickingAnItem {}))
+                .with(fixture_test(test_menu::MouseOpeningFocusesTheMenu {}))
+                .with(fixture_test(test_menu::TypeAheadSkipsDisabledItems {}))
+                .with(fixture_test(test_menu::SelectionMenu {})),
+        )
+        .with_test_group(
+            TestGroup::new("menu_atoms")
+                .with(fixture_test(test_menu_atoms::MenuTrigger {}))
+                .with(fixture_test(test_menu_atoms::KeyboardOpening {}))
+                .with(fixture_test(test_menu_atoms::SelectionMenu {}))
+                .with(fixture_test(test_menu_atoms::LongPressTrigger {}))
+                .with(fixture_test(test_menu_atoms::SectionSelection {}))
+                .with(fixture_test(test_menu_atoms::CloseOnSelect {}))
+                .with(fixture_test(test_menu_atoms::ItemHover {}))
+                .with(fixture_test(test_menu_atoms::DisabledItemIsntHovered {}))
+                .with(fixture_test(test_menu_atoms::ItemFocusRing {}))
+                .with(fixture_test(test_menu_atoms::ItemPressState {}))
+                .with(fixture_test(test_menu_atoms::ItemDisabledState {}))
+                .with(fixture_test(test_menu_atoms::EmptyState {}))
+                .with(fixture_test(test_menu_atoms::ArrowKeysStopAtTheEnds {}))
+                .with(fixture_test(test_menu_atoms::SelectionCantBecomeEmpty {}))
+                .with(fixture_test(
+                    test_menu_atoms::SectionWithoutHeadingIsLabelled {},
+                ))
+                .with(fixture_test(
+                    test_menu_atoms::PressDragReleaseActivatesAnItem {},
+                ))
+                .with(fixture_test(test_menu_atoms::TabKeepsFocusInTheOpenMenu {})),
+        )
+        .with_test_group(
+            TestGroup::new("grid")
+                .with(fixture_test(test_grid::AriaStructure {}))
+                .with(fixture_test(test_grid::RowFocusCellFocus {}))
+                .with(fixture_test(test_grid::RowFocusChildFocus {}))
+                .with(fixture_test(test_grid::CellFocusChildFocus {}))
+                .with(fixture_test(test_grid::CellFocusCellFocus {}))
+                .with(fixture_test(test_grid::RestoresTheLastFocusedChild {}))
+                .with(fixture_test(test_grid::FocusingAChildFromOutsideKeepsIt {}))
+                .with(fixture_test(test_grid::TwoDimensionalNavigation {}))
+                .with(fixture_test(test_grid::RowSelection {}))
+                .with(fixture_test(test_grid::CellFocusModeSelectsRows {}))
+                .with(fixture_test(test_grid::CellActions {})),
+        )
+        .with_test_group(
+            TestGroup::new("grid_list")
+                .with(fixture_test(test_grid_list::AriaStructure {}))
+                .with(fixture_test(
+                    test_grid_list::TabIntoTheListFocusesTheFirstRow {},
+                ))
+                .with(fixture_test(
+                    test_grid_list::KeyboardNavigationSkipsDisabledRows {},
+                ))
+                .with(fixture_test(
+                    test_grid_list::TabOutAndBackRestoresTheFocusedRow {},
+                ))
+                .with(fixture_test(test_grid_list::SelectAllAndClear {}))
+                .with(fixture_test(test_grid_list::SpaceTogglesSelection {}))
+                .with(fixture_test(test_grid_list::ClickSelection {}))
+                .with(fixture_test(test_grid_list::DisabledRowIsMarked {}))
+                .with(fixture_test(test_grid_list::SelectAllSkipsDisabledRow {}))
+                .with(fixture_test(test_grid_list::ShiftArrowExtendsSelection {}))
+                .with(fixture_test(test_grid_list::SelectionAnnouncements {}))
+                .with(fixture_test(
+                    test_grid_list_features::ArrowsCycleThroughChildrenAndRow {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::ArrowsAreMirroredRightToLeft {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::TabWalksTheChildren {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::ArrowsMoveBetweenChildrenOfRows {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::TextInputKeepsItsKeys {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::HoverOnRowsWithAnAction {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::ActionsWithoutSelection {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::ReplaceSelectionBehavior {},
+                ))
+                .with(fixture_test(test_grid_list_features::LinksOpenOnPress {}))
+                .with(fixture_test(
+                    test_grid_list_features::SectionsAndDescriptions {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::ClickingATabbableChildInTabNavigation {},
+                ))
+                .with(fixture_test(test_grid_list_cases::AutoFocus {}))
+                .with(fixture_test(
+                    test_grid_list_cases::AutoFocusFirstSelectsIt {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_cases::AutoFocusLastSelectsIt {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_cases::AutoFocusWithoutSelection {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_cases::AutoFocusKeepsAnAllSelection {},
+                ))
+                .with(fixture_test(test_grid_list_cases::FocusRing {}))
+                .with(fixture_test(test_grid_list_cases::PressState {}))
+                .with(fixture_test(
+                    test_grid_list_cases::NoPressStateWhenNotInteractive {},
+                ))
+                .with(fixture_test(
+                    test_grid_list_cases::EscapeKeepsTheSelection {},
+                ))
+                .with(fixture_test(test_grid_list_cases::EmptyState {}))
+                .with(fixture_test(test_grid_list_cases::GridLayout {}))
+                .with(fixture_test(test_grid_list_cases::Sections {}))
+                .with(fixture_test(
+                    test_grid_list_cases::SelectsOnPressDownByDefault {},
+                ))
+                .with(fixture_test(test_grid_list_cases::SelectsOnPressUp {}))
+                .with(fixture_test(
+                    test_grid_list_cases::ClickingATabbableChildInArrowNavigation {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("tabs")
+                .with(fixture_test(test_tabs::AriaStructure {}))
+                .with(fixture_test(test_tabs::SelectionByPress {}))
+                .with(fixture_test(test_tabs::KeyboardNavigation {}))
+                .with(fixture_test(test_tabs::DisabledTab {}))
+                .with(fixture_test(test_tabs::DisabledFirstTab {}))
+                .with(fixture_test(test_tabs::AllTabsDisabled {}))
+                .with(fixture_test(test_tabs::Vertical {}))
+                .with(fixture_test(test_tabs::ManualActivation {}))
+                .with(fixture_test(test_tabs::RtlVertical {}))
+                .with(fixture_test(test_tabs::DataAttributes {}))
+                .with(fixture_test(test_tabs::ForceMount {}))
+                .with(fixture_test(test_tabs::TabIsDisabled {}))
+                .with(fixture_test(test_tabs::Controlled {}))
+                .with(fixture_test(test_tabs::Dynamic {}))
+                .with(fixture_test(test_tabs::Nested {}))
+                .with(fixture_test(test_tabs::TabPanels {}))
+                .with(fixture_test(test_tabs::DisabledTabs {}))
+                .with(fixture_test(test_tabs::DefaultSelectedKey {}))
+                .with(fixture_test(test_tabs::HomeAndEndSkipDisabledTabs {}))
+                .with(fixture_test(test_tabs::PanelAriaLabel {}))
+                .with(fixture_test(test_tabs::RtlHorizontal {}))
+                .with(fixture_test(test_tabs::ManualActivationWithSpace {}))
+                .with(fixture_test(test_tabs::PanelTabStop {}))
+                .with(fixture_test(test_tabs::TooltipOnATab {}))
+                .with(fixture_test(test_tabs::RovingTabindexFollowsTheApp {}))
+                .with(fixture_test(test_tabs::RootStateAndDefaultClasses {})),
+        )
+        .with_test_group(
+            TestGroup::new("calendar")
+                .with(fixture_test(test_calendar::Structure {}))
+                .with(fixture_test(test_calendar::SelectionByPress {}))
+                .with(fixture_test(test_calendar::KeyboardArrows {}))
+                .with(fixture_test(test_calendar::KeyboardPages {}))
+                .with(fixture_test(test_calendar::KeyboardHomeEnd {}))
+                .with(fixture_test(test_calendar::KeyboardEnterSelects {}))
+                .with(fixture_test(test_calendar::KeyboardPagingFromASixthRow {}))
+                .with(fixture_test(test_calendar::PreviousNextButtons {}))
+                .with(fixture_test(test_calendar::MinMax {}))
+                .with(fixture_test(test_calendar::Unavailable {}))
+                .with(fixture_test(test_calendar::Disabled {}))
+                .with(fixture_test(test_calendar::ReadOnly {}))
+                .with(fixture_test(test_calendar::Invalid {}))
+                .with(fixture_test(test_calendar::TwoMonths {}))
+                .with(fixture_test(test_calendar::WeekView {}))
+                .with(fixture_test(test_calendar::DayView {}))
+                .with(fixture_test(test_calendar::FirstDayOfWeek {}))
+                .with(fixture_test(test_calendar::RangeByPress {}))
+                .with(fixture_test(test_calendar::RangeByKeyboard {}))
+                .with(fixture_test(test_calendar::RangeByDragging {}))
+                .with(fixture_test(test_calendar::RangeUnavailable {}))
+                .with(fixture_test(test_calendar::LabelledByAnotherElement {}))
+                .with(fixture_test(test_calendar::RightToLeft {}))
+                .with(fixture_test(
+                    test_calendar::SettingTheFocusedDateKeepsTheFocus {},
+                ))
+                .with(fixture_test(test_calendar::ControlledRangeCleared {}))
+                .with(fixture_test(
+                    test_calendar::UnavailableDatesDependingOnTheAnchor {},
+                ))
+                .with(fixture_test(test_calendar::RangeByTouchTaps {}))
+                .with(fixture_test(test_calendar::RangeByTouchDragging {}))
+                .with(fixture_test(test_calendar::RangeKeptWhenATouchScrolls {}))
+                .with(fixture_test(test_calendar::TodayInTheBrowsersTimeZone {}))
+                .with(fixture_test(test_calendar::PageBehaviorSingle {}))
+                .with(fixture_test(test_calendar::TwoWeeks {}))
+                .with(fixture_test(test_calendar::WeeksInMonth {}))
+                .with(fixture_test(test_calendar::HeldArrowKeys {}))
+                .with(fixture_test(test_calendar::ChangingTheVisibleDuration {}))
+                .with(fixture_test(test_calendar::MonthAndYearPickers {}))
+                .with(fixture_test(test_calendar::Announcements {}))
+                .with(fixture_test(test_calendar::CommitSelectOnRelease {}))
+                .with(fixture_test(test_calendar::CommitSelectOnBlur {}))
+                .with(fixture_test(test_calendar::CommitClearOnRelease {}))
+                .with(fixture_test(test_calendar::CommitClearOnBlur {}))
+                .with(fixture_test(test_calendar::CommitResetOnRelease {}))
+                .with(fixture_test(test_calendar::CommitResetOnBlur {}))
+                .with(fixture_test(test_calendar::DayViewLeftRightArrows {}))
+                .with(fixture_test(test_calendar::DayViewUpDownArrows {}))
+                .with(fixture_test(test_calendar::DayViewPageKeys {}))
+                .with(fixture_test(test_calendar::DayViewShiftPageKeys {}))
+                .with(fixture_test(test_calendar::DayViewHomeEnd {}))
+                .with(fixture_test(test_calendar::WeekViewLeftRightArrows {}))
+                .with(fixture_test(test_calendar::WeekViewUpDownArrows {}))
+                .with(fixture_test(test_calendar::WeekViewPageKeys {}))
+                .with(fixture_test(test_calendar::WeekViewShiftPageKeys {}))
+                .with(fixture_test(test_calendar::WeekViewHomeEnd {}))
+                .with(fixture_test(test_calendar::TwoWeeksLeftRightArrows {}))
+                .with(fixture_test(test_calendar::TwoWeeksUpDownArrows {}))
+                .with(fixture_test(test_calendar::TwoWeeksPageKeys {}))
+                .with(fixture_test(test_calendar::TwoWeeksShiftPageKeys {}))
+                .with(fixture_test(test_calendar::TwoWeeksHomeEnd {}))
+                .with(fixture_test(test_calendar::PaginationByTheVisibleMonths {}))
+                .with(fixture_test(test_calendar::PaginationByTheVisibleWeeks {}))
+                .with(fixture_test(test_calendar::PaginationByTheVisibleDays {}))
+                .with(fixture_test(test_calendar::FirstDayOfWeekSaturday {}))
+                .with(fixture_test(test_calendar::FirstDayOfWeekInFrench {}))
+                .with(fixture_test(test_calendar::FirstDayOfWeekNeedingSixRows {}))
+                .with(fixture_test(test_calendar::FirstDayOfWeekOfTheLocale {}))
+                .with(fixture_test(test_calendar::LabelledByTheMonthByDefault {}))
+                .with(fixture_test(test_calendar::LabelledOnlyByAnotherElement {}))
+                .with(fixture_test(test_calendar::CustomId {}))
+                .with(fixture_test(test_calendar::LabelledWithSeveralMonths {}))
+                .with(fixture_test(test_calendar::DescribedAndDetailed {}))
+                .with(fixture_test(test_calendar::DefaultClasses {}))
+                .with(fixture_test(test_calendar::CustomClassesAndAttributes {}))
+                .with(fixture_test(test_calendar::CellHover {}))
+                .with(fixture_test(test_calendar::CellFocusRing {}))
+                .with(fixture_test(test_calendar::CellPressState {}))
+                .with(fixture_test(test_calendar::WeekdayStyle {}))
+                .with(fixture_test(
+                    test_calendar::ClearingTheValueThroughTheState {},
+                ))
+                .with(fixture_test(
+                    test_calendar::ShowsTheCurrentMonthByDefault {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeShowsTheCurrentMonthByDefault {},
+                ))
+                .with(fixture_test(test_calendar::PressOutsideTheLimits {}))
+                .with(fixture_test(test_calendar::LimitsDisableTheButtons {}))
+                .with(fixture_test(
+                    test_calendar::ButtonsDisabledWhileFocusedMoveTheFocus {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeButtonsDisabledWhileFocusedMoveTheFocus {},
+                ))
+                .with(fixture_test(test_calendar::KeysStopAtTheLimits {}))
+                .with(fixture_test(test_calendar::MaximumDate {}))
+                .with(fixture_test(test_calendar::EraOfDatesBeforeChrist {}))
+                .with(fixture_test(test_calendar::RangeEraOfDatesBeforeChrist {}))
+                .with(fixture_test(
+                    test_calendar::AnnouncementsOfDatesBeforeChrist {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeAnnouncementsOfDatesBeforeChrist {},
+                ))
+                .with(fixture_test(test_calendar::CalendarAnnouncements {}))
+                .with(fixture_test(test_calendar::AlignmentOfTheInitialValue {}))
+                .with(fixture_test(
+                    test_calendar::RangeAlignmentOfTheInitialValue {},
+                ))
+                .with(fixture_test(
+                    test_calendar::SeveralMonthsPlaceTheSelectedDate {},
+                ))
+                .with(fixture_test(
+                    test_calendar::SeveralMonthsPlaceTheSelectedRange {},
+                ))
+                .with(fixture_test(
+                    test_calendar::ThreeMonthsPagingByTheButtons {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeThreeMonthsPagingByTheButtons {},
+                ))
+                .with(fixture_test(
+                    test_calendar::ThreeMonthsPagingByTheKeyboard {},
+                ))
+                .with(fixture_test(
+                    test_calendar::ThreeMonthsHomeEndAndPageKeys {},
+                ))
+                .with(fixture_test(test_calendar::UnavailableIntervals {}))
+                .with(fixture_test(test_calendar::RangeUnavailableIntervals {}))
+                .with(fixture_test(test_calendar::DefaultFocusedValue {}))
+                .with(fixture_test(test_calendar::ControlledFocusedValue {}))
+                .with(fixture_test(
+                    test_calendar::DefaultFocusedValueConstrained {},
+                ))
+                .with(fixture_test(
+                    test_calendar::ControlledFocusedValueConstrained {},
+                ))
+                .with(fixture_test(test_calendar::AutoFocusToday {}))
+                .with(fixture_test(test_calendar::AutoFocusTheSelectedDate {}))
+                .with(fixture_test(
+                    test_calendar::RangeAutoFocusTheFirstSelectedDate {},
+                ))
+                .with(fixture_test(test_calendar::ControlledSelection {}))
+                .with(fixture_test(test_calendar::ReadOnlyKeyboardSelection {}))
+                .with(fixture_test(test_calendar::ValidSelectionHasNoError {}))
+                .with(fixture_test(
+                    test_calendar::UnavailableSelectionIsInvalid {},
+                ))
+                .with(fixture_test(test_calendar::RangeLabels {}))
+                .with(fixture_test(test_calendar::RangeAcrossMonths {}))
+                .with(fixture_test(test_calendar::RangeSelectionPrompts {}))
+                .with(fixture_test(
+                    test_calendar::RangeKeyboardSelectionControlled {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangePressSelectionControlled {},
+                ))
+                .with(fixture_test(test_calendar::RangeReadOnlyKeyboard {}))
+                .with(fixture_test(test_calendar::RangeReadOnlyPointer {}))
+                .with(fixture_test(test_calendar::RangeDisabled {}))
+                .with(fixture_test(test_calendar::RangePressOutsideTheLimits {}))
+                .with(fixture_test(
+                    test_calendar::RangeEscapeCancelsAPressedRange {},
+                ))
+                .with(fixture_test(test_calendar::RangeDraggingTheStart {}))
+                .with(fixture_test(test_calendar::RangeDragReleasedOutside {}))
+                .with(fixture_test(
+                    test_calendar::RangeCommittedByAnOutsidePress {},
+                ))
+                .with(fixture_test(test_calendar::RangePagingDoesNotCommit {}))
+                .with(fixture_test(
+                    test_calendar::RangePressOnTheStartStartsANewRange {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangePressOnTheEndStartsANewRange {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangePressInTheMiddleStartsANewRange {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeInvalidEndNotDraggableByTouch {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeKeptWhenATouchOnADisabledDateScrolls {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeKeptWhenATouchOnAWeekdayScrolls {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeKeptWhenATouchOnTheHeadingScrolls {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeUnreachableDatesAndButtons {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangePreviousButtonDisabledByUnavailableDates {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeNextButtonDisabledByUnavailableDates {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeUnavailableDatesAfterPaging {},
+                ))
+                .with(fixture_test(
+                    test_calendar::RangeStartedAtTheEndOfAvailableDates {},
+                ))
+                .with(fixture_test(test_calendar::RangeNonContiguous {}))
+                .with(fixture_test(
+                    test_calendar::RangeBlurSelectsTheNearestAvailableDate {},
+                ))
+                .with(fixture_test(test_calendar::RangeInvalid {}))
+                .with(fixture_test(test_calendar::RangeValidHasNoError {}))
+                .with(fixture_test(
+                    test_calendar::RangeUnavailableSelectionIsInvalid {},
+                ))
+                .with(fixture_test(test_calendar::RangeStartAndEndStates {}))
+                .with(fixture_test(test_calendar::CommitClearWithoutARange {})),
+        )
+        .with_test_group(
+            TestGroup::new("date_field")
+                .with(fixture_test(test_date_field::Structure {}))
+                .with(fixture_test(test_date_field::SegmentsAreTextboxesOnIos {}))
+                .with(fixture_test(test_date_field::Typing {}))
+                .with(fixture_test(test_date_field::ArrowsAndBackspace {}))
+                .with(fixture_test(
+                    test_date_field::InvalidDateCommittedWhenLeft {},
+                ))
+                .with(fixture_test(test_date_field::FormReset {}))
+                .with(fixture_test(test_date_field::MinValidation {}))
+                .with(fixture_test(test_date_field::DisabledAndReadOnly {}))
+                .with(fixture_test(test_date_field::DateAndTime {}))
+                .with(fixture_test(test_date_field::Zoned {}))
+                .with(fixture_test(test_date_field::TimeField {}))
+                .with(fixture_test(test_date_field::DatePickerStructure {}))
+                .with(fixture_test(
+                    test_date_field::DatePickerSelectsInItsCalendar {},
+                ))
+                .with(fixture_test(
+                    test_date_field::DatePickerOpensByAltArrowDown {},
+                ))
+                .with(fixture_test(
+                    test_date_field::DatePickerEscapeKeepsTheValue {},
+                ))
+                .with(fixture_test(
+                    test_date_field::DatePickerFieldEditsTheValue {},
+                ))
+                .with(fixture_test(
+                    test_date_field::DatePickerEditDoesNotComeBack {},
+                ))
+                .with(fixture_test(test_date_field::DateRangePicker {}))
+                .with(fixture_test(test_date_field::GroupStates {}))
+                .with(fixture_test(test_date_field::MonthArrowKeys {}))
+                .with(fixture_test(test_date_field::MonthWraps {}))
+                .with(fixture_test(test_date_field::MonthPageKeys {}))
+                .with(fixture_test(test_date_field::MonthHomeEnd {}))
+                .with(fixture_test(test_date_field::DayArrowKeys {}))
+                .with(fixture_test(test_date_field::DayWraps {}))
+                .with(fixture_test(test_date_field::DayPageKeys {}))
+                .with(fixture_test(test_date_field::DayHomeEnd {}))
+                .with(fixture_test(test_date_field::YearArrowKeys {}))
+                .with(fixture_test(test_date_field::YearPageKeys {}))
+                .with(fixture_test(test_date_field::HourArrowKeys {}))
+                .with(fixture_test(test_date_field::HourWrapsIn12HourTime {}))
+                .with(fixture_test(test_date_field::HourWrapsIn24HourTime {}))
+                .with(fixture_test(test_date_field::HourPageKeys {}))
+                .with(fixture_test(test_date_field::HourHomeEndIn12HourTime {}))
+                .with(fixture_test(test_date_field::HourHomeEndIn24HourTime {}))
+                .with(fixture_test(test_date_field::MinuteKeys {}))
+                .with(fixture_test(test_date_field::SecondKeys {}))
+                .with(fixture_test(test_date_field::DayPeriodArrowKeys {}))
+                .with(fixture_test(test_date_field::EraShowsAndHides {}))
+                .with(fixture_test(test_date_field::EraOfDatesBeforeChrist {}))
+                .with(fixture_test(
+                    test_date_field::ArrowsConstrainAnInvalidDateOnBlur {},
+                ))
+                .with(fixture_test(test_date_field::TypingIntoTheMonth {}))
+                .with(fixture_test(test_date_field::TypingIntoTheDay {}))
+                .with(fixture_test(test_date_field::TypingIntoTheYear {}))
+                .with(fixture_test(
+                    test_date_field::TypingIntoTheHourIn12HourTime {},
+                ))
+                .with(fixture_test(
+                    test_date_field::TypingIntoTheHourIn24HourTime {},
+                ))
+                .with(fixture_test(test_date_field::TypingIntoTheMinute {}))
+                .with(fixture_test(test_date_field::TypingIntoTheSecond {}))
+                .with(fixture_test(test_date_field::TypingIntoTheDayPeriod {}))
+                .with(fixture_test(test_date_field::TypingArabicDigits {}))
+                .with(fixture_test(
+                    test_date_field::TypingASkippedTimeConstrainsOnBlur {},
+                ))
+                .with(fixture_test(test_date_field::BackspaceInTheMonth {}))
+                .with(fixture_test(test_date_field::BackspaceInTheDay {}))
+                .with(fixture_test(test_date_field::BackspaceInTheYear {}))
+                .with(fixture_test(
+                    test_date_field::BackspaceInTheHourIn12HourTime {},
+                ))
+                .with(fixture_test(
+                    test_date_field::BackspaceInTheHourIn24HourTime {},
+                ))
+                .with(fixture_test(test_date_field::BackspaceInTheDayPeriod {}))
+                .with(fixture_test(
+                    test_date_field::BackspaceInTheMinuteAndSecond {},
+                ))
+                .with(fixture_test(test_date_field::BackspaceWithArabicDigits {}))
+                .with(fixture_test(
+                    test_date_field::ClearingEverySegmentEmptiesTheValue {},
+                ))
+                .with(fixture_test(test_date_field::SpinButtonValues {}))
+                .with(fixture_test(
+                    test_date_field::ClearingTheHourKeepsTheDayPeriod {},
+                ))
+                .with(fixture_test(test_date_field::HourThroughTheFallBack {}))
+                .with(fixture_test(
+                    test_date_field::HourThroughTheFallBackWithoutMinutes {},
+                ))
+                .with(fixture_test(
+                    test_date_field::TimeFieldThroughTheFallBackFromThePlaceholder {},
+                ))
+                .with(fixture_test(
+                    test_date_field::TimeFieldThroughTheFallBack {},
+                ))
+                .with(fixture_test(test_date_field::TimeFieldKeepsItsTimeZone {}))
+                .with(fixture_test(test_date_field::TimeBoundsOnTheValuesDay {}))
+                .with(fixture_test(
+                    test_date_field::PressingTheFieldFocusesASegment {},
+                ))
+                .with(fixture_test(test_date_field::AutoFocus {}))
+                .with(fixture_test(test_date_field::FocusChanges {}))
+                .with(fixture_test(test_date_field::LabelledByAriaLabel {}))
+                .with(fixture_test(test_date_field::LabelledByAnotherElement {}))
+                .with(fixture_test(test_date_field::HelpTextWithAValue {}))
+                .with(fixture_test(test_date_field::ErrorMessage {}))
+                .with(fixture_test(test_date_field::NoErrorMessageWhileValid {}))
+                .with(fixture_test(test_date_field::UnavailableDate {}))
+                .with(fixture_test(test_date_field::HoverState {}))
+                .with(fixture_test(test_date_field::DisabledState {}))
+                .with(fixture_test(test_date_field::ReadOnlyState {}))
+                .with(fixture_test(test_date_field::RequiredState {}))
+                .with(fixture_test(test_date_field::RequiredValidation {}))
+                .with(fixture_test(test_date_field::ResetClearsTheValidation {}))
+                .with(fixture_test(
+                    test_date_field::ValidationCommitsOnBlurOnlyAfterAChange {},
+                ))
+                .with(fixture_test(test_date_field::NativeMinAndMax {}))
+                .with(fixture_test(test_date_field::NativeValidate {}))
+                .with(fixture_test(test_date_field::NativeServerValidation {}))
+                .with(fixture_test(test_date_field::CustomNativeMessage {}))
+                .with(fixture_test(test_date_field::AriaMinAndMax {}))
+                .with(fixture_test(test_date_field::AriaValidate {}))
+                .with(fixture_test(test_date_field::AriaServerValidation {}))
+                .with(fixture_test(test_date_field::TimeFieldNativeMinAndMax {}))
+                .with(fixture_test(
+                    test_date_field::TimeFieldDescriptionAndReset {},
+                ))
+                .with(fixture_test(test_date_field::HiddenDateInputContainer {}))
+                .with(fixture_test(test_date_field::RemovingTheFocusedField {})),
+        )
+        .with_test_group(
+            TestGroup::new("date_picker")
+                .with(fixture_test(test_date_picker::CloseOnSelect {}))
+                .with(fixture_test(test_date_picker::DisabledPicker {}))
+                .with(fixture_test(test_date_picker::ProgrammaticValue {}))
+                .with(fixture_test(test_date_picker::RequiredPicker {}))
+                .with(fixture_test(test_date_picker::RequiredTimeField {}))
+                .with(fixture_test(test_date_picker::RangePlaceholderTimes {}))
+                .with(fixture_test(test_date_picker::EnterDoesNothing {}))
+                .with(fixture_test(test_date_picker::HeldKeys {}))
+                .with(fixture_test(test_date_picker::DeletingAPartialField {}))
+                .with(fixture_test(test_date_picker::Autofill {}))
+                .with(fixture_test(test_date_picker::SelectionWhileElsewhere {}))
+                .with(fixture_test(test_date_picker::GermanOrder {}))
+                .with(fixture_test(test_date_picker::TwelveHourClocks {}))
+                .with(fixture_test(test_date_picker::RightToLeft {}))
+                .with(fixture_test(test_date_picker::SwitchingToRightToLeft {}))
+                .with(fixture_test(test_date_picker::Slots {}))
+                .with(fixture_test(test_date_picker::SlotsDescriptionAfter {}))
+                .with(fixture_test(test_date_picker::RangeSlots {}))
+                .with(fixture_test(
+                    test_date_picker::DataAttributesOnTheOuterElement {},
+                ))
+                .with(fixture_test(test_date_picker::RangePressedWhileOpen {}))
+                .with(fixture_test(test_date_picker::InvalidState {}))
+                .with(fixture_test(test_date_picker::RequiredState {}))
+                .with(fixture_test(test_date_picker::FormValue {}))
+                .with(fixture_test(test_date_picker::RangeValidationErrors {}))
+                .with(fixture_test(test_date_picker::RangeCloseOnSelect {}))
+                .with(fixture_test(test_date_picker::RangeDisabled {}))
+                .with(fixture_test(test_date_picker::ClearContexts {}))
+                .with(fixture_test(test_date_picker::RangeClearContexts {}))
+                .with(fixture_test(test_date_picker::SpecifiedDate {}))
+                .with(fixture_test(test_date_picker::GranularitySecond {}))
+                .with(fixture_test(test_date_picker::DefaultStructure {}))
+                .with(fixture_test(test_date_picker::ReadOnly {}))
+                .with(fixture_test(
+                    test_date_picker::RequiredAndInvalidSegments {},
+                ))
+                .with(fixture_test(test_date_picker::ReadOnlyTimeZone {}))
+                .with(fixture_test(
+                    test_date_picker::PlaceholderFocusedInTheCalendar {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::SelectedDateFocusedOverThePlaceholder {},
+                ))
+                .with(fixture_test(test_date_picker::ForcedLeadingZeros {}))
+                .with(fixture_test(test_date_picker::ButtonControlsTheDialog {}))
+                .with(fixture_test(test_date_picker::RangeOpensByAltArrowDown {}))
+                .with(fixture_test(test_date_picker::ArrowKeysBetweenSegments {}))
+                .with(fixture_test(test_date_picker::PressOnALiteral {}))
+                .with(fixture_test(test_date_picker::AutoFocus {}))
+                .with(fixture_test(test_date_picker::RangeAutoFocus {}))
+                .with(fixture_test(
+                    test_date_picker::FocusChangeWithinThePicker {},
+                ))
+                .with(fixture_test(test_date_picker::FocusChangeWhenLeaving {}))
+                .with(fixture_test(test_date_picker::FocusChangeWhenOpening {}))
+                .with(fixture_test(test_date_picker::FocusChangeAfterClosing {}))
+                .with(fixture_test(test_date_picker::TimeFieldInThePopover {}))
+                .with(fixture_test(
+                    test_date_picker::DeletingInThePopoversTimeField {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::ChangeOnceDateAndTimeAreSelected {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::ClosingConfirmsThePlaceholderTime {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::ClosingWithoutADateCommitsNothing {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::ClosingKeepsAValidDateTime {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::ClearingTheValueClearsDateAndTime {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::RangeTimeFieldsInThePopover {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::RangeChangeOnceDatesAndTimesAreSelected {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::RangeClosingWithoutDatesCommitsNothing {},
+                ))
+                .with(fixture_test(test_date_picker::RangeClearingTheValue {}))
+                .with(fixture_test(test_date_picker::Labelling {}))
+                .with(fixture_test(test_date_picker::LabellingWithAriaLabel {}))
+                .with(fixture_test(
+                    test_date_picker::LabellingWithAriaLabelledby {},
+                ))
+                .with(fixture_test(test_date_picker::HelpText {}))
+                .with(fixture_test(test_date_picker::ErrorMessage {}))
+                .with(fixture_test(test_date_picker::EraForBcDates {}))
+                .with(fixture_test(
+                    test_date_picker::MouseDownFocusesTheFirstSegment {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::MouseDownFocusesTheFirstUnfilledSegment {},
+                ))
+                .with(fixture_test(
+                    test_date_picker::MouseDownFocusesTheLastSegment {},
+                ))
+                .with(fixture_test(test_date_picker::RangeMouseDownOnEachField {}))
+                .with(fixture_test(test_date_picker::RangeMouseDownOnTheDash {}))
+                .with(fixture_test(
+                    test_date_picker::RemovingTheEraFocusesThePreviousSegment {},
+                ))
+                .with(fixture_test(test_date_picker::BelowTheMinimum {}))
+                .with(fixture_test(test_date_picker::AboveTheMaximum {}))
+                .with(fixture_test(test_date_picker::RangeLimits {}))
+                .with(fixture_test(test_date_picker::ZoneKeptWhenCleared {}))
+                .with(fixture_test(test_date_picker::FormReset {}))
+                .with(fixture_test(test_date_picker::NativeMinAndMax {}))
+                .with(fixture_test(test_date_picker::NativeValidate {}))
+                .with(fixture_test(test_date_picker::NativeServerErrors {}))
+                .with(fixture_test(test_date_picker::NativeCustomMessage {}))
+                .with(fixture_test(test_date_picker::NativeErrorClearedOnReset {}))
+                .with(fixture_test(
+                    test_date_picker::NativeErrorUpdatedByTheCalendar {},
+                ))
+                .with(fixture_test(test_date_picker::AriaMinAndMax {}))
+                .with(fixture_test(test_date_picker::AriaValidate {}))
+                .with(fixture_test(test_date_picker::AriaServerErrors {}))
+                .with(fixture_test(test_date_picker::RangeDescriptionWithTimes {})),
+        )
+        .with_test_group(
+            TestGroup::new("slider")
+                .with(fixture_test(test_slider::LabelledGroup {}))
+                .with(fixture_test(test_slider::Fill {}))
+                .with(fixture_test(test_slider::Keyboard {}))
+                .with(fixture_test(test_slider::TrackClick {}))
+                .with(fixture_test(test_slider::DraggingState {}))
+                .with(fixture_test(test_slider::TwoThumbs {}))
+                .with(fixture_test(test_slider::Orientation {}))
+                .with(fixture_test(test_slider::DisabledState {}))
+                .with(fixture_test(test_slider::Tooltips {}))
+                .with(fixture_test(test_slider::ClosestThumbByClick {}))
+                .with(fixture_test(test_slider::ClosestThumbByDrag {}))
+                .with(fixture_test(test_slider::StackedThumbsBefore {}))
+                .with(fixture_test(test_slider::StackedThumbsAfter {}))
+                .with(fixture_test(test_slider::ManyStackedThumbsBefore {}))
+                .with(fixture_test(test_slider::ManyStackedThumbsAfter {}))
+                .with(fixture_test(test_slider::DisabledTrack {}))
+                .with(fixture_test(test_slider::VerticalDrag {}))
+                .with(fixture_test(test_slider::RightToLeft {}))
+                .with(fixture_test(test_slider::Keys {}))
+                .with(fixture_test(test_slider::KeysVertical {}))
+                .with(fixture_test(test_slider::RepeatedPageKeys {}))
+                .with(fixture_test(test_slider::InputEvent {}))
+                .with(fixture_test(test_slider::DisabledThumb {}))
+                .with(fixture_test(test_slider::FormProp {}))
+                .with(fixture_test(test_slider::ThumbLabels {}))
+                .with(fixture_test(test_slider::Attributes {}))
+                .with(fixture_test(test_slider::ThreeThumbs {}))
+                .with(fixture_test(test_slider::ControlledThumbs {}))
+                .with(fixture_test(test_slider::RestrictedValues {}))
+                .with(fixture_test(test_slider::MissingValue {})),
+        )
+        .with_test_group(
+            TestGroup::new("dnd")
+                .with(fixture_test(test_dnd::BasicDragAndDrop {}))
+                .with(fixture_test(test_dnd::EscapeCancels {}))
+                .with(fixture_test(test_dnd::ReorderAList {}))
+                .with(fixture_test(test_dnd::NativeBasicDragAndDrop {}))
+                .with(fixture_test(test_dnd::TabForwardSkipsNonDropTargets {}))
+                .with(fixture_test(test_dnd::TabBackwardSkipsNonDropTargets {}))
+                .with(fixture_test(test_dnd::PrefersAnAncestorDropTarget {}))
+                .with(fixture_test(test_dnd::EnterOnTheDragSourceCancels {}))
+                .with(fixture_test(test_dnd::IgnoresDropTargetsInHiddenTrees {}))
+                .with(fixture_test(test_dnd::ARemovedDropTarget {}))
+                .with(fixture_test(test_dnd::ADropTargetHiddenDuringTheDrag {}))
+                .with(fixture_test(
+                    test_dnd::AnAddedDropTargetKeepsTheCurrentTarget {},
+                ))
+                .with(fixture_test(test_dnd::AHiddenDragSourceIsSkipped {}))
+                .with(fixture_test(test_dnd::EscapeWithAHiddenDragSource {}))
+                .with(fixture_test(test_dnd::DisabledDrag {}))
+                .with(fixture_test(test_dnd::DisabledDrop {}))
+                .with(fixture_test(test_dnd::DropOperationOverride {}))
+                .with(fixture_test(test_dnd::AllowedDropOperations {}))
+                .with(fixture_test(test_dnd::CanceledTargetsAreHidden {}))
+                .with(fixture_test(test_dnd::AltEnterActivates {}))
+                .with(fixture_test(test_dnd::NativeDisabledDrag {}))
+                .with(fixture_test(test_dnd::NativeDisabledDrop {}))
+                .with(fixture_test(test_dnd::NavigatingWithFocusEventsOnly {}))
+                .with(fixture_test(test_dnd::HidesEverythingButDropTargets {}))
+                .with(fixture_test(test_dnd::ClickingTheDragSourceCancels {}))
+                .with(fixture_test(test_dnd::RestoresFocusFromNonDropTargets {}))
+                .with(fixture_test(test_dnd::IgnoresClicksNotFromScreenReaders {}))
+                .with(fixture_test(
+                    test_dnd::TalkbackClickOnTheDragSourceCancels {},
+                ))
+                .with(fixture_test(
+                    test_dnd::TalkbackDoubleTapOnADropTargetDrops {},
+                ))
+                .with(fixture_test(test_dnd::ScreenReaderAnAddedDropTarget {}))
+                .with(fixture_test(test_dnd::ScreenReaderAnAddedNonDropTarget {}))
+                .with(fixture_test(test_dnd::ScreenReaderARemovedDropTarget {}))
+                .with(fixture_test(test_dnd::ScreenReaderAHiddenDropTarget {})),
+        )
+        .with_test_group(
+            TestGroup::new("dnd_draggable_collection")
+                .with(fixture_test(
+                    test_dnd_draggable_collection::NativeASingleItem {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::NativeSeveralSelectedItems {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::NativeOnlyTheDraggedItem {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::KeyboardASingleItem {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::KeyboardSeveralSelectedItems {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::KeyboardOnlyTheCurrentItem {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::KeyboardAListBoxWithoutDragButtons {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::KeyboardRowActions {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::ScreenReaderASingleItem {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::ScreenReaderSeveralSelectedItems {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::ScreenReaderOnlyTheClickedItem {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::ScreenReaderAListBoxWithoutDragButtons {},
+                ))
+                .with(fixture_test(
+                    test_dnd_draggable_collection::ScreenReaderRowActions {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("dnd_native")
+                .with(fixture_test(test_dnd_native::DragMovesOnlyWhenMoving {}))
+                .with(fixture_test(test_dnd_native::DropMovesOnlyWhenMoving {}))
+                .with(fixture_test(test_dnd_native::DropExitWhenLeaving {}))
+                .with(fixture_test(test_dnd_native::DropExitOnDrop {}))
+                .with(fixture_test(test_dnd_native::DropActivateWhenHeld {}))
+                .with(fixture_test(test_dnd_native::NoDropActivateAfterLeaving {}))
+                .with(fixture_test(
+                    test_dnd_native::NestedElementsNeitherEnterNorExit {},
+                ))
+                .with(fixture_test(test_dnd_native::NestedDragSource {}))
+                .with(fixture_test(test_dnd_native::NestedDropTargetDrop {}))
+                .with(fixture_test(test_dnd_native::NestedDropTargetEnter {}))
+                .with(fixture_test(test_dnd_native::NestedDropTargetExit {}))
+                .with(fixture_test(test_dnd_native::NestedDropTargetActivate {}))
+                .with(fixture_test(test_dnd_native::NestedDropTargetMove {}))
+                .with(fixture_test(test_dnd_native::CustomDataTypes {}))
+                .with(fixture_test(test_dnd_native::SeveralItemsOfACustomType {}))
+                .with(fixture_test(test_dnd_native::AnItemOfSeveralTypes {}))
+                .with(fixture_test(test_dnd_native::SeveralItemsOfSeveralTypes {}))
+                .with(fixture_test(test_dnd_native::SeveralNativeTypes {}))
+                .with(fixture_test(test_dnd_native::AFile {}))
+                .with(fixture_test(test_dnd_native::SeveralFiles {}))
+                .with(fixture_test(test_dnd_native::TextAndFiles {}))
+                .with(fixture_test(test_dnd_native::ADirectory {}))
+                .with(fixture_test(test_dnd_native::AFileOfAnUnknownType {}))
+                .with(fixture_test(
+                    test_dnd_native::GetDropOperationOverridesTheDefault {},
+                ))
+                .with(fixture_test(
+                    test_dnd_native::AllowedOperationsLimitTheDrop {},
+                ))
+                .with(fixture_test(test_dnd_native::GetDropOperationCancels {}))
+                .with(fixture_test(
+                    test_dnd_native::EffectAllowedNarrowedByTheBrowser {},
+                ))
+                .with(fixture_test(
+                    test_dnd_native::EffectAllowedNarrowedToARefusedOperation {},
+                ))
+                .with(fixture_test(
+                    test_dnd_native::ModifierKeysPickTheOperation {},
+                ))
+                .with(fixture_test(
+                    test_dnd_native::WrongEffectAllowedOfTheBrowser {},
+                ))
+                .with(fixture_test(test_dnd_native::FileTypesBeforeTheDrop {}))
+                .with(fixture_test(
+                    test_dnd_native::UnknownFileTypesBeforeTheDrop {},
+                ))
+                .with(fixture_test(test_dnd_native::NoFileTypesBeforeTheDrop {}))
+                .with(fixture_test(test_dnd_native::TheItemsJsonIsNoDragType {}))
+                .with(fixture_test(test_dnd_native::ADragPreview {}))
+                .with(fixture_test(
+                    test_dnd_native::ASmallDragPreviewIsCentered {},
+                ))
+                .with(fixture_test(test_dnd_native::TheDragPreviewOffset {}))
+                .with(fixture_test(
+                    test_dnd_native::TheDragPreviewOffsetIsClamped {},
+                ))
+                .with(fixture_test(test_dnd_native::ARemovedDragSourceEndsOnce {}))
+                .with(fixture_test(test_dnd_native::ADragEndingInItsFirstFrame {}))
+                .with(fixture_test(test_dnd_native::KeyboardCustomDataTypes {}))
+                .with(fixture_test(
+                    test_dnd_native::KeyboardSeveralItemsOfACustomType {},
+                ))
+                .with(fixture_test(
+                    test_dnd_native::KeyboardAnItemOfSeveralTypes {},
+                ))
+                .with(fixture_test(
+                    test_dnd_native::KeyboardSeveralItemsOfSeveralTypes {},
+                ))
+                .with(fixture_test(test_dnd_native::KeyboardNestedDropTargets {}))
+                .with(fixture_test(
+                    test_dnd_native::ASecondEnterStartsNoSecondDrag {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("dnd_collection")
+                .with(fixture_test(test_dnd_collection::BasicDragAndDrop {}))
+                .with(fixture_test(test_dnd_collection::ArrowKeyNavigation {}))
+                .with(fixture_test(test_dnd_collection::HomeAndEnd {}))
+                .with(fixture_test(test_dnd_collection::PageUpAndPageDown {}))
+                .with(fixture_test(
+                    test_dnd_collection::PageUpAndPageDownSkipInvalidTargets {},
+                ))
+                .with(fixture_test(
+                    test_dnd_collection::AfterTheLastFocusedItem {},
+                ))
+                .with(fixture_test(test_dnd_collection::AfterTheSelectedItems {}))
+                .with(fixture_test(test_dnd_collection::BeforeTheSelectedItems {}))
+                .with(fixture_test(test_dnd_collection::OnTheFirstSelectedItem {}))
+                .with(fixture_test(test_dnd_collection::OnTheLastSelectedItem {}))
+                .with(fixture_test(test_dnd_collection::NativeBasicDragAndDrop {}))
+                .with(fixture_test(test_dnd_collection::NativeDropOnAnItem {}))
+                .with(fixture_test(
+                    test_dnd_collection::ScreenReaderBasicDragAndDrop {},
+                ))
+                .with(fixture_test(
+                    test_dnd_collection::ScreenReaderDescriptions {},
+                ))
+                .with(fixture_test(
+                    test_dnd_collection::ScreenReaderInsertionIndicators {},
+                ))
+                .with(fixture_test(
+                    test_dnd_collection::ScreenReaderHidesRowsNotTakingTheDrop {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("clipboard")
+                .with(fixture_test(test_clipboard::Copies {}))
+                .with(fixture_test(test_clipboard::CopiesOnlyWhenFocused {}))
+                .with(fixture_test(test_clipboard::NoCopyWithoutItems {}))
+                .with(fixture_test(test_clipboard::Cuts {}))
+                .with(fixture_test(test_clipboard::CutsOnlyWhenFocused {}))
+                .with(fixture_test(test_clipboard::NoCutWithoutItems {}))
+                .with(fixture_test(test_clipboard::NoCutWithoutOnCut {}))
+                .with(fixture_test(test_clipboard::Pastes {}))
+                .with(fixture_test(test_clipboard::PastesOnlyWhenFocused {}))
+                .with(fixture_test(test_clipboard::NoPasteWithoutOnPaste {}))
+                .with(fixture_test(test_clipboard::CustomTypes {}))
+                .with(fixture_test(test_clipboard::MultipleItemsOfACustomType {}))
+                .with(fixture_test(test_clipboard::ItemsOfMultipleTypes {}))
+                .with(fixture_test(
+                    test_clipboard::MultipleItemsOfMultipleTypes {},
+                ))
+                .with(fixture_test(test_clipboard::TheActionOfACut {}))
+                .with(fixture_test(test_clipboard::TheActionOfACopy {})),
+        )
+        .with_test_group(
+            TestGroup::new("clipboard_write")
+                .with(fixture_test(test_clipboard_write::WritesText {}))
+                .with(fixture_test(test_clipboard_write::WritesTextLoadedLater {}))
+                .with(fixture_test(
+                    test_clipboard_write::WritesNothingWithoutText {},
+                ))
+                .with(fixture_test(test_clipboard_write::ADeniedWrite {}))
+                .with(fixture_test(test_clipboard_write::NoClipboard {})),
+        )
+        .with_test_group(
+            TestGroup::new("text_field")
+                .with(fixture_test(test_text_field::Labelling {}))
+                .with(fixture_test(test_text_field::TypingUpdatesTheState {}))
+                .with(fixture_test(test_text_field::Validation {}))
+                .with(fixture_test(
+                    test_text_field::ProgrammaticChangesUpdateTheInput {},
+                ))
+                .with(fixture_test(
+                    test_text_field::FormResetRestoresTheDefault {},
+                ))
+                .with(fixture_test(test_text_field_atoms::ProvidesSlotsInput {}))
+                .with(fixture_test(
+                    test_text_field_atoms::ProvidesSlotsTextarea {},
+                ))
+                .with(fixture_test(test_text_field_atoms::HoverState {}))
+                .with(fixture_test(test_text_field_atoms::FocusVisibleState {}))
+                .with(fixture_test(
+                    test_text_field_atoms::ReadOnlyAndRequiredState {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::NativeValidationErrorsInput {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::NativeValidationErrorsTextarea {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::CustomizedValidationErrors {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::InvalidWithoutMessageRendersNoError {},
+                ))
+                .with(fixture_test(test_text_field_atoms::IdGoesOnTheInput {}))
+                .with(fixture_test(test_text_field_atoms::FormAttribute {}))
+                .with(fixture_test(
+                    test_text_field_atoms::ServerValidationErrors {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::BoundValuesKeepTheDomInSync {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::FormValidationBehavior {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::NativeValidateFunction {},
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::NoAutoFocusIfInvalidIsPrevented {},
+                ))
+                .with(fixture_test(test_text_field_atoms::AriaValidateFunction {}))
+                .with(fixture_test(test_text_field_atoms::AriaServerValidation {}))
+                .with(fixture_test(test_text_field_atoms::DisabledState {})),
+        )
+        .with_test_group(
+            TestGroup::new("search_field")
+                .with(fixture_test(test_search_field::ProvidesSlots {}))
+                .with(fixture_test(test_search_field::EnterSubmits {}))
+                .with(fixture_test(test_search_field::EscapeClearsOnce {}))
+                .with(fixture_test(
+                    test_search_field::ClearButtonClearsAndFocusesTheInput {},
+                ))
+                .with(fixture_test(
+                    test_search_field::ClearButtonShowsFocusVisible {},
+                ))
+                .with(fixture_test(
+                    test_search_field::DisabledFieldIgnoresKeysAndTheClearButton {},
+                ))
+                .with(fixture_test(
+                    test_search_field::EnterWithoutOnSubmitSubmitsTheForm {},
+                ))
+                .with(fixture_test(test_search_field::ValidationErrors {}))
+                .with(fixture_test(test_search_field::ReadOnly {}))
+                .with(fixture_test(test_search_field::FormAttribute {}))
+                .with(fixture_test(test_search_field::InputType {})),
+        )
+        .with_test_group(
+            TestGroup::new("combobox")
+                .with(fixture_test(test_combobox::AriaStructure {}))
+                .with(fixture_test(
+                    test_combobox::TypingFiltersAndKeyboardSelects {},
+                ))
+                .with(fixture_test(test_combobox::EscapeRevertsTheInput {}))
+                .with(fixture_test(
+                    test_combobox::ButtonShowsAllOptionsAndClickSelects {},
+                ))
+                .with(fixture_test(
+                    test_combobox::ArrowDownOpensWithTheSelectedOptionFocused {},
+                ))
+                .with(fixture_test(
+                    test_combobox::ClearingTheInputClearsTheValue {},
+                ))
+                .with(fixture_test(
+                    test_combobox::ExternallyChangedValueShowsInTheInput {},
+                ))
+                .with(fixture_test(
+                    test_combobox::ExternallySelectedAddedItemShowsInTheInput {},
+                ))
+                .with(fixture_test(
+                    test_combobox::ItemAddedAfterItsSelectionShowsInTheInput {},
+                ))
+                .with(fixture_test(
+                    test_combobox::ValueAndItemsDerivedFromOneSignal {},
+                ))
+                .with(fixture_test(test_combobox::ValueChangedByATimer {}))
+                .with(fixture_test(test_combobox::ValueWrittenInAnEffect {}))
+                .with(fixture_test(
+                    test_combobox::PopoverInAModalStaysInteractive {},
+                ))
+                .with(fixture_test(test_combobox::ButtonIsPressedWhileOpen {}))
+                .with(fixture_test(test_combobox::ButtonTogglesThePopover {}))
+                .with(fixture_test(test_combobox::ClickingTheInputKeepsItOpen {}))
+                .with(fixture_test(test_combobox::ArrowUpOpensOnTheLastOption {}))
+                .with(fixture_test(
+                    test_combobox::PickingTheSelectedOptionResetsTheText {},
+                ))
+                .with(fixture_test(test_combobox::TabCommitsTheFocusedOption {}))
+                .with(fixture_test(test_combobox::ReadOnly {}))
+                .with(fixture_test(test_combobox::Disabled {}))
+                .with(fixture_test(test_combobox::ClosesWhenThePageScrolls {}))
+                .with(fixture_test(
+                    test_combobox::PopoverSpansTheInputAndTheButton {},
+                ))
+                .with(fixture_test(
+                    test_combobox::PopoverContentIsntPartOfTheComboBox {},
+                ))
+                .with(fixture_test(test_combobox::ServerFilteredOptionsReopen {}))
+                .with(fixture_test(
+                    test_combobox::ComboBoxValueListsTheSelection {},
+                ))
+                .with(fixture_test(
+                    test_combobox::LeftAndRightClearTheVirtualFocus {},
+                ))
+                .with(fixture_test(
+                    test_combobox::EscapeDoesntPreventTheDefault {},
+                ))
+                .with(fixture_test(test_combobox::HeldArrowKeysRepeat {}))
+                .with(fixture_test(test_combobox_forms::SelectAnOption {}))
+                .with(fixture_test(test_combobox_forms::CustomTextOnBlur {}))
+                .with(fixture_test(test_combobox_forms::EscapeKeepsCustomText {}))
+                .with(fixture_test(test_combobox_forms::EnterCommitsCustomText {}))
+                .with(fixture_test(test_combobox_forms::NativeValidation {}))
+                .with(fixture_test(test_combobox_forms::AriaValidation {}))
+                .with(fixture_test(test_combobox_forms::MultipleSelection {}))
+                .with(fixture_test(test_combobox_forms::MultipleFormReset {}))
+                .with(fixture_test(
+                    test_combobox_forms::RequiredWithMultipleSelection {},
+                ))
+                .with(fixture_test(test_combobox_forms::FormValue {}))
+                .with(fixture_test(test_combobox_forms::FocusTrigger {}))
+                .with(fixture_test(test_combobox_forms::ManualTrigger {}))
+                .with(fixture_test(test_combobox_forms::FilteringSections {}))
+                .with(fixture_test(
+                    test_combobox_forms::DisabledOptionIsSkipped {},
+                ))
+                .with(fixture_test(
+                    test_combobox_forms::EnterWithoutAFocusedOption {},
+                ))
+                .with(fixture_test(
+                    test_combobox_forms::SingleSelectionFormReset {},
+                ))
+                .with(fixture_test(
+                    test_combobox_forms::ClickingASectionHeaderKeepsItOpen {},
+                ))
+                .with(fixture_test(
+                    test_combobox_forms::BlurAfterPickingReportsNoChange {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("checkbox")
+                .with(fixture_test(test_checkbox::SelectedState {}))
+                .with(fixture_test(test_checkbox::KeyboardAndFocusRing {}))
+                .with(fixture_test(test_checkbox::VirtualLabelClick {}))
+                .with(fixture_test(test_checkbox::Hover {}))
+                .with(fixture_test(test_checkbox::PressState {}))
+                .with(fixture_test(test_checkbox::PressStateWithKeyboard {}))
+                .with(fixture_test(test_checkbox::IndeterminateState {}))
+                .with(fixture_test(test_checkbox::DisabledState {}))
+                .with(fixture_test(test_checkbox::ReadOnlyState {}))
+                .with(fixture_test(test_checkbox::InvalidState {}))
+                .with(fixture_test(test_checkbox::RequiredState {}))
+                .with(fixture_test(test_checkbox::BoundState {}))
+                .with(fixture_test(test_checkbox::BoundReadOnlyAndOnChange {}))
+                .with(fixture_test(test_checkbox::Group {}))
+                .with(fixture_test(test_checkbox::GroupDisabledAndReadOnly {}))
+                .with(fixture_test(test_checkbox::GroupValidation {}))
+                .with(fixture_test(test_checkbox::NativeGroupValidateFunction {}))
+                .with(fixture_test(
+                    test_checkbox::NativeCheckboxValidateFunction {},
+                ))
+                .with(fixture_test(test_checkbox::NativeGroupServerValidation {}))
+                .with(fixture_test(test_checkbox::CustomNativeErrorMessage {}))
+                .with(fixture_test(test_checkbox::AriaGroupValidateFunction {}))
+                .with(fixture_test(test_checkbox::AriaCheckboxValidateFunction {}))
+                .with(fixture_test(test_checkbox::AriaGroupServerValidation {})),
+        )
+        .with_test_group(
+            TestGroup::new("forms")
+                .with(fixture_test(test_forms::FormReset {}))
+                .with(fixture_test(test_forms::CanceledFormReset {}))
+                .with(fixture_test(test_forms::FormResetWithStoppedPropagation {}))
+                .with(fixture_test(test_forms::FormResetCanceledInCapturePhase {}))
+                .with(fixture_test(test_forms::ImplicitSubmissionWithEnter {}))
+                .with(fixture_test(test_forms::RightToLeftArrowKeys {}))
+                .with(fixture_test(test_forms::CheckboxGroupRealtimeValidation {}))
+                .with(fixture_test(test_forms::FieldAtoms {})),
+        )
+        .with_test_group(
+            TestGroup::new("radio_group")
+                .with(fixture_test(test_radio_group::Structure {}))
+                .with(fixture_test(
+                    test_radio_group::TabEntersAndLeavesTheGroup {},
+                ))
+                .with(fixture_test(test_radio_group::SelectionByPress {}))
+                .with(fixture_test(test_radio_group::VirtualLabelClick {}))
+                .with(fixture_test(test_radio_group::ArrowKeys {}))
+                .with(fixture_test(test_radio_group::SelectedRadioIsTheTabStop {}))
+                .with(fixture_test(test_radio_group::SkipsDisabledRadios {}))
+                .with(fixture_test(test_radio_group::Horizontal {}))
+                .with(fixture_test(test_radio_group::DisabledGroup {}))
+                .with(fixture_test(test_radio_group::ReadOnlyGroup {}))
+                .with(fixture_test(test_radio_group::Validation {}))
+                .with(fixture_test(test_radio_group::ValidationWithTheKeyboard {}))
+                .with(fixture_test(test_radio_group::Hover {}))
+                .with(fixture_test(test_radio_group::PressState {}))
+                .with(fixture_test(test_radio_group::PressStateWithKeyboard {}))
+                .with(fixture_test(test_radio_group::Controlled {}))
+                .with(fixture_test(test_radio_group::LabelContextStaysInside {}))
+                .with(fixture_test(test_radio_group::TypedValues {})),
+        )
+        .with_test_group(
+            TestGroup::new("switch")
+                .with(fixture_test(test_switch::SelectedState {}))
+                .with(fixture_test(test_switch::Keyboard {}))
+                .with(fixture_test(test_switch::VirtualLabelClick {}))
+                .with(fixture_test(test_switch::Hover {}))
+                .with(fixture_test(test_switch::PressState {}))
+                .with(fixture_test(test_switch::PressStateWithKeyboard {}))
+                .with(fixture_test(test_switch::DisabledState {}))
+                .with(fixture_test(test_switch::ReadOnlyState {}))
+                .with(fixture_test(test_switch::BoundState {}))
+                .with(fixture_test(test_switch::BoundReadOnly {})),
+        )
+        .with_test_group(
+            TestGroup::new("toggle_button")
+                .with(fixture_test(test_toggle_button::ToggleButton {}))
+                .with(fixture_test(test_toggle_button::DisabledToggleButton {}))
+                .with(fixture_test(test_toggle_button::SingleSelection {}))
+                .with(fixture_test(test_toggle_button::MultipleSelection {}))
+                .with(fixture_test(test_toggle_button::HorizontalNavigation {}))
+                .with(fixture_test(test_toggle_button::TabLeavesAndRestores {}))
+                .with(fixture_test(test_toggle_button::VerticalNavigation {}))
+                .with(fixture_test(test_toggle_button::DisabledGroup {})),
+        )
+        .with_test_group(
+            TestGroup::new("aria_hide_outside")
+                .with(fixture_test(
+                    test_aria_hide_outside::HidesEverythingButTheTarget {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::HidesTheCellsOfAHiddenRow {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::NestedHidesRestoredOutOfOrder {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::NestedHidesRestoredInOrder {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::HidesARootWithoutTheTarget {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::ShowsOverlaysRegisteredLate {},
+                ))
+                .with(fixture_test(test_aria_hide_outside::AddedOutside {}))
+                .with(fixture_test(
+                    test_aria_hide_outside::AddedToAHiddenContainer {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::AddedInsideTheTarget {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::AddedWithATopLayerElement {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::ReparentedIntoTheTarget {},
+                ))
+                .with(fixture_test(
+                    test_aria_hide_outside::ReparentedIntoAHiddenContainer {},
+                ))
+                .with(fixture_test(test_aria_hide_outside::UnhideAfterReorder {}))
+                .with(fixture_test(
+                    test_aria_hide_outside::InertModeHidesSvgWithAriaHidden {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("dialog")
+                .with(fixture_test(test_dialog::DismissButtonCloses {}))
+                .with(fixture_test(test_dialog::EscapeCloses {}))
+                .with(fixture_test(test_dialog::AlertDialog {}))
+                .with(fixture_test(test_dialog::KeyboardOpenAndCloseFromInside {}))
+                .with(fixture_test(test_dialog::KeyboardOpenAndEscape {}))
+                .with(fixture_test(test_dialog::NestedModals {}))
+                .with(fixture_test(test_dialog::AnimatedModal {}))
+                .with(fixture_test(test_dialog::AutoFocus {}))
+                .with(fixture_test(test_dialog::RegularDialogNotDescribed {}))
+                .with(fixture_test(test_dialog::AlertDialogDescribedbyOverride {}))
+                .with(fixture_test(test_dialog::UntitledDialogWarns {}))
+                .with(fixture_test(test_dialog::NamedDialogsDontWarn {}))
+                .with(fixture_test(test_dialog::KeepsFocusInsideAShadowRoot {})),
+        )
+        .with_test_group(
+            TestGroup::new("toolbar")
+                .with(fixture_test(test_toolbar::Structure {}))
+                .with(fixture_test(test_toolbar::KeyboardNavigation {}))
+                .with(fixture_test(test_toolbar::TabLeavesAndReenters {}))
+                .with(fixture_test(test_toolbar::NoWrapping {}))
+                .with(fixture_test(test_toolbar::Vertical {}))
+                .with(fixture_test(test_toolbar::RightToLeft {}))
+                .with(fixture_test(test_toolbar::RightToLeftVertical {}))
+                .with(fixture_test(test_toolbar::AriaExampleChildren {}))
+                .with(fixture_test(test_toolbar::DefaultClassAndOrientation {}))
+                .with(fixture_test(test_toolbar::Dividers {}))
+                .with(fixture_test(test_toolbar::AriaLabelWinsOverLabelledby {})),
+        )
+        .with_test_group(
+            TestGroup::new("progress_bar")
+                .with(fixture_test(test_progress_bar::Renders {}))
+                .with(fixture_test(test_progress_bar::FollowsItsValue {}))
+                .with(fixture_test(test_progress_bar::CustomRange {}))
+                .with(fixture_test(test_progress_bar::EmptyRange {}))
+                .with(fixture_test(test_progress_bar::Indeterminate {}))
+                .with(fixture_test(test_progress_bar::CustomTextValue {}))
+                .with(fixture_test(
+                    test_progress_bar::LabelFollowsTheRenderedLabel {},
+                ))
+                .with(fixture_test(test_progress_bar::Meter {}))
+                .with(fixture_test(test_progress_bar::ZeroRange {}))
+                .with(fixture_test(test_progress_bar::MeterCustomRange {}))
+                .with(fixture_test(test_progress_bar::MeterEmptyRange {}))
+                .with(fixture_test(test_progress_bar::DefaultClassesAndPercent {})),
+        )
+        .with_test_group(
+            TestGroup::new("pressable")
+                .with(fixture_test(test_pressable::MergesWithTheChildsHandlers {}))
+                .with(fixture_test(test_pressable::MakesTheChildFocusable {}))
+                .with(fixture_test(test_pressable::Disabled {}))
+                .with(fixture_test(test_pressable::PressResponder {}))
+                .with(fixture_test(
+                    test_pressable::PressResponderWarnsWithoutPressable {},
+                ))
+                .with(fixture_test(
+                    test_pressable::WarnsAboutChildrenWithoutInteractiveRoles {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("spin_button")
+                .with(fixture_test(test_spin_button::AriaProps {}))
+                .with(fixture_test(test_spin_button::DisabledAndReadOnly {}))
+                .with(fixture_test(test_spin_button::KeysCallTheirCallbacks {}))
+                .with(fixture_test(
+                    test_spin_button::ReadOnlyAndDisabledIgnoreKeys {},
+                ))
+                .with(fixture_test(test_spin_button::AnnouncesValueChanges {})),
+        )
+        .with_test_group(
+            TestGroup::new("submenu")
+                .with(fixture_test(test_submenu::SupportsASubmenuTrigger {}))
+                .with(fixture_test(test_submenu::SupportsNestedSubmenuTriggers {}))
+                .with(fixture_test(test_submenu::Keyboard {}))
+                .with(fixture_test(
+                    test_submenu::FocusingAnotherItemClosesTheSubmenu {},
+                ))
+                .with(fixture_test(test_submenu::InteractingOutsideClosesAll {}))
+                .with(fixture_test(test_submenu::ContextMenu {}))
+                .with(fixture_test(test_submenu::Subdialog {}))
+                .with(fixture_test(test_submenu::SubdialogWithDialog {}))
+                .with(fixture_test(test_submenu::RightToLeft {}))
+                .with(fixture_test(test_submenu::SafeTriangle {}))
+                .with(fixture_test(
+                    test_submenu::HoveringBackOntoTheTriggerKeepsTheSubmenu {},
+                ))
+                .with(fixture_test(
+                    test_submenu::ClickingInsideTheSubmenuTreeKeepsItOpen {},
+                ))
+                .with(fixture_test(test_submenu::SubmenuSections {}))
+                .with(fixture_test(test_submenu::NestedSubdialogs {}))
+                .with(fixture_test(
+                    test_submenu::InteractingOutsideClosesAllSubdialogs {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("link")
+                .with(fixture_test(test_link::CurrentPage {}))
+                .with(fixture_test(test_link::NewTab {}))
+                .with(fixture_test(test_link::TriggerProps {}))
+                .with(fixture_test(test_link::Disabled {}))
+                .with(fixture_test(test_link::StateAttributes {}))
+                .with(fixture_test(test_link::DisabledHookAnchor {}))
+                .with(fixture_test(test_link::AnchorLink {}))
+                .with(fixture_test(test_link::Replace {}))
+                .with(fixture_test(test_link::ClientSideNavigation {})),
+        )
+        .with_test_group(
+            TestGroup::new("localized_atoms")
+                .with(fixture_test(test_localized_atoms::SearchField {}))
+                .with(fixture_test(test_localized_atoms::NumberField {}))
+                .with(fixture_test(test_localized_atoms::Tag {}))
+                .with(fixture_test(test_localized_atoms::Select {})),
+        )
+        .with_test_group(
+            TestGroup::new("breadcrumbs")
+                .with(fixture_test(test_breadcrumbs::CurrentItem {}))
+                .with(fixture_test(test_breadcrumbs::DynamicCollections {}))
+                .with(fixture_test(test_breadcrumbs::Disabled {}))
+                .with(fixture_test(test_breadcrumbs::Hooks {}))
+                .with(fixture_test(test_breadcrumbs::Press {})),
+        )
+        .with_test_group(
+            TestGroup::new("disclosure")
+                .with(fixture_test(test_disclosure::TriggerControlsItsPanel {}))
+                .with(fixture_test(
+                    test_disclosure::AdjacentInteractiveElements {},
+                ))
+                .with(fixture_test(test_disclosure::TogglesByPressAndEnter {}))
+                .with(fixture_test(test_disclosure::FindInPageExpands {}))
+                .with(fixture_test(test_disclosure::NestedDisclosures {}))
+                .with(fixture_test(test_disclosure::OneExpandedAtATime {}))
+                .with(fixture_test(test_disclosure::MultipleExpanded {}))
+                .with(fixture_test(test_disclosure::PanelAsLandmark {}))
+                .with(fixture_test(test_disclosure::RepeatedKeydownTogglesOnce {}))
+                .with(fixture_test(test_disclosure::DisabledGroup {}))
+                .with(fixture_test(test_disclosure::FocusRing {}))
+                .with(fixture_test(test_disclosure::Controlled {}))
+                .with(fixture_test(test_disclosure::DisabledExpanded {}))
+                .with(fixture_test(test_disclosure::FindInPageControlledClosed {}))
+                .with(fixture_test(test_disclosure::GroupOnExpandedChange {}))
+                .with(fixture_test(test_disclosure::GroupControlled {}))
+                .with(fixture_test(test_disclosure::NestedGroups {}))
+                .with(fixture_test(test_disclosure::RemountedPanel {})),
+        )
+        .with_test_group(
+            TestGroup::new("popover")
+                .with(fixture_test(test_popover::TriggerControlsTheDialog {}))
+                .with(fixture_test(test_popover::OutsideClickCloses {}))
+                .with(fixture_test(
+                    test_popover::ClosesOnDocumentAndWindowScroll {},
+                ))
+                .with(fixture_test(test_popover::ModalStaysOpenOnScroll {}))
+                .with(fixture_test(
+                    test_popover::NonModalContainsFocusWithADialog {},
+                ))
+                .with(fixture_test(test_popover::TriggerNamesAnUntitledDialog {}))
+                .with(fixture_test(test_popover::StandalonePopoverIsTheDialog {}))
+                .with(fixture_test(test_popover::Animated {}))
+                .with(fixture_test(test_popover::Scrolling {}))
+                .with(fixture_test(test_popover::ContainmentPerOpening {}))
+                .with(fixture_test(test_popover::Direction {})),
+        )
+        .with_test_group(
+            TestGroup::new("dismiss_button")
+                .with(fixture_test(test_dismiss_button::DefaultLabel {}))
+                .with(fixture_test(test_dismiss_button::AriaLabel {}))
+                .with(fixture_test(test_dismiss_button::AriaLabelledby {}))
+                .with(fixture_test(test_dismiss_button::AriaLabelledbyAndLabel {}))
+                .with(fixture_test(test_dismiss_button::ActivatingDismisses {}))
+                .with(fixture_test(
+                    test_dismiss_button::DoesntSubmitAnEnclosingForm {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("overlay")
+                .with(fixture_test(test_overlay::Dismissable {}))
+                .with(fixture_test(test_overlay::NotDismissable {}))
+                .with(fixture_test(test_overlay::KeyboardDismissDisabled {}))
+                .with(fixture_test(test_overlay::TopMostOnly {}))
+                .with(fixture_test(test_overlay::NestedModals {})),
+        )
+        .with_test_group(
+            TestGroup::new("overlay_state")
+                .with(fixture_test(
+                    test_overlay_state::PopoverStateOverridesTheTrigger {},
+                ))
+                .with(fixture_test(
+                    test_overlay_state::ModalStateOverridesTheTrigger {},
+                ))
+                .with(fixture_test(test_overlay_state::StandalonePopover {}))
+                .with(fixture_test(
+                    test_overlay_state::PopoverInAModalClosesAlone {},
+                ))
+                .with(fixture_test(test_overlay_state::ModalFilterCloses {}))
+                .with(fixture_test(test_overlay_state::ModalFilterKeeps {}))
+                .with(fixture_test(test_overlay_state::EnterAndExitCallbacks {}))
+                .with(fixture_test(
+                    test_overlay_state::AutoFocusInAModalOpenedFromAMenu {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("overlay_position")
+                .with(fixture_test(test_overlay_position::PlacedAbove {}))
+                .with(fixture_test(test_overlay_position::HiddenUntilPlaced {}))
+                .with(fixture_test(
+                    test_overlay_position::RepositionsOnPropsChange {},
+                ))
+                .with(fixture_test(
+                    test_overlay_position::RepositionsOnWindowResize {},
+                ))
+                .with(fixture_test(test_overlay_position::MaxHeightLimits {}))
+                .with(fixture_test(test_overlay_position::TargetWithMargin {}))
+                .with(fixture_test(test_overlay_position::CrossOffsetShifts {}))
+                .with(fixture_test(test_overlay_position::StartAndEndFollowRtl {}))
+                .with(fixture_test(
+                    test_overlay_position::TargetRectReplacesTheTrigger {},
+                ))
+                .with(fixture_test(test_overlay_position::ArrowBoundaryOffset {}))
+                .with(fixture_test(
+                    test_overlay_position::StaysWithinTheBoundary {},
+                ))
+                .with(fixture_test(test_overlay_position::ReopenedWithArrow {}))
+                .with(fixture_test(test_overlay_position::FlipsBelow {}))
+                .with(fixture_test(test_overlay_position::ReopenedUnplaced {})),
+        )
+        .with_test_group(
+            TestGroup::new("global_shortcuts")
+                .with(fixture_test(
+                    test_global_shortcuts::SlashOutsideTextFields {},
+                ))
+                .with(fixture_test(test_global_shortcuts::SlashInTextField {}))
+                .with(fixture_test(test_global_shortcuts::ModKAnywhere {}))
+                .with(fixture_test(test_global_shortcuts::ShiftKey {}))
+                .with(fixture_test(test_global_shortcuts::LaterBindingWins {}))
+                .with(fixture_test(test_global_shortcuts::ShortcutKeys {})),
+        )
+        .with_test_group(
+            TestGroup::new("landmark")
+                .with(fixture_test(test_landmark::NavigationOrder {}))
+                .with(fixture_test(test_landmark::SkipsInertLandmarks {}))
+                .with(fixture_test(test_landmark::WrapEventBackward {}))
+                .with(fixture_test(test_landmark::ShiftF6FromOutside {}))
+                .with(fixture_test(test_landmark::RestoresLastFocused {}))
+                .with(fixture_test(test_landmark::AltF6ToMain {}))
+                .with(fixture_test(test_landmark::AddedAndRemoved {}))
+                .with(fixture_test(test_landmark::WrapEvent {}))
+                .with(fixture_test(test_landmark::LabelUpdates {}))
+                .with(fixture_test(test_landmark::NestedOrder {}))
+                .with(fixture_test(test_landmark::Controller {}))
+                .with(fixture_test(test_landmark::DuplicateRoleWarnings {})),
+        )
+        .with_test_group(
+            TestGroup::new("toast")
+                .with(fixture_test(test_toast::TriggerAndClose {}))
+                .with(fixture_test(test_toast::Timeouts {}))
+                .with(fixture_test(test_toast::KeyboardFocus {}))
+                .with(fixture_test(test_toast::ProgrammaticClose {}))
+                .with(fixture_test(test_toast::RemainingTimeAfterPause {}))
+                .with(fixture_test(test_toast::OneAtATime {}))
+                .with(fixture_test(test_toast::FocusedToastAfterNewToast {})),
+        )
+        .with_test_group(
+            TestGroup::new("tooltip")
+                .with(fixture_test(test_tooltip::ShowsOnHover {}))
+                .with(fixture_test(
+                    test_tooltip::WarmTooltipReplacesWithoutAnimation {},
+                ))
+                .with(fixture_test(test_tooltip::ShowsOnFocus {}))
+                .with(fixture_test(
+                    test_tooltip::CloseOnPressDisabledAndCloseDelay {},
+                ))
+                .with(fixture_test(test_tooltip::FocusTriggerMode {}))
+                .with(fixture_test(test_tooltip::HideOnScroll {}))
+                .with(fixture_test(test_tooltip::OpensAtOnceWithoutDelay {}))
+                .with(fixture_test(test_tooltip::StaysOpenWhileHovered {}))
+                .with(fixture_test(test_tooltip::ClosesWhenThePointerLeavesIt {}))
+                .with(fixture_test(test_tooltip::StaysOpenBackOnTheTrigger {})),
+        )
+        .with_test_group(
+            TestGroup::new("tag_group")
+                .with(fixture_test(
+                    test_tag_group_atoms::DefaultClassesAndSlots {},
+                ))
+                .with(fixture_test(
+                    test_tag_group_atoms::LabelContextEndsWithTheGroup {},
+                ))
+                .with(fixture_test(test_tag_group_atoms::FocusRing {}))
+                .with(fixture_test(
+                    test_tag_group_atoms::TabbingToRemoveButtons {},
+                ))
+                .with(fixture_test(test_tag_group_atoms::SelectionState {}))
+                .with(fixture_test(test_tag_group_atoms::EmptyState {}))
+                .with(fixture_test(
+                    test_tag_group_atoms::FocusMovesToTheGridWhenNoTagCanTakeIt {},
+                ))
+                .with(fixture_test(test_tag_group_atoms::Hover {}))
+                .with(fixture_test(test_tag_group_atoms::NotInteractive {}))
+                .with(fixture_test(test_tag_group_atoms::PressState {}))
+                .with(fixture_test(
+                    test_tag_group_atoms::DisabledTagsCantBeRemoved {},
+                ))
+                .with(fixture_test(test_tag_group_atoms::OnAction {}))
+                .with(fixture_test(
+                    test_tag_group_atoms::OnActionWithReplaceSelection {},
+                ))
+                .with(fixture_test(test_tag_group_atoms::OrderWhenAdding {}))
+                .with(fixture_test(test_tag_group_atoms::RightToLeft {}))
+                .with(fixture_test(test_tag_group_atoms::KeyboardSelection {}))
+                .with(fixture_test(test_tag_group::AriaStructure {}))
+                .with(fixture_test(test_tag_group::KeyboardNavigation {}))
+                .with(fixture_test(
+                    test_tag_group::RemovingWithTheKeyboardMovesFocusOn {},
+                ))
+                .with(fixture_test(test_tag_group::RemoveButton {}))
+                .with(fixture_test(
+                    test_tag_group::RemovingEveryTagFocusesTheGroup {},
+                ))
+                .with(fixture_test(test_tag_group::HoldingTheRemoveKey {})),
+        )
+        .with_test_group(
+            TestGroup::new("virtual_list")
+                .with(fixture_test(test_virtual_list::FollowsItsEnd {}))
+                .with(fixture_test(
+                    test_virtual_list::AppendedLinesComeIntoView {},
+                ))
+                .with(fixture_test(test_virtual_list::PageScrollKeepsFollowing {}))
+                .with(fixture_test(
+                    test_virtual_list::ScrollJumpsRenderRowsInOrder {},
+                ))
+                .with(fixture_test(
+                    test_virtual_list::ScrollingAwayStopsFollowing {},
+                ))
+                .with(fixture_test(test_virtual_list::SelectedRowStaysRendered {}))
+                .with(fixture_test(
+                    test_virtual_list::TurningFollowingOnScrollsToTheEnd {},
+                ))
+                .with(fixture_test(
+                    test_virtual_list::RebuiltViewsDropTheOldHandlers {},
+                ))
+                .with(fixture_test(
+                    test_virtual_list::FollowToggleKeepsMeasuredSizes {},
+                ))
+                .with(fixture_test(
+                    test_virtual_list::TextRowsAreMeasuredAgainWhenTheyResize {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("virtualizer")
+                .with(fixture_test(test_virtualizer::RendersTheVisibleOptions {}))
+                .with(fixture_test(
+                    test_virtualizer::ScrollingRendersOtherOptions {},
+                ))
+                .with(fixture_test(
+                    test_virtualizer::FocusedOptionScrollsIntoView {},
+                ))
+                .with(fixture_test(test_virtualizer::LogStaysAtItsEnd {}))
+                .with(fixture_test(
+                    test_virtualizer::PlainListBoxIsNotVirtualized {},
+                ))
+                .with(fixture_test(
+                    test_virtualizer::FocusedOptionStaysRendered {},
+                ))
+                .with(fixture_test(
+                    test_virtualizer::TypeAheadReachesAnUnrenderedOption {},
+                ))
+                .with(fixture_test(
+                    test_virtualizer::PressingAScrolledToOptionSelectsIt {},
+                ))
+                .with(fixture_test(
+                    test_virtualizer::RendersOptionsAfterBeingHidden {},
+                )),
+        )
+        .with_test_group(
+            TestGroup::new("tree")
+                .with(fixture_test(test_tree::AriaStructure {}))
+                .with(fixture_test(test_tree::KeyboardExpansion {}))
+                .with(fixture_test(
+                    test_tree::ArrowRightOnAnExpandedRowKeepsTheFocus {},
+                ))
+                .with(fixture_test(test_tree::ExpandButton {}))
+                .with(fixture_test(test_tree::PressingAParentTogglesIt {}))
+                .with(fixture_test(
+                    test_tree::DisabledItemsCanBeExpandedButNotSelected {},
+                ))
+                .with(fixture_test(test_tree::DisabledItemsCannotBeUsed {}))
+                .with(fixture_test(test_tree::RightToLeftExpansionKeys {}))
+                .with(fixture_test(
+                    test_tree::CollapsingTheParentOfTheFocusedRow {},
+                ))
+                .with(fixture_test(test_tree::AnItemGettingChildren {}))
+                .with(fixture_test(test_tree::TypeAheadSearchesTheVisibleRows {}))
+                .with(fixture_test(
+                    test_tree::HomeAndEndMoveBetweenTheVisibleRows {},
+                ))
+                .with(fixture_test(
+                    test_tree::SelectableRowsAreNotExpandedByPressingThem {},
+                ))
+                .with(fixture_test(
+                    test_tree::RowsWithAnActionAreNotExpandedByPressingThem {},
+                ))
+                .with(fixture_test(test_tree::TabIntoAnEmptyTree {}))
+                .with(fixture_test(test_tree::EscapeKeepsTheSelection {}))
+                .with(fixture_test(test_tree::SelectsOnPressUp {}))
+                .with(fixture_test(test_tree::KeysInATextInputStayThere {})),
+        )
+        .with_test_group(
+            TestGroup::new("visually_hidden")
+                .with(fixture_test(test_visually_hidden::HidesElement {}))
+                .with(fixture_test(
+                    test_visually_hidden::UnhidesFocusedFocusable {},
+                ))
+                .with(fixture_test(test_visually_hidden::ReactiveIsFocusable {})),
+        )
+        .with_test_group(
+            TestGroup::new("separator")
+                .with(fixture_test(test_separator::DefaultClass {}))
+                .with(fixture_test(test_separator::AccessibilityProps {}))
+                .with(fixture_test(test_separator::Orientation {})),
+        )
+        .with_test_group(
+            TestGroup::new("theme")
+                .with(fixture_test(test_theme::Context {}))
+                .with(fixture_test(test_theme::Switching {}))
+                .with(fixture_test(test_theme::SetterWithoutTheme {}))
+                .with(fixture_test(test_theme::ControlledWithoutSetter {}))
+                .with(fixture_test(
+                    test_theme::RootRemovesDocumentThemeOnUnmount {},
+                ))
+                .with(fixture_test(
+                    test_theme::RootRestoresPreviousDocumentTheme {},
+                ))
+                .with(fixture_test(
+                    test_theme::NestedUnmountPreservesDocumentTheme {},
+                ))
+                .with(fixture_test(
+                    test_theme::RootUnmountPreservesExternalDocumentTheme {},
+                )),
+        );
+    let mut hydration = TestGroup::new("hydration");
+    for shard in 0..4 {
+        hydration = hydration.with(fixture_test(test_hydration_ids::HydrationIdTests {
+            shard,
+            shards: 4,
+        }));
     }
+    tests.with_test_group(hydration)
 }

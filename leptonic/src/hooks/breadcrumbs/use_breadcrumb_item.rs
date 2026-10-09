@@ -2,7 +2,7 @@
 use leptos::prelude::*;
 
 use crate::{
-    hooks::{UseLinkInput, UseLinkReturn, use_link},
+    hooks::link::{UseLinkInput, UseLinkReturn, use_link},
     utils::aria::AriaCurrent,
 };
 

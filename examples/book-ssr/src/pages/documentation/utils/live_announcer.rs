@@ -11,7 +11,7 @@ pub fn PageLiveAnnouncer() -> impl IntoView {
             <p>
                 "Screen readers announce what has focus and what changes in the accessibility tree. Some changes have neither: "
                 "\u{201c}3 results available\u{201d} in a combobox, the new value of a spin button, a background save that "
-                "failed. The functions of "<Code inline=true>"leptonic::utils::live_announcer"</Code>
+                "failed. The functions of "<Code inline=true>"leptonic"</Code>
                 " tell screen readers about them through ARIA live regions. They are one of the "
                 "building blocks for screen readers, next to "
                 <Link href=routes::doc::screen_readers::VisuallyHidden.materialize()>"VisuallyHidden"</Link>"."
@@ -22,7 +22,7 @@ pub fn PageLiveAnnouncer() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::live_announcer::{announce_assertive, announce_polite};
+                        use leptonic::{announce_assertive, announce_polite};
 
                         announce_polite("Sorted by name, ascending.");
                         announce_assertive("Connection lost.");
@@ -79,7 +79,7 @@ pub fn PageLiveAnnouncer() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::live_announcer::{Assertiveness, clear_announcer};
+                        use leptonic::{Assertiveness, clear_announcer};
 
                         clear_announcer(Some(Assertiveness::Polite));
                     ")}

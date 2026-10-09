@@ -316,7 +316,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                         "available dates around the anchor."
                     </p>
                     <p>
-                        "A "<Code inline=true>"DateRange"</Code>" ("<Code inline=true>"leptonic::utils::date"</Code>") has "
+                        "A "<Code inline=true>"DateRange"</Code>" ("<Code inline=true>"leptonic"</Code>") has "
                         "the fields "<Code inline=true>"start"</Code>" and "<Code inline=true>"end"</Code>", both included. "
                         <Code inline=true>"DateRange::between(a, b)"</Code>" orders two dates; "
                         <Code inline=true>"contains(date)"</Code>" checks a date."
@@ -465,7 +465,6 @@ pub fn PageCalendarHooks() -> impl IntoView {
                             "Whether the day belongs to another month than the grid\u{2019}s. Such days are shown but disabled."
                         </ApiRow>
                         <ApiRow name="element" ty="CapturedElement" default="CapturedElement::new()">"Captures the button element, which the hook focuses."</ApiRow>
-
                     </ApiTable>
                 </Section>
 
@@ -556,7 +555,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-calendar-month-picker-return">
                     <ApiTable kind=ApiKind::Return of="UseCalendarPickerReturn">
-                        <ApiRow name="aria_label" ty="&'static str">"Names the picker: \u{201c}month\u{201d}."</ApiRow>
+                        <ApiRow name="aria_label" ty="Signal<String>">"Names the picker: \u{201c}month\u{201d}."</ApiRow>
                         <ApiRow name="value" ty="Signal<i16>">"The focused date\u{2019}s month (1 to 12)."</ApiRow>
                         <ApiRow name="items" ty="Signal<Vec<CalendarPickerItem>>">
                             "The months, each with its "<Code inline=true>"id"</Code>" (the month), the "<Code inline=true>"date"</Code>

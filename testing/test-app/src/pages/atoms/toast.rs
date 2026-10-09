@@ -5,12 +5,13 @@ use leptonic::{
         button::Button,
         toast::{Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle},
     },
-    hooks::{ToastOptions, ToastQueue},
+    hooks::toast::{ToastOptions, ToastQueue},
 };
 use leptos::prelude::*;
 
 /// Toasts of one queue (react-aria-components' `Toast.test.js` setup): "Toast" adds one without
-/// a timeout, "Timed toast" one closing after 1.5 seconds, "Slow toast" after 3 seconds, "Close
+/// a timeout, "Timed toast" one closing after half a second (short: the tests wait for it several
+/// times), "Slow toast" after 3 seconds (for timing the time left after a pause), "Close
 /// newest" closes the newest programmatically. "Add, then close oldest" adds a toast after 1.5
 /// seconds and closes the oldest after 3 seconds (while the focus stays in a toast).
 /// `#test-toast-closed` counts the `on_close` calls.
@@ -45,31 +46,31 @@ pub fn PageAtomToast() -> impl IntoView {
                 <ToastCloseButton>"x"</ToastCloseButton>
             </Toast>
         </ToastRegion>
-        <Button attr:id="test-toast-add" on_press=move |_| add(None)>"Toast"</Button>
-        <Button attr:id="test-toast-add-timed" on_press=move |_| add(Some(Duration::from_millis(1500)))>
+        <Button id="test-toast-add" on_press=move |_| add(None)>"Toast"</Button>
+        <Button id="test-toast-add-timed" on_press=move |_| add(Some(Duration::from_millis(500)))>
             "Timed toast"
         </Button>
-        <Button attr:id="test-toast-add-slow" on_press=move |_| add(Some(Duration::from_secs(3)))>
+        <Button id="test-toast-add-slow" on_press=move |_| add(Some(Duration::from_secs(3)))>
             "Slow toast"
         </Button>
         <Button
-            attr:id="test-toast-close-newest"
+            id="test-toast-close-newest"
             on_press=move |_| {
                 if let Some(toast) = queue.visible_toasts.get_untracked().first() {
-                    queue.close(&toast.key);
+                    queue.close(toast.key);
                 }
             }
         >
             "Close newest"
         </Button>
         <Button
-            attr:id="test-toast-add-then-close-oldest"
+            id="test-toast-add-then-close-oldest"
             on_press=move |_| {
                 set_timeout(move || add(None), Duration::from_millis(1500));
                 set_timeout(
                     move || {
                         if let Some(toast) = queue.visible_toasts.get_untracked().last() {
-                            queue.close(&toast.key);
+                            queue.close(toast.key);
                         }
                     },
                     Duration::from_secs(3),

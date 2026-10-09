@@ -50,21 +50,6 @@ pub fn PageUsePress() -> impl IntoView {
                     <ApiRow name="on_double_press" ty="Option<Callback<PressEvent>>" default="None">
                         "Called when the element receives a native "<Code inline=true>"dblclick"</Code>" event."
                     </ApiRow>
-                    <ApiRow name="on_long_press_start, on_long_press, on_long_press_end" ty="Option<Callback<LongPressEvent>>" default="None">
-                        "Long press callbacks. Setting any of them enables long press detection, see "
-                        <AnchorLink href="#long-press">"Long Press"</AnchorLink>"."
-                    </ApiRow>
-                    <ApiRow name="long_press_threshold" ty="Option<Signal<Duration>>" default="None (500 ms)">
-                        "How long the element has to be held before "<Code inline=true>"on_long_press"</Code>" fires."
-                    </ApiRow>
-                    <ApiRow name="long_press_accessibility_description" ty="MaybeProp<String>" default="None">
-                        "Describes the long press action to assistive technology, e.g. \u{201c}Long press to open menu\u{201d}. "
-                        "Only applied when "<Code inline=true>"on_long_press"</Code>" is set."
-                    </ApiRow>
-                    <ApiRow name="long_press_disabled" ty="Signal<bool>" default="false">
-                        "Turns long press detection off while "<Code inline=true>"true"</Code>
-                        ", so presses aren\u{2019}t cancelled after the threshold."
-                    </ApiRow>
                     <ApiRow name="prevent_focus_on_press" ty="Signal<bool>" default="false">
                         "Don\u{2019}t move focus to the element when it is pressed, e.g. for toolbar buttons next to a text editor."
                     </ApiRow>
@@ -79,10 +64,11 @@ pub fn PageUsePress() -> impl IntoView {
                     <ApiRow name="propagation" ty="PressPropagation" default="Stop">
                         "Whether the press events propagate. Default: stopped, unless a callback calls "<Code inline=true>"continue_propagation()"</Code>"."
                     </ApiRow>
-                    <ApiRow name="force_is_pressed" ty="Option<Signal<bool>>" default="None">
+                    <ApiRow name="force_is_pressed" ty="Signal<bool>" default="None">
                         "Forces the pressed state: "<Code inline=true>"is_pressed"</Code>" is "<Code inline=true>"true"</Code>
                         " while this signal is, e.g. to keep a trigger looking pressed while its menu is open."
                     </ApiRow>
+                    <ApiRow name="long_press" ty="Option<LongPress>" default="None">"Long-press handlers and options, including the threshold and accessible description."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -105,15 +91,14 @@ pub fn PageUsePress() -> impl IntoView {
                             <Code inline=true>"Keyboard"</Code>", "<Code inline=true>"Virtual"</Code>" (screen readers and "
                             "programmatic clicks) or "<Code inline=true>"Other"</Code>"."
                         </ApiRow>
-                        <ApiRow name="target" ty="SendWrapper<EventTarget>">"The pressed element."</ApiRow>
+                        <ApiRow name="target" ty="SendWrapper<Element>">"The pressed element."</ApiRow>
                         <ApiRow name="modifiers" ty="Modifiers">"The modifier keys held during the event."</ApiRow>
-                        <ApiRow name="x, y" ty="Option<f64>">
-                            "Pointer position relative to the element. "<Code inline=true>"None"</Code>" for keyboard presses."
-                        </ApiRow>
                         <ApiRow name="key" ty="Option<KeyboardKey>">
                             "The key that triggered a keyboard press, so you can tell Enter and Space apart. "
                             <Code inline=true>"None"</Code>" for pointer presses."
                         </ApiRow>
+                        <ApiRow name="kind" ty="PressEventKind">"The phase of the press interaction."</ApiRow>
+                        <ApiRow name="point" ty="Point">"Pointer coordinates in the event target, in CSS pixels."</ApiRow>
                     </ApiTable>
 
                     <p>
@@ -125,7 +110,10 @@ pub fn PageUsePress() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::data_attributes::flag};
+                        use leptonic::{
+                            flag,
+                            hooks::interactions::{PressEvent, UsePressInput, UsePressReturn, use_press},
+                        };
                         use leptos::{logging::log, prelude::*};
 
                         let disabled = RwSignal::new(false);
@@ -189,7 +177,8 @@ pub fn PageUsePress() -> impl IntoView {
 
             <Section title="Long Press">
                 <p>
-                    "Long press detection is part of "<Code inline=true>"use_press"</Code>". Set any of "
+                    "Long press detection is part of "<Code inline=true>"use_press"</Code>". Set "
+                    <Code inline=true>"long_press: Some(LongPress { .. })"</Code>" with any of "
                     <Code inline=true>"on_long_press_start"</Code>", "<Code inline=true>"on_long_press"</Code>" or "
                     <Code inline=true>"on_long_press_end"</Code>", and the hook starts a timer when a mouse or touch press "
                     "starts. Keyboard presses never become long presses."
@@ -199,15 +188,18 @@ pub fn PageUsePress() -> impl IntoView {
                     {indoc!(r#"
                         use std::time::Duration;
 
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::interactions::{LongPress, LongPressEvent, UsePressInput, UsePressReturn, use_press};
                         use leptos::prelude::*;
 
                         let threshold = RwSignal::new(Duration::from_millis(800));
 
                         let UsePressReturn { props, .. } = use_press(UsePressInput {
-                            on_long_press: Some(Callback::new(move |_: LongPressEvent| open_menu())),
-                            long_press_threshold: Some(threshold.into()),
-                            long_press_accessibility_description: "Long press to open the menu".into(),
+                            long_press: Some(LongPress {
+                                on_long_press: Some(Callback::new(move |_: LongPressEvent| open_menu())),
+                                threshold: threshold.into(),
+                                accessibility_description: "Long press to open the menu".into(),
+                                ..Default::default()
+                            }),
                             ..Default::default()
                         });
                     "#)}
@@ -233,16 +225,15 @@ pub fn PageUsePress() -> impl IntoView {
                     "If you release before the threshold, the timer is cancelled and only "<Code inline=true>"on_long_press_start"</Code>
                     " and "<Code inline=true>"on_long_press_end"</Code>" fire. Because a long press cancels the press, "
                     <Code inline=true>"on_press"</Code>" doesn\u{2019}t fire for it. On touch devices, the native context menu "
-                    "is suppressed during the interaction. The "<Code inline=true>"long_press_accessibility_description"</Code>
+                    "is suppressed during the interaction. The "<Code inline=true>"accessibility_description"</Code>
                     " is linked to the element through "<Code inline=true>"aria-describedby"</Code>"."
                 </p>
 
                 <p>
-                    <Code inline=true>"LongPressEvent"</Code>" has the fields "<Code inline=true>"event_type"</Code>" ("
+                    <Code inline=true>"LongPressEvent"</Code>" has the fields "<Code inline=true>"kind"</Code>" ("
                     <Code inline=true>"LongPressStart"</Code>", "<Code inline=true>"LongPress"</Code>" or "
                     <Code inline=true>"LongPressEnd"</Code>"), "<Code inline=true>"pointer_type"</Code>", "
-                    <Code inline=true>"target"</Code>", "<Code inline=true>"modifiers"</Code>", "<Code inline=true>"x"</Code>
-                    " and "<Code inline=true>"y"</Code>"."
+                    <Code inline=true>"target"</Code>", "<Code inline=true>"modifiers"</Code>" and "<Code inline=true>"point"</Code>"."
                 </p>
             </Section>
 

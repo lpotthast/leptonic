@@ -1,12 +1,13 @@
 use leptonic::{
-    atoms::prelude::{
-        CheckboxButton, CheckboxField, ColorSlider, ColorSliderOutput, ColorSliderTrack,
-        ColorSwatch, ColorThumb, Label,
+    ColorValue, HSL, HslChannel,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        color_slider::{ColorSlider, ColorSliderOutput, ColorSliderTrack},
+        color_swatch::ColorSwatch,
+        color_thumb::ColorThumb,
+        field::Label,
     },
-    utils::{
-        color::{ColorValue, HSL, HslChannel},
-        i18n::use_locale,
-    },
+    use_locale,
 };
 use leptos::prelude::*;
 

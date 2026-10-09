@@ -53,18 +53,15 @@ pub fn PageUseListbox() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::{
-                            Key, SelectionMode, use_list_collection, use_list_state,
-                            collections::{SelectionOptions, UseListStateInput},
-                        };
+                        use leptonic::hooks::collections::{Key, SelectionMode, SelectionOptions, UseListCollectionInput, UseListStateInput, use_list_collection, use_list_state};
                         use leptos::prelude::*;
 
                         let fruits = Signal::stored(vec![("apple", "Apple"), ("banana", "Banana")]);
-                        let collection = use_list_collection(
-                            fruits,
-                            |(key, _)| Key::from(*key),
-                            |(_, label)| (*label).to_owned(),
-                        );
+                        let collection = use_list_collection(UseListCollectionInput {
+                            items: fruits,
+                            key: |(key, _)| Key::from(*key),
+                            text_value: |(_, label)| (*label).to_owned(),
+                        });
                         let state = use_list_state(UseListStateInput {
                             collection,
                             selection: SelectionOptions {
@@ -111,7 +108,7 @@ pub fn PageUseListbox() -> impl IntoView {
                         <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
                             "The id of a visible label. The hook renders no label itself."
                         </ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Vertical">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
                             "Decides which arrow keys move between options; set as "<Code inline=true>"aria-orientation"</Code>"."
                         </ApiRow>
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
@@ -176,7 +173,7 @@ pub fn PageUseListbox() -> impl IntoView {
                                 id: None,
                                 aria_label: "Fruits".into(),
                                 aria_labelledby: Signal::stored(None),
-                                orientation: Orientation::Vertical,
+                                orientation: Orientation::Vertical.into(),
                                 layout: ListLayout::Stack,
                                 keyboard_delegate: None,
                                 layout_delegate: None,
@@ -247,7 +244,7 @@ pub fn PageUseListbox() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="allows_selection" ty="Signal<bool>">"Whether pressing the option can select it."</ApiRow>
                         <ApiRow name="has_action" ty="Signal<bool>">"Whether the option has an action or link to perform."</ApiRow>
-                        <ApiRow name="link" ty="Option<ItemLink>">
+                        <ApiRow name="link" ty="Signal<Option<ItemLink>>">
                             "The option\u{2019}s link, if the collection item has one. Render the option as an "
                             <Code inline=true>"<a>"</Code>" with it, or keep another element: links then open through a temporary "
                             <Code inline=true>"<a>"</Code>"."
@@ -298,7 +295,7 @@ pub fn PageUseListbox() -> impl IntoView {
                             "For the element containing the section\u{2019}s options: "<Code inline=true>"role=\"group\""</Code>
                             ", labelled by the heading or the section\u{2019}s "<Code inline=true>"aria_label"</Code>"."
                         </ApiRow>
-                        <ApiRow name="heading" ty="Option<String>">"The header text, if any."</ApiRow>
+                        <ApiRow name="heading" ty="Signal<Option<String>>">"The header text, if any."</ApiRow>
                     </ApiTable>
                 </Section>
 

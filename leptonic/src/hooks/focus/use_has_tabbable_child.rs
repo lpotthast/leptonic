@@ -1,12 +1,13 @@
 // Upstream: react-aria/src/focus/useHasTabbableChild.ts @ 99e6102368
 use leptos::prelude::*;
+use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    hooks::IntoAttrs,
+    IntoAttrs,
     utils::{
-        element_capture::{CapturedElement, ElementCaptureAttr},
+        focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
     },
 };
@@ -21,18 +22,10 @@ use crate::{
 // =============================================================================
 
 /// Input parameters for the `use_has_tabbable_child` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UseHasTabbableChildInput {
     /// Whether the check should be disabled.
     pub is_disabled: Signal<bool>,
-}
-
-impl Default for UseHasTabbableChildInput {
-    fn default() -> Self {
-        Self {
-            is_disabled: Signal::derive(|| false),
-        }
-    }
 }
 
 /// The return value of the `use_has_tabbable_child` hook.
@@ -135,8 +128,11 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
             let callback: Closure<dyn FnMut(js_sys::Array, web_sys::MutationObserver)> =
                 Closure::new(
                     move |_mutations: js_sys::Array, _observer: web_sys::MutationObserver| {
+                        // Written only on change: every mutation runs this.
                         let has = has_tabbable_element(&el_clone);
-                        set_has_tabbable_child.set(has);
+                        if has_tabbable_child.try_get_untracked() == Some(!has) {
+                            set_has_tabbable_child.set(has);
+                        }
                     },
                 );
 
@@ -182,7 +178,7 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
 /// Check if an element has any tabbable descendant elements.
 ///
-/// Uses `get_focusable_tree_walker` with `tabbable: true` to create a walker that
+/// Uses `get_focusable_tree_walker` with `Focusability::Tabbable` to create a walker that
 /// only visits tabbable elements. If `next_node()` returns anything, a tabbable
 /// child exists. This mirrors react-aria's `getFocusableTreeWalker({tabbable: true})`
 /// followed by `!!walker.nextNode()`.
@@ -190,7 +186,7 @@ fn has_tabbable_element(element: &web_sys::Element) -> bool {
     let Some(mut walker) = get_focusable_tree_walker(
         element,
         FocusableTreeWalkerOptions {
-            tabbable: true,
+            focusability: Focusability::Tabbable,
             ..Default::default()
         },
     ) else {

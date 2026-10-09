@@ -1,6 +1,4 @@
-use std::collections::VecDeque;
-
-use std::time::Duration;
+use std::{collections::VecDeque, time::Duration};
 
 use leptonic::{
     atoms::{
@@ -11,8 +9,8 @@ use leptonic::{
             NumberField, NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton,
         },
     },
-    hooks::*,
-    utils::data_attributes::flag,
+    flag,
+    hooks::interactions::{LongPress, LongPressEvent, UsePressInput, UsePressReturn, use_press},
 };
 use leptos::prelude::*;
 
@@ -27,36 +25,39 @@ pub fn PressLongDemo() -> impl IntoView {
 
     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
         is_disabled: lp_disabled.into(),
-        on_long_press_start: Some(Callback::new(move |e: LongPressEvent| {
-            set_lp_events.update(|events| {
-                events.push_front(format!(
-                    "LongPressStart: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                ));
-                events.truncate(50);
-            });
-        })),
-        on_long_press: Some(Callback::new(move |e: LongPressEvent| {
-            set_lp_count.update(|c| *c += 1);
-            set_lp_events.update(|events| {
-                events.push_front(format!(
-                    "LongPress: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                ));
-                events.truncate(50);
-            });
-        })),
-        on_long_press_end: Some(Callback::new(move |e: LongPressEvent| {
-            set_lp_events.update(|events| {
-                events.push_front(format!(
-                    "LongPressEnd: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                ));
-                events.truncate(50);
-            });
-        })),
-        long_press_threshold: Some(threshold),
-        long_press_accessibility_description: "Long press to increment counter".into(),
+        long_press: Some(LongPress {
+            on_long_press_start: Some(Callback::new(move |e: LongPressEvent| {
+                set_lp_events.update(|events| {
+                    events.push_front(format!(
+                        "LongPressStart: pointer_type={:?}, x={}, y={}",
+                        e.pointer_type, e.point.x, e.point.y,
+                    ));
+                    events.truncate(50);
+                });
+            })),
+            on_long_press: Some(Callback::new(move |e: LongPressEvent| {
+                set_lp_count.update(|c| *c += 1);
+                set_lp_events.update(|events| {
+                    events.push_front(format!(
+                        "LongPress: pointer_type={:?}, x={}, y={}",
+                        e.pointer_type, e.point.x, e.point.y,
+                    ));
+                    events.truncate(50);
+                });
+            })),
+            on_long_press_end: Some(Callback::new(move |e: LongPressEvent| {
+                set_lp_events.update(|events| {
+                    events.push_front(format!(
+                        "LongPressEnd: pointer_type={:?}, x={}, y={}",
+                        e.pointer_type, e.point.x, e.point.y,
+                    ));
+                    events.truncate(50);
+                });
+            })),
+            threshold,
+            accessibility_description: "Long press to increment counter".into(),
+            ..LongPress::default()
+        }),
         ..Default::default()
     });
     let (attrs, styles) = props.into_parts();

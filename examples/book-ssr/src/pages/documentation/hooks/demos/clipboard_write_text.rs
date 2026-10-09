@@ -1,4 +1,4 @@
-use leptonic::{atoms::button::Button, utils::clipboard::write_text};
+use leptonic::{atoms::button::Button, write_text};
 use leptos::{prelude::*, task::spawn_local};
 
 #[component]

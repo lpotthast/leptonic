@@ -1,4 +1,6 @@
 // Upstream: react-stately/src/calendar/useRangeCalendarState.ts @ 99e6102368
+// Upstream: react-aria-components/test/RangeCalendar.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
 use jiff::civil::{Date, Weekday};
 use leptos::prelude::*;
 
@@ -8,9 +10,9 @@ use super::{
     },
     utils::{align_center, constrain_value, is_invalid, previous_available_date},
 };
-use crate::utils::{
+use crate::{
     ValueBinding,
-    date::{DateDuration, DateExt, DateRange, max_date, min_date},
+    utils::date::{DateDuration, DateExt, DateRange, max_date, min_date},
 };
 
 // =============================================================================
@@ -444,6 +446,7 @@ mod tests {
     use jiff::civil::date;
 
     use super::*;
+    use crate::testing::with_owner;
 
     fn state(input: UseRangeCalendarStateInput) -> RangeCalendarState {
         use_range_calendar_state(UseRangeCalendarStateInput {
@@ -454,7 +457,7 @@ mod tests {
 
     #[test]
     fn selects_a_range_with_two_selections() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let range = state(UseRangeCalendarStateInput {
                 default_focused_value: Some(date(2024, 5, 15)),
                 ..UseRangeCalendarStateInput::default()
@@ -478,7 +481,7 @@ mod tests {
 
     #[test]
     fn contiguous_ranges_stop_at_unavailable_dates() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let booked = Callback::new(|query: DateAvailabilityQuery| query.date.day() == 25);
             let range = state(UseRangeCalendarStateInput {
                 default_focused_value: Some(date(2024, 5, 15)),

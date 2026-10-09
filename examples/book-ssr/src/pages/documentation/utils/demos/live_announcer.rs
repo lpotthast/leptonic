@@ -1,7 +1,4 @@
-use leptonic::{
-    atoms::button::Button,
-    utils::live_announcer::{announce_assertive, announce_polite, clear_announcer},
-};
+use leptonic::{announce_assertive, announce_polite, atoms::button::Button, clear_announcer};
 use leptos::prelude::*;
 
 const CONNECTION_LOST: &str = "Connection lost. Your changes are not saved.";

@@ -1,19 +1,20 @@
 // Upstream: react-aria/src/focus/FocusScope.tsx @ 99e6102368
+// Upstream: react-aria/test/focus/FocusScope.test.js @ 99e6102368
 use std::sync::Arc;
 
+use leptos::prelude::*;
+use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use send_wrapper::SendWrapper;
+#[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{
-        dom_ext::node_contains,
-        element_capture::{CapturedElement, ElementCaptureAttr},
-        focusability,
-        focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
-        shadow_dom,
-        shadow_tree_walker::ShadowTreeWalker,
-    },
+use crate::IntoAttrs;
+pub use crate::utils::focusability::Focusability;
+#[cfg(not(feature = "ssr"))]
+use crate::utils::{
+    focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
+    shadow_dom,
+    shadow_tree_walker::ShadowTreeWalker,
 };
 
 // =============================================================================
@@ -21,33 +22,39 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `use_focus_manager(input)` returns the manager plus an `ElementCaptureAttr` to spread onto the
-//   scope element: no `RefObject` to create and pass. React-aria: `createFocusManager(ref)`, or
-//   `useFocusManager()` reading the manager of the enclosing `FocusScope` (here: the
-//   `FocusScopeContext` of the `FocusScope` atom).
+// - `create_focus_manager()` returns the manager plus an `ElementCaptureAttr` to spread onto the
+//   scope element: no `RefObject` to create and pass (react-aria: `createFocusManager(ref)`).
+//   `use_focus_manager_context()` is react-aria's `useFocusManager()`: the manager of the
+//   enclosing `FocusScope` (or `FocusManagerProvider`), provided as a `FocusManager` context.
+// - `FocusManager` is `Copy` (its state lives in a `StoredValue` of the owner that created it);
+//   once that owner is gone, the methods find nothing.
 // - The default options of `createFocusManager(ref, defaultOptions)` are a default filter only
-//   (`FocusManager::with_default_accept`): `from`, `wrap` and `tabbable` describe a single call,
-//   and `FocusManagerOptions` names them all in each call (struct literal or `Default`).
+//   (`FocusManager::with_default_accept`): `from`, `wrap` and `focusability` describe a single
+//   call, and `FocusManagerOptions` names them all in each call (struct literal or `Default`).
+// - `focusability: Focusability` instead of `tabbable?: boolean`.
 // - `find_first`/`find_last` return the element without focusing it, for callers with their own
 //   focus strategy (e.g. `focus_safely` without scrolling). React-aria has no such methods.
 //
 // =============================================================================
 
+/// A filter of the elements a focus manager may move to.
+pub type AcceptElement = Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>;
+
 /// Options for focus movement.
 #[derive(Clone, Default)]
 pub struct FocusManagerOptions {
-    /// Element to start navigation from. Defaults to document.activeElement.
+    /// Element to start navigation from. Defaults to the focused element.
     pub from: Option<web_sys::Element>,
 
     /// Whether to wrap around when reaching the end.
     pub wrap: bool,
 
-    /// Whether to only consider tabbable elements (tabindex >= 0).
-    pub tabbable: bool,
+    /// Which elements to move to: every focusable one (default), or only tabbable ones.
+    pub focusability: Focusability,
 
     /// Custom filter function for acceptable elements.
     /// Unlike a bare `fn` pointer, this accepts closures that capture state.
-    pub accept: Option<Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    pub accept: Option<AcceptElement>,
 }
 
 impl std::fmt::Debug for FocusManagerOptions {
@@ -55,24 +62,30 @@ impl std::fmt::Debug for FocusManagerOptions {
         f.debug_struct("FocusManagerOptions")
             .field("from", &self.from)
             .field("wrap", &self.wrap)
-            .field("tabbable", &self.tabbable)
+            .field("focusability", &self.focusability)
             .field("accept", &self.accept.as_ref().map(|_| ".."))
             .finish()
     }
 }
 
-/// A focus manager provides methods for moving focus within a scope.
-#[allow(clippy::type_complexity)]
-#[derive(Clone)]
-pub struct FocusManager {
-    /// Function to get the current scope element.
+/// The state of a [`FocusManager`].
+struct FocusManagerState {
+    /// Returns the current scope element.
     #[cfg(not(feature = "ssr"))]
-    get_scope: Arc<SendWrapper<Box<dyn Fn() -> Option<web_sys::Element>>>>,
-    #[cfg(feature = "ssr")]
-    get_scope: Arc<dyn Fn() -> Option<web_sys::Element> + Send + Sync>,
+    get_scope: SendWrapper<Box<dyn Fn() -> Option<web_sys::Element>>>,
     /// The filter of calls that don't pass one (react-aria's default options of
     /// `createFocusManager`).
-    default_accept: Option<Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    default_accept: Option<AcceptElement>,
+}
+
+/// A focus manager provides methods for moving focus within a scope.
+///
+/// `Copy`: its state lives in a `StoredValue` of the reactive owner that created it. Once that
+/// owner is disposed, the methods find nothing (a pending callback may still hold the manager of
+/// an unmounted scope).
+#[derive(Clone, Copy)]
+pub struct FocusManager {
+    state: StoredValue<FocusManagerState>,
 }
 
 impl std::fmt::Debug for FocusManager {
@@ -88,20 +101,13 @@ impl FocusManager {
         F: Fn() -> Option<web_sys::Element> + 'static,
     {
         #[cfg(feature = "ssr")]
-        {
-            let _ = get_scope;
-            Self {
-                get_scope: Arc::new(|| None),
+        let _ = get_scope;
+        Self {
+            state: StoredValue::new(FocusManagerState {
+                #[cfg(not(feature = "ssr"))]
+                get_scope: SendWrapper::new(Box::new(get_scope)),
                 default_accept: None,
-            }
-        }
-
-        #[cfg(not(feature = "ssr"))]
-        {
-            Self {
-                get_scope: Arc::new(SendWrapper::new(Box::new(get_scope))),
-                default_accept: None,
-            }
+            }),
         }
     }
 
@@ -109,186 +115,110 @@ impl FocusManager {
     /// picker's segments without its button).
     #[must_use]
     pub fn with_default_accept(
-        mut self,
+        self,
         accept: impl Fn(&web_sys::Element) -> bool + Send + Sync + 'static,
     ) -> Self {
-        self.default_accept = Some(Arc::new(accept));
+        self.state
+            .update_value(|state| state.default_accept = Some(Arc::new(accept)));
         self
     }
 
-    fn with_defaults(&self, mut opts: FocusManagerOptions) -> FocusManagerOptions {
-        if opts.accept.is_none() {
-            opts.accept.clone_from(&self.default_accept);
-        }
-        opts
+    /// The scope element and the options with the default filter applied; `None` without a scope
+    /// (also once the manager's owner is gone).
+    #[cfg(not(feature = "ssr"))]
+    fn resolve(
+        self,
+        mut opts: FocusManagerOptions,
+    ) -> Option<(web_sys::Element, FocusManagerOptions)> {
+        let scope = self.state.try_with_value(|state| {
+            if opts.accept.is_none() {
+                opts.accept.clone_from(&state.default_accept);
+            }
+            (state.get_scope)()
+        })??;
+        Some((scope, opts))
     }
 
-    /// Move focus to the next focusable element.
+    /// Move focus to the next focusable element: after `from` (or the focused element) if it is
+    /// in the scope, else to the first one.
     #[allow(clippy::needless_pass_by_value)]
-    pub fn focus_next(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        let opts = self.with_defaults(opts);
-        let scope = (self.get_scope)()?;
-
-        let from = opts.from.or_else(|| {
-            scope
-                .owner_document()
-                .and_then(|d| shadow_dom::get_active_element(&d))
-        });
-
-        let from_radio_group = from.as_ref().and_then(focusability::get_radio_group_name);
-
-        let from_in_scope = from.as_ref().is_some_and(|from_el| {
-            node_contains(Some(scope.as_ref()), Some(from_el.as_ref())).unwrap_or(false)
-        });
-
-        if let Some(ref from_el) = from
-            && from_in_scope
+    pub fn focus_next(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        #[cfg(feature = "ssr")]
         {
-            // Normal case: advance from current position.
-            let mut walker = get_focusable_tree_walker(
-                &scope,
-                FocusableTreeWalkerOptions {
-                    tabbable: opts.tabbable,
-                    from: Some(from_el.clone()),
-                    from_radio_group,
-                    accept: opts.accept.clone(),
-                },
-            )?;
-
-            if let Some(el) = walker_next(&mut walker) {
-                focus_element(&el);
-                return Some(el);
-            }
-
-            // Wrap around: create a fresh walker without from_radio_group.
-            if opts.wrap {
-                let mut wrap_walker = get_focusable_tree_walker(
-                    &scope,
-                    FocusableTreeWalkerOptions {
-                        tabbable: opts.tabbable,
-                        accept: opts.accept,
-                        ..Default::default()
-                    },
-                )?;
-                let result = walker_next(&mut wrap_walker);
-                if let Some(ref el) = result {
-                    focus_element(el);
-                }
-                return result;
-            }
-
-            return None;
+            let _ = opts;
+            None
         }
-
-        // From outside scope or no from: focus first element (react-aria behavior).
-        let mut walker = get_focusable_tree_walker(
-            &scope,
-            FocusableTreeWalkerOptions {
-                tabbable: opts.tabbable,
-                accept: opts.accept,
-                ..Default::default()
-            },
-        )?;
-        let result = walker_next(&mut walker);
-        if let Some(ref el) = result {
-            focus_element(el);
+        #[cfg(not(feature = "ssr"))]
+        {
+            let (scope, opts) = self.resolve(opts)?;
+            let from = from_or_active(&scope, opts.from.clone());
+            let mut walker = walker(&scope, &opts)?;
+            if let Some(from) = from.filter(|from| shadow_dom::node_contains(&scope, from)) {
+                walker.set_current_node(&from);
+            }
+            let mut next = walker_next(&mut walker);
+            if next.is_none() && opts.wrap {
+                walker.set_current_node(&scope);
+                next = walker_next(&mut walker);
+            }
+            if let Some(next) = &next {
+                focus_element(next);
+            }
+            next
         }
-        result
     }
 
-    /// Move focus to the previous focusable element.
+    /// Move focus to the previous focusable element: before `from` (or the focused element) if it
+    /// is in the scope, else to the last one.
     #[allow(clippy::needless_pass_by_value)]
-    pub fn focus_previous(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        let opts = self.with_defaults(opts);
-        let scope = (self.get_scope)()?;
-
-        let from = opts.from.or_else(|| {
-            scope
-                .owner_document()
-                .and_then(|d| shadow_dom::get_active_element(&d))
-        });
-
-        let from_radio_group = from.as_ref().and_then(focusability::get_radio_group_name);
-
-        let from_in_scope = from.as_ref().is_some_and(|from_el| {
-            node_contains(Some(scope.as_ref()), Some(from_el.as_ref())).unwrap_or(false)
-        });
-
-        if let Some(ref from_el) = from
-            && from_in_scope
+    pub fn focus_previous(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        #[cfg(feature = "ssr")]
         {
-            // Normal case: walk backwards from current position.
-            let mut walker = get_focusable_tree_walker(
-                &scope,
-                FocusableTreeWalkerOptions {
-                    tabbable: opts.tabbable,
-                    from: Some(from_el.clone()),
-                    from_radio_group,
-                    accept: opts.accept.clone(),
-                },
-            )?;
-
-            if let Some(el) = walker_previous(&mut walker) {
-                focus_element(&el);
-                return Some(el);
-            }
-
-            // Wrap around: create a fresh walker without from_radio_group.
-            if opts.wrap {
-                let mut wrap_walker = get_focusable_tree_walker(
-                    &scope,
-                    FocusableTreeWalkerOptions {
-                        tabbable: opts.tabbable,
-                        accept: opts.accept,
-                        ..Default::default()
-                    },
-                )?;
-                let result = find_last_focusable(&mut wrap_walker, &scope);
-                if let Some(ref el) = result {
-                    focus_element(el);
+            let _ = opts;
+            None
+        }
+        #[cfg(not(feature = "ssr"))]
+        {
+            let (scope, opts) = self.resolve(opts)?;
+            let from = from_or_active(&scope, opts.from.clone());
+            let mut walker = walker(&scope, &opts)?;
+            let previous = match from.filter(|from| shadow_dom::node_contains(&scope, from)) {
+                Some(from) => {
+                    walker.set_current_node(&from);
+                    walker_previous(&mut walker).or_else(|| {
+                        opts.wrap.then(|| {
+                            walker.set_current_node(&scope);
+                            last(&mut walker)
+                        })?
+                    })
                 }
-                return result;
+                None => last(&mut walker),
+            };
+            if let Some(previous) = &previous {
+                focus_element(previous);
             }
-
-            return None;
+            previous
         }
-
-        // From outside scope or no from: focus last element (react-aria behavior).
-        let mut walker = get_focusable_tree_walker(
-            &scope,
-            FocusableTreeWalkerOptions {
-                tabbable: opts.tabbable,
-                accept: opts.accept,
-                ..Default::default()
-            },
-        )?;
-        let result = find_last_focusable(&mut walker, &scope);
-        if let Some(ref el) = result {
-            focus_element(el);
-        }
-        result
     }
 
     /// Move focus to the first focusable element.
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn focus_first(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        let opts = self.with_defaults(opts);
-        let result = self.find_first(opts);
-        if let Some(ref el) = result {
-            focus_element(el);
+    pub fn focus_first(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let first = self.find_first(opts);
+        #[cfg(not(feature = "ssr"))]
+        if let Some(first) = &first {
+            focus_element(first);
         }
-        result
+        first
     }
 
     /// Move focus to the last focusable element.
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn focus_last(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        let opts = self.with_defaults(opts);
-        let result = self.find_last(opts);
-        if let Some(ref el) = result {
-            focus_element(el);
+    pub fn focus_last(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let last = self.find_last(opts);
+        #[cfg(not(feature = "ssr"))]
+        if let Some(last) = &last {
+            focus_element(last);
         }
-        result
+        last
     }
 
     /// Find the first focusable element without focusing it.
@@ -297,18 +227,17 @@ impl FocusManager {
     /// (e.g., `focus_safely` for overlay auto-focus instead of standard
     /// `focus()` which allows scrolling).
     #[allow(clippy::needless_pass_by_value)]
-    pub fn find_first(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        let opts = self.with_defaults(opts);
-        let scope = (self.get_scope)()?;
-        let mut walker = get_focusable_tree_walker(
-            &scope,
-            FocusableTreeWalkerOptions {
-                tabbable: opts.tabbable,
-                accept: opts.accept,
-                ..Default::default()
-            },
-        )?;
-        walker_next(&mut walker)
+    pub fn find_first(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        #[cfg(feature = "ssr")]
+        {
+            let _ = opts;
+            None
+        }
+        #[cfg(not(feature = "ssr"))]
+        {
+            let (scope, opts) = self.resolve(opts)?;
+            walker_next(&mut walker(&scope, &opts)?)
+        }
     }
 
     /// Find the last focusable element without focusing it.
@@ -316,22 +245,48 @@ impl FocusManager {
     /// Use this when the caller needs to apply its own focus strategy
     /// (e.g., `focus_safely` for overlay auto-focus).
     #[allow(clippy::needless_pass_by_value)]
-    pub fn find_last(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        let opts = self.with_defaults(opts);
-        let scope = (self.get_scope)()?;
-        let mut walker = get_focusable_tree_walker(
-            &scope,
-            FocusableTreeWalkerOptions {
-                tabbable: opts.tabbable,
-                accept: opts.accept,
-                ..Default::default()
-            },
-        )?;
-        find_last_focusable(&mut walker, &scope)
+    pub fn find_last(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        #[cfg(feature = "ssr")]
+        {
+            let _ = opts;
+            None
+        }
+        #[cfg(not(feature = "ssr"))]
+        {
+            let (scope, opts) = self.resolve(opts)?;
+            last(&mut walker(&scope, &opts)?)
+        }
     }
 }
 
+/// `from`, else the focused element of the scope's document.
+#[cfg(not(feature = "ssr"))]
+fn from_or_active(
+    scope: &web_sys::Element,
+    from: Option<web_sys::Element>,
+) -> Option<web_sys::Node> {
+    from.or_else(|| {
+        scope
+            .owner_document()
+            .and_then(|document| shadow_dom::get_active_element(&document))
+    })
+    .map(Into::into)
+}
+
+/// A walker over the scope's elements the options accept, at the scope element.
+#[cfg(not(feature = "ssr"))]
+fn walker(scope: &web_sys::Element, opts: &FocusManagerOptions) -> Option<ShadowTreeWalker> {
+    get_focusable_tree_walker(
+        scope,
+        FocusableTreeWalkerOptions {
+            focusability: opts.focusability,
+            accept: opts.accept.clone(),
+        },
+    )
+}
+
 /// Cast-wrapper: advance to the next node and try to cast to `Element`.
+#[cfg(not(feature = "ssr"))]
 fn walker_next(walker: &mut ShadowTreeWalker) -> Option<web_sys::Element> {
     walker
         .next_node()
@@ -339,99 +294,81 @@ fn walker_next(walker: &mut ShadowTreeWalker) -> Option<web_sys::Element> {
 }
 
 /// Cast-wrapper: move to the previous node and try to cast to `Element`.
+#[cfg(not(feature = "ssr"))]
 fn walker_previous(walker: &mut ShadowTreeWalker) -> Option<web_sys::Element> {
     walker
         .previous_node()
         .and_then(|n| n.dyn_into::<web_sys::Element>().ok())
 }
 
-/// Navigate the walker to the deepest last descendant of `scope`.
-fn set_walker_to_last_descendant(walker: &ShadowTreeWalker, scope: &web_sys::Element) {
-    let mut node: web_sys::Node = scope.clone().into();
-    while let Some(last) = node.last_child() {
-        node = last;
+/// The last accepted element below the walker's node: its last child, that one's last child,
+/// ... (react-aria's `last`).
+#[cfg(not(feature = "ssr"))]
+fn last(walker: &mut ShadowTreeWalker) -> Option<web_sys::Element> {
+    let mut last = None;
+    while let Some(node) = walker.last_child() {
+        last = Some(node);
     }
-    walker.set_current_node(&node);
-}
-
-/// Find the last focusable element within the scope.
-///
-/// Positions the walker at the deepest last descendant and walks backwards.
-/// The current node at that position might itself be focusable, so we check
-/// it via `matches_filter` before falling back to `walker_previous`.
-fn find_last_focusable(
-    walker: &mut ShadowTreeWalker,
-    scope: &web_sys::Element,
-) -> Option<web_sys::Element> {
-    set_walker_to_last_descendant(walker, scope);
-    let last_node = walker.current_node();
-    if walker.matches_filter(&last_node) {
-        return last_node.dyn_into::<web_sys::Element>().ok();
-    }
-    walker_previous(walker)
+    last.and_then(|n| n.dyn_into::<web_sys::Element>().ok())
 }
 
 /// Focus an element, allowing the browser to scroll it into view.
 ///
 /// React-aria's `createFocusManager` uses standard `element.focus()` (with scroll)
 /// for programmatic navigation, rather than `focusSafely` (which prevents scroll).
+#[cfg(not(feature = "ssr"))]
 fn focus_element(element: &web_sys::Element) {
     crate::utils::focus::focus_element(element, false);
 }
 
-/// Input parameters for the `use_focus_manager` hook.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct UseFocusManagerInput {}
-
-/// The return value of the `use_focus_manager` hook.
-pub struct UseFocusManagerReturn {
+/// The return value of [`create_focus_manager`].
+pub struct CreateFocusManagerReturn {
     /// The focus manager instance.
     pub focus_manager: FocusManager,
 
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseFocusManagerProps,
+    pub props: FocusManagerScopeProps,
 }
 
-impl std::fmt::Debug for UseFocusManagerReturn {
+impl std::fmt::Debug for CreateFocusManagerReturn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("UseFocusManagerReturn")
+        f.debug_struct("CreateFocusManagerReturn")
             .field("focus_manager", &self.focus_manager)
             .field("props", &self.props)
             .finish()
     }
 }
 
-/// Props from `use_focus_manager` that can be extracted and merged programmatically.
+/// Props of the scope element of [`create_focus_manager`].
 #[derive(Debug)]
-pub struct UseFocusManagerProps {
+pub struct FocusManagerScopeProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl IntoAttrs for UseFocusManagerProps {
-    type Attrs = UseFocusManagerAttrs;
+impl IntoAttrs for FocusManagerScopeProps {
+    type Attrs = FocusManagerScopeAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (self.element_capture,)
     }
 }
 
-/// These attributes must be spread onto the target element: `<foo {..attrs} />`
-pub type UseFocusManagerAttrs = (ElementCaptureAttr,);
+/// These attributes must be spread onto the scope element: `<foo {..attrs} />`
+pub type FocusManagerScopeAttrs = (ElementCaptureAttr,);
 
-/// Creates a focus manager for navigating focus within a scope.
+/// Creates a focus manager for navigating focus within a scope element (react-aria's
+/// `createFocusManager`).
 ///
 /// The focus manager provides methods to programmatically move focus
 /// between focusable elements within a container.
 ///
-/// The hook automatically captures the DOM element through [`ElementCaptureAttr`],
-/// so you don't need to create or pass a `NodeRef`. Just spread the props
-/// onto your element and focus management works automatically.
+/// The props capture the scope element through [`ElementCaptureAttr`], so you don't need to
+/// create or pass a `NodeRef`: spread them onto the container.
 ///
 /// # Example
 ///
 /// ```ignore
-/// let UseFocusManagerReturn { focus_manager, props } =
-///     use_focus_manager(UseFocusManagerInput::default());
+/// let CreateFocusManagerReturn { focus_manager, props } = create_focus_manager();
 ///
 /// view! {
 ///     <div {..props.into_attrs()}>
@@ -443,15 +380,23 @@ pub type UseFocusManagerAttrs = (ElementCaptureAttr,);
 ///     </div>
 /// }
 /// ```
-pub fn use_focus_manager(_input: UseFocusManagerInput) -> UseFocusManagerReturn {
+pub fn create_focus_manager() -> CreateFocusManagerReturn {
     let scope_element = CapturedElement::new();
 
-    UseFocusManagerReturn {
+    CreateFocusManagerReturn {
+        // The manager's state and the capture belong to the same owner: the manager reads the
+        // capture only while it lives.
         focus_manager: FocusManager::new(move || {
             scope_element.get_untracked().map(SendWrapper::take)
         }),
-        props: UseFocusManagerProps {
+        props: FocusManagerScopeProps {
             element_capture: scope_element.attr(),
         },
     }
+}
+
+/// The focus manager of the enclosing `FocusScope` (or `FocusManagerProvider`), react-aria's
+/// `useFocusManager`. `None` outside of one.
+pub fn use_focus_manager_context() -> Option<FocusManager> {
+    use_context::<FocusManager>()
 }

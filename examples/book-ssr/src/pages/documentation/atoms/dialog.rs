@@ -254,7 +254,7 @@ pub fn PageAtomDialog() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::dialog::DialogTitle, utils::heading_level::HeadingLevel};
+                        use leptonic::{HeadingLevel, atoms::dialog::DialogTitle};
 
                         #[component]
                         fn MyDialogHeading(children: Children) -> impl IntoView {

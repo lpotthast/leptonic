@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude as atoms, hooks::Orientation};
+use leptonic::{Orientation, atoms};
 use leptos::prelude::*;
 
 #[component]
@@ -7,16 +7,16 @@ pub fn ToolbarAtomDemo() -> impl IntoView {
     let italic = RwSignal::new(false);
 
     view! {
-        <atoms::Toolbar aria_label="Text formatting" classes="demo-toolbar">
-            <atoms::ToggleButton is_selected=bold set_selected=bold classes="demo-toolbar-atom-button">
+        <atoms::toolbar::Toolbar aria_label="Text formatting" classes="demo-toolbar">
+            <atoms::toggle_button::ToggleButton is_selected=bold set_selected=bold classes="demo-toolbar-atom-button">
                 "Bold"
-            </atoms::ToggleButton>
-            <atoms::ToggleButton is_selected=italic set_selected=italic classes="demo-toolbar-atom-button">
+            </atoms::toggle_button::ToggleButton>
+            <atoms::toggle_button::ToggleButton is_selected=italic set_selected=italic classes="demo-toolbar-atom-button">
                 "Italic"
-            </atoms::ToggleButton>
+            </atoms::toggle_button::ToggleButton>
             // A horizontal toolbar divides its groups with vertical separators.
-            <atoms::Separator orientation=Orientation::Vertical classes="demo-toolbar-separator"/>
-            <atoms::Button
+            <atoms::separator::Separator orientation=Orientation::Vertical classes="demo-toolbar-separator"/>
+            <atoms::button::Button
                 classes="demo-toolbar-atom-button"
                 on_press=move |_| {
                     bold.set(false);
@@ -24,8 +24,8 @@ pub fn ToolbarAtomDemo() -> impl IntoView {
                 }
             >
                 "Clear"
-            </atoms::Button>
-        </atoms::Toolbar>
+            </atoms::button::Button>
+        </atoms::toolbar::Toolbar>
 
         <p class="demo-toolbar-preview" data-bold=bold data-italic=italic>
             "The quick brown fox jumps over the lazy dog."

@@ -34,6 +34,7 @@ crate-type = ["cdylib", "rlib"]
 hydrate = ["leptos/hydrate", "leptonic/hydrate"]
 ssr = [
     "dep:axum",
+    "dep:http-body",
     "dep:tokio",
     "dep:leptos_axum",
     "leptos/ssr",
@@ -46,17 +47,23 @@ ssr = [
 axum = { version = "0.8.9", optional = true, default-features = false, features = ["http1", "tokio"] }
 console_error_panic_hook = { version = "0.1.7", default-features = false }
 # `TimeoutFuture`: a stand-in for a download in the clipboard fixture.
+# `Frame`: the server wraps response bodies to know the request a panic while streaming happened in (`src/main.rs`).
+http-body = { version = "1.0.1", optional = true, default-features = false }
 gloo-timers = { version = "0.4.0", default-features = false, features = ["futures"] }
 leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard", "intl-strings"] }
 leptos = { version = "0.8.22", default-features = false }
 leptos_axum = { version = "0.8.10", optional = true, default-features = false, features = ["default"] }
 leptos_meta = { version = "0.8.7", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
+# `DragPreview` holds its element in a `SendWrapper`.
+send_wrapper = { version = "0.6.0", default-features = false }
 tokio = { version = "1.53.2", optional = true, default-features = false, features = ["macros", "net", "rt-multi-thread"] }
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "registry", "std", "ansi"] }
 tracing-wasm = { version = "0.2.1", default-features = false }
 wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std"] }
+# Shadow roots in the dialog fixture (`attachShadow`).
+web-sys = { version = "0.3.106", default-features = false, features = ["ShadowRootInit", "ShadowRootMode"] }
 
 [profile.dev.package."*"]
 # No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): smaller

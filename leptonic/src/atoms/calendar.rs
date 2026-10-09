@@ -1,15 +1,17 @@
+// Upstream: react-aria-components/src/Calendar.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/RangeCalendar.test.tsx @ 99e6102368
 //! Headless calendar atoms: a calendar and a range calendar with their
 //! heading, buttons, grids and cells.
-// Upstream: react-aria-components/src/Calendar.tsx @ 99e6102368
 
 use jiff::civil::{Date, Weekday};
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
-        IntoAttrs, UseButtonInput, UseButtonReturn, UseFocusRingInput, UseFocusRingReturn,
-        UseHoverInput,
+        button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::{
             CalendarData, CalendarHeadingFormat, CalendarStates, CalendarYearPickerFormat,
             CommitBehavior, DateAvailabilityQuery, PageBehavior, SelectionAlignment,
@@ -21,11 +23,10 @@ use crate::{
             use_calendar_heading, use_calendar_month_picker, use_calendar_state,
             use_calendar_year_picker, use_range_calendar, use_range_calendar_state,
         },
-        use_button, use_focus_ring, use_hover,
+        focus::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        CapturedElement, ValueBinding,
-        classes::Classes,
         data_attributes::flag,
         date::{DateDuration, DateExt, DateRange},
         date_time_formatter::{DateTimeFormat, MonthFormat},
@@ -55,6 +56,8 @@ use crate::{
 // ## OMITTED FEATURES
 // - The visually hidden heading before the grids and the hidden next button after them
 //   (react-aria-components adds both for touch screen readers): they would be further elements.
+// - A ref to the calendar's element (react-spectrum's `ref.focus()` moving the focus to the
+//   focused date, "should support focusing via a ref"): atoms forward no element yet.
 //
 // =============================================================================
 
@@ -160,7 +163,7 @@ pub fn Calendar(
     /// Receives the focused date.
     #[prop(into, optional)]
     set_focused_value: Option<Out<Date>>,
-    #[prop(into, optional)] on_focus_change: Option<Callback<Date>>,
+    #[prop(into, optional)] on_focused_value_change: Option<Callback<Date>>,
     /// How much is visible at once. Default: one month. A change re-aligns the visible range.
     #[prop(into, default = Signal::stored(DateDuration::months(1)))]
     visible_duration: Signal<DateDuration>,
@@ -190,7 +193,7 @@ pub fn Calendar(
     let classes = with_default_class("leptonic-Calendar", classes);
     let (mut value, mut on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (focused_value, on_focus_change) =
-        ValueBinding::from_state_props(focused_value, set_focused_value, on_focus_change);
+        ValueBinding::from_state_props(focused_value, set_focused_value, on_focused_value_change);
     // Inside a date picker: its date, selection, limits and states; focused on opening.
     let (
         mut min_value,
@@ -301,7 +304,7 @@ pub fn RangeCalendar(
     #[prop(optional)] default_focused_value: Option<Date>,
     #[prop(into, optional)] focused_value: Option<Signal<Date>>,
     #[prop(into, optional)] set_focused_value: Option<Out<Date>>,
-    #[prop(into, optional)] on_focus_change: Option<Callback<Date>>,
+    #[prop(into, optional)] on_focused_value_change: Option<Callback<Date>>,
     /// How much is visible at once. Default: one month. A change re-aligns the visible range.
     #[prop(into, default = Signal::stored(DateDuration::months(1)))]
     visible_duration: Signal<DateDuration>,
@@ -325,7 +328,7 @@ pub fn RangeCalendar(
     let classes = with_default_class("leptonic-RangeCalendar", classes);
     let (mut value, mut on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (focused_value, on_focus_change) =
-        ValueBinding::from_state_props(focused_value, set_focused_value, on_focus_change);
+        ValueBinding::from_state_props(focused_value, set_focused_value, on_focused_value_change);
     // Inside a date range picker: its range, selection, limits and states; focused on opening.
     let (
         mut min_value,

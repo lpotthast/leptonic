@@ -29,10 +29,6 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                         ", on the server and in the browser, whatever the modality. Set it when the element is focused on mount, "
                         "so the ring shows right away. It does not focus anything."
                     </ApiRow>
-                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                        "Stops following modality changes. While true, the hook unsubscribes and its signals keep their "
-                        "last value. When it turns false again, the signals catch up with the current modality."
-                    </ApiRow>
                     <ApiRow name="is_text_input" ty="bool" default="false">
                         "Use text input rules: only "<Keys keys="Tab"/>" and "<Keys keys="Escape"/>" make focus visible, see "<AnchorLink href="#text-input-rules">"Text Input Rules"</AnchorLink>"."
                     </ApiRow>
@@ -44,14 +40,13 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                     <ApiRow name="focus_should_be_visible" ty="Signal<bool>">
                         "Whether focus should be visible: true for every modality except "<Code inline=true>"Pointer"</Code>"."
                     </ApiRow>
-                    <ApiRow name="modality" ty="Signal<Modality>">"The current interaction modality."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::focus::{UseFocusVisibleInput, UseFocusVisibleReturn, use_focus_visible};
 
                         let UseFocusVisibleReturn { focus_should_be_visible, .. } =
                             use_focus_visible(UseFocusVisibleInput::default());
@@ -68,10 +63,10 @@ pub fn PageUseFocusVisible() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "Click the button, then tab away and back. Its outline only shows while the modality is not "
-                    "\u{201c}Pointer\u{201d}. While \u{201c}Disabled\u{201d} is checked, the readout keeps its last value."
+                    "\u{201c}Pointer\u{201d}. The readout follows the current modality."
                 </p>
 
-                <Demo description="Button whose focus outline follows the current interaction modality, with a disabled toggle" source=include_str!("demos/focus_visible.rs")>
+                <Demo description="Button whose focus outline follows the current interaction modality, with a modality readout" source=include_str!("demos/focus_visible.rs")>
                     <FocusVisibleDemo/>
                 </Demo>
             </Section>
@@ -99,7 +94,7 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                         <TableCell>"yes"</TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"Unknown"</Code></TableCell>
+                        <TableCell><Code inline=true>"None"</Code></TableCell>
                         <TableCell>"No interaction happened yet."</TableCell>
                         <TableCell>"yes"</TableCell>
                     </TableRow>
@@ -124,19 +119,6 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                 </Code>
             </Section>
 
-            <Section title="Disabling">
-                <p>"Set "<Code inline=true>"is_disabled"</Code>" while the element using the hook is hidden or inactive, to avoid needless updates:"</p>
-
-                <Code language=Language::Rust>
-                    {indoc!(r"
-                        let focus_visible = use_focus_visible(UseFocusVisibleInput {
-                            is_disabled: Signal::derive(move || !is_panel_visible.get()),
-                            ..Default::default()
-                        });
-                    ")}
-                </Code>
-            </Section>
-
             <Section title="use_interaction_modality">
                 <p>
                     <Code inline=true>"use_interaction_modality()"</Code>" returns the current modality as a "
@@ -147,7 +129,7 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::focus::{Modality, UseFocusVisibleInput, UseFocusVisibleReturn, add_window_focus_tracking, get_modality, get_pointer_type, set_modality, use_focus_ring, use_focus_visible, use_focusable, use_interaction_modality};
 
                         let modality = use_interaction_modality();
                         let by_keyboard = move || modality.get() == Some(Modality::Keyboard);
@@ -157,8 +139,8 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
             <Section title="get_modality">
                 <p>
-                    <Code inline=true>"get_modality() -> Modality"</Code>" reads the current modality once, without tracking, e.g. "
-                    "in an event handler. It is "<Code inline=true>"Unknown"</Code>" during SSR and before any hook started "
+                    <Code inline=true>"get_modality() -> Option<Modality>"</Code>" reads the current modality once, without tracking, e.g. "
+                    "in an event handler. It is "<Code inline=true>"None"</Code>" during SSR and before any hook started "
                     "tracking the modality."
                 </p>
             </Section>
@@ -182,10 +164,10 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
             <Section title="add_window_focus_tracking">
                 <p>
-                    <Code inline=true>"add_window_focus_tracking(Option<&HtmlElement>) -> Box<dyn FnOnce()>"</Code>" tracks the "
-                    "modality in another window, e.g. an iframe, identified by an element in it, and returns a function that "
-                    "stops tracking it. "<Code inline=true>"tear_down_window_focus_tracking(Option<&HtmlElement>)"</Code>
-                    " stops tracking the window containing the element as well. The main window is tracked automatically."
+                    <Code inline=true>"add_window_focus_tracking(&Element) -> WindowFocusTracking"</Code>" tracks "
+                    "the modality in the window containing that element, such as an iframe. Keep the returned guard "
+                    "for as long as tracking is needed; dropping it releases the window listeners. The main window "
+                    "is tracked automatically."
                 </p>
             </Section>
 

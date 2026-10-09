@@ -1,6 +1,12 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
-    hooks::*,
+    IntoAttrs,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+    },
+    hooks::focus::{
+        CreateFocusManagerReturn, FocusManagerOptions, Focusability, create_focus_manager,
+    },
 };
 use leptos::{prelude::*, web_sys};
 use send_wrapper::SendWrapper;
@@ -14,15 +20,19 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
     let last_focused = StoredValue::new(None::<SendWrapper<web_sys::Element>>);
     let (status, set_status) = signal(String::from("Nothing focused yet."));
 
-    let UseFocusManagerReturn {
+    let CreateFocusManagerReturn {
         focus_manager,
         props,
-    } = use_focus_manager(UseFocusManagerInput::default());
+    } = create_focus_manager();
 
     let options = move || FocusManagerOptions {
         from: last_focused.with_value(|el| el.as_ref().map(|el| (**el).clone())),
         wrap: wrap.get_untracked(),
-        tabbable: tabbable_only.get_untracked(),
+        focusability: if tabbable_only.get_untracked() {
+            Focusability::Tabbable
+        } else {
+            Focusability::Focusable
+        },
         ..Default::default()
     };
     let report = move |focused: Option<web_sys::Element>| {
@@ -35,9 +45,9 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
         });
     };
 
-    let first = focus_manager.clone();
-    let previous = focus_manager.clone();
-    let next = focus_manager.clone();
+    let first = focus_manager;
+    let previous = focus_manager;
+    let next = focus_manager;
     let last = focus_manager;
 
     view! {

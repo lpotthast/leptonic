@@ -1,4 +1,9 @@
-use leptonic::hooks::*;
+use leptonic::{
+    IntoAttrs,
+    hooks::interactions::{
+        ContextMenuEvent, UseContextMenuInput, UseContextMenuReturn, use_context_menu,
+    },
+};
 use leptos::prelude::*;
 
 #[component]
@@ -8,7 +13,7 @@ pub fn ContextMenuDemo() -> impl IntoView {
 
     let UseContextMenuReturn { props, .. } = use_context_menu(UseContextMenuInput {
         on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
-            last.set(Some((e.x, e.y)));
+            last.set(Some((e.point.x, e.point.y)));
             count.update(|count| *count += 1);
         })),
     });

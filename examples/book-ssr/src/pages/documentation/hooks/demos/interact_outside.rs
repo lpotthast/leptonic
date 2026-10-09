@@ -1,6 +1,12 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}},
-    hooks::*,
+    IntoAttrs,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+    },
+    hooks::interactions::{
+        UseInteractOutsideInput, UseInteractOutsideReturn, use_interact_outside,
+    },
 };
 use leptos::prelude::*;
 

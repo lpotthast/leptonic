@@ -1,10 +1,10 @@
 use leptonic::{
+    HSV, HsvChannel, RGB8,
     atoms::{
         color_field::{ColorChannelField, ColorField},
         field::Label,
         input::Input,
     },
-    utils::color::{HSV, HsvChannel, RGB8},
 };
 use leptos::prelude::*;
 

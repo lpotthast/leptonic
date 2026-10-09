@@ -1,11 +1,32 @@
+// Upstream: react-stately/test/color/Color.test.tsx @ 99e6102368
 //! Color names (react-aria's `getColorName`/`getHueName`): the lightness, chroma and hue are
 //! picked by message key and localized (`ColorNameStrings`).
-use super::RGB8;
+use std::cell::RefCell;
+
+use super::{RGB8, channel_formatter};
 use crate::utils::{
     i18n::Locale,
     intl_strings::{ColorNameArgs, ColorNameStrings, LocalizedStrings, TransparentColorNameArgs},
-    number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle},
+    number_formatter::{NumberFormatOptions, NumberStyle},
 };
+
+thread_local! {
+    /// The color names of the locale named last: built once per locale, not per name (a drag
+    /// names colors on every change).
+    static STRINGS: RefCell<Option<(Locale, ColorNameStrings)>> = const { RefCell::new(None) };
+}
+
+/// The color names in `locale`.
+fn strings_for(locale: &Locale) -> ColorNameStrings {
+    STRINGS.with_borrow_mut(|cached| match cached {
+        Some((cached_locale, strings)) if cached_locale == locale => strings.clone(),
+        _ => {
+            let strings = ColorNameStrings::for_locale(locale.clone());
+            *cached = Some((locale.clone(), strings.clone()));
+            strings
+        }
+    })
+}
 
 /// Lightness between orange and brown.
 const ORANGE_LIGHTNESS_THRESHOLD: f64 = 0.68;
@@ -36,13 +57,13 @@ fn message(strings: &ColorNameStrings, key: &str) -> String {
 
 /// The name of a color channel in `locale`, by its upstream key ("hue", "red", "alpha", ...).
 pub(super) fn channel_name(key: &str, locale: &Locale) -> String {
-    message(&ColorNameStrings::for_locale(locale.clone()), key)
+    message(&strings_for(locale), key)
 }
 
 /// The color's name in `locale`, e.g. "very dark grayish blue", with its transparency while
 /// `alpha` is below 1 ("vibrant red, 20% transparent").
 pub(super) fn color_name(color: RGB8, alpha: f64, locale: &Locale) -> String {
-    let strings = ColorNameStrings::for_locale(locale.clone());
+    let strings = strings_for(locale);
     let (l, c, h) = to_oklch(color);
     if l > 0.999 {
         return strings.white();
@@ -78,9 +99,9 @@ pub(super) fn color_name(color: RGB8, alpha: f64, locale: &Locale) -> String {
     };
     let (lightness, chroma) = (part(lightness), part(chroma));
     let name = if alpha < 1.0 {
-        let percent = NumberFormatter::new(
+        let percent = channel_formatter(
             locale,
-            NumberFormatOptions {
+            &NumberFormatOptions {
                 style: NumberStyle::Percent,
                 ..NumberFormatOptions::default()
             },
@@ -104,7 +125,7 @@ pub(super) fn color_name(color: RGB8, alpha: f64, locale: &Locale) -> String {
 
 /// The name of the color's hue in `locale`, e.g. "red orange".
 pub(super) fn hue_name(color: RGB8, locale: &Locale) -> String {
-    let strings = ColorNameStrings::for_locale(locale.clone());
+    let strings = strings_for(locale);
     let (l, c, h) = to_oklch(color);
     oklch_hue(&strings, l, c, h).0
 }

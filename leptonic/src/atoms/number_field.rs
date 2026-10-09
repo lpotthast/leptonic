@@ -1,5 +1,7 @@
 // Upstream: react-aria-components/src/NumberField.tsx @ 99e6102368
+// Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use super::{
     field::{FieldContext, LabelContext},
@@ -7,18 +9,22 @@ use super::{
     input::{InputContext, InputState},
 };
 use crate::{
-    Out,
+    IntoAttrs, NumberValue, Out, ValueBinding,
     atoms::field::LabelPresence,
     hooks::{
-        CommitBehavior, IntoAttrs, UseButtonInput, UseFocusRingInput, UseHoverInput,
-        UseNumberFieldGroupProps, UseNumberFieldInput, UseNumberFieldReturn,
-        UseNumberFieldStateInput, ValidateFn, ValidationBehavior, use_button, use_focus_ring,
-        use_hover, use_number_field, use_number_field_state,
+        button::{UseButtonInput, use_button},
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
+        form::{
+            CommitBehavior, UseNumberFieldGroupProps, UseNumberFieldInput, UseNumberFieldReturn,
+            UseNumberFieldStateInput, ValidateFn, ValidationBehavior, use_number_field,
+            use_number_field_state,
+        },
+        interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        NumberValue, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, number_formatter::NumberFormatOptions,
-        number_value::OptionalNumberSignal, scoped_context::scoped_view, styles::Styles,
+        data_attributes::flag, default_class::with_default_class,
+        number_formatter::NumberFormatOptions, number_value::OptionalNumberSignal,
+        scoped_context::scoped_view, styles::Styles,
     },
 };
 
@@ -41,7 +47,7 @@ use crate::{
 
 /// Context from [`NumberField`] to its group and buttons.
 #[derive(Clone)]
-struct NumberFieldCtx {
+struct NumberFieldContext {
     group: StoredValue<UseNumberFieldGroupProps>,
     increment: StoredValue<UseButtonInput>,
     decrement: StoredValue<UseButtonInput>,
@@ -195,7 +201,7 @@ pub fn NumberField<T: NumberValue>(
                 is_focus_visible,
             },
         ));
-        provide_context(NumberFieldCtx {
+        provide_context(NumberFieldContext {
             group: StoredValue::new(group_props),
             increment: StoredValue::new(increment_button),
             decrement: StoredValue::new(decrement_button),
@@ -249,9 +255,9 @@ pub fn NumberFieldGroup(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-NumberFieldGroup", classes);
-    let ctx = expect_context::<NumberFieldCtx>();
+    let ctx = expect_context::<NumberFieldContext>();
     let ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let hover = use_hover(UseHoverInput {
@@ -291,7 +297,7 @@ pub fn NumberFieldIncrementButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-NumberFieldIncrementButton", classes);
-    let ctx = expect_context::<NumberFieldCtx>();
+    let ctx = expect_context::<NumberFieldContext>();
     stepper_button(ctx.increment.get_value(), classes, styles, children)
 }
 
@@ -308,7 +314,7 @@ pub fn NumberFieldDecrementButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-NumberFieldDecrementButton", classes);
-    let ctx = expect_context::<NumberFieldCtx>();
+    let ctx = expect_context::<NumberFieldContext>();
     stepper_button(ctx.decrement.get_value(), classes, styles, children)
 }
 

@@ -1,12 +1,11 @@
 //! The HSV (HSB) color space.
 
 use super::{
-    AreaGradient, ColorChannelRange, ColorSpaceAxes, ColorValue, RGB8, axes_of,
+    AreaGradient, ColorChannelRange, ColorSpaceAxes, ColorValue, HUE_STOPS, RGB8, axes_of,
     hue_space_area_gradient, hue_stops, round_fraction,
 };
 use crate::utils::{
-    i18n::Locale,
-    locale::WritingDirection,
+    i18n::{Locale, WritingDirection},
     math::to_fixed_number,
     number_formatter::{NumberFormatOptions, NumberStyle, UnitDisplay},
 };
@@ -116,7 +115,6 @@ impl ColorValue for HSV {
                 max_value: 360.0,
                 step: 1.0,
                 page_size: 15.0,
-                gradient_stops: Some(&[0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0]),
             },
             // 0 to 1 (react-aria: 0 to 100; see the module's deviations).
             HsvChannel::Saturation | HsvChannel::Brightness => ColorChannelRange {
@@ -124,32 +122,30 @@ impl ColorValue for HSV {
                 max_value: 1.0,
                 step: 0.01,
                 page_size: 0.1,
-                gradient_stops: None,
             },
         }
     }
 
-    fn channels() -> Vec<HsvChannel> {
-        vec![
+    fn channels() -> [HsvChannel; 3] {
+        [
             HsvChannel::Hue,
             HsvChannel::Saturation,
             HsvChannel::Brightness,
         ]
     }
 
+    fn gradient_stops(channel: HsvChannel) -> &'static [f64] {
+        match channel {
+            HsvChannel::Hue => &HUE_STOPS,
+            HsvChannel::Saturation | HsvChannel::Brightness => &[0.0, 1.0],
+        }
+    }
+
     fn color_space_axes(
         x_channel: Option<HsvChannel>,
         y_channel: Option<HsvChannel>,
     ) -> ColorSpaceAxes<HsvChannel> {
-        axes_of(
-            [
-                HsvChannel::Hue,
-                HsvChannel::Saturation,
-                HsvChannel::Brightness,
-            ],
-            x_channel,
-            y_channel,
-        )
+        axes_of(Self::channels(), x_channel, y_channel)
     }
 
     fn to_css_string(&self) -> String {
@@ -215,14 +211,14 @@ impl ColorValue for HSV {
 }
 
 impl From<HSV> for RGB8 {
-    // Expectations: 0 ≤ H < 360, 0 ≤ S ≤ 1 and 0 ≤ V ≤ 1:
+    // Expectations: 0 ≤ S ≤ 1 and 0 ≤ V ≤ 1; hues wrap around (react-aria: `% 6` of sixths).
     #[allow(
         clippy::many_single_char_names,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss
     )]
     fn from(hsv: HSV) -> Self {
-        let (h, s, v) = (hsv.hue, hsv.saturation, hsv.brightness);
+        let (h, s, v) = (hsv.hue.rem_euclid(360.0), hsv.saturation, hsv.brightness);
 
         let c = v * s;
         let x = c * (1.0 - f64::abs(((h / 60.0) % 2.0) - 1.0));
@@ -241,7 +237,8 @@ impl From<HSV> for RGB8 {
         } else if (300.0..360.0).contains(&h) {
             (c, 0.0, x)
         } else {
-            (c, x, 0.0) // error! simply using the 0.0..60.0 branch again.
+            // Only NaN: as 0°.
+            (c, x, 0.0)
         };
 
         let (r, g, b) = (

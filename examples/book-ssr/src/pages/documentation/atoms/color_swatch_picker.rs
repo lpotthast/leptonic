@@ -37,7 +37,14 @@ pub fn PageAtomColorSwatchPicker() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::*, utils::color::RGB8};
+                        use leptonic::{
+                            RGB8,
+                            atoms::{
+                                color_swatch::ColorSwatch,
+                                color_swatch_picker::{ColorSwatchPicker, ColorSwatchPickerItems},
+                                field::Label,
+                            },
+                        };
                         use leptos::prelude::*;
 
                         let colors = vec![
@@ -88,9 +95,9 @@ pub fn PageAtomColorSwatchPicker() -> impl IntoView {
                 <Section title="Props" id="color-swatch-picker-props">
                     <ApiTable kind=ApiKind::Props of="ColorSwatchPicker">
                         <ApiRow name="colors" ty="Signal<Vec<C>>">"Required. The colors to pick from, distinct as hex codes."</ApiRow>
-                        <ApiRow name="default_value" ty="Option<C>" default="None">
-                            "The initially picked color, unless "<Code inline=true>"value"</Code>" is set; "
-                            <Code inline=true>"None"</Code>": none."
+                        <ApiRow name="default_value" ty="Option<C>" default="black">
+                            "The initial color without a bound value or surrounding color picker. Omitted: black, converted to "
+                            <Code inline=true>"C"</Code>"."
                         </ApiRow>
                         <ApiRow name="value" ty="Option<Signal<C>>" default="None">
                             "The picked color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color "

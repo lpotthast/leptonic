@@ -7,7 +7,7 @@ use leptonic::{
         input::{Input, TextArea},
         text_field::TextField,
     },
-    hooks::{ValidationBehavior, ValidationResult},
+    hooks::form::{ValidateFn, ValidationBehavior, ValidationResult},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -93,8 +93,10 @@ pub fn PageAtomTextField() -> impl IntoView {
                     <Input />
                 </TextField>
             </div>
+            // The field outside the form it belongs to.
+            <form id="tf-form"></form>
             <div id="tf-form-attribute">
-                <TextField form="test">
+                <TextField form="tf-form">
                     <Label>"Test"</Label>
                     <Input />
                 </TextField>
@@ -111,6 +113,7 @@ pub fn PageAtomTextField() -> impl IntoView {
             <UppercaseField />
 
             <ServerErrorsForm />
+            <TextFieldValidation />
 
             <Form attr:id="form-native">
                 <TextField name="name" is_required=true>
@@ -179,6 +182,65 @@ fn UppercaseField() -> impl IntoView {
         <div id="tf-uppercase">
             <TextField value=text set_value=move |value: String| text.set(value.to_uppercase())>
                 <Label>"Uppercase"</Label>
+                <Input />
+            </TextField>
+        </div>
+    }
+}
+
+/// Validators, a canceled `invalid` event, server errors and a disabled field (react-spectrum's
+/// `TextField.test.js` validation and state cases).
+#[component]
+fn TextFieldValidation() -> impl IntoView {
+    let not_foo = || -> ValidateFn<String> {
+        Arc::new(|v: &String| {
+            if v == "Foo" {
+                Err(vec!["Invalid name".to_owned()])
+            } else {
+                Ok(())
+            }
+        })
+    };
+    view! {
+        <Form attr:id="tfv-validate">
+            <TextField default_value="Foo" validate=not_foo()>
+                <Label>"Name"</Label>
+                <Input />
+                <FieldError />
+            </TextField>
+        </Form>
+        // The form cancels its fields' `invalid` events: no field takes the focus.
+        <Form attr:id="tfv-prevented" on:invalid:capture=|e| e.prevent_default()>
+            <TextField is_required=true>
+                <Label>"Name"</Label>
+                <Input />
+                <FieldError />
+            </TextField>
+        </Form>
+        <Form attr:id="tfv-aria-validate" validation_behavior=ValidationBehavior::Aria>
+            <TextField default_value="Foo" validate=not_foo()>
+                <Label>"Name"</Label>
+                <Input />
+                <FieldError />
+            </TextField>
+        </Form>
+        <Form
+            attr:id="tfv-aria-server"
+            validation_behavior=ValidationBehavior::Aria
+            validation_errors=Signal::stored(HashMap::from([(
+                "name".to_owned(),
+                vec!["Invalid name".to_owned()],
+            )]))
+        >
+            <TextField name="name">
+                <Label>"Name"</Label>
+                <Input />
+                <FieldError />
+            </TextField>
+        </Form>
+        <div id="tf-disabled">
+            <TextField default_value="test" is_disabled=true>
+                <Label>"Disabled"</Label>
                 <Input />
             </TextField>
         </div>

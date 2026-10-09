@@ -51,7 +51,12 @@ pub fn PageAtomDisclosure() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{Button, Disclosure, DisclosurePanel, DisclosureTrigger};
+                        use leptonic::{
+                            atoms::{
+                                button::Button,
+                                disclosure::{Disclosure, DisclosurePanel, DisclosureTrigger},
+                            },
+                        };
 
                         view! {
                             <Disclosure>
@@ -81,7 +86,7 @@ pub fn PageAtomDisclosure() -> impl IntoView {
                 </p>
                 <Section title="Props" id="disclosure-props">
                     <ApiTable kind=ApiKind::Props of="Disclosure">
-                        <ApiRow name="id" ty="Option<Key>" default="generated">"Its key in a "<Code inline=true>"DisclosureGroup"</Code>"."</ApiRow>
+                        <ApiRow name="key" ty="Option<Key>" default="generated">"Its key in a "<Code inline=true>"DisclosureGroup"</Code>"."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the button can\u{2019}t toggle the panel."</ApiRow>
                         <ApiRow name="default_expanded" ty="bool" default="false">
                             "Whether the panel starts expanded. Ignored with "<Code inline=true>"is_expanded"</Code>" or in a group."
@@ -135,11 +140,11 @@ pub fn PageAtomDisclosure() -> impl IntoView {
                 </p>
                 <Section title="Props" id="disclosure-group-props">
                     <ApiTable kind=ApiKind::Props of="DisclosureGroup">
-                        <ApiRow name="expansion" ty="DisclosureGroupExpansion" default="Single">
+                        <ApiRow name="expansion" ty="Signal<DisclosureGroupExpansion>" default="Single">
                             <Code inline=true>"Single"</Code>": expanding one collapses the others; "<Code inline=true>"Multiple"</Code>": any number."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether all disclosures are disabled."</ApiRow>
-                        <ApiRow name="default_expanded_keys" ty="Vec<Key>" default="empty">
+                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="empty">
                             "The initially expanded disclosures (their "<Code inline=true>"id"</Code>"s). Ignored with "
                             <Code inline=true>"expanded_keys"</Code>"."
                         </ApiRow>

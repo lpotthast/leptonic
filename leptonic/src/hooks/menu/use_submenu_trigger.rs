@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/menu/useSubmenuTrigger.ts @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/SubMenuTrigger.test.tsx @ 99e6102368
 use std::time::Duration;
 
 use leptos::prelude::*;
@@ -6,17 +8,22 @@ use web_sys::KeyboardEvent;
 
 use super::{SubmenuTriggerState, UseSafelyMouseToSubmenuInput, use_safely_mouse_to_submenu};
 use crate::{
+    CapturedElement,
     hooks::{
-        InteractOutsideFilter, PressEvent,
         collections::FocusStrategy,
-        interactions::use_keyboard::{UseKeyboardInput, UseKeyboardProps, use_keyboard},
+        interactions::{
+            PressEvent,
+            use_keyboard::{UseKeyboardInput, UseKeyboardProps, use_keyboard},
+        },
+        overlay::InteractOutsideFilter,
     },
     utils::{
-        CapturedElement, EventAccessors,
         aria::AriaHasPopup,
+        dom_ext::EventAccessors,
         focus::focus_element,
         i18n::use_locale,
         id::use_id,
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         pointer_type::PointerType,
         shadow_dom::{get_active_element, node_contains},
@@ -160,9 +167,8 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
     // Whether the event's current target (the submenu) has focus, and the event comes from
     // inside it. Otherwise focus is elsewhere (e.g. an input in the popover).
     let from_inside = |e: &KeyboardEvent| {
-        let Some(current) = e
-            .current_target()
-            .and_then(|t| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(t).ok())
+        let Ok(current) =
+            wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_current_target())
         else {
             return false;
         };
@@ -188,13 +194,13 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
         use_keyboard(UseKeyboardInput {
             shortcuts: Some(
                 KeyboardShortcuts::new()
-                    .on(Shortcut::key("ArrowLeft"), move |e| {
+                    .on(Shortcut::new(KeyboardKey::ArrowLeft), move |e| {
                         close_towards_parent(e, false)
                     })
-                    .on(Shortcut::key("ArrowRight"), move |e| {
+                    .on(Shortcut::new(KeyboardKey::ArrowRight), move |e| {
                         close_towards_parent(e, true)
                     })
-                    .on(Shortcut::key("Escape"), move |e| {
+                    .on(Shortcut::new(KeyboardKey::Escape), move |e| {
                         if !from_inside(e) {
                             return false;
                         }
@@ -242,10 +248,12 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
     let trigger_keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(
             KeyboardShortcuts::new()
-                .on(Shortcut::key("ArrowRight"), move |_| {
+                .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| {
                     open_or_close(!is_rtl())
                 })
-                .on(Shortcut::key("ArrowLeft"), move |_| open_or_close(is_rtl())),
+                .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| {
+                    open_or_close(is_rtl())
+                }),
         ),
         ..UseKeyboardInput::default()
     })

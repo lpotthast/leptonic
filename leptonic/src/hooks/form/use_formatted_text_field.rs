@@ -4,8 +4,8 @@ use web_sys::{CompositionEvent, InputEvent};
 
 use super::use_number_field_state::NumberFieldState;
 use crate::{
-    hooks::ColorFieldState,
-    utils::{CapturedElement, EventHandler, NumberValue, color::ColorValue},
+    CapturedElement, EventHandler, NumberValue, hooks::color::ColorFieldState,
+    utils::color::ColorValue,
 };
 
 // =============================================================================
@@ -32,7 +32,7 @@ pub trait FormattedTextState: Copy + Send + Sync + 'static {
 
 impl<T: NumberValue> FormattedTextState for NumberFieldState<T> {
     fn is_valid_text(&self, text: &str) -> bool {
-        self.validate(text.to_owned())
+        self.validate(text)
     }
 
     fn set_text(&self, text: String) {

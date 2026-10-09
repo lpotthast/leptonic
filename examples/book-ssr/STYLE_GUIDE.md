@@ -98,6 +98,9 @@ element's font size, so smaller text gets tighter spacing. Use them for padding,
   welcome and 404 pages may use larger display sizes.
 - Weights: 400 text, 600 emphasis in UI (titles of list items), 700 headings and table heads. No other weights.
 - Code, logs and keys use `--typography-code-font-family`, never a bare `monospace`.
+- Code has no ligatures and no automatic hyphenation. Prose keeps `line-height: 1.6`, so inline code chips don't
+  cover the line above. Long identifiers (headings, table of contents, API types) break only between their words
+  (`<wbr>` from the kit's `identifier_words`), and a code block's text ends left of its copy button.
 
 ### Motion and layering
 

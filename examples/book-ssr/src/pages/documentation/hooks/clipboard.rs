@@ -58,7 +58,13 @@ pub fn PageUseClipboard() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::{DragItem, DropItem, IntoAttrs, UseClipboardInput, use_clipboard};
+                        use leptonic::{
+                            IntoAttrs,
+                            hooks::{
+                                clipboard::{UseClipboardInput, use_clipboard},
+                                dnd::{DragItem, DropItem},
+                            },
+                        };
 
                         let note = RwSignal::new(String::from("Water the plants"));
 
@@ -150,12 +156,12 @@ pub fn PageUseClipboard() -> impl IntoView {
                 <p>
                     <Code inline=true>"use_clipboard"</Code>" reacts to the clipboard shortcuts. To put text on the clipboard "
                     "yourself, e.g. when a \u{201c}Copy\u{201d} button is pressed, call "
-                    <Code inline=true>"leptonic::utils::clipboard::write_text"</Code>". It needs the "
+                    <Code inline=true>"leptonic::write_text"</Code>". It needs the "
                     <Code inline=true>"clipboard"</Code>" feature (part of "<Code inline=true>"full"</Code>")."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::clipboard::write_text;
+                        use leptonic::write_text;
                         use leptos::task::spawn_local;
 
                         let copy = move |_| {

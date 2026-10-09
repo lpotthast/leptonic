@@ -1,27 +1,30 @@
+// Upstream: react-aria-components/src/TagGroup.tsx @ 99e6102368
+// Upstream: react-aria-components/test/TagGroup.test.js @ 99e6102368
+// Upstream: react-aria-components/test/TagGroup.ssr.test.js @ 99e6102368
 //! Headless tag groups: a focusable list of tags (labels, categories, filters) to navigate,
 //! select and remove.
-// Upstream: react-aria-components/src/TagGroup.tsx @ 99e6102368
 use std::{collections::HashSet, sync::Arc};
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::field::{FieldContext, LabelContext, LabelPresence};
 use crate::{
-    Out,
+    IntoAttrs, Out, ValueBinding,
     hooks::{
-        DisabledBehavior, IntoAttrs, SelectionBehavior, SelectionMode, TagGroupData,
-        UseButtonInput, UseFocusRingInput, UseHoverInput, UseTagGroupInput, UseTagGroupProps,
-        UseTagGroupReturn, UseTagInput, UseTagReturn,
+        button::{UseButtonInput, use_button},
         collections::{
-            CollectionMemo, Key, Node, Selection, SelectionOptions, UseListStateInput,
-            use_list_state,
+            CollectionMemo, DisabledBehavior, Key, Node, Selection, SelectionBehavior,
+            SelectionMode, SelectionOptions, UseListStateInput, use_list_state,
         },
-        use_button, use_focus_ring, use_hover, use_tag, use_tag_group,
+        focus::{UseFocusRingInput, use_focus_ring},
+        interactions::{UseHoverInput, use_hover},
+        tag::{
+            TagGroupData, UseTagGroupAttrs, UseTagGroupInput, UseTagGroupReturn, UseTagInput,
+            UseTagReturn, use_tag, use_tag_group,
+        },
     },
-    utils::{
-        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
-        styles::Styles,
-    },
+    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -46,14 +49,15 @@ use crate::{
 
 /// What a [`TagGroup`] provides to its [`TagList`].
 #[derive(Clone, Copy)]
-struct TagListCtx {
-    props: StoredValue<Option<UseTagGroupProps>>,
+struct TagListContext {
+    /// The grid's attributes (one `TagList` per group: they hold its id).
+    attrs: StoredValue<UseTagGroupAttrs>,
     data: StoredValue<TagGroupData>,
 }
 
 /// What a [`Tag`] provides to its [`TagRemoveButton`].
 #[derive(Clone)]
-struct TagRemoveCtx {
+struct TagRemoveContext {
     button: StoredValue<Option<UseButtonInput>>,
 }
 
@@ -65,7 +69,11 @@ struct TagRemoveCtx {
 ///
 /// ```ignore
 /// let tags = RwSignal::new(vec!["News", "Travel", "Gaming"]);
-/// let collection = use_list_collection(tags.into(), |t| Key::from(*t), |t| t.to_string());
+/// let collection = use_list_collection(UseListCollectionInput {
+///     items: tags.into(),
+///     key: |t| Key::from(*t),
+///     text_value: |t| t.to_string(),
+/// });
 /// view! {
 ///     <TagGroup collection=collection on_remove=move |keys: HashSet<Key>| tags.update(|t| t.retain(|t| !keys.contains(&Key::from(*t))))>
 ///         <Label>"Categories"</Label>
@@ -92,8 +100,8 @@ pub fn TagGroup(
     selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected keys.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
+    default_selection: Selection,
+    /// The selection (controlled), replacing `default_selection`: a value or any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -102,7 +110,7 @@ pub fn TagGroup(
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] disabled_behavior: DisabledBehavior,
-    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
     #[prop(into, optional)] aria_describedby: Option<String>,
@@ -124,10 +132,10 @@ pub fn TagGroup(
         selection: SelectionOptions {
             selection_mode,
             selection_behavior,
-            default_selection: Selection::keys(default_selected_keys),
+            default_selection,
             selection,
             on_selection_change,
-            disallow_empty_selection: Signal::stored(disallow_empty_selection),
+            disallow_empty_selection,
             disabled_keys: disabled_keys.unwrap_or_default(),
             disabled_behavior,
             ..SelectionOptions::default()
@@ -143,7 +151,7 @@ pub fn TagGroup(
         data,
     } = use_tag_group(UseTagGroupInput {
         state,
-        element: crate::utils::CapturedElement::new(),
+        element: crate::CapturedElement::new(),
         id: None,
         has_label: label_presence.has_label,
         aria_label,
@@ -160,10 +168,10 @@ pub fn TagGroup(
         error_message: error_message_props,
         is_invalid: Signal::stored(false),
         validation_errors: Signal::stored(Vec::new()),
-        validation_details: Signal::stored(crate::hooks::ValidityStateSnapshot::default()),
+        validation_details: Signal::stored(crate::hooks::form::ValidityStateSnapshot::default()),
     };
-    let list = TagListCtx {
-        props: StoredValue::new(Some(grid_props)),
+    let list = TagListContext {
+        attrs: StoredValue::new(grid_props.into_attrs()),
         data: StoredValue::new(data),
     };
 
@@ -196,17 +204,13 @@ pub fn TagList(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TagList", classes);
-    let Some(ctx) = use_context::<TagListCtx>() else {
+    let Some(ctx) = use_context::<TagListContext>() else {
         crate::utils::dev_warn!("A <TagList> must be inside a <TagGroup>.");
-        return None;
-    };
-    let Some(props) = ctx.props.try_update_value(Option::take).flatten() else {
-        crate::utils::dev_warn!("A <TagGroup> has one <TagList>.");
         return None;
     };
     let data = ctx.data.get_value();
     let collection = data.list.state.collection;
-    let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
+    let is_empty = Signal::derive(move || collection.with(|c| c.is_empty()));
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
     let empty = move || {
         is_empty
@@ -218,7 +222,7 @@ pub fn TagList(
     Some(view! {
         <Provider value=data>
             <div
-                {..props.into_attrs()}
+                {..ctx.attrs.get_value()}
                 {..focus_ring.props.into_attrs()}
                 class=classes
                 style=styles
@@ -277,7 +281,7 @@ pub fn Tag(
         SelectionMode::Single => Some("single"),
         SelectionMode::Multiple => Some("multiple"),
     };
-    let remove = TagRemoveCtx {
+    let remove = TagRemoveContext {
         button: StoredValue::new(remove_button),
     };
 
@@ -334,7 +338,11 @@ where
             {
                 let children = children.clone();
                 let key = node.key.clone();
-                view! { <Tag key=key classes=classes.clone()>{children(node)}</Tag> }
+                view! {
+                    <Tag key=key classes=classes.clone()>
+                        {children(node)}
+                    </Tag>
+                }
             }
         </For>
     }
@@ -343,7 +351,8 @@ where
 /// The button removing its [`Tag`] (rendered only when the group has `on_remove`). Keyboard
 /// users can also press Delete or Backspace on the tag.
 ///
-/// Data attributes: `data-hovered`, `data-pressed`, `data-focus-visible`.
+/// Data attributes: `data-hovered`, `data-pressed`, `data-focused`, `data-focus-visible`,
+/// `data-disabled`.
 ///
 /// Default class: `leptonic-TagRemoveButton`.
 #[component]
@@ -355,7 +364,10 @@ pub fn TagRemoveButton(
     children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TagRemoveButton", classes);
-    let ctx = expect_context::<TagRemoveCtx>();
+    let Some(ctx) = use_context::<TagRemoveContext>() else {
+        crate::utils::dev_warn!("A <TagRemoveButton> must be inside a <Tag>.");
+        return None;
+    };
     let input = ctx.button.get_value()?;
     let button = use_button(input);
     let (attrs, button_styles) = button.props.into_parts();
@@ -367,6 +379,9 @@ pub fn TagRemoveButton(
             style=styles
             data-hovered=flag(button.is_hovered)
             data-pressed=flag(button.is_pressed)
+            data-focused=flag(button.is_focused)
+            data-focus-visible=flag(button.is_focus_visible)
+            data-disabled=flag(button.is_disabled)
         >
             {children.map(|children| children())}
         </button>

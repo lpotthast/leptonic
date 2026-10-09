@@ -1,12 +1,13 @@
 use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
+    I18nProvider, Locale,
     atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
     hooks::{
-        SelectionMode, SortDescriptor, SortDirection, TableCollection, TableOptions,
-        collections::{Key, Selection},
+        collections::{Key, Selection, SelectionMode},
+        table::{SortDescriptor, SortDirection, TableCollection},
     },
-    utils::i18n::{I18nProvider, Locale, use_i18n},
+    use_i18n,
 };
 use leptos::prelude::*;
 
@@ -70,25 +71,20 @@ pub fn PageAtomTable() -> impl IntoView {
     }));
     let rows = Memo::new(move |_| files.with(|f| sort.with(|s| sorted(f, s.as_ref()))));
     let table = Memo::new(move |_| {
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("name", "Name").row_header().allows_sorting();
-                t.column("type", "Type").allows_sorting();
-                t.column("date", "Date Modified").allows_sorting();
-                rows.with(|rows| {
-                    for file in rows {
-                        t.row(file.name, file.name, |r| {
-                            r.cell(file.name);
-                            r.cell(file.kind);
-                            r.cell(file.date);
-                        });
-                    }
-                });
-            },
-        ))
+        Arc::new(TableCollection::build(|t| {
+            t.column("name", "Name").row_header().allows_sorting();
+            t.column("type", "Type").allows_sorting();
+            t.column("date", "Date Modified").allows_sorting();
+            rows.with(|rows| {
+                for file in rows {
+                    t.row(file.name, file.name, |r| {
+                        r.cell(file.name);
+                        r.cell(file.kind);
+                        r.cell(file.date);
+                    });
+                }
+            });
+        }))
     });
     let selection = RwSignal::new(String::new());
     let german: Locale = "de-DE".parse().expect("a locale");
@@ -113,10 +109,11 @@ pub fn PageAtomTable() -> impl IntoView {
             <button id="test-table-before">"Before"</button>
             <Table
                 table=table
+                show_selection_checkboxes=true
                 selection_mode=SelectionMode::Multiple
                 disabled_keys=Signal::stored(HashSet::from([Key::from("log.txt")]))
                 default_sort_descriptor=sort.get_untracked().expect("initial sort")
-                on_sort_change=Callback::new(move |d: SortDescriptor| sort.set(Some(d)))
+                on_sort_descriptor_change=Callback::new(move |d: Option<SortDescriptor>| sort.set(d))
                 on_selection_change=Callback::new(move |s: Selection| {
                     selection.set(describe_selection(&s));
                 })
@@ -210,27 +207,23 @@ fn ContactsTable() -> impl IntoView {
 fn LocalizedTable() -> impl IntoView {
     let i18n = use_i18n().expect("inside an I18nProvider");
     let table = Memo::new(|_| {
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("name", "Name").row_header().allows_sorting();
-                t.row("games", "Games", |r| {
-                    r.cell("Games");
-                });
-            },
-        ))
+        Arc::new(TableCollection::build(|t| {
+            t.column("name", "Name").row_header().allows_sorting();
+            t.row("games", "Games", |r| {
+                r.cell("Games");
+            });
+        }))
     });
     view! {
         <button
             id="test-table-to-french"
-            on:click=move |_| i18n.set_locale.run("fr-FR".parse().expect("a locale"))
+            on:click=move |_| i18n.set_locale("fr-FR".parse().expect("a locale"))
         >
             "Français"
         </button>
         <Table
             table=table
+            show_selection_checkboxes=true
             selection_mode=SelectionMode::Multiple
             default_sort_descriptor=SortDescriptor {
                 column: Key::from("name"),

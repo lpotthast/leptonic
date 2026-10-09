@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
 use leptonic::{
+    I18nProvider, Locale,
     atoms::{
         button::Button,
         table::{Table, TableBody, TableCell, TableHeader, TableRow},
     },
     hooks::{
-        CellFocusMode, KeyboardNavigationBehavior, SelectionMode, TableCollection, TableOptions,
-        collections::Selection,
+        collections::{Selection, SelectionMode},
+        grid::CellFocusMode,
+        gridlist::KeyboardNavigationBehavior,
+        table::TableCollection,
     },
-    utils::{
-        i18n::{I18nProvider, Locale},
-        styles::Styles,
-    },
+    leptos_styles::Styles,
 };
 use leptos::prelude::*;
 
@@ -302,18 +302,18 @@ fn ColSpanTable() -> impl IntoView {
 #[component]
 fn EmptyTable() -> impl IntoView {
     let table = Memo::new(|_| {
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("name", "Name").row_header().allows_sorting();
-                t.column("type", "Type");
-            },
-        ))
+        Arc::new(TableCollection::build(|t| {
+            t.column("name", "Name").row_header().allows_sorting();
+            t.column("type", "Type");
+        }))
     });
     view! {
-        <Table table=table aria_label="Empty table" selection_mode=SelectionMode::Multiple>
+        <Table
+            table=table
+            show_selection_checkboxes=true
+            aria_label="Empty table"
+            selection_mode=SelectionMode::Multiple
+        >
             <TableHeader />
             <TableBody />
         </Table>

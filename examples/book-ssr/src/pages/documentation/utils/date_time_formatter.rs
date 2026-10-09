@@ -25,9 +25,11 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::{
-                            date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, DateTimeStyle},
-                            i18n::use_locale,
+                        use leptonic::{
+                            DateTimeFormatOptions,
+                            DateTimeFormatter,
+                            DateTimeStyle,
+                            use_locale,
                         };
 
                         let locale = use_locale();

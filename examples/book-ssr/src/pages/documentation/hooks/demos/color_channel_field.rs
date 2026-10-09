@@ -1,12 +1,15 @@
 use leptonic::{
+    ColorValue, HSV, HsvChannel, IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::*,
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        css::CssColor,
-        style::BackgroundColorProperty,
-        styles::Styles,
+    hooks::{
+        button::use_button,
+        color::{
+            UseColorChannelFieldInput, UseColorChannelFieldStateInput, use_color_channel_field,
+            use_color_channel_field_state,
+        },
+        form::ValidationBehavior,
     },
+    leptos_styles::{Styles, css::CssColor, property::BackgroundColorProperty},
 };
 use leptos::prelude::*;
 
@@ -32,26 +35,23 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
         on_change: None,
     });
     let field = use_color_channel_field(UseColorChannelFieldInput {
-        field: UseNumberFieldInput {
-            has_label: true.into(),
-            state: state.number,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            is_required: Signal::stored(false),
-            placeholder: MaybeProp::default(),
-            auto_focus: false,
-            is_wheel_disabled: false,
-            increment_aria_label: MaybeProp::default(),
-            decrement_aria_label: MaybeProp::default(),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            on_key_down: None,
-            on_key_up: None,
-        },
         state,
+        has_label: true.into(),
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        is_required: Signal::stored(false),
+        placeholder: MaybeProp::default(),
+        auto_focus: false,
+        is_wheel_disabled: false,
+        increment_aria_label: MaybeProp::default(),
+        decrement_aria_label: MaybeProp::default(),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
     });
 
     // The stepper buttons come as `UseButtonInput`s: render them with `use_button`.

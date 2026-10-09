@@ -53,7 +53,10 @@ pub fn PageUseMove() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::data_attributes::flag};
+                        use leptonic::{
+                            flag,
+                            hooks::interactions::{MoveEvent, UseMoveInput, UseMoveReturn, use_move},
+                        };
                         use leptos::prelude::*;
 
                         let offset = RwSignal::new((0.0, 0.0));

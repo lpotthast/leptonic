@@ -20,13 +20,14 @@
 //! `Overlay`), rendered by the overlay atoms.
 
 mod calculate_position;
-pub mod overlay_focus_contain;
-pub mod use_close_on_scroll;
-pub mod use_overlay;
-pub mod use_overlay_position;
-pub mod use_overlay_trigger;
-pub mod use_overlay_trigger_state;
-pub mod use_popover;
+pub(crate) mod overlay_focus_contain;
+pub(crate) mod use_close_on_scroll;
+pub(crate) mod use_overlay;
+pub(crate) mod use_overlay_position;
+pub(crate) mod use_overlay_trigger;
+pub(crate) mod use_overlay_trigger_state;
+pub(crate) mod use_popover;
+pub(crate) mod use_prevent_scroll;
 mod visible_overlays;
 
 pub use overlay_focus_contain::*;
@@ -36,3 +37,4 @@ pub use use_overlay_position::*;
 pub use use_overlay_trigger::*;
 pub use use_overlay_trigger_state::*;
 pub use use_popover::*;
+pub use use_prevent_scroll::*;

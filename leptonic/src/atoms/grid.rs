@@ -1,26 +1,39 @@
+// Upstream: react-aria/src/grid/useGrid.ts @ 99e6102368
+// Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
-        CellFocusMode, DisabledBehavior, GridData, GridFocusMode, IntoAttrs,
-        KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, UseFocusRingInput,
-        UseFocusRingReturn, UseFocusVisibleInput, UseGridCellInput, UseGridCellReturn,
-        UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn, UseGridStateInput,
-        UseHoverInput,
         collections::{
-            CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, Selection, SelectionOptions,
+            CollectionMemo, CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key, Selection,
+            SelectionBehavior, SelectionMode, SelectionOptions,
         },
-        use_focus_ring, use_focus_visible, use_grid, use_grid_cell, use_grid_row,
-        use_grid_row_group, use_grid_state, use_hover,
+        focus::{UseFocusRingInput, UseFocusRingReturn, is_focus_visible, use_focus_ring},
+        grid::{
+            CellFocusMode, GridData, GridFocusMode, UseGridCellInput, UseGridCellReturn,
+            UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn, UseGridStateInput,
+            use_grid, use_grid_cell, use_grid_row, use_grid_row_group, use_grid_state,
+        },
+        gridlist::KeyboardNavigationBehavior,
+        interactions::{UseHoverInput, use_hover},
     },
-    utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
-    },
+    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - react-aria-components has no grid component: these atoms render the grid hooks
+//   (`use_grid`, `use_grid_row`, `use_grid_cell`) with the conventions of the other atoms
+//   (default classes, data attributes, `x` + `set_x` state props).
+//
+// =============================================================================
 
 /// A headless grid: rows of cells, navigated in two dimensions with the arrow keys.
 ///
@@ -38,11 +51,11 @@ pub fn Grid(
     #[prop(optional)]
     focus_mode: GridFocusMode,
     #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
-    #[prop(optional)] selection_behavior: SelectionBehavior,
+    #[prop(into, optional)] selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected rows.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
+    default_selection: Selection,
+    /// The selection (controlled), replacing `default_selection`: a value or any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -51,12 +64,15 @@ pub fn Grid(
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] disabled_behavior: DisabledBehavior,
-    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(optional)] escape_key_behavior: EscapeKeyBehavior,
     /// Arrow keys wrap around at the ends.
     #[prop(optional)]
     should_focus_wrap: bool,
     #[prop(optional)] keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Select rows when a press ends instead of when it starts (e.g. for draggable rows).
+    #[prop(optional)]
+    should_select_on_press_up: bool,
     /// Called with the key of an activated row.
     #[prop(into, optional)]
     on_row_action: Option<Callback<Key>>,
@@ -64,7 +80,9 @@ pub fn Grid(
     #[prop(into, optional)]
     on_cell_action: Option<Callback<Key>>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Ids of elements labelling it.
+    #[prop(into, optional)]
+    aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -76,11 +94,11 @@ pub fn Grid(
         collection,
         selection: SelectionOptions {
             selection_mode,
-            selection_behavior: Signal::stored(selection_behavior),
-            default_selection: Selection::keys(default_selected_keys),
+            selection_behavior,
+            default_selection,
             selection,
             on_selection_change,
-            disallow_empty_selection: Signal::stored(disallow_empty_selection),
+            disallow_empty_selection,
             disabled_keys: disabled_keys.unwrap_or_default(),
             disabled_behavior,
             ..SelectionOptions::default()
@@ -90,7 +108,7 @@ pub fn Grid(
 
     let UseGridReturn { props, data } = use_grid(UseGridInput {
         aria_label,
-        aria_labelledby,
+        aria_labelledby: Signal::derive(move || aria_labelledby.get()),
         options: CollectionOptions {
             should_focus_wrap,
             escape_key_behavior,
@@ -103,13 +121,11 @@ pub fn Grid(
         element: CapturedElement::new(),
         id: None,
         keyboard_delegate: None,
-        should_select_on_press_up: false,
+        should_select_on_press_up,
     });
 
     // One keyboard-modality signal for all rows.
-    let focus_visible = GridFocusVisible(
-        use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible,
-    );
+    let focus_visible = GridFocusVisible(Signal::derive(is_focus_visible));
     view! {
         <Provider value=data>
             <Provider value=focus_visible>
@@ -159,7 +175,10 @@ pub fn GridRow(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridRow", classes);
-    let grid = expect_context::<GridData>();
+    let Some(grid) = use_context::<GridData>() else {
+        crate::utils::dev_warn!("a <GridRow> belongs in a <Grid>");
+        return ().into_any();
+    };
     let UseGridRowReturn {
         row_props,
         is_selected,
@@ -200,6 +219,7 @@ pub fn GridRow(
             {children()}
         </div>
     }
+    .into_any()
 }
 
 /// A cell of a [`Grid`], for the collection cell `key` (`Key::cell(row, column)`).
@@ -225,7 +245,10 @@ pub fn GridCell(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridCell", classes);
-    let grid = expect_context::<GridData>();
+    let Some(grid) = use_context::<GridData>() else {
+        crate::utils::dev_warn!("a <GridCell> belongs in a <Grid>");
+        return ().into_any();
+    };
     let UseGridCellReturn {
         grid_cell_props,
         is_pressed,
@@ -260,4 +283,5 @@ pub fn GridCell(
             {children()}
         </div>
     }
+    .into_any()
 }

@@ -27,7 +27,9 @@ pub fn PageAtomMeter() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::*;
+                        use leptonic::{
+                            atoms::{field::Label, meter::{Meter, MeterFill, MeterValueText}},
+                        };
 
                         let battery_level = RwSignal::new(68.0);
 

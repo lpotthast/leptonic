@@ -1,4 +1,7 @@
 // Upstream: react-aria/src/tag/useTag.ts @ 99e6102368
+// Upstream: react-aria/test/tag/useTagGroup.test.js @ 99e6102368
+// Upstream: react-aria-components/test/TagGroup.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/tag/TagGroup.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{
@@ -8,13 +11,13 @@ use leptos::{
 
 use super::TagGroupData;
 use crate::{
+    EventHandler, IntoAttrs, PropsWithStyles,
     hooks::{
-        FocusMode, IntoAttrs, PropsWithStyles,
         button::use_button::UseButtonInput,
         collections::Key,
-        focus::use_focus_visible::{Modality, UseFocusVisibleInput, use_focus_visible},
+        focus::use_focus_visible::{Modality, is_focus_visible, use_interaction_modality},
         gridlist::{
-            UseGridListItemCellProps, UseGridListItemInput, UseGridListItemReturn,
+            FocusMode, UseGridListItemCellProps, UseGridListItemInput, UseGridListItemReturn,
             UseGridListItemRowAttrs, UseGridListItemRowProps, grid_list_row_id, use_grid_list_item,
         },
         interactions::{
@@ -25,7 +28,9 @@ use crate::{
     utils::{
         id::use_id,
         intl_strings::{TagStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        platform::device::has_touch_events,
         use_description::use_description,
     },
 };
@@ -140,23 +145,26 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
             is_disabled,
             shortcuts: Some(
                 KeyboardShortcuts::new()
-                    .on(Shortcut::key("Delete"), move |_| remove())
-                    .on(Shortcut::key("Backspace"), move |_| remove()),
+                    .on(Shortcut::new(KeyboardKey::Delete), move |_| remove())
+                    .on(Shortcut::new(KeyboardKey::Backspace), move |_| remove()),
             ),
             allow_repeats: true,
             ..UseKeyboardInput::default()
         })
         .props
     } else {
-        use_keyboard(UseKeyboardInput::default()).props
+        // Without `on_remove`, the tag has no keyboard handlers of its own (react-aria: none).
+        UseKeyboardProps {
+            on_keydown: EventHandler::empty(),
+            on_keyup: EventHandler::empty(),
+        }
     };
 
     // The first tag is the tab stop until a tag gets focus.
     row.item.tabindex = Signal::derive(move || {
-        let focused_key = selection.focused_key();
-        let is_this = key.with_value(|k| focused_key.as_ref() == Some(k));
+        let is_this = key.with_value(|k| selection.is_focused_key(k));
         Some(
-            if !is_disabled.get() && (is_this || focused_key.is_none()) {
+            if !is_disabled.get() && (is_this || !selection.has_focused_key()) {
                 0
             } else {
                 -1
@@ -164,13 +172,18 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         )
     });
 
-    // Keyboard and screen reader users learn how to remove tags.
-    let focus_visible = use_focus_visible(UseFocusVisibleInput::default());
-    let modality = focus_visible.modality;
+    // Keyboard and screen reader users learn how to remove tags. On touch devices, a virtual
+    // modality comes from a screen reader's touch gestures, which can't press Delete: they count
+    // as pointer interaction (react-aria).
+    let modality = use_interaction_modality();
     let has_remove = on_remove.is_some();
     let strings = use_localized_strings::<TagStrings>();
     let aria_describedby = use_description(Signal::derive(move || {
-        (has_remove && matches!(modality.get(), Modality::Keyboard | Modality::Virtual))
+        let modality = match modality.get() {
+            Some(Modality::Virtual) if has_touch_events() => Some(Modality::Pointer),
+            modality => modality,
+        };
+        (has_remove && matches!(modality, Some(Modality::Keyboard | Modality::Virtual)))
             .then(|| strings.read().remove_description())
     }));
 
@@ -198,9 +211,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         remove_button,
         is_selected,
         is_focused,
-        is_focus_visible: Signal::derive(move || {
-            is_focused.get() && focus_visible.focus_should_be_visible.get()
-        }),
+        is_focus_visible: Signal::derive(move || is_focused.get() && is_focus_visible()),
         is_disabled,
         is_pressed,
         allows_selection,

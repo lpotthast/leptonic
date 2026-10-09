@@ -32,8 +32,17 @@ pub fn PageAtomColorPicker() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::prelude::*,
-                            utils::color::{Color, HSV, HsvChannel, RGB8},
+                            Color,
+                            HSV,
+                            HsvChannel,
+                            RGB8,
+                            atoms::{
+                                color_area::ColorArea,
+                                color_picker::ColorPicker,
+                                color_slider::{ColorSlider, ColorSliderTrack},
+                                color_swatch::ColorSwatch,
+                                color_thumb::ColorThumb,
+                            },
                         };
                         use leptos::prelude::*;
 

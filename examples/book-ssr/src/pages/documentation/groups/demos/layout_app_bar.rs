@@ -1,7 +1,7 @@
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::button::Button,
-    hooks::{IntoAttrs, LandmarkRole, UseLandmarkInput, UseLandmarkReturn, use_landmark},
-    utils::CapturedElement,
+    hooks::landmark::{LandmarkRole, UseLandmarkInput, UseLandmarkReturn, use_landmark},
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;

@@ -15,50 +15,95 @@ pub enum SelectionMode {
     Multiple,
 }
 
-/// Three-way settings whose `Auto` is react-aria's default for the context (react-aria: an
-/// optional boolean, `undefined` meaning the default).
-macro_rules! auto_settings {
-    ($($(#[$doc:meta])* $name:ident),* $(,)?) => {$(
-        $(#[$doc])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-        pub enum $name {
-            /// react-aria's default for the context.
-            #[default]
-            Auto,
-            Always,
-            Never,
-        }
-
-        impl $name {
-            /// The setting: `auto()` decides for [`Self::Auto`].
-            pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
-                match self {
-                    Self::Auto => auto(),
-                    Self::Always => true,
-                    Self::Never => false,
-                }
-            }
-        }
-
-        impl From<bool> for $name {
-            fn from(value: bool) -> Self {
-                if value { Self::Always } else { Self::Never }
-            }
-        }
-    )*};
+/// Whether activating an item closes its menu or select popover. `Auto`: a select closes in
+/// single selection; a menu closes unless it allows multiple selection or the item was toggled
+/// with Space (links and Enter always close).
+/// `Auto` is react-aria's default for the context (react-aria: an optional boolean, `undefined`
+/// meaning the default).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CloseOnSelect {
+    /// react-aria's default for the context.
+    #[default]
+    Auto,
+    Always,
+    Never,
 }
 
-auto_settings!(
-    /// Whether activating an item closes its menu or select popover. `Auto`: a select closes in
-    /// single selection; a menu closes unless it allows multiple selection or the item was
-    /// toggled with Space (links and Enter always close).
-    CloseOnSelect,
-    /// Whether moving focus to an item selects it. `Auto`: when the selection behavior is
-    /// `Replace`.
-    SelectOnFocus,
-    /// Whether an item is selected on press up instead of press down. `Auto`: for links (tabs).
-    SelectOnPressUp,
-);
+impl CloseOnSelect {
+    /// The setting: `auto()` decides for [`Self::Auto`].
+    pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
+        match self {
+            Self::Auto => auto(),
+            Self::Always => true,
+            Self::Never => false,
+        }
+    }
+}
+
+impl From<bool> for CloseOnSelect {
+    fn from(value: bool) -> Self {
+        if value { Self::Always } else { Self::Never }
+    }
+}
+
+/// Whether moving focus to an item selects it. `Auto`: when the selection behavior is
+/// `Replace`.
+/// `Auto` is react-aria's default for the context (react-aria: an optional boolean, `undefined`
+/// meaning the default).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SelectOnFocus {
+    /// react-aria's default for the context.
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
+impl SelectOnFocus {
+    /// The setting: `auto()` decides for [`Self::Auto`].
+    pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
+        match self {
+            Self::Auto => auto(),
+            Self::Always => true,
+            Self::Never => false,
+        }
+    }
+}
+
+impl From<bool> for SelectOnFocus {
+    fn from(value: bool) -> Self {
+        if value { Self::Always } else { Self::Never }
+    }
+}
+
+/// Whether an item is selected on press up instead of press down. `Auto`: for links (tabs).
+/// `Auto` is react-aria's default for the context (react-aria: an optional boolean, `undefined`
+/// meaning the default).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SelectOnPressUp {
+    /// react-aria's default for the context.
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
+impl SelectOnPressUp {
+    /// The setting: `auto()` decides for [`Self::Auto`].
+    pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
+        match self {
+            Self::Auto => auto(),
+            Self::Always => true,
+            Self::Never => false,
+        }
+    }
+}
+
+impl From<bool> for SelectOnPressUp {
+    fn from(value: bool) -> Self {
+        if value { Self::Always } else { Self::Never }
+    }
+}
 
 /// The selection behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

@@ -47,8 +47,9 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::{UseGlobalShortcutsInput, use_global_shortcuts},
-                            utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+                            KeyboardShortcuts,
+                            Shortcut,
+                            hooks::interactions::{UseGlobalShortcutsInput, use_global_shortcuts},
                         };
                         use leptos::prelude::*;
 
@@ -57,11 +58,11 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
 
                         use_global_shortcuts(UseGlobalShortcutsInput {
                             // Control + K (Command + K on Apple devices), also while typing.
-                            anywhere: KeyboardShortcuts::new().on(Shortcut::key("k").primary(), move |_| {
+                            anywhere: KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::K).primary(), move |_| {
                                 palette_open.update(|open| *open = !*open);
                             }),
                             // A bare "/" is text while the user types: only outside text fields.
-                            outside_text_fields: KeyboardShortcuts::new().on(Shortcut::key("/"), move |_| {
+                            outside_text_fields: KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::Slash), move |_| {
                                 if let Some(input) = search.get_untracked() {
                                     let _ = input.focus();
                                 }

@@ -49,7 +49,13 @@ pub fn PageAtomPopover() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{Button, Dialog, DialogTitle, DialogTrigger, Popover};
+                        use leptonic::{
+                            atoms::{
+                                button::Button,
+                                dialog::{Dialog, DialogTitle, DialogTrigger},
+                                popover::Popover,
+                            },
+                        };
 
                         view! {
                             <DialogTrigger>
@@ -159,6 +165,11 @@ pub fn PageAtomPopover() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the popover element."</ApiRow>
                         <ApiRow name="children" ty="ChildrenFn">"The popover content. Required."</ApiRow>
+                        <ApiRow name="boundary" ty="Option<CapturedElement>" default="None">"The element the overlay must stay within; defaults to the document body."</ApiRow>
+                        <ApiRow name="on_enter" ty="Option<Callback<SendWrapper<Element>>>" default="None">"Called with the element when its enter animation starts."</ApiRow>
+                        <ApiRow name="on_exit" ty="Option<Callback<SendWrapper<Element>>>" default="None">"Called with the element when its exit animation starts."</ApiRow>
+                        <ApiRow name="should_update_position" ty="Signal<bool>" default="true">"Update positioning when the target or overlay changes size."</ApiRow>
+                        <ApiRow name="target_rect" ty="Signal<Option<Rect>>" default="None">"Override the target rectangle in viewport coordinates."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -204,7 +215,9 @@ pub fn PageAtomPopover() -> impl IntoView {
                     </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::atoms::prelude::{Button, DialogTrigger, Popover};
+                            use leptonic::{
+                                atoms::{button::Button, dialog::DialogTrigger, popover::Popover},
+                            };
 
                             view! {
                                 <DialogTrigger>
@@ -239,7 +252,10 @@ pub fn PageAtomPopover() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::{OverlayArrow, Popover}, hooks::Placement};
+                        use leptonic::{
+                            atoms::{overlay_arrow::OverlayArrow, popover::Popover},
+                            hooks::overlay::Placement,
+                        };
 
                         view! {
                             <Popover placement=Placement::Top classes="my-popover">

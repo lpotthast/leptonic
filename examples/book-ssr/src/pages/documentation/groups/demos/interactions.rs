@@ -1,4 +1,8 @@
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*, utils::data_attributes::flag};
+use leptonic::{
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    flag,
+    hooks::interactions::{UsePressInput, UsePressReturn, use_press},
+};
 use leptos::prelude::*;
 
 #[component]

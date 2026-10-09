@@ -15,7 +15,7 @@ thread_local! {
     static VISIBLE_OVERLAYS: RefCell<Vec<SendWrapper<web_sys::Element>>> = const { RefCell::new(Vec::new()) };
 }
 
-/// Push an overlay element onto the stack. Skips if already present.
+/// Pushes an overlay element onto the stack, also when it is on it already:
 ///
 /// One entry per open overlay: the overlays of a group (a root popover and its submenus' popovers)
 /// share their group's element, which stays on the stack while any of them is open.

@@ -1,4 +1,8 @@
-use leptonic::atoms::prelude::{Button, Dialog, DialogTitle, DialogTrigger, Popover};
+use leptonic::atoms::{
+    button::Button,
+    dialog::{Dialog, DialogTitle, DialogTrigger},
+    popover::Popover,
+};
 use leptos::prelude::*;
 
 #[component]

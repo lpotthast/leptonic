@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/gridlist/useGridListItem.ts @ 99e6102368
+// Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
+// Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
@@ -10,30 +11,27 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::{GridListData, KeyboardNavigationBehavior, grid_list_row_id};
 use crate::{
+    CapturedElement, EventHandler, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
     hooks::{
-        IntoAttrs, PropsWithStyles,
         collections::{
             FocusItem, Key, NodeKind, SelectionMode, UseSelectableItemAttrs,
             UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
             use_selectable_item,
         },
-        focus::use_focus_visible::{
-            Modality, UseFocusVisibleInput, get_modality, use_focus_visible,
-        },
+        focus::use_focus_visible::{Modality, get_modality, is_focus_visible},
     },
+    use_slot,
     utils::{
-        CapturedElement, EventAccessors, EventHandler, SlotProps,
         aria::{AriaDisabled, AriaExpanded, AriaRole, AriaSelected},
+        dom_ext::{EventAccessors, node_contains},
         focus::focus_safely,
+        focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
-        locale::WritingDirection,
-        node_contains,
         owner_alive::OwnerAlive,
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
         shadow_dom::get_active_element,
-        use_slot,
     },
 };
 
@@ -73,7 +71,7 @@ pub struct UseGridListItemInput {
     pub allows_arrow_navigation: bool,
     /// Called when a context menu is requested on the row (right click, Shift+F10, the context
     /// menu key; a long press on iOS unless it selects).
-    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
+    pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_grid_list_item`].
@@ -107,6 +105,7 @@ pub struct UseGridListItemRowProps {
     pub item: UseSelectableItemProps,
     /// Navigation between the row's focusable children.
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
+    /// On `focusin` (React's bubbling `onFocus`): focus on a child makes the row the focused key.
     pub on_focus: EventHandler<FocusEvent>,
 }
 
@@ -123,8 +122,8 @@ pub type UseGridListItemRowAttrs = (
         Attr<attr::AriaSetsize, Signal<Option<usize>>>,
     ),
     UseSelectableItemAttrs,
-    On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::Capture<ev::keydown>>,
+    OnEvent<ev::focusin>,
 );
 
 impl IntoAttrs for UseGridListItemRowProps {
@@ -145,7 +144,7 @@ impl IntoAttrs for UseGridListItemRowProps {
             ),
             self.item.into_attrs(),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
-            self.on_focus.into_on(ev::focus),
+            self.on_focus.into_on(ev::focusin),
         )
     }
 }
@@ -175,7 +174,7 @@ impl IntoAttrs for UseGridListItemCellProps {
 /// `KeyboardNavigationBehavior::Tab`).
 #[allow(clippy::too_many_lines)]
 pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn {
-    crate::hooks::track_interaction_modality();
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseGridListItemInput {
         list,
         key,
@@ -265,7 +264,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             if let Some(mut walker) = get_focusable_tree_walker(
                 &row,
                 FocusableTreeWalkerOptions {
-                    tabbable: true,
+                    focusability: Focusability::Tabbable,
                     ..FocusableTreeWalkerOptions::default()
                 },
             ) && let Some(child) = walker
@@ -490,7 +489,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             && let Some(mut walker) = get_focusable_tree_walker(
                 &row,
                 FocusableTreeWalkerOptions {
-                    tabbable: true,
+                    focusability: Focusability::Tabbable,
                     ..FocusableTreeWalkerOptions::default()
                 },
             )
@@ -527,7 +526,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row);
         if !on_row {
             // A child got focus (e.g. by clicking it): the row becomes the focused key.
-            if get_modality() == Modality::Pointer {
+            if get_modality() == Some(Modality::Pointer) {
                 selection.set_focused_key(Some(row_key.get_value()), None);
             }
             return;
@@ -561,7 +560,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
 
     let description = use_slot("description");
     let description_id = description.referenced_id;
-    let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
+    let focus_visible = Signal::derive(is_focus_visible);
     let key = StoredValue::new(key);
 
     UseGridListItemReturn {

@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/interactions/createKeyboardShortcutHandler.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/createKeyboardShortcutHandler.test.js @ 99e6102368
+// Upstream: react-aria/test/interactions/useKeyboard.test.js @ 99e6102368
 //! Keyboard shortcuts: a key plus an exact set of modifiers, mapped to handlers.
 //!
 //! This is leptonic's take on react-aria's `createKeyboardShortcutHandler`. React-aria describes
@@ -6,52 +8,65 @@
 //! values, built with `const` functions:
 //!
 //! ```
-//! use leptonic::utils::keyboard_shortcut::Shortcut;
+//! use leptonic::{KeyboardKey, Shortcut};
 //!
-//! const UNDO: Shortcut = Shortcut::key("z").primary();
-//! const REDO: Shortcut = Shortcut::key("z").primary().shift();
-//! const PAGE_UP: Shortcut = Shortcut::key("PageUp");
+//! const UNDO: Shortcut = Shortcut::new(KeyboardKey::Z).primary();
+//! const REDO: Shortcut = Shortcut::new(KeyboardKey::Z).primary().shift();
+//! const PAGE_UP: Shortcut = Shortcut::new(KeyboardKey::PageUp);
 //! ```
 //!
 //! [`Shortcut::parse`] accepts react-aria's string syntax as well, for shortcuts that come from
 //! configuration or user input.
 //!
-//! Deviations from react-aria: [`Shortcut::parse`] rejects a spec naming two keys (`"a+b"`;
-//! react-aria takes the last) and accepts the `+` key (`"Mod++"`, which react-aria can't parse).
-//!
-//! A shortcut matches a keyboard event when the key matches (case-insensitively) and the *exact*
-//! set of modifiers is held. `Shortcut::key("z").primary()` does not match `Ctrl+Shift+Z`.
-//!
-//! One exception (not in react-aria): for a character without case, such as `/`, `?` or `7`,
-//! Shift is ignored unless the shortcut requires it, as the keyboard layout decides whether
-//! typing the character takes Shift (`/` is Shift+7 on German keyboards, `?` takes Shift on most).
+//! A shortcut matches a keyboard event when the key matches (letters and other keys of the
+//! `Other` kind case-insensitively) and the *exact* set of modifiers is held.
+//! `Shortcut::new(KeyboardKey::Z).primary()` does not match `Ctrl+Shift+Z`.
+//
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Shortcuts are typed values (`Shortcut`: a `KeyboardKey` and modifiers) bound with
+//   `KeyboardShortcuts::on`, instead of a record of shortcut strings; `Shortcut::parse` takes
+//   react-aria's string syntax.
+// - A handler returns `()`, a `bool` or a `ShortcutOutcome` (react-aria: `void`, a boolean or an
+//   object of `shouldPreventDefault`/`shouldContinuePropagation`).
+//
+// ## DIFFERENT BEHAVIOR
+// - `Shortcut::parse` rejects a spec naming two keys (`"a+b"`; react-aria takes the last) and
+//   accepts the `+` key (`"Mod++"`, which react-aria can't parse).
+// - For a character without case, such as `/`, `?` or `7`, Shift is ignored unless the shortcut
+//   requires it, as the keyboard layout decides whether typing the character takes Shift (`/` is
+//   Shift+7 on German keyboards, `?` takes Shift on most). react-aria requires the exact
+//   modifiers.
+//
+// =============================================================================
 
 use std::{borrow::Cow, fmt, str::FromStr, sync::Arc};
 
 use web_sys::KeyboardEvent;
 
-use crate::utils::{
-    EventModifiers, Modifiers, aria::AriaKeyshortcuts, key::KeyboardKey, platform::device,
+use crate::{
+    EventModifiers, Modifiers,
+    utils::{aria::AriaKeyshortcuts, key::KeyboardKey, platform::device},
 };
 
 /// A key combination: one key plus the modifiers that must be held, and no others.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Shortcut {
-    key: Cow<'static, str>,
+    key: KeyboardKey,
     modifiers: Modifiers,
     /// The platform's primary modifier (Command on Apple platforms, Control elsewhere).
     primary: bool,
 }
 
 impl Shortcut {
-    /// A shortcut for `key` without modifiers.
-    ///
-    /// `key` is a [`KeyboardEvent.key`](https://developer.mozilla.org/docs/Web/API/KeyboardEvent/key)
-    /// value such as `"a"`, `"Enter"`, `" "` or `"ArrowDown"`. It is compared case-insensitively.
-    /// The aliases `Space`, `Esc`, `Del`, `Ins`, `Left`, `Right`, `Up` and `Down` are accepted.
-    pub const fn key(key: &'static str) -> Self {
+    /// A shortcut for `key` without modifiers. Letters match in either case (`KeyboardKey::Z`
+    /// matches `z` and `Z`, which Shift types).
+    pub const fn new(key: KeyboardKey) -> Self {
         Self {
-            key: Cow::Borrowed(key),
+            key,
             modifiers: Modifiers {
                 shift_key: false,
                 ctrl_key: false,
@@ -59,14 +74,6 @@ impl Shortcut {
                 alt_key: false,
             },
             primary: false,
-        }
-    }
-
-    /// Like [`Shortcut::key`], for keys only known at runtime.
-    pub fn owned_key(key: String) -> Self {
-        Self {
-            key: Cow::Owned(key),
-            ..Self::key("")
         }
     }
 
@@ -107,45 +114,49 @@ impl Shortcut {
     }
 
     /// Parse react-aria's shortcut syntax, e.g. `"Mod+Shift+z"`, `"Control+Alt+Enter"` or
-    /// `"Escape"`. Modifier names (`Shift`, `Alt`, `Control`/`Ctrl`, `Meta`, `Mod`) are
-    /// case-insensitive and may come in any order. Exactly one non-modifier key is required.
+    /// `"Escape"`. Modifier names (`Shift`, `Alt`, `Control`/`Ctrl`, `Meta`, `Mod`) and key names
+    /// are case-insensitive, and modifiers may come in any order. The key aliases `Space`, `Esc`,
+    /// `Del`, `Ins`, `Left`, `Right`, `Up` and `Down` are accepted. Exactly one non-modifier key
+    /// is required.
     ///
     /// # Errors
     ///
     /// Returns an error if `spec` names no key or more than one.
     pub fn parse(spec: &str) -> Result<Self, InvalidShortcut> {
-        let mut shortcut = Self::key("");
+        let mut modifiers = Modifiers::default();
+        let mut primary = false;
         let mut key: Option<&str> = None;
         // The `+` key itself: `"+"`, `"Mod++"`.
-        let (modifiers, plus_key) = if spec == "+" {
+        let (modifier_part, plus_key) = if spec == "+" {
             ("", true)
-        } else if let Some(modifiers) = spec.strip_suffix("++") {
-            (modifiers, true)
+        } else if let Some(modifier_part) = spec.strip_suffix("++") {
+            (modifier_part, true)
         } else {
             (spec, false)
         };
         if plus_key {
             key = Some("+");
         }
-        let parts = modifiers
+        let parts = modifier_part
             .split('+')
             .filter(|part| !(plus_key && part.is_empty()));
         for part in parts {
             match part.to_ascii_lowercase().as_str() {
-                "shift" => shortcut.modifiers.shift_key = true,
-                "alt" => shortcut.modifiers.alt_key = true,
-                "control" | "ctrl" => shortcut.modifiers.ctrl_key = true,
-                "meta" => shortcut.modifiers.meta_key = true,
-                "mod" => shortcut.primary = true,
+                "shift" => modifiers.shift_key = true,
+                "alt" => modifiers.alt_key = true,
+                "control" | "ctrl" => modifiers.ctrl_key = true,
+                "meta" => modifiers.meta_key = true,
+                "mod" => primary = true,
                 _ if key.is_some() => return Err(InvalidShortcut(spec.to_owned())),
                 _ => key = Some(part),
             }
         }
         match key {
-            Some(key) if !key.is_empty() => {
-                shortcut.key = Cow::Owned(key.to_owned());
-                Ok(shortcut)
-            }
+            Some(key) if !key.is_empty() => Ok(Self {
+                key: key_named(key),
+                modifiers,
+                primary,
+            }),
             _ => Err(InvalidShortcut(spec.to_owned())),
         }
     }
@@ -170,8 +181,55 @@ impl Shortcut {
         } else {
             pressed
         };
-        // Aliases ("Esc", "Up", ...) are for writing shortcuts; events carry the standard key names.
-        pressed == required && *canonical_key(&self.key) == *key.to_lowercase()
+        let Ok(event_key) = key.parse::<KeyboardKey>();
+        let same_key = match (&self.key, &event_key) {
+            (KeyboardKey::Other(own), KeyboardKey::Other(pressed)) => {
+                own.to_lowercase() == pressed.to_lowercase()
+            }
+            (own, pressed) => own == pressed,
+        };
+        pressed == required && same_key
+    }
+}
+
+/// The key a shortcut spec names: aliases resolved, named keys case-insensitively.
+fn key_named(name: &str) -> KeyboardKey {
+    let lower = name.to_ascii_lowercase();
+    let name = match lower.as_str() {
+        "space" => "Space",
+        "esc" => "Escape",
+        "del" => "Delete",
+        "ins" => "Insert",
+        "left" => "ArrowLeft",
+        "right" => "ArrowRight",
+        "up" => "ArrowUp",
+        "down" => "ArrowDown",
+        _ => name,
+    };
+    let Ok(key) = name.parse::<KeyboardKey>();
+    if !matches!(key, KeyboardKey::Other(_)) {
+        return key;
+    }
+    // Named keys (`escape`, `pageup`): their variant names are their `KeyboardEvent.key` names.
+    KeyboardKey::known_keys()
+        .find(|known| <&'static str>::from(known).eq_ignore_ascii_case(name))
+        .unwrap_or(key)
+}
+
+/// The key's name in shortcut specs and `aria-keyshortcuts`: a character as on the key cap (`K`,
+/// `/`), a named key by its `KeyboardEvent.key` name (`ArrowDown`, `PageUp`, `Space`).
+fn key_name(key: &KeyboardKey) -> Cow<'static, str> {
+    match key {
+        KeyboardKey::Other(name) => name.clone(),
+        key => {
+            let display = key.display();
+            let Ok(parsed) = display.parse::<KeyboardKey>();
+            if parsed == *key {
+                Cow::Owned(display.to_owned())
+            } else {
+                Cow::Borrowed(<&'static str>::from(key))
+            }
+        }
     }
 }
 
@@ -221,21 +279,7 @@ impl Shortcut {
                 }
             }
         }
-        let key = match canonical_key(&self.key).as_ref() {
-            " " => KeyboardKey::Space,
-            "escape" => KeyboardKey::Escape,
-            "delete" => KeyboardKey::Delete,
-            "insert" => KeyboardKey::Insert,
-            "arrowleft" => KeyboardKey::ArrowLeft,
-            "arrowright" => KeyboardKey::ArrowRight,
-            "arrowup" => KeyboardKey::ArrowUp,
-            "arrowdown" => KeyboardKey::ArrowDown,
-            _ => self
-                .key
-                .parse::<KeyboardKey>()
-                .unwrap_or_else(|never| match never {}),
-        };
-        keys.push(key);
+        keys.push(self.key.clone());
         keys
     }
 }
@@ -271,20 +315,13 @@ impl Shortcut {
                 value.push('+');
             }
         }
-        let key = match canonical_key(&self.key).as_ref() {
-            " " => "Space".to_owned(),
-            "escape" => "Escape".to_owned(),
-            "delete" => "Delete".to_owned(),
-            "insert" => "Insert".to_owned(),
-            "arrowleft" => "ArrowLeft".to_owned(),
-            "arrowright" => "ArrowRight".to_owned(),
-            "arrowup" => "ArrowUp".to_owned(),
-            "arrowdown" => "ArrowDown".to_owned(),
-            // A character: as on the key cap (letters in upper case).
-            _ if self.key.chars().count() == 1 => self.key.to_uppercase(),
-            _ => self.key.to_string(),
-        };
-        value.push_str(&key);
+        let name = key_name(&self.key);
+        // A character: as on the key cap (letters in upper case).
+        if name.chars().count() == 1 {
+            value.push_str(&name.to_uppercase());
+        } else {
+            value.push_str(&name);
+        }
         AriaKeyshortcuts::from_value(value)
     }
 }
@@ -302,7 +339,7 @@ impl fmt::Display for Shortcut {
                 write!(f, "{name}+")?;
             }
         }
-        f.write_str(&self.key)
+        f.write_str(&key_name(&self.key))
     }
 }
 
@@ -322,22 +359,6 @@ impl fmt::Display for InvalidShortcut {
 }
 
 impl std::error::Error for InvalidShortcut {}
-
-fn canonical_key(key: &str) -> Cow<'_, str> {
-    let lower = key.to_lowercase();
-    let aliased = match lower.as_str() {
-        "space" => " ",
-        "esc" => "escape",
-        "del" => "delete",
-        "ins" => "insert",
-        "left" => "arrowleft",
-        "right" => "arrowright",
-        "up" => "arrowup",
-        "down" => "arrowdown",
-        _ => return Cow::Owned(lower),
-    };
-    Cow::Borrowed(aliased)
-}
 
 /// What a shortcut handler did with the event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -396,12 +417,12 @@ impl From<bool> for ShortcutOutcome {
 type ShortcutAction = Arc<dyn Fn(&KeyboardEvent) -> ShortcutOutcome + Send + Sync>;
 
 /// A set of keyboard shortcuts and their handlers, consumed by
-/// [`use_keyboard`](fn@crate::hooks::use_keyboard).
+/// [`use_keyboard`](fn@crate::hooks::interactions::use_keyboard).
 ///
 /// ```ignore
 /// let shortcuts = KeyboardShortcuts::new()
-///     .on(Shortcut::key("ArrowUp"), move |_| increment())
-///     .on(Shortcut::key("Home"), move |_| {
+///     .on(Shortcut::new(KeyboardKey::ArrowUp), move |_| increment())
+///     .on(Shortcut::new(KeyboardKey::Home), move |_| {
 ///         // Returning `false` leaves the event alone (no preventDefault, keeps bubbling).
 ///         if let Some(min) = min { set(min); true } else { false }
 ///     });
@@ -488,23 +509,36 @@ mod tests {
     fn shift_is_ignored_for_characters_without_case() {
         let shift = mods(true, false, false, false);
         // `/` is Shift+7 on German keyboards, `?` takes Shift on most.
-        assert_that!(Shortcut::key("/").matches_key("/", shift, false)).is_true();
-        assert_that!(Shortcut::key("/").matches_key("/", NONE, false)).is_true();
-        assert_that!(Shortcut::key("?").matches_key("?", shift, false)).is_true();
-        assert_that!(Shortcut::key("7").primary().matches_key(
+        assert_that!(Shortcut::new(KeyboardKey::Slash).matches_key("/", shift, false)).is_true();
+        assert_that!(Shortcut::new(KeyboardKey::Slash).matches_key("/", NONE, false)).is_true();
+        assert_that!(
+            Shortcut::new(KeyboardKey::Other(Cow::Borrowed("?"))).matches_key("?", shift, false)
+        )
+        .is_true();
+        assert_that!(Shortcut::new(KeyboardKey::N7).primary().matches_key(
             "7",
             mods(true, false, true, false),
             false
         ))
         .is_true();
         // Letters and named keys still need the exact modifiers.
-        assert_that!(Shortcut::key("k").matches_key("K", shift, false)).is_false();
-        assert_that!(Shortcut::key("Enter").matches_key("Enter", shift, false)).is_false();
-        // A shortcut requiring Shift still requires it.
-        assert_that!(Shortcut::key("/").shift().matches_key("/", NONE, false)).is_false();
-        // Other modifiers still count.
-        assert_that!(Shortcut::key("/").matches_key("/", mods(false, true, false, false), false))
+        assert_that!(Shortcut::new(KeyboardKey::K).matches_key("K", shift, false)).is_false();
+        assert_that!(Shortcut::new(KeyboardKey::Enter).matches_key("Enter", shift, false))
             .is_false();
+        // A shortcut requiring Shift still requires it.
+        assert_that!(
+            Shortcut::new(KeyboardKey::Slash)
+                .shift()
+                .matches_key("/", NONE, false)
+        )
+        .is_false();
+        // Other modifiers still count.
+        assert_that!(Shortcut::new(KeyboardKey::Slash).matches_key(
+            "/",
+            mods(false, true, false, false),
+            false
+        ))
+        .is_false();
     }
 
     #[test]
@@ -520,13 +554,13 @@ mod tests {
 
     #[test]
     fn aria_keyshortcuts_values() {
-        let palette = Shortcut::key("k").primary();
+        let palette = Shortcut::new(KeyboardKey::K).primary();
         assert_that!(palette.to_aria_keyshortcuts(false).to_string())
             .is_equal_to("Control+K".to_owned());
         assert_that!(palette.to_aria_keyshortcuts(true).to_string())
             .is_equal_to("Meta+K".to_owned());
         assert_that!(
-            Shortcut::key("z")
+            Shortcut::new(KeyboardKey::Z)
                 .primary()
                 .shift()
                 .to_aria_keyshortcuts(true)
@@ -534,29 +568,33 @@ mod tests {
         )
         .is_equal_to("Shift+Meta+Z".to_owned());
         assert_that!(
-            Shortcut::key("Space")
+            Shortcut::new(KeyboardKey::Space)
                 .alt()
                 .to_aria_keyshortcuts(false)
                 .to_string()
         )
         .is_equal_to("Alt+Space".to_owned());
         assert_that!(
-            Shortcut::key("Down")
+            Shortcut::new(KeyboardKey::ArrowDown)
                 .to_aria_keyshortcuts(false)
                 .to_string()
         )
         .is_equal_to("ArrowDown".to_owned());
         assert_that!(
-            Shortcut::key("PageUp")
+            Shortcut::new(KeyboardKey::PageUp)
                 .to_aria_keyshortcuts(false)
                 .to_string()
         )
         .is_equal_to("PageUp".to_owned());
-        assert_that!(Shortcut::key("/").to_aria_keyshortcuts(false).to_string())
-            .is_equal_to("/".to_owned());
+        assert_that!(
+            Shortcut::new(KeyboardKey::Slash)
+                .to_aria_keyshortcuts(false)
+                .to_string()
+        )
+        .is_equal_to("/".to_owned());
         let both: AriaKeyshortcuts = [
             palette.to_aria_keyshortcuts(false),
-            Shortcut::key("/").to_aria_keyshortcuts(false),
+            Shortcut::new(KeyboardKey::Slash).to_aria_keyshortcuts(false),
         ]
         .into_iter()
         .collect();
@@ -565,23 +603,17 @@ mod tests {
 
     #[test]
     fn apple_keys_show_control_as_its_symbol() {
-        let keys = Shortcut::key("k").ctrl().primary().keys(true);
-        let shown: String = keys
-            .iter()
-            .map(|key| key.display(crate::Language::En).to_owned())
-            .collect();
+        let keys = Shortcut::new(KeyboardKey::K).ctrl().primary().keys(true);
+        let shown: String = keys.iter().map(|key| key.display().to_owned()).collect();
         assert_that!(shown).is_equal_to("⌃⌘K".to_owned());
-        let keys = Shortcut::key("k").primary().keys(false);
-        let shown: Vec<String> = keys
-            .iter()
-            .map(|key| key.display(crate::Language::En).to_owned())
-            .collect();
+        let keys = Shortcut::new(KeyboardKey::K).primary().keys(false);
+        let shown: Vec<String> = keys.iter().map(|key| key.display().to_owned()).collect();
         assert_that!(shown).is_equal_to(vec!["Ctrl".to_owned(), "K".to_owned()]);
     }
 
     #[test]
     fn plain_key_matches_only_without_modifiers() {
-        let shortcut = Shortcut::key("PageUp");
+        let shortcut = Shortcut::new(KeyboardKey::PageUp);
         assert_that!(shortcut.matches_key("PageUp", NONE, false)).is_true();
         assert_that!(shortcut.matches_key("PageUp", mods(true, false, false, false), false))
             .is_false();
@@ -589,13 +621,13 @@ mod tests {
 
     #[test]
     fn keys_compare_case_insensitively() {
-        let shortcut = Shortcut::key("z").shift();
+        let shortcut = Shortcut::new(KeyboardKey::Z).shift();
         assert_that!(shortcut.matches_key("Z", mods(true, false, false, false), false)).is_true();
     }
 
     #[test]
     fn primary_is_platform_dependent() {
-        let undo = Shortcut::key("z").primary();
+        let undo = Shortcut::new(KeyboardKey::Z).primary();
         let ctrl = mods(false, false, true, false);
         let cmd = mods(false, false, false, true);
         assert_that!(undo.matches_key("z", ctrl, false)).is_true();
@@ -606,31 +638,51 @@ mod tests {
 
     #[test]
     fn modifiers_must_match_exactly() {
-        let undo = Shortcut::key("z").primary();
+        let undo = Shortcut::new(KeyboardKey::Z).primary();
         assert_that!(undo.matches_key("z", mods(true, false, true, false), false)).is_false();
     }
 
     #[test]
     fn aliases_are_resolved() {
-        assert_that!(Shortcut::key("Down").matches_key("ArrowDown", NONE, false)).is_true();
-        assert_that!(Shortcut::key("Space").matches_key(" ", NONE, false)).is_true();
-        assert_that!(Shortcut::key("Esc").matches_key("Escape", NONE, false)).is_true();
+        assert_that!(Shortcut::parse("Down"))
+            .get_ok()
+            .is_equal_to(Shortcut::new(KeyboardKey::ArrowDown));
+        assert_that!(Shortcut::parse("Space"))
+            .get_ok()
+            .is_equal_to(Shortcut::new(KeyboardKey::Space));
+        assert_that!(Shortcut::parse("esc"))
+            .get_ok()
+            .is_equal_to(Shortcut::new(KeyboardKey::Escape));
+        assert_that!(Shortcut::new(KeyboardKey::Space).matches_key(" ", NONE, false)).is_true();
+    }
+
+    #[test]
+    fn key_names_are_case_insensitive() {
+        assert_that!(Shortcut::parse("escape"))
+            .get_ok()
+            .is_equal_to(Shortcut::new(KeyboardKey::Escape));
+        assert_that!(Shortcut::parse("Mod+pageup"))
+            .get_ok()
+            .is_equal_to(Shortcut::new(KeyboardKey::PageUp).primary());
+        assert_that!(Shortcut::parse("Z"))
+            .get_ok()
+            .is_equal_to(Shortcut::new(KeyboardKey::Z));
     }
 
     #[test]
     fn parses_react_aria_syntax() {
         assert_that!(Shortcut::parse("Mod+Shift+z"))
             .get_ok()
-            .is_equal_to(Shortcut::key("z").primary().shift());
+            .is_equal_to(Shortcut::new(KeyboardKey::Z).primary().shift());
         assert_that!(Shortcut::parse("shift+MOD+z"))
             .get_ok()
-            .is_equal_to(Shortcut::key("z").primary().shift());
+            .is_equal_to(Shortcut::new(KeyboardKey::Z).primary().shift());
         assert_that!(Shortcut::parse("Ctrl+Alt+Enter"))
             .get_ok()
-            .is_equal_to(Shortcut::key("Enter").ctrl().alt());
+            .is_equal_to(Shortcut::new(KeyboardKey::Enter).ctrl().alt());
         assert_that!(Shortcut::parse("Escape"))
             .get_ok()
-            .is_equal_to(Shortcut::key("Escape"));
+            .is_equal_to(Shortcut::new(KeyboardKey::Escape));
     }
 
     #[test]
@@ -642,8 +694,8 @@ mod tests {
 
     #[test]
     fn displays_in_parse_syntax() {
-        let shortcut = Shortcut::key("z").primary().shift();
-        assert_that!(shortcut.to_string()).is_equal_to("Mod+Shift+z".to_owned());
+        let shortcut = Shortcut::new(KeyboardKey::Z).primary().shift();
+        assert_that!(shortcut.to_string()).is_equal_to("Mod+Shift+Z".to_owned());
         assert_that!(Shortcut::parse(&shortcut.to_string()))
             .get_ok()
             .is_equal_to(shortcut);
@@ -656,5 +708,86 @@ mod tests {
         assert_that!(ShortcutOutcome::Handled.prevent_default()).is_true();
         assert_that!(ShortcutOutcome::Handled.continue_propagation()).is_false();
         assert_that!(ShortcutOutcome::Ignored.continue_propagation()).is_true();
+    }
+
+    // useKeyboard.test.js' "Mac (Mod = Meta)" and "Windows (Mod = Ctrl)" cases: the matching (the
+    // propagation of handled and unhandled keys is covered by the browser tests).
+
+    /// "matches Mod+key with metaKey", "matches Mod+key with ctrlKey".
+    #[test]
+    fn mod_is_meta_on_mac_and_control_elsewhere() {
+        let save = Shortcut::parse("Mod+s").unwrap();
+        let meta = mods(false, false, false, true);
+        let ctrl = mods(false, false, true, false);
+        assert_that!(save.matches_key("s", meta, true)).is_true();
+        assert_that!(save.matches_key("s", ctrl, true)).is_false();
+        assert_that!(save.matches_key("s", NONE, true)).is_false();
+        assert_that!(save.matches_key("s", ctrl, false)).is_true();
+        assert_that!(save.matches_key("s", meta, false)).is_false();
+    }
+
+    /// "plain key ignores meta".
+    #[test]
+    fn plain_key_does_not_match_with_meta() {
+        let save = Shortcut::parse("s").unwrap();
+        assert_that!(save.matches_key("s", mods(false, false, false, true), true)).is_false();
+    }
+
+    /// "Control+Shift distinct from Mod+Shift".
+    #[test]
+    fn control_shift_is_distinct_from_mod_shift_on_mac() {
+        let mod_shift = Shortcut::parse("Mod+Shift+a").unwrap();
+        let ctrl_shift = Shortcut::parse("Control+Shift+a").unwrap();
+        let meta_shift = mods(true, false, false, true);
+        let ctrl_shift_pressed = mods(true, false, true, false);
+        assert_that!(mod_shift.matches_key("A", meta_shift, true)).is_true();
+        assert_that!(ctrl_shift.matches_key("A", meta_shift, true)).is_false();
+        assert_that!(mod_shift.matches_key("A", ctrl_shift_pressed, true)).is_false();
+        assert_that!(ctrl_shift.matches_key("A", ctrl_shift_pressed, true)).is_true();
+    }
+
+    /// "Meta+Control+Alt combination".
+    #[test]
+    fn meta_control_alt_combination() {
+        let shortcut = Shortcut::parse("Meta+Control+Alt+z").unwrap();
+        assert_that!(shortcut.matches_key("z", mods(false, true, true, true), true)).is_true();
+        assert_that!(shortcut.matches_key("z", mods(false, true, true, false), true)).is_false();
+    }
+
+    /// "Shift+Alt and key aliases".
+    #[test]
+    fn shift_alt_and_key_aliases() {
+        let shortcut = Shortcut::parse("Shift+Alt+down").unwrap();
+        assert_that!(shortcut.matches_key("ArrowDown", mods(true, true, false, false), true))
+            .is_true();
+    }
+
+    /// "Mod+Shift+a matches only that binding, not Mod+a".
+    #[test]
+    fn mod_shift_a_is_not_mod_a() {
+        let mod_a = Shortcut::parse("Mod+a").unwrap();
+        let mod_shift_a = Shortcut::parse("Mod+Shift+a").unwrap();
+        let meta_shift = mods(true, false, false, true);
+        let meta = mods(false, false, false, true);
+        assert_that!(mod_shift_a.matches_key("A", meta_shift, true)).is_true();
+        assert_that!(mod_a.matches_key("A", meta_shift, true)).is_false();
+        assert_that!(mod_a.matches_key("a", meta, true)).is_true();
+        assert_that!(mod_shift_a.matches_key("a", meta, true)).is_false();
+    }
+
+    /// "treats control as an alias for ctrl", "parses modifiers case-insensitively and ignores
+    /// order".
+    #[test]
+    fn modifier_names_and_order() {
+        let expected = Shortcut::new(KeyboardKey::K).ctrl().shift().alt();
+        for spec in [
+            "Control+Shift+Alt+k",
+            "ctrl+ALT+shift+k",
+            "Shift+Alt+Ctrl+K",
+        ] {
+            assert_that!(Shortcut::parse(spec))
+                .get_ok()
+                .is_equal_to(expected.clone());
+        }
     }
 }

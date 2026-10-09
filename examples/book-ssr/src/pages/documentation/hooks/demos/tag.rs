@@ -1,17 +1,19 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::button::Button,
     hooks::{
-        IntoAttrs, SelectionMode, TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput,
-        UseTagReturn,
+        button::use_button,
         collections::{
-            Key, Selection, SelectionOptions, UseListStateInput, use_list_collection,
-            use_list_state,
+            Key, Selection, SelectionMode, SelectionOptions, UseListCollectionInput,
+            UseListStateInput, use_list_collection, use_list_state,
         },
-        use_button, use_tag, use_tag_group,
+        tag::{
+            TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput, UseTagReturn, use_tag,
+            use_tag_group,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -23,8 +25,11 @@ pub fn TagDemo() -> impl IntoView {
     let tags = RwSignal::new(ALL_TAGS.to_vec());
     let selection = RwSignal::new(Selection::default());
 
-    let collection =
-        use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+    let collection = use_list_collection(UseListCollectionInput {
+        items: tags.into(),
+        key: |tag| Key::from(*tag),
+        text_value: |tag| (*tag).to_owned(),
+    });
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {

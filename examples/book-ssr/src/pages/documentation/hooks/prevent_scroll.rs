@@ -32,7 +32,17 @@ pub fn PageUsePreventScroll() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                modal::use_modal_backdrop,
+                                overlay::{
+                                    UsePreventScrollInput,
+                                    use_close_on_scroll,
+                                    use_popover,
+                                    use_prevent_scroll,
+                                },
+                            },
+                        };
 
                         let is_modal_open = RwSignal::new(false);
 

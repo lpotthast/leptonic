@@ -1,4 +1,8 @@
 // Upstream: react-aria/src/menu/useMenu.ts @ 99e6102368
+// Upstream: react-aria/src/menu/utils.ts @ 99e6102368
+// Upstream: react-aria/test/menu/useMenu.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
@@ -8,15 +12,13 @@ use leptos::{
 use web_sys::KeyboardEvent;
 
 use crate::{
-    hooks::{
-        IntoAttrs, Orientation,
-        collections::{
-            AutoFocus, CollectionOptions, FocusStrategy, Key, KeyboardDelegate, LinkBehavior,
-            ListLayout, ListState, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
-            UseSelectableListInput, use_selectable_list,
-        },
+    CapturedElement, EventHandler, IntoAttrs, Orientation,
+    hooks::collections::{
+        AutoFocus, CollectionOptions, FocusStrategy, Key, KeyboardDelegate, LinkBehavior,
+        ListLayout, ListState, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
+        UseSelectableListInput, use_selectable_list,
     },
-    utils::{CapturedElement, EventHandler, aria::AriaRole, id::use_id},
+    utils::{aria::AriaRole, id::use_id},
 };
 
 // =============================================================================
@@ -30,6 +32,8 @@ use crate::{
 //
 // - A submenu gets its id, label, closing and keyboard handling as `submenu` (from
 //   `use_submenu_trigger`); its items come from its own list state.
+// - `should_focus_wrap` is part of `options` (`CollectionOptions`, default `false`); react-aria's
+//   `useMenu` defaults it to `true`.
 //
 // ## OMITTED FEATURES
 // - Virtual focus.
@@ -48,7 +52,8 @@ pub struct UseMenuInput {
     pub aria_label: MaybeProp<String>,
     /// A menu trigger provides this (`menu_props.aria_labelledby`).
     pub aria_labelledby: MaybeProp<String>,
-    /// Keyboard and focus behavior. Arrow keys wrap around by default.
+    /// Keyboard and focus behavior. react-aria's `useMenu` lets the arrow keys wrap around by
+    /// default: set `should_focus_wrap` (the `Menu` atom does).
     pub options: CollectionOptions,
     /// Replaces the list keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
@@ -70,6 +75,9 @@ pub struct MenuData {
     pub collection_id: String,
     pub on_action: Option<Callback<Key>>,
     pub on_close: Option<Callback<()>>,
+    /// The level in the menu tree of the submenus this menu's items open: 0 in the root menu,
+    /// one more than the menu's own in a submenu (for `use_submenu_trigger_state`).
+    pub submenu_level: usize,
 }
 
 /// Return value of [`use_menu`].
@@ -131,6 +139,7 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
     } = input;
     let (mut id, mut aria_labelledby) = (id, aria_labelledby);
     let mut submenu_keyboard = None;
+    let submenu_level = submenu.as_ref().map_or(0, |submenu| submenu.level + 1);
     if let Some(submenu) = submenu {
         id = Some(submenu.id);
         aria_labelledby = MaybeProp::from(submenu.aria_labelledby);
@@ -164,12 +173,12 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
     });
 
     // Link items open on press, never by moving focus.
-    options.link_behavior = LinkBehavior::Override;
+    options.link_behavior = Signal::stored(LinkBehavior::Override);
 
     let mut collection = use_selectable_list(UseSelectableListInput {
         state,
         element,
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
         layout_delegate: None,
         keyboard_delegate,
@@ -196,6 +205,7 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
             collection_id: collection.collection_id.clone(),
             on_action,
             on_close,
+            submenu_level,
         },
         props: UseMenuProps {
             id: id.unwrap_or_else(|| use_id("menu")),

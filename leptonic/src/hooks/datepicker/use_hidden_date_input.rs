@@ -1,15 +1,18 @@
 // Upstream: react-aria-components/src/HiddenDateInput.tsx @ 99e6102368
+// Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
+// Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 
 use super::types::{DateValue, Granularity};
 use crate::{
-    hooks::IntoAttrs,
+    EventHandler, IntoAttrs, OnEvent,
     utils::{
-        EventAccessors, EventHandler,
+        aria::AriaHidden,
+        dom_ext::EventAccessors,
         focusability::{PreventFocusAttr, prevent_focus_attr},
         styles::Styles,
         visually_hidden::visually_hidden_fixed_styles,
@@ -60,16 +63,27 @@ pub struct UseHiddenDateInputReturn {
 /// Props of the hidden input's container.
 #[derive(Debug)]
 pub struct UseHiddenDateContainerProps {
-    pub aria_hidden: &'static str,
+    pub aria_hidden: AriaHidden,
     pub prevent_focus: PreventFocusAttr,
     pub styles: Styles,
 }
 
 impl IntoAttrs for UseHiddenDateContainerProps {
-    type Attrs = (Attr<attr::AriaHidden, &'static str>, PreventFocusAttr);
+    type Attrs = (
+        Attr<attr::AriaHidden, AriaHidden>,
+        PreventFocusAttr,
+        leptos::tachys::html::attribute::custom::CustomAttr<&'static str, &'static str>,
+    );
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::AriaHidden, self.aria_hidden), self.prevent_focus)
+        (
+            Attr(attr::AriaHidden, self.aria_hidden),
+            self.prevent_focus,
+            leptos::tachys::html::attribute::custom::custom_attribute(
+                "data-a11y-ignore",
+                "aria-hidden-focus",
+            ),
+        )
     }
 }
 
@@ -98,7 +112,7 @@ impl IntoAttrs for UseHiddenDateInputProps {
         Attr<attr::Name, Option<String>>,
         Attr<attr::Step, Signal<u32>>,
         Attr<attr::Value, Signal<String>>,
-        On<ev::input, SharedEventCallback<web_sys::Event>>,
+        OnEvent<ev::input>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
@@ -152,7 +166,7 @@ pub fn use_hidden_date_input<V: DateValue>(
     } = input;
     UseHiddenDateInputReturn {
         container_props: UseHiddenDateContainerProps {
-            aria_hidden: "true",
+            aria_hidden: AriaHidden::True,
             prevent_focus: prevent_focus_attr(),
             // Fixed at the top left, so that focusing it doesn't scroll the page.
             styles: visually_hidden_fixed_styles(),

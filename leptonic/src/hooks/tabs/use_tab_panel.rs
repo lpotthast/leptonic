@@ -4,16 +4,17 @@ use leptos::{
     prelude::*,
 };
 
-use super::TabListData;
+use super::TabListState;
 use crate::{
+    IntoAttrs,
     hooks::{
-        IntoAttrs,
         collections::Key,
         focus::use_has_tabbable_child::{
             UseHasTabbableChildAttrs, UseHasTabbableChildInput, UseHasTabbableChildProps,
             use_has_tabbable_child,
         },
     },
+    labels,
     utils::aria::AriaRole,
 };
 
@@ -22,9 +23,6 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Takes the `TabListData` (react-aria: the state, with the ids in a `WeakMap`), which a panel
-//   rendered outside the tab list can reach; `use_tab` takes the `TabListItemData` of its tab
-//   list.
 // - `key` names the panel's tab, so that several panels can be rendered at once (force-mounted);
 //   `None` is the selected tab, as react-aria's single panel.
 //
@@ -39,11 +37,13 @@ use crate::{
 /// Input of [`use_tab_panel`].
 #[derive(Debug, Clone)]
 pub struct UseTabPanelInput {
-    /// The tab list.
-    pub tabs: TabListData,
+    /// The tab list's state.
+    pub state: TabListState,
     /// The panel's tab. `None`: the selected tab (a single panel showing the selected tab's
     /// content).
     pub key: Option<Key>,
+    /// Names the panel, next to its tab (the panel then labels itself too).
+    pub aria_label: MaybeProp<String>,
     /// The ids of elements describing the panel.
     pub aria_describedby: Option<String>,
     /// The id of an element with details about the panel.
@@ -60,10 +60,12 @@ pub struct UseTabPanelReturn {
 /// Props for the tab panel element.
 #[derive(Debug)]
 pub struct UseTabPanelProps {
-    pub id: Signal<String>,
+    /// `None` without tabs.
+    pub id: Signal<Option<String>>,
     pub role: AriaRole,
-    /// The panel's tab labels it.
-    pub aria_labelledby: Signal<String>,
+    pub aria_label: Signal<Option<String>>,
+    /// The panel's tab labels it (and the panel itself, next to an `aria_label`).
+    pub aria_labelledby: Signal<Option<String>>,
     /// The panel is a tab stop unless it contains tabbable elements.
     pub tabindex: Signal<Option<i32>>,
     pub aria_describedby: Option<String>,
@@ -72,9 +74,10 @@ pub struct UseTabPanelProps {
 }
 
 pub type UseTabPanelAttrs = (
-    Attr<attr::Id, Signal<String>>,
+    Attr<attr::Id, Signal<Option<String>>>,
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabelledby, Signal<String>>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::Tabindex, Signal<Option<i32>>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaDetails, Option<String>>,
@@ -88,6 +91,7 @@ impl IntoAttrs for UseTabPanelProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::Tabindex, self.tabindex),
             Attr(attr::AriaDescribedby, self.aria_describedby),
@@ -100,27 +104,32 @@ impl IntoAttrs for UseTabPanelProps {
 /// The content of a tab, labelled by the tab: a tab stop unless it contains tabbable elements.
 pub fn use_tab_panel(input: UseTabPanelInput) -> UseTabPanelReturn {
     let UseTabPanelInput {
-        tabs,
+        state,
         key,
+        aria_label,
         aria_describedby,
         aria_details,
     } = input;
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput::default());
     let has_tabbable_child = tabbable_child.has_tabbable_child;
-    let state = tabs.state;
     let key = StoredValue::new(key);
-    let panel_key = move || {
-        key.get_value()
-            .or_else(|| state.selected_key())
-            .map_or_else(String::new, |k| k.to_string())
-    };
-    let id_tabs = tabs.clone();
-    let label_tabs = tabs;
+    let panel_key = move || key.get_value().or_else(|| state.selected_key());
+    let labelling = Memo::new(move |_| {
+        let key = panel_key()?;
+        let id = state.tab_panel_id(&key);
+        let labelling = labels(&id, aria_label.get(), Some(&state.tab_id(&key)));
+        Some((id, labelling))
+    });
     UseTabPanelReturn {
         props: UseTabPanelProps {
-            id: Signal::derive(move || id_tabs.tab_panel_id(&Key::from(panel_key()))),
+            id: Signal::derive(move || labelling.with(|l| l.as_ref().map(|(id, _)| id.clone()))),
             role: AriaRole::Tabpanel,
-            aria_labelledby: Signal::derive(move || label_tabs.tab_id(&Key::from(panel_key()))),
+            aria_label: Signal::derive(move || {
+                labelling.with(|l| l.as_ref().and_then(|(_, l)| l.aria_label.clone()))
+            }),
+            aria_labelledby: Signal::derive(move || {
+                labelling.with(|l| l.as_ref().and_then(|(_, l)| l.aria_labelledby.clone()))
+            }),
             tabindex: Signal::derive(move || (!has_tabbable_child.get()).then_some(0)),
             aria_describedby,
             aria_details,

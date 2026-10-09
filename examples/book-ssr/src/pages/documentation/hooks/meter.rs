@@ -66,8 +66,13 @@ pub fn PageUseMeter() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::{css::{computed_pct, computed_size}, style::WidthProperty, styles::Styles},
+                            computed_pct,
+                            computed_size,
+                            hooks::{
+                                meter::{UseMeterInput, use_meter},
+                                progress::UseProgressBarReturn,
+                            },
+                            leptos_styles::{Styles, property::WidthProperty},
                         };
 
                         let UseProgressBarReturn { props, label_props, percentage, value_text } = use_meter(UseMeterInput {

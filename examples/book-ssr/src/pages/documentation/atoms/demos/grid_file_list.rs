@@ -5,7 +5,10 @@ use leptonic::{
         button::Button,
         grid_list::{GridList, GridListItem},
     },
-    hooks::{Key, SelectionBehavior, SelectionMode, collections::Selection, use_list_collection},
+    hooks::collections::{
+        Key, Selection, SelectionBehavior, SelectionMode, UseListCollectionInput,
+        use_list_collection,
+    },
 };
 use leptos::prelude::*;
 
@@ -23,11 +26,11 @@ const FILES: [File; 5] = [
 #[component]
 pub fn GridFileListDemo() -> impl IntoView {
     // The rows: a key and a text value (for type-ahead) per file.
-    let files = use_list_collection(
-        Signal::stored(FILES.to_vec()),
-        |(key, _, _)| Key::from(*key),
-        |(_, name, _)| (*name).to_owned(),
-    );
+    let files = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FILES.to_vec()),
+        key: |(key, _, _)| Key::from(*key),
+        text_value: |(_, name, _)| (*name).to_owned(),
+    });
     // App state: the selected files, and the last thing done with a file.
     let selection = RwSignal::new(Selection::default());
     let last_action = RwSignal::new(None::<String>);

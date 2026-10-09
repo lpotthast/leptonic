@@ -118,7 +118,7 @@ pub fn PageToolbarOverview() -> impl IntoView {
                 <li><Link href=routes::doc::toolbar::Atom.materialize()>"Toolbar Atom"</Link></li>
                 <li><Link href=routes::doc::Separator.materialize()>"Separator"</Link></li>
                 <li><Link href=routes::doc::ToggleButton.materialize()>"Toggle Button"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
             </SeeAlso>
         </DocPage>
     }

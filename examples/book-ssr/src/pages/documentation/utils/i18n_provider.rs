@@ -11,7 +11,7 @@ pub fn PageI18nProvider() -> impl IntoView {
             <p>
                 "Leptonic\u{2019}s hooks format numbers, compare text and lay out arrow keys and overlays for a locale: a "
                 "language, a region and the writing direction that follows from them. "<Code inline=true>"I18nProvider"</Code>
-                " (in "<Code inline=true>"leptonic::utils::i18n"</Code>") sets that locale for everything rendered inside it, "
+                " (in "<Code inline=true>"leptonic"</Code>") sets that locale for everything rendered inside it, "
                 "and "<AnchorLink href="#use-locale">"use_locale"</AnchorLink>", "
                 <AnchorLink href="#use-direction">"use_direction"</AnchorLink>" and "
                 <AnchorLink href="#use-i18n">"use_i18n"</AnchorLink>" read and change it. Without a provider, the locale is "
@@ -34,7 +34,7 @@ pub fn PageI18nProvider() -> impl IntoView {
                 <p>"Wrap your app in it:"</p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::i18n::{I18nProvider, Locale, locale};
+                        use leptonic::{I18nProvider, Locale, locale};
 
                         view! {
                             <I18nProvider locale=Locale::from(locale!("de-DE"))>
@@ -72,10 +72,7 @@ pub fn PageI18nProvider() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::{
-                            i18n::use_locale,
-                            list_formatter::{ListFormatOptions, ListFormatter},
-                        };
+                        use leptonic::{ListFormatOptions, ListFormatter, use_locale};
 
                         let locale = use_locale();
                         let guests = move || {
@@ -103,10 +100,10 @@ pub fn PageI18nProvider() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::i18n::{Locale, locale, use_i18n};
+                        use leptonic::{Locale, locale, use_i18n};
 
                         if let Some(i18n) = use_i18n() {
-                            i18n.set_locale.run(Locale::from(locale!("fr-FR")));
+                            i18n.set_locale(Locale::from(locale!("fr-FR")));
                         }
                     "#)}
                 </Code>
@@ -114,9 +111,9 @@ pub fn PageI18nProvider() -> impl IntoView {
                 <Section title="I18nContext">
                     <ApiTable kind=ApiKind::Fields of="I18nContext">
                         <ApiRow name="locale" ty="Signal<Locale>">"The current locale."</ApiRow>
-                        <ApiRow name="set_locale" ty="Callback<Locale>">"Changes the locale for everything inside the provider."</ApiRow>
                     </ApiTable>
                     <p>
+                        "Call "<Code inline=true>"set_locale(locale)"</Code>" to change the locale for the provider. "
                         "Its methods "<Code inline=true>"get_locale()"</Code>", "<Code inline=true>"direction()"</Code>" and "
                         <Code inline=true>"is_rtl()"</Code>" read the current locale, tracked like "
                         <Code inline=true>"locale.get()"</Code>"."
@@ -132,15 +129,16 @@ pub fn PageI18nProvider() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::i18n::{InvalidLocale, Locale};
+                        use leptonic::{InvalidLocale, Locale};
 
                         let locale: Result<Locale, InvalidLocale> = "pt-BR".parse();
                     "#)}
                 </Code>
-                <ApiTable kind=ApiKind::Fields of="Locale">
-                    <ApiRow name="direction" ty="WritingDirection">"The writing direction, derived from the locale\u{2019}s script."</ApiRow>
-                </ApiTable>
                 <DocTable headers=&["Method", "Returns"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"direction()"</Code></TableCell>
+                        <TableCell>"The writing direction derived from the locale script."</TableCell>
+                    </TableRow>
                     <TableRow>
                         <TableCell><Code inline=true>"locale_str()"</Code></TableCell>
                         <TableCell>"The BCP 47 tag, e.g. \u{201c}de-DE\u{201d}."</TableCell>
@@ -169,7 +167,7 @@ pub fn PageI18nProvider() -> impl IntoView {
 
                 <Section title="locale!" id="locale-macro">
                     <p>
-                        <Code inline=true>"leptonic::utils::i18n::locale"</Code>" re-exports ICU4X\u{2019}s "
+                        <Code inline=true>"leptonic::locale"</Code>" re-exports ICU4X\u{2019}s "
                         <Code inline=true>"locale!"</Code>" macro: an invalid tag is a compile error, so "
                         <Code inline=true>"Locale::from(locale!(\"de-DE\"))"</Code>" can\u{2019}t fail at runtime."
                     </p>
@@ -179,7 +177,7 @@ pub fn PageI18nProvider() -> impl IntoView {
             <Section title="WritingDirection">
                 <p>
                     <Code inline=true>"WritingDirection::Ltr"</Code>" or "<Code inline=true>"WritingDirection::Rtl"</Code>
-                    " (in "<Code inline=true>"leptonic::utils::locale"</Code>"). Leptonic derives it from the script the "
+                    " (in "<Code inline=true>"leptonic::locale"</Code>"). Leptonic derives it from the script the "
                     "locale is written in: Arabic, Hebrew, Thaana, Syriac, Mandaic, N\u{2019}Ko, Adlam and Samaritan are "
                     "right to left, so \u{201c}ar\u{201d}, \u{201c}fa\u{201d}, \u{201c}he\u{201d} and \u{201c}ur\u{201d} are, "
                     "while \u{201c}zh\u{201d} or \u{201c}hi\u{201d} are left to right. "<Code inline=true>"is_rtl()"</Code>

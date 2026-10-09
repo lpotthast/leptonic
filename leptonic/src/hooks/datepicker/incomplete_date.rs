@@ -1,5 +1,8 @@
 // Upstream: react-stately/src/datepicker/IncompleteDate.ts @ 99e6102368
-// Upstream: @internationalized/date/src/manipulation.ts @ 99e6102368 (`cycleValue`, zoned hours)
+// Upstream: @internationalized/date/src/manipulation.ts @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DatePicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/TimeField.test.js @ 99e6102368
+// (From `manipulation.ts`: `cycleValue` and the zoned hours.)
 //! The value a date field shows while it is edited: each field may be missing, and the fields
 //! may form an invalid date (February 30) until the field is left.
 

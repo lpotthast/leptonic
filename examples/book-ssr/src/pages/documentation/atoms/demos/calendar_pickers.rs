@@ -10,7 +10,7 @@ use leptonic::{
     },
     hooks::{
         calendar::{CalendarPickerItem, UseCalendarPickerReturn},
-        collections::{Key, use_list_collection},
+        collections::{Key, UseListCollectionInput, use_list_collection},
     },
     jiff::civil::date,
 };
@@ -69,11 +69,11 @@ fn PickerSelect(picker: UseCalendarPickerReturn) -> impl IntoView {
         items,
         on_change,
     } = picker;
-    let options = use_list_collection(
+    let options = use_list_collection(UseListCollectionInput {
         items,
-        |item: &CalendarPickerItem| Key::from(item.id),
-        |item: &CalendarPickerItem| item.formatted.clone(),
-    );
+        key: |item: &CalendarPickerItem| Key::from(item.id),
+        text_value: |item: &CalendarPickerItem| item.formatted.clone(),
+    });
 
     view! {
         <Select

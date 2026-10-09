@@ -5,43 +5,43 @@
 //! [`use_table_cell`]. Group rows (`<thead>`, `<tbody>`) with `use_grid_row_group`.
 
 /// The rows and columns of a table.
-pub mod table_collection;
+pub(crate) mod table_collection;
 
 /// Column widths: the layout of resizable columns.
-pub mod table_column_layout;
+pub(crate) mod table_column_layout;
 
 /// Table navigation: the grid's, plus the column headers.
-pub mod table_keyboard_delegate;
+pub(crate) mod table_keyboard_delegate;
 
 /// Column sizes and the flexbox-like algorithm distributing a table's width among its columns.
-pub mod table_utils;
+pub(crate) mod table_utils;
 
 /// The table element.
-pub mod use_table;
+pub(crate) mod use_table;
 
 /// A body cell (`gridcell` or `rowheader`).
-pub mod use_table_cell;
+pub(crate) mod use_table_cell;
 
 /// A column header: focus, sorting.
-pub mod use_table_column_header;
+pub(crate) mod use_table_column_header;
 
 /// A column's resizer.
-pub mod use_table_column_resize;
+pub(crate) mod use_table_column_resize;
 
 /// The widths of resizable columns.
-pub mod use_table_column_resize_state;
+pub(crate) mod use_table_column_resize_state;
 
 /// A row of column headers, and its placeholders.
-pub mod use_table_header_row;
+pub(crate) mod use_table_header_row;
 
 /// A body row.
-pub mod use_table_row;
+pub(crate) mod use_table_row;
 
 /// Checkboxes selecting a row, or all rows.
-pub mod use_table_selection_checkbox;
+pub(crate) mod use_table_selection_checkbox;
 
 /// Table state: rows, columns, selection, focus and sorting.
-pub mod use_table_state;
+pub(crate) mod use_table_state;
 
 pub use table_collection::*;
 pub use table_column_layout::{ColumnWidths, DEFAULT_MIN_WIDTH, DefaultMinWidth, DefaultWidth};

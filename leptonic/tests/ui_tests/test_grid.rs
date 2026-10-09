@@ -4,10 +4,11 @@
 //! of a cell, two-dimensional navigation with disabled rows and column spans, and row selection.
 //! Spec: react-aria `useGrid.test.js`; the multi-column checks follow `GridKeyboardDelegate`.
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{ElementActions, Page, PageActions, xpath};
+use crate::pages::{ElementActions, Page, role};
 
 const PATH: &str = "/atoms/grid";
 
@@ -31,19 +32,15 @@ async fn switch_grid(page: &Page<'_>, label: &str) -> Result<SwitchGrid, Report>
 
 /// The row of the "Users" grid whose first cell is `name`.
 async fn row(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
-    page.element(xpath(format!(
-        "//*[@role='row'][.//*[@role='gridcell'][normalize-space(.)='{name}']]"
-    )))
-    .await
+    page.element(role(AriaRole::Row).has(role(AriaRole::Gridcell).text(name)))
+        .await
 }
 
 /// The cell with `text` in the row of `name`.
 async fn cell(page: &Page<'_>, name: &str, text: &str) -> Result<WebElement, Report> {
     row(page, name)
         .await?
-        .element(xpath(format!(
-            ".//*[@role='gridcell'][normalize-space(.)='{text}']"
-        )))
+        .element(role(AriaRole::Gridcell).text(text))
         .await
 }
 
@@ -59,34 +56,47 @@ async fn expect_focus_on_cell(page: &Page<'_>, name: &str, text: &str) -> Result
     Ok(())
 }
 
+/// The grid is multiselectable with one row group, its rows have `aria-selected` (and
+/// `aria-disabled` when disabled), and a cell spanning two columns has `aria-colspan` and its
+/// `aria-colindex`.
+#[browser_test]
 pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let users = page.element("[role=grid][aria-label='Users']").await?;
-    assert_that!(users.attr("aria-multiselectable").await?)
-        .get_some()
+    assert_that!(users)
+        .has_attribute("aria-multiselectable")
+        .await
         .is_equal_to("true");
     let groups = users.elements("[role=rowgroup]").await?;
     assert_that!(groups).has_length(1);
 
     let alice = row(page, "Alice").await?;
-    assert_that!(alice.attr("aria-selected").await?)
-        .get_some()
+    assert_that!(alice)
+        .has_attribute("aria-selected")
+        .await
         .is_equal_to("false");
     let bob = row(page, "Bob").await?;
-    assert_that!(bob.attr("aria-disabled").await?)
-        .get_some()
+    assert_that!(bob)
+        .has_attribute("aria-disabled")
+        .await
         .is_equal_to("true");
 
     let on_leave = cell(page, "Carol", "On leave").await?;
-    assert_that!(on_leave.attr("aria-colspan").await?)
-        .get_some()
+    assert_that!(on_leave)
+        .has_attribute("aria-colspan")
+        .await
         .is_equal_to("2");
-    assert_that!(on_leave.attr("aria-colindex").await?)
-        .get_some()
+    assert_that!(on_leave)
+        .has_attribute("aria-colindex")
+        .await
         .is_equal_to("2");
     Ok(())
 }
 
+/// In row focus mode with cell focus mode, Tab focuses the row and the arrow keys move from it to
+/// its cell, through the cell's switches and back, in both directions. Only the focused row or cell
+/// shows visible focus ("gridFocusMode = row, cellFocusMode = cell").
+#[browser_test]
 pub async fn row_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let g = switch_grid(page, "Row-Cell").await?;
@@ -127,6 +137,10 @@ pub async fn row_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
+/// In row focus mode with child focus mode, Tab focuses the row and the arrow keys skip the cell,
+/// moving through its switches and back to the row in both directions ("gridFocusMode = row,
+/// cellFocusMode = child").
+#[browser_test]
 pub async fn row_focus_child_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let g = switch_grid(page, "Row-Child").await?;
@@ -155,6 +169,9 @@ pub async fn row_focus_child_focus(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
+/// In cell focus mode with child focus mode, Tab focuses the cell's first switch and the arrow keys
+/// cycle through its switches in both directions ("gridFocusMode = cell, cellFocusMode = child").
+#[browser_test]
 pub async fn cell_focus_child_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let g = switch_grid(page, "Cell-Child").await?;
@@ -179,6 +196,10 @@ pub async fn cell_focus_child_focus(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
+/// In cell focus mode with cell focus mode, Tab focuses the cell and the arrow keys move from it
+/// through its switches and back, in both directions ("gridFocusMode = cell, cellFocusMode =
+/// cell").
+#[browser_test]
 pub async fn cell_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let g = switch_grid(page, "Cell-Cell").await?;
@@ -205,9 +226,9 @@ pub async fn cell_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// A cell child focused from outside the grid keeps focus, as when a dialog opened from a row's
-/// button restores focus to it (crudkit): after a mouse press on the child (the cell becomes the
-/// focused key) and with pointer or keyboard modality (closing the dialog with Escape).
+/// Focusing a cell's child from outside the grid, as a dialog restoring focus to a row's button
+/// does, keeps focus on the child in pointer and in keyboard modality.
+#[browser_test]
 pub async fn focusing_a_child_from_outside_keeps_it(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let g = switch_grid(page, "Row-Child").await?;
@@ -229,22 +250,17 @@ pub async fn focusing_a_child_from_outside_keeps_it(page: &Page<'_>) -> Result<(
             .await
             .context_with(|| format!("{modality} modality"))?;
         // Focus must stay: deferred focus handling (microtasks, frames) must not move it.
-        page.focus_stays(target)
+        page.focus_stays(target, std::time::Duration::from_millis(100))
             .await
             .context_with(|| format!("{modality} modality"))?;
     }
     Ok(())
 }
 
-/// Focusing a cell (in child focus mode) restores focus to the child that was focused last (the
-/// second switch, moved to with the arrow keys), not the first child: when tabbing back into the
-/// grid, and when the cell itself is focused from outside the grid.
-///
-/// react-aria's version ("should restore focus to the child that was last focused within a
-/// cell") focuses the cell from its own child. In a browser, that keeps focus on the cell
-/// (`useGridCell`'s `onFocus` ignores focus coming from the cell's children, and setting the
-/// already focused key again changes nothing); the jsdom test only passes because its fake
-/// timers still hold the frame callback queued when tabbing in.
+/// In child focus mode, tabbing back into the grid or focusing the cell from outside focuses the
+/// cell's last focused child, not its first ("should restore focus to the child that was last
+/// focused within a cell, not the first child").
+#[browser_test]
 pub async fn restores_the_last_focused_child(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let g = switch_grid(page, "Cell-Child").await?;
@@ -259,14 +275,18 @@ pub async fn restores_the_last_focused_child(page: &Page<'_>) -> Result<(), Repo
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&g.switches[1]).await?;
 
+    // Upstream focuses the cell from its own child. In a browser that keeps focus on the cell
+    // (`useGridCell`'s `onFocus` ignores focus from the cell's children; jsdom only passes through
+    // its fake timers), so the cell is focused from outside the grid.
     before.click().await?;
     g.cells[0].focus().await?;
     page.wait_for_focus(&g.switches[1]).await?;
     Ok(())
 }
 
-/// Up/Down keep the column (respecting column spans) and skip the disabled row; Home/End stay in
-/// the row, Ctrl+Home/End go to the first/last row.
+/// Up and Down keep the column (respecting column spans) and skip the disabled row; Home and End
+/// stay in the row, Ctrl+Home and Ctrl+End go to the first and last row.
+#[browser_test]
 pub async fn two_dimensional_navigation(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-grid-before-users")
@@ -300,7 +320,9 @@ pub async fn two_dimensional_navigation(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Rows are selected by Space and by pressing (a row, or any of its cells).
+/// Space on a row's cell and clicks on a row or any of its cells toggle the row's selection, and
+/// selectable rows show hover, while the disabled row can't be selected.
+#[browser_test]
 pub async fn row_selection(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let selection = page.element("#test-grid-selection").await?;
@@ -316,8 +338,9 @@ pub async fn row_selection(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Space).await?;
     selection.wait_for_inner_text("Alice").await?;
     let alice = row(page, "Alice").await?;
-    assert_that!(alice.attr("aria-selected").await?)
-        .get_some()
+    assert_that!(alice)
+        .has_attribute("aria-selected")
+        .await
         .is_equal_to("true");
 
     // Selectable rows show hover.
@@ -330,7 +353,9 @@ pub async fn row_selection(page: &Page<'_>) -> Result<(), Report> {
 
     // The disabled row can't be selected.
     cell(page, "Bob", "Bob").await?.click().await?;
-    selection.inner_text_stays("Alice,Dave").await?;
+    selection
+        .inner_text_stays("Alice,Dave", std::time::Duration::from_millis(100))
+        .await?;
 
     alice.click().await?;
     selection.wait_for_inner_text("Dave").await?;
@@ -341,14 +366,13 @@ pub async fn row_selection(page: &Page<'_>) -> Result<(), Report> {
 async fn grid_cell(page: &Page<'_>, grid: &str, text: &str) -> Result<WebElement, Report> {
     page.element(format!("[role=grid][aria-label='{grid}']"))
         .await?
-        .element(xpath(format!(
-            ".//*[@role='gridcell'][normalize-space(.)='{text}']"
-        )))
+        .element(role(AriaRole::Gridcell).text(text))
         .await
 }
 
-/// In cell focus mode, cells can't be selected themselves (no cell selection): Space and presses
-/// on a cell select its row.
+/// In cell focus mode, Space on a cell and clicking a cell select the cell's row, since cells can't
+/// be selected themselves.
+#[browser_test]
 pub async fn cell_focus_mode_selects_rows(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-grid-before-fruits")
@@ -368,9 +392,9 @@ pub async fn cell_focus_mode_selects_rows(page: &Page<'_>) -> Result<(), Report>
     Ok(())
 }
 
-/// With `on_cell_action`, activating a cell runs the action with the cell's key instead of
-/// selecting the row. Only Enter is an action key: Space on such a cell does nothing (cells can't
-/// be selected, and the cell's press handling keeps the key from the row).
+/// With `on_cell_action`, Enter on a cell and clicking a cell run the action with the cell's key
+/// instead of selecting the row, while Space on a cell does nothing.
+#[browser_test]
 pub async fn cell_actions(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-grid-before-actions")
@@ -384,8 +408,12 @@ pub async fn cell_actions(page: &Page<'_>) -> Result<(), Report> {
     let action = page.element("#test-grid-actions-action").await?;
     let selection = page.element("#test-grid-actions-selection").await?;
     page.send_keys(Key::Space).await?;
-    selection.inner_text_stays("").await?;
-    action.inner_text_stays("").await?;
+    selection
+        .inner_text_stays("", std::time::Duration::from_millis(100))
+        .await?;
+    action
+        .inner_text_stays("", std::time::Duration::from_millis(100))
+        .await?;
     page.send_keys(Key::Enter).await?;
     action.wait_for_inner_text("Apple-0").await?;
     page.send_keys(Key::Right).await?;
@@ -394,6 +422,8 @@ pub async fn cell_actions(page: &Page<'_>) -> Result<(), Report> {
 
     grid_cell(page, "Actions", "Yellow").await?.click().await?;
     action.wait_for_inner_text("Banana-1").await?;
-    selection.inner_text_stays("").await?;
+    selection
+        .inner_text_stays("", std::time::Duration::from_millis(100))
+        .await?;
     Ok(())
 }

@@ -1,14 +1,18 @@
 // Upstream: react-aria-components/src/Meter.tsx @ 99e6102368
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
+    IntoAttrs,
     atoms::{
         field::{LabelContext, LabelPresence},
         progress_bar::{ValueContext, fill, value_text},
     },
-    hooks::{IntoAttrs, UseMeterInput, UseProgressBarReturn, use_meter},
+    hooks::{
+        meter::{UseMeterInput, use_meter},
+        progress::UseProgressBarReturn,
+    },
     utils::{
-        classes::Classes,
         default_class::with_default_class,
         number_formatter::NumberFormatOptions,
         number_value::{NumberSignal, NumberValue},
@@ -105,7 +109,8 @@ pub fn Meter<T: NumberValue>(
     }
 }
 
-/// The filled part of a [`Meter`]'s track: as wide as the value (in percent of its container).
+/// The filled part of a [`Meter`]'s track: as wide as the value (in percent of its container),
+/// which `--percent` holds too.
 ///
 /// Default class: `leptonic-MeterFill`.
 #[component]
@@ -114,7 +119,7 @@ pub fn MeterFill(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MeterFill", classes);
-    fill(classes, styles)
+    fill("MeterFill", classes, styles)
 }
 
 /// The formatted value of a [`Meter`] (its `aria-valuetext`).
@@ -126,5 +131,5 @@ pub fn MeterValueText(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MeterValueText", classes);
-    value_text(classes, styles)
+    value_text("MeterValueText", classes, styles)
 }

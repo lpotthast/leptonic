@@ -1,7 +1,10 @@
 // Upstream: react-aria-components/src/Select.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Select.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Select.ssr.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, ev, prelude::*};
+use leptos_classes::Classes;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -9,11 +12,11 @@ use leptos::{context::Provider, ev, prelude::*};
 //
 // ## API DIFFERENCES
 // - The value is typed and its type is the selection mode (`S: SelectedValues`: `Option<V>`
-//   selects one value, `Vec<V>` several; react-aria: `selectionMode` with `Key | null` or
+//   selects one value, `HashSet<V>` several; react-aria: `selectionMode` with `Key | null` or
 //   `Key[]`); the collection's keys are the values'.
 // - State (C4): `default_value` + `on_change`, or `value` + `set_value`; the popover's
 //   `default_open`, or `is_open` + `set_open`.
-// - The parts are atoms reading `SelectCtx` (`SelectTrigger`, `SelectValue`, `SelectPopover`,
+// - The parts are atoms reading `SelectContext` (`SelectTrigger`, `SelectValue`, `SelectPopover`,
 //   `HiddenSelect`; react-aria-components: contexts consumed by `Button`, `Popover`, ...).
 //
 // =============================================================================
@@ -25,29 +28,36 @@ use super::{
     typed_values::{KeyedStateProps, selected_state_props},
 };
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     atoms::field::LabelPresence,
     hooks::{
-        IntoAttrs, Placement, PopoverModality, SelectState, UseFocusRingInput,
-        UseHiddenSelectReturn, UseLabelProps, UseListBoxInput, UsePopoverInput, UsePopoverReturn,
-        UseSelectInput, UseSelectReturn, UseSelectStateInput, UseSelectTriggerProps, ValidateFn,
-        ValidationBehavior,
+        button::use_button,
         collections::{CloseOnSelect, CollectionMemo, Key},
-        use_button, use_focus_ring, use_hidden_select, use_popover, use_select, use_select_state,
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
+        form::{UseLabelProps, ValidateFn, ValidationBehavior},
+        listbox::UseListBoxInput,
+        overlay::{
+            OverlayPositionOptions, Placement, PopoverModality, UsePopoverInput, UsePopoverReturn,
+            use_popover,
+        },
+        select::{
+            SelectState, UseHiddenSelectReturn, UseSelectInput, UseSelectReturn,
+            UseSelectStateInput, UseSelectTriggerProps, use_hidden_select, use_select,
+            use_select_state,
+        },
     },
     utils::{
-        CapturedElement, ValueBinding,
-        classes::Classes,
         data_attributes::flag,
         default_class::with_default_class,
         intl_strings::{AtomStrings, use_localized_strings},
+        scoped_context::{ClearContexts, clear_context},
         styles::Styles,
     },
 };
 
 /// Context from [`Select`] to its parts.
 #[derive(Clone)]
-pub struct SelectCtx {
+pub struct SelectContext {
     pub state: SelectState,
     pub is_invalid: Signal<bool>,
     pub is_disabled: Signal<bool>,
@@ -60,13 +70,13 @@ pub struct SelectCtx {
 /// The `use_select` outputs for the parts.
 #[derive(Clone)]
 struct Parts {
-    trigger: crate::hooks::UseButtonInput,
+    trigger: crate::hooks::button::UseButtonInput,
     trigger_props: UseSelectTriggerProps,
     value_id: String,
-    hidden_select: crate::hooks::UseHiddenSelectInput,
+    hidden_select: crate::hooks::select::UseHiddenSelectInput,
 }
 
-impl SelectCtx {
+impl SelectContext {
     /// The configuration of the popover's listbox.
     pub fn listbox_input(&self) -> UseListBoxInput {
         self.listbox.get_value()
@@ -103,7 +113,7 @@ pub fn Select<S: SelectedValues>(
     #[prop(optional)]
     default_value: S,
     /// The selected value(s) (controlled): a value or any signal. `Option<V>` selects one value,
-    /// `Vec<V>` several.
+    /// `HashSet<V>` several.
     #[prop(into, optional)]
     value: Option<Signal<S>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -208,7 +218,7 @@ pub fn Select<S: SelectedValues>(
         on_blur: None,
     });
 
-    let ctx = SelectCtx {
+    let ctx = SelectContext {
         state,
         is_invalid,
         is_disabled,
@@ -239,7 +249,7 @@ pub fn Select<S: SelectedValues>(
     let is_open = Signal::derive(move || state.is_open());
     let is_focused = Signal::derive(move || state.is_focused());
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let focus_within = (
@@ -276,6 +286,8 @@ pub fn Select<S: SelectedValues>(
 /// `data-disabled`, `data-pressed`, `data-hovered` and (from `use_button`)
 /// `data-focus-visible` for styling.
 ///
+/// Outside a [`Select`], renders nothing and warns in debug builds.
+///
 /// Default class: `leptonic-SelectTrigger`.
 #[component]
 pub fn SelectTrigger(
@@ -283,15 +295,18 @@ pub fn SelectTrigger(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let Some(ctx) = use_context::<SelectContext>() else {
+        crate::utils::dev_warn!("SelectTrigger: not inside a Select");
+        return None;
+    };
     let classes = with_default_class("leptonic-SelectTrigger", classes);
-    let ctx = expect_context::<SelectCtx>();
     let (input, trigger_props) = ctx.part(|p| (p.trigger.clone(), p.trigger_props.clone()));
     let button = use_button(input);
     let (attrs, button_styles) = button.props.into_parts();
     let styles = button_styles.merge(styles);
     let state = ctx.state;
 
-    view! {
+    Some(view! {
         <button
             {..attrs}
             {..trigger_props.into_attrs()}
@@ -301,17 +316,19 @@ pub fn SelectTrigger(
             data-open=flag(Signal::derive(move || state.is_open()))
             data-invalid=flag(ctx.is_invalid)
             data-disabled=flag(ctx.is_disabled)
-            data-pressed=flag(button.is_pressed)
+            data-pressed=flag(Signal::derive(move || button.is_pressed.get() || state.is_open()))
             data-hovered=flag(button.is_hovered)
         >
             {children()}
         </button>
-    }
+    })
 }
 
 /// The text of the selected option(s), or `placeholder`. Several selected options are listed in
 /// the locale's way ("Cat, Dog, and Kangaroo"). Exposes `data-placeholder` while nothing is
 /// selected.
+///
+/// Outside a [`Select`], renders nothing and warns in debug builds.
 ///
 /// Default class: `leptonic-SelectValue`.
 #[component]
@@ -322,15 +339,19 @@ pub fn SelectValue(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let Some(ctx) = use_context::<SelectContext>() else {
+        crate::utils::dev_warn!("SelectValue: not inside a Select");
+        return None;
+    };
     let classes = with_default_class("leptonic-SelectValue", classes);
-    let ctx = expect_context::<SelectCtx>();
     let state = ctx.state;
     let id = ctx.parts.with_value(|p| p.value_id.clone());
-    let is_empty = move || state.value().is_empty();
+    let selected_items = Memo::new(move |_| state.selected_items());
+    let is_empty = move || selected_items.with(Vec::is_empty);
     let locale = crate::utils::i18n::use_locale();
     let strings = use_localized_strings::<AtomStrings>();
     let text = move || {
-        let items = state.selected_items();
+        let items = selected_items.get();
         if items.is_empty() {
             placeholder
                 .get()
@@ -347,7 +368,7 @@ pub fn SelectValue(
         }
     };
 
-    view! {
+    Some(view! {
         <span
             id=id
             class=classes
@@ -356,13 +377,15 @@ pub fn SelectValue(
         >
             {text}
         </span>
-    }
+    })
 }
 
 /// The select's popover, positioned at the trigger. Holds the options'
 /// [`ListBox`](super::listbox::ListBox); mounted while open. Modal, as react-aria-components'
 /// select popover: focus stays inside and the rest of the page is hidden from assistive
 /// technology until it closes.
+///
+/// Outside a [`Select`], renders nothing and warns in debug builds.
 ///
 /// Default class: `leptonic-SelectPopover`.
 #[component]
@@ -388,8 +411,11 @@ pub fn SelectPopover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    let Some(ctx) = use_context::<SelectContext>() else {
+        crate::utils::dev_warn!("SelectPopover: not inside a Select");
+        return None;
+    };
     let classes = with_default_class("leptonic-SelectPopover", classes);
-    let ctx = expect_context::<SelectCtx>();
     let ctx_labelledby = ctx.listbox_input().aria_labelledby;
     let UsePopoverReturn {
         props,
@@ -399,24 +425,26 @@ pub fn SelectPopover(
         ..
     } = use_popover(UsePopoverInput {
         trigger: ctx.trigger_element,
-        placement,
-        max_height,
-        offset,
-        cross_offset,
-        container_padding,
-        should_flip,
+        position: OverlayPositionOptions {
+            placement,
+            offset,
+            cross_offset,
+            container_padding,
+            should_flip,
+            max_height,
+            ..OverlayPositionOptions::default()
+        },
         state: ctx.state,
-        arrow_size: Signal::stored(None),
-        arrow_boundary_offset: Signal::stored(0.0),
-        boundary: None,
         target_rect: Signal::stored(None),
+        // The focused option keeps its place when the popover moves (react-aria-components).
+        scroll: Some(ctx.listbox_input().element),
         modality: PopoverModality::Modal,
         is_keyboard_dismiss_disabled: Signal::stored(false),
         should_close_on_interact_outside: None,
         group: None,
         is_submenu: false,
     });
-    render_popover(
+    Some(render_popover(
         ctx.state,
         PopoverParts {
             props,
@@ -425,6 +453,13 @@ pub fn SelectPopover(
             trigger_anchor_point,
             trigger: ctx.trigger_element,
             trigger_name: Some("Select"),
+            on_enter: None,
+            on_exit: None,
+            width_with: None,
+            clear_contexts: ClearContexts(&[
+                clear_context::<LabelContext>,
+                clear_context::<FieldContext>,
+            ]),
         },
         PopoverModality::Modal,
         CapturedElement::new(),
@@ -437,11 +472,13 @@ pub fn SelectPopover(
         classes,
         styles,
         children,
-    )
+    ))
 }
 
 /// A visually hidden native form element mirroring the select's value: a `<select>` (for up
 /// to 300 options, supporting autofill) or hidden inputs.
+///
+/// Outside a [`Select`], renders nothing and warns in debug builds.
 #[component]
 pub fn HiddenSelect(
     /// The `autocomplete` attribute (autofill hint).
@@ -452,7 +489,10 @@ pub fn HiddenSelect(
     #[prop(into, optional)]
     label: MaybeProp<String>,
 ) -> impl IntoView {
-    let ctx = expect_context::<SelectCtx>();
+    let Some(ctx) = use_context::<SelectContext>() else {
+        crate::utils::dev_warn!("HiddenSelect: not inside a Select");
+        return None;
+    };
     let input = ctx.part(|p| p.hidden_select.clone());
     let has_name = ctx.state.name().is_some();
     let default_label = input.label;
@@ -465,7 +505,7 @@ pub fn HiddenSelect(
         input_props,
         first_input_capture,
         input_values,
-    } = use_hidden_select(crate::hooks::UseHiddenSelectInput {
+    } = use_hidden_select(crate::hooks::select::UseHiddenSelectInput {
         auto_complete,
         trigger: Some(ctx.trigger_element),
         label: MaybeProp::derive(move || label.get().or_else(|| default_label.get())),
@@ -475,7 +515,7 @@ pub fn HiddenSelect(
     let input_props = StoredValue::new(input_props);
     let first_input_capture = StoredValue::new(first_input_capture);
 
-    view! {
+    Some(view! {
         <div {..container_props.into_attrs()}>
             <Show
                 when=move || use_native_select.get()
@@ -519,16 +559,78 @@ pub fn HiddenSelect(
                     <select {..select_props.get_value().into_attrs()}>
                         <For
                             each=move || options.get()
-                            key=|option| (option.value.clone(), option.is_selected)
+                            key=|option| option.key.clone()
                             let:option
                         >
-                            <option value=option.value.clone() selected=option.is_selected>
-                                {if option.value.is_empty() { "\u{A0}".to_owned() } else { option.text }}
-                            </option>
+                            {
+                                let state = ctx.state;
+                                let key = option.key.clone();
+                                let text = Memo::new(move |_| {
+                                    key.as_ref().map_or_else(String::new, |key| {
+                                        state.list.collection.with(|c| {
+                                            c.get(key).map_or_else(|| key.to_string(), |node| node.text_value.to_string())
+                                        })
+                                    })
+                                });
+                                let is_empty = option.key.is_none();
+                                let value = option.value.clone();
+                                let is_selected = move || option.is_selected(&state);
+                                view! {
+                                    <option
+                                        value=value
+                                        label=is_empty.then_some("\u{A0}")
+                                        selected=is_selected.clone()
+                                        prop:selected=is_selected
+                                    >
+                                        {move || text.get()}
+                                    </option>
+                                }
+                            }
                         </For>
                     </select>
                 </label>
             </Show>
         </div>
+    })
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::testing::with_owner;
+
+    // No upstream: misplaced composition parts render nothing in Leptonic.
+    #[test]
+    fn select_trigger_without_parent_renders_nothing() {
+        with_owner(|| {
+            let html = view! { <SelectTrigger>"Misplaced trigger"</SelectTrigger> }.to_html();
+            assert_that!(html).is_equal_to(().to_html());
+        });
+    }
+
+    #[test]
+    fn select_value_without_parent_renders_nothing() {
+        with_owner(|| {
+            let html = view! { <SelectValue placeholder="Misplaced value" /> }.to_html();
+            assert_that!(html).is_equal_to(().to_html());
+        });
+    }
+
+    #[test]
+    fn select_popover_without_parent_renders_nothing() {
+        with_owner(|| {
+            let html = view! { <SelectPopover>"Misplaced popover"</SelectPopover> }.to_html();
+            assert_that!(html).is_equal_to(().to_html());
+        });
+    }
+
+    #[test]
+    fn hidden_select_without_parent_renders_nothing() {
+        with_owner(|| {
+            let html = view! { <HiddenSelect /> }.to_html();
+            assert_that!(html).is_equal_to(().to_html());
+        });
     }
 }

@@ -22,10 +22,12 @@ use std::cell::Cell;
 
 use wasm_bindgen::{JsCast, JsValue};
 
-use crate::utils::{
+use crate::{
     Modifiers,
-    focus::focus_element,
-    platform::{browser, device},
+    utils::{
+        focus::focus_element,
+        platform::{browser, device},
+    },
 };
 
 thread_local! {

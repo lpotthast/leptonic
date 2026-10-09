@@ -38,7 +38,7 @@ pub fn PageUseSpinButton() -> impl IntoView {
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseSpinButtonInput">
-                    <ApiRow name="value" ty="Signal<Option<f64>>" default="None">
+                    <ApiRow name="value" ty="Signal<Option<T>>" default="None">
                         "The current value, exposed as "<Code inline=true>"aria-valuenow"</Code>". "<Code inline=true>"None"</Code>
                         " (or NaN) means empty."
                     </ApiRow>
@@ -48,7 +48,7 @@ pub fn PageUseSpinButton() -> impl IntoView {
                         " uses "<Code inline=true>"value"</Code>". An empty string, or no "<Code inline=true>"value"</Code>" either, is "
                         "announced as \u{201c}Empty\u{201d}."
                     </ApiRow>
-                    <ApiRow name="min_value, max_value" ty="Signal<Option<f64>>" default="None">
+                    <ApiRow name="min_value, max_value" ty="Signal<Option<T>>" default="None">
                         "The limits, exposed as "<Code inline=true>"aria-valuemin"</Code>" / "<Code inline=true>"aria-valuemax"</Code>
                         ". Holding a stepper button stops spinning once a limit is reached."
                     </ApiRow>
@@ -98,7 +98,12 @@ pub fn PageUseSpinButton() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                button::{UseButtonInput, use_button},
+                                spinbutton::{UseSpinButtonInput, use_spin_button},
+                            },
+                        };
 
                         let (cups, set_cups) = signal(2.0_f64);
                         let step = move |delta: f64| set_cups.update(|v| *v = (*v + delta).clamp(0.0, 10.0));

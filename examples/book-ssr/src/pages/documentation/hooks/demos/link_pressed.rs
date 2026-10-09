@@ -1,11 +1,11 @@
-use leptonic::hooks::*;
+use leptonic::hooks::link::{LinkElementType, UseLinkInput, use_link};
 use leptos::prelude::*;
 
 #[component]
 pub fn LinkPressedDemo() -> impl IntoView {
     let link = use_link(UseLinkInput {
         // A link that runs code instead of navigating, so holding it doesn't leave the page.
-        element_type: LinkElementType::Other,
+        element_type: LinkElementType::Other.into(),
         ..UseLinkInput::default()
     });
     let is_pressed = link.is_pressed;

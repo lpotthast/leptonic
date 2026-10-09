@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::hooks::LinkTarget;
+use leptonic::hooks::link::LinkTarget;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -23,7 +23,9 @@ pub fn PageThemes() -> impl IntoView {
                     "children in a "<Code inline=true>"<div class=\"leptonic-ThemeProvider\" data-theme=\u{2026}>"</Code>" with "
                     <Code inline=true>"display: contents"</Code>". The outermost provider also sets "
                     <Code inline=true>"data-theme"</Code>" on "<Code inline=true>"<html>"</Code>", so that content rendered "
-                    "into "<Code inline=true>"<body>"</Code>" (modals, popovers, toasts) is themed too."
+                    "into "<Code inline=true>"<body>"</Code>" (modals, popovers, toasts) is themed too. When that provider "
+                    "unmounts, it restores the previous document theme, or removes the attribute if there was none. "
+                    "It leaves later changes made by other code in place."
                 </p>
                 <p>
                     "Without "<Code inline=true>"theme"</Code>", the provider keeps the theme itself, starting with "
@@ -36,7 +38,10 @@ pub fn PageThemes() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::{LeptonicTheme, ThemeProvider}, signal_ls};
+                        use leptonic::{
+                            atoms::theme::{LeptonicTheme, ThemeProvider},
+                            signal_ls,
+                        };
 
                         let (theme, set_theme) = signal_ls("theme", LeptonicTheme::default());
 
@@ -98,7 +103,7 @@ pub fn PageThemes() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use codee::string::FromToStringCodec;
-                        use leptonic::atoms::prelude::{LeptonicTheme, Theme, ThemeProvider};
+                        use leptonic::atoms::theme::{LeptonicTheme, Theme, ThemeProvider};
                         use leptos::prelude::*;
                         use leptos_meta::Html;
                         use leptos_use::{SameSite, UseCookieOptions, use_cookie_with_options};
@@ -145,7 +150,12 @@ pub fn PageThemes() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{LeptonicTheme, SwitchButton, SwitchField, use_theme};
+                        use leptonic::{
+                            atoms::{
+                                switch::{SwitchButton, SwitchField},
+                                theme::{LeptonicTheme, use_theme},
+                            },
+                        };
 
                         let theme = use_theme::<LeptonicTheme>().expect("inside a ThemeProvider");
                         let is_dark = Signal::derive(move || theme.theme().get() == LeptonicTheme::Dark);
@@ -183,7 +193,7 @@ pub fn PageThemes() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{Theme, ThemeProvider};
+                        use leptonic::atoms::theme::{Theme, ThemeProvider};
                         use serde::{Deserialize, Serialize};
 
                         #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]

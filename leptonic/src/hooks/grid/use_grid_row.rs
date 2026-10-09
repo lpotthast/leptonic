@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/grid/useGridRow.ts @ 99e6102368
+// Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -6,17 +7,12 @@ use leptos::{
 
 use super::GridData;
 use crate::{
-    hooks::{
-        IntoAttrs, PropsWithStyles,
-        collections::{
-            Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
-            UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
-        },
+    CapturedElement, IntoAttrs, PropsWithStyles,
+    hooks::collections::{
+        Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput, UseSelectableItemProps,
+        UseSelectableItemReturn, use_selectable_item,
     },
-    utils::{
-        CapturedElement,
-        aria::{AriaDisabled, AriaRole, AriaSelected},
-    },
+    utils::aria::{AriaDisabled, AriaRole, AriaSelected},
 };
 
 // =============================================================================
@@ -37,7 +33,7 @@ pub struct UseGridRowInput {
     pub key: Key,
     /// Called when a context menu is requested on the row (right click, Shift+F10, the context
     /// menu key; a long press on iOS unless it selects).
-    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
+    pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_grid_row`].
@@ -119,7 +115,7 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
             let key = key.clone();
             Callback::new(move |()| on_row_action.run(key.clone()))
         })),
-        link_behavior: crate::hooks::collections::LinkBehavior::Action,
+        link_behavior: Signal::stored(crate::hooks::collections::LinkBehavior::Action),
         focus: None,
         should_use_virtual_focus: false,
         on_context_menu,

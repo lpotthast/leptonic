@@ -1,7 +1,9 @@
 // Upstream: react-aria/src/numberfield/useNumberField.ts @ 99e6102368
+// Upstream: react-aria/test/numberfield/useNumberField.test.ts @ 99e6102368
+// Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use leptos_use::use_document;
@@ -20,12 +22,14 @@ use super::{
         InputMode, UseTextFieldInput, UseTextFieldInputAttrs, UseTextFieldInputProps,
         UseTextFieldReturn, use_text_field,
     },
-    use_text_field_state::TextFieldState,
+    use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
 };
 use crate::{
+    CapturedElement, EventHandler, IntoAttrs, NumberValue, OnEvent, SlotProps,
     hooks::{
-        InputType, IntoAttrs, TextFieldElement, UseButtonInput,
+        button::UseButtonInput,
         focus::use_focus_within::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
+        form::{InputType, TextFieldElement},
         interactions::{
             use_keyboard::KeyboardEventWrapper,
             use_press::{PressEvent, chain_optional_callbacks},
@@ -34,15 +38,16 @@ use crate::{
         spinbutton::use_spin_button::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
-        CapturedElement, EventAccessors, EventHandler, NumberValue, SlotProps,
         aria::{AriaDisabled, AriaInvalid, AriaRole},
+        dom_ext::EventAccessors,
         focus::focus_event_target,
         id::use_id,
         intl_strings::{NumberFieldStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         live_announcer::announce_assertive,
-        number_formatter::NumberStyle,
-        platform::device,
+        number_formatter::{CurrencySign, NumberFormatOptions, use_number_formatter},
+        platform::{device, use_platform_check},
         pointer_type::PointerType,
     },
 };
@@ -132,8 +137,8 @@ pub type UseNumberFieldGroupAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
 );
 
 impl IntoAttrs for UseNumberFieldGroupProps {
@@ -167,11 +172,11 @@ pub type UseNumberFieldInputAttrs = (
     UseTextFieldInputAttrs,
     (
         Attr<attr::AriaRoledescription, Signal<Option<String>>>,
-        On<ev::beforeinput, SharedEventCallback<InputEvent>>,
-        On<ev::compositionstart, SharedEventCallback<CompositionEvent>>,
-        On<ev::compositionend, SharedEventCallback<CompositionEvent>>,
-        On<ev::paste, SharedEventCallback<ClipboardEvent>>,
-        On<ev::wheel, SharedEventCallback<WheelEvent>>,
+        OnEvent<ev::beforeinput>,
+        OnEvent<ev::compositionstart>,
+        OnEvent<ev::compositionend>,
+        OnEvent<ev::paste>,
+        OnEvent<ev::wheel>,
     ),
 );
 
@@ -274,7 +279,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     });
 
     // Enter commits; its default action (submitting the form) is kept.
-    let shortcuts = KeyboardShortcuts::new().on(Shortcut::key("Enter"), move |_| {
+    let shortcuts = KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::Enter), move |_| {
         if inactive() {
             return ShortcutOutcome::Ignored;
         }
@@ -291,39 +296,41 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     let has_negative =
         T::lower_bound(state.min_value.get_untracked()).is_none_or(|min| min < T::ZERO);
     let has_decimals = !T::IS_INTEGER
-        && state.format_options.with_untracked(|options| {
-            options
-                .maximum_fraction_digits
-                .unwrap_or(match options.style {
-                    NumberStyle::Percent => 0,
-                    NumberStyle::Currency => 2,
-                    NumberStyle::Decimal | NumberStyle::Unit => 3,
-                })
-                > 0
-        });
-    let input_mode = if device::is_iphone() {
-        if has_negative {
-            InputMode::Text
-        } else if has_decimals {
+        && state
+            .format_options
+            .with_untracked(|options| options.fraction_digits().1 > 0);
+    let is_iphone = use_platform_check(device::is_iphone);
+    let is_android = use_platform_check(device::is_android);
+    let input_mode = Signal::derive(move || {
+        Some(if is_iphone.get() {
+            if has_negative {
+                InputMode::Text
+            } else if has_decimals {
+                InputMode::Decimal
+            } else {
+                InputMode::Numeric
+            }
+        } else if is_android.get() && !has_negative && has_decimals {
             InputMode::Decimal
         } else {
             InputMode::Numeric
-        }
-    } else if device::is_android() && !has_negative && has_decimals {
-        InputMode::Decimal
-    } else {
-        InputMode::Numeric
-    };
+        })
+    });
+    let is_ios = use_platform_check(device::is_ios);
 
     // Typing changes the text only while it is (the beginning of) a valid number.
-    let text_state = TextFieldState::new(
-        state.input_value,
-        Callback::new(move |text: String| {
-            if state.validate(text.clone()) {
-                state.set_input_value(text);
-            }
-        }),
-    );
+    let text_state = use_text_field_state(UseTextFieldStateInput {
+        default_value: String::new(),
+        value: Some(crate::ValueBinding::new(
+            state.input_value,
+            Callback::new(move |text: String| {
+                if state.validate(&text) {
+                    state.set_input_value(text);
+                }
+            }),
+        )),
+        on_change: None,
+    });
     let UseTextFieldReturn {
         label_props,
         input_props: mut text_field_props,
@@ -346,7 +353,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         auto_complete: Some("off".to_owned()),
         auto_correct: Some(false),
         spell_check: Some(false),
-        input_mode: Some(input_mode),
+        input_mode,
         auto_focus,
         has_label,
         aria_label,
@@ -388,20 +395,26 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         use_native_range_validation(state, element);
     }
 
+    // Announced as the value formatted with a minus sign (an accounting format's parentheses
+    // aren't read as negative), not as the text being typed.
+    let text_value_formatter = use_number_formatter(Signal::derive(move || NumberFormatOptions {
+        currency_sign: CurrencySign::Standard,
+        ..state.format_options.get()
+    }));
     // The spin button's keyboard handling (arrows, Page Up/Down, Home/End), not its role.
     let UseSpinButtonReturn {
         props: spin,
         increment_button: spin_increment_button,
         decrement_button: spin_decrement_button,
     } = use_spin_button(UseSpinButtonInput {
-        value: Signal::derive(move || state.number_value.get().map(NumberValue::to_f64)),
-        text_value: Signal::derive(move || Some(state.input_value.get())),
-        min_value: Signal::derive(move || {
-            T::lower_bound(state.min_value.get()).map(NumberValue::to_f64)
+        value: state.number_value,
+        text_value: Signal::derive(move || {
+            Some(state.number_value.get().map_or_else(String::new, |value| {
+                text_value_formatter.with(|formatter| formatter.format(value))
+            }))
         }),
-        max_value: Signal::derive(move || {
-            T::upper_bound(state.max_value.get()).map(NumberValue::to_f64)
-        }),
+        min_value: Signal::derive(move || T::lower_bound(state.min_value.get())),
+        max_value: Signal::derive(move || T::upper_bound(state.max_value.get())),
         is_disabled,
         is_read_only,
         is_required,
@@ -528,8 +541,8 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             }),
             aria_controls: Signal::stored(Some(input_id.clone())),
             exclude_from_tab_order: Signal::stored(true),
-            prevent_focus_on_press: true,
-            allow_focus_when_disabled: true,
+            prevent_focus_on_press: true.into(),
+            allow_focus_when_disabled: true.into(),
             is_disabled: Signal::derive(move || !can_step.get()),
             on_press_start: chain_optional_callbacks(
                 spin_button.on_press_start,
@@ -563,7 +576,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             text_field: text_field_props,
             // Not on iOS, so that VoiceOver announces the required state.
             aria_roledescription: Signal::derive(move || {
-                (!device::is_ios()).then(|| strings.read().number_field())
+                (!is_ios.get()).then(|| strings.read().number_field())
             }),
             on_beforeinput,
             on_compositionstart,

@@ -9,7 +9,7 @@ pub fn PageScroll() -> impl IntoView {
     view! {
         <DocPage title="scroll">
             <p>
-                "The functions of "<Code inline=true>"leptonic::utils::scroll"</Code>" find the elements that scroll and "
+                "The functions of "<Code inline=true>"leptonic"</Code>" find the elements that scroll and "
                 "bring an element into view inside them. Collections use them to keep the focused item visible, "
                 <Link href=routes::doc::grid::Hook.materialize()>"grid cells"</Link>" to scroll themselves into the "
                 "viewport; use them when you move focus or selection in a scrolling container yourself. Unlike the "
@@ -22,7 +22,7 @@ pub fn PageScroll() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::scroll::{ScrollAlignment, ScrollIntoViewOpts, scroll_into_view};
+                        use leptonic::{ScrollAlignment, ScrollIntoViewOpts, scroll_into_view};
 
                         // `list` and `item` are `web_sys::HtmlElement`s: keep the item visible in the list.
                         scroll_into_view(&list, &item, ScrollIntoViewOpts {

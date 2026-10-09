@@ -1,4 +1,6 @@
 // Upstream: react-stately/src/virtualizer/Virtualizer.ts @ 99e6102368
+// Upstream: react-stately/src/virtualizer/utils.ts @ 99e6102368
+// Upstream: react-stately/src/virtualizer/ReusableView.ts @ 99e6102368
 use std::{collections::HashSet, sync::Arc};
 
 use super::{
@@ -21,6 +23,10 @@ use crate::{
 //   invalidation generation.
 // - The layout gets the virtualizer's state as a `VirtualizerContext` argument (react-stately:
 //   a `virtualizer` back reference).
+//
+// - The views stay in layout order while scrolling (react-stately keeps their order and puts new
+//   ones last until the scrolling ends, sparing DOM moves): the renderer mounts each new row
+//   before its successor and leaves mounted rows in place, so a scroll needs no reordering pass.
 //
 // ## ADDITIONS
 // - Anchoring that switches on (the layout's scroll anchor info appearing, e.g. a log's "follow"
@@ -258,25 +264,9 @@ impl<L: Layout> Virtualizer<L> {
     }
 
     fn update_subviews(&mut self) {
-        let infos = self.visible_layout_infos();
-        if self.is_scrolling {
-            // Reordering DOM nodes is costly: while scrolling, the views keep their order and
-            // new ones go last (the position is absolute, the order matters for assistive
-            // technology only and is fixed once scrolling stops).
-            let mut ordered: Vec<LayoutInfo> = self
-                .visible
-                .iter()
-                .filter_map(|view| infos.iter().find(|info| info.key == view.key).cloned())
-                .collect();
-            for info in infos {
-                if !ordered.iter().any(|view| view.key == info.key) {
-                    ordered.push(info);
-                }
-            }
-            self.visible = ordered;
-        } else {
-            self.visible = infos;
-        }
+        // In layout order (react-stately keeps the views' order while scrolling, as reordering
+        // DOM nodes is costly there; the renderer here never moves a mounted row anyway).
+        self.visible = self.visible_layout_infos();
     }
 
     /// Lays out what changed and returns the views to render.
@@ -349,13 +339,8 @@ impl<L: Layout> Virtualizer<L> {
             self.invalidation = invalidation;
             self.invalidation_generation = Some(invalidation_generation);
         }
-        if is_scrolling != self.is_scrolling {
-            self.is_scrolling = is_scrolling;
-            if !is_scrolling {
-                // Fix the order after scrolling.
-                needs_update = true;
-            }
-        }
+        // Only for the anchor: the views' order doesn't depend on it (see `update_subviews`).
+        self.is_scrolling = is_scrolling;
 
         let mut scroll_to = None;
         if needs_layout {
@@ -387,7 +372,7 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::hooks::virtualizer::{ListLayout, ListLayoutOptions, ScrollAnchorEdge};
+    use crate::hooks::virtualizer::{EndAnchor, ItemSize, ListLayout, ListLayoutOptions};
 
     fn rows(count: usize) -> Arc<Collection> {
         Arc::new(Collection::build(|b| {
@@ -426,7 +411,7 @@ mod tests {
     fn renders_the_visible_rows_of_fixed_size() {
         let collection = rows(1000);
         let mut virtualizer = Virtualizer::new(ListLayout::new(ListLayoutOptions {
-            row_size: Some(48.0),
+            row_size: ItemSize::Fixed(48.0),
             ..ListLayoutOptions::default()
         }));
         let result = virtualizer.render(input(&collection, 0.0, 0));
@@ -447,12 +432,12 @@ mod tests {
     fn the_first_render_applies_its_layout_options() {
         let collection = rows(10);
         let mut virtualizer = Virtualizer::new(ListLayout::new(ListLayoutOptions {
-            row_size: Some(32.0),
+            row_size: ItemSize::Fixed(32.0),
             ..ListLayoutOptions::default()
         }));
         let mut first = input(&collection, 0.0, 0);
         first.invalidation.layout_options = Some(ListLayoutOptions {
-            row_size: Some(48.0),
+            row_size: ItemSize::Fixed(48.0),
             ..ListLayoutOptions::default()
         });
         virtualizer.render(first);
@@ -463,7 +448,7 @@ mod tests {
     fn measures_estimated_rows() {
         let collection = rows(100);
         let mut virtualizer = Virtualizer::new(ListLayout::new(ListLayoutOptions {
-            estimated_row_size: Some(20.0),
+            row_size: ItemSize::Estimated(20.0),
             ..ListLayoutOptions::default()
         }));
         let result = virtualizer.render(input(&collection, 0.0, 0));
@@ -485,7 +470,7 @@ mod tests {
     fn keeps_persisted_keys_and_lays_out_far_keys() {
         let collection = rows(1000);
         let mut virtualizer = Virtualizer::new(ListLayout::new(ListLayoutOptions {
-            row_size: Some(48.0),
+            row_size: ItemSize::Fixed(48.0),
             ..ListLayoutOptions::default()
         }));
         let mut first = input(&collection, 0.0, 0);
@@ -500,8 +485,8 @@ mod tests {
     #[test]
     fn stays_at_the_end_when_rows_are_appended() {
         let mut virtualizer = Virtualizer::new(ListLayout::new(ListLayoutOptions {
-            row_size: Some(48.0),
-            anchor_to: Some(ScrollAnchorEdge::End),
+            row_size: ItemSize::Fixed(48.0),
+            anchor_to_end: Some(EndAnchor::default()),
             ..ListLayoutOptions::default()
         }));
         // The first anchored layout snaps to the end.

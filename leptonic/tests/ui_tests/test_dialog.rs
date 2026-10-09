@@ -1,31 +1,41 @@
 // Upstream: react-aria-components/test/Dialog.test.js @ 99e6102368
+// Upstream: react-aria/test/dialog/useDialog.test.js @ 99e6102368
 //! Behavior of the dialog hook (through the `Dialog` atom in a modal): `role="dialog"` named by
 //! `aria_label`, focused when the modal opens (the first button with `auto_focus`), closing with
 //! Escape (the focused dialog's removal must not fail) or the dismiss button of a dismissable
 //! modal, restoring focus to the opener, sibling modals, and no `aria-modal` (react-aria-components:
-//! the inert page makes the modal modal).
+//! the inert page makes the modal modal); descriptions, the missing-title warning, and focus kept
+//! inside a shadow root.
 //! Spec: react-aria-components `Dialog.test.js`.
-use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use assertr::{
+    matchers::{eq, satisfying},
+    prelude::*,
+};
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions};
+use crate::pages::{ElementActions, Page, WebElement};
 
 const PATH: &str = "/atoms/dialog";
 
-/// "should be focused when opened": the dialog itself takes the focus. A dismissable modal has no
-/// `aria-modal` (WebKit bug 211934) and starts with a visually hidden dismiss button for screen
-/// reader users (react-aria-components' `Modal`), which closes it and restores focus.
+/// Opening a dismissable modal focuses its dialog, named by `aria_label`, without `aria-modal`;
+/// its visually hidden Dismiss button closes it and returns focus to the opener ("has dismiss
+/// button when isDismissable").
+#[browser_test]
 pub async fn dismiss_button_closes(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let opener = page.element("#test-dialog-open").await?;
     let is_open = page.element("#test-dialog-is-open").await?;
     opener.click().await?;
     let dialog = page.element("[role=dialog]").await?;
-    assert_that!(dialog.attr("aria-label").await?)
-        .get_some()
+    assert_that!(dialog)
+        .has_attribute("aria-label")
+        .await
         .is_equal_to("Settings");
-    assert_that!(dialog.attr("aria-labelledby").await?).is_none();
+    assert_that!(dialog)
+        .attribute("aria-labelledby")
+        .await
+        .is_none();
     page.wait_for_focus(&dialog).await?;
     assert_that!(page.count(".leptonic-ModalContent[aria-modal]").await?).is_equal_to(0);
     assert_that!(
@@ -45,6 +55,7 @@ pub async fn dismiss_button_closes(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Escape closes the dialog and focus returns to the opener.
+#[browser_test]
 pub async fn escape_closes(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let opener = page.element("#test-dialog-open").await?;
@@ -61,10 +72,11 @@ pub async fn escape_closes(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// A second modal in the same owner (an alert dialog with `Button` atoms, opened by a `Button`
-/// atom) gets its own backdrop's props: it is the topmost overlay, so Escape closes it. The alert
-/// dialog takes the focus, not its first (maybe destructive) button; it is not dismissable, named
-/// by its `DialogTitle` and described by its `DialogDescription`.
+/// An alert dialog takes the focus itself rather than its first button, has no Dismiss button and
+/// is named by its title and described by its description; Escape closes it and returns focus to
+/// the opener ("works with modal", "should set aria-describedby when Text slot="description" is
+/// used in alertdialog").
+#[browser_test]
 pub async fn alert_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let opener = page.element("#test-dialog-open-other").await?;
@@ -78,9 +90,15 @@ pub async fn alert_dialog(page: &Page<'_>) -> Result<(), Report> {
     .is_equal_to(0);
     let title = alert.element("h2").await?;
     let title_id = title.id().await?;
-    assert_that!(alert.attr("aria-labelledby").await?).is_equal_to(title_id);
-    assert_that!(title.inner_text().await?).is_equal_to("Other");
-    assert_that!(alert.referenced_text("aria-describedby").await?).is_equal_to("Leave this page?");
+    assert_that!(alert)
+        .attribute("aria-labelledby")
+        .await
+        .is_equal_to(title_id);
+    assert_that!(title).inner_text().await.is_equal_to("Other");
+    assert_that!(alert)
+        .accessible_description()
+        .await
+        .is_equal_to("Leave this page?");
 
     page.send_keys(Key::Escape).await?;
     page.wait_for_count("[role=alertdialog]", 0).await?;
@@ -88,7 +106,9 @@ pub async fn alert_dialog(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Opened with the keyboard, closed from inside (a button calling `on_close`).
+/// An alert dialog opened with Enter closes when its own close button is pressed with Enter, and
+/// focus returns to the opener ("works with modal").
+#[browser_test]
 pub async fn keyboard_open_and_close_from_inside(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let opener = page.element("#test-dialog-open-other").await?;
@@ -106,7 +126,9 @@ pub async fn keyboard_open_and_close_from_inside(page: &Page<'_>) -> Result<(), 
     Ok(())
 }
 
-/// Opened and closed with the keyboard.
+/// An alert dialog opened with Enter takes the focus and closes on Escape, returning focus to the
+/// opener.
+#[browser_test]
 pub async fn keyboard_open_and_escape(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let opener = page.element("#test-dialog-open-other").await?;
@@ -121,9 +143,10 @@ pub async fn keyboard_open_and_escape(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// A button inside a modal opened by a `DialogTrigger` doesn't press through the trigger's
-/// responder: it counts, the modal stays open. A modal nested in its markup: Escape closes only
-/// the nested one, focus returns to its trigger inside the outer modal.
+/// A button inside a modal opened by a `DialogTrigger` works without pressing the trigger, so the
+/// modal stays open; Escape in a modal nested in it closes only the nested one and returns focus
+/// to its trigger.
+#[browser_test]
 pub async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
     const TRIGGERED: &str = "[role=dialog][aria-label=Triggered]";
     const NESTED: &str = "[role=dialog][aria-label=Nested]";
@@ -152,6 +175,7 @@ pub async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
 
 /// Backdrop and modal animate in and out; they stay rendered until the exit animations ended,
 /// then focus returns to the opener.
+#[browser_test]
 pub async fn animated_modal(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let opener = page.element("#test-dialog-open-animated").await?;
@@ -168,7 +192,9 @@ pub async fn animated_modal(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Opting into `auto_focus`: the first button takes the focus instead of the dialog.
+/// With `auto_focus`, the dialog's first button takes the focus instead of the dialog; Escape
+/// closes it and returns focus to the opener.
+#[browser_test]
 pub async fn auto_focus(page: &Page<'_>) -> Result<(), Report> {
     const DIALOG: &str = "[role=dialog][aria-label='Auto focus']";
     page.goto_path(PATH).await?;
@@ -181,4 +207,109 @@ pub async fn auto_focus(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_count(DIALOG, 0).await?;
     page.wait_for_focus(&opener).await?;
     Ok(())
+}
+
+/// Opens the modal of `#test-dialog-open-<name>` and returns its dialog.
+async fn open(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
+    page.goto_path(PATH).await?;
+    page.element(format!("#test-dialog-open-{name}"))
+        .await?
+        .click()
+        .await?;
+    page.element(".leptonic-ModalContent .leptonic-Dialog")
+        .await
+}
+
+/// A regular dialog isn't described by its description, which still has an id (useDialog.test.js
+/// "should not auto-wire aria-describedby on regular dialog, but contentProps.id is still
+/// provided").
+#[browser_test]
+pub async fn regular_dialog_not_described(page: &Page<'_>) -> Result<(), Report> {
+    let dialog = open(page, "described").await?;
+    assert_that!(dialog)
+        .has_attribute("role")
+        .await
+        .is_equal_to("dialog");
+    assert_that!(dialog)
+        .attribute("aria-describedby")
+        .await
+        .is_none();
+    let description = dialog.element(".leptonic-DialogDescription").await?;
+    assert_that!(description)
+        .has_attribute("id")
+        .await
+        .is_not_empty();
+    Ok(())
+}
+
+/// An alert dialog's `aria_describedby` replaces its description as what describes it
+/// (useDialog.test.js "should allow aria-describedby override on alertdialog").
+#[browser_test]
+pub async fn alert_dialog_describedby_override(page: &Page<'_>) -> Result<(), Report> {
+    let dialog = open(page, "override").await?;
+    assert_that!(dialog)
+        .has_attribute("aria-describedby")
+        .await
+        .is_equal_to("test-dialog-custom-description");
+    assert_that!(dialog)
+        .accessible_description()
+        .await
+        .is_equal_to("A custom description.");
+    Ok(())
+}
+
+/// A dialog without title, `aria_label` or `aria_labelledby` logs a warning once rendered
+/// (useDialog.test.js "should warn when dialog has no accessible title").
+#[browser_test]
+pub async fn untitled_dialog_warns(page: &Page<'_>) -> Result<(), Report> {
+    open(page, "untitled").await?;
+    assert_that!(|| warnings(page))
+        .eventually_ok()
+        .satisfies(|warnings| {
+            warnings.contains_matching(satisfying(|warning: AssertThat<String, Capture>| {
+                warning.contains("A dialog must have a title");
+            }));
+        })
+        .await;
+    // The warning was expected: the page check must not fail on it.
+    crate::fixtures::take_warnings(page, "A dialog must have a title", 1).await?;
+    Ok(())
+}
+
+/// Dialogs named by `aria_label`, by `aria_labelledby` or by a title log no warning
+/// (useDialog.test.js "should not warn when aria-label is provided", "should not warn when
+/// aria-labelledby is provided", "should not warn when a title element is rendered").
+#[browser_test]
+pub async fn named_dialogs_dont_warn(page: &Page<'_>) -> Result<(), Report> {
+    for name in ["autofocus", "labelledby", "described"] {
+        open(page, name).await?;
+        // The check runs once the dialog rendered (an effect after mount).
+        page.settle().await?;
+        assert_that!(|| warnings(page))
+            .consistently_ok()
+            .for_at_least(std::time::Duration::from_millis(100))
+            .matches(eq(Vec::<String>::new()))
+            .await;
+    }
+    Ok(())
+}
+
+/// A dialog whose content focused an element inside a shadow root when it mounted keeps that
+/// focus instead of taking it (useDialog.test.js "should not focus the overlay if something inside
+/// is auto focused", across a shadow root).
+#[browser_test]
+pub async fn keeps_focus_inside_a_shadow_root(page: &Page<'_>) -> Result<(), Report> {
+    open(page, "shadow").await?;
+    let host = page.element("#test-dialog-shadow-host").await?;
+    page.wait_for_focus(&host).await?;
+    page.focus_stays(&host, std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
+}
+
+/// The console warnings the page logged.
+async fn warnings(page: &Page<'_>) -> Result<Vec<String>, Report> {
+    Ok(crate::pages::health::diagnostics(page.low_level().driver())
+        .await?
+        .console_warnings)
 }

@@ -1,17 +1,22 @@
 // Upstream: react-stately/src/table/useTableState.ts @ 99e6102368
-use std::{collections::HashSet, sync::Arc};
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TreeGridTable.test.tsx @ 99e6102368
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use leptos::prelude::*;
 
-use super::TableCollection;
+use super::{Column, ColumnKind, TableCollection};
 use crate::{
+    ValueBinding,
     hooks::{
-        GridFocusMode, GridState, TreeExpansion, UseGridStateInput,
-        collections::{CollectionMemo, Key, SelectionOptions},
-        tree::use_tree_state::use_tree_expansion,
-        use_grid_state,
+        collections::{CollectionMemo, Key, SelectionMode, SelectionOptions},
+        grid::{GridFocusMode, GridState, UseGridStateInput, use_grid_state},
+        gridlist::{TreeRowPosition, tree_row_positions},
+        tree::{TreeExpansion, use_tree_state::use_tree_expansion},
     },
-    utils::ValueBinding,
 };
 
 // =============================================================================
@@ -22,8 +27,9 @@ use crate::{
 // - Hook-owned sort state (C4): `default_sort_descriptor` and `on_sort_change`, or
 //   `sort_descriptor` bound to app state, instead of a controlled `sortDescriptor`. Sorting the
 //   rows is up to the caller: rebuild the table collection from the sort descriptor.
-// - The table collection is built by the caller (`TableCollection::build_with`, which also adds
-//   the selection checkbox column) instead of from JSX children.
+// - The table collection is built by the caller (`TableCollection::build`) instead of from JSX
+//   children; the state adds the selection checkbox column (`show_selection_checkboxes`, while
+//   the selection mode isn't `None`, as react-stately).
 // - react-aria defaults a table's `disabledBehavior` to `selection`; here the caller sets
 //   `selection.disabled_behavior` (the table atoms use `DisabledBehavior::Selection`).
 //
@@ -63,6 +69,9 @@ pub struct SortDescriptor {
 pub struct UseTableStateInput {
     /// The columns and rows.
     pub table: Memo<Arc<TableCollection>>,
+    /// Add a first column of checkboxes selecting the rows (and all rows, in its header), while
+    /// the selection mode isn't `None` (see `TableCollection::with_selection_column`).
+    pub show_selection_checkboxes: Signal<bool>,
     pub selection: SelectionOptions,
     pub focus_mode: GridFocusMode,
     /// The initial sorting. Ignored when `sort_descriptor` is bound.
@@ -96,6 +105,9 @@ pub struct TableTree {
     column: StoredValue<Key>,
     /// Which rows are expanded.
     pub expansion: TreeExpansion,
+    /// Every row's position (of all rows, collapsed ones' child rows too), computed once per
+    /// table change.
+    positions: Memo<Arc<HashMap<Key, TreeRowPosition>>>,
 }
 
 impl TableTree {
@@ -108,15 +120,26 @@ impl TableTree {
     pub fn is_tree_column(&self, column: &Key) -> bool {
         self.column.with_value(|tree_column| tree_column == column)
     }
+
+    /// The position of the row `key`: its level, its position among its sibling rows and their
+    /// number (tracked).
+    pub fn position(&self, key: &Key) -> Option<TreeRowPosition> {
+        self.positions.with(|positions| positions.get(key).copied())
+    }
 }
 
 /// The state of a table: its grid state (rows, cells, selection, focus) and its sorting.
 #[derive(Debug, Clone, Copy)]
 pub struct TableState {
     pub grid: GridState,
-    /// The columns and rows. In a tree table also the child rows of collapsed rows (the grid's
-    /// collection, `grid.list.collection`, holds the visible rows).
+    /// The columns and rows, with the selection checkbox column while it is shown. In a tree
+    /// table also the child rows of collapsed rows (the grid's collection,
+    /// `grid.list.collection`, holds the visible rows).
     pub table: Memo<Arc<TableCollection>>,
+    /// The table's columns: the data columns in order (the selection checkbox column too), then
+    /// the column groups. Changes only when the columns do, not with the rows: read it instead
+    /// of `table` for what depends only on the columns.
+    pub columns: Memo<Arc<[Column]>>,
     /// Set in a tree table.
     pub tree: Option<TableTree>,
     /// The current sorting, if any.
@@ -149,6 +172,7 @@ impl TableState {
 pub fn use_table_state(input: UseTableStateInput) -> TableState {
     let UseTableStateInput {
         table,
+        show_selection_checkboxes,
         selection,
         focus_mode,
         default_sort_descriptor,
@@ -165,8 +189,32 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
         TableTree {
             column: StoredValue::new(tree.column),
             expansion,
+            // Recomputed only when the table changes, and then always a change.
+            positions: Memo::new_with_compare(
+                move |_| table.with(|t| Arc::new(tree_row_positions(t.collection()))),
+                |_, _| true,
+            ),
         }
     });
+    // The selection checkbox column, while rows can be selected (react-stately).
+    let selection_mode = selection.selection_mode;
+    let table = Memo::new_with_compare(
+        move |_| {
+            let shown =
+                show_selection_checkboxes.get() && selection_mode.get() != SelectionMode::None;
+            table.with(|t| {
+                if shown {
+                    Arc::new(t.with_selection_column())
+                } else {
+                    t.clone()
+                }
+            })
+        },
+        // The same table (the caller's, unchanged) compares by pointer; a rebuilt one is new.
+        |previous, next| {
+            previous.is_none_or(|previous| !next.is_some_and(|next| Arc::ptr_eq(previous, next)))
+        },
+    );
     // A tree table's visible rows: child rows of expanded rows only.
     let collection: CollectionMemo = Memo::new(move |_| match tree {
         Some(tree) => tree
@@ -183,9 +231,24 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
     .without_navigation_while_empty();
     let binding = sort_descriptor
         .unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_sort_descriptor)));
+    let columns = Memo::new(move |_| {
+        table.with(|t| {
+            let groups = t
+                .header_rows()
+                .iter()
+                .flat_map(|row| t.collection().children(row))
+                .filter_map(|node| t.column(&node.key))
+                .filter(|column| column.kind == ColumnKind::Group);
+            t.columns()
+                .chain(groups)
+                .cloned()
+                .collect::<Arc<[Column]>>()
+        })
+    });
     TableState {
         grid,
         table,
+        columns,
         tree,
         sort_descriptor: binding.value,
         binding,
@@ -202,7 +265,7 @@ mod tests {
 
     #[test]
     fn sorting_a_column_again_reverses_the_direction() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let table = Memo::new(|_| {
                 Arc::new(TableCollection::build(|t| {
                     t.column("name", "Name").allows_sorting();
@@ -211,6 +274,7 @@ mod tests {
             });
             let changes = RwSignal::new(Vec::new());
             let state = use_table_state(UseTableStateInput {
+                show_selection_checkboxes: Signal::stored(false),
                 tree: None,
                 on_sort_change: Some(Callback::new(move |d: SortDescriptor| {
                     changes.update(|c| c.push(d));
@@ -247,7 +311,7 @@ mod tests {
 
     #[test]
     fn a_bound_sort_descriptor_is_shown_written_and_cleared() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let table = Memo::new(|_| {
                 Arc::new(TableCollection::build(|t| {
                     t.column("name", "Name").allows_sorting();
@@ -255,6 +319,7 @@ mod tests {
             });
             let sort = RwSignal::new(None);
             let state = use_table_state(UseTableStateInput {
+                show_selection_checkboxes: Signal::stored(false),
                 tree: None,
                 sort_descriptor: Some(sort.into()),
                 table,

@@ -27,14 +27,14 @@ pub fn PageAtomKbd() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude as atoms, utils::keyboard_shortcut::Shortcut};
+                        use leptonic::{Shortcut, atoms};
                         use leptos::prelude::*;
 
-                        const SEARCH: Shortcut = Shortcut::key("k").primary();
+                        const SEARCH: Shortcut = Shortcut::new(KeyboardKey::K).primary();
 
                         view! {
                             // "Ctrl + K", or "⌘K" on Apple devices.
-                            <p>"Search with "<atoms::ShortcutKeys shortcut=SEARCH classes="my-keys"/>"."</p>
+                            <p>"Search with "<atoms::kbd::ShortcutKeys shortcut=SEARCH classes="my-keys"/>"."</p>
                         }
                     "#)}
                 </Code>
@@ -108,11 +108,11 @@ pub fn PageAtomKbd() -> impl IntoView {
                     </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{atoms::prelude::Keys, utils::keyboard_shortcut::Shortcut};
+                            use leptonic::{Shortcut, atoms::kbd::Keys};
                             use leptos::prelude::*;
 
                             // [Control, Shift, Z]; with `true`: [Shift, Command, Z].
-                            let keys = Shortcut::key("z").primary().shift().keys(false);
+                            let keys = Shortcut::new(KeyboardKey::Z).primary().shift().keys(false);
 
                             view! { <Keys keys separators=false classes="my-keys"/> }
                         "#)}
@@ -202,12 +202,12 @@ pub fn PageAtomKbd() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        <atoms::MenuItem key="copy">
-                            <atoms::MenuItemLabel>"Copy"</atoms::MenuItemLabel>
-                            <atoms::MenuItemShortcut>
-                                <atoms::ShortcutKeys shortcut=Shortcut::key("c").primary() classes="my-keys"/>
-                            </atoms::MenuItemShortcut>
-                        </atoms::MenuItem>
+                        <atoms::menu::MenuItem key="copy">
+                            <atoms::menu::MenuItemLabel>"Copy"</atoms::menu::MenuItemLabel>
+                            <atoms::menu::MenuItemShortcut>
+                                <atoms::kbd::ShortcutKeys shortcut=Shortcut::new(KeyboardKey::C).primary() classes="my-keys"/>
+                            </atoms::menu::MenuItemShortcut>
+                        </atoms::menu::MenuItem>
                     "#)}
                 </Code>
             </Section>

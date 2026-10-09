@@ -29,17 +29,11 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
                         "Ignore focus events while true. Disabling it while the child is focused removes both data attributes."
                     </ApiRow>
-                    <ApiRow name="within" ty="bool" default="false">
-                        "Track focus anywhere inside the child instead of on the child itself."
-                    </ApiRow>
                     <ApiRow name="is_text_input" ty="bool" default="false">
                         "Set this when the child behaves like a text input without being one (e.g. a date segment): typing "
                         "in it doesn\u{2019}t make focus visible, only "<Keys keys="Tab"/>" and "<Keys keys="Escape"/>
                         " do. Real text inputs follow this rule anyway, see "
                         <Link href=format!("{}#text-input-mode", routes::doc::focus::UseFocusRing.materialize())>"use_focus_ring"</Link>"."
-                    </ApiRow>
-                    <ApiRow name="auto_focus" ty="bool" default="false">
-                        "Set this when the child is focused on mount: the ring then starts out visible. It does not focus the child."
                     </ApiRow>
                     <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">
                         "Called when the child receives or loses focus."
@@ -48,13 +42,14 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                         "Called with the new focus state."
                     </ApiRow>
                     <ApiRow name="children" ty="Children">"The element to track. Must render a single element. Required."</ApiRow>
+                    <ApiRow name="target" ty="FocusRingTarget" default="FocusRingTarget::Element">"Track the element itself or focus anywhere in its subtree."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::FocusRing;
+                        use leptonic::atoms::focus_ring::FocusRing;
 
                         view! {
                             <FocusRing>

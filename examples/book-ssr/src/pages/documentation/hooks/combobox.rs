@@ -49,9 +49,18 @@ pub fn PageUseCombobox() -> impl IntoView {
                     {indoc!(r#"
                         use std::collections::HashSet;
 
-                        use leptonic::hooks::{
-                            ComboBoxMenuTrigger, Key, SelectMode, UseComboBoxStateInput, ValidationBehavior, use_collection,
-                            use_combobox_state, use_contains_filter,
+                        use leptonic::{
+                            hooks::{
+                                collections::{Key, use_collection},
+                                combobox::{
+                                    ComboBoxMenuTrigger,
+                                    UseComboBoxStateInput,
+                                    use_combobox_state,
+                                    use_contains_filter,
+                                },
+                                form::ValidationBehavior,
+                                select::SelectMode,
+                            },
                         };
                         use leptos::{logging::log, prelude::*};
 
@@ -96,7 +105,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "All options. Items marked "<Code inline=true>".disabled(true)"</Code>" can\u{2019}t be focused or selected."
                         </ApiRow>
                         <ApiRow name="filter" ty="Option<ComboBoxFilter>" default="None">
-                            "Decides which options match the input text: a function of the option text and the input text. "
+                            "Prepares a matcher for the current input text, then applies it to each option text. "
                             <Code inline=true>"use_contains_filter()"</Code>" matches options containing the input, ignoring "
                             "case and accents in the current locale. "<Code inline=true>"None"</Code>" shows the collection as "
                             "is, e.g. when you filter on the server."
@@ -125,13 +134,13 @@ pub fn PageUseCombobox() -> impl IntoView {
                         <ApiRow name="disabled_keys" ty="Signal<HashSet<Key>>" default="empty">
                             "Further options that can\u{2019}t be focused or selected."
                         </ApiRow>
-                        <ApiRow name="menu_trigger" ty="ComboBoxMenuTrigger" default="Input">
+                        <ApiRow name="menu_trigger" ty="Signal<ComboBoxMenuTrigger>" default="Input">
                             "When the popover opens, see "<AnchorLink href="#opening-the-popover">"Opening the Popover"</AnchorLink>"."
                         </ApiRow>
-                        <ApiRow name="allows_empty_collection" ty="bool" default="false">
+                        <ApiRow name="allows_empty_collection" ty="Signal<bool>" default="false">
                             "Keep the popover open when no option matches, e.g. to show an empty state."
                         </ApiRow>
-                        <ApiRow name="allows_custom_value" ty="bool" default="false">
+                        <ApiRow name="allows_custom_value" ty="Signal<bool>" default="false">
                             "Keep text that matches no option, see "<AnchorLink href="#custom-values">"Custom Values"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="should_close_on_blur" ty="bool" default="true">
@@ -330,7 +339,20 @@ pub fn PageUseCombobox() -> impl IntoView {
                 <Section title="Example" id="use-combobox-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::{
+                                button::use_button,
+                                combobox::{
+                                    ComboBoxFormValue,
+                                    UseComboBoxInput,
+                                    UseComboBoxReturn,
+                                    use_combobox,
+                                },
+                                form::{UseTextFieldReturn, use_text_field},
+                                listbox::{use_listbox, use_option},
+                            },
+                        };
                         use leptos::prelude::*;
 
                         let popover = CapturedElement::new();
@@ -432,6 +454,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "Called when focus enters or leaves the combobox. Focus moving between the input, the button and "
                             "the popover doesn\u{2019}t count."
                         </ApiRow>
+                        <ApiRow name="button_element" ty="CapturedElement" default="CapturedElement::new()">"Capture of the popup button; attach it to the button element."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -487,10 +510,11 @@ pub fn PageUseCombobox() -> impl IntoView {
                     {indoc!(r"
                         use std::sync::Arc;
 
-                        use leptonic::hooks::ComboBoxFilter;
+                        use leptonic::hooks::combobox::ComboBoxFilter;
 
-                        let starts_with: ComboBoxFilter = Arc::new(|text: &str, input: &str| {
-                            text.to_lowercase().starts_with(&input.to_lowercase())
+                        let starts_with: ComboBoxFilter = Arc::new(|input: &str| {
+                            let input = input.to_lowercase();
+                            Box::new(move |text: &str| text.to_lowercase().starts_with(&input))
                         });
                     ")}
                 </Code>

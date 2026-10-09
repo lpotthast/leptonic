@@ -2,9 +2,8 @@ use std::collections::HashSet;
 
 use leptonic::{
     atoms::grid_list::{GridList, GridListItem},
-    hooks::{
-        SelectionMode,
-        collections::{Key, Selection, use_list_collection},
+    hooks::collections::{
+        Key, Selection, SelectionMode, UseListCollectionInput, use_list_collection,
     },
 };
 use leptos::prelude::*;
@@ -16,11 +15,11 @@ const FOLDERS: [&str; 5] = ["Inbox", "Drafts", "Spam", "Sent", "Trash"];
 /// A multi-select grid list. "Spam" is disabled.
 #[component]
 pub fn PageAtomGridList() -> impl IntoView {
-    let folders = use_list_collection(
-        Signal::stored(FOLDERS.to_vec()),
-        |folder| Key::from(*folder),
-        |folder| (*folder).to_owned(),
-    );
+    let folders = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FOLDERS.to_vec()),
+        key: |folder| Key::from(*folder),
+        text_value: |folder| (*folder).to_owned(),
+    });
     let selection = RwSignal::new(String::new());
 
     view! {

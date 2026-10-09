@@ -1,9 +1,10 @@
 use leptonic::{
     atoms::{
         grid_list::{GridList, GridListItem},
-        prelude::{ContextMenuTrigger, Menu, MenuItems, Popover, use_context_menu_target},
+        menu::{ContextMenuTrigger, Menu, MenuItems, use_context_menu_target},
+        popover::Popover,
     },
-    hooks::collections::{Key, use_collection, use_list_collection},
+    hooks::collections::{Key, UseListCollectionInput, use_collection, use_list_collection},
 };
 use leptos::prelude::*;
 
@@ -15,11 +16,11 @@ const FILES: [(&str, &str); 3] = [
 
 #[component]
 pub fn MenuContextRowsDemo() -> impl IntoView {
-    let files = use_list_collection(
-        Signal::stored(FILES.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, name)| (*name).to_owned(),
-    );
+    let files = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FILES.to_vec()),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, name)| (*name).to_owned(),
+    });
     let last_action = RwSignal::new(None::<String>);
 
     view! {

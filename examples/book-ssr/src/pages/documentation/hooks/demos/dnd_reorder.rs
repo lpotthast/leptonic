@@ -1,27 +1,31 @@
 use std::{collections::HashSet, sync::Arc};
 
-use leptonic::hooks::FocusMode;
-use leptonic::hooks::KeyboardNavigationBehavior;
-use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
+    CapturedElement, IntoAttrs, Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
-        DragItem, DraggableCollectionState, DropPosition, DropTarget, DroppableCollectionData,
-        DroppableCollectionOptions, DroppableCollectionReorderEvent, GridListData, IntoAttrs,
-        ListDropTargetDelegate, Orientation, SelectionMode, UseDraggableCollectionInput, UseDraggableCollectionStateInput,
-        UseDraggableItemInput, UseDraggableItemReturn, UseDropIndicatorInput,
-        UseDropIndicatorReturn, UseDroppableCollectionInput, UseDroppableCollectionReturn,
-        UseDroppableCollectionStateInput, UseDroppableItemInput, UseDroppableItemReturn,
-        UseGridListInput, UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
         collections::{
-            Key, ListLayout, SelectionOptions, UseListStateInput, use_list_collection,
-            UseListKeyboardDelegateInput, use_list_keyboard_delegate, use_list_state,
+            CollectionOptions, Key, ListLayout, SelectionMode, SelectionOptions,
+            UseListCollectionInput, UseListKeyboardDelegateInput, UseListStateInput,
+            use_list_collection, use_list_keyboard_delegate, use_list_state,
         },
-        use_draggable_collection, use_draggable_collection_state, use_draggable_item,
-        use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
-        use_droppable_item, use_grid_list, use_grid_list_item,
+        dnd::{
+            DragItem, DraggableCollectionState, DropPosition, DropTarget, DroppableCollectionData,
+            DroppableCollectionOptions, DroppableCollectionReorderEvent, ListDropTargetDelegate,
+            UseDraggableCollectionInput, UseDraggableCollectionStateInput, UseDraggableItemInput,
+            UseDraggableItemReturn, UseDropIndicatorInput, UseDropIndicatorReturn,
+            UseDroppableCollectionInput, UseDroppableCollectionReturn,
+            UseDroppableCollectionStateInput, UseDroppableItemInput, UseDroppableItemReturn,
+            use_draggable_collection, use_draggable_collection_state, use_draggable_item,
+            use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
+            use_droppable_item,
+        },
+        gridlist::{
+            FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
+            UseGridListItemInput, UseGridListItemReturn, UseGridListReturn, use_grid_list,
+            use_grid_list_item,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -71,11 +75,11 @@ pub fn ReorderDemo() -> impl IntoView {
     let last_drop = RwSignal::new(String::from("none yet"));
 
     // The rows and their selection: dragging a selected row drags all selected rows.
-    let collection = use_list_collection(
-        tasks.into(),
-        |task| Key::from(*task),
-        |task| (*task).to_owned(),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: tasks.into(),
+        key: |task| Key::from(*task),
+        text_value: |task| (*task).to_owned(),
+    });
     let list = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
@@ -151,7 +155,7 @@ pub fn ReorderDemo() -> impl IntoView {
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
             element,
-            orientation: Orientation::Vertical,
+            orientation: Orientation::Vertical.into(),
             layout: ListLayout::Stack,
             layout_delegate: None,
         }),
@@ -259,7 +263,7 @@ fn TaskRow(
             class="demo-dnd-row"
             style=row_styles
             aria-hidden=move || aria_hidden.get()
-            data-dragging=move || is_dragging.get().then_some("")
+            data-dragging=move || is_dragging.get().then_some("true")
             data-focus-visible=move || is_focus_visible.get().then_some("")
         >
             <div {..grid_cell_props.into_attrs()} class="demo-dnd-cell">
@@ -288,7 +292,7 @@ fn DropIndicator(
         activate_button: None,
     });
     view! {
-        <div role="row" class="demo-dnd-indicator" data-drop-target=move || is_drop_target.get().then_some("") data-hidden=move || is_hidden.get().then_some("")>
+        <div role="row" class="demo-dnd-indicator" data-drop-target=move || is_drop_target.get().then_some("true") data-hidden=move || is_hidden.get().then_some("")>
             <div role="gridcell" {..drop_indicator_props.into_attrs()}></div>
         </div>
     }

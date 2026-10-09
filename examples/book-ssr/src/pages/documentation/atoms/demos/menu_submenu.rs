@@ -1,8 +1,8 @@
 use leptonic::{
-    atoms::prelude as atoms,
+    atoms,
     hooks::{
-        Placement,
         collections::{Key, use_collection},
+        overlay::Placement,
     },
 };
 use leptos::prelude::*;
@@ -22,30 +22,30 @@ pub fn MenuSubmenuDemo() -> impl IntoView {
     });
 
     view! {
-        <atoms::MenuTrigger>
-            <atoms::Button classes="demo-btn">"File"</atoms::Button>
-            <atoms::Popover placement=Placement::BottomLeft offset=4.0>
-                <atoms::Menu collection=file on_action=on_action classes="demo-menu-list">
-                    <atoms::MenuItem key="new" classes="demo-menu-atom-item">"New"</atoms::MenuItem>
+        <atoms::menu::MenuTrigger>
+            <atoms::button::Button classes="demo-btn">"File"</atoms::button::Button>
+            <atoms::popover::Popover placement=Placement::BottomLeft offset=4.0>
+                <atoms::menu::Menu collection=file on_action=on_action classes="demo-menu-list">
+                    <atoms::menu::MenuItem key="new" classes="demo-menu-atom-item">"New"</atoms::menu::MenuItem>
                     // Hover "Share", press it, or press ArrowRight on it.
-                    <atoms::SubmenuTrigger key="share">
-                        <atoms::MenuItem key="share" classes="demo-menu-atom-item">
-                            <atoms::MenuItemLabel>"Share"</atoms::MenuItemLabel>
+                    <atoms::menu::SubmenuTrigger key="share">
+                        <atoms::menu::MenuItem key="share" classes="demo-menu-atom-item">
+                            <atoms::menu::MenuItemLabel>"Share"</atoms::menu::MenuItemLabel>
                             // A decorative arrow, hidden from the item's accessible name.
                             <span class="demo-menu-atom-arrow" aria-hidden="true">"\u{203a}"</span>
-                        </atoms::MenuItem>
-                        <atoms::Popover offset=-4.0>
-                            <atoms::Menu collection=targets on_action=on_action classes="demo-menu-list">
-                                <atoms::MenuItems classes="demo-menu-atom-item" let:node>
+                        </atoms::menu::MenuItem>
+                        <atoms::popover::Popover offset=-4.0>
+                            <atoms::menu::Menu collection=targets on_action=on_action classes="demo-menu-list">
+                                <atoms::menu::MenuItems classes="demo-menu-atom-item" let:node>
                                     {node.text_value.to_string()}
-                                </atoms::MenuItems>
-                            </atoms::Menu>
-                        </atoms::Popover>
-                    </atoms::SubmenuTrigger>
-                    <atoms::MenuItem key="close" classes="demo-menu-atom-item">"Close"</atoms::MenuItem>
-                </atoms::Menu>
-            </atoms::Popover>
-        </atoms::MenuTrigger>
+                                </atoms::menu::MenuItems>
+                            </atoms::menu::Menu>
+                        </atoms::popover::Popover>
+                    </atoms::menu::SubmenuTrigger>
+                    <atoms::menu::MenuItem key="close" classes="demo-menu-atom-item">"Close"</atoms::menu::MenuItem>
+                </atoms::menu::Menu>
+            </atoms::popover::Popover>
+        </atoms::menu::MenuTrigger>
         <p class="demo-status">
             {move || match last_action.get() {
 

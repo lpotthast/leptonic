@@ -2,7 +2,7 @@
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
-    hooks::IntoAttrs,
+    IntoAttrs,
     utils::intl_strings::{BreadcrumbsStrings, use_localized_strings},
 };
 

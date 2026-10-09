@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/table/TableKeyboardDelegate.ts @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TableTests.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::prelude::*;
@@ -6,10 +8,10 @@ use leptos::prelude::*;
 use super::TableCollection;
 use crate::{
     hooks::{
-        GridKeyboardDelegate,
         collections::{Key, KeyboardDelegate, NavigationOptions, Node, NodeKind},
+        grid::GridKeyboardDelegate,
     },
-    utils::{filter::Collator, locale::WritingDirection},
+    utils::{filter::Collator, i18n::WritingDirection},
 };
 
 // =============================================================================
@@ -266,11 +268,11 @@ mod tests {
     use super::*;
     use crate::{
         hooks::{
-            GridFocusMode,
             collections::{
                 CollectionMemo, LayoutDelegate, Rect, SelectionManager, SelectionMode,
                 SelectionOptions, Size,
             },
+            grid::GridFocusMode,
         },
         utils::{filter::CollatorOptions, i18n::Locale},
     };
@@ -351,7 +353,7 @@ mod tests {
 
     #[test]
     fn up_from_the_first_row_reaches_the_column_headers() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, WritingDirection::Ltr);
             assert_that!(d.key_above(&k("alice"), NAV)).is_equal_to(Some(k("name")));
             assert_that!(d.key_above(&cell("alice", 2), NAV)).is_equal_to(Some(k("phone")));
@@ -368,7 +370,7 @@ mod tests {
 
     #[test]
     fn left_and_right_wrap_within_a_header_row() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, WritingDirection::Ltr);
             assert_that!(d.key_right_of(&k("name"), NAV)).is_equal_to(Some(k("email")));
             assert_that!(d.key_right_of(&k("phone"), NAV)).is_equal_to(Some(k("name")));
@@ -409,7 +411,7 @@ mod tests {
 
     #[test]
     fn page_up_and_down_reach_the_column_headers() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate_with_layout(
                 GridFocusMode::Row,
                 WritingDirection::Ltr,
@@ -425,7 +427,7 @@ mod tests {
 
     #[test]
     fn type_ahead_matches_rows_and_row_headers() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Cell, WritingDirection::Ltr);
             assert_that!(d.key_for_search("b", None)).is_equal_to(Some(k("bob")));
             // Searching from a cell finds the row header cell.

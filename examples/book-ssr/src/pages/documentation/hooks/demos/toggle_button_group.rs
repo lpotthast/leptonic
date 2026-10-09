@@ -1,8 +1,17 @@
 use std::collections::HashSet;
 
 use leptonic::{
+    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::{collections::Key, *},
+    hooks::{
+        button::{
+            ToggleGroupState, UseButtonInput, UseToggleButtonGroupInput,
+            UseToggleButtonGroupItemInput, UseToggleGroupStateInput, use_button,
+            use_toggle_button_group, use_toggle_button_group_item, use_toggle_group_state,
+        },
+        collections::Key,
+        toolbar::UseToolbarInput,
+    },
 };
 use leptos::prelude::*;
 
@@ -14,7 +23,7 @@ pub fn ToggleButtonGroupDemo() -> impl IntoView {
 
     // Single selection (the default): the group is a `radiogroup`, its buttons are radios.
     let state = use_toggle_group_state(UseToggleGroupStateInput {
-        disallow_empty_selection: true,
+        disallow_empty_selection: Signal::stored(true),
         default_selected_keys: HashSet::from([Key::from("Left")]),
         is_disabled: disabled.into(),
         ..UseToggleGroupStateInput::default()

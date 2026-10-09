@@ -33,7 +33,7 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                     <ApiRow name="value" ty="Option<ValueBinding<Option<T>>>" default="None">"The value as app state, replacing "<Code inline=true>"default_value"</Code>"."</ApiRow>
                     <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">"Called with each new value."</ApiRow>
                     <ApiRow name="placeholder_value" ty="Signal<Option<T>>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
-                    <ApiRow name="min_value, max_value" ty="Signal<Option<T>>" default="None">
+                    <ApiRow name="min_value, max_value" ty="Signal<Option<Time>>" default="None">
                         "The earliest and latest valid time (\u{201c}Value must be 8:00 AM or later.\u{201d})."
                     </ApiRow>
                     <ApiRow name="granularity" ty="Signal<Option<Granularity>>" default="None">
@@ -57,7 +57,7 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                 <ApiTable kind=ApiKind::Return of="datepicker::use_time_field_state::TimeFieldState">
                     <ApiRow name="value" ty="Signal<Option<T>>">"The value."</ApiRow>
                     <ApiRow name="time_value" ty="Signal<Option<Time>>">"The time of the value."</ApiRow>
-                    <ApiRow name="field" ty="DateFieldState<T::Field>">
+                    <ApiRow name="field" ty="DateFieldState<Field>">
                         "The "<Link href=format!("{}#use-date-field-state-return", routes::doc::date_field::Hook.materialize())>"date field state"</Link>
                         " editing it. A "<Code inline=true>"civil::Time"</Code>" is edited as a "<Code inline=true>"civil::DateTime"</Code>
                         " on today."
@@ -82,9 +82,10 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r"
                         use leptonic::{
-                            hooks::{IntoAttrs, datepicker::*},
+                            CapturedElement,
+                            IntoAttrs,
+                            hooks::datepicker::*,
                             jiff::civil::Time,
-                            utils::CapturedElement,
                         };
                         use leptos::prelude::*;
 

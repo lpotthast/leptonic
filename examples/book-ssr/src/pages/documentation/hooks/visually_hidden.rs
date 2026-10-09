@@ -38,7 +38,7 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
                 </ApiTable>
 
                 <ApiTable kind=ApiKind::Fields of="UseVisuallyHiddenProps">
-                    <ApiRow name="style" ty="Signal<Option<&'static str>>">
+                    <ApiRow name="style" ty="Signal<Option<&str>>">
                         "The hiding styles, rendered as the element\u{2019}s "<Code inline=true>"style"</Code>
                         " attribute. "<Code inline=true>"None"</Code>" while a focusable element shows."
                     </ApiRow>
@@ -52,7 +52,10 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::{IntoAttrs, UseVisuallyHiddenInput, use_visually_hidden};
+                        use leptonic::{
+                            IntoAttrs,
+                            hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden},
+                        };
 
                         let hidden = use_visually_hidden(UseVisuallyHiddenInput::default());
 
@@ -94,12 +97,12 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
             <Section title="Hiding Styles">
                 <p>
                     "The hook hides elements with "<Code inline=true>"VISUALLY_HIDDEN_STYLE"</Code>" from "
-                    <Code inline=true>"leptonic::utils::visually_hidden"</Code>": a 1\u{d7}1 pixel, absolutely positioned, "
+                    <Code inline=true>"leptonic"</Code>": a 1\u{d7}1 pixel, absolutely positioned, "
                     "clipped box. Use the constant (or "<Code inline=true>"visually_hidden_styles()"</Code>", the same rules as "
                     <Code inline=true>"Styles"</Code>" to merge with others) for elements that are always hidden and need no "
                     "hook, such as a native "<Code inline=true>"<input>"</Code>" behind a custom checkbox."
                 </p>
-                <Code language=Language::Css>{leptonic::utils::visually_hidden::VISUALLY_HIDDEN_STYLE}</Code>
+                <Code language=Language::Css>{leptonic::VISUALLY_HIDDEN_STYLE}</Code>
             </Section>
 
             <Section title="Hiding Techniques">

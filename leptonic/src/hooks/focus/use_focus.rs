@@ -1,12 +1,9 @@
 // Upstream: react-aria/src/interactions/useFocus.ts @ 99e6102368
-use leptos::{
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/interactions/useFocus.test.js @ 99e6102368
+use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
-use crate::{hooks::IntoAttrs, utils::EventHandler};
+use crate::{EventHandler, IntoAttrs, OnEvent};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -17,11 +14,13 @@ use crate::{hooks::IntoAttrs, utils::EventHandler};
 //   none when there are no callbacks): `is_disabled` is reactive.
 // - A blur is reported only after a reported focus, once: Chrome fires its own blur for an
 //   element disabled while focused after the synthetic one (react-aria would report both).
+// - The disabled-while-focused observer is set up only with a blur callback (`on_blur` or
+//   `on_focus_change`), react-aria: whenever the focus handler is attached.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - The blur handler reads `is_disabled` with `try_get_untracked` and runs callbacks with
 //   `try_run`: removing a focused element blurs it after its owner was disposed ("Blur After
-//   Disposal" in hooks-implementation.md).
+//   Disposal" in leptos-and-dom.md).
 //
 // =============================================================================
 
@@ -66,10 +65,7 @@ impl IntoAttrs for UseFocusProps {
 }
 
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
-pub type UseFocusAttrs = (
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-);
+pub type UseFocusAttrs = (OnEvent<ev::focus>, OnEvent<ev::blur>);
 
 /// Track focus of an element.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
@@ -89,7 +85,9 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         use wasm_bindgen::JsCast;
 
         use crate::utils::{
-            EventAccessors, EventTargetExt, shadow_dom, synthetic_blur::SyntheticBlurObserver,
+            dom_ext::{EventAccessors, EventTargetExt},
+            shadow_dom,
+            synthetic_blur::SyntheticBlurObserver,
         };
 
         let UseFocusInput {
@@ -107,22 +105,27 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         // disabled while focused only after the synthetic blur was dispatched.
         let has_focus = StoredValue::new(false);
 
+        // Only blurs that are reported need the observer (react-aria: the synthetic blur event
+        // calls `onBlur`).
+        let reports_blur = on_blur.is_some() || on_focus_change.is_some();
+
         let handle_focus = move |e: FocusEvent| {
-            // Double check that document.activeElement actually matches e.target in case a previously chained
-            // focus handler already moved focus somewhere else.
-            // Use owner document from target to correctly handle iframes/shadow DOM.
-            // Use shadow-DOM-aware get_active_element to pierce shadow roots.
-            let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
-            let owner_doc = target
+            // The event is the element's own (as for blur: its target, retargeted to a shadow
+            // host, is the element), and the active element is the focused one, in case a
+            // previously chained focus handler already moved focus somewhere else (react-aria:
+            // `getActiveElement() === getEventTarget(e)`, across shadow roots and iframes).
+            let target = e.expect_target();
+            let focused = shadow_dom::get_event_target(&e).unwrap_or_else(|| target.clone());
+            let owner_doc = focused
                 .dyn_ref::<web_sys::Node>()
                 .and_then(web_sys::Node::owner_document);
             let active = owner_doc.as_ref().and_then(shadow_dom::get_active_element);
 
             if target == e.expect_current_target()
-                && active == target.to_element()
+                && active == focused.to_element()
                 && !disabled.get_untracked()
             {
-                if let Some(el) = target.dyn_ref::<web_sys::Element>() {
+                if reports_blur && let Some(el) = target.dyn_ref::<web_sys::Element>() {
                     blur_observer.set_value(SyntheticBlurObserver::observe(el));
                 }
                 has_focus.set_value(true);

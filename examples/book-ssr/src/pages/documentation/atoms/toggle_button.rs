@@ -46,7 +46,7 @@ pub fn PageAtomToggleButton() -> impl IntoView {
 
                         use leptonic::{
                             atoms::toggle_button::{ToggleButton, ToggleButtonGroup},
-                            hooks::Key,
+                            hooks::collections::Key,
                         };
                         use leptos::prelude::*;
 
@@ -119,6 +119,27 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<button>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"The button\u{2019}s content. Required."</ApiRow>
+                        <ApiRow name="aria_controls" ty="Signal<Option<String>>" default="None">"Ids of the elements controlled by this button."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing this control."</ApiRow>
+                        <ApiRow name="aria_expanded" ty="Signal<Option<AriaExpanded>>" default="None">"Whether the controlled content is expanded."</ApiRow>
+                        <ApiRow name="aria_haspopup" ty="Signal<Option<AriaHasPopup>>" default="None">"The kind of popup opened by this control."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements labelling this control."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focus this element when it mounts."</ApiRow>
+                        <ApiRow name="exclude_from_tab_order" ty="Signal<bool>" default="false">"Remove the element from sequential keyboard navigation."</ApiRow>
+                        <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus leaves the element."</ApiRow>
+                        <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus enters the element."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focused state changes."</ApiRow>
+                        <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">"Called when the hovered state changes."</ApiRow>
+                        <ApiRow name="on_hover_end" ty="Option<Callback<HoverEndEvent>>" default="None">"Called when hover ends."</ApiRow>
+                        <ApiRow name="on_hover_start" ty="Option<Callback<HoverStartEvent>>" default="None">"Called when hover starts."</ApiRow>
+                        <ApiRow name="on_key_down" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called when a key is pressed."</ApiRow>
+                        <ApiRow name="on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called when a key is released."</ApiRow>
+                        <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called for a completed press."</ApiRow>
+                        <ApiRow name="on_press_change" ty="Option<Callback<bool>>" default="None">"Called when the pressed state changes."</ApiRow>
+                        <ApiRow name="on_press_end" ty="Option<Callback<PressEvent>>" default="None">"Called when a press ends."</ApiRow>
+                        <ApiRow name="on_press_start" ty="Option<Callback<PressEvent>>" default="None">"Called when a press starts."</ApiRow>
+                        <ApiRow name="on_press_up" ty="Option<Callback<PressEvent>>" default="None">"Called when the pointer or key is released over the element."</ApiRow>
+                        <ApiRow name="prevent_focus_on_press" ty="Signal<bool>" default="false">"Keep focus where it is when this element is pressed."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -138,7 +159,7 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                         <ApiRow name="selection_mode" ty="ToggleGroupSelectionMode" default="Single">
                             <Code inline=true>"Single"</Code>": at most one button is selected. "<Code inline=true>"Multiple"</Code>": any number."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">
                             "Keeps at least one button selected: the last selected button can\u{2019}t be deselected."
                         </ApiRow>
                         <ApiRow name="default_value" ty="HashSet<V>" default="HashSet::new()">
@@ -155,7 +176,7 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                             "Called with the selected buttons\u{2019} values when they change."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables all buttons."</ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                             "Which arrow keys move focus: "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>", or "
                             <Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>"."
                         </ApiRow>
@@ -224,7 +245,7 @@ pub fn PageAtomToggleButton() -> impl IntoView {
             <Section title="Composition">
                 <p>
                     <Code inline=true>"ToggleButtonGroup"</Code>" hands its state to the buttons inside it through the "
-                    <Code inline=true>"ToggleButtonGroupCtx"</Code>" context; a "<Code inline=true>"ToggleButton"</Code>
+                    <Code inline=true>"ToggleButtonGroupContext"</Code>" context; a "<Code inline=true>"ToggleButton"</Code>
                     " anywhere below the group joins it. A multiple-selection group inside a "
                     <Link href=routes::doc::toolbar::Atom.materialize()>"Toolbar"</Link>" becomes a group of that toolbar: the "
                     "toolbar\u{2019}s arrow keys move through its buttons too."

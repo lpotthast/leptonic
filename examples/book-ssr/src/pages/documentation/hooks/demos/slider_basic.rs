@@ -1,11 +1,15 @@
 use leptonic::{
+    IntoAttrs, Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::*,
-    utils::{
-        css::{computed_pct, computed_size},
-        style::WidthProperty,
-        styles::Styles,
+    computed_pct, computed_size,
+    hooks::{
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
+        slider::{
+            UseSliderInput, UseSliderStateInput, UseSliderThumbInput, use_slider, use_slider_state,
+            use_slider_thumb,
+        },
     },
+    leptos_styles::{Styles, property::WidthProperty},
 };
 use leptos::prelude::*;
 
@@ -57,7 +61,7 @@ pub fn SliderBasicDemo() -> impl IntoView {
     // The slider hooks don't track keyboard focus: a focus ring on the thumb sets `data-focus-visible` while its
     // input has keyboard focus.
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let (track_attrs, track_styles) = slider.track_props.into_parts();
@@ -65,7 +69,9 @@ pub fn SliderBasicDemo() -> impl IntoView {
     let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
     // The fill covers the track up to the thumb.
     let fill_styles = Styles::new().add_reactive(move || {
-        WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0) * 100.0)))
+        WidthProperty.declare(computed_size(computed_pct(
+            state.thumb_percent(0).as_percent(),
+        )))
     });
 
     view! {

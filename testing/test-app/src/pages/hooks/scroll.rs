@@ -1,6 +1,4 @@
-use leptonic::utils::scroll::{
-    ScrollAlignment, ScrollIntoViewOpts, get_scroll_parents, scroll_into_view,
-};
+use leptonic::{ScrollAlignment, ScrollIntoViewOpts, get_scroll_parents, scroll_into_view};
 use leptos::{html, prelude::*, web_sys};
 use wasm_bindgen::JsCast;
 

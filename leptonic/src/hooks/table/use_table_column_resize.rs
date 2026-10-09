@@ -1,14 +1,17 @@
 // Upstream: react-aria/src/table/useTableColumnResize.ts @ 99e6102368
+// Upstream: react-aria/test/table/ariaTableResizing.test.tsx @ 99e6102368
+// Upstream: react-aria/test/table/tableResizingTests.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TableSizing.test.tsx @ 99e6102368
 use std::collections::HashMap;
 
 use leptos::{
     attr,
     attr::Attr,
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
     tachys::html::property::{Property, prop},
 };
+use leptos_element_capture::CapturedElement;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
@@ -17,26 +20,27 @@ use super::{
     use_table_column_resize_state::TableColumnResizeState,
 };
 use crate::{
+    ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
-        IntoAttrs, Modality, MoveEndEvent, MoveEvent, MoveStartEvent, PressEvent, PropsWithStyles,
-        UseKeyboardInput, UseMoveInput, UsePressInput, collections::Key, use_interaction_modality,
-        use_keyboard, use_move, use_press,
+        collections::Key,
+        focus::{Modality, use_interaction_modality},
+        interactions::{
+            MoveEndEvent, MoveEvent, MoveStartEvent, PressEvent, UseKeyboardInput, UseMoveInput,
+            UsePressInput, use_keyboard, use_move, use_press,
+        },
     },
     utils::{
-        ElementCaptureAttr, EventAccessors, EventHandler,
         aria::AriaOrientation,
-        css::TouchAction,
-        element_capture::CapturedElement,
+        dom_ext::EventAccessors,
         focus::focus_safely,
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
         id::use_id,
         intl_strings::{TableStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        locale::WritingDirection,
         pointer_type::PointerType,
         shadow_dom::get_active_element,
-        style::TouchActionProperty,
-        styles::Styles,
+        styles::{Styles, css::TouchAction, property::TouchActionProperty},
         use_description::use_description,
         visually_hidden::visually_hidden_styles,
     },
@@ -102,7 +106,6 @@ pub struct UseTableColumnResizerProps {
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_dragstart: EventHandler<web_sys::DragEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
-    pub element_capture: ElementCaptureAttr,
 }
 
 impl IntoAttrs for UseTableColumnResizerProps {
@@ -118,21 +121,19 @@ impl IntoAttrs for UseTableColumnResizerProps {
             self.on_mousedown.into_on(ev::mousedown),
             self.on_dragstart.into_on(ev::dragstart),
             self.on_dblclick.into_on(ev::dblclick),
-            self.element_capture,
         )
     }
 }
 
 pub type UseTableColumnResizerAttrs = (
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-    On<ev::dragstart, SharedEventCallback<web_sys::DragEvent>>,
-    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
-    ElementCaptureAttr,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::keyup>,
+    OnEvent<ev::pointerdown>,
+    OnEvent<ev::pointerup>,
+    OnEvent<ev::click>,
+    OnEvent<ev::mousedown>,
+    OnEvent<ev::dragstart>,
+    OnEvent<ev::dblclick>,
 );
 
 /// Props for the resizer's range input.
@@ -190,8 +191,8 @@ pub type UseTableColumnResizeInputAttrs = (
     Attr<attr::Value, Signal<f64>>,
     Property<&'static str, Signal<String>>,
     Attr<attr::Disabled, Signal<bool>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-    On<ev::input, SharedEventCallback<Event>>,
+    OnEvent<ev::blur>,
+    OnEvent<ev::input>,
     ElementCaptureAttr,
 );
 
@@ -335,16 +336,22 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         let space = resizer.clone();
         let tab = resizer.clone();
         KeyboardShortcuts::new()
-            .on(Shortcut::key("Escape"), move |_| r.end_in_edit_mode())
-            .on(Shortcut::key("Enter"), move |_| {
+            .on(Shortcut::new(KeyboardKey::Escape), move |_| {
+                r.end_in_edit_mode()
+            })
+            .on(Shortcut::new(KeyboardKey::Enter), move |_| {
                 if enter.is_edit_mode() {
                     enter.end();
                 } else {
                     enter.start();
                 }
             })
-            .on(Shortcut::key(" "), move |_| space.end_in_edit_mode())
-            .on(Shortcut::key("Tab"), move |_| tab.end_in_edit_mode())
+            .on(Shortcut::new(KeyboardKey::Space), move |_| {
+                space.end_in_edit_mode()
+            })
+            .on(Shortcut::new(KeyboardKey::Tab), move |_| {
+                tab.end_in_edit_mode()
+            })
     };
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(shortcuts),
@@ -544,7 +551,6 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                 on_mousedown: press_props.on_mousedown,
                 on_dragstart: press_props.on_dragstart,
                 on_dblclick: press_props.on_dblclick,
-                element_capture: move_props.element_capture,
             },
             // Over the press styles' `touch-action` (`merge` keeps the first, `add` would duplicate).
             Styles::new()

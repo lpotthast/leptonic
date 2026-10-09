@@ -1,14 +1,18 @@
 // Upstream: react-stately/src/dnd/useDroppableCollectionState.ts @ 99e6102368
+// Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use super::types::{
-    AcceptedDragTypes, DragTypes, DropOperation, DropPosition, DropTarget,
-    DroppableCollectionActivateEvent, DroppableCollectionDropEvent, DroppableCollectionEnterEvent,
-    DroppableCollectionExitEvent, DroppableCollectionInsertDropEvent,
-    DroppableCollectionOnItemDropEvent, DroppableCollectionReorderEvent,
-    DroppableCollectionRootDropEvent, ItemDropTarget,
+use super::{
+    types::{
+        AcceptedDragTypes, DragTypes, DropOperation, DropPosition, DropTarget,
+        DroppableCollectionActivateEvent, DroppableCollectionDropEvent,
+        DroppableCollectionEnterEvent, DroppableCollectionExitEvent,
+        DroppableCollectionInsertDropEvent, DroppableCollectionOnItemDropEvent,
+        DroppableCollectionReorderEvent, DroppableCollectionRootDropEvent, ItemDropTarget,
+    },
+    utils::{dragging_keys, is_internal_drop_operation},
 };
 use crate::hooks::collections::{Collection, Key, ListState};
 
@@ -18,7 +22,9 @@ use crate::hooks::collections::{Collection, Key, ListState};
 //
 // ## API DIFFERENCES
 // - Hook-owned state: the current `target` is a signal.
-// - `should_accept_item_drop` and `get_drop_operation` take query structs.
+// - `should_accept_item_drop` and `get_drop_operation` take query structs; the state's
+//   `get_drop_operation` takes a borrowing `DropOperationEvent` (called for many targets per
+//   pointer move) and runs the callbacks untracked.
 //
 // =============================================================================
 
@@ -38,15 +44,18 @@ pub struct CollectionDropOperationQuery {
     pub allowed_operations: Vec<DropOperation>,
 }
 
-/// What a collection drop target decides a drop operation from.
-#[derive(Debug, Clone)]
-pub struct DropOperationEvent {
-    pub target: DropTarget,
-    pub types: DragTypes,
-    pub allowed_operations: Vec<DropOperation>,
+/// What a collection drop target decides a drop operation from (borrowed: a drag checks many
+/// targets per pointer move).
+#[derive(Debug, Clone, Copy)]
+pub struct DropOperationEvent<'a> {
+    pub target: &'a DropTarget,
+    pub types: &'a DragTypes,
+    /// In order of preference.
+    pub allowed_operations: &'a [DropOperation],
     /// The drag comes from this collection.
     pub is_internal: bool,
-    pub dragging_keys: HashSet<Key>,
+    /// The dragged items of this collection.
+    pub dragging_keys: &'a HashSet<Key>,
 }
 
 /// Callbacks and settings of a droppable collection.
@@ -106,7 +115,7 @@ impl std::fmt::Debug for DroppableCollectionState {
 impl DroppableCollectionState {
     /// Make `target` the current drop target, firing exit and enter events.
     pub fn set_target(&self, target: Option<DropTarget>) {
-        if self.is_drop_target(target.as_ref()) {
+        if untrack(|| self.is_drop_target(target.as_ref())) {
             return;
         }
         let (on_exit, on_enter) = self
@@ -157,10 +166,34 @@ impl DroppableCollectionState {
         })
     }
 
-    /// The drop operation for a drop at `e.target`.
-    pub fn get_drop_operation(&self, e: &DropOperationEvent) -> DropOperation {
+    /// The drop operation for a drop of the current drag at `target` of the collection
+    /// `collection_element`.
+    pub(crate) fn drop_operation_at(
+        &self,
+        collection_element: Option<&web_sys::Element>,
+        target: &DropTarget,
+        types: &DragTypes,
+        allowed_operations: &[DropOperation],
+    ) -> DropOperation {
+        self.get_drop_operation(&DropOperationEvent {
+            target,
+            types,
+            allowed_operations,
+            is_internal: is_internal_drop_operation(collection_element),
+            dragging_keys: &dragging_keys(),
+        })
+    }
+
+    /// The drop operation for a drop at `e.target`. Reads the collection and runs the app's
+    /// callbacks (`should_accept_item_drop`, `get_drop_operation`) untracked: a drop operation is
+    /// a query at the moment of the call.
+    pub fn get_drop_operation(&self, e: &DropOperationEvent<'_>) -> DropOperation {
+        untrack(|| self.drop_operation(e))
+    }
+
+    fn drop_operation(&self, e: &DropOperationEvent<'_>) -> DropOperation {
         if e.is_internal
-            && let DropTarget::Item(target) = &e.target
+            && let DropTarget::Item(target) = e.target
             && !e.dragging_keys.is_empty()
         {
             if e.dragging_keys.contains(&target.key) && target.drop_position == DropPosition::On {
@@ -185,15 +218,15 @@ impl DroppableCollectionState {
         self.default_drop_operation(e)
     }
 
-    fn default_drop_operation(&self, e: &DropOperationEvent) -> DropOperation {
+    fn default_drop_operation(&self, e: &DropOperationEvent<'_>) -> DropOperation {
         if self.is_disabled.get_untracked() {
             return DropOperation::Cancel;
         }
         self.options.with_value(|o| {
-            if !o.accepted_drag_types.accepts(&e.types) {
+            if !o.accepted_drag_types.accepts(e.types) {
                 return DropOperation::Cancel;
             }
-            let item = match &e.target {
+            let item = match e.target {
                 DropTarget::Item(item) => Some(item),
                 DropTarget::Root => None,
             };
@@ -206,7 +239,7 @@ impl DroppableCollectionState {
                 && item.is_some_and(|t| {
                     self.list
                         .collection
-                        .with_untracked(|c| is_dragging_within_parent(c, t, &e.dragging_keys))
+                        .with_untracked(|c| is_dragging_within_parent(c, t, e.dragging_keys))
                 });
             let is_item_drop_allowed = !on_item
                 || o.should_accept_item_drop.is_none_or(|accept| {
@@ -235,7 +268,7 @@ impl DroppableCollectionState {
                     Some(get) => get.run(CollectionDropOperationQuery {
                         target: e.target.clone(),
                         types: e.types.clone(),
-                        allowed_operations: e.allowed_operations.clone(),
+                        allowed_operations: e.allowed_operations.to_vec(),
                     }),
                     None => e
                         .allowed_operations
@@ -327,58 +360,61 @@ mod tests {
         })
     }
 
-    fn query(target: DropTarget, is_internal: bool, dragging: &[&str]) -> DropOperationEvent {
-        DropOperationEvent {
+    /// The drop operation of a text drag (allowing move and copy) of the keys `dragging` at
+    /// `target`.
+    fn operation(
+        state: &DroppableCollectionState,
+        target: &DropTarget,
+        is_internal: bool,
+        dragging: &[&str],
+    ) -> DropOperation {
+        let types = DragTypes::of_items(&[super::super::types::DragItem::text("x")]);
+        let dragging_keys: HashSet<Key> = dragging.iter().map(|k| Key::from(*k)).collect();
+        state.get_drop_operation(&DropOperationEvent {
             target,
-            types: DragTypes::of_items(&[super::super::types::DragItem::text("x")]),
-            allowed_operations: vec![DropOperation::Move, DropOperation::Copy],
+            types: &types,
+            allowed_operations: &[DropOperation::Move, DropOperation::Copy],
             is_internal,
-            dragging_keys: dragging.iter().map(|k| Key::from(*k)).collect(),
-        }
+            dragging_keys: &dragging_keys,
+        })
     }
 
     #[test]
     fn reorders_need_a_reorder_handler_and_the_same_parent() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let s = state(DroppableCollectionOptions {
                 on_reorder: Some(Callback::new(|_| {})),
                 ..DroppableCollectionOptions::default()
             });
             let before_c = DropTarget::item("c", DropPosition::Before);
-            assert_that!(s.get_drop_operation(&query(before_c.clone(), true, &["a"])))
-                .is_equal_to(DropOperation::Move);
+            assert_that!(operation(&s, &before_c, true, &["a"])).is_equal_to(DropOperation::Move);
             // An external drop between items needs `on_insert`.
-            assert_that!(s.get_drop_operation(&query(before_c, false, &[])))
-                .is_equal_to(DropOperation::Cancel);
+            assert_that!(operation(&s, &before_c, false, &[])).is_equal_to(DropOperation::Cancel);
             // Dragging a nested item next to a top-level one is not a reorder.
             let after_a = DropTarget::item("a", DropPosition::After);
-            assert_that!(s.get_drop_operation(&query(after_a, true, &["b1"])))
-                .is_equal_to(DropOperation::Cancel);
+            assert_that!(operation(&s, &after_a, true, &["b1"])).is_equal_to(DropOperation::Cancel);
         });
     }
 
     #[test]
     fn items_cant_be_dropped_on_themselves_or_into_their_children() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let s = state(DroppableCollectionOptions {
                 on_move: Some(Callback::new(|_| {})),
                 ..DroppableCollectionOptions::default()
             });
             let on_b = DropTarget::item("b", DropPosition::On);
-            assert_that!(s.get_drop_operation(&query(on_b, true, &["b"])))
-                .is_equal_to(DropOperation::Cancel);
+            assert_that!(operation(&s, &on_b, true, &["b"])).is_equal_to(DropOperation::Cancel);
             let after_b1 = DropTarget::item("b1", DropPosition::After);
-            assert_that!(s.get_drop_operation(&query(after_b1, true, &["b"])))
-                .is_equal_to(DropOperation::Cancel);
+            assert_that!(operation(&s, &after_b1, true, &["b"])).is_equal_to(DropOperation::Cancel);
             let on_c = DropTarget::item("c", DropPosition::On);
-            assert_that!(s.get_drop_operation(&query(on_c, true, &["a"])))
-                .is_equal_to(DropOperation::Move);
+            assert_that!(operation(&s, &on_c, true, &["a"])).is_equal_to(DropOperation::Move);
         });
     }
 
     #[test]
     fn positions_between_two_items_are_the_same_target() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let s = state(DroppableCollectionOptions::default());
             s.set_target(Some(DropTarget::item("a", DropPosition::After)));
             assert_that!(s.is_drop_target(Some(&DropTarget::item("b", DropPosition::Before))))

@@ -1,8 +1,8 @@
 use leptonic::{
-    atoms::prelude as atoms,
+    atoms,
     hooks::{
-        MenuTriggerType,
         collections::{Key, use_collection},
+        menu::MenuTriggerType,
     },
 };
 use leptos::prelude::*;
@@ -19,20 +19,20 @@ pub fn MenuContextDemo() -> impl IntoView {
     view! {
         // Right click the button, press Shift+F10 (or the context menu key) on it, or long press it on iOS:
         // the menu opens where it was requested.
-        <atoms::MenuTrigger trigger=MenuTriggerType::ContextMenu>
-            <atoms::Button classes="demo-context-target">"Right click here"</atoms::Button>
-            <atoms::Popover>
-                <atoms::Menu
+        <atoms::menu::MenuTrigger trigger=MenuTriggerType::ContextMenu>
+            <atoms::button::Button classes="demo-context-target">"Right click here"</atoms::button::Button>
+            <atoms::popover::Popover>
+                <atoms::menu::Menu
                     collection=actions
                     on_action=move |key: Key| last_action.set(Some(key))
                     classes="demo-menu-list"
                 >
-                    <atoms::MenuItems classes="demo-menu-atom-item" let:node>
+                    <atoms::menu::MenuItems classes="demo-menu-atom-item" let:node>
                         {node.text_value.to_string()}
-                    </atoms::MenuItems>
-                </atoms::Menu>
-            </atoms::Popover>
-        </atoms::MenuTrigger>
+                    </atoms::menu::MenuItems>
+                </atoms::menu::Menu>
+            </atoms::popover::Popover>
+        </atoms::menu::MenuTrigger>
         <p class="demo-status">
             {move || match last_action.get() {
                 Some(key) => format!("Last action: {key}."),

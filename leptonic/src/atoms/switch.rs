@@ -1,17 +1,21 @@
 // Upstream: react-aria-components/src/Switch.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Switch.test.js @ 99e6102368
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{field::FieldContext, form::use_validation_behavior};
 use crate::{
-    Out,
+    IntoAttrs, Out, ValueBinding,
     hooks::{
-        IntoAttrs, ToggleOptions, UseHoverInput, UseSwitchInput, UseSwitchReturn,
-        UseToggleStateInput, ValidateFn, ValidationBehavior, use_hover, use_switch,
-        use_toggle_state,
+        form::{
+            ToggleOptions, UseSwitchInput, UseSwitchReturn, UseToggleStateInput, ValidateFn,
+            ValidationBehavior, use_switch, use_toggle_state,
+        },
+        interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
-        dev_warn, styles::Styles, visually_hidden::visually_hidden_styles,
+        data_attributes::flag, default_class::with_default_class, dev_warn, styles::Styles,
+        visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -109,7 +113,7 @@ pub fn SwitchField(
         validation_errors: switch.validation_errors,
         validation_details: switch.validation_details,
     };
-    let button = SwitchButtonCtx {
+    let button = SwitchButtonContext {
         switch: StoredValue::new(Some(switch)),
         is_required,
     };
@@ -147,7 +151,7 @@ pub fn SwitchButton(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SwitchButton", classes);
-    let Some(ctx) = use_context::<SwitchButtonCtx>() else {
+    let Some(ctx) = use_context::<SwitchButtonContext>() else {
         dev_warn!("a <SwitchButton> belongs in a <SwitchField>");
         return ().into_any();
     };
@@ -160,7 +164,7 @@ pub fn SwitchButton(
 
 /// What a [`SwitchField`] hands its [`SwitchButton`].
 #[derive(Clone)]
-struct SwitchButtonCtx {
+struct SwitchButtonContext {
     /// The switch, taken by the button.
     switch: StoredValue<Option<UseSwitchReturn>>,
     is_required: Signal<bool>,

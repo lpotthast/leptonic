@@ -1,9 +1,15 @@
 use leptonic::{
     ScrollBehavior,
-    atoms::prelude::{
-        AnchorLink, Button, CurrentMatch, Link, Menu, MenuItems, MenuTrigger, Popover,
+    atoms::{
+        button::Button,
+        link::{AnchorLink, CurrentMatch, Link},
+        menu::{Menu, MenuItems, MenuTrigger},
+        popover::Popover,
     },
-    hooks::{LinkTarget, UseLinkInput, collections::use_collection, use_link},
+    hooks::{
+        collections::use_collection,
+        link::{LinkTarget, UseLinkInput, use_link},
+    },
 };
 use leptos::prelude::*;
 

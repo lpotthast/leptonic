@@ -1,12 +1,8 @@
 // Upstream: react-aria/src/checkbox/useCheckboxGroup.ts @ 99e6102368
 // Upstream: react-aria/src/checkbox/useCheckboxGroupItem.ts @ 99e6102368
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/checkbox/useCheckboxGroup.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/CheckboxGroup.test.js @ 99e6102368
+use leptos::{attr, attr::Attr, ev, prelude::*};
 use web_sys::FocusEvent;
 
 use super::{
@@ -19,15 +15,15 @@ use super::{
     },
     use_label::{LabelElementType, UseLabelProps},
     use_toggle::ToggleOptions,
-    use_toggle_state::ToggleState,
+    use_toggle_state::{UseToggleStateInput, use_toggle_state},
 };
 use crate::{
-    hooks::{IntoAttrs, PropsWithStyles, UseFocusWithinInput, collections::Key, use_focus_within},
-    utils::{
-        EventHandler, SlotProps,
-        aria::{AriaDisabled, AriaRole},
-        join_slot_ids,
+    EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps, ValueBinding,
+    hooks::{
+        collections::Key,
+        focus::{UseFocusWithinInput, use_focus_within},
     },
+    utils::aria::{AriaDisabled, AriaRole},
 };
 
 // =============================================================================
@@ -103,8 +99,8 @@ pub type UseCheckboxGroupAttrs = (
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
 );
 
 impl IntoAttrs for UseCheckboxGroupProps {
@@ -157,10 +153,12 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
         ..UseFieldInput::default()
     });
     let focus_within = use_focus_within(UseFocusWithinInput {
-        on_focus_within: on_focus
-            .map(|cb| Callback::new(move |e: crate::hooks::FocusWithinEvent| cb.run(e.event))),
-        on_blur_within: on_blur
-            .map(|cb| Callback::new(move |e: crate::hooks::FocusWithinEvent| cb.run(e.event))),
+        on_focus_within: on_focus.map(|cb| {
+            Callback::new(move |e: crate::hooks::focus::FocusWithinEvent| cb.run(e.event))
+        }),
+        on_blur_within: on_blur.map(|cb| {
+            Callback::new(move |e: crate::hooks::focus::FocusWithinEvent| cb.run(e.event))
+        }),
         on_focus_within_change: on_focus_change,
         ..UseFocusWithinInput::default()
     });
@@ -248,23 +246,22 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
 
     let selected_value = value.clone();
     let toggled_value = value.clone();
-    let toggle_state = ToggleState::new(
-        Signal::derive(move || state.is_selected(&selected_value)),
-        state.default_value().contains(&value),
-        Callback::new(move |is_selected: bool| {
-            if item_read_only.get_untracked() {
-                return;
-            }
-            if is_selected {
-                state.add_value(toggled_value.clone());
-            } else {
-                state.remove_value(&toggled_value);
-            }
-            if let Some(on_change) = on_change {
-                on_change.run(is_selected);
-            }
-        }),
-    );
+    let toggle_state = use_toggle_state(UseToggleStateInput {
+        default_selected: false,
+        value: Some(ValueBinding::new(
+            Signal::derive(move || state.is_selected(&selected_value)),
+            Callback::new(move |is_selected: bool| {
+                if is_selected {
+                    state.add_value(toggled_value.clone());
+                } else {
+                    state.remove_value(&toggled_value);
+                }
+            }),
+        )),
+        on_change,
+        // The item's or the group's (react-aria).
+        is_read_only: options.is_read_only,
+    });
 
     // The checkbox's own validation, merged into the group's (server errors are the group's).
     let realtime_validation = use_form_validation_state(UseFormValidationStateInput {
@@ -273,7 +270,7 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         value: toggle_state.is_selected,
         validate: options.validate.take(),
         validation_behavior: ValidationBehavior::Aria,
-        name: None,
+        names: Vec::new(),
     })
     .realtime_validation;
     // Shown through the group's validation.
@@ -342,7 +339,7 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
             None
         }
     });
-    input_props.aria_describedby = join_slot_ids(&[own, group_error, group.description_id]);
+    input_props.aria_describedby = IdRefs::derive([own, group_error, group.description_id]);
     checkbox.input_props = PropsWithStyles::new(input_props, input_styles);
     checkbox
 }

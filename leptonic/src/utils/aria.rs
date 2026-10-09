@@ -20,8 +20,7 @@
 use std::str::FromStr;
 
 use itertools::Itertools;
-use leptos::{attr::AttributeKey, prelude::*, tachys::html::attribute::AttributeValue};
-use smallvec::SmallVec;
+use leptos::{attr::AttributeKey, tachys::html::attribute::AttributeValue};
 
 /// Implements `AttributeValue` for a `Copy + Send + 'static` type that has an `into_str(self) -> &'static str` method.
 /// This delegates all rendering to the `&'static str` `AttributeValue` impl.
@@ -120,94 +119,6 @@ macro_rules! define_aria_bool {
 
         impl_attribute_value_via_str!($name);
     };
-}
-
-/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby>
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AriaDescribedby {
-    ids: SmallVec<[Oco<'static, str>; 1]>,
-}
-
-impl AriaDescribedby {
-    pub fn none() -> Self {
-        Self {
-            ids: SmallVec::new(),
-        }
-    }
-
-    pub fn element_with_id(id: impl Into<Oco<'static, str>>) -> Self {
-        Self {
-            ids: SmallVec::from_buf([id.into()]),
-        }
-    }
-
-    /// The referenced element ids.
-    pub fn ids(&self) -> impl Iterator<Item = &str> {
-        self.ids.iter().map(Oco::as_str)
-    }
-
-    // TODO: This could be made more efficient.
-    fn into_oco(self) -> Oco<'static, str> {
-        match self.ids.len() {
-            1 => self.ids.into_iter().next().unwrap(),
-            _ => self.ids.into_iter().join(" ").into(),
-        }
-    }
-}
-
-impl AttributeValue for AriaDescribedby {
-    type State = (leptos::tachys::renderer::types::Element, Oco<'static, str>);
-    type AsyncOutput = Self;
-    type Cloneable = Self;
-    type CloneableOwned = Self;
-
-    fn html_len(&self) -> usize {
-        let id_lengths: usize = self.ids.iter().map(|id| id.len()).sum();
-        let num_spaces = if self.ids.is_empty() {
-            0
-        } else {
-            self.ids.len() - 1
-        };
-        id_lengths + num_spaces
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        <Oco<'static, str> as AttributeValue>::to_html(self.into_oco(), key, buf);
-    }
-
-    fn to_template(key: &str, buf: &mut String) {
-        <Oco<'static, str> as AttributeValue>::to_template(key, buf);
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &leptos::tachys::renderer::types::Element,
-    ) -> Self::State {
-        <Oco<'static, str> as AttributeValue>::hydrate::<FROM_SERVER>(self.into_oco(), key, el)
-    }
-
-    fn build(self, el: &leptos::tachys::renderer::types::Element, key: &str) -> Self::State {
-        <Oco<'static, str> as AttributeValue>::build(self.into_oco(), el, key)
-    }
-
-    fn rebuild(self, key: &str, state: &mut Self::State) {
-        <Oco<'static, str> as AttributeValue>::rebuild(self.into_oco(), key, state);
-    }
-
-    fn into_cloneable(self) -> Self::Cloneable {
-        self
-    }
-
-    fn into_cloneable_owned(self) -> Self::CloneableOwned {
-        self
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
-        std::future::ready(self)
-    }
 }
 
 /// An `aria-keyshortcuts` value: the shortcuts activating or focusing an element, e.g.
@@ -479,21 +390,6 @@ impl AriaRole {
 
 impl_attribute_value_via_str!(AriaRole);
 
-/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls>
-///
-/// A space-separated list of one or more ID values referencing the elements being controlled
-/// by the current element. Used as `Option<AriaControls>` at call sites.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AriaControls(pub Vec<String>);
-
-impl IntoAttributeValue for AriaControls {
-    type Output = String;
-
-    fn into_attribute_value(self) -> Self::Output {
-        self.0.join(" ")
-    }
-}
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaHasPopup {
@@ -592,11 +488,6 @@ define_aria_bool! {
 define_aria_bool! {
     /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-readonly>
     AriaReadonly
-}
-
-define_aria_bool! {
-    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-grabbed>
-    AriaGrabbed
 }
 
 define_aria_bool! {
@@ -716,6 +607,58 @@ impl AriaLive {
 }
 
 impl_attribute_value_via_str!(AriaLive);
+
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-atomic>
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AriaAtomic {
+    /// Assistive technology presents the whole live region on a change.
+    True,
+    /// Only the changed nodes are presented.
+    #[default]
+    False,
+}
+
+impl AriaAtomic {
+    pub fn into_str(self) -> &'static str {
+        match self {
+            Self::True => "true",
+            Self::False => "false",
+        }
+    }
+}
+
+impl_attribute_value_via_str!(AriaAtomic);
+
+/// Which changes of a live region are presented.
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-relevant>
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AriaRelevant {
+    /// Added nodes.
+    Additions,
+    /// Added nodes and changed text (the ARIA default).
+    #[default]
+    AdditionsText,
+    /// Removed nodes.
+    Removals,
+    /// Changed text.
+    Text,
+    /// Every change.
+    All,
+}
+
+impl AriaRelevant {
+    pub fn into_str(self) -> &'static str {
+        match self {
+            Self::Additions => "additions",
+            Self::AdditionsText => "additions text",
+            Self::Removals => "removals",
+            Self::Text => "text",
+            Self::All => "all",
+        }
+    }
+}
+
+impl_attribute_value_via_str!(AriaRelevant);
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-pressed>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]

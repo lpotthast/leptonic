@@ -1,25 +1,27 @@
 // Upstream: react-aria-components/src/Dialog.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Dialog.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Dialog.browser.test.tsx @ 99e6102368
 use leptos::{
     context::Provider,
     prelude::*,
     tachys::html::{class::class, style::style},
 };
+use leptos_classes::Classes;
 
 use super::press::PressResponder;
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out,
     hooks::{
-        DialogRole, IntoAttrs, OverlayTriggerState, PressResponderTrigger, UseDialogInput,
-        UseDialogReturn, UseOverlayTriggerStateInput, use_dialog, use_overlay_trigger_state,
+        dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog},
+        interactions::PressResponderTrigger,
+        overlay::{OverlayTriggerState, UseOverlayTriggerStateInput, use_overlay_trigger_state},
     },
     utils::{
-        CapturedElement,
         aria::AriaExpanded,
-        classes::Classes,
         default_class::with_default_class,
         dev_warn,
         heading_level::HeadingLevel,
-        id::{ensure_element_id, use_id},
+        id::use_id,
         slot_id::{SlotProps, use_slot},
         styles::Styles,
     },
@@ -74,12 +76,7 @@ pub fn Dialog(
     let classes = with_default_class("leptonic-Dialog", classes);
     let trigger = use_context::<DialogTriggerContext>();
     // Without a title, `aria_label` or `aria_labelledby`, the trigger names the dialog
-    // (react-aria-components). Its id is ensured once the dialog is rendered, before the hook
-    // checks that the dialog has a name.
-    let trigger_id = RwSignal::new(None);
-    if let Some(trigger) = trigger {
-        Effect::new(move |_| trigger_id.set(trigger.ensure_trigger_id()));
-    }
+    // (react-aria-components).
     let UseDialogReturn {
         dialog_props,
         title_props,
@@ -91,7 +88,13 @@ pub fn Dialog(
         aria_describedby,
         fallback_aria_labelledby: trigger
             .and_then(|trigger| trigger.dialog_labelledby)
-            .unwrap_or_else(|| trigger_id.into()),
+            .or_else(|| {
+                trigger.map(|trigger| {
+                    let trigger_id = trigger.trigger_id;
+                    Signal::derive(move || Some(trigger_id.get()))
+                })
+            })
+            .unwrap_or_default(),
         ..UseDialogInput::default()
     });
     // A dialog opened by a `DialogTrigger` is what its trigger controls (react-aria-components passes
@@ -168,10 +171,19 @@ pub(crate) fn overlay_open_state(
     context: Option<DialogTriggerContext>,
 ) -> OverlayTriggerState {
     match context {
-        Some(context) if is_open.is_none() && default_open.is_none() => context.state,
+        Some(context) if is_open.is_none() && default_open.is_none() => {
+            if set_open.is_some() || on_open_change.is_some() {
+                dev_warn!(
+                    "An overlay inside a <DialogTrigger> ignores its own `set_open` and \
+                     `on_open_change` (without `is_open` or `default_open`, the trigger owns the \
+                     open state): set them on the trigger."
+                );
+            }
+            context.state
+        }
         _ => {
             let (value, on_open_change) =
-                crate::utils::ValueBinding::from_state_props(is_open, set_open, on_open_change);
+                crate::ValueBinding::from_state_props(is_open, set_open, on_open_change);
             use_overlay_trigger_state(UseOverlayTriggerStateInput {
                 default_open: default_open.unwrap_or(false),
                 value,
@@ -191,8 +203,9 @@ pub struct DialogTriggerContext {
     pub trigger: CapturedElement,
     /// The id of the open overlay, set by it: the trigger's `aria-controls`.
     pub overlay_id: RwSignal<Option<String>>,
-    /// The id the trigger element gets when it has none (see [`Self::ensure_trigger_id`]).
-    generated_trigger_id: StoredValue<String>,
+    /// The trigger element's id (see [`PressResponderTrigger::id`]): an untitled dialog or menu
+    /// is named by it.
+    pub trigger_id: RwSignal<String>,
     /// What names an untitled dialog instead of the trigger (e.g. a date picker's button and
     /// label).
     pub(crate) dialog_labelledby: Option<Signal<Option<String>>>,
@@ -205,7 +218,7 @@ impl DialogTriggerContext {
             state,
             trigger,
             overlay_id: RwSignal::new(None),
-            generated_trigger_id: StoredValue::new(use_id("dialog-trigger")),
+            trigger_id: RwSignal::new(use_id("dialog-trigger")),
             dialog_labelledby: None,
         }
     }
@@ -215,13 +228,6 @@ impl DialogTriggerContext {
     pub(crate) fn with_dialog_labelledby(mut self, labelledby: Signal<Option<String>>) -> Self {
         self.dialog_labelledby = Some(labelledby);
         self
-    }
-
-    /// The trigger element's id, once rendered: its own (`attr:id`), else a generated one it gets
-    /// now. An untitled dialog is named by it. Called on demand (not on render), so the server
-    /// and the hydrated page agree on the trigger's attributes.
-    pub fn ensure_trigger_id(&self) -> Option<String> {
-        ensure_element_id(&self.trigger, &self.generated_trigger_id.get_value())
     }
 }
 
@@ -257,14 +263,14 @@ pub fn DialogTrigger(
     children: Children,
 ) -> impl IntoView {
     let (value, on_open_change) =
-        crate::utils::ValueBinding::from_state_props(is_open, set_open, on_open_change);
+        crate::ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
         default_open,
         value,
         on_open_change,
     });
-    // The trigger needs an id to name an untitled dialog. Its own (`attr:id`) wins, which only the
-    // rendered element shows (react-aria-components merges both ids into one).
+    // The trigger needs an id to name an untitled dialog: the context's, or the trigger element's
+    // own, which it writes there (react-aria-components merges both ids into one).
     let context = DialogTriggerContext::new(state, CapturedElement::new());
     let DialogTriggerContext {
         trigger,
@@ -278,6 +284,7 @@ pub fn DialogTrigger(
         aria_expanded: Signal::derive(move || Some(AriaExpanded::from(is_open.get()))),
         aria_controls: Signal::derive(move || is_open.get().then(|| overlay_id.get()).flatten()),
         element: trigger,
+        id: context.trigger_id,
     };
 
     view! {

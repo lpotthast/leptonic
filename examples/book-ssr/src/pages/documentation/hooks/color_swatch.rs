@@ -50,8 +50,9 @@ pub fn PageUseColorSwatch() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::color::{Color, RGB8},
+                            Color,
+                            RGB8,
+                            hooks::color::{UseColorSwatchInput, use_color_swatch},
                         };
                         use leptos::prelude::*;
 

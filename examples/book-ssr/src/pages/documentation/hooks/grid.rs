@@ -27,11 +27,28 @@ pub fn PageUseGrid() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
+                            CapturedElement,
                             hooks::{
-                                collections::{CollectionOptions, SelectionOptions},
-                                *,
+                                collections::{
+                                    CollectionOptions,
+                                    Key,
+                                    SelectionOptions,
+                                    use_collection,
+                                },
+                                grid::{
+                                    GridFocusMode,
+                                    UseGridCellInput,
+                                    UseGridInput,
+                                    UseGridReturn,
+                                    UseGridRowInput,
+                                    UseGridStateInput,
+                                    use_grid,
+                                    use_grid_cell,
+                                    use_grid_row,
+                                    use_grid_state,
+                                },
+                                gridlist::KeyboardNavigationBehavior,
                             },
-                            utils::CapturedElement,
                         };
                         use leptos::prelude::*;
 
@@ -129,7 +146,7 @@ pub fn PageUseGrid() -> impl IntoView {
                         <ApiRow name="state" ty="GridState">"From "<Code inline=true>"use_grid_state"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The grid element; the props capture it. Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the grid."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<String>>" default="None">"Names the grid."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the "<Link href=format!("{}#use-grid-keyboard-delegate", routes::doc::CollectionState.materialize())>"grid keyboard delegate"</Link>"."
                         </ApiRow>

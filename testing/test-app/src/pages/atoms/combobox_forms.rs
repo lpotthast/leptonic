@@ -9,9 +9,11 @@ use leptonic::{
         listbox::{ListBox, ListBoxItem, ListBoxItems, ListBoxSection, ListBoxSectionHeading},
     },
     hooks::{
-        ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxValue, ValidationBehavior,
-        collections::{CollectionMemo, Key, use_collection, use_list_collection},
-        use_contains_filter,
+        collections::{
+            CollectionMemo, Key, UseListCollectionInput, use_collection, use_list_collection,
+        },
+        combobox::{ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxValue, use_contains_filter},
+        form::ValidationBehavior,
     },
 };
 use leptos::{ev::SubmitEvent, prelude::*};
@@ -19,18 +21,18 @@ use leptos::{ev::SubmitEvent, prelude::*};
 const ANIMALS: [(&str, &str); 3] = [("1", "Cat"), ("2", "Dog"), ("3", "Kangaroo")];
 
 fn animals() -> CollectionMemo {
-    use_list_collection(
-        Signal::stored(ANIMALS.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, text)| (*text).to_owned(),
-    )
+    use_list_collection(UseListCollectionInput {
+        items: Signal::stored(ANIMALS.to_vec()),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, text)| (*text).to_owned(),
+    })
 }
 
-fn join(keys: &[Key]) -> String {
-    keys.iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(",")
+/// The keys, sorted (a multiple selection is a set).
+fn join<'a>(keys: impl IntoIterator<Item = &'a Key>) -> String {
+    let mut keys: Vec<String> = keys.into_iter().map(ToString::to_string).collect();
+    keys.sort();
+    keys.join(",")
 }
 
 /// The popover with one option per item, shared by the combo boxes below.
@@ -81,20 +83,22 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
             s.item("parrot", "Parrot");
         });
     });
-    let no_dogs: leptonic::hooks::ValidateFn<ComboBoxValue<Option<Key>>> =
+    let no_dogs: leptonic::hooks::form::ValidateFn<ComboBoxValue<Option<Key>>> =
         Arc::new(|value: &ComboBoxValue<Option<Key>>| {
-        if value.value == Some(Key::from("2")) {
-            Err(vec!["Dogs are not allowed".to_owned()])
-        } else {
-            Ok(())
-        }
-    });
+            if value.value == Some(Key::from("2")) {
+                Err(vec!["Dogs are not allowed".to_owned()])
+            } else {
+                Ok(())
+            }
+        });
     let log_open = |log: RwSignal<Vec<String>>| {
-        Callback::new(move |change: leptonic::hooks::ComboBoxOpenChange| {
-            log.update(|log| {
-                log.push(format!("{}:{:?}", change.is_open, change.trigger));
-            });
-        })
+        Callback::new(
+            move |change: leptonic::hooks::combobox::ComboBoxOpenChange| {
+                log.update(|log| {
+                    log.push(format!("{}:{:?}", change.is_open, change.trigger));
+                });
+            },
+        )
     };
 
     view! {
@@ -107,7 +111,7 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 allows_custom_value=true
                 name="animal"
                 on_change={move |key: Option<Key>| {
-                    custom_changes.update(|c| c.push(format!("[{}]", join(key.as_slice()))));
+                    custom_changes.update(|c| c.push(format!("[{}]", join(&key))));
                 }}
             >
                 <Label>"Custom animal"</Label>
@@ -137,25 +141,25 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
         </Form>
 
         <Form attr:id="cbf-multiple">
-            <ComboBox<Vec<Key>>
+            <ComboBox<HashSet<Key>>
                 collection=animals()
                 filter=use_contains_filter()
                 name="animals"
                 default_input_value=""
-                on_change={move |keys: Vec<Key>| {
+                on_change={move |keys: HashSet<Key>| {
                     multiple_changes.update(|c| c.push(format!("[{}]", join(&keys))));
                 }}
             >
                 <Label>"Animals"</Label>
                 <Input />
                 <Options />
-            </ComboBox<Vec<Key>>>
+            </ComboBox<HashSet<Key>>>
             <input type="reset" id="cbf-multiple-reset" />
         </Form>
         <div>"Changes: " <span id="cbf-multiple-changes">{move || multiple_changes.get().join("|")}</span></div>
 
         <Form attr:id="cbf-multiple-required">
-            <ComboBox<Vec<Key>>
+            <ComboBox<HashSet<Key>>
                 collection=animals()
                 filter=use_contains_filter()
                 is_required=true
@@ -165,7 +169,7 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
                 <Input />
                 <Options />
                 <FieldError />
-            </ComboBox<Vec<Key>>>
+            </ComboBox<HashSet<Key>>>
         </Form>
 
         <form id="cbf-key">
@@ -253,7 +257,7 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
 /// The sections of the combo box's (filtered) collection, with their headings and options.
 #[component]
 fn SectionedOptions() -> impl IntoView {
-    let list = expect_context::<leptonic::hooks::ListBoxData>();
+    let list = expect_context::<leptonic::hooks::listbox::ListBoxData>();
     let collection = list.state.collection;
     move || {
         collection.with(|c| {

@@ -81,7 +81,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
                         <ApiRow name="is_ready" ty="Signal<bool>" default="true">
                             "Whether the entry may start. The element is hidden until then."
                         </ApiRow>
-                        <ApiRow name="on_enter" ty="Option<Callback<SendWrapper<web_sys::Element>>>" default="None">
+                        <ApiRow name="on_enter" ty="Option<Callback<SendWrapper<Element>>>" default="None">
                             "Called with the element when the entry starts, e.g. to start a Web Animation, which is awaited "
                             "like CSS ones."
                         </ApiRow>
@@ -94,6 +94,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
                             "True while the element is ready and its enter animations run. Render it as a "
                             <Code inline=true>"data-entering"</Code>" attribute."
                         </ApiRow>
+                        <ApiRow name="styles" ty="Styles">"Merge these styles onto the animated element so it stays hidden until ready."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -101,16 +102,16 @@ pub fn PageAnimationHooks() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                hooks::{UseEnterAnimationInput, UseEnterAnimationReturn, use_enter_animation},
-                                utils::CapturedElement,
+                                CapturedElement,
+                                hooks::animation::{UseEnterAnimationInput, UseEnterAnimationReturn, use_enter_animation},
                             };
 
                             let element = CapturedElement::new();
-                            let UseEnterAnimationReturn { is_entering } =
+                            let UseEnterAnimationReturn { is_entering, styles } =
                                 use_enter_animation(UseEnterAnimationInput { element, is_ready: true.into(), on_enter: None });
 
                             view! {
-                                <div {..element.attr()} class="panel" data-entering=move || is_entering.get().then_some("")>
+                                <div {..element.attr()} class="panel" style=styles data-entering=move || is_entering.get().then_some("")>
                                     "Hello"
                                 </div>
                             }
@@ -143,7 +144,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
                         <ApiRow name="is_open" ty="Signal<bool>">
                             "Whether the element is logically open. The exit starts when it turns false. Required."
                         </ApiRow>
-                        <ApiRow name="on_exit" ty="Option<Callback<SendWrapper<web_sys::Element>>>" default="None">
+                        <ApiRow name="on_exit" ty="Option<Callback<SendWrapper<Element>>>" default="None">
                             "Called with the element when the exit starts, e.g. to start a Web Animation, which is awaited "
                             "like CSS ones."
                         </ApiRow>
@@ -168,8 +169,8 @@ pub fn PageAnimationHooks() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                hooks::{UseExitAnimationInput, UseExitAnimationReturn, use_exit_animation},
-                                utils::CapturedElement,
+                                CapturedElement,
+                                hooks::animation::{UseExitAnimationInput, UseExitAnimationReturn, use_exit_animation},
                             };
 
                             // `is_open: Signal<bool>` is your overlay's state.

@@ -1,5 +1,6 @@
 use leptonic::hooks::{
-    ButtonElementType, ButtonType, LinkRel, LinkTarget, UseButtonInput, UseButtonReturn, use_button,
+    button::{ButtonElementType, ButtonType, UseButtonInput, UseButtonReturn, use_button},
+    link::{LinkRel, LinkTarget},
 };
 use leptos::prelude::*;
 
@@ -77,7 +78,7 @@ pub fn PageHookButton() -> impl IntoView {
         id: Some("test-btn-blank".into()),
         element_type: ButtonElementType::Anchor,
         href: Signal::stored(Some("https://example.com".to_owned())),
-        target: LinkTarget::Blank,
+        target: LinkTarget::Blank.into(),
         rel: vec![LinkRel::NoFollow],
         ..Default::default()
     })

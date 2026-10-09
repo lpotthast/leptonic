@@ -2,7 +2,8 @@ use indoc::indoc;
 use leptos::prelude::*;
 
 use super::demos::{
-    calendar::AtomCalendarDemo, calendar_pickers::CalendarPickersDemo, calendar_range::AtomRangeCalendarDemo,
+    calendar::AtomCalendarDemo, calendar_pickers::CalendarPickersDemo,
+    calendar_range::AtomRangeCalendarDemo,
 };
 use crate::{kit::*, routes};
 
@@ -152,7 +153,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="focused_value" ty="Option<Signal<Date>>" default="None">"The focused date (controlled)."</ApiRow>
                         <ApiRow name="set_focused_value" ty="Option<Out<Date>>" default="None">"Receives the focused date."</ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the focused date."</ApiRow>
+                        <ApiRow name="on_focused_value_change" ty="Option<Callback<Date>>" default="None">"Called with the focused date."</ApiRow>
                         <ApiRow name="visible_duration" ty="Signal<DateDuration>" default="DateDuration::months(1)">
                             "How much is visible at once. See "<AnchorLink href="#calendargrid">"CalendarGrid"</AnchorLink>
                             " for several months. A change aligns the visible range around the focused date again."
@@ -215,7 +216,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <ApiRow name="default_focused_value" ty="Option<Date>" default="None">"The initially focused date. Default: the range\u{2019}s start, else today."</ApiRow>
                         <ApiRow name="focused_value" ty="Option<Signal<Date>>" default="None">"The focused date (controlled)."</ApiRow>
                         <ApiRow name="set_focused_value" ty="Option<Out<Date>>" default="None">"Receives the focused date."</ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the focused date."</ApiRow>
+                        <ApiRow name="on_focused_value_change" ty="Option<Callback<Date>>" default="None">"Called with the focused date."</ApiRow>
                         <ApiRow name="visible_duration" ty="Signal<DateDuration>" default="DateDuration::months(1)">"How much is visible at once."</ApiRow>
                         <ApiRow name="page_behavior" ty="Signal<PageBehavior>" default="Visible">"How the page buttons move."</ApiRow>
                         <ApiRow name="first_day_of_week" ty="MaybeProp<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>

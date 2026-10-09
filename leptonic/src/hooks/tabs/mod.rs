@@ -3,19 +3,19 @@
 //! its tabs with [`use_tab`] and the panel with [`use_tab_panel`].
 
 /// Tab list navigation.
-pub mod tabs_keyboard_delegate;
+pub(crate) mod tabs_keyboard_delegate;
 
 /// A tab.
-pub mod use_tab;
+pub(crate) mod use_tab;
 
 /// The tab list element.
-pub mod use_tab_list;
+pub(crate) mod use_tab_list;
 
 /// Tab list state: tabs, the selected tab, focus.
-pub mod use_tab_list_state;
+pub(crate) mod use_tab_list_state;
 
 /// The content of a tab.
-pub mod use_tab_panel;
+pub(crate) mod use_tab_panel;
 
 pub use tabs_keyboard_delegate::*;
 pub use use_tab::*;

@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::VisuallyHidden;
+use leptonic::atoms::visually_hidden::VisuallyHidden;
 use leptos::prelude::*;
 
 /// `VisuallyHidden` (react-aria's `VisuallyHidden.test.tsx` setups): buttons A and C around a

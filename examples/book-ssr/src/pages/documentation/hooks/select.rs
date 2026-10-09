@@ -162,9 +162,12 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         {indoc!(r#"
                             use std::collections::HashSet;
 
-                            use leptonic::hooks::{
-                                Key, SelectMode, UseSelectStateInput, ValidationBehavior, collections::CloseOnSelect,
-                                use_select_state,
+                            use leptonic::{
+                                hooks::{
+                                    collections::{CloseOnSelect, Key},
+                                    form::ValidationBehavior,
+                                    select::{SelectMode, UseSelectStateInput, use_select_state},
+                                },
                             };
                             use leptos::{logging::log, prelude::*};
 
@@ -267,7 +270,12 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-select-example">
                     <Code language=Language::Rust>
                         {indoc!(r"
-                            use leptonic::hooks::{UseSelectInput, UseSelectReturn, use_button, use_select};
+                            use leptonic::{
+                                hooks::{
+                                    button::use_button,
+                                    select::{UseSelectInput, UseSelectReturn, use_select},
+                                },
+                            };
 
                             let UseSelectReturn {
                                 label_props,
@@ -358,9 +366,10 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         <ApiRow name="select_props" ty="UseHiddenSelectSelectProps">
                             "For the "<Code inline=true>"<select>"</Code>". Changes made by autofill update the select\u{2019}s value."
                         </ApiRow>
-                        <ApiRow name="options" ty="Signal<Vec<HiddenSelectOption>>">
-                            "The "<Code inline=true>"<option>"</Code>"s to render ("<Code inline=true>"value"</Code>", "
-                            <Code inline=true>"text"</Code>", "<Code inline=true>"is_selected"</Code>"), starting with an empty one."
+                        <ApiRow name="options" ty="Memo<Vec<HiddenSelectOption>>">
+                            "The "<Code inline=true>"<option>"</Code>"s to render, starting with an empty one. Key each by "
+                            <Code inline=true>"key"</Code>" and read selection reactively with "
+                            <Code inline=true>"is_selected(&state)"</Code>". Selected keys missing from the collection remain available for form submission."
                         </ApiRow>
                         <ApiRow name="label" ty="MaybeProp<String>">
                             "The text of a "<Code inline=true>"<label>"</Code>" around the "<Code inline=true>"<select>"</Code>"."
@@ -382,8 +391,12 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-hidden-select-example">
                     <Code language=Language::Rust>
                         {indoc!(r"
-                            use leptonic::hooks::{IntoAttrs, UseHiddenSelectReturn, use_hidden_select};
+                            use leptonic::{
+                                IntoAttrs,
+                                hooks::select::{UseHiddenSelectReturn, use_hidden_select},
+                            };
 
+                            let state = hidden_select.state;
                             let UseHiddenSelectReturn { container_props, select_props, options, label, .. } =
                                 use_hidden_select(hidden_select);
 
@@ -392,8 +405,17 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                     <label>
                                         {move || label.get()}
                                         <select {..select_props.into_attrs()}>
-                                            <For each=move || options.get() key=|o| (o.value.clone(), o.is_selected) let:o>
-                                                <option value=o.value selected=o.is_selected>{o.text}</option>
+                                            <For each=move || options.get() key=|o| o.key.clone() let:o>
+                                                {
+                                                    let value = o.value.clone();
+                                                    let text = o.text.clone();
+                                                    let selected = move || o.is_selected(&state);
+                                                    view! {
+                                                        <option value=value selected=selected.clone() prop:selected=selected>
+                                                            {text}
+                                                        </option>
+                                                    }
+                                                }
                                             </For>
                                         </select>
                                     </label>

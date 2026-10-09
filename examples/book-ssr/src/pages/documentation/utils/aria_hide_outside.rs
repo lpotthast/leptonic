@@ -25,7 +25,19 @@ pub fn PageAriaHideOutside() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::{hooks::*, utils::{AriaHideOutsideOptions, aria_hide_outside}};
+                        use leptonic::{
+                            AriaHideOutsideOptions,
+                            aria_hide_outside,
+                            hooks::{
+                                modal::use_modal_backdrop,
+                                overlay::{
+                                    UseOverlayInput,
+                                    UseOverlayReturn,
+                                    use_overlay,
+                                    use_popover,
+                                },
+                            },
+                        };
 
                         let (is_open, set_is_open) = signal(false);
                         let UseOverlayReturn { props, overlay_element, .. } = use_overlay(UseOverlayInput {
@@ -56,14 +68,14 @@ pub fn PageAriaHideOutside() -> impl IntoView {
 
             <Section title="AriaHideOutsideOptions">
                 <ApiTable kind=ApiKind::Fields of="AriaHideOutsideOptions">
-                    <ApiRow name="root" ty="Option<web_sys::Element>" default="None">
+                    <ApiRow name="root" ty="Option<Element>" default="None">
                         "The element to start hiding from. "<Code inline=true>"None"</Code>": the document body."
                     </ApiRow>
                     <ApiRow name="mode" ty="HideMode" default="AriaHidden">
                         "How elements are hidden: "<Code inline=true>"AriaHidden"</Code>" sets "<Code inline=true>"aria-hidden=\"true\""</Code>
                         " (the page stays usable with a pointer, as behind a combo box\u{2019}s popover), "<Code inline=true>"Inert"</Code>
                         " sets "<Code inline=true>"inert"</Code>" (also not interactive, for modal overlays). Import it as "
-                        <Code inline=true>"leptonic::utils::HideMode"</Code>"."
+                        <Code inline=true>"leptonic::HideMode"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>

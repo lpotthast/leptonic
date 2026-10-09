@@ -64,7 +64,10 @@ pub fn PageUseKeyboard() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::Propagation};
+                        use leptonic::{
+                            Propagation,
+                            hooks::interactions::{KeyboardEventWrapper, UseKeyboardInput, UseKeyboardReturn, use_keyboard},
+                        };
                         use leptos::{logging::log, prelude::*};
 
                         let disabled = RwSignal::new(false);
@@ -96,14 +99,15 @@ pub fn PageUseKeyboard() -> impl IntoView {
                     "Matching keys by hand in "<Code inline=true>"on_key_down"</Code>" gets tedious quickly, especially once modifiers "
                     "are involved. Instead, describe each shortcut as a "<Code inline=true>"Shortcut"</Code>", bind it to a handler in "
                     <Code inline=true>"KeyboardShortcuts"</Code>" and pass them as "<Code inline=true>"shortcuts"</Code>
-                    ". Both live in "<Code inline=true>"leptonic::utils::keyboard_shortcut"</Code>"."
+                    ". Both live in "<Code inline=true>"leptonic"</Code>"."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+                            KeyboardShortcuts,
+                            Shortcut,
+                            hooks::interactions::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
                         };
                         use leptos::prelude::*;
 
@@ -111,11 +115,11 @@ pub fn PageUseKeyboard() -> impl IntoView {
                         let saves = RwSignal::new(0);
 
                         let shortcuts = KeyboardShortcuts::new()
-                            .on(Shortcut::key("ArrowRight"), move |_| position.update(|p| *p += 1))
-                            .on(Shortcut::key("ArrowLeft"), move |_| position.update(|p| *p -= 1))
-                            .on(Shortcut::key("s").primary(), move |_| saves.update(|s| *s += 1))
+                            .on(Shortcut::new(KeyboardKey::ArrowRight), move |_| position.update(|p| *p += 1))
+                            .on(Shortcut::new(KeyboardKey::ArrowLeft), move |_| position.update(|p| *p -= 1))
+                            .on(Shortcut::new(KeyboardKey::S).primary(), move |_| saves.update(|s| *s += 1))
                             // `false`: not handled, the event keeps its default and bubbles on.
-                            .on(Shortcut::key("Home"), move |_| {
+                            .on(Shortcut::new(KeyboardKey::Home), move |_| {
                                 if position.get_untracked() == 0 {
                                     return false;
                                 }

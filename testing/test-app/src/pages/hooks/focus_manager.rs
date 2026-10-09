@@ -1,7 +1,12 @@
 use std::sync::Arc;
 
-use leptonic::hooks::{
-    FocusManager, FocusManagerOptions, IntoAttrs, UseFocusManagerInput, use_focus_manager,
+use leptonic::{
+    IntoAttrs,
+    atoms::focus_scope::FocusScope,
+    hooks::focus::{
+        FocusManager, FocusManagerOptions, Focusability, create_focus_manager,
+        use_focus_manager_context,
+    },
 };
 use leptos::{prelude::*, web_sys};
 
@@ -9,35 +14,26 @@ use crate::pages::prevent_focus_steal;
 
 #[component]
 pub fn PageHookFocusManager() -> impl IntoView {
-    let fm = use_focus_manager(UseFocusManagerInput::default());
+    let fm = create_focus_manager();
     let focus_manager = StoredValue::new(fm.focus_manager);
 
-    let fm_wrap = use_focus_manager(UseFocusManagerInput::default());
-    let fm_wrap_mgr = StoredValue::new(fm_wrap.focus_manager);
-
-    let fm_tabbable = use_focus_manager(UseFocusManagerInput::default());
+    let fm_tabbable = create_focus_manager();
     let fm_tabbable_mgr = StoredValue::new(fm_tabbable.focus_manager);
 
-    let fm_accept = use_focus_manager(UseFocusManagerInput::default());
-    let fm_accept_mgr = StoredValue::new(fm_accept.focus_manager);
-
-    let fm_radio = use_focus_manager(UseFocusManagerInput::default());
+    let fm_radio = create_focus_manager();
     let fm_radio_mgr = StoredValue::new(fm_radio.focus_manager);
 
-    let fm_radio_none = use_focus_manager(UseFocusManagerInput::default());
+    let fm_radio_none = create_focus_manager();
     let fm_radio_none_mgr = StoredValue::new(fm_radio_none.focus_manager);
 
-    let fm_radio_wrap = use_focus_manager(UseFocusManagerInput::default());
+    let fm_radio_wrap = create_focus_manager();
     let fm_radio_wrap_mgr = StoredValue::new(fm_radio_wrap.focus_manager);
 
-    let fm_vis = use_focus_manager(UseFocusManagerInput::default());
+    let fm_vis = create_focus_manager();
     let fm_vis_mgr = StoredValue::new(fm_vis.focus_manager);
 
-    let fm_inert = use_focus_manager(UseFocusManagerInput::default());
+    let fm_inert = create_focus_manager();
     let fm_inert_mgr = StoredValue::new(fm_inert.focus_manager);
-
-    let fm_outside = use_focus_manager(UseFocusManagerInput::default());
-    let fm_outside_mgr = StoredValue::new(fm_outside.focus_manager);
 
     view! {
         <div id="test-page-hook-focus-manager">
@@ -45,22 +41,16 @@ pub fn PageHookFocusManager() -> impl IntoView {
 
             <section>
                 <h2>"Basic Navigation"</h2>
+                // Focus outside the scope, for `focus_next`/`focus_previous` from outside.
+                <button id="test-fm-outside-external">"External (outside scope)"</button>
                 <div id="test-fm-scope" {..fm.props.into_attrs()}>
                     <button id="test-fm-item-1">"Item 1"</button>
                     <button id="test-fm-item-2">"Item 2"</button>
                     <button id="test-fm-item-3">"Item 3"</button>
                 </div>
                 <FocusManagerControls focus_manager />
-            </section>
-
-            <section>
-                <h2>"Wrap"</h2>
-                <div id="test-fm-wrap-scope" {..fm_wrap.props.into_attrs()}>
-                    <button id="test-fm-wrap-item-1">"Wrap Item 1"</button>
-                    <button id="test-fm-wrap-item-2">"Wrap Item 2"</button>
-                    <button id="test-fm-wrap-item-3">"Wrap Item 3"</button>
-                </div>
-                <FocusManagerWrapControls focus_manager=fm_wrap_mgr />
+                <FocusManagerWrapControls focus_manager />
+                <FocusManagerAcceptControls focus_manager />
             </section>
 
             <section>
@@ -73,16 +63,6 @@ pub fn PageHookFocusManager() -> impl IntoView {
                     <button id="test-fm-tabbable-item-3">"Tabbable Item 3"</button>
                 </div>
                 <FocusManagerTabbableControls focus_manager=fm_tabbable_mgr />
-            </section>
-
-            <section>
-                <h2>"Accept Filter"</h2>
-                <div id="test-fm-accept-scope" {..fm_accept.props.into_attrs()}>
-                    <button id="test-fm-accept-item-1">"Accept Item 1"</button>
-                    <button id="test-fm-accept-item-2">"Accept Item 2"</button>
-                    <button id="test-fm-accept-item-3">"Accept Item 3"</button>
-                </div>
-                <FocusManagerAcceptControls focus_manager=fm_accept_mgr />
             </section>
 
             <section>
@@ -186,16 +166,8 @@ pub fn PageHookFocusManager() -> impl IntoView {
                 <FocusManagerInertControls focus_manager=fm_inert_mgr />
             </section>
 
-            <section>
-                <h2>"Outside Scope"</h2>
-                <button id="test-fm-outside-external">"External (outside scope)"</button>
-                <div id="test-fm-outside-scope" {..fm_outside.props.into_attrs()}>
-                    <button id="test-fm-outside-item-1">"Outside Item 1"</button>
-                    <button id="test-fm-outside-item-2">"Outside Item 2"</button>
-                    <button id="test-fm-outside-item-3">"Outside Item 3"</button>
-                </div>
-                <FocusManagerOutsideControls focus_manager=fm_outside_mgr />
-            </section>
+            <ScopeManager />
+            <ContainerGroups />
         </div>
     }
 }
@@ -204,7 +176,7 @@ pub fn PageHookFocusManager() -> impl IntoView {
 fn FocusManagerControls(focus_manager: StoredValue<FocusManager>) -> impl IntoView {
     let default_opts = || FocusManagerOptions {
         wrap: false,
-        tabbable: false,
+        focusability: Focusability::Focusable,
         from: None,
         accept: None,
     };
@@ -261,7 +233,7 @@ fn FocusManagerWrapControls(focus_manager: StoredValue<FocusManager>) -> impl In
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: true,
-                tabbable: false,
+                focusability: Focusability::Focusable,
                 from: None,
                 accept: None,
             });
@@ -272,29 +244,7 @@ fn FocusManagerWrapControls(focus_manager: StoredValue<FocusManager>) -> impl In
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: true,
-                tabbable: false,
-                from: None,
-                accept: None,
-            });
-        });
-    };
-
-    let nowrap_next = move |_| {
-        focus_manager.with_value(|fm: &FocusManager| {
-            fm.focus_next(FocusManagerOptions {
-                wrap: false,
-                tabbable: false,
-                from: None,
-                accept: None,
-            });
-        });
-    };
-
-    let nowrap_prev = move |_| {
-        focus_manager.with_value(|fm: &FocusManager| {
-            fm.focus_previous(FocusManagerOptions {
-                wrap: false,
-                tabbable: false,
+                focusability: Focusability::Focusable,
                 from: None,
                 accept: None,
             });
@@ -317,20 +267,6 @@ fn FocusManagerWrapControls(focus_manager: StoredValue<FocusManager>) -> impl In
             >
                 "Wrap Prev"
             </button>
-            <button
-                id="test-fm-nowrap-focus-next"
-                on:mousedown=prevent_focus_steal
-                on:click=nowrap_next
-            >
-                "No-Wrap Next"
-            </button>
-            <button
-                id="test-fm-nowrap-focus-prev"
-                on:mousedown=prevent_focus_steal
-                on:click=nowrap_prev
-            >
-                "No-Wrap Prev"
-            </button>
         </div>
     }
 }
@@ -341,7 +277,7 @@ fn FocusManagerTabbableControls(focus_manager: StoredValue<FocusManager>) -> imp
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: false,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -352,7 +288,7 @@ fn FocusManagerTabbableControls(focus_manager: StoredValue<FocusManager>) -> imp
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: false,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -363,7 +299,7 @@ fn FocusManagerTabbableControls(focus_manager: StoredValue<FocusManager>) -> imp
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: false,
-                tabbable: false,
+                focusability: Focusability::Focusable,
                 from: None,
                 accept: None,
             });
@@ -374,7 +310,7 @@ fn FocusManagerTabbableControls(focus_manager: StoredValue<FocusManager>) -> imp
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: false,
-                tabbable: false,
+                focusability: Focusability::Focusable,
                 from: None,
                 accept: None,
             });
@@ -418,7 +354,7 @@ fn FocusManagerTabbableControls(focus_manager: StoredValue<FocusManager>) -> imp
 #[component]
 fn FocusManagerAcceptControls(focus_manager: StoredValue<FocusManager>) -> impl IntoView {
     let reject_item_2: Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync> =
-        Arc::new(|el: &web_sys::Element| el.id() != "test-fm-accept-item-2");
+        Arc::new(|el: &web_sys::Element| el.id() != "test-fm-item-2");
 
     let reject_filter = StoredValue::new(reject_item_2);
 
@@ -427,7 +363,7 @@ fn FocusManagerAcceptControls(focus_manager: StoredValue<FocusManager>) -> impl 
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: false,
-                tabbable: false,
+                focusability: Focusability::Focusable,
                 from: None,
                 accept: Some(filter),
             });
@@ -439,7 +375,7 @@ fn FocusManagerAcceptControls(focus_manager: StoredValue<FocusManager>) -> impl 
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: false,
-                tabbable: false,
+                focusability: Focusability::Focusable,
                 from: None,
                 accept: Some(filter),
             });
@@ -472,7 +408,7 @@ fn FocusManagerRadioControls(focus_manager: StoredValue<FocusManager>) -> impl I
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: false,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -483,7 +419,7 @@ fn FocusManagerRadioControls(focus_manager: StoredValue<FocusManager>) -> impl I
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: false,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -516,7 +452,7 @@ fn FocusManagerRadioNoneControls(focus_manager: StoredValue<FocusManager>) -> im
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: false,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -527,7 +463,7 @@ fn FocusManagerRadioNoneControls(focus_manager: StoredValue<FocusManager>) -> im
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: false,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -560,7 +496,7 @@ fn FocusManagerRadioWrapControls(focus_manager: StoredValue<FocusManager>) -> im
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_next(FocusManagerOptions {
                 wrap: true,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -571,7 +507,7 @@ fn FocusManagerRadioWrapControls(focus_manager: StoredValue<FocusManager>) -> im
         focus_manager.with_value(|fm: &FocusManager| {
             fm.focus_previous(FocusManagerOptions {
                 wrap: true,
-                tabbable: true,
+                focusability: Focusability::Tabbable,
                 from: None,
                 accept: None,
             });
@@ -602,7 +538,7 @@ fn FocusManagerRadioWrapControls(focus_manager: StoredValue<FocusManager>) -> im
 fn FocusManagerVisControls(focus_manager: StoredValue<FocusManager>) -> impl IntoView {
     let default_opts = || FocusManagerOptions {
         wrap: false,
-        tabbable: false,
+        focusability: Focusability::Focusable,
         from: None,
         accept: None,
     };
@@ -643,7 +579,7 @@ fn FocusManagerVisControls(focus_manager: StoredValue<FocusManager>) -> impl Int
 fn FocusManagerInertControls(focus_manager: StoredValue<FocusManager>) -> impl IntoView {
     let default_opts = || FocusManagerOptions {
         wrap: false,
-        tabbable: false,
+        focusability: Focusability::Focusable,
         from: None,
         accept: None,
     };
@@ -680,46 +616,94 @@ fn FocusManagerInertControls(focus_manager: StoredValue<FocusManager>) -> impl I
     }
 }
 
+/// A `FocusScope`'s own focus manager (`use_focus_manager_context`): its items move focus with the
+/// arrow keys (FocusScope.test.js, "focus manager").
 #[component]
-fn FocusManagerOutsideControls(focus_manager: StoredValue<FocusManager>) -> impl IntoView {
-    let on_focus_next = move |_| {
-        focus_manager.with_value(|fm: &FocusManager| {
-            fm.focus_next(FocusManagerOptions {
-                wrap: false,
-                tabbable: false,
-                from: None,
-                accept: None,
-            });
-        });
-    };
-
-    let on_focus_prev = move |_| {
-        focus_manager.with_value(|fm: &FocusManager| {
-            fm.focus_previous(FocusManagerOptions {
-                wrap: false,
-                tabbable: false,
-                from: None,
-                accept: None,
-            });
-        });
-    };
-
+fn ScopeManager() -> impl IntoView {
     view! {
-        <div id="test-fm-outside-controls">
-            <button
-                id="test-fm-outside-focus-next"
-                on:mousedown=prevent_focus_steal
-                on:click=on_focus_next
-            >
-                "Outside Next"
-            </button>
-            <button
-                id="test-fm-outside-focus-prev"
-                on:mousedown=prevent_focus_steal
-                on:click=on_focus_prev
-            >
-                "Outside Prev"
-            </button>
+        <section>
+            <h2>"FocusScope's manager"</h2>
+            <FocusScope>
+                <ScopeItem id="test-fm-own-1" />
+                <ScopeItem id="test-fm-own-2" />
+                <ScopeItem id="test-fm-own-3" />
+            </FocusScope>
+        </section>
+    }
+}
+
+/// ArrowRight focuses the next element of the scope, ArrowLeft the previous one, both wrapping.
+#[component]
+fn ScopeItem(id: &'static str) -> impl IntoView {
+    let manager = use_focus_manager_context().expect("inside a FocusScope");
+    let wrap = || FocusManagerOptions {
+        wrap: true,
+        ..FocusManagerOptions::default()
+    };
+    view! {
+        <div
+            id=id
+            role="button"
+            tabindex="0"
+            on:keydown=move |e: web_sys::KeyboardEvent| match e.key().as_str() {
+                "ArrowRight" => {
+                    manager.focus_next(wrap());
+                }
+                "ArrowLeft" => {
+                    manager.focus_previous(wrap());
+                }
+                _ => {}
+            }
+        >
+            {id}
+        </div>
+    }
+}
+
+/// FocusScope.test.js "... accounting for container elements within the scope": a pointerdown on
+/// a group focuses the next tabbable element from the group, i.e. its first tabbable item.
+#[component]
+fn ContainerGroups() -> impl IntoView {
+    view! {
+        <section>
+            <h2>"Container elements"</h2>
+            <FocusScope>
+                <ContainerGroup id="test-fm-group-1">
+                    <div id="test-fm-group-item-1" role="button" tabindex="-1"></div>
+                    <div id="test-fm-group-item-2" role="button" tabindex="0"></div>
+                    <div role="button" style="display: none"></div>
+                </ContainerGroup>
+                <ContainerGroup id="test-fm-group-2">
+                    <div role="button" style="visibility: hidden"></div>
+                    <div role="button" style="visibility: collapse"></div>
+                    <div id="test-fm-group-item-3" role="button" tabindex="0"></div>
+                </ContainerGroup>
+            </FocusScope>
+        </section>
+    }
+}
+
+#[component]
+fn ContainerGroup(id: &'static str, children: Children) -> impl IntoView {
+    let manager = use_focus_manager_context().expect("inside a FocusScope");
+    view! {
+        <div
+            id=id
+            role="group"
+            on:pointerdown=move |e: web_sys::PointerEvent| {
+                // From the event's target (the group itself in the test), as upstream.
+                manager.focus_next(FocusManagerOptions {
+                    from: e
+                        .target()
+                        .and_then(|target| {
+                            wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(target).ok()
+                        }),
+                    focusability: Focusability::Tabbable,
+                    ..FocusManagerOptions::default()
+                });
+            }
+        >
+            {children()}
         </div>
     }
 }

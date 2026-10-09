@@ -1,16 +1,17 @@
-use leptonic::hooks::FocusMode;
-use leptonic::hooks::KeyboardNavigationBehavior;
-use leptonic::hooks::collections::CollectionOptions;
-use leptonic::hooks::collections::ListLayout;
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::button::Button,
     hooks::{
-        GridListData, IntoAttrs, Key, SelectionBehavior, SelectionMode, UseGridListInput,
-        UseGridListItemInput, UseGridListReturn,
-        collections::{Selection, SelectionOptions, UseListStateInput},
-        use_grid_list, use_grid_list_item, use_list_collection, use_list_state,
+        collections::{
+            CollectionOptions, Key, ListLayout, Selection, SelectionBehavior, SelectionMode,
+            SelectionOptions, UseListCollectionInput, UseListStateInput, use_list_collection,
+            use_list_state,
+        },
+        gridlist::{
+            FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
+            UseGridListItemInput, UseGridListReturn, use_grid_list, use_grid_list_item,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -30,11 +31,11 @@ pub fn GridListDemo() -> impl IntoView {
     let opened = RwSignal::new(None::<Key>);
 
     // The rows follow the files: removing one updates the collection, and focus moves to a neighbor.
-    let collection = use_list_collection(
-        files.into(),
-        |(key, _)| Key::from(*key),
-        |(_, name)| (*name).to_owned(),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: files.into(),
+        key: |(key, _)| Key::from(*key),
+        text_value: |(_, name)| (*name).to_owned(),
+    });
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {

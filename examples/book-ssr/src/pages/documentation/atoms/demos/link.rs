@@ -1,4 +1,7 @@
-use leptonic::atoms::prelude::{CheckboxButton, CheckboxField, CurrentMatch, Link};
+use leptonic::atoms::{
+    checkbox::{CheckboxButton, CheckboxField},
+    link::{CurrentMatch, Link},
+};
 use leptos::prelude::*;
 
 /// The pages of the Link concept. The link to the page you are on has `aria-current="page"`.

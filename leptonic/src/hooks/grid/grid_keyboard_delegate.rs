@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/grid/GridKeyboardDelegate.ts @ 99e6102368
+// Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::prelude::*;
@@ -8,7 +9,7 @@ use crate::{
         Collection, CollectionMemo, Key, KeyboardDelegate, LayoutDelegate, NavigationOptions, Node,
         NodeKind, SelectionManager,
     },
-    utils::{filter::Collator, locale::WritingDirection},
+    utils::{filter::Collator, i18n::WritingDirection},
 };
 
 // =============================================================================
@@ -490,7 +491,7 @@ mod tests {
 
     #[test]
     fn row_mode_moves_between_rows_and_into_cells() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, false);
             assert_that!(d.key_below(&k("alice"), NAV)).is_equal_to(Some(k("bob")));
             assert_that!(d.key_above(&k("alice"), NAV)).is_none();
@@ -507,7 +508,7 @@ mod tests {
 
     #[test]
     fn vertical_moves_keep_the_column_and_skip_disabled_rows() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, true);
             assert_that!(d.key_below(&k("alice"), NAV)).is_equal_to(Some(k("carol")));
             assert_that!(d.key_below(&cell("alice", 1), NAV)).is_equal_to(Some(cell("carol", 1)));
@@ -519,7 +520,7 @@ mod tests {
 
     #[test]
     fn cell_mode_stays_on_cells() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Cell, false);
             assert_that!(d.first_key(None, false)).is_equal_to(Some(cell("alice", 0)));
             assert_that!(d.last_key(None, false)).is_equal_to(Some(cell("dave", 2)));
@@ -537,7 +538,7 @@ mod tests {
 
     #[test]
     fn right_to_left_mirrors_horizontal_moves() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, false).with_direction(WritingDirection::Rtl);
             assert_that!(d.key_left_of(&k("alice"), NAV)).is_equal_to(Some(cell("alice", 0)));
             assert_that!(d.key_left_of(&cell("alice", 0), NAV)).is_equal_to(Some(cell("alice", 1)));
@@ -548,7 +549,7 @@ mod tests {
 
     #[test]
     fn type_ahead_matches_row_text() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, false);
             assert_that!(d.key_for_search("ca", None)).is_equal_to(Some(k("carol")));
             assert_that!(d.key_for_search("a", Some(&k("bob")))).is_equal_to(Some(k("alice")));

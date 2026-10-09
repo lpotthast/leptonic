@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude::Link as AtomLink, jiff::civil::Date};
+use leptonic::{atoms::link::Link as AtomLink, jiff::civil::Date};
 use leptos::prelude::*;
 use leptos_meta::{Meta, Title};
 

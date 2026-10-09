@@ -3,7 +3,7 @@ use leptonic::{
         button::Button,
         toast::{Toast, ToastCloseButton, ToastContent, ToastRegion, ToastTitle},
     },
-    hooks::{ToastOptions, use_toast_state},
+    hooks::toast::{ToastOptions, UseToastStateInput, use_toast_state},
 };
 use leptos::prelude::*;
 
@@ -11,7 +11,7 @@ use leptos::prelude::*;
 /// one ("Alert 1", "Alert 2", ...) without a timeout.
 #[component]
 pub fn PageAtomToastSingle() -> impl IntoView {
-    let queue = use_toast_state::<String>(None);
+    let queue = use_toast_state::<String>(UseToastStateInput::default());
     let count = StoredValue::new(0);
     view! {
         <h1>"One toast at a time"</h1>
@@ -24,7 +24,7 @@ pub fn PageAtomToastSingle() -> impl IntoView {
             </Toast>
         </ToastRegion>
         <Button
-            attr:id="test-toast-single-add"
+            id="test-toast-single-add"
             on_press=move |_| {
                 count.update_value(|count| *count += 1);
                 queue.add(

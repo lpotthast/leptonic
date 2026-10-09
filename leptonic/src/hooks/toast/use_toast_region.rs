@@ -1,25 +1,22 @@
 // Upstream: react-aria/src/toast/useToastRegion.ts @ 99e6102368
+// Upstream: react-aria/test/toast/useToast.test.js @ 99e6102368
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, PointerEvent};
 
-use super::use_toast_state::ToastQueue;
+use super::use_toast_state::{ToastKey, ToastQueue};
 use crate::{
+    CapturedElement, EventHandler, IntoAttrs, OnEvent,
     hooks::{
-        IntoAttrs, Modality, UseHoverInput,
-        focus::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
-        get_modality,
+        focus::{FocusWithinEvent, Modality, UseFocusWithinInput, get_modality, use_focus_within},
+        interactions::{UseHoverInput, use_hover},
         landmark::{LandmarkRole, UseLandmarkInput, UseLandmarkProps, use_landmark},
-        use_hover,
     },
-    utils::{
-        CapturedElement, EventHandler,
-        intl_strings::{ToastStrings, use_localized_strings},
-    },
+    utils::intl_strings::{ToastStrings, use_localized_strings},
 };
 
 // =============================================================================
@@ -55,6 +52,7 @@ pub struct UseToastRegionInput<T: Clone + Send + Sync + 'static> {
 }
 
 /// Return value of [`use_toast_region`].
+#[derive(Debug)]
 pub struct UseToastRegionReturn {
     pub region_props: UseToastRegionProps,
 }
@@ -73,10 +71,10 @@ impl IntoAttrs for UseToastRegionProps {
     type Attrs = (
         <UseLandmarkProps as IntoAttrs>::Attrs,
         CustomAttr<&'static str, &'static str>,
-        On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
-        On<ev::focusin, SharedEventCallback<FocusEvent>>,
-        On<ev::focusout, SharedEventCallback<FocusEvent>>,
+        OnEvent<ev::pointerenter>,
+        OnEvent<ev::pointerleave>,
+        OnEvent<ev::focusin>,
+        OnEvent<ev::focusout>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
@@ -95,7 +93,7 @@ impl IntoAttrs for UseToastRegionProps {
 
 /// Focuses an element as the user would (keyboard) or without scrolling (pointer).
 fn restore_focus(element: &web_sys::Element) {
-    crate::utils::focus::focus_element(element, get_modality() == Modality::Pointer);
+    crate::utils::focus::focus_element(element, get_modality() == Some(Modality::Pointer));
 }
 
 /// Behavior and accessibility of the region showing toasts (react-aria's `useToastRegion`): a
@@ -197,8 +195,8 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
 
     // The keys of the toasts as rendered last (newest first), and the key of the focused toast
     // (`None`: none has the focus).
-    let previous = StoredValue::new(Vec::<String>::new());
-    let focused_toast = StoredValue::new(None::<String>);
+    let previous = StoredValue::new(Vec::<ToastKey>::new());
+    let focused_toast = StoredValue::new(None::<ToastKey>);
     let query_toasts = move || -> Vec<web_sys::Element> {
         let Some(region) = element.get_untracked() else {
             return Vec::new();
@@ -218,7 +216,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         // The rendered toasts are in the order of the visible toasts as processed last.
         let key = toast
             .and_then(|toast| query_toasts().iter().position(|element| *element == toast))
-            .and_then(|index| previous.with_value(|keys| keys.get(index).cloned()));
+            .and_then(|index| previous.with_value(|keys| keys.get(index).copied()));
         focused_toast.set_value(key);
     });
     let on_focusout = EventHandler::new(move |e: FocusEvent| {
@@ -242,9 +240,9 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
     // A closing focused toast hands the focus to the next newer one (else the next older one);
     // with a pointer, the focus leaves the region (the timeouts would seem stuck).
     Effect::new(move |_| {
-        let visible: Vec<String> = queue
+        let visible: Vec<ToastKey> = queue
             .visible_toasts
-            .with(|toasts| toasts.iter().map(|toast| toast.key.clone()).collect());
+            .with(|toasts| toasts.iter().map(|toast| toast.key).collect());
         let previous_visible = previous.get_value();
         previous.set_value(visible.clone());
         if visible.is_empty() || previous_visible == visible {
@@ -266,7 +264,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
             return;
         };
         focused_toast.set_value(None);
-        if get_modality() == Modality::Pointer
+        if get_modality() == Some(Modality::Pointer)
             && let Some(last) = last_focused.get_value().filter(|last| last.is_connected())
         {
             restore_focus(&last);

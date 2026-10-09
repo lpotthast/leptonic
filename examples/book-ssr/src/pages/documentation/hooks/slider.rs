@@ -50,8 +50,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::*,
-                            utils::{css::{computed_pct, computed_size}, style::WidthProperty, styles::Styles},
+                            computed_pct,
+                            computed_size,
+                            hooks::slider::{UseSliderInput, UseSliderStateInput, UseSliderThumbInput, use_slider, use_slider_state, use_slider_thumb},
+                            leptos_styles::{Styles, property::WidthProperty},
                         };
                         use leptos::prelude::*;
 
@@ -98,7 +100,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         let (track_attrs, track_styles) = slider.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
                         let fill_styles = Styles::new().add_reactive(move || {
-                            WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0) * 100.0)))
+                            WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0).as_percent())))
                         });
 
                         view! {
@@ -176,7 +178,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         let focus_ring = use_focus_ring(UseFocusRingInput {
-                            within: true,
+                            target: FocusRingTarget::Within,
                             ..UseFocusRingInput::default()
                         });
 
@@ -239,8 +241,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <DocTable headers=&["Method", "Meaning"]>
                         <TableRow><TableCell><Code inline=true>"thumb_count()"</Code></TableCell><TableCell>"The number of thumbs."</TableCell></TableRow>
                         <TableRow><TableCell><Code inline=true>"thumb_value(i), set_thumb_value(i, value)"</Code></TableCell><TableCell>"A thumb\u{2019}s value. Setting snaps to the step and stays between the neighbors."</TableCell></TableRow>
-                        <TableRow><TableCell><Code inline=true>"thumb_percent(i), set_thumb_percent(i, fraction)"</Code></TableCell><TableCell>"A thumb\u{2019}s position as a fraction (0.0 to 1.0) of the range."</TableCell></TableRow>
-                        <TableRow><TableCell><Code inline=true>"value_percent(value), percent_value(fraction)"</Code></TableCell><TableCell>"Converts between a value and its fraction of the range; "<Code inline=true>"percent_value"</Code>" snaps to the step and returns an "<Code inline=true>"Option<T>"</Code>"."</TableCell></TableRow>
+                        <TableRow><TableCell><Code inline=true>"thumb_percent(i), set_thumb_percent(i, fraction)"</Code></TableCell><TableCell>"A thumb\u{2019}s position as a "<Code inline=true>"Fraction"</Code>" of the range."</TableCell></TableRow>
+                        <TableRow><TableCell><Code inline=true>"value_percent(value), percent_value(fraction)"</Code></TableCell><TableCell>"Converts between a value and its fraction of the range; "<Code inline=true>"percent_value"</Code>" rounds to the step, clamps to the bounds, and returns an "<Code inline=true>"Option<T>"</Code>"."</TableCell></TableRow>
                         <TableRow><TableCell><Code inline=true>"thumb_min_value(i), thumb_max_value(i)"</Code></TableCell><TableCell>"A thumb\u{2019}s bounds: its neighbors\u{2019} values or the range."</TableCell></TableRow>
                         <TableRow><TableCell><Code inline=true>"increment_thumb(i, size), decrement_thumb(i, size)"</Code></TableCell><TableCell>"Steps a thumb by "<Code inline=true>"size"</Code>" ("<Code inline=true>"Option<T>"</Code>", at least the step)."</TableCell></TableRow>
                         <TableRow><TableCell><Code inline=true>"page_size()"</Code></TableCell><TableCell>"The step of "<Keys keys="PageUp"/>" and "<Keys keys="PageDown"/>"."</TableCell></TableRow>
@@ -433,17 +435,17 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         <ApiRow name="min_value, max_value" ty="Signal<f64>">"The range. Required."</ApiRow>
                         <ApiRow name="step" ty="Signal<f64>">"The step; automatic marks sit on it. Required."</ApiRow>
                         <ApiRow name="values" ty="Signal<Vec<f64>>">"The thumbs\u{2019} values: marks up to the thumb (or between the first and the last thumb) are in range. Required."</ApiRow>
-                        <ApiRow name="marks" ty="SliderMarks">
-                            "Which marks to place. Required: "<Code inline=true>"SliderMarks::None"</Code>", "
+                        <ApiRow name="marks" ty="SliderMarkPlacement">
+                            "Which marks to place. Required: "<Code inline=true>"SliderMarkPlacement::None"</Code>", "
                             <Code inline=true>"Automatic { create_names }"</Code>" (one per step, at most about 20) or "
                             <Code inline=true>"Custom { marks }"</Code>"."
                         </ApiRow>
                         <ApiRow name="format" ty="Callback<f64, String>">"Formats the names of automatic marks. Required."</ApiRow>
                     </ApiTable>
                     <p>
-                        "A custom "<Code inline=true>"SliderMark"</Code>" has a "<Code inline=true>"value"</Code>" ("
+                        "A "<Code inline=true>"CustomSliderMark"</Code>" has a "<Code inline=true>"value"</Code>" ("
                         <Code inline=true>"SliderMarkValue::Value(v)"</Code>", a value of the range, or "
-                        <Code inline=true>"SliderMarkValue::Percentage(p)"</Code>", a fraction of the track) and an optional "
+                        <Code inline=true>"SliderMarkValue::Fraction(f)"</Code>", a fraction of the track) and an optional "
                         <Code inline=true>"name"</Code>" (a "<Code inline=true>"MaybeProp<String>"</Code>": a text or a signal "
                         "of one). Marks outside the range are left out."
                     </p>
@@ -452,7 +454,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <Section title="Return" id="use-slider-marks-return">
                     <p>"It returns a "<Code inline=true>"Signal<Vec<ComputedSliderMark>>"</Code>":"</p>
                     <ApiTable kind=ApiKind::Fields of="ComputedSliderMark">
-                        <ApiRow name="percentage" ty="f64">"The position along the track, 0.0 to 1.0."</ApiRow>
+                        <ApiRow name="percentage" ty="Fraction">"The position along the track."</ApiRow>
                         <ApiRow name="value" ty="f64">"The value of the range at the mark."</ApiRow>
                         <ApiRow name="name" ty="Option<String>">"The mark\u{2019}s name, to show next to it."</ApiRow>
                     </ApiTable>
@@ -466,10 +468,13 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <p>"A named mark every 10 along a slider ("<Code inline=true>"state"</Code>" is its "<Code inline=true>"SliderState<f64>"</Code>"), each placed at its "<Code inline=true>"percentage"</Code>" of the track:"</p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::utils::{
-                                css::{LengthPercentageAuto, computed_pct},
-                                style::LeftProperty,
-                                styles::Styles,
+                            use leptonic::{
+                                computed_pct,
+                                leptos_styles::{
+                                    Styles,
+                                    css::LengthPercentageAuto,
+                                    property::LeftProperty,
+                                },
                             };
 
                             let marks = use_slider_marks(UseSliderMarksInput {
@@ -477,18 +482,18 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 max_value: state.max_value,
                                 step: Signal::stored(10.0),
                                 values: state.values,
-                                marks: SliderMarks::Automatic { create_names: true },
+                                marks: SliderMarkPlacement::Automatic { create_names: true },
                                 format: Callback::new(move |value| state.format_value(value)),
                             });
 
                             view! {
                                 // Marks only show what the thumbs announce: hide them from assistive technology.
                                 <div class="marks" aria-hidden="true">
-                                    <For each=move || marks.get() key=|mark| mark.percentage.to_bits() let:mark>
+                                    <For each=move || marks.get() key=|mark| mark.percentage.get().to_bits() let:mark>
                                         <span
                                             class="mark"
                                             style=Styles::new().add(LeftProperty.declare(LengthPercentageAuto::from(
-                                                computed_pct(mark.percentage * 100.0),
+                                                computed_pct(mark.percentage.as_percent()),
                                             )))
                                             data-in-range={
                                                 let mark = mark.clone();

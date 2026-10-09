@@ -1,5 +1,7 @@
 // Upstream: react-aria-components/src/TextField.tsx @ 99e6102368
+// Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use super::{
     field::{FieldContext, LabelContext},
@@ -9,14 +11,14 @@ use super::{
 use crate::{
     Out,
     atoms::field::LabelPresence,
-    hooks::{
+    hooks::form::{
         AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement, UseTextFieldInput,
         UseTextFieldReturn, UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_text_field,
         use_text_field_state,
     },
     utils::{
-        classes::Classes, data_attributes::flag, default_class::with_default_class,
-        scoped_context::scoped_view, styles::Styles,
+        data_attributes::flag, default_class::with_default_class, scoped_context::scoped_view,
+        styles::Styles,
     },
 };
 
@@ -96,8 +98,7 @@ pub fn TextField(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TextField", classes);
-    let (value, on_change) =
-        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
+    let (value, on_change) = crate::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_text_field_state(UseTextFieldStateInput {
         default_value,
         value,
@@ -125,7 +126,7 @@ pub fn TextField(
         auto_capitalize,
         auto_correct,
         spell_check,
-        input_mode,
+        input_mode: Signal::stored(input_mode),
         enter_key_hint,
         auto_focus,
         has_label,

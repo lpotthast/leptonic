@@ -68,8 +68,11 @@ name = "assertr"
 version = "0.8.0"
 dependencies = [
  "borrow-for",
+ "http",
  "num-traits",
+ "serde",
  "serde_json",
+ "thirtyfour",
  "toml",
 ]
 
@@ -252,6 +255,7 @@ version = "0.6.0"
 dependencies = [
  "async-trait",
  "backtrace",
+ "browser-test-macros",
  "chrome-for-testing-manager",
  "futures-util",
  "rootcause",
@@ -262,6 +266,18 @@ dependencies = [
  "tracing",
  "typed-builder",
  "url",
+]
+
+[[package]]
+name = "browser-test-macros"
+version = "0.6.0"
+dependencies = [
+ "heck",
+ "manyhow",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -1725,7 +1741,6 @@ dependencies = [
  "send_wrapper",
  "serde",
  "serde_json",
- "smallvec",
  "strum",
  "syntect",
  "thirtyfour",
@@ -1789,7 +1804,7 @@ dependencies = [
 
 [[package]]
 name = "leptos-browser-test"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "rootcause",
  "thiserror 2.0.21",
@@ -2259,6 +2274,15 @@ checksum = "2bfe0f4c752e450fc2faf62654f1c134747922825d5b04ca717b8874f41a40c0"
 dependencies = [
  "proc-macro2",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "proc-macro-crate"
+version = "3.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e67ba7e9b2b56446f1d419b1d807906278ffa1a658a8a5d8a39dcb1f5a78614f"
+dependencies = [
+ "toml_edit",
 ]
 
 [[package]]
@@ -3305,6 +3329,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.25.15+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1340ea94a5856333492c9064b02c778b191dd2c853778d9609debdcdfea3a614"
+dependencies = [
+ "indexmap",
+ "toml_datetime",
+ "toml_parser",
+ "winnow",
 ]
 
 [[package]]

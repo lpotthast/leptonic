@@ -1,11 +1,11 @@
 //! Browser integration tests.
 //!
 //! Starts `testing/test-app` through `cargo leptos serve` and drives it with Chrome for Testing.
-//! Every case is a test of its own (`cases`), run in a fresh or reset WebDriver session. A failing
+//! Every case is a test of its own (registered in `ui_tests`), run in a fresh or reset WebDriver session. A failing
 //! test fails `cargo test`.
 //!
 //! Every test's timing is logged when it finishes, and a summary (slowest tests, slowest steps,
-//! time spent on sessions) is printed at the end. The `PageActions` helpers (navigation, waits,
+//! time spent on sessions) is printed at the end. The `Page` and fixture helpers (navigation, waits,
 //! lookups) run as `browser_test::step`s: slow ones (> 2s) are logged as warnings, and
 //! `BROWSER_TEST_LOG_STEPS=1` logs every step with its duration.
 //!
@@ -13,30 +13,36 @@
 //! - `BROWSER_TEST_VISIBLE=1`: show the browser window.
 //! - `BROWSER_TEST_PAUSE=1`: pause before each test for manual inspection.
 //! - `BROWSER_TEST_DRIVER_OUTPUT=1`: forward chromedriver output.
-//! - `BROWSER_TEST_FILTER=<text>`: only run the tests whose name contains `<text>`.
+//! - `BROWSER_TEST_GROUP=<name>`: only run these exact logical groups (comma-separated names).
+//!   Names and membership are explicit in `ui_tests/mod.rs`, independent of Rust module placement.
+//! - `BROWSER_TEST_FILTER=<text>`: only run the tests whose name contains `<text>` (several
+//!   texts separated by commas: any of them). Combined with group selection, both must match.
+//!   browser-test's `TestFilter` implements selection. The checks of the whole run always run.
 //! - `BROWSER_TEST_LOG_STEPS=1`: log every step of every test with its duration.
 //! - `BROWSER_TEST_SESSION_REUSE=0`: give every test a fresh browser instead of resetting the one
 //!   of the test before.
 //! - `BROWSER_TEST_SESSION_RESET=new-context`: reset sessions by giving every test a new browser
 //!   context (keeping no cache) instead of resetting the tab item by item (keeping the HTTP
 //!   cache), e.g. to cross-check that no test depends on how it is reset.
-//! - `BROWSER_TEST_STAYS_MS=<ms>`: stays checks also observe that long after the page settled
-//!   (default 0), to find checks that pass only because they don't observe long enough.
 //! - `BROWSER_TEST_PARALLELISM=<n>`: how many tests run at the same time (default 8, `1`:
 //!   sequential, e.g. with `BROWSER_TEST_VISIBLE=1`).
+//! - `TEST_APP_TARGET_DIR=<dir>`: build the test-app, and its site, there (default: the inherited
+//!   `CARGO_TARGET_DIR`, else `testing/test-app/target`). Suites with different target dirs can
+//!   run at the same time; two suites with one target dir can't.
 #![cfg(not(target_arch = "wasm32"))]
 
-mod cases;
 mod common;
+mod fixtures;
+mod harness;
 mod pages;
-mod timing;
 mod ui_tests;
 
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
+use assertr::assertions::Patience;
 use browser_test::{
     BrowserTestRunner, CachedData, Cancellation, ChromeBinary, ChromeProfilesDir, DriverOutput,
     FailurePolicy, Parallelism, Pause, SessionReset, SessionReuse, StderrSummary, Timeouts,
@@ -50,9 +56,15 @@ async fn browser_tests() -> Result<(), Report> {
     // Chrome for Testing is downloaded through rustls with `ring` (browser-test's `rustls-no-provider`).
     // Installing fails only if a provider is installed already, which is as good.
     let _ = rustls::crypto::ring::default_provider().install_default();
-    // Before the runner reads it for thirtyfour's lookups.
-    timing::install();
 
+    // Install assertr timing defaults.
+    Patience::DEFAULT
+        .within(Duration::from_secs(5))
+        .polling_every(Duration::from_millis(20))
+        .consistently_for(Duration::from_millis(100))
+        .set_global();
+
+    let tests = ui_tests::all(parallelism()?)?;
     let app_start = Instant::now();
     // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
     // leptonic's build script generates none.
@@ -61,11 +73,15 @@ async fn browser_tests() -> Result<(), Report> {
     // An optimized wasm bundle (the app's `wasm-release` profile, see its Cargo.toml): pages load and
     // hydrate in less than half the time, and rebuild as fast as in dev.
     app = app.with_build_profile(BuildProfile::Release);
-    // The app's own target dir (`TEST_APP_TARGET_DIR`), so that a `CARGO_TARGET_DIR` set for this
-    // crate doesn't also receive the app's server and wasm builds.
-    if let Some(target_dir) = std::env::var_os("TEST_APP_TARGET_DIR") {
-        app = app.with_env("CARGO_TARGET_DIR", target_dir);
-    }
+    // The suite's builds and its site (the wasm, JS and CSS the server serves) go into one target
+    // dir, so that suites with different target dirs (other sessions, other checkouts) and
+    // `just serve-test-app` can run at the same time: cargo-leptos would write the site next to
+    // the app's `Cargo.toml` (`site-root`), whatever the target dir, and another build would
+    // replace the files under a running suite.
+    let target_dir = app_target_dir(Path::new(app_dir))?;
+    app = app
+        .with_env("CARGO_TARGET_DIR", &target_dir)
+        .with_env("LEPTOS_SITE_ROOT", target_dir.join("browser-test-site"));
     let app = app.start().await.map_err(Report::into_dynamic)?;
     tracing::info!(
         "Built and started the test app in {:.2}s.",
@@ -76,11 +92,22 @@ async fn browser_tests() -> Result<(), Report> {
     // fresh or reset browser. They don't share app state: each loads its own page. The checks of the whole
     // run follow, sequentially (see `ui_tests::all`).
     runner()?
-        .run(app.base_url(), ui_tests::all(parallelism()?))
+        .run(app.base_url(), tests)
         .await
         .map_err(Report::into_dynamic)?;
 
     Ok(())
+}
+
+/// The test-app's target dir: `TEST_APP_TARGET_DIR` (so that a `CARGO_TARGET_DIR` set for this
+/// crate doesn't also receive the app's server and wasm builds), else the inherited
+/// `CARGO_TARGET_DIR`, else the app's own `target`. Relative paths are relative to the current
+/// directory.
+fn app_target_dir(app_dir: &Path) -> Result<PathBuf, Report> {
+    let target_dir = std::env::var_os("TEST_APP_TARGET_DIR")
+        .or_else(|| std::env::var_os("CARGO_TARGET_DIR"))
+        .map_or_else(|| app_dir.join("target"), PathBuf::from);
+    Ok(std::path::absolute(target_dir)?)
 }
 
 /// `BROWSER_TEST_SESSION_RESET`: `manual` (the default) resets a session's tab item by item and
@@ -98,7 +125,7 @@ fn session_reset() -> Result<SessionReset, Report> {
 }
 
 /// `BROWSER_TEST_PARALLELISM`, default 8 (every parallel test is a browser of ~0.5 GB; more than 8
-/// gains little on 32 threads, see `documentation/browser-tests.md`). An invalid value is an error.
+/// gains little on 32 threads, see `documentation/testing.md`). An invalid value is an error.
 fn parallelism() -> Result<Parallelism, Report> {
     Ok(Parallelism::from_env()?.unwrap_or(Parallelism::parallel(8)))
 }
@@ -124,9 +151,9 @@ fn runner() -> Result<BrowserTestRunner, Report> {
         })
         .with_failure_policy(FailurePolicy::RunAll)
         // Chrome Headless Shell: a third less memory than Chrome and faster session resets
-        // (`documentation/browser-tests.md`, "Speed and memory"). Visible runs use Chrome.
+        // (`documentation/testing.md`, "Speed and memory"). Visible runs use Chrome.
         .with_headless_chrome_binary(ChromeBinary::ChromeHeadlessShell)
-        // Every case is a test of its own (`cases`): a test's browser is reset and runs the next
+        // Every case is a test of its own (registered in `ui_tests`): a test's browser is reset and runs the next
         // test instead of starting a new one. `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser per
         // test.
         .with_session_reuse(
@@ -137,13 +164,12 @@ fn runner() -> Result<BrowserTestRunner, Report> {
         .with_visibility(Visibility::from_env()?.unwrap_or_default())
         .with_pause(Pause::from_env()?.unwrap_or_default())
         .with_driver_output(DriverOutput::from_env()?.unwrap_or_default())
-        // Lookups poll with thirtyfour's element queries, as long and as often as eventual
-        // assertions (`timing`); an implicit wait would make every lookup of a missing element
-        // block, and compound with the polling.
+        // Lookups poll (`pages::lookup`), as long and as often as eventual assertions
+        // (`Patience::global()`); an implicit wait would make every lookup of a missing element block, and
+        // compound with the polling.
         .with_timeouts(
             Timeouts::builder()
                 .implicit_wait_timeout(Duration::ZERO)
                 .build(),
-        )
-        .with_element_query_wait(timing::element_query_wait()))
+        ))
 }

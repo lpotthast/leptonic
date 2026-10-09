@@ -41,7 +41,7 @@ pub fn PageAtomTooltip() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::{Button, Tooltip, TooltipTrigger};
+                        use leptonic::{atoms::{button::Button, tooltip::{Tooltip, TooltipTrigger}}};
 
                         view! {
                             <TooltipTrigger>
@@ -120,7 +120,9 @@ pub fn PageAtomTooltip() -> impl IntoView {
                     </ul>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::atoms::prelude::{Focusable, Tooltip, TooltipTrigger};
+                            use leptonic::{
+                                atoms::{focusable::Focusable, tooltip::{Tooltip, TooltipTrigger}},
+                            };
                             use leptos_icons::Icon;
 
                             view! {

@@ -1,33 +1,50 @@
 // No upstream: react-aria has no tests of its own for the live announcer (only components
+// asserting announcements); this checks leptonic's regions and messages.
 //! The live announcer: polite and assertive announcements in one shared announcer, cleared on
 //! request and removed after their timeout. Event handlers run without a reactive owner;
 //! announcing must still work.
-// asserting announcements); this checks leptonic's regions and messages.
 use assertr::{matchers::eq, prelude::*};
+use browser_test::browser_test;
 use rootcause::Report;
 
-use crate::pages::{Page, PageActions};
+use crate::pages::Page;
 
 const PATH: &str = "/hooks/live-announcer";
 
 /// Polite and assertive announcements go into their regions of one shared announcer.
+#[browser_test]
 pub async fn announcements(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-la-polite").await?.click().await?;
     page.element("[data-live-announcer] [aria-live=polite] div")
         .await?;
-    assert_that!(log_text(page, "polite").await?).is_equal_to("Polite hello");
+    assert_that!(
+        page.element("[data-live-announcer] [aria-live=polite]")
+            .await?
+    )
+    .text_content()
+    .await
+    .map_owned(Option::unwrap_or_default)
+    .is_equal_to("Polite hello");
 
     page.element("#test-la-assertive").await?.click().await?;
     page.element("[data-live-announcer] [aria-live=assertive] div")
         .await?;
-    assert_that!(log_text(page, "assertive").await?).is_equal_to("Urgent hello");
+    assert_that!(
+        page.element("[data-live-announcer] [aria-live=assertive]")
+            .await?
+    )
+    .text_content()
+    .await
+    .map_owned(Option::unwrap_or_default)
+    .is_equal_to("Urgent hello");
 
     assert_that!(page.count("[data-live-announcer]").await?).is_equal_to(1);
     Ok(())
 }
 
 /// Clearing empties both regions.
+#[browser_test]
 pub async fn clear(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-la-polite").await?.click().await?;
@@ -54,6 +71,7 @@ pub async fn clear(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Announcements are removed after their timeout.
+#[browser_test]
 pub async fn timeout(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-la-short").await?.click().await?;

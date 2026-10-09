@@ -1,7 +1,9 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{select::SelectAtomDemo, select_form::SelectFormDemo, select_multiple::SelectMultipleAtomDemo};
+use super::demos::{
+    select::SelectAtomDemo, select_form::SelectFormDemo, select_multiple::SelectMultipleAtomDemo,
+};
 use crate::{kit::*, routes};
 
 #[component]
@@ -74,15 +76,15 @@ pub fn PageAtomSelect() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::{field::Label, listbox::{ListBox, ListBoxItem}, select::*},
-                            hooks::collections::{Key, use_list_collection},
+                            hooks::collections::{Key, UseListCollectionInput, use_list_collection},
                         };
                         use leptos::{logging::log, prelude::*};
 
-                        let fruits = use_list_collection(
-                            Signal::stored(vec!["Apple", "Banana", "Cherry"]),
-                            |fruit| Key::from(*fruit),
-                            |fruit| (*fruit).to_owned(),
-                        );
+                        let fruits = use_list_collection(UseListCollectionInput {
+                            items: Signal::stored(vec!["Apple", "Banana", "Cherry"]),
+                            key: |fruit| Key::from(*fruit),
+                            text_value: |fruit| (*fruit).to_owned(),
+                        });
 
                         view! {
                             <Select collection=fruits on_change=Callback::new(|key: Option<Key>| log!("{key:?}"))>
@@ -451,7 +453,12 @@ pub fn PageAtomSelect() -> impl IntoView {
 
             <Section title="Composition">
                 <p>
-                    "The parts find the select through the "<Code inline=true>"SelectCtx"</Code>" context. Your own "
+                    <Code inline=true>"SelectTrigger"</Code>", "<Code inline=true>"SelectValue"</Code>", "
+                    <Code inline=true>"SelectPopover"</Code>" and "<Code inline=true>"HiddenSelect"</Code>
+                    " render nothing outside a "<Code inline=true>"Select"</Code>" and warn in debug builds."
+                </p>
+                <p>
+                    "The parts find the select through the "<Code inline=true>"SelectContext"</Code>" context. Your own "
                     "Leptos components inside "<Code inline=true>"Select"</Code>" can read it too, e.g. to show the number of "
                     "selected options in a multiple select\u{2019}s trigger:"
                 </p>
@@ -459,7 +466,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                     {indoc!(r#"
                         #[component]
                         fn SelectedCount() -> impl IntoView {
-                            let state = expect_context::<SelectCtx>().state;
+                            let state = expect_context::<SelectContext>().state;
                             move || match state.value().len() {
                                 0 => "None selected".to_owned(),
                                 n => format!("{n} selected"),
@@ -469,7 +476,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </Code>
                 <p>
                     <Code inline=true>"state"</Code>" is the "<Code inline=true>"SelectState"</Code>" documented on the "
-                    <Link href=hook_section("use-select-state")>"hook page"</Link>". "<Code inline=true>"SelectCtx"</Code>
+                    <Link href=hook_section("use-select-state")>"hook page"</Link>". "<Code inline=true>"SelectContext"</Code>
                     " also has "<Code inline=true>"is_invalid"</Code>" and "<Code inline=true>"is_disabled"</Code>"."
                 </p>
             </Section>

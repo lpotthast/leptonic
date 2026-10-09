@@ -33,7 +33,10 @@ pub fn PageFormHooks() -> impl IntoView {
                     {indoc!(r#"
                         use std::sync::Arc;
 
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::form::{UseFormResetInput, UseFormValidationInput, UseFormValidationStateInput, ValidationBehavior, use_form_reset, use_form_validation, use_form_validation_state},
+                        };
                         use leptos::prelude::*;
 
                         let code = RwSignal::new(String::new());
@@ -47,7 +50,7 @@ pub fn PageFormHooks() -> impl IntoView {
                             })),
                             builtin_validation: Signal::default(),
                             validation_behavior: ValidationBehavior::Native,
-                            name: Some("coupon".to_owned()),
+                            names: vec!["coupon".to_owned()],
                         });
                         use_form_validation(UseFormValidationInput {
                             element,
@@ -125,9 +128,7 @@ pub fn PageFormHooks() -> impl IntoView {
                             " shows the errors of "<Code inline=true>"validate"</Code>" and the browser once they are committed (on "
                             <Code inline=true>"change"</Code>" or submission). Required."
                         </ApiRow>
-                        <ApiRow name="name" ty="Option<String>">
-                            "The field\u{2019}s "<Code inline=true>"name"</Code>", which selects its server errors. Required ("<Code inline=true>"None"</Code>" for no server errors)."
-                        </ApiRow>
+                        <ApiRow name="names" ty="Vec<String>" default="Vec::new()">"Field names used to look up server validation errors."</ApiRow>
                     </ApiTable>
                 </Section>
 

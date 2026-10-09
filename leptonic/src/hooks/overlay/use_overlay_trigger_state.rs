@@ -1,7 +1,7 @@
 // Upstream: react-stately/src/overlays/useOverlayTriggerState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::{Point, ValueBinding};
+use crate::{Point, ValueBinding};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -9,8 +9,7 @@ use crate::utils::{Point, ValueBinding};
 //
 // ## API DIFFERENCES
 // - Hook-owned state (C4): `default_open` + `on_open_change`, or `value` bound to app state
-//   (`ValueBinding::from(rw_signal)`), instead of a controlled `isOpen`. The state converts from
-//   app state directly (`OverlayTriggerState::from(rw_signal)`).
+//   (`ValueBinding::from(rw_signal)`), instead of a controlled `isOpen`.
 // - A `Copy` struct of signals and methods (C3).
 // - `point` is a typed [`Point`] (C13).
 //
@@ -88,28 +87,6 @@ impl OverlayState for OverlayTriggerState {
     }
 }
 
-/// An overlay whose open state is app state.
-impl From<ValueBinding<bool>> for OverlayTriggerState {
-    fn from(value: ValueBinding<bool>) -> Self {
-        use_overlay_trigger_state(UseOverlayTriggerStateInput {
-            value: Some(value),
-            ..UseOverlayTriggerStateInput::default()
-        })
-    }
-}
-
-impl From<RwSignal<bool>> for OverlayTriggerState {
-    fn from(signal: RwSignal<bool>) -> Self {
-        ValueBinding::from(signal).into()
-    }
-}
-
-impl From<(ReadSignal<bool>, WriteSignal<bool>)> for OverlayTriggerState {
-    fn from(signals: (ReadSignal<bool>, WriteSignal<bool>)) -> Self {
-        ValueBinding::from(signals).into()
-    }
-}
-
 /// Manages whether an overlay is open.
 pub fn use_overlay_trigger_state(input: UseOverlayTriggerStateInput) -> OverlayTriggerState {
     let UseOverlayTriggerStateInput {
@@ -142,10 +119,11 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
     #[test]
     fn opens_closes_and_toggles_reporting_changes_only() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let changes = RwSignal::new(Vec::new());
             let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
                 on_open_change: Some(Callback::new(move |v| changes.update(|c| c.push(v)))),
@@ -162,7 +140,7 @@ mod tests {
 
     #[test]
     fn a_bound_value_is_read_and_written() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(true);
             let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
                 value: Some(ValueBinding::from(app)),

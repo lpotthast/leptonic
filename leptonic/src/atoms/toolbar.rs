@@ -1,12 +1,11 @@
 // Upstream: react-aria-components/src/Toolbar.tsx @ 99e6102368
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use crate::{
-    hooks::{IntoAttrs, UseToolbarInput, use_toolbar},
-    utils::{
-        classes::Classes, default_class::with_default_class, orientation::Orientation,
-        styles::Styles,
-    },
+    CapturedElement, IntoAttrs, Orientation,
+    hooks::toolbar::{UseToolbarInput, use_toolbar},
+    utils::{default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -39,6 +38,7 @@ pub fn Toolbar(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Toolbar", classes);
     let toolbar = use_toolbar(UseToolbarInput {
+        element: CapturedElement::new(),
         orientation,
         aria_label,
         aria_labelledby,

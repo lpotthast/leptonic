@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 99e6102368
+// Upstream: @internationalized/number/src/NumberFormatter.ts @ 99e6102368
 
 use std::{fmt, sync::Arc};
 
@@ -96,6 +97,56 @@ impl Default for NumberFormatOptions {
             currency_sign: CurrencySign::default(),
             numbering_system: None,
         }
+    }
+}
+
+impl NumberFormatOptions {
+    /// The minimum and maximum fraction digits, resolved as `Intl.NumberFormat` does: the style's
+    /// defaults (percent 0-0, currency 2-2, else 0-3), where a given maximum below the default
+    /// minimum lowers the minimum and a given minimum above the default maximum raises the
+    /// maximum.
+    pub(crate) fn fraction_digits(&self) -> (u32, u32) {
+        let (default_min, default_max) = match self.style {
+            NumberStyle::Percent => (0, 0),
+            NumberStyle::Currency => (2, 2),
+            NumberStyle::Decimal | NumberStyle::Unit => (0, 3),
+        };
+        match (self.minimum_fraction_digits, self.maximum_fraction_digits) {
+            (None, None) => (default_min, default_max),
+            (Some(min), None) => (min, default_max.max(min)),
+            (None, Some(max)) => (default_min.min(max), max),
+            // `Intl.NumberFormat` throws a `RangeError` for a minimum above the maximum.
+            (Some(min), Some(max)) => (min, max.max(min)),
+        }
+    }
+
+    /// `decimal` with the digit options applied: significant digits if set, else fraction digits, rounding half
+    /// away from zero (as `Intl.NumberFormat`); then the minimum integer digits.
+    #[must_use]
+    pub(crate) fn round(&self, mut decimal: Decimal) -> Decimal {
+        let to_i16 = |digits: u32| i16::try_from(digits).unwrap_or(i16::MAX);
+        let half_expand = SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfExpand);
+        let options = self;
+        if options.minimum_significant_digits.is_some()
+            || options.maximum_significant_digits.is_some()
+        {
+            let min = options.minimum_significant_digits.unwrap_or(1).max(1);
+            let max = options.maximum_significant_digits.unwrap_or(21).max(min);
+            let first = |d: &Decimal| d.absolute.nonzero_magnitude_start();
+            decimal.round_with_mode(first(&decimal) - to_i16(max) + 1, half_expand);
+            decimal.absolute.trim_end();
+            let position = (first(&decimal) - to_i16(min) + 1).min(0);
+            decimal.absolute.pad_end(position);
+        } else {
+            let (min, max) = self.fraction_digits();
+            decimal.round_with_mode(-to_i16(max), half_expand);
+            decimal.absolute.trim_end();
+            decimal.absolute.pad_end(-to_i16(min));
+        }
+        if let Some(digits) = options.minimum_integer_digits {
+            decimal.absolute.pad_start(to_i16(digits));
+        }
+        decimal
     }
 }
 
@@ -417,19 +468,9 @@ impl NumberFormatter {
         }
     }
 
-    /// `decimal` rounded as this formatter shows it (with the style's default fraction digits).
+    /// `decimal` rounded as this formatter shows it.
     pub(crate) fn round(&self, decimal: Decimal) -> Decimal {
-        let (min, max) = self.default_fraction_digits();
-        self.with_digits(decimal, min, max)
-    }
-
-    /// The style's default minimum and maximum fraction digits (as `Intl.NumberFormat`).
-    fn default_fraction_digits(&self) -> (u32, u32) {
-        match self.options.style {
-            NumberStyle::Percent => (0, 0),
-            NumberStyle::Currency => (2, 2),
-            NumberStyle::Decimal | NumberStyle::Unit => (0, 3),
-        }
+        self.options.round(decimal)
     }
 
     /// The maximum fraction digits this formatter shows, `None` when significant digits decide
@@ -441,16 +482,12 @@ impl NumberFormatter {
         {
             return None;
         }
-        let (min, max) = self.default_fraction_digits();
-        let min = options.minimum_fraction_digits.unwrap_or(min);
-        Some(options.maximum_fraction_digits.unwrap_or(max).max(min))
+        Some(self.options.fraction_digits().1)
     }
 
     /// The minimum fraction digits this formatter shows.
     pub(crate) fn minimum_fraction_digits(&self) -> u32 {
-        self.options
-            .minimum_fraction_digits
-            .unwrap_or(self.default_fraction_digits().0)
+        self.options.fraction_digits().0
     }
 
     /// The numbering system this formatter writes digits with.
@@ -461,36 +498,6 @@ impl NumberFormatter {
             .chars()
             .find_map(NumberingSystem::of_zero)
             .unwrap_or(NumberingSystem::Latn)
-    }
-
-    /// Applies the digit options: significant digits if set, else fraction digits (`min` and
-    /// `max` are the style's defaults), rounding half away from zero (as `Intl.NumberFormat`);
-    /// then the minimum integer digits.
-    fn with_digits(&self, mut decimal: Decimal, min: u32, max: u32) -> Decimal {
-        let to_i16 = |digits: u32| i16::try_from(digits).unwrap_or(i16::MAX);
-        let half_expand = SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfExpand);
-        let options = &self.options;
-        if options.minimum_significant_digits.is_some()
-            || options.maximum_significant_digits.is_some()
-        {
-            let min = options.minimum_significant_digits.unwrap_or(1).max(1);
-            let max = options.maximum_significant_digits.unwrap_or(21).max(min);
-            let first = |d: &Decimal| d.absolute.nonzero_magnitude_start();
-            decimal.round_with_mode(first(&decimal) - to_i16(max) + 1, half_expand);
-            decimal.absolute.trim_end();
-            let position = (first(&decimal) - to_i16(min) + 1).min(0);
-            decimal.absolute.pad_end(position);
-        } else {
-            let min = options.minimum_fraction_digits.unwrap_or(min);
-            let max = options.maximum_fraction_digits.unwrap_or(max).max(min);
-            decimal.round_with_mode(-to_i16(max), half_expand);
-            decimal.absolute.trim_end();
-            decimal.absolute.pad_end(-to_i16(min));
-        }
-        if let Some(digits) = options.minimum_integer_digits {
-            decimal.absolute.pad_start(to_i16(digits));
-        }
-        decimal
     }
 
     /// Sets the sign of `decimal` as the sign display shows it.
@@ -765,6 +772,44 @@ mod tests {
         };
         assert_that!(format(rounded.clone(), 2.5)).is_equal_to("3".to_owned());
         assert_that!(format(rounded, -2.5)).is_equal_to("-3".to_owned());
+    }
+
+    // `Intl.NumberFormat`: a maximum below the style's default minimum lowers the minimum.
+    #[test]
+    fn a_maximum_below_the_default_minimum_lowers_the_minimum() {
+        let formatter = NumberFormatter::new(
+            &Locale::from(locale!("en-US")),
+            NumberFormatOptions {
+                style: NumberStyle::Currency,
+                currency: Some("USD".to_owned()),
+                maximum_fraction_digits: Some(0),
+                ..NumberFormatOptions::default()
+            },
+        );
+        assert_that!(formatter.format(5.0)).is_equal_to("$5".to_owned());
+        assert_that!(formatter.format(5.5)).is_equal_to("$6".to_owned());
+        assert_that!(formatter.minimum_fraction_digits()).is_equal_to(0);
+        assert_that!(formatter.maximum_fraction_digits()).is_equal_to(Some(0));
+        let one = NumberFormatter::new(
+            &Locale::from(locale!("en-US")),
+            NumberFormatOptions {
+                style: NumberStyle::Currency,
+                currency: Some("USD".to_owned()),
+                maximum_fraction_digits: Some(1),
+                ..NumberFormatOptions::default()
+            },
+        );
+        assert_that!(one.format(5.0)).is_equal_to("$5.0".to_owned());
+        // A minimum above the default maximum raises the maximum.
+        let three = NumberFormatter::new(
+            &Locale::from(locale!("en-US")),
+            NumberFormatOptions {
+                style: NumberStyle::Percent,
+                minimum_fraction_digits: Some(1),
+                ..NumberFormatOptions::default()
+            },
+        );
+        assert_that!(three.format(0.5)).is_equal_to("50.0%".to_owned());
     }
 
     #[test]

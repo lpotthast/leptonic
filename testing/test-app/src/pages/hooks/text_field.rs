@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use leptonic::hooks::InputType;
-use leptonic::hooks::TextFieldElement;
-use leptonic::hooks::ValidationBehavior;
-use leptonic::hooks::{
-    IntoAttrs, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput, use_text_field,
-    use_text_field_state,
+use leptonic::{
+    IntoAttrs,
+    hooks::form::{
+        InputType, TextFieldElement, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput,
+        ValidationBehavior, use_text_field, use_text_field_state,
+    },
 };
 use leptos::prelude::*;
 
@@ -55,7 +55,7 @@ pub fn PageHookTextField() -> impl IntoView {
         auto_capitalize: None,
         auto_correct: None,
         spell_check: None,
-        input_mode: None,
+        input_mode: Signal::stored(None),
         enter_key_hint: None,
         auto_focus: false,
         exclude_from_tab_order: false,

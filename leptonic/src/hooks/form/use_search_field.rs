@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/searchfield/useSearchField.ts @ 99e6102368
 // Upstream: react-stately/src/searchfield/useSearchFieldState.ts @ 99e6102368
+// Upstream: react-aria/test/searchfield/useSearchField.test.js @ 99e6102368
+// Upstream: react-stately/test/searchfield/useSearchFieldState.test.js @ 99e6102368
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -7,8 +9,9 @@ use super::use_text_field::{UseTextFieldInput, UseTextFieldReturn, use_text_fiel
 use crate::{
     hooks::button::use_button::UseButtonInput,
     utils::{
-        EventAccessors,
+        dom_ext::EventAccessors,
         intl_strings::{SearchFieldStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
     },
 };
@@ -46,7 +49,7 @@ pub struct UseSearchFieldInput {
 pub struct UseSearchFieldReturn {
     /// The text field: label, input, description and error message props and validation.
     pub text_field: UseTextFieldReturn,
-    /// The clear button's configuration, for [`use_button`](fn@crate::hooks::use_button): out of the
+    /// The clear button's configuration, for [`use_button`](fn@crate::hooks::button::use_button): out of the
     /// tab order, keeps focus in the input, empties the field.
     pub clear_button: UseButtonInput,
 }
@@ -80,7 +83,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     let inactive = move || is_disabled.get_untracked() || is_read_only.get_untracked();
 
     let search_shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("Enter"), move |_| {
+        .on(Shortcut::new(KeyboardKey::Enter), move |_| {
             if inactive() {
                 return ShortcutOutcome::Ignored;
             }
@@ -93,7 +96,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
                 None => ShortcutOutcome::Ignored,
             }
         })
-        .on(Shortcut::key("Escape"), move |e| {
+        .on(Shortcut::new(KeyboardKey::Escape), move |e| {
             if inactive() {
                 return ShortcutOutcome::Ignored;
             }
@@ -129,7 +132,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         aria_label: Signal::derive(move || Some(strings.read().clear_search())).into(),
         is_disabled: Signal::derive(move || is_disabled.get() || is_read_only.get()),
         exclude_from_tab_order: Signal::stored(true),
-        prevent_focus_on_press: true,
+        prevent_focus_on_press: true.into(),
         // On press start, so touching the button doesn't blur the input and close the virtual
         // keyboard.
         on_press_start: Some(Callback::new(move |_| {

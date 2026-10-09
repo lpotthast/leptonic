@@ -1,3 +1,6 @@
+// No upstream: the modifier keys of an event as one value (react-aria reads the four `*Key`
+// fields of the event).
+
 /// Keyboard modifiers held during an event.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]

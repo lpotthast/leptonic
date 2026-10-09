@@ -1,5 +1,8 @@
-use leptonic::utils::scroll_behavior::ScrollBehavior;
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    ScrollBehavior,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::link::{UseAnchorLinkInput, UseLinkInput, use_anchor_link},
+};
 use leptos::prelude::*;
 
 #[component]

@@ -1,26 +1,24 @@
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::hooks::focus::{
+    Modality, UseFocusVisibleInput, UseFocusVisibleReturn, use_focus_visible,
+    use_interaction_modality,
+};
 use leptos::prelude::*;
 
-fn modality_name(modality: Modality) -> &'static str {
+fn modality_name(modality: Option<Modality>) -> &'static str {
     match modality {
-        Modality::Unknown => "Unknown",
-        Modality::Pointer => "Pointer",
-        Modality::Keyboard => "Keyboard",
-        Modality::Virtual => "Virtual",
+        None => "None yet",
+        Some(Modality::Pointer) => "Pointer",
+        Some(Modality::Keyboard) => "Keyboard",
+        Some(Modality::Virtual) => "Virtual",
     }
 }
 
 #[component]
 pub fn FocusVisibleDemo() -> impl IntoView {
-    let disabled = RwSignal::new(false);
-
     let UseFocusVisibleReturn {
         focus_should_be_visible,
-        modality,
-    } = use_focus_visible(UseFocusVisibleInput {
-        is_disabled: disabled.into(),
-        ..Default::default()
-    });
+    } = use_focus_visible(UseFocusVisibleInput::default());
+    let modality = use_interaction_modality();
 
     view! {
         // The hook sets no attribute: the demo exposes its state, and the CSS outlines the focused button
@@ -37,14 +35,5 @@ pub fn FocusVisibleDemo() -> impl IntoView {
             "Modality: " {move || modality_name(modality.get())} ". Focus should be visible: "
             {move || if focus_should_be_visible.get() { "yes" } else { "no" }} "."
         </p>
-
-        <div class="demo-controls">
-            <CheckboxField is_selected=disabled set_selected=disabled>
-                <CheckboxButton classes="demo-check">
-                    <span class="demo-check-box" aria-hidden="true"></span>
-                    "Disabled"
-                </CheckboxButton>
-            </CheckboxField>
-        </div>
     }
 }

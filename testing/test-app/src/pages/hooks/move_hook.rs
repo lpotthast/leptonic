@@ -1,4 +1,7 @@
-use leptonic::hooks::{IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move};
+use leptonic::{
+    IntoAttrs,
+    hooks::interactions::{MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move},
+};
 use leptos::prelude::*;
 
 /// `use_move` (react-aria's `useMove.test.js`): a movable element, one nested in another movable
@@ -17,7 +20,6 @@ pub fn PageHookMove() -> impl IntoView {
             <Movable log name="parent">
                 <Movable log name="child" />
             </Movable>
-            <button id="test-move-reset" on:click=move |_| log.set(Vec::new())>"Reset log"</button>
             <div>"Log: " <span id="test-move-log">{move || log.get().join(",")}</span></div>
         </div>
     }

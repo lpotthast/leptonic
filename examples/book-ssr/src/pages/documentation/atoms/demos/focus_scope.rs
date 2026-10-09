@@ -1,4 +1,6 @@
-use leptonic::atoms::prelude::*;
+use leptonic::atoms::{
+    button::Button, field::Label, focus_scope::FocusScope, input::Input, text_field::TextField,
+};
 use leptos::prelude::*;
 
 #[component]

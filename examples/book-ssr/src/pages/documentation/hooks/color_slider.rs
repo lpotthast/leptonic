@@ -29,8 +29,26 @@ pub fn PageUseColorSlider() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r"
                         use leptonic::{
-                            hooks::*,
-                            utils::color::{HSV, HsvChannel},
+                            HSV,
+                            HsvChannel,
+                            hooks::{
+                                color::{
+                                    ColorSliderState,
+                                    UseColorSliderInput,
+                                    UseColorSliderReturn,
+                                    UseColorSliderStateInput,
+                                    use_color_slider,
+                                    use_color_slider_state,
+                                },
+                                focus::use_focus_ring,
+                                slider::{
+                                    SliderState,
+                                    UseSliderReturn,
+                                    UseSliderThumbReturn,
+                                    use_slider,
+                                    use_slider_thumb,
+                                },
+                            },
                         };
                         use leptos::prelude::*;
 
@@ -50,6 +68,7 @@ pub fn PageUseColorSlider() -> impl IntoView {
                                 aria_label: MaybeProp::default(),
                                 aria_labelledby: None,
                                 aria_describedby: None,
+                                aria_details: None,
                                 name: None,
                                 form: None,
                             });
@@ -112,7 +131,7 @@ pub fn PageUseColorSlider() -> impl IntoView {
                             <Code inline=true>"ValueBinding::from(rw_signal)"</Code>" or "
                             <Code inline=true>"ValueBinding::new(signal, callback)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The channel the slider changes. Required."</ApiRow>
+                        <ApiRow name="channel" ty="Channel">"The channel the slider changes. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Orientation::Horizontal">
                             "The direction of the track: how pointer positions and the gradient map to values."
@@ -126,7 +145,7 @@ pub fn PageUseColorSlider() -> impl IntoView {
                     <p>"A "<Code inline=true>"Copy"</Code>" "<Code inline=true>"ColorSliderState<C>"</Code>":"</p>
                     <ApiTable kind=ApiKind::Return of="ColorSliderState">
                         <ApiRow name="value" ty="Signal<C>">"The color."</ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The channel the slider changes."</ApiRow>
+                        <ApiRow name="channel" ty="Channel">"The channel the slider changes."</ApiRow>
                         <ApiRow name="slider" ty="SliderState<f64>">
                             "The slider of the channel\u{2019}s value (one thumb); disabled state and orientation live here."
                         </ApiRow>
@@ -181,6 +200,7 @@ pub fn PageUseColorSlider() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the slider."</ApiRow>
                         <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the slider."</ApiRow>
+                        <ApiRow name="aria_details" ty="Option<String>" default="None">"The ids of the elements with details about the slider."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to."</ApiRow>
                     </ApiTable>

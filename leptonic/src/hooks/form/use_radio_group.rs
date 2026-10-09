@@ -1,13 +1,8 @@
 // Upstream: react-aria/src/radio/useRadioGroup.ts @ 99e6102368
+// Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{attr, attr::Attr, ev, prelude::*};
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::{
@@ -17,16 +12,21 @@ use super::{
     use_radio_group_state::RadioGroupState,
 };
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, SlotProps,
     hooks::{
-        FocusManager, FocusManagerOptions, FocusWithinEvent, IntoAttrs, UseFocusWithinInput,
-        UseKeyboardInput, collections::Key, use_focus_within, use_keyboard,
+        collections::Key,
+        focus::{
+            FocusManager, FocusManagerOptions, FocusWithinEvent, Focusability, UseFocusWithinInput,
+            use_focus_within,
+        },
+        interactions::{UseKeyboardInput, use_keyboard},
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler, SlotProps,
         aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaReadonly, AriaRequired, AriaRole},
-        i18n::use_direction,
+        dom_ext::EventAccessors,
+        i18n::{WritingDirection, use_direction},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-        locale::WritingDirection,
         orientation::Orientation,
     },
 };
@@ -55,7 +55,7 @@ pub struct UseRadioGroupInput {
     pub aria_describedby: Option<String>,
     pub aria_errormessage: Option<String>,
     /// The axis of the arrow keys (react-aria's default: vertical).
-    pub orientation: Orientation,
+    pub orientation: Signal<Orientation>,
     /// The id of the form the radios belong to, when not their ancestor.
     pub form: Option<String>,
     pub on_focus: Option<Callback<FocusEvent>>,
@@ -99,7 +99,7 @@ pub struct UseRadioGroupProps {
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub aria_orientation: AriaOrientation,
+    pub aria_orientation: Signal<AriaOrientation>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
@@ -117,14 +117,14 @@ pub type UseRadioGroupAttrs = (
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     ElementCaptureAttr,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
 );
 
 impl IntoAttrs for UseRadioGroupProps {
@@ -205,13 +205,14 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     let group = CapturedElement::new();
     let radios: StoredValue<Vec<(Key, CapturedElement)>> = StoredValue::new(Vec::new());
     let direction = use_direction();
+    // Created once (its state lives in this owner), not per key event.
+    let focus_manager = FocusManager::new(move || group.get_untracked().map(|g| (*g).clone()));
     // Focus and select the next (or previous) radio, wrapping around.
     let select_next = move |e: &KeyboardEvent, next: bool| -> bool {
-        let focus_manager = FocusManager::new(move || group.get_untracked().map(|g| (*g).clone()));
         let options = FocusManagerOptions {
             from: wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target()).ok(),
             wrap: true,
-            tabbable: false,
+            focusability: Focusability::Focusable,
             accept: Some(Arc::new(|el: &web_sys::Element| {
                 el.tag_name().eq_ignore_ascii_case("input")
                     && el.get_attribute("type").as_deref() == Some("radio")
@@ -240,17 +241,21 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     };
     let horizontal_next = move || {
         !(direction.get_untracked() == WritingDirection::Rtl
-            && orientation != Orientation::Vertical)
+            && orientation.get_untracked() != Orientation::Vertical)
     };
     let shortcuts = KeyboardShortcuts::new()
-        .on(Shortcut::key("ArrowRight"), move |e| {
+        .on(Shortcut::new(KeyboardKey::ArrowRight), move |e| {
             select_next(e, horizontal_next())
         })
-        .on(Shortcut::key("ArrowLeft"), move |e| {
+        .on(Shortcut::new(KeyboardKey::ArrowLeft), move |e| {
             select_next(e, !horizontal_next())
         })
-        .on(Shortcut::key("ArrowDown"), move |e| select_next(e, true))
-        .on(Shortcut::key("ArrowUp"), move |e| select_next(e, false));
+        .on(Shortcut::new(KeyboardKey::ArrowDown), move |e| {
+            select_next(e, true)
+        })
+        .on(Shortcut::new(KeyboardKey::ArrowUp), move |e| {
+            select_next(e, false)
+        });
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(shortcuts),
         allow_repeats: true,
@@ -270,7 +275,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
             aria_readonly: Signal::derive(move || is_read_only.get().then_some(AriaReadonly::True)),
             aria_required: Signal::derive(move || is_required.get().then_some(AriaRequired::True)),
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            aria_orientation: orientation.into(),
+            aria_orientation: Signal::derive(move || orientation.get().into()),
             aria_label: field_props.aria_label,
             aria_labelledby: field_props.aria_labelledby,
             aria_describedby: field_props.aria_describedby,

@@ -1,16 +1,17 @@
 // Upstream: react-aria/src/tree/useTreeItem.ts @ 99e6102368
+// Upstream: react-aria-components/test/Tree.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Tree.browser.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
     hooks::{
-        FocusMode,
         button::use_button::UseButtonInput,
         collections::Key,
         gridlist::{
-            GridListData, UseGridListItemInput, UseGridListItemReturn, grid_list_row_id,
+            FocusMode, GridListData, UseGridListItemInput, UseGridListItemReturn, grid_list_row_id,
             use_grid_list_item,
         },
-        interactions::use_press::PressEvent,
+        interactions::{ContextMenuEvent, use_press::PressEvent},
     },
     utils::{
         focusability::{PreventFocusAttr, prevent_focus_attr},
@@ -36,6 +37,14 @@ pub struct UseTreeItemInput {
     pub tree: GridListData,
     /// The item's key in the tree's collection.
     pub key: Key,
+    /// What gets focus when the item is focused: the row, or its first focusable child.
+    pub focus_mode: FocusMode,
+    /// Let ArrowUp/ArrowDown move between items while a child has focus, also with
+    /// `KeyboardNavigationBehavior::Tab`.
+    pub allows_arrow_navigation: bool,
+    /// Called when a context menu is requested on the item (right click, Shift+F10, the context
+    /// menu key).
+    pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
 /// Return value of [`use_tree_item`].
@@ -55,7 +64,13 @@ pub struct UseTreeItemReturn {
 /// An item of a tree: a grid list row with `aria-expanded`, `aria-level`, `aria-posinset` and
 /// `aria-setsize`, plus an expand button.
 pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
-    let UseTreeItemInput { tree, key } = input;
+    let UseTreeItemInput {
+        tree,
+        key,
+        focus_mode,
+        allows_arrow_navigation,
+        on_context_menu,
+    } = input;
     let expansion = tree.tree;
     let selection = tree.state.selection;
     let row_id = grid_list_row_id(&tree.id, &key);
@@ -68,9 +83,9 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     let item = use_grid_list_item(UseGridListItemInput {
         list: tree,
         key: key.clone(),
-        focus_mode: FocusMode::Row,
-        allows_arrow_navigation: false,
-        on_context_menu: None,
+        focus_mode,
+        allows_arrow_navigation,
+        on_context_menu,
     });
     let is_disabled = item.is_disabled;
 
@@ -92,7 +107,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
         }),
         aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         exclude_from_tab_order: Signal::stored(true),
-        prevent_focus_on_press: true,
+        prevent_focus_on_press: true.into(),
         on_press: Some(Callback::new(move |_: PressEvent| {
             if is_disabled.get_untracked() {
                 return;

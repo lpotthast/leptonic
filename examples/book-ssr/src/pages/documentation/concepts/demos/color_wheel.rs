@@ -1,9 +1,10 @@
 use leptonic::{
-    atoms::prelude::{ColorThumb, ColorWheel, ColorWheelTrack},
-    utils::{
-        color::{ColorValue, HSV, HsvChannel},
-        i18n::use_locale,
+    ColorValue, HSV, HsvChannel,
+    atoms::{
+        color_thumb::ColorThumb,
+        color_wheel::{ColorWheel, ColorWheelTrack},
     },
+    use_locale,
 };
 use leptos::prelude::*;
 

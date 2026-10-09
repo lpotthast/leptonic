@@ -5,7 +5,7 @@ use leptonic::{
         field::Label,
         tag_group::{TagGroup, TagItems, TagList, TagRemoveButton},
     },
-    hooks::collections::{Key, use_list_collection},
+    hooks::collections::{Key, UseListCollectionInput, use_list_collection},
 };
 use leptos::prelude::*;
 
@@ -13,7 +13,11 @@ use leptos::prelude::*;
 pub fn TagGroupConceptDemo() -> impl IntoView {
     // App state: the active filters.
     let filters = RwSignal::new(vec!["In stock", "Under $50", "Free shipping"]);
-    let collection = use_list_collection(filters.into(), |filter| Key::from(*filter), |filter| (*filter).to_owned());
+    let collection = use_list_collection(UseListCollectionInput {
+        items: filters.into(),
+        key: |filter| Key::from(*filter),
+        text_value: |filter| (*filter).to_owned(),
+    });
 
     view! {
         <TagGroup

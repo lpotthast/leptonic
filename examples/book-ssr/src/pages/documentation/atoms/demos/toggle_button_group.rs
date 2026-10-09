@@ -5,7 +5,7 @@ use leptonic::{
         checkbox::{CheckboxButton, CheckboxField},
         toggle_button::{ToggleButton, ToggleButtonGroup},
     },
-    hooks::Key,
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 

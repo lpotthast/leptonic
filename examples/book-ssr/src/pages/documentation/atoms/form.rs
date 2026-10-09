@@ -70,7 +70,7 @@ pub fn PageAtomForm() -> impl IntoView {
                                 input::Input,
                                 text_field::TextField,
                             },
-                            hooks::{ButtonType, InputType},
+                            hooks::{button::ButtonType, form::InputType},
                         };
                         use leptos::{ev::SubmitEvent, prelude::*};
 

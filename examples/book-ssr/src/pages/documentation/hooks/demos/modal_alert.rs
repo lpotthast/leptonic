@@ -1,6 +1,11 @@
 use leptonic::{
+    IntoAttrs,
     atoms::{button::Button, focus_scope::FocusScope},
-    hooks::*,
+    hooks::{
+        dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog},
+        modal::{UseModalBackdropInput, UseModalBackdropReturn, use_modal_backdrop},
+        overlay::{UseOverlayTriggerStateInput, use_overlay_trigger_state},
+    },
 };
 use leptos::{portal::Portal, prelude::*};
 
@@ -18,9 +23,6 @@ pub fn AlertDialogDemo() -> impl IntoView {
         should_close_on_interact_outside: None,
         is_entering: Signal::stored(false),
     });
-    let UseModalReturn {
-        modal_props: aria_modal_props,
-    } = use_modal(UseModalInput::default());
     let UseDialogReturn {
         dialog_props,
         title_props,
@@ -31,7 +33,6 @@ pub fn AlertDialogDemo() -> impl IntoView {
     });
 
     let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let aria_modal_attrs = StoredValue::new(aria_modal_props.into_attrs());
     let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
     let title_attrs = StoredValue::new(title_props.into_attrs());
     let content_attrs = StoredValue::new(content_props.into_attrs());
@@ -56,7 +57,6 @@ pub fn AlertDialogDemo() -> impl IntoView {
                     <FocusScope contain=true restore_focus=true auto_focus=true>
                         <div
                             {..modal_attrs.get_value()}
-                            {..aria_modal_attrs.get_value()}
                             {..dialog_attrs.get_value()}
                             class="demo-dialog"
                         >

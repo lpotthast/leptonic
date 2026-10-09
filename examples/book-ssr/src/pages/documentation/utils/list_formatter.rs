@@ -21,15 +21,17 @@ pub fn PageListFormatter() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::{
-                            i18n::use_locale,
-                            list_formatter::{ListFormatOptions, ListFormatType, ListFormatter},
+                        use leptonic::{
+                            ListFormatOptions,
+                            ListFormatType,
+                            ListFormatter,
+                            use_locale,
                         };
 
                         let locale = use_locale();
                         let hint = move || {
                             let formatter = ListFormatter::new(&locale.get(), &ListFormatOptions {
-                                r#type: ListFormatType::Disjunction,
+                                kind: ListFormatType::Disjunction,
                                 ..Default::default()
                             });
                             format!("Pay with {}.", formatter.format(&["card", "PayPal", "invoice"]))
@@ -63,7 +65,7 @@ pub fn PageListFormatter() -> impl IntoView {
 
             <Section title="ListFormatOptions">
                 <ApiTable kind=ApiKind::Fields of="ListFormatOptions">
-                    <ApiRow name="r#type" ty="ListFormatType" default="Conjunction">
+                    <ApiRow name="kind" ty="ListFormatType" default="Conjunction">
                         <Code inline=true>"Conjunction"</Code>" (\u{201c}A, B, and C\u{201d}), "<Code inline=true>"Disjunction"</Code>
                         " (\u{201c}A, B, or C\u{201d}) or "<Code inline=true>"Unit"</Code>" (\u{201c}A, B, C\u{201d}, e.g. for "
                         "measurements like \u{201c}5 ft, 7 in\u{201d})."

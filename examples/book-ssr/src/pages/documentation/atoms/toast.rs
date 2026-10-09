@@ -55,7 +55,10 @@ pub fn PageAtomToast() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::toast::*, hooks::{ToastOptions, ToastQueue}};
+                        use leptonic::{
+                            atoms::toast::*,
+                            hooks::toast::{ToastOptions, ToastQueue},
+                        };
                         use leptos::prelude::*;
 
                         // Usually created at the root of the app and provided as a context.

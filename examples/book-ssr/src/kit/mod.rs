@@ -23,7 +23,7 @@ pub use demo::Demo;
 pub use disclosure::Disclosure;
 pub use icon::Icon;
 /// Where a [`Link`] opens, and its relationship to the page.
-pub use leptonic::hooks::{LinkRel, LinkTarget};
+pub use leptonic::hooks::link::{LinkRel, LinkTarget};
 pub use link::{AnchorLink, Link};
 pub use members::SectionMembers;
 pub use page::{DocPage, DocPageHeader};
@@ -32,4 +32,3 @@ pub use section::Section;
 pub use table::{
     ApiKind, ApiRow, ApiTable, DocTable, KeyRow, KeyboardTable, Keys, TableCell, TableRow,
 };
-

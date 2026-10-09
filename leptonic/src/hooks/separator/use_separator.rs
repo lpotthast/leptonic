@@ -5,7 +5,7 @@ use leptos::{
 };
 
 use crate::{
-    hooks::IntoAttrs,
+    IntoAttrs,
     utils::{
         aria::{AriaOrientation, AriaRole},
         orientation::Orientation,
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn hr_needs_no_role() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let props = props(Orientation::Horizontal, SeparatorElementType::Hr);
             assert_that!(props.role).is_none();
             assert_that!(props.aria_orientation.get_untracked()).is_none();
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn other_elements_get_the_role_and_only_a_vertical_orientation() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let horizontal = props(Orientation::Horizontal, SeparatorElementType::Div);
             assert_that!(horizontal.role).is_equal_to(Some(AriaRole::Separator));
             assert_that!(horizontal.aria_orientation.get_untracked()).is_none();

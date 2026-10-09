@@ -1,19 +1,22 @@
 // Upstream: react-aria-components/src/ProgressBar.tsx @ 99e6102368
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
+    IntoAttrs,
     atoms::field::{LabelContext, LabelPresence},
-    hooks::{IntoAttrs, UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
+    hooks::progress::{UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
     utils::{
-        classes::Classes,
-        css::{computed_pct, computed_size},
         data_attributes::flag,
         default_class::with_default_class,
         fraction::Fraction,
         number_formatter::NumberFormatOptions,
         number_value::{NumberValue, OptionalNumberSignal},
-        style::WidthProperty,
-        styles::Styles,
+        styles::{
+            Styles,
+            css::{computed_pct, computed_size},
+            property::WidthProperty,
+        },
     },
 };
 
@@ -136,8 +139,8 @@ pub fn ProgressBar<T: NumberValue>(
 }
 
 /// The filled part of a [`ProgressBar`]'s track: as wide as the progress (in percent of its
-/// container). While indeterminate, it has no width of its own: animate it with CSS on
-/// `[data-indeterminate]`.
+/// container), which `--percent` holds too (`100%` while indeterminate). While indeterminate, it
+/// has no width of its own: animate it with CSS on `[data-indeterminate]`.
 ///
 /// Data attributes: `data-indeterminate`.
 ///
@@ -148,7 +151,7 @@ pub fn ProgressBarFill(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ProgressBarFill", classes);
-    fill(classes, styles)
+    fill("ProgressBarFill", classes, styles)
 }
 
 /// The formatted value of a [`ProgressBar`] (its `aria-valuetext`); empty while indeterminate.
@@ -160,30 +163,47 @@ pub fn ProgressBarValueText(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ProgressBarValueText", classes);
-    value_text(classes, styles)
+    value_text("ProgressBarValueText", classes, styles)
 }
 
-/// A fill sized to the percentage of the surrounding progress bar or meter.
-pub(crate) fn fill(classes: Classes, styles: Styles) -> impl IntoView {
-    let ValueContext { percentage, .. } = expect_context::<ValueContext>();
+/// The value of the surrounding progress bar or meter, or `None` (with a warning in debug builds)
+/// outside of one.
+fn value_context(part: &str) -> Option<ValueContext> {
+    let context = use_context::<ValueContext>();
+    if context.is_none() {
+        crate::utils::dev_warn!("A <{part}> must be inside a <ProgressBar> or <Meter>.");
+    }
+    context
+}
+
+/// A fill sized to the percentage of the surrounding progress bar or meter, with the percentage
+/// in `--percent` (`100%` while indeterminate, as react-aria-components' starter styles use it).
+pub(crate) fn fill(part: &str, classes: Classes, styles: Styles) -> impl IntoView {
+    let ValueContext { percentage, .. } = value_context(part)?;
     let styles = Styles::new()
         .add_optional(move || {
             percentage.get().map(|percentage| {
                 WidthProperty.declare(computed_size(computed_pct(percentage.as_percent())))
             })
         })
+        .add_optional_unchecked("--percent", move || {
+            Some(format!(
+                "{}%",
+                percentage.get().map_or(100.0, Fraction::as_percent)
+            ))
+        })
         .merge(styles);
-    view! {
+    Some(view! {
         <div
             class=classes
             style=styles
             data-indeterminate=flag(Signal::derive(move || percentage.with(Option::is_none)))
         />
-    }
+    })
 }
 
 /// The value text of the surrounding progress bar or meter.
-pub(crate) fn value_text(classes: Classes, styles: Styles) -> impl IntoView {
-    let ValueContext { value_text, .. } = expect_context::<ValueContext>();
-    view! { <span class=classes style=styles>{value_text}</span> }
+pub(crate) fn value_text(part: &str, classes: Classes, styles: Styles) -> impl IntoView {
+    let ValueContext { value_text, .. } = value_context(part)?;
+    Some(view! { <span class=classes style=styles>{value_text}</span> })
 }

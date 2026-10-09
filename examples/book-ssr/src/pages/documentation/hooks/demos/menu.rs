@@ -1,21 +1,28 @@
 use std::sync::Arc;
 
-use leptonic::hooks::PopoverModality;
 use leptonic::{
-    atoms::{checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
+    CapturedElement, IntoAttrs,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        focus_scope::FocusScope,
+    },
     hooks::{
-        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, SelectionMode,
-        UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn, UseMenuSectionInput,
-        UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerStateInput, UsePopoverInput,
-        UsePopoverReturn,
+        button::use_button,
         collections::{
             AutoFocus, CollectionBuilder, CollectionOptions, Key, NodeKind, Selection,
-            SelectionOptions, UseListStateInput, use_collection, use_list_state,
+            SelectionMode, SelectionOptions, UseListStateInput, use_collection, use_list_state,
         },
-        use_button, use_menu, use_menu_item, use_menu_section, use_menu_trigger,
-        use_menu_trigger_state, use_popover,
+        menu::{
+            MenuData, MenuTriggerType, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
+            UseMenuReturn, UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput,
+            UseMenuTriggerStateInput, use_menu, use_menu_item, use_menu_section, use_menu_trigger,
+            use_menu_trigger_state,
+        },
+        overlay::{
+            OverlayPositionOptions, OverlayTriggerType, Placement, PopoverModality,
+            UsePopoverInput, UsePopoverReturn, use_popover,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -117,23 +124,20 @@ fn MenuButton(
         trigger_props: popover_trigger_props,
         ..
     } = use_popover(UsePopoverInput {
-        placement: Signal::stored(Placement::BottomStart),
-        offset: Signal::stored(4.0),
+        position: OverlayPositionOptions {
+            placement: Signal::stored(Placement::BottomStart),
+            offset: Signal::stored(4.0),
+            ..OverlayPositionOptions::default()
+        },
         state: state.overlay,
         trigger: CapturedElement::new(),
-        cross_offset: Signal::stored(0.0),
-        container_padding: Signal::stored(12.0),
-        should_flip: Signal::stored(true),
-        max_height: Signal::stored(None),
-        arrow_size: Signal::stored(None),
-        arrow_boundary_offset: Signal::stored(0.0),
-        boundary: None,
         target_rect: Signal::stored(None),
         modality: PopoverModality::Modal,
         is_keyboard_dismiss_disabled: Signal::stored(false),
         should_close_on_interact_outside: None,
         group: None,
         is_submenu: false,
+        scroll: None,
     });
     let (popover_attrs, popover_styles) = popover_props.into_parts();
     let contents = StoredValue::new(contents);
@@ -255,9 +259,12 @@ fn MenuSection(menu: MenuData, key: Key, items: Vec<Key>) -> impl IntoView {
 
     view! {
         <li {..item_props.into_attrs()} class="demo-menu-section">
-            {heading_props.map(|props| view! {
-                <span {..props.into_attrs()} class="demo-menu-heading">{heading}</span>
-            })}
+            {
+                let heading_attrs = heading_props.into_attrs();
+                move || heading.get().map(|text| view! {
+                    <span {..heading_attrs.clone()} class="demo-menu-heading">{text}</span>
+                })
+            }
             <ul {..group_props.into_attrs()}>
                 {items.into_iter().map(|key| view! { <MenuItem menu=menu.clone() key/> }).collect_view()}
             </ul>

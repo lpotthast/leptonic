@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/utils/shadowdom/DOMFunctions.ts @ 99e6102368
 // Upstream: react-aria/src/utils/domHelpers.ts @ 99e6102368
+// Upstream: react-aria/test/utils/DOMFunctions.test.tsx @ 99e6102368
+// Upstream: react-aria/test/utils/domHelpers.test.js @ 99e6102368
 //! Shadow DOM utilities for cross-shadow-boundary DOM operations.
 //!
 //! Provides functions for working with shadow DOM boundaries, including

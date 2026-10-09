@@ -1,13 +1,16 @@
-use leptonic::{atoms::prelude as atoms, utils::keyboard_shortcut::Shortcut};
+use leptonic::{KeyboardKey, Shortcut, atoms};
 use leptos::prelude::*;
 
 #[component]
 pub fn ShortcutKeysDemo() -> impl IntoView {
     let shortcuts = [
-        ("Search", Shortcut::key("k").primary()),
-        ("Redo", Shortcut::key("z").primary().shift()),
-        ("Move line down", Shortcut::key("ArrowDown").alt()),
-        ("Close", Shortcut::key("Escape")),
+        ("Search", Shortcut::new(KeyboardKey::K).primary()),
+        ("Redo", Shortcut::new(KeyboardKey::Z).primary().shift()),
+        (
+            "Move line down",
+            Shortcut::new(KeyboardKey::ArrowDown).alt(),
+        ),
+        ("Close", Shortcut::new(KeyboardKey::Escape)),
     ];
 
     view! {
@@ -16,7 +19,7 @@ pub fn ShortcutKeysDemo() -> impl IntoView {
                 .into_iter()
                 .map(|(action, shortcut)| view! {
                     <dt>{action}</dt>
-                    <dd><atoms::ShortcutKeys shortcut classes="demo-shortcut-keys"/></dd>
+                    <dd><atoms::kbd::ShortcutKeys shortcut classes="demo-shortcut-keys"/></dd>
                 })
                 .collect_view()}
         </dl>

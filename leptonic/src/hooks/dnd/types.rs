@@ -129,6 +129,18 @@ impl DropOperations {
         .collect()
     }
 
+    /// The preferred allowed operation (move, copy, link), `Cancel` without any.
+    pub(crate) fn first(self) -> DropOperation {
+        [
+            DropOperation::Move,
+            DropOperation::Copy,
+            DropOperation::Link,
+        ]
+        .into_iter()
+        .find(|op| self.contains(*op))
+        .unwrap_or(DropOperation::Cancel)
+    }
+
     /// `operation` if it is allowed, otherwise `Cancel`.
     pub(crate) fn restrict(self, operation: DropOperation) -> DropOperation {
         if self.contains(operation) {

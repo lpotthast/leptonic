@@ -2,20 +2,23 @@
 // Upstream: react-aria-components/src/ColorWheel.tsx @ 99e6102368
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
     color_thumb::{ColorThumbContext, ThumbParts, WheelThumbParts},
 };
 use crate::{
-    Out,
-    hooks::{
+    Out, ValueBinding,
+    hooks::color::{
         UseColorWheelInput, UseColorWheelStateInput, UseColorWheelTrackAttrs, use_color_wheel,
         use_color_wheel_state,
     },
     utils::{
-        ValueBinding, classes::Classes, color::ColorValue, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
+        color::{Color, ColorValue, HSL},
+        data_attributes::flag,
+        default_class::with_default_class,
+        styles::Styles,
     },
 };
 
@@ -54,12 +57,14 @@ struct ColorWheelTrackContext {
 /// Default class: `leptonic-ColorWheel`.
 #[component]
 #[allow(clippy::too_many_arguments)]
-pub fn ColorWheel<C: ColorValue + Default>(
-    /// The wheel's outer radius, in pixels.
-    outer_radius: f64,
-    /// The wheel's inner radius, in pixels.
-    inner_radius: f64,
-    /// The initial color. Default: the color type's default.
+pub fn ColorWheel<C: ColorValue>(
+    /// The wheel's outer radius, in pixels (a value or any signal).
+    #[prop(into)]
+    outer_radius: Signal<f64>,
+    /// The wheel's inner radius, in pixels (a value or any signal).
+    #[prop(into)]
+    inner_radius: Signal<f64>,
+    /// The initial color. Default: `hsl(0, 100%, 50%)` (red, as react-aria-components).
     #[prop(optional)]
     default_value: Option<C>,
     /// The color (controlled): a value or any signal. Default: the `ColorPicker`'s around it.
@@ -79,6 +84,15 @@ pub fn ColorWheel<C: ColorValue + Default>(
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Elements describing the wheel.
+    #[prop(into, optional)]
+    aria_describedby: Option<String>,
+    /// Elements with details about the wheel.
+    #[prop(into, optional)]
+    aria_details: Option<String>,
+    /// The element with the wheel's error message.
+    #[prop(into, optional)]
+    aria_errormessage: Option<String>,
     /// The name of the input, for form submission.
     #[prop(into, optional)]
     name: Option<String>,
@@ -97,18 +111,19 @@ pub fn ColorWheel<C: ColorValue + Default>(
         is_disabled,
         on_change,
         on_change_end,
-        default_value: default_value.unwrap_or_default(),
+        default_value: default_value.unwrap_or_else(|| C::from(Color::from(HSL::new()))),
     });
     let wheel = use_color_wheel(UseColorWheelInput {
-        aria_label,
-        aria_labelledby,
-        name,
-        form,
         state,
         outer_radius,
         inner_radius,
-        aria_describedby: None,
-        aria_details: None,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        aria_details,
+        aria_errormessage,
+        name,
+        form,
     });
     let (track_attrs, track_styles) = wheel.track_props.into_parts();
     let track = ColorWheelTrackContext {
@@ -142,9 +157,7 @@ pub fn ColorWheel<C: ColorValue + Default>(
 ///
 /// Data attributes: `data-disabled`.
 ///
-/// # Panics
-///
-/// Outside a [`ColorWheel`].
+/// Outside a [`ColorWheel`] it renders nothing (with a development warning).
 ///
 /// Default class: `leptonic-ColorWheelTrack`.
 #[component]
@@ -153,9 +166,12 @@ pub fn ColorWheelTrack(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorWheelTrack", classes);
-    let ColorWheelTrackContext { is_disabled, track } = expect_context::<ColorWheelTrackContext>();
+    let Some(ColorWheelTrackContext { is_disabled, track }) = use_context() else {
+        crate::utils::dev_warn!("A <ColorWheelTrack> must be inside a <ColorWheel>.");
+        return None;
+    };
     let (attrs, track_styles) = track.get_value();
-    view! {
+    Some(view! {
         <div {..attrs} class=classes style=track_styles.merge(styles) data-disabled=flag(is_disabled) />
-    }
+    })
 }

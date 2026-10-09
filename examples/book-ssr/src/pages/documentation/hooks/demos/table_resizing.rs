@@ -1,24 +1,21 @@
 use std::sync::Arc;
 
-use leptonic::hooks::GridFocusMode;
-use leptonic::hooks::KeyboardNavigationBehavior;
-use leptonic::hooks::collections::CollectionOptions;
-use leptonic::hooks::collections::DisabledBehavior;
-use leptonic::hooks::collections::SelectionOptions;
 use leptonic::{
+    CapturedElement, IntoAttrs, computed_px, computed_size,
     hooks::{
-        ColumnBound, ColumnSize, IntoAttrs, TableCollection, TableColumnResizeState, TableData,
-        UseTableCellInput, UseTableColumnHeaderInput, UseTableColumnResizeInput,
-        UseTableColumnResizeStateInput, UseTableInput, UseTableReturn, UseTableRowInput,
-        UseTableStateInput, collections::Key, use_grid_row_group, use_table, use_table_cell,
-        use_table_column_header, use_table_column_resize, use_table_column_resize_state,
-        use_table_header_row, use_table_row, use_table_state,
+        collections::{CollectionOptions, DisabledBehavior, Key, SelectionOptions},
+        grid::{GridFocusMode, use_grid_row_group},
+        gridlist::KeyboardNavigationBehavior,
+        table::{
+            ColumnBound, ColumnSize, TableCollection, TableColumnResizeState, TableData,
+            UseTableCellInput, UseTableColumnHeaderInput, UseTableColumnResizeInput,
+            UseTableColumnResizeStateInput, UseTableInput, UseTableReturn, UseTableRowInput,
+            UseTableStateInput, use_table, use_table_cell, use_table_column_header,
+            use_table_column_resize, use_table_column_resize_state, use_table_header_row,
+            use_table_row, use_table_state,
+        },
     },
-    utils::{
-        CapturedElement,
-        css::{computed_px, computed_size},
-        style::WidthProperty,
-    },
+    leptos_styles::property::WidthProperty,
 };
 use leptos::{html, prelude::*};
 use leptos_use::use_element_size;
@@ -95,6 +92,7 @@ pub fn TableResizingHookDemo() -> impl IntoView {
         }))
     });
     let state = use_table_state(UseTableStateInput {
+        show_selection_checkboxes: Signal::stored(false),
         tree: None,
         table,
         selection: SelectionOptions {
@@ -111,7 +109,7 @@ pub fn TableResizingHookDemo() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         id: None,
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         keyboard_delegate: None,
         options: CollectionOptions::default(),
         keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),

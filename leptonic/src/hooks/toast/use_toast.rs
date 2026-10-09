@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/toast/useToast.ts @ 99e6102368
+// Upstream: react-aria/test/toast/useToast.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -6,7 +7,8 @@ use leptos::{
 
 use super::use_toast_state::{QueuedToast, ToastQueue};
 use crate::{
-    hooks::{IntoAttrs, UseButtonInput},
+    IntoAttrs,
+    hooks::button::UseButtonInput,
     utils::{
         aria::{AriaHidden, AriaModal, AriaRole},
         id::use_id,
@@ -39,6 +41,7 @@ pub struct UseToastInput<T: Clone + Send + Sync + 'static> {
 }
 
 /// Return value of [`use_toast`].
+#[derive(Debug)]
 pub struct UseToastReturn {
     /// For the toast (a non-modal alert dialog).
     pub toast_props: UseToastProps,
@@ -155,7 +158,7 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> U
                 let strings = use_localized_strings::<ToastStrings>();
                 Signal::derive(move || Some(strings.read().close())).into()
             },
-            on_press: Some(Callback::new(move |_| queue.close(&key))),
+            on_press: Some(Callback::new(move |_| queue.close(key))),
             ..UseButtonInput::default()
         },
     }

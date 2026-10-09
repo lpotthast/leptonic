@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 
-use leptonic::{hooks::*, utils::data_attributes::flag};
+use leptonic::{
+    flag,
+    hooks::interactions::{PressEvent, UsePressInput, UsePressReturn, use_press},
+};
 use leptos::prelude::*;
 
 #[component]

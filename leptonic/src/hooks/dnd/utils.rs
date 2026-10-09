@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/dnd/utils.ts @ 99e6102368
-use std::{cell::RefCell, collections::HashSet};
+// Upstream: react-aria/test/dnd/dnd.test.js @ 99e6102368
+// Upstream: react-aria/test/dnd/useClipboard.test.js @ 99e6102368
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use leptos::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
@@ -7,9 +9,12 @@ use wasm_bindgen::{JsCast, JsValue};
 use super::types::{
     DirectoryDropItem, DragItem, DropItem, DropOperations, FileDropItem, GENERIC_TYPE, TextDropItem,
 };
-use crate::hooks::{
-    collections::Key,
-    focus::use_focus_visible::{Modality, get_modality, use_interaction_modality},
+use crate::{
+    hooks::{
+        collections::Key,
+        focus::use_focus_visible::{Modality, get_modality, use_interaction_modality},
+    },
+    utils::{dom_ext::EventAccessors, shadow_dom::get_event_target},
 };
 
 // =============================================================================
@@ -61,7 +66,16 @@ pub fn use_drag_modality() -> Signal<DragModality> {
 
 /// The current drag modality.
 pub fn get_drag_modality() -> DragModality {
-    map_modality(Some(get_modality()))
+    map_modality(get_modality())
+}
+
+/// The element an event happened on, inside shadow roots too (react-aria's `getEventTarget`);
+/// `None` when it happened on the window or the document.
+pub(crate) fn event_target_element(e: &impl AsRef<web_sys::Event>) -> Option<web_sys::Element> {
+    get_event_target(e)
+        .unwrap_or_else(|| e.expect_target())
+        .dyn_into()
+        .ok()
 }
 
 /// State shared by all drags and drops of collections.
@@ -69,7 +83,8 @@ pub fn get_drag_modality() -> DragModality {
 pub(crate) struct DndState {
     /// The collection the dragged items come from.
     pub dragging_collection: Option<web_sys::Element>,
-    pub dragging_keys: HashSet<Key>,
+    /// Shared: read during every validity check of a drag.
+    pub dragging_keys: Rc<HashSet<Key>>,
     /// The collection the drag is over.
     pub drop_collection: Option<web_sys::Element>,
 }
@@ -84,12 +99,12 @@ pub(crate) fn with_dnd_state<R>(f: impl FnOnce(&mut DndState) -> R) -> R {
     DND_STATE.with(|s| f(&mut s.borrow_mut()))
 }
 
-pub(crate) fn dragging_keys() -> HashSet<Key> {
+pub(crate) fn dragging_keys() -> Rc<HashSet<Key>> {
     with_dnd_state(|s| s.dragging_keys.clone())
 }
 
 pub(crate) fn set_dragging_keys(keys: HashSet<Key>) {
-    with_dnd_state(|s| s.dragging_keys = keys);
+    with_dnd_state(|s| s.dragging_keys = Rc::new(keys));
 }
 
 pub(crate) fn set_dragging_collection(element: Option<web_sys::Element>) {

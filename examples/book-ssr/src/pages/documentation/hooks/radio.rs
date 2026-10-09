@@ -22,7 +22,19 @@ pub fn PageUseRadioHook() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                collections::{Key, Size},
+                                form::{
+                                    UseRadioGroupInput,
+                                    UseRadioGroupStateInput,
+                                    UseRadioInput,
+                                    use_radio,
+                                    use_radio_group,
+                                    use_radio_group_state,
+                                },
+                            },
+                        };
                         use leptos::prelude::*;
 
                         let state = use_radio_group_state(UseRadioGroupStateInput {
@@ -32,7 +44,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                         let group = use_radio_group(UseRadioGroupInput {
                             state,
                             has_label: true.into(),
-                            orientation: Orientation::Vertical,
+                            orientation: Orientation::Vertical.into(),
                             id: None,
                             aria_label: MaybeProp::default(),
                             aria_labelledby: None,
@@ -173,7 +185,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                         <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Option<String>" default="None">
                             "Further labelling, describing or error elements."
                         </ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Vertical">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
                             "Sets "<Code inline=true>"aria-orientation"</Code>". In right-to-left locales, "<Keys keys="ArrowLeft"/>
                             " and "<Keys keys="ArrowRight"/>" swap their direction in horizontal groups."
                         </ApiRow>

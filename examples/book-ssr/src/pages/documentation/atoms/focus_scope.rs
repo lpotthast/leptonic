@@ -20,7 +20,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
             <Section title="Hooks Used">
                 <p>
                     "The "<Code inline=true>"FocusManager"</Code>" of "
-                    <Link href=routes::doc::focus::UseFocusManager.materialize()><Code inline=true>"use_focus_manager"</Code></Link>
+                    <Link href=routes::doc::focus::UseFocusManager.materialize()><Code inline=true>"create_focus_manager"</Code></Link>
                     ", which also decides what counts as focusable."
                 </p>
             </Section>
@@ -33,7 +33,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                         "is mounted, e.g. a non-modal popover starts containing focus once a dialog is inside. Always give "
                         "keyboard users a way out of a containing scope, such as a close button or "<Keys keys="Escape"/>"."
                     </ApiRow>
-                    <ApiRow name="restore_focus" ty="bool" default="false">
+                    <ApiRow name="restore_focus" ty="Signal<bool>" default="false">
                         "When the scope unmounts, focus the element that was focused when it mounted."
                     </ApiRow>
                     <ApiRow name="auto_focus" ty="bool" default="false">
@@ -50,7 +50,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude::FocusScope;
+                        use leptonic::atoms::focus_scope::FocusScope;
 
                         view! {
                             <FocusScope contain=true restore_focus=true auto_focus=true>
@@ -84,28 +84,28 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="FocusScopeContext">
+            <Section title="FocusManager">
                 <p>
-                    <Code inline=true>"FocusScope"</Code>" provides a "<Code inline=true>"FocusScopeContext"</Code>
-                    ". Its "<Code inline=true>"focus_manager"</Code>" moves focus within the scope, with the methods described on the "
-                    <Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link>" page."
+                    <Code inline=true>"FocusScope"</Code>" provides a "<Code inline=true>"FocusManager"</Code>
+                    " that moves focus within the scope, with the methods described on the "
+                    <Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link>" page."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::{button::Button, focus_scope::FocusScopeContext},
-                            hooks::FocusManagerOptions,
+                            atoms::button::Button,
+                            hooks::focus::{FocusManagerOptions, use_focus_manager_context},
                         };
                         use leptos::prelude::*;
 
                         #[component]
                         fn NextButton() -> impl IntoView {
-                            let ctx = expect_context::<FocusScopeContext>();
+                            let manager = use_focus_manager_context().expect("inside FocusScope");
 
                             view! {
                                 <Button on_press=move |_| {
-                                    ctx.focus_manager.focus_next(FocusManagerOptions { wrap: true, ..Default::default() });
+                                    manager.focus_next(FocusManagerOptions { wrap: true, ..Default::default() });
                                 }>
                                     "Next"
                                 </Button>
@@ -123,7 +123,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                     </li>
                     <li>
                         "Before restoring focus, the scope dispatches the cancelable "<Code inline=true>"leptonic-focus-scope-restore"</Code>
-                        " event ("<Code inline=true>"RESTORE_FOCUS_EVENT"</Code>"). Call "<Code inline=true>"prevent_default()"</Code>
+                        " event ("<Code inline=true>"RestoreFocusEvent"</Code>"). Call "<Code inline=true>"prevent_default()"</Code>
                         " on it to restore focus yourself."
                     </li>
                     <li>
@@ -136,7 +136,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"create_focus_manager"</Link></li>
                 <li><Link href=routes::doc::focus::FocusManagerProvider.materialize()>"FocusManagerProvider"</Link></li>
                 <li><Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link></li>
                 <li><Link href=routes::doc::dialog::Atom.materialize()>"Dialog Atoms"</Link></li>

@@ -1,11 +1,16 @@
 // Upstream: react-aria/src/listbox/useListBox.ts @ 99e6102368
+// Upstream: react-aria/src/listbox/utils.ts @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.ssr.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/listbox/ListBox.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
+    CapturedElement, IntoAttrs, Orientation,
     hooks::{
-        IntoAttrs, Orientation,
         collections::{
             CollectionOptions, Key, KeyboardDelegate, LayoutDelegate, LinkBehavior, ListLayout,
             ListState, SelectionBehavior, SelectionMode, UseSelectableCollectionAttrs,
@@ -14,7 +19,6 @@ use crate::{
         focus::use_focus_within::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
     },
     utils::{
-        CapturedElement,
         aria::{AriaMultiselectable, AriaOrientation, AriaRole},
         id::use_id,
     },
@@ -45,7 +49,7 @@ pub struct UseListBoxInput {
     /// The ids of the elements naming the listbox (a signal: e.g. a field's label ids follow
     /// whether its label is rendered).
     pub aria_labelledby: Signal<Option<String>>,
-    pub orientation: Orientation,
+    pub orientation: Signal<Orientation>,
     /// Items stacked (one per row/column) or wrapping in a grid.
     pub layout: ListLayout,
     /// Replaces the list keyboard delegate.
@@ -98,7 +102,7 @@ pub struct ListBoxData {
     pub collection_id: String,
     pub should_select_on_press_up: bool,
     pub should_focus_on_hover: bool,
-    pub link_behavior: LinkBehavior,
+    pub link_behavior: Signal<LinkBehavior>,
     pub on_action: Option<Callback<Key>>,
     /// Options are focused virtually (`CollectionOptions::should_use_virtual_focus`).
     pub should_use_virtual_focus: bool,
@@ -121,7 +125,7 @@ pub struct UseListBoxProps {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
-    pub aria_orientation: AriaOrientation,
+    pub aria_orientation: Signal<AriaOrientation>,
     /// Focus, keyboard and tab-index handling (`use_selectable_list`), including focus-within
     /// tracking.
     pub collection: UseSelectableCollectionProps,
@@ -133,7 +137,7 @@ pub type UseListBoxAttrs = (
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
     UseSelectableCollectionAttrs,
 );
 
@@ -160,7 +164,11 @@ impl IntoAttrs for UseListBoxProps {
 /// collection order.
 ///
 /// ```ignore
-/// let collection = use_list_collection(fruits, |f| Key::from(f.id), |f| f.name.clone());
+/// let collection = use_list_collection(UseListCollectionInput {
+///     items: fruits,
+///     key: |f| Key::from(f.id),
+///     text_value: |f| f.name.clone(),
+/// });
 /// let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions {
 ///     selection_mode: Signal::stored(SelectionMode::Multiple), ..SelectionOptions::default() } });
 /// let element = CapturedElement::new();
@@ -170,7 +178,7 @@ impl IntoAttrs for UseListBoxProps {
 ///     id: None,
 ///     aria_label: "Fruits".into(),
 ///     aria_labelledby: Signal::stored(None),
-///     orientation: Orientation::Vertical,
+///     orientation: Orientation::Vertical.into(),
 ///     layout: ListLayout::Stack,
 ///     keyboard_delegate: None,
 ///     layout_delegate: None,
@@ -223,12 +231,18 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
 
     let id = id.unwrap_or_else(|| use_id("listbox"));
 
-    // Pressing a link in a toggle-selection list opens it; selecting it needs a checkbox.
-    if options.link_behavior == LinkBehavior::Action
-        && untrack(|| state.selection.selection_behavior()) == SelectionBehavior::Toggle
-    {
-        options.link_behavior = LinkBehavior::Override;
-    }
+    // Pressing a link in a toggle-selection list opens it; selecting it needs a checkbox. Follows
+    // the selection behavior (a long press switches to `Toggle`).
+    let link_behavior = options.link_behavior;
+    options.link_behavior = Memo::new(move |_| match link_behavior.get() {
+        LinkBehavior::Action
+            if state.selection.selection_behavior() == SelectionBehavior::Toggle =>
+        {
+            LinkBehavior::Override
+        }
+        link_behavior => link_behavior,
+    })
+    .into();
 
     let mut collection = use_selectable_list(UseSelectableListInput {
         state,
@@ -273,10 +287,7 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
                 (state.selection.selection_mode() == SelectionMode::Multiple)
                     .then_some(AriaMultiselectable::True)
             }),
-            aria_orientation: match orientation {
-                Orientation::Horizontal => AriaOrientation::Horizontal,
-                Orientation::Vertical => AriaOrientation::Vertical,
-            },
+            aria_orientation: Signal::derive(move || orientation.get().into()),
             collection,
         },
         data,

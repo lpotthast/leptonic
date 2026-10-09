@@ -29,7 +29,7 @@ pub struct UseRadioGroupStateInput {
     /// The initially selected value. Ignored when `value` is bound.
     pub default_value: Option<Key>,
     /// The selected value as app state, replacing `default_value`.
-    pub value: Option<crate::utils::ValueBinding<Option<Key>>>,
+    pub value: Option<crate::ValueBinding<Option<Key>>>,
     /// Called with the selected value when it changes.
     pub on_change: Option<Callback<Option<Key>>>,
     /// The radios' `name` (for form submission). Generated when `None`.
@@ -84,7 +84,7 @@ pub struct RadioGroupState {
     pub validation_behavior: ValidationBehavior,
     name: StoredValue<String>,
     default_selected_value: StoredValue<Option<Key>>,
-    set_selected: crate::utils::ValueBinding<Option<Key>>,
+    set_selected: crate::ValueBinding<Option<Key>>,
     set_last_focused: WriteSignal<Option<Key>>,
     on_change: Option<Callback<Option<Key>>>,
 }
@@ -144,7 +144,7 @@ pub fn use_radio_group_state(input: UseRadioGroupStateInput) -> RadioGroupState 
     } = input;
     let name = name.unwrap_or_else(|| use_id("radio-group"));
     let set_selected =
-        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_value)));
+        value.unwrap_or_else(|| crate::ValueBinding::from(RwSignal::new(default_value)));
     let selected_value = set_selected.value;
     let default_value = selected_value.get_untracked();
     let (last_focused_value, set_last_focused) = signal(None);
@@ -154,7 +154,7 @@ pub fn use_radio_group_state(input: UseRadioGroupStateInput) -> RadioGroupState 
         value: selected_value,
         validate,
         validation_behavior,
-        name: Some(name.clone()),
+        names: vec![name.clone()],
     });
     RadioGroupState {
         selected_value,
@@ -178,13 +178,14 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
     #[test]
     fn a_bound_value_is_read_and_written() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let app = RwSignal::new(Some(Key::from("a")));
             let state = use_radio_group_state(UseRadioGroupStateInput {
-                value: Some(crate::utils::ValueBinding::from(app)),
+                value: Some(crate::ValueBinding::from(app)),
                 ..UseRadioGroupStateInput::default()
             });
             assert_that!(state.default_selected_value()).is_equal_to(Some(Key::from("a")));
@@ -197,7 +198,7 @@ mod tests {
 
     #[test]
     fn selects_values_unless_read_only_or_disabled() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let changes = RwSignal::new(Vec::new());
             let is_read_only = RwSignal::new(false);
             let state = use_radio_group_state(UseRadioGroupStateInput {
@@ -218,7 +219,7 @@ mod tests {
 
     #[test]
     fn named_explicitly_or_generated() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let named = use_radio_group_state(UseRadioGroupStateInput {
                 name: Some("plan".to_owned()),
                 ..UseRadioGroupStateInput::default()

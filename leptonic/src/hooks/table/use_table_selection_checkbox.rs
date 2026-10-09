@@ -1,13 +1,16 @@
 // Upstream: react-aria/src/table/useTableSelectionCheckbox.ts @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use super::TableData;
 use crate::{
+    ValueBinding,
     hooks::{
-        UseGridSelectionCheckboxInput,
         collections::{Key, SelectionMode},
-        form::{ToggleOptions, ToggleState, use_checkbox::UseCheckboxInput},
-        use_grid_selection_checkbox,
+        form::{
+            ToggleOptions, UseToggleStateInput, use_checkbox::UseCheckboxInput, use_toggle_state,
+        },
+        grid::{UseGridSelectionCheckboxInput, use_grid_selection_checkbox},
     },
     utils::intl_strings::{TableStrings, use_localized_strings},
 };
@@ -58,11 +61,13 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
     let selection = table.state.grid.list.selection;
     let rows = table.state.table;
     let strings = use_localized_strings::<TableStrings>();
-    let state = ToggleState::new(
-        Signal::derive(move || selection.is_select_all()),
-        false,
-        Callback::new(move |_| selection.toggle_select_all()),
-    );
+    let state = use_toggle_state(UseToggleStateInput {
+        value: Some(ValueBinding::new(
+            Signal::derive(move || selection.is_select_all()),
+            Callback::new(move |_| selection.toggle_select_all()),
+        )),
+        ..UseToggleStateInput::default()
+    });
     UseCheckboxInput {
         is_indeterminate: Signal::derive(move || {
             !selection.is_empty() && !selection.is_select_all()

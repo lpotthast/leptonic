@@ -1,6 +1,7 @@
 // Upstream: react-aria-components/src/Label.tsx @ 99e6102368
 // Upstream: react-aria-components/src/Text.tsx @ 99e6102368
 // Upstream: react-aria-components/src/FieldError.tsx @ 99e6102368
+// Upstream: react-aria-components/test/FieldError.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
@@ -8,13 +9,16 @@ use leptos::{
     ev,
     prelude::*,
 };
+use leptos_classes::Classes;
 use web_sys::MouseEvent;
 
 use crate::{
-    hooks::{IntoAttrs, LabelElementType, UseLabelProps, ValidationResult, ValidityStateSnapshot},
+    CapturedElement, EventHandler, IntoAttrs, SlotProps,
+    hooks::form::{LabelElementType, UseLabelProps, ValidationResult, ValidityStateSnapshot},
+    use_slot,
     utils::{
-        CapturedElement, EventHandler, SlotProps, classes::Classes,
-        default_class::with_default_class, dev_warn, styles::Styles, use_slot,
+        default_class::with_default_class, dev_warn, scoped_context::use_clearable_context,
+        styles::Styles,
     },
 };
 
@@ -168,7 +172,7 @@ pub fn Label(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Label", classes);
-    let context = use_context::<LabelContext>();
+    let context = use_clearable_context::<LabelContext>();
     let default_text = context.as_ref().and_then(|context| context.default_text);
     let children = move || match children {
         Some(children) => Either::Left(children()),
@@ -213,7 +217,7 @@ pub fn Description(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Description", classes);
-    let props = use_context::<FieldContext>().map_or_else(
+    let props = use_clearable_context::<FieldContext>().map_or_else(
         || {
             // Outside a field, the id is referenced by nothing.
             dev_warn!(
@@ -242,40 +246,54 @@ pub fn FieldError(
     #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-FieldError", classes);
-    let ctx = use_context::<FieldContext>();
-    if ctx.is_none() {
+    let Some(ctx) = use_clearable_context::<FieldContext>() else {
         dev_warn!("A <FieldError> shows nothing outside a field (TextField, Checkbox, ...).");
-    }
-    let children = StoredValue::new(children);
-    move || {
-        let ctx = ctx.clone()?;
-        if !ctx.is_invalid.get() {
-            return None;
-        }
-        let content = if let Some(children) = children.with_value(|c| c.as_ref().map(|c| c())) {
-            children
-        } else if let Some(message) = &message {
-            message(&ValidationResult {
-                is_invalid: true,
-                validation_errors: ctx.validation_errors.get(),
-                validation_details: ctx.validation_details.get(),
-            })?
-            .into_any()
-        } else {
-            let errors = ctx.validation_errors.get();
-            if errors.is_empty() {
+        return None;
+    };
+    let has_children = children.is_some();
+    // The message, unless children replace it: only this text follows the validation.
+    let message_text = {
+        let (is_invalid, errors, details) = (
+            ctx.is_invalid,
+            ctx.validation_errors,
+            ctx.validation_details,
+        );
+        Memo::new(move |_| {
+            if has_children || !is_invalid.get() {
                 return None;
             }
-            errors.join(" ").into_any()
-        };
-        Some(text(
-            element,
-            ctx.error_message,
-            classes.clone(),
-            styles.clone(),
-            content,
-        ))
-    }
+            match &message {
+                Some(message) => message(&ValidationResult {
+                    is_invalid: true,
+                    validation_errors: errors.get(),
+                    validation_details: details.get(),
+                }),
+                None => errors.with(|errors| (!errors.is_empty()).then(|| errors.join(" "))),
+            }
+        })
+    };
+    // The element is rendered (and its id referenced by the field) only while this changes, not
+    // on every change of the errors.
+    let is_shown = Memo::new(move |_| {
+        ctx.is_invalid.get() && (has_children || message_text.with(Option::is_some))
+    });
+    let children = StoredValue::new(children);
+    let error_message = ctx.error_message;
+    Some(move || {
+        is_shown.get().then(|| {
+            let content = match children.with_value(|c| c.as_ref().map(|c| c())) {
+                Some(children) => children,
+                None => (move || message_text.get()).into_any(),
+            };
+            text(
+                element,
+                error_message.clone(),
+                classes.clone(),
+                styles.clone(),
+                content,
+            )
+        })
+    })
 }
 
 fn text(

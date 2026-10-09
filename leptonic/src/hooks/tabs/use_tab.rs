@@ -3,25 +3,32 @@ use leptos::{
     attr::{self, Attr},
     prelude::*,
 };
+use web_sys::FocusEvent;
 
-use super::TabListItemData;
+use super::TabListState;
 use crate::{
+    CapturedElement, IntoAttrs, PropsWithStyles,
     hooks::{
-        IntoAttrs, PropsWithStyles,
         collections::{
             Key, LinkBehavior, SelectOnPressUp, UseSelectableItemAttrs, UseSelectableItemInput,
             UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
         },
+        focus::{UseFocusableInput, UseFocusableItemAttrs, UseFocusableItemProps, use_focusable},
     },
     utils::{
-        CapturedElement,
         aria::{AriaDisabled, AriaRole, AriaSelected},
+        dev_warn,
     },
 };
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
+//
+// ## API DIFFERENCES
+// - Of `useFocusable`, the tab takes the focus handlers, element capture and a
+//   `FocusableContext`'s description and attributes (e.g. a `TooltipTrigger`'s); its tab stop
+//   is the collection's (react-aria merges the selectable item's `tabIndex` last too).
 //
 // ## OMITTED FEATURES
 // - Link attributes (`href`, ...) on tabs that are links: they navigate on selection
@@ -32,13 +39,19 @@ use crate::{
 /// Input of [`use_tab`].
 #[derive(Debug, Clone)]
 pub struct UseTabInput {
-    /// The tab list (from `use_tab_list`).
-    pub list: TabListItemData,
+    /// The tab list's state.
+    pub state: TabListState,
     /// The tab's key in the tab list's collection.
     pub key: Key,
     pub is_disabled: Signal<bool>,
     /// Select when the press ends instead of when it starts. Defaults to `true` for links.
     pub should_select_on_press_up: SelectOnPressUp,
+    /// Called when the tab receives focus.
+    pub on_focus: Option<Callback<FocusEvent>>,
+    /// Called when the tab loses focus.
+    pub on_blur: Option<Callback<FocusEvent>>,
+    /// Called when the tab's focus changes.
+    pub on_focus_change: Option<Callback<bool>>,
 }
 
 /// Return value of [`use_tab`].
@@ -61,6 +74,8 @@ pub struct UseTabProps {
     /// The selected tab controls its panel.
     pub aria_controls: Signal<Option<String>>,
     pub item: UseSelectableItemProps,
+    /// A `FocusableContext`'s handlers, description and attributes (e.g. a `TooltipTrigger`'s).
+    pub focusable: UseFocusableItemProps,
 }
 
 pub type UseTabAttrs = (
@@ -69,6 +84,7 @@ pub type UseTabAttrs = (
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
     UseSelectableItemAttrs,
+    UseFocusableItemAttrs,
 );
 
 impl IntoAttrs for UseTabProps {
@@ -81,6 +97,7 @@ impl IntoAttrs for UseTabProps {
             Attr(attr::AriaDisabled, self.aria_disabled),
             Attr(attr::AriaControls, self.aria_controls),
             self.item.into_attrs(),
+            self.focusable.into_attrs(),
         )
     }
 }
@@ -88,12 +105,14 @@ impl IntoAttrs for UseTabProps {
 /// A tab of a tab list: selected by press (and, with automatic activation, by focus).
 pub fn use_tab(input: UseTabInput) -> UseTabReturn {
     let UseTabInput {
-        list,
+        state,
         key,
         is_disabled,
         should_select_on_press_up,
+        on_focus,
+        on_blur,
+        on_focus_change,
     } = input;
-    let state = list.tabs.state;
     let selection = state.list.list.selection;
     let collection = state.list.list.collection;
     let tab_key = StoredValue::new(key.clone());
@@ -115,13 +134,16 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         item_elements: state.list.list.item_elements,
         key: key.clone(),
         element: CapturedElement::new(),
-        id: Some(list.tabs.tab_id(&key)),
-        collection_id: list.collection_id,
+        id: Some(state.tab_id(&key)),
+        collection_id: state.collection_id().unwrap_or_else(|| {
+            dev_warn!("use_tab: call `use_tab_list` before rendering its tabs");
+            String::new()
+        }),
         is_disabled,
         should_select_on_press_up: should_select_on_press_up.resolve(|| is_link),
         allows_different_press_origin: false,
         on_action: Signal::stored(None),
-        link_behavior: LinkBehavior::Selection,
+        link_behavior: Signal::stored(LinkBehavior::Selection),
         focus: None,
         should_use_virtual_focus: false,
         on_context_menu: None,
@@ -135,7 +157,16 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
             item_tabindex.get()
         }
     });
-    let panel_id = list.tabs.tab_panel_id(&key);
+    let panel_id = state.tab_panel_id(&key);
+    let focusable: UseFocusableItemProps = use_focusable(UseFocusableInput {
+        is_disabled,
+        on_focus,
+        on_blur,
+        on_focus_change,
+        ..UseFocusableInput::default()
+    })
+    .props
+    .into();
 
     UseTabReturn {
         props: PropsWithStyles::new(
@@ -147,6 +178,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
                 }),
                 aria_controls: Signal::derive(move || is_selected.get().then(|| panel_id.clone())),
                 item,
+                focusable,
             },
             styles,
         ),

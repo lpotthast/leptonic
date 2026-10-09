@@ -1,17 +1,19 @@
-use leptonic::hooks::GridFocusMode;
-use leptonic::hooks::KeyboardNavigationBehavior;
-use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
+    CapturedElement, IntoAttrs,
     hooks::{
-        GridData, IntoAttrs, Key, SelectionMode, UseGridCellInput, UseGridInput, UseGridReturn,
-        UseGridRowInput, UseGridStateInput,
-        collections::{Selection, SelectionOptions},
-        use_collection, use_grid, use_grid_cell, use_grid_row, use_grid_row_group, use_grid_state,
+        collections::{
+            CollectionOptions, Key, Selection, SelectionMode, SelectionOptions, use_collection,
+        },
+        grid::{
+            GridData, GridFocusMode, UseGridCellInput, UseGridInput, UseGridReturn,
+            UseGridRowInput, UseGridStateInput, use_grid, use_grid_cell, use_grid_row,
+            use_grid_row_group, use_grid_state,
+        },
+        gridlist::KeyboardNavigationBehavior,
     },
-    utils::{
-        CapturedElement,
+    leptos_styles::{
         css::{CssColor, rgb},
-        style::BackgroundColorProperty,
+        property::BackgroundColorProperty,
     },
 };
 use leptos::prelude::*;
@@ -82,7 +84,7 @@ pub fn Grid2dDemo() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         id: None,
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         keyboard_delegate: None,
         options: CollectionOptions::default(),
         keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),

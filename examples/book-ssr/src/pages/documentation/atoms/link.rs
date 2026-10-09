@@ -43,7 +43,7 @@ pub fn PageAtomLink() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::Link, hooks::LinkTarget};
+                        use leptonic::{atoms::link::Link, hooks::link::LinkTarget};
 
                         view! {
                             <Link href="/settings" classes="my-link">"Settings"</Link>
@@ -78,7 +78,7 @@ pub fn PageAtomLink() -> impl IntoView {
                 <Section title="Props" id="link-props">
                     <ApiTable kind=ApiKind::Props of="atoms::link::Link">
                         <ApiRow name="href" ty="impl ToHref">"A route of your app or a URL. Required."</ApiRow>
-                        <ApiRow name="target" ty="LinkTarget" default="Same">
+                        <ApiRow name="target" ty="Signal<LinkTarget>" default="Same">
                             "Where to open the link, e.g. "<Code inline=true>"LinkTarget::Blank"</Code>" for a new tab."
                         </ApiRow>
                         <ApiRow name="rel" ty="Vec<LinkRel>" default="empty">
@@ -102,6 +102,16 @@ pub fn PageAtomLink() -> impl IntoView {
                         <ApiRow name="children" ty="ChildrenFn">
                             "The link content, rendered again when the link is disabled or enabled. Required."
                         </ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focus this element when it mounts."</ApiRow>
+                        <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus leaves the element."</ApiRow>
+                        <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus enters the element."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focused state changes."</ApiRow>
+                        <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">"Called when the hovered state changes."</ApiRow>
+                        <ApiRow name="on_key_down" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called when a key is pressed."</ApiRow>
+                        <ApiRow name="on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called when a key is released."</ApiRow>
+                        <ApiRow name="on_press_change" ty="Option<Callback<bool>>" default="None">"Called when the pressed state changes."</ApiRow>
+                        <ApiRow name="on_press_end" ty="Option<Callback<PressEvent>>" default="None">"Called when a press ends."</ApiRow>
+                        <ApiRow name="on_press_start" ty="Option<Callback<PressEvent>>" default="None">"Called when a press starts."</ApiRow>
                     </ApiTable>
                 </Section>
 

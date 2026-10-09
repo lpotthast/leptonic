@@ -1,19 +1,21 @@
 // Upstream: react-aria/src/select/HiddenSelect.tsx @ 99e6102368
+// Upstream: react-aria/test/select/HiddenSelect.test.tsx @ 99e6102368
+use std::collections::HashMap;
+
 use leptos::{
     attr::{
         self, Attr,
         custom::{CustomAttr, custom_attribute},
     },
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
 
 use super::{SelectMode, SelectState};
 use crate::{
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
     hooks::{
-        IntoAttrs,
         collections::Key,
         form::{
             use_form_reset::{UseFormResetInput, use_form_reset},
@@ -21,7 +23,7 @@ use crate::{
             use_form_validation_state::ValidationBehavior,
         },
     },
-    utils::{CapturedElement, ElementCaptureAttr, EventHandler, aria::AriaHidden},
+    utils::aria::AriaHidden,
 };
 
 // =============================================================================
@@ -80,10 +82,21 @@ impl std::fmt::Debug for UseHiddenSelectInput {
 /// An `<option>` of the hidden `<select>`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HiddenSelectOption {
+    /// The collection key, or `None` for the empty option.
+    pub key: Option<Key>,
     /// The form value (the key).
     pub value: String,
     pub text: String,
-    pub is_selected: bool,
+}
+
+impl HiddenSelectOption {
+    /// Tracks selection separately from the options, so changing the value retains option nodes.
+    pub fn is_selected(&self, state: &SelectState) -> bool {
+        let value = state.value();
+        self.key
+            .as_ref()
+            .map_or_else(|| value.is_empty(), |key| value.contains(key))
+    }
 }
 
 /// Return value of [`use_hidden_select`].
@@ -95,7 +108,7 @@ pub struct UseHiddenSelectReturn {
     pub use_native_select: Signal<bool>,
     pub select_props: UseHiddenSelectSelectProps,
     /// The `<option>`s, starting with an empty one (no value).
-    pub options: Signal<Vec<HiddenSelectOption>>,
+    pub options: Memo<Vec<HiddenSelectOption>>,
     /// The text of the `<label>` around the `<select>`.
     pub label: MaybeProp<String>,
     /// Props for every hidden input; `first_input_capture` goes on the first one only.
@@ -156,8 +169,8 @@ pub type UseHiddenSelectSelectAttrs = (
     Attr<attr::Required, Signal<bool>>,
     Attr<attr::Name, Option<String>>,
     Attr<attr::Form, Option<String>>,
-    On<ev::change, SharedEventCallback<web_sys::Event>>,
-    On<ev::input, SharedEventCallback<web_sys::Event>>,
+    OnEvent<ev::change>,
+    OnEvent<ev::input>,
     ElementCaptureAttr,
 );
 
@@ -173,7 +186,7 @@ impl IntoAttrs for UseHiddenSelectSelectProps {
             Attr(attr::Required, self.required),
             Attr(attr::Name, self.name),
             Attr(attr::Form, self.form),
-            self.on_change.to_on(ev::change),
+            self.on_change.clone().into_on(ev::change),
             self.on_change.into_on(ev::input),
             self.element_capture,
         )
@@ -229,6 +242,44 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
         validation_behavior,
     });
 
+    let options = Memo::new(move |_| {
+        let value = state.value();
+        collection.with(|c| {
+            let mut options = vec![HiddenSelectOption {
+                key: None,
+                value: String::new(),
+                text: String::new(),
+            }];
+            options.extend(c.items().map(|node| HiddenSelectOption {
+                key: Some(node.key.clone()),
+                value: node.key.to_string(),
+                text: node.text_value.to_string(),
+            }));
+            // A controlled selection may outlive an option (e.g. an asynchronous collection).
+            // Keep its form value even while the visible trigger shows its placeholder.
+            options.extend(value.iter().filter(|key| c.get(key).is_none()).map(|key| {
+                HiddenSelectOption {
+                    key: Some(key.clone()),
+                    value: key.to_string(),
+                    text: key.to_string(),
+                }
+            }));
+            options
+        })
+    });
+    let keys_by_value = Memo::new(move |_| {
+        options.with(|options| {
+            let mut keys = HashMap::new();
+            for option in options {
+                if let Some(key) = &option.key {
+                    keys.entry(option.value.clone())
+                        .or_insert_with(|| key.clone());
+                }
+            }
+            keys
+        })
+    });
+
     // Autofill picks options of the native select.
     let on_change = EventHandler::new(move |e: web_sys::Event| {
         let Some(select) = e
@@ -247,11 +298,10 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
         } else {
             vec![select.value()]
         };
-        let keys: Vec<Key> = collection.with_untracked(|c| {
+        let keys = keys_by_value.with_untracked(|keys| {
             values
                 .iter()
-                .filter_map(|value| c.items().find(|n| n.key.to_string() == *value))
-                .map(|n| n.key.clone())
+                .filter_map(|value| keys.get(value).cloned())
                 .collect()
         });
         state.set_value(keys);
@@ -280,22 +330,7 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
             on_change,
             element_capture: select_element.attr(),
         },
-        options: Signal::derive(move || {
-            let value = state.value();
-            let mut options = vec![HiddenSelectOption {
-                value: String::new(),
-                text: String::new(),
-                is_selected: value.is_empty(),
-            }];
-            collection.with(|c| {
-                options.extend(c.items().map(|n| HiddenSelectOption {
-                    value: n.key.to_string(),
-                    text: n.text_value.to_string(),
-                    is_selected: value.contains(&n.key),
-                }));
-            });
-            options
-        }),
+        options,
         label,
         // Only one of `<select>` and the inputs is rendered: they capture into the same element.
         first_input_capture: select_element.attr(),

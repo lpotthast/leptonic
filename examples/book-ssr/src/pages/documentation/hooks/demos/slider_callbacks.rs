@@ -1,10 +1,13 @@
 use leptonic::{
-    hooks::*,
-    utils::{
-        css::{computed_pct, computed_size},
-        style::WidthProperty,
-        styles::Styles,
+    IntoAttrs, Orientation, computed_pct, computed_size,
+    hooks::{
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
+        slider::{
+            UseSliderInput, UseSliderStateInput, UseSliderThumbInput, use_slider, use_slider_state,
+            use_slider_thumb,
+        },
     },
+    leptos_styles::{Styles, property::WidthProperty},
 };
 use leptos::prelude::*;
 
@@ -60,13 +63,15 @@ pub fn SliderCallbacksDemo() -> impl IntoView {
         aria_details: None,
     });
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let (track_attrs, track_styles) = slider.track_props.into_parts();
     let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
     let fill_styles = Styles::new().add_reactive(move || {
-        WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0) * 100.0)))
+        WidthProperty.declare(computed_size(computed_pct(
+            state.thumb_percent(0).as_percent(),
+        )))
     });
     let show = |value: Option<f64>| {
         value.map_or_else(|| "none yet".to_owned(), |value| format!("{value:.0}"))

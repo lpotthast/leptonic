@@ -221,11 +221,11 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
 
                 <Section title="Input" id="use-checkbox-group-state-input">
                     <ApiTable kind=ApiKind::Input of="UseCheckboxGroupStateInput">
-                        <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">"The initially checked values, restored on form reset."</ApiRow>
-                        <ApiRow name="value" ty="Option<ValueBinding<Vec<Key>>>" default="None">
+                        <ApiRow name="default_value" ty="HashSet<Key>" default="vec![]">"The initially checked values, restored on form reset."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<HashSet<Key>>>" default="None">
                             "The checked values as app state, replacing "<Code inline=true>"default_value"</Code>"."
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
+                        <ApiRow name="on_change" ty="Option<Callback<HashSet<Key>>>" default="None">
                             "Called with the checked values when they change."
                         </ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Disables the group, or prevents changes."</ApiRow>
@@ -233,7 +233,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                             "At least one checkbox must be checked: the checkboxes are required while none is."
                         </ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the group invalid while "<Code inline=true>"true"</Code>"."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<Vec<Key>>>" default="None">"Validates the checked values."</ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<HashSet<Key>>>" default="None">"Validates the checked values."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Aria">
                             "Shows errors as the user edits, or on form submission. Applies to all checkboxes of the group."
                         </ApiRow>
@@ -249,7 +249,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         ", which is "<Code inline=true>"Copy"</Code>"."
                     </p>
                     <ApiTable kind=ApiKind::Return of="CheckboxGroupState">
-                        <ApiRow name="value" ty="Signal<Vec<Key>>">"The checked values, in the order they were checked."</ApiRow>
+                        <ApiRow name="value" ty="Signal<HashSet<Key>>">"The checked values, in the order they were checked."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>">"The group\u{2019}s settings."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>">"Whether a value is still required: the group is required and nothing is checked."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation is invalid."</ApiRow>
@@ -368,7 +368,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     {indoc!(r#"
                         use std::sync::Arc;
 
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::form::{ToggleOptions, UseCheckboxInput, UseToggleStateInput, use_checkbox, use_toggle_state};
                         use leptos::prelude::*;
 
                         let state = use_toggle_state(UseToggleStateInput::default());

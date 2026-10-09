@@ -1,4 +1,7 @@
-use leptonic::atoms::prelude::{Label, ProgressBar, ProgressBarFill, ProgressBarValueText};
+use leptonic::atoms::{
+    field::Label,
+    progress_bar::{ProgressBar, ProgressBarFill, ProgressBarValueText},
+};
 use leptos::prelude::*;
 
 #[component]

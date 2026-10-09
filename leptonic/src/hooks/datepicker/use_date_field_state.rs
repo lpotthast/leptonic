@@ -1,12 +1,12 @@
 // Upstream: react-stately/src/datepicker/useDateFieldState.ts @ 99e6102368
 // Upstream: react-stately/src/datepicker/utils.ts @ 99e6102368
-use std::sync::Arc;
-
+// Upstream: @adobe/react-spectrum/test/datepicker/DateField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/datepicker/DatePicker.test.js @ 99e6102368
 use jiff::tz::TimeZone;
 use leptos::prelude::*;
 
 use super::{
-    format::{DateFormatter, FormatOptions, resolve_hour_cycle, segments},
+    format::{FormatOptions, Formatters, SegmentNumbers, resolve_hour_cycle, segments},
     incomplete_date::IncompleteDate,
     types::{
         DateSegment, DateSegmentType, DateValue, Era, Granularity, HourCycle, MaxGranularity,
@@ -14,13 +14,13 @@ use super::{
     },
 };
 use crate::{
+    ValueBinding,
     hooks::form::{
         FormValidationState, UseFormValidationStateInput, VALID_VALIDITY_STATE, ValidateFn,
         ValidationBehavior, ValidationResult, ValidityStateSnapshot, use_form_validation_state,
     },
     utils::{
-        ValueBinding,
-        i18n::{Locale, use_locale},
+        i18n::use_locale,
         intl_strings::{DateValidationStrings, use_localized_strings},
     },
 };
@@ -38,6 +38,8 @@ use crate::{
 // - `hour_cycle`, `granularity`, `max_granularity`: enums (react-aria: numbers and strings).
 // - The format options (`placeholder_value`, `granularity`, `max_granularity`, `hour_cycle`,
 //   `hide_time_zone`, `should_force_leading_zeros`) are signals (C11).
+// - `is_invalid` only adds invalidity (C4): react-aria's `isInvalid={false}` hiding native and
+//   built-in errors ("should use controlled validation first") has no counterpart.
 //
 // ## DIFFERENT BEHAVIOR
 // - A granularity finer than the value type has (a time for a `civil::Date`) is the day
@@ -125,19 +127,6 @@ impl<V: DateValue> Default for UseDateFieldStateInput<V> {
     }
 }
 
-/// A formatter with what it was made for.
-#[derive(Clone)]
-struct Formatter {
-    key: (Locale, FormatOptions),
-    formatter: Arc<DateFormatter>,
-}
-
-impl PartialEq for Formatter {
-    fn eq(&self, other: &Self) -> bool {
-        self.key == other.key
-    }
-}
-
 /// An edit in progress: the incomplete value, and the revision of the value and the hour cycle
 /// it was made for (react-aria resets the display whenever the value changes, also back to an
 /// earlier one).
@@ -174,7 +163,7 @@ pub struct DateFieldState<V: DateValue> {
     placeholder: Memo<V>,
     display_segments: Memo<Vec<DateSegmentType>>,
     hour_cycle: Memo<ResolvedHourCycle>,
-    formatter: Memo<Formatter>,
+    formatters: Memo<Formatters>,
     format_options: Memo<FormatOptions>,
     default_value: StoredValue<Option<V>>,
 }
@@ -367,8 +356,8 @@ impl<V: DateValue> DateFieldState<V> {
         let Some(value) = self.binding.value.get() else {
             return String::new();
         };
-        let locale = self.formatter.with(|formatter| formatter.key.0.clone());
-        DateFormatter::long(&locale, &self.format_options.get()).format(&value)
+        self.formatters
+            .with(|formatters| formatters.long().format(&value))
     }
 
     /// The field's options for other formatting of its values (e.g. a picker's description).
@@ -389,13 +378,13 @@ pub(crate) fn resolve_granularity<V: DateValue>(granularity: Option<Granularity>
 }
 
 /// The validation of a value against min, max and unavailable dates (react-stately's
-/// `getValidationResult`).
+/// `getValidationResult`). `format` formats a violated limit for its message (only then).
 pub(crate) fn validation_result<V: DateValue>(
     value: Option<&V>,
     min_value: Option<&V>,
     max_value: Option<&V>,
     is_date_unavailable: Option<Callback<V, bool>>,
-    formatter: &DateFormatter,
+    format: &dyn Fn(&V) -> String,
     strings: &DateValidationStrings,
 ) -> ValidationResult {
     let Some(value) = value else {
@@ -408,10 +397,10 @@ pub(crate) fn validation_result<V: DateValue>(
     let is_invalid = range_overflow || range_underflow || is_unavailable;
     let mut errors = Vec::new();
     if let Some(min) = min_value.filter(|_| range_underflow) {
-        errors.push(strings.range_underflow(&formatter.format(min)));
+        errors.push(strings.range_underflow(&format(min)));
     }
     if let Some(max) = max_value.filter(|_| range_overflow) {
-        errors.push(strings.range_overflow(&formatter.format(max)));
+        errors.push(strings.range_overflow(&format(max)));
     }
     if is_unavailable {
         errors.push(strings.unavailable_date());
@@ -584,14 +573,8 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
         show_era: display.with(|display| display.era == Some(Era::Bc)),
         should_force_leading_zeros: should_force_leading_zeros.get(),
     });
-    let formatter = Memo::new(move |_| {
-        let locale = locale.get();
-        let options = format_options.get();
-        Formatter {
-            formatter: Arc::new(DateFormatter::new(&locale, &options)),
-            key: (locale, options),
-        }
-    });
+    let formatters = Memo::new(move |_| Formatters::new(locale.get(), format_options.get()));
+    let numbers = Memo::new(move |_| SegmentNumbers::new(&locale.get()));
 
     let date_value = Memo::new(move |_| {
         let base = binding.value.get().unwrap_or_else(|| placeholder.get());
@@ -600,42 +583,45 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
     let segment_list = Memo::new(move |_| {
         let date_value = date_value.get();
         display.with(|display| {
-            formatter.with(|formatter| {
-                segments(
-                    &date_value,
-                    display,
-                    &formatter.formatter,
-                    &locale.get(),
-                    granularity_signal.get(),
-                )
+            formatters.with(|formatters| {
+                numbers.with(|numbers| {
+                    locale.with(|locale| {
+                        segments(
+                            &date_value,
+                            display,
+                            formatters.short(),
+                            numbers,
+                            locale,
+                            granularity_signal.get(),
+                        )
+                    })
+                })
             })
         })
     });
 
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let strings = use_localized_strings::<DateValidationStrings>();
-    let builtin_validation = Signal::derive(move || {
+    let builtin_validation = Memo::new(move |_| {
         let value = binding.value.get();
         let (min, max) = (min_value.get(), max_value.get());
-        Some(formatter.with(|formatter| {
-            validation_result(
-                value.as_ref(),
-                min.as_ref(),
-                max.as_ref(),
-                is_date_unavailable.get_value(),
-                &formatter.formatter,
-                &strings.read(),
-            )
-        }))
+        Some(validation_result(
+            value.as_ref(),
+            min.as_ref(),
+            max.as_ref(),
+            is_date_unavailable.get_value(),
+            &|limit| formatters.with(|formatters| formatters.short().format(limit)),
+            &strings.read(),
+        ))
     });
     let validation = picker_validation.unwrap_or_else(|| {
         use_form_validation_state(UseFormValidationStateInput {
             is_invalid,
             value: binding.value,
             validate,
-            builtin_validation,
+            builtin_validation: builtin_validation.into(),
             validation_behavior,
-            name: name.clone(),
+            names: name.clone().into_iter().collect(),
         })
     });
 
@@ -659,7 +645,7 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
         placeholder,
         display_segments,
         hour_cycle,
-        formatter,
+        formatters,
         format_options,
         default_value: StoredValue::new(initial_value),
     }
@@ -671,6 +657,7 @@ mod tests {
     use jiff::civil::{Date, date};
 
     use super::*;
+    use crate::testing::with_owner;
 
     fn texts(state: &DateFieldState<Date>) -> Vec<String> {
         state
@@ -684,8 +671,7 @@ mod tests {
 
     #[test]
     fn edits_an_empty_field_segment_by_segment() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let changes = RwSignal::new(Vec::<Option<Date>>::new());
             let state = use_date_field_state(UseDateFieldStateInput {
                 placeholder_value: Signal::stored(Some(date(2024, 1, 1))),
@@ -722,8 +708,7 @@ mod tests {
 
     #[test]
     fn validates_against_min_and_max() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let state = use_date_field_state(UseDateFieldStateInput {
                 default_value: Some(date(2024, 6, 5)),
                 min_value: Signal::stored(Some(date(2024, 7, 1))),

@@ -30,7 +30,10 @@ pub fn PageUseCloseOnScroll() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::overlay::{UseCloseOnScrollInput, use_close_on_scroll},
+                        };
 
                         let trigger = CapturedElement::new();
                         let (is_open, set_is_open) = signal(false);

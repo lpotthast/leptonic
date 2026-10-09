@@ -1,6 +1,19 @@
 use std::time::Duration;
 
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*, utils::CapturedElement};
+use leptonic::{
+    CapturedElement, IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::{
+        overlay::{
+            OverlayPositionOptions, Placement, UseOverlayPositionInput, use_overlay_position,
+        },
+        tooltip::{
+            TooltipTriggerMode, UseTooltipInput, UseTooltipTriggerInput,
+            UseTooltipTriggerStateInput, use_tooltip, use_tooltip_trigger,
+            use_tooltip_trigger_state,
+        },
+    },
+};
 use leptos::{portal::Portal, prelude::*};
 
 /// A tooltip built from the three tooltip hooks, positioned with `use_overlay_position`.
@@ -27,18 +40,13 @@ pub fn TooltipDemo() -> impl IntoView {
         state: Some(state),
     });
     let position = use_overlay_position(UseOverlayPositionInput {
-        placement: Signal::stored(Placement::Top),
-        offset: Signal::stored(6.0),
+        position: OverlayPositionOptions {
+            placement: Signal::stored(Placement::Top),
+            offset: Signal::stored(6.0),
+            ..OverlayPositionOptions::default()
+        },
         target: trigger_element,
         is_open: state.overlay.is_open,
-        container_padding: Signal::stored(12.0),
-        cross_offset: Signal::stored(0.0),
-        should_flip: Signal::stored(true),
-        boundary: None,
-        max_height: Signal::stored(None),
-        arrow_size: Signal::stored(None),
-        arrow_boundary_offset: Signal::stored(0.0),
-        should_update_position: Signal::stored(true),
         target_rect: Signal::stored(None),
         scroll: None,
         on_close: None,

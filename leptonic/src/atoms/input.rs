@@ -9,11 +9,17 @@ use leptos::{
     },
     prelude::*,
 };
+use leptos_classes::Classes;
 
 use crate::{
-    hooks::{IntoAttrs, UseHoverInput, UseTextFieldInputProps, use_hover},
+    IntoAttrs,
+    hooks::{
+        form::UseTextFieldInputProps,
+        interactions::{UseHoverInput, use_hover},
+    },
     utils::{
-        classes::Classes, data_attributes::flag, default_class::with_default_class, styles::Styles,
+        data_attributes::flag, default_class::with_default_class,
+        scoped_context::use_clearable_context, styles::Styles,
     },
 };
 
@@ -62,7 +68,7 @@ impl InputContext {
         }
     }
 
-    /// The input of a [`use_text_field`](fn@crate::hooks::use_text_field) field, which can also be
+    /// The input of a [`use_text_field`](fn@crate::hooks::form::use_text_field) field, which can also be
     /// a [`TextArea`].
     pub fn text_field(props: UseTextFieldInputProps, state: InputState) -> Self {
         let attrs_props = props.clone();
@@ -73,7 +79,8 @@ impl InputContext {
     }
 }
 
-/// The `<input>` of the field around it.
+/// The `<input>` of the field around it (outside a field, or inside a field's popover, nothing is
+/// rendered).
 ///
 /// Data attributes: `data-focused`, `data-focus-visible`, `data-hovered`, `data-disabled`,
 /// `data-invalid`.
@@ -89,14 +96,17 @@ pub fn Input(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Input", classes);
-    let ctx = expect_context::<InputContext>();
+    let Some(ctx) = use_clearable_context::<InputContext>() else {
+        crate::utils::dev_warn!("An <Input> needs a field around it (TextField, ComboBox, ...).");
+        return None;
+    };
     let state = ctx.state;
     let hover = use_hover(UseHoverInput {
         is_disabled: state.is_disabled,
         ..UseHoverInput::default()
     });
 
-    view! {
+    Some(view! {
         <input
             {..(ctx.attrs)()}
             {..hover.props.into_attrs()}
@@ -105,7 +115,7 @@ pub fn Input(
             class=classes
             style=styles
         />
-    }
+    })
 }
 
 /// The `<textarea>` of the field around it (for multi-line text).
@@ -122,7 +132,10 @@ pub fn TextArea(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TextArea", classes);
-    let ctx = expect_context::<InputContext>();
+    let Some(ctx) = use_clearable_context::<InputContext>() else {
+        crate::utils::dev_warn!("A <TextArea> needs a text field around it.");
+        return None;
+    };
     let state = ctx.state;
     let Some(text_field) = ctx.text_field else {
         crate::utils::dev_warn!("A <TextArea> needs a text field: use an <Input>.");

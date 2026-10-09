@@ -1,16 +1,13 @@
 use leptonic::{
+    Locale, NumberFormatOptions, NumberFormatter, NumberParser, NumberStyle, Orientation,
+    SignDisplay,
     atoms::{
         field::Label,
         input::Input,
         radio::{RadioButton, RadioField, RadioGroup},
         text_field::TextField,
     },
-    hooks::{Orientation, collections::Key},
-    utils::{
-        i18n::Locale,
-        number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle, SignDisplay},
-        number_parser::NumberParser,
-    },
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 

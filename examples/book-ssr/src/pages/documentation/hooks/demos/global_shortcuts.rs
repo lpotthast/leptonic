@@ -1,18 +1,14 @@
 use leptonic::{
-    atoms::prelude as atoms,
-    hooks::{UseGlobalShortcutsInput, use_global_shortcuts},
-    utils::{
-        focus::focus_safely,
-        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-    },
+    KeyboardKey, KeyboardShortcuts, Shortcut, atoms, focus_safely,
+    hooks::interactions::{UseGlobalShortcutsInput, use_global_shortcuts},
 };
 use leptos::prelude::*;
 use leptos_use::use_document;
 
 /// Focuses the message field. A bare key: only while the user isn't typing.
-const FOCUS_MESSAGE: Shortcut = Shortcut::key("/");
+const FOCUS_MESSAGE: Shortcut = Shortcut::new(KeyboardKey::Slash);
 /// Sends the message: Control + Enter (Command + Enter on Apple devices), also while typing.
-const SEND: Shortcut = Shortcut::key("Enter").primary();
+const SEND: Shortcut = Shortcut::new(KeyboardKey::Enter).primary();
 
 /// The id of the message field, so that the shortcut finds it.
 const MESSAGE_FIELD_ID: &str = "demo-global-shortcuts-message";
@@ -50,16 +46,16 @@ pub fn GlobalShortcutsDemo() -> impl IntoView {
 
     view! {
         <p>
-            "Press "<atoms::ShortcutKeys shortcut=FOCUS_MESSAGE classes="demo-shortcut-keys"/>
+            "Press "<atoms::kbd::ShortcutKeys shortcut=FOCUS_MESSAGE classes="demo-shortcut-keys"/>
             " anywhere on this page to write a message, "
-            <atoms::ShortcutKeys shortcut=SEND classes="demo-shortcut-keys"/>" to send it."
+            <atoms::kbd::ShortcutKeys shortcut=SEND classes="demo-shortcut-keys"/>" to send it."
         </p>
         <div class="demo-message-row">
-            <atoms::TextField id=MESSAGE_FIELD_ID value=message set_value=message classes="demo-field">
-                <atoms::Label classes="demo-field-label">"Message"</atoms::Label>
-                <atoms::Input classes="demo-atom-input"/>
-            </atoms::TextField>
-            <atoms::Button on_press=move |_| { send(); } classes="demo-btn">"Send"</atoms::Button>
+            <atoms::text_field::TextField id=MESSAGE_FIELD_ID value=message set_value=message classes="demo-field">
+                <atoms::field::Label classes="demo-field-label">"Message"</atoms::field::Label>
+                <atoms::input::Input classes="demo-atom-input"/>
+            </atoms::text_field::TextField>
+            <atoms::button::Button on_press=move |_| { send(); } classes="demo-btn">"Send"</atoms::button::Button>
         </div>
         <p class="demo-status">
             {move || match (sent.get(), last_sent.get()) {

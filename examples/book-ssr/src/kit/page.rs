@@ -1,6 +1,7 @@
 use leptonic::{
-    atoms::prelude::{AnchorLink, Button},
-    utils::{clipboard::write_text_deferred, live_announcer::announce_polite},
+    announce_polite,
+    atoms::{button::Button, link::AnchorLink},
+    write_text_deferred,
 };
 use leptos::{context::Provider, prelude::*};
 use leptos_meta::{Meta, Title};

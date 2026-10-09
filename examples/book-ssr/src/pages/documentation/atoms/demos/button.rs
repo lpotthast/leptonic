@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude as atoms;
+use leptonic::atoms;
 use leptos::prelude::*;
 
 #[component]
@@ -7,9 +7,9 @@ pub fn ButtonDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     view! {
-        <atoms::Button classes="demo-atom-button" is_disabled=disabled on_press=move |_| presses.update(|n| *n += 1)>
+        <atoms::button::Button classes="demo-atom-button" is_disabled=disabled on_press=move |_| presses.update(|n| *n += 1)>
             "Press me"
-        </atoms::Button>
+        </atoms::button::Button>
         <p class="demo-status">
             {move || match presses.get() {
                 1 => "Pressed 1 time.".to_owned(),
@@ -17,12 +17,12 @@ pub fn ButtonDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <atoms::CheckboxField is_selected=disabled set_selected=disabled>
-                <atoms::CheckboxButton classes="demo-check">
+            <atoms::checkbox::CheckboxField is_selected=disabled set_selected=disabled>
+                <atoms::checkbox::CheckboxButton classes="demo-check">
                     <span class="demo-check-box" aria-hidden="true"></span>
                     "Disabled"
-                </atoms::CheckboxButton>
-            </atoms::CheckboxField>
+                </atoms::checkbox::CheckboxButton>
+            </atoms::checkbox::CheckboxField>
         </div>
     }
 }

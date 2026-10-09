@@ -1,13 +1,15 @@
 // Upstream: react-stately/src/tree/useTreeState.ts @ 99e6102368
+// Upstream: react-stately/test/tree/useTreeState.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Tree.test.tsx @ 99e6102368
 use std::{collections::HashSet, sync::Arc};
 
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::collections::{
         CollectionMemo, ItemElements, Key, ListState, SelectionManager, SelectionOptions,
     },
-    utils::ValueBinding,
 };
 
 // =============================================================================
@@ -190,7 +192,7 @@ mod tests {
 
     #[test]
     fn expanding_shows_children_and_reports_the_change() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let changes = RwSignal::new(Vec::new());
             let state = use_tree_state(UseTreeStateInput {
                 collection: tree(),
@@ -220,7 +222,7 @@ mod tests {
 
     #[test]
     fn a_collapsed_parent_hides_expanded_descendants() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_tree_state(UseTreeStateInput {
                 collection: tree(),
                 selection: SelectionOptions::default(),
@@ -242,7 +244,7 @@ mod tests {
 
     #[test]
     fn bound_expanded_keys_are_shown_and_written() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let expanded = RwSignal::new(keys(&["a"]));
             let state = use_tree_state(UseTreeStateInput {
                 collection: tree(),

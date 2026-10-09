@@ -1,4 +1,9 @@
 // Upstream: react-stately/src/calendar/useCalendarState.ts @ 99e6102368
+// Upstream: react-stately/test/calendar/useCalendarState.test.ts @ 99e6102368
+// Upstream: react-aria/test/calendar/useCalendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/CalendarBase.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/Calendar.test.js @ 99e6102368
 use jiff::civil::{Date, Weekday};
 use leptos::prelude::*;
 
@@ -6,10 +11,12 @@ use super::utils::{
     align_center, align_end, align_start, constrain_start, constrain_value, is_invalid,
     previous_available_date,
 };
-use crate::utils::{
+use crate::{
     ValueBinding,
-    date::{DateDuration, DateExt, DateRange, first_day_of_week, min_date, today},
-    i18n::use_locale,
+    utils::{
+        date::{DateDuration, DateExt, DateRange, first_day_of_week, min_date, today},
+        i18n::use_locale,
+    },
 };
 
 // =============================================================================
@@ -568,8 +575,19 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
         min,
         max,
     );
-    let owned_focus =
-        focused_value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(initial_focus)));
+    // A controlled value may be read-only: constrain what the calendar reads rather than
+    // relying on its setter to accept an initial or subsequent min/max correction.
+    let owned_focus = focused_value.map_or_else(
+        || ValueBinding::from(RwSignal::new(initial_focus)),
+        |binding| {
+            ValueBinding::new(
+                Signal::derive(move || {
+                    constrain_value(binding.value.get(), min_value.get(), max_value.get())
+                }),
+                Callback::new(move |date| binding.set(date)),
+            )
+        },
+    );
     let focus = ValueBinding::new(
         owned_focus.value,
         Callback::new(move |date: Date| {
@@ -671,6 +689,7 @@ mod tests {
     use jiff::civil::date;
 
     use super::*;
+    use crate::testing::with_owner;
 
     fn state(input: UseCalendarStateInput) -> CalendarState {
         use_calendar_state(UseCalendarStateInput {
@@ -681,7 +700,7 @@ mod tests {
 
     #[test]
     fn shows_the_month_of_the_value() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let calendar = state(UseCalendarStateInput {
                 default_value: Some(date(2024, 5, 15)),
                 ..UseCalendarStateInput::default()
@@ -697,8 +716,30 @@ mod tests {
     }
 
     #[test]
+    fn constrains_a_controlled_focused_date_without_mutating_it() {
+        with_owner(|| {
+            let focused = RwSignal::new(date(2019, 6, 5));
+            let min = RwSignal::new(Some(date(2019, 7, 5)));
+            let calendar = state(UseCalendarStateInput {
+                focused_value: Some(ValueBinding::new(focused.into(), Callback::new(|_| {}))),
+                min_value: min.into(),
+                ..UseCalendarStateInput::default()
+            });
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2019, 7, 5));
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2019, 7, 1));
+            assert_that!(focused.get_untracked()).is_equal_to(date(2019, 6, 5));
+            min.set(Some(date(2019, 8, 5)));
+            crate::testing::flush_effects();
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2019, 8, 5));
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2019, 8, 1));
+        });
+    }
+
+    #[test]
     fn paging_keeps_the_day() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let calendar = state(UseCalendarStateInput {
                 default_value: Some(date(2024, 5, 15)),
                 ..UseCalendarStateInput::default()
@@ -721,7 +762,7 @@ mod tests {
 
     #[test]
     fn selection_respects_min_max_and_unavailable_dates() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let weekend = Callback::new(|date: Date| {
                 matches!(date.weekday(), Weekday::Saturday | Weekday::Sunday)
             });
@@ -748,7 +789,7 @@ mod tests {
     /// From react-stately's `useCalendarState.test.ts` ("selectDate").
     #[test]
     fn selects_dates_outside_the_visible_range_and_the_nearest_available() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let selected = date(2026, 4, 15);
             let never = Callback::new(|_: Date| false);
             for forward in [true, false] {

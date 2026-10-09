@@ -1,11 +1,11 @@
+// No upstream: typed keyboard keys (react-aria compares `KeyboardEvent.key` strings).
+
 use std::{borrow::Cow, convert::Infallible, str::FromStr};
 
-use strum::{EnumIter, IntoEnumIterator};
-
-use crate::Language;
+use strum::{EnumIter, IntoEnumIterator, IntoStaticStr};
 
 /// A keyboard key.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter, IntoStaticStr)]
 pub enum KeyboardKey {
     A,
     B,
@@ -140,8 +140,8 @@ impl KeyboardKey {
         })
     }
 
-    /// Returns the display string for this key in the given language.
-    pub fn display(&self, _lang: Language) -> &str {
+    /// Returns the display string for this key (English).
+    pub fn display(&self) -> &str {
         match self {
             Self::A => "A",
             Self::B => "B",
@@ -361,7 +361,7 @@ impl KeyboardEventKey for web_sys::KeyboardEvent {
 /// e))`). Nothing happens if the browser can't create the event.
 ///
 /// Called from a handler of `e`, this is a nested dispatch of the same event type: safe only when
-/// no listener still running for `e` is on the copy's path (see hooks-implementation.md, "No
+/// no listener still running for `e` is on the copy's path (see leptos-and-dom.md, "No
 /// Nested Dispatch of the Same Event Type").
 pub(crate) fn redispatch_keyboard_event(e: &web_sys::KeyboardEvent, target: &web_sys::EventTarget) {
     let init = web_sys::KeyboardEventInit::new();

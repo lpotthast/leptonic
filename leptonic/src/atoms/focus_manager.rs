@@ -1,10 +1,12 @@
 // No upstream: a container providing a `FocusManager` without a `FocusScope` (react-aria:
 // `createFocusManager(ref)` on an element of the app's own).
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
-    hooks::*,
-    utils::{classes::Classes, default_class::with_default_class, styles::Styles},
+    IntoAttrs,
+    hooks::focus::{CreateFocusManagerReturn, FocusManager, create_focus_manager},
+    utils::{default_class::with_default_class, styles::Styles},
 };
 
 /// A container providing a [`FocusManager`] for the elements inside it (as a context, and to its
@@ -22,13 +24,13 @@ where
     V: IntoView + 'static,
 {
     let classes = with_default_class("leptonic-FocusManagerProvider", classes);
-    let UseFocusManagerReturn {
+    let CreateFocusManagerReturn {
         focus_manager,
         props,
-    } = use_focus_manager(UseFocusManagerInput {});
+    } = create_focus_manager();
 
     view! {
-        <Provider value=focus_manager.clone()>
+        <Provider value=focus_manager>
             <div {..props.into_attrs()} class=classes style=styles>
                 {children(focus_manager)}
             </div>

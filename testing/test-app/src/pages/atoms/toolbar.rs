@@ -1,8 +1,11 @@
 use leptonic::{
-    atoms::prelude::{Button, CheckboxButton, CheckboxField, Link, ToggleButton, Toolbar},
-    utils::{
-        i18n::{I18nProvider, Locale},
-        orientation::Orientation,
+    I18nProvider, Locale, Orientation,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+        link::Link,
+        toggle_button::ToggleButton,
+        toolbar::Toolbar,
     },
 };
 use leptos::prelude::*;
@@ -12,7 +15,8 @@ use leptos::prelude::*;
 /// separated by an `<hr>`, and "After". Further: a vertical toolbar ("Up 1", "Up 2") and a
 /// horizontal one in a right-to-left locale ("RTL 1", "RTL 2"), a vertical one in a right-to-left
 /// locale ("RV 1", "RV 2"), and react-aria's example toolbar ("Input Before Toolbar", toggle
-/// buttons "B", "U", "I", a "Night Mode" checkbox and a "Help" link).
+/// buttons "B", "U", "I", a "Night Mode" checkbox and a "Help" link), and a toolbar with both an
+/// `aria_label` ("Labelled twice") and an `aria_labelledby` (`#test-toolbar-label`).
 #[component]
 pub fn PageAtomToolbar() -> impl IntoView {
     let rtl: Locale = "ar".parse().expect("a valid locale");
@@ -52,6 +56,11 @@ pub fn PageAtomToolbar() -> impl IntoView {
                     <Button>"RV 2"</Button>
                 </Toolbar>
             </I18nProvider>
+
+            <span id="test-toolbar-label">"Toolbar aria-labelledby"</span>
+            <Toolbar aria_label="Labelled twice" aria_labelledby="test-toolbar-label">
+                <Button>"Align right"</Button>
+            </Toolbar>
 
             <input aria-label="Input Before Toolbar" id="test-toolbar-input-before" />
             <Toolbar aria_label="Text formatting">

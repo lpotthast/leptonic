@@ -1,8 +1,17 @@
 use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
-    atoms::prelude::{Button, FieldError, Form, Input, Label, TextField},
-    hooks::{ButtonType, InputType, ValidationBehavior},
+    atoms::{
+        button::Button,
+        field::{FieldError, Label},
+        form::Form,
+        input::Input,
+        text_field::TextField,
+    },
+    hooks::{
+        button::ButtonType,
+        form::{InputType, ValidationBehavior},
+    },
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 

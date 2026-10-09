@@ -1,14 +1,18 @@
 // Upstream: react-aria/src/tree/useTree.ts @ 99e6102368
+// Upstream: react-aria-components/test/Tree.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/AriaTree.test-util.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use super::TreeState;
 use crate::{
+    CapturedElement,
     hooks::{
-        KeyboardNavigationBehavior,
         collections::{CollectionOptions, Key, ListLayout},
-        gridlist::{UseGridListInput, UseGridListReturn, use_grid_list},
+        gridlist::{
+            KeyboardNavigationBehavior, UseGridListInput, UseGridListReturn, use_grid_list,
+        },
     },
-    utils::{CapturedElement, aria::AriaRole},
+    utils::aria::AriaRole,
 };
 
 // =============================================================================
@@ -20,8 +24,7 @@ use crate::{
 //   `role="treegrid"`); the expansion state comes from the `TreeState` given.
 //
 // ## OMITTED FEATURES
-// - The grid list settings besides `options` and `on_action` (keyboard navigation behavior,
-//   selecting on press up, a custom keyboard delegate): trees use the grid list defaults.
+// - A custom keyboard delegate: trees use the grid list's (type-ahead, Home/End, paging).
 //
 // =============================================================================
 
@@ -34,11 +37,16 @@ pub struct UseTreeInput {
     /// The element id. Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    /// Ids of elements labelling the tree.
+    pub aria_labelledby: Signal<Option<String>>,
     pub options: CollectionOptions,
     /// Called with the key of an activated item. Without it (and without selection), pressing a
     /// parent item toggles it.
     pub on_action: Option<Callback<Key>>,
+    /// How the keyboard moves between the items' interactive children: arrow keys, or Tab.
+    pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Select items when a press ends instead of when it starts (e.g. for draggable items).
+    pub should_select_on_press_up: bool,
 }
 
 /// A tree: a grid list (`role="treegrid"`) whose items can have children, expanded and
@@ -53,11 +61,13 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
         aria_labelledby,
         options,
         on_action,
+        keyboard_navigation_behavior,
+        should_select_on_press_up,
     } = input;
     let mut tree = use_grid_list(UseGridListInput {
         id,
         aria_label,
-        aria_labelledby: Signal::stored(aria_labelledby),
+        aria_labelledby,
         options,
         on_action,
         tree: Some(state.expansion),
@@ -65,8 +75,8 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
         element,
         layout: ListLayout::Stack,
         keyboard_delegate: None,
-        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
-        should_select_on_press_up: false,
+        keyboard_navigation_behavior,
+        should_select_on_press_up,
     });
     tree.props.role = Signal::stored(AriaRole::Treegrid);
     tree

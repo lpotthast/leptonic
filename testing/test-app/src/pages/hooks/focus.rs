@@ -1,5 +1,8 @@
-use leptonic::hooks::{IntoAttrs, UseFocusInput, use_focus};
-use leptos::prelude::*;
+use leptonic::{
+    IntoAttrs,
+    hooks::focus::{UseFocusInput, use_focus},
+};
+use leptos::{html, portal::Portal, prelude::*, web_sys};
 
 #[component]
 pub fn PageHookFocus() -> impl IntoView {
@@ -140,6 +143,85 @@ pub fn PageHookFocus() -> impl IntoView {
                     }
                 }
             </section>
+            <ShadowFocus />
+        </div>
+    }
+}
+
+/// useFocus.test.js "useFocus with Shadow DOM": `use_focus` on elements inside a shadow root (one
+/// disabled), with their calls shown in the light DOM.
+#[component]
+fn ShadowFocus() -> impl IntoView {
+    let host = NodeRef::<html::Div>::new();
+    let log = RwSignal::new(Vec::<&'static str>::new());
+    let target = NodeRef::<html::Div>::new();
+    let disabled_target = NodeRef::<html::Div>::new();
+    let focus = |element: NodeRef<html::Div>| {
+        move |e: web_sys::MouseEvent| {
+            e.prevent_default();
+            if let Some(element) = element.get_untracked() {
+                let _ = element.focus();
+            }
+        }
+    };
+    view! {
+        <section>
+            <h2>"Shadow DOM"</h2>
+            <div node_ref=host></div>
+            <Show when=move || host.get().is_some()>
+                <Portal mount=web_sys::Element::from(host.get_untracked().expect("mounted")) use_shadow=true>
+                    <ShadowFocusTargets log target disabled_target />
+                </Portal>
+            </Show>
+            <button id="test-focus-shadow-focus" on:mousedown=focus(target)>
+                "Focus the shadow target"
+            </button>
+            <button id="test-focus-shadow-focus-disabled" on:mousedown=focus(disabled_target)>
+                "Focus the disabled shadow target"
+            </button>
+            <div>"Shadow log: " <span id="test-focus-shadow-log">{move || log.get().join(", ")}</span></div>
+        </section>
+    }
+}
+
+#[component]
+fn ShadowFocusTargets(
+    log: RwSignal<Vec<&'static str>>,
+    target: NodeRef<html::Div>,
+    disabled_target: NodeRef<html::Div>,
+) -> impl IntoView {
+    let entry = move |name: &'static str| move |_| log.update(|log| log.push(name));
+    let focus = use_focus(UseFocusInput {
+        is_disabled: Signal::stored(false),
+        on_focus: Some(Callback::new(entry("focus"))),
+        on_blur: Some(Callback::new(entry("blur"))),
+        on_focus_change: Some(Callback::new(move |focused: bool| {
+            log.update(|log| {
+                log.push(if focused {
+                    "change true"
+                } else {
+                    "change false"
+                })
+            });
+        })),
+    });
+    let disabled = use_focus(UseFocusInput {
+        is_disabled: Signal::stored(true),
+        on_focus: Some(Callback::new(entry("disabled focus"))),
+        on_blur: Some(Callback::new(entry("disabled blur"))),
+        on_focus_change: None,
+    });
+    view! {
+        <div id="test-focus-shadow-target" tabindex="-1" {..focus.props.into_attrs()} node_ref=target>
+            "Shadow target"
+        </div>
+        <div
+            id="test-focus-shadow-disabled"
+            tabindex="-1"
+            {..disabled.props.into_attrs()}
+            node_ref=disabled_target
+        >
+            "Disabled shadow target"
         </div>
     }
 }

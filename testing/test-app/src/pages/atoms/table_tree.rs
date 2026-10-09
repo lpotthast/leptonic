@@ -1,12 +1,12 @@
 use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
+    I18nProvider, Locale,
     atoms::table::{Table, TableBody, TableCell, TableExpandButton, TableHeader, TableRow},
     hooks::{
-        SelectionMode, TableCollection,
-        collections::{Key, Selection},
+        collections::{Key, Selection, SelectionMode},
+        table::TableCollection,
     },
-    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 
@@ -22,7 +22,12 @@ struct File {
     children: &'static [File],
 }
 
-const fn leaf(key: &'static str, name: &'static str, kind: &'static str, date: &'static str) -> File {
+const fn leaf(
+    key: &'static str,
+    name: &'static str,
+    kind: &'static str,
+    date: &'static str,
+) -> File {
     File {
         key,
         name,
@@ -55,7 +60,12 @@ const FILES: &[File] = &[
             leaf("lightroom", "Lightroom", "Application", "10/18/2017"),
         ],
     },
-    leaf("report", "2024 Financial Report", "PDF Document", "12/30/2024"),
+    leaf(
+        "report",
+        "2024 Financial Report",
+        "PDF Document",
+        "12/30/2024",
+    ),
     leaf("job", "Job Posting", "Text Document", "1/18/2025"),
 ];
 

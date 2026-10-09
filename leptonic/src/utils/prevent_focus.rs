@@ -17,11 +17,27 @@ pub(crate) fn is_ignoring_focus_events() -> bool {
     IGNORE_FOCUS_EVENT.with(Cell::get)
 }
 
+/// A running [`prevent_focus`]: it ends by itself after the next frame, or earlier with
+/// [`dispose`](Self::dispose) (when the press ends or its element unmounts).
+#[cfg(not(feature = "ssr"))]
+pub(crate) struct FocusPrevention {
+    cleanup: Box<dyn Fn()>,
+}
+
+#[cfg(not(feature = "ssr"))]
+impl FocusPrevention {
+    /// Ends the prevention now: removes its listeners (react-aria's returned cleanup).
+    pub(crate) fn dispose(self) {
+        (self.cleanup)();
+    }
+}
+
 /// Keeps the focus on the active element while `target` (or its nearest focusable ancestor, which
 /// the browser would focus) is pressed: the focus and blur events of the move are stopped and the
-/// focus moves back. Call it on mouse down; it cleans up after the next frame.
+/// focus moves back. Call it on mouse down; it cleans up after the next frame, or when disposed.
+/// `None` when there is nothing to prevent (the focus is on the target already).
 #[cfg(not(feature = "ssr"))]
-pub(crate) fn prevent_focus(target: Option<web_sys::Element>) {
+pub(crate) fn prevent_focus(target: Option<web_sys::Element>) -> Option<FocusPrevention> {
     use std::{cell::RefCell, rc::Rc};
 
     use wasm_bindgen::JsCast;
@@ -40,26 +56,18 @@ pub(crate) fn prevent_focus(target: Option<web_sys::Element>) {
     {
         target = element.parent_element();
     }
-    let Some(document) = target
+    let document = target
         .as_ref()
         .and_then(|target| target.owner_document())
-        .or_else(|| leptos_use::use_document().as_ref().cloned())
-    else {
-        return;
-    };
-    let Some(active) = get_active_element(&document) else {
-        return;
-    };
+        .or_else(|| leptos_use::use_document().as_ref().cloned())?;
+    let active = get_active_element(&document)?;
     if target.as_ref() == Some(&active) {
-        return;
+        return None;
     }
     // Focus events inside a shadow root don't reach the window.
     let root: web_sys::EventTarget = match target.as_ref().map(|target| target.get_root_node()) {
         Some(root) if root.dyn_ref::<web_sys::ShadowRoot>().is_some() => root.unchecked_into(),
-        _ => match document.default_view() {
-            Some(window) => window.unchecked_into(),
-            None => return,
-        },
+        _ => document.default_view()?.unchecked_into(),
     };
 
     let is_moving_to_target = {
@@ -108,13 +116,26 @@ pub(crate) fn prevent_focus(target: Option<web_sys::Element>) {
             leptos::prelude::queue_microtask(cleanup);
         }
     };
+    // Nothing had focus (the active element is `<body>`, which `focus()` ignores): blur the
+    // element that got focus instead, so focus stays nowhere. Upstream refocuses `<body>`, which
+    // leaves the focus on the target (e.g. a tree's expand button on a fresh page).
+    let nothing_focused = document.body().is_some_and(|body| active == *body);
     let refocus = {
         let is_refocusing = is_refocusing.clone();
         let active = active.clone();
+        let document = document.clone();
         move || {
             if !is_refocusing.get() {
                 is_refocusing.set(true);
-                focus_element(&active, true);
+                if nothing_focused {
+                    if let Some(focused) = get_active_element(&document)
+                        .and_then(|focused| focused.dyn_into::<web_sys::HtmlElement>().ok())
+                    {
+                        let _ = focused.blur();
+                    }
+                } else {
+                    focus_element(&active, true);
+                }
                 cleanup_after_event();
             }
         }
@@ -169,4 +190,7 @@ pub(crate) fn prevent_focus(target: Option<web_sys::Element>) {
     ]);
     let after_frame = cleanup.clone();
     frame.set(leptos::prelude::request_animation_frame_with_handle(after_frame).ok());
+    Some(FocusPrevention {
+        cleanup: Box::new(cleanup),
+    })
 }

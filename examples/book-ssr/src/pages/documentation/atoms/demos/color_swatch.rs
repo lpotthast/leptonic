@@ -1,4 +1,4 @@
-use leptonic::{atoms::color_swatch::ColorSwatch, utils::color::RGB8};
+use leptonic::{RGB8, atoms::color_swatch::ColorSwatch};
 use leptos::prelude::*;
 
 /// Named colors. The name becomes the swatch's accessible label, replacing the generated one ("vibrant red").

@@ -1,6 +1,11 @@
 use leptonic::{
-    atoms::prelude::{CheckboxButton, CheckboxField, ColorSwatch, ColorThumb, ColorWheel, ColorWheelTrack},
-    utils::color::{ColorValue, HSV, HsvChannel},
+    ColorValue, HSV, HsvChannel,
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField},
+        color_swatch::ColorSwatch,
+        color_thumb::ColorThumb,
+        color_wheel::{ColorWheel, ColorWheelTrack},
+    },
 };
 use leptos::prelude::*;
 
@@ -13,7 +18,7 @@ const INITIAL: HSV = HSV {
 
 #[component]
 pub fn ColorWheelAtomDemo() -> impl IntoView {
-    let locale = leptonic::utils::i18n::use_locale();
+    let locale = leptonic::use_locale();
     // The wheel owns its color (`default_value`). `on_change` reports every change, `on_change_end`
     // only the color at the end of a drag or key press.
     let color = RwSignal::new(INITIAL);

@@ -1,12 +1,11 @@
 use leptonic::{
     atoms::{
-        listbox::{ListBox, ListBoxItemCtx, ListBoxItems},
+        listbox::{ListBox, ListBoxItemContext, ListBoxItems},
         virtualizer::Virtualizer,
     },
     hooks::{
-        SelectionMode,
-        collections::{Key, Node, use_list_collection},
-        virtualizer::{ListLayout, ListLayoutOptions},
+        collections::{Key, Node, SelectionMode, UseListCollectionInput, use_list_collection},
+        virtualizer::{ItemSize, ListLayout, ListLayoutOptions},
     },
 };
 use leptos::prelude::*;
@@ -16,11 +15,11 @@ const ORDERS: usize = 10_000;
 
 #[component]
 pub fn VirtualizerDemo() -> impl IntoView {
-    let orders = use_list_collection(
-        Signal::stored((1..=ORDERS).collect::<Vec<usize>>()),
-        |number| Key::from(*number),
-        |number| format!("Order {number}"),
-    );
+    let orders = use_list_collection(UseListCollectionInput {
+        items: Signal::stored((1..=ORDERS).collect::<Vec<usize>>()),
+        key: |number| Key::from(*number),
+        text_value: |number| format!("Order {number}"),
+    });
     // What the demo shows below the list: how many options are rendered right now, and the option
     // that had focus last.
     let rendered = RwSignal::new(0_usize);
@@ -30,7 +29,7 @@ pub fn VirtualizerDemo() -> impl IntoView {
         // Every row is 36px high: the layout knows where each of the 10,000 options goes without
         // rendering them.
         <Virtualizer layout=ListLayout::new(ListLayoutOptions {
-            row_size: Some(36.0),
+            row_size: ItemSize::Fixed(36.0),
             ..ListLayoutOptions::default()
         })>
             // The listbox scrolls: its stylesheet gives it a fixed height.
@@ -70,7 +69,7 @@ fn OrderRow(
     });
 
     let text = node.text_value.to_string();
-    let item = expect_context::<ListBoxItemCtx>();
+    let item = expect_context::<ListBoxItemContext>();
     let name = text.clone();
     Effect::new(move |_| {
         if item.is_focused.get() {

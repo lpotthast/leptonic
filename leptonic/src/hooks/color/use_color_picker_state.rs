@@ -1,7 +1,9 @@
 // Upstream: react-stately/src/color/useColorPickerState.ts @ 99e6102368
+// Upstream: react-aria-components/test/ColorPicker.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/color/ColorPicker.test.js @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::{ValueBinding, color::Color};
+use crate::{ValueBinding, utils::color::Color};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -61,8 +63,6 @@ pub fn use_color_picker_state(input: UseColorPickerStateInput) -> ColorPickerSta
 
 #[cfg(test)]
 mod tests {
-    // Upstream: react-aria-components/test/ColorPicker.test.js,
-    // @adobe/react-spectrum/test/color/ColorPicker.test.js (the state's part of them).
     use assertr::prelude::*;
 
     use super::*;

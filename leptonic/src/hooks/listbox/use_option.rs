@@ -1,4 +1,7 @@
 // Upstream: react-aria/src/listbox/useOption.ts @ 99e6102368
+// Upstream: react-aria/src/listbox/utils.ts @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/listbox/ListBox.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -6,23 +9,18 @@ use leptos::{
 
 use super::ListBoxData;
 use crate::{
+    CapturedElement, IntoAttrs, PropsWithStyles, SlotProps,
     hooks::{
-        IntoAttrs, PropsWithStyles,
         collections::{
             ItemLink, Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
             UseSelectableItemProps, UseSelectableItemReturn, use_node_aria_label,
             use_selectable_item,
         },
-        focus::use_focus_visible::{
-            Modality, UseFocusVisibleInput, get_modality, use_focus_visible,
-        },
+        focus::use_focus_visible::{Modality, get_modality, is_focus_visible},
         interactions::use_hover::{UseHoverAttrs, UseHoverInput, UseHoverProps, use_hover},
     },
-    utils::{
-        CapturedElement, SlotProps,
-        aria::{AriaDisabled, AriaRole, AriaSelected},
-        use_slot,
-    },
+    use_slot,
+    utils::aria::{AriaDisabled, AriaRole, AriaSelected},
 };
 
 // =============================================================================
@@ -50,7 +48,7 @@ pub struct UseOptionInput {
     pub key: Key,
     /// Called when a context menu is requested on the option (right click, Shift+F10, the context
     /// menu key; a long press on iOS unless it selects).
-    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
+    pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_option`].
@@ -73,8 +71,8 @@ pub struct UseOptionReturn {
     pub allows_selection: Signal<bool>,
     /// Whether the option has an action (or link) to perform.
     pub has_action: Signal<bool>,
-    /// The option's link, if the collection item has one.
-    pub link: Option<ItemLink>,
+    /// The option's link, if the collection item has one (follows the collection).
+    pub link: Signal<Option<ItemLink>>,
 }
 
 /// Props for the option element.
@@ -126,21 +124,15 @@ impl IntoAttrs for UseOptionProps {
     }
 }
 
-/// The element id of the option `key` in the listbox `list_id` (whitespace removed from the
-/// key).
+/// The element id of the option `key` in the listbox `list_id` (see [`Key::id_fragment`]).
 pub fn option_id(list_id: &str, key: &Key) -> String {
-    let key: String = key
-        .to_string()
-        .chars()
-        .filter(|c| !c.is_whitespace())
-        .collect();
-    format!("{list_id}-option-{key}")
+    format!("{list_id}-option-{}", key.id_fragment())
 }
 
 /// An option of a listbox: selection on press (as configured by the listbox), focus handling,
 /// and `role="option"` with its ARIA state.
 pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
-    crate::hooks::track_interaction_modality();
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseOptionInput {
         list,
         key,
@@ -159,12 +151,15 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     } = list;
     let selection = state.selection;
 
-    let node = untrack(|| state.collection.with(|c| c.get(&key).cloned()));
-    if node.is_none() {
+    if !untrack(|| state.collection.with(|c| c.contains_key(&key))) {
         crate::utils::dev_warn!("use_option: the key {key:?} is not in the listbox's collection");
     }
     let aria_label = use_node_aria_label(state.collection, key.clone());
-    let link = node.and_then(|n| n.link);
+    let link = {
+        let key = key.clone();
+        let collection = state.collection;
+        Memo::new(move |_| collection.with(|c| c.get(&key).and_then(|n| n.link.clone())))
+    };
 
     let position_key = StoredValue::new(key.clone());
     let label = use_slot("label");
@@ -209,7 +204,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         }),
         on_hover_start: Some(Callback::new(move |_| {
             // Unless the keyboard is in use: hovering moves focus.
-            if should_focus_on_hover && get_modality() == Modality::Pointer {
+            if should_focus_on_hover && get_modality() == Some(Modality::Pointer) {
                 selection.set_focused(true);
                 selection.set_focused_key(Some(hover_key.clone()), None);
             }
@@ -219,7 +214,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     let is_hovered = hover.is_hovered;
     let hover = hover.props;
 
-    let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
+    let focus_visible = Signal::derive(is_focus_visible);
     let (item_props, styles) = props.into_inner();
 
     UseOptionReturn {
@@ -265,7 +260,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         is_hovered,
         allows_selection,
         has_action,
-        link,
+        link: link.into(),
     }
 }
 
@@ -276,9 +271,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn option_ids_drop_whitespace() {
+    fn option_ids_tell_keys_apart() {
         assert_that!(option_id("lb", &Key::from("Ice cream")))
-            .is_equal_to("lb-option-Icecream".to_owned());
-        assert_that!(option_id("lb", &Key::from(7))).is_equal_to("lb-option-7".to_owned());
+            .is_equal_to("lb-option-Ice%20;cream".to_owned());
+        assert_that!(option_id("lb", &Key::from(7)))
+            .is_not_equal_to(option_id("lb", &Key::from("7")));
     }
 }

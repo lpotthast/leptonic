@@ -1,12 +1,40 @@
 // Upstream: react-aria/src/interactions/PressResponder.tsx @ 99e6102368
 // Upstream: react-aria/src/interactions/Pressable.tsx @ 99e6102368
+// Upstream: react-aria/test/interactions/Pressable.test.js @ 99e6102368
+// Upstream: react-aria/test/interactions/PressResponder.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
     atoms::focusable::{ChildKind, focusable_child_attrs, manage_child},
-    hooks::*,
+    hooks::{
+        focus::{FocusableContext, UseFocusableInput, use_focusable},
+        interactions::{
+            LongPress, PressEvent, PressPropagation, PressResponderContext, PressResponderTrigger,
+            UsePressInput, chain_optional_callbacks, merge_long_press, use_press,
+        },
+    },
     utils::{keyboard_shortcut::KeyboardShortcuts, scoped_context::scoped_view},
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `PressResponder` takes long presses as one `long_press` group (see `use_press`); it also
+//   carries an overlay trigger's props (`trigger`), keyboard shortcuts and a context menu handler
+//   for its pressable child, which `use_button` applies (react-aria-components merges these
+//   props into the child through the same context).
+//
+// ## DIFFERENT BEHAVIOR
+// - `Pressable`'s child is an element by construction (`TypedChildren`), so there is no "must
+//   forward its ref" error; a child without an interactive role is warned about in debug builds,
+//   as upstream. A child without a `tabindex` is made focusable instead of warned about.
+//
+// ## ADDITIONS
+// - `Pressable` takes `use_press`' additions: `on_double_press` and `long_press`.
+//
+// =============================================================================
 
 /// Makes its child element pressable (react-aria's `Pressable`): the press and focus handlers go
 /// onto the child itself, which becomes focusable and must have an interactive role (a `<button>`,
@@ -18,13 +46,33 @@ use crate::{
 /// </Pressable>
 /// ```
 #[component]
+#[allow(clippy::too_many_arguments)]
 pub fn Pressable<V>(
     #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// Keeps the focus where it is when the child is pressed.
+    #[prop(into, optional)]
+    prevent_focus_on_press: Signal<bool>,
+    /// Cancels the press when the pointer leaves the child (instead of resuming it when the
+    /// pointer comes back).
+    #[prop(into, optional)]
+    should_cancel_on_pointer_exit: Signal<bool>,
+    /// Keeps text selectable while the child is pressed.
+    #[prop(into, optional)]
+    allow_text_selection_on_press: Signal<bool>,
+    /// Shows the child pressed while `true` (react-aria's `isPressed`).
+    #[prop(into, optional)]
+    force_is_pressed: Signal<bool>,
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_start: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_end: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_up: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_change: Option<Callback<bool>>,
+    /// Called when the child is double-clicked.
+    #[prop(into, optional)]
+    on_double_press: Option<Callback<PressEvent>>,
+    /// Long press handling (see `use_press`).
+    #[prop(optional)]
+    long_press: Option<LongPress>,
     /// The pressable element.
     children: TypedChildren<V>,
 ) -> impl IntoView
@@ -35,20 +83,27 @@ where
 
     let press = use_press(UsePressInput {
         is_disabled,
+        propagation: PressPropagation::Stop,
+        allow_text_selection_on_press,
+        should_cancel_on_pointer_exit,
+        prevent_focus_on_press,
+        force_is_pressed,
         on_press,
         on_press_up,
         on_press_start,
         on_press_end,
         on_press_change,
-        ..UsePressInput::default()
+        on_double_press,
+        long_press,
     });
     let (press, _) = press.props.into_inner();
-    let element = crate::utils::CapturedElement::new();
+    let element = crate::CapturedElement::new();
     // An overlay trigger's props from a surrounding `PressResponder` (a `DialogTrigger`'s), as
     // react-aria's `usePress` merges them: the ARIA attributes, and the element to position at.
-    let trigger = use_context::<PressResponderContext>()
-        .and_then(|ctx| ctx.trigger)
-        .unwrap_or_else(PressResponderTrigger::empty);
+    let trigger = use_context::<PressResponderContext>().and_then(|ctx| ctx.trigger);
+    if let Some(trigger) = trigger {
+        trigger.sync_id_once_mounted(element);
+    }
     let focusable = use_focusable(UseFocusableInput {
         is_disabled,
         ..UseFocusableInput::default()
@@ -62,10 +117,21 @@ where
     children.into_inner()().add_any_attr((
         (
             focusable,
-            trigger.element.attr(),
-            leptos::attr::Attr(leptos::attr::AriaHaspopup, trigger.aria_haspopup),
-            leptos::attr::Attr(leptos::attr::AriaExpanded, trigger.aria_expanded),
-            leptos::attr::Attr(leptos::attr::AriaControls, trigger.aria_controls),
+            trigger
+                .map_or_else(crate::CapturedElement::new, |trigger| trigger.element)
+                .attr(),
+            leptos::attr::Attr(
+                leptos::attr::AriaHaspopup,
+                Signal::derive(move || trigger.and_then(|trigger| trigger.aria_haspopup.get())),
+            ),
+            leptos::attr::Attr(
+                leptos::attr::AriaExpanded,
+                Signal::derive(move || trigger.and_then(|trigger| trigger.aria_expanded.get())),
+            ),
+            leptos::attr::Attr(
+                leptos::attr::AriaControls,
+                Signal::derive(move || trigger.and_then(|trigger| trigger.aria_controls.get())),
+            ),
             // Keyboard handlers before press handling, as `use_button`.
             on_keydown.chain(press.on_keydown).into_on(ev::keydown),
         ),
@@ -114,12 +180,9 @@ pub fn PressResponder(
     #[prop(into, optional)] on_press_end: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_up: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_change: Option<Callback<bool>>,
-    #[prop(into, optional)] on_long_press_start: Option<Callback<LongPressEvent>>,
-    #[prop(into, optional)] on_long_press: Option<Callback<LongPressEvent>>,
-    #[prop(into, optional)] on_long_press_end: Option<Callback<LongPressEvent>>,
-    /// Describes the long-press action to assistive technology.
-    #[prop(into, optional)]
-    long_press_accessibility_description: MaybeProp<String>,
+    /// Long press handling for the pressable child, merged with its own (see `use_press`).
+    #[prop(optional)]
+    long_press: Option<LongPress>,
     #[prop(into, optional)] is_disabled: Option<Signal<bool>>,
     #[prop(into, optional)] force_is_pressed: Option<Signal<bool>>,
     #[prop(into, optional)] prevent_focus_on_press: Option<Signal<bool>>,
@@ -133,7 +196,7 @@ pub fn PressResponder(
     shortcuts: Option<KeyboardShortcuts>,
     /// Called when the pressable element requests a context menu (see `MenuTrigger`).
     #[prop(into, optional)]
-    on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
+    on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
     children: Children,
 ) -> impl IntoView {
     // Nesting: read parent context and merge (parent callbacks chain before ours).
@@ -155,18 +218,7 @@ pub fn PressResponder(
         on_press_change,
     );
 
-    let on_long_press_start = chain_optional_callbacks(
-        parent_ctx.as_ref().and_then(|c| c.on_long_press_start),
-        on_long_press_start,
-    );
-    let on_long_press = chain_optional_callbacks(
-        parent_ctx.as_ref().and_then(|c| c.on_long_press),
-        on_long_press,
-    );
-    let on_long_press_end = chain_optional_callbacks(
-        parent_ctx.as_ref().and_then(|c| c.on_long_press_end),
-        on_long_press_end,
-    );
+    let long_press = merge_long_press(parent_ctx.as_ref().and_then(|c| c.long_press), long_press);
 
     let registered = StoredValue::new(false);
 
@@ -181,20 +233,7 @@ pub fn PressResponder(
         on_press_end,
         on_press_up,
         on_press_change,
-        on_long_press_start,
-        on_long_press,
-        on_long_press_end,
-        long_press_accessibility_description: {
-            let parent = parent_ctx
-                .as_ref()
-                .map(|c| c.long_press_accessibility_description)
-                .unwrap_or_default();
-            MaybeProp::derive(move || {
-                long_press_accessibility_description
-                    .get()
-                    .or_else(|| parent.get())
-            })
-        },
+        long_press,
         is_disabled: is_disabled.or(parent_ctx.as_ref().and_then(|c| c.is_disabled)),
         force_is_pressed: force_is_pressed.or(parent_ctx.as_ref().and_then(|c| c.force_is_pressed)),
         prevent_focus_on_press: prevent_focus_on_press

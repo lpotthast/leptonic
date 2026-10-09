@@ -1,26 +1,29 @@
 use std::sync::Arc;
 
 use leptonic::{
+    CapturedElement, IntoAttrs, Orientation, flag,
     hooks::{
-        CollectionDropOperationQuery, DragEndEvent, DragItem, DropItem, DropOperation,
-        DropPosition, DropTarget, DroppableCollectionData, DroppableCollectionEnterEvent,
-        DroppableCollectionExitEvent, DroppableCollectionInsertDropEvent,
-        DroppableCollectionOnItemDropEvent, DroppableCollectionOptions,
-        DroppableCollectionRootDropEvent, FocusMode, GridListData, IntoAttrs,
-        KeyboardNavigationBehavior, ListDropTargetDelegate, Orientation, SelectionMode,
-        UseDragInput, UseDragReturn, UseDropIndicatorInput, UseDropIndicatorReturn,
-        UseDroppableCollectionInput, UseDroppableCollectionReturn,
-        UseDroppableCollectionStateInput, UseGridListInput, UseGridListItemInput,
-        UseGridListItemReturn, UseGridListReturn,
         collections::{
-            CollectionOptions, Key, ListLayout, ListState, SelectionOptions,
-            UseListKeyboardDelegateInput, UseListStateInput, use_list_collection,
-            use_list_keyboard_delegate, use_list_state,
+            CollectionOptions, Key, ListLayout, ListState, SelectionMode, SelectionOptions,
+            UseListCollectionInput, UseListKeyboardDelegateInput, UseListStateInput,
+            use_list_collection, use_list_keyboard_delegate, use_list_state,
         },
-        use_drag, use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
-        use_grid_list, use_grid_list_item,
+        dnd::{
+            CollectionDropOperationQuery, DragEndEvent, DragItem, DropItem, DropOperation,
+            DropPosition, DropTarget, DroppableCollectionData, DroppableCollectionEnterEvent,
+            DroppableCollectionExitEvent, DroppableCollectionInsertDropEvent,
+            DroppableCollectionOnItemDropEvent, DroppableCollectionOptions,
+            DroppableCollectionRootDropEvent, ListDropTargetDelegate, UseDragInput, UseDragReturn,
+            UseDropIndicatorInput, UseDropIndicatorReturn, UseDroppableCollectionInput,
+            UseDroppableCollectionReturn, UseDroppableCollectionStateInput, use_drag,
+            use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
+        },
+        gridlist::{
+            FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
+            UseGridListItemInput, UseGridListItemReturn, UseGridListReturn, use_grid_list,
+            use_grid_list_item,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::{context::Provider, prelude::*};
 use leptos_router::hooks::use_query_map;
@@ -127,11 +130,11 @@ pub fn PageHookDndCollection() -> impl IntoView {
             .unwrap_or_default()
     };
 
-    let collection = use_list_collection(
-        items.into(),
-        |item: &Item| Key::from(item.id.clone()),
-        |item: &Item| item.text.clone(),
-    );
+    let collection = use_list_collection(UseListCollectionInput {
+        items: items.into(),
+        key: |item: &Item| Key::from(item.id.clone()),
+        text_value: |item: &Item| item.text.clone(),
+    });
     let list: ListState = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
@@ -236,7 +239,7 @@ pub fn PageHookDndCollection() -> impl IntoView {
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
             element,
-            orientation: Orientation::Vertical,
+            orientation: Orientation::Vertical.into(),
             layout: ListLayout::Stack,
             layout_delegate: None,
         }),
@@ -273,7 +276,10 @@ pub fn PageHookDndCollection() -> impl IntoView {
                         last()
                             .map(|id| {
                                 view! {
-                                    <DropIndicator target=DropTarget::item(id, DropPosition::After) />
+                                    <DropIndicator target=DropTarget::item(
+                                        id,
+                                        DropPosition::After,
+                                    ) />
                                 }
                             })
                     }}
@@ -354,8 +360,8 @@ fn DropIndicator(target: DropTarget, #[prop(optional)] inline: bool) -> impl Int
             role="button"
             class="test-dnd-indicator"
             {..drop_indicator_props.into_attrs()}
-            data-drop-target=move || is_drop_target.get().then_some("")
-            data-hidden=move || is_hidden.get().then_some("")
+            data-drop-target=flag(is_drop_target)
+            data-hidden=flag(is_hidden)
         ></div>
     };
     if inline {

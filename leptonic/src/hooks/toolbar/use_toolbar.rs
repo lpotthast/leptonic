@@ -1,24 +1,17 @@
 // Upstream: react-aria/src/toolbar/useToolbar.ts @ 99e6102368
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{Capture, On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{attr, attr::Attr, ev, ev::Capture, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
-    hooks::{FocusManager, FocusManagerOptions, IntoAttrs},
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
+    hooks::focus::{FocusManager, FocusManagerOptions},
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaOrientation, AriaRole},
-        i18n::use_direction,
+        dom_ext::{EventAccessors, node_contains},
+        i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
-        locale::WritingDirection,
-        node_contains,
         orientation::Orientation,
         shadow_dom::get_active_element,
     },
@@ -31,7 +24,7 @@ use crate::{
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Restoring the last focused child when focus re-enters the toolbar happens in a microtask:
 //   focusing inside a `focus` handler would dispatch a nested `focus` event, which Leptos'
-//   handler closures can't take (hooks-implementation.md, "No Nested Dispatch of the Same Event
+//   handler closures can't take (leptos-and-dom.md, "No Nested Dispatch of the Same Event
 //   Type").
 //
 // =============================================================================
@@ -39,6 +32,8 @@ use crate::{
 /// Input of [`use_toolbar`].
 #[derive(Debug, Clone)]
 pub struct UseToolbarInput {
+    /// The toolbar element; the hook's props capture it.
+    pub element: CapturedElement,
     /// The axis of the arrow keys (react-aria's default: horizontal).
     pub orientation: Signal<Orientation>,
     pub aria_label: MaybeProp<String>,
@@ -49,6 +44,7 @@ pub struct UseToolbarInput {
 impl Default for UseToolbarInput {
     fn default() -> Self {
         Self {
+            element: CapturedElement::new(),
             orientation: Signal::stored(Orientation::Horizontal),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
@@ -83,9 +79,9 @@ pub type UseToolbarAttrs = (
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     ElementCaptureAttr,
-    On<Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
-    On<Capture<ev::focus>, SharedEventCallback<FocusEvent>>,
-    On<Capture<ev::blur>, SharedEventCallback<FocusEvent>>,
+    OnEvent<Capture<ev::keydown>>,
+    OnEvent<Capture<ev::focus>>,
+    OnEvent<Capture<ev::blur>>,
 );
 
 impl IntoAttrs for UseToolbarProps {
@@ -111,11 +107,11 @@ impl IntoAttrs for UseToolbarProps {
 #[allow(clippy::too_many_lines)]
 pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     let UseToolbarInput {
+        element,
         orientation,
         aria_label,
         aria_labelledby,
     } = input;
-    let element = CapturedElement::new();
     let (is_in_toolbar, set_in_toolbar) = signal(false);
     Effect::new(move || {
         if let Some(el) = element.get() {
@@ -127,8 +123,8 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         }
     });
     let direction = use_direction();
-    let focus_manager =
-        move || FocusManager::new(move || element.get_untracked().map(|el| (*el).clone()));
+    // Created once (its state lives in this owner), not per key event.
+    let focus_manager = FocusManager::new(move || element.get_untracked().map(|el| (*el).clone()));
     let last_focused: StoredValue<Option<SendWrapper<web_sys::HtmlElement>>> =
         StoredValue::new(None);
 
@@ -153,7 +149,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
             Orientation::Vertical => (KeyboardKey::ArrowDown, KeyboardKey::ArrowUp),
         };
         let key = e.typed_key();
-        let manager = focus_manager();
+        let manager = focus_manager;
         if key == next_key {
             if reverse {
                 manager.focus_previous(FocusManagerOptions::default());

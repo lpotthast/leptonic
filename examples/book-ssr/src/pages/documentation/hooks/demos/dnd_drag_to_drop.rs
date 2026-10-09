@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
 use leptonic::{
+    CapturedElement, IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
-    hooks::{
+    hooks::dnd::{
         DragEndEvent, DragItem, DragType, DropEvent, DropItem, DropOperation, DropOperationQuery,
-        IntoAttrs, UseDragInput, UseDragReturn, UseDropInput, UseDropReturn, use_drag, use_drop,
+        UseDragInput, UseDragReturn, UseDropInput, UseDropReturn, use_drag, use_drop,
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -101,7 +101,7 @@ fn Card(drag: UseDragReturn, title: &'static str, content: &'static str) -> impl
             role="button"
             tabindex="0"
             class="demo-dnd-card"
-            data-dragging=move || is_dragging.get().then_some("")
+            data-dragging=move || is_dragging.get().then_some("true")
         >
             <strong>{title}</strong>
             <span>{content}</span>
@@ -150,7 +150,7 @@ fn Target(
                 role="button"
                 tabindex="0"
                 class="demo-dnd-target"
-                data-drop-target=move || is_drop_target.get().then_some("")
+                data-drop-target=move || is_drop_target.get().then_some("true")
             >
                 <strong>{title}</strong>
                 <span class="demo-caption">{hint}</span>

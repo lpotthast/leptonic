@@ -51,15 +51,15 @@ pub fn PageAtomListBox() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::listbox::{ListBox, ListBoxItem},
-                            hooks::{Key, SelectionMode, collections::Selection, use_list_collection},
+                            hooks::collections::{Key, Selection, SelectionMode, UseListCollectionInput, use_list_collection},
                         };
                         use leptos::{logging::log, prelude::*};
 
-                        let fruits = use_list_collection(
-                            Signal::stored(vec!["Apple", "Banana", "Cherry"]),
-                            |fruit| Key::from(*fruit),
-                            |fruit| (*fruit).to_owned(),
-                        );
+                        let fruits = use_list_collection(UseListCollectionInput {
+                            items: Signal::stored(vec!["Apple", "Banana", "Cherry"]),
+                            key: |fruit| Key::from(*fruit),
+                            text_value: |fruit| (*fruit).to_owned(),
+                        });
 
                         view! {
                             <ListBox
@@ -130,9 +130,9 @@ pub fn PageAtomListBox() -> impl IntoView {
                             "How pointer presses change the selection: "<Code inline=true>"Toggle"</Code>" the option, or "
                             <Code inline=true>"Replace"</Code>" the selection with it."
                         </ApiRow>
-                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">"The initially selected options."</ApiRow>
+                        <ApiRow name="default_selection" ty="Selection" default="empty">"The initially selected options."</ApiRow>
                         <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                            "The selection (controlled), replacing "<Code inline=true>"default_selection"</Code>": a value or any signal."
                         </ApiRow>
                         <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
@@ -149,13 +149,13 @@ pub fn PageAtomListBox() -> impl IntoView {
                             <Code inline=true>"Selection"</Code>": they can be focused and trigger "<Code inline=true>"on_action"</Code>
                             ", but not be selected."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">
                             "Prevent deselecting the last selected option."
                         </ApiRow>
                         <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
                             "The accessible name. The atom renders no label: give either a label text or the id of a visible label."
                         </ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Vertical">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
                             "Which arrow keys move between options."
                         </ApiRow>
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
@@ -398,7 +398,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                     " as context: the listbox then uses that configuration instead of its own props."
                 </p>
                 <p>
-                    <Code inline=true>"ListBoxItem"</Code>" provides its state as "<Code inline=true>"ListBoxItemCtx"</Code>
+                    <Code inline=true>"ListBoxItem"</Code>" provides its state as "<Code inline=true>"ListBoxItemContext"</Code>
                     " context ("<Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_focused"</Code>", "
                     <Code inline=true>"is_focus_visible"</Code>", "<Code inline=true>"is_disabled"</Code>", "
                     <Code inline=true>"is_pressed"</Code>", "<Code inline=true>"is_hovered"</Code>"). Leptos components inside an option can read it, e.g. a check mark:"
@@ -407,7 +407,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                     {indoc!(r#"
                         #[component]
                         fn CheckMark() -> impl IntoView {
-                            let item = expect_context::<ListBoxItemCtx>();
+                            let item = expect_context::<ListBoxItemContext>();
                             move || item.is_selected.get().then_some("\u{2713}")
                         }
                     "#)}

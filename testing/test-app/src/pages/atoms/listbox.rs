@@ -2,9 +2,8 @@ use std::collections::HashSet;
 
 use leptonic::{
     atoms::listbox::{ListBox, ListBoxItem},
-    hooks::{
-        SelectionMode,
-        collections::{Key, Selection, use_list_collection},
+    hooks::collections::{
+        Key, Selection, SelectionMode, UseListCollectionInput, use_list_collection,
     },
 };
 use leptos::prelude::*;
@@ -14,11 +13,11 @@ const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Durian", "Elderberry"];
 /// A multi-select listbox. "Cherry" is disabled.
 #[component]
 pub fn PageAtomListBox() -> impl IntoView {
-    let fruits = use_list_collection(
-        Signal::stored(FRUITS.to_vec()),
-        |fruit| Key::from(*fruit),
-        |fruit| (*fruit).to_owned(),
-    );
+    let fruits = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FRUITS.to_vec()),
+        key: |fruit| Key::from(*fruit),
+        text_value: |fruit| (*fruit).to_owned(),
+    });
     let selection = RwSignal::new(String::new());
 
     view! {

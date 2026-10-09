@@ -47,7 +47,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::use_collection;
+                        use leptonic::hooks::collections::use_collection;
 
                         let collection = use_collection(|b| {
                             b.item("details", "Details");
@@ -110,7 +110,12 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-list-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{Key, UseTabListStateInput, use_tab_list_state};
+                            use leptonic::{
+                                hooks::{
+                                    collections::Key,
+                                    tabs::{UseTabListStateInput, use_tab_list_state},
+                                },
+                            };
                             use leptos::logging::log;
 
                             let state = use_tab_list_state(UseTabListStateInput {
@@ -137,12 +142,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <Link href=format!("{}#accessibility", routes::doc::Tabs.materialize())>"keyboard interaction"</Link>"."
                 </p>
                 <p>
-                    "Tabs and panels learn about their tab list through a "<Code inline=true>"TabListData"</Code>
-                    ". Create it from the state with "<Code inline=true>"TabListData::new(state)"</Code>" and hand a clone to "
-                    <Code inline=true>"use_tab_list"</Code>" and to "<Code inline=true>"use_tab_panel"</Code>". It holds the "
-                    <Code inline=true>"state"</Code>" and a generated "<Code inline=true>"id"</Code>", from which "
-                    <Code inline=true>"tab_id(&key)"</Code>" and "<Code inline=true>"tab_panel_id(&key)"</Code>
-                    " derive the ids of a tab and its panel."
+                    "The list, its tabs and its panels share "<Code inline=true>"TabListState"</Code>". Pass the same "
+                    "state to each hook. It owns the generated ids that connect every tab to its panel."
                 </p>
 
                 <Section title="Input" id="use-tab-list-input">
@@ -151,7 +152,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         "the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseTabListInput">
-                        <ApiRow name="tabs" ty="TabListData">"The tab list, from "<Code inline=true>"TabListData::new(state)"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The tab list element; the hook\u{2019}s props capture it. Required."</ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                             "Which arrow keys move between the tabs, see "<AnchorLink href="#orientation">"Orientation"</AnchorLink>
@@ -163,6 +163,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name for the tab list."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id of a visible label."</ApiRow>
+                        <ApiRow name="state" ty="TabListState">"Required. The tab list state shared by the list, tabs and panels."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -172,9 +173,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             "The id, "<Code inline=true>"role=\"tablist\""</Code>", "<Code inline=true>"aria-orientation"</Code>
                             ", the labels, and the keyboard and focus handling. Spread "<Code inline=true>"{..props.into_attrs()}"</Code>"."
                         </ApiRow>
-                        <ApiRow name="data" ty="TabListItemData">
-                            "What the tabs need to know about the tab list. Pass a clone to each "<Code inline=true>"use_tab"</Code>"."
-                        </ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -182,16 +180,21 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
+                                CapturedElement,
+                                IntoAttrs,
+                                Orientation,
                                 hooks::{
-                                    IntoAttrs, KeyboardActivation, Orientation, TabListData, UseTabListInput, UseTabListReturn,
-                                    use_tab_list,
+                                    tabs::{
+                                        KeyboardActivation,
+                                        UseTabListInput,
+                                        UseTabListReturn,
+                                        use_tab_list,
+                                    },
                                 },
-                                utils::CapturedElement,
                             };
 
-                            let tabs = TabListData::new(state);
-                            let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
-                                tabs: tabs.clone(),
+                            let UseTabListReturn { props } = use_tab_list(UseTabListInput {
+                                state,
                                 element: CapturedElement::new(),
                                 orientation: Orientation::Horizontal.into(),
                                 keyboard_activation: KeyboardActivation::Automatic,
@@ -211,7 +214,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
             <Section title="use_tab">
                 <p>
-                    "Renders one tab. It needs the tab list data and the tab\u{2019}s key; whether it is selected, focused or "
+                    "Renders one tab. It needs the tab list state and the tab\u{2019}s key; whether it is selected, focused or "
                     "disabled comes from the state. A press selects the tab, and focus follows."
                 </p>
 
@@ -221,7 +224,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         "value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseTabInput">
-                        <ApiRow name="list" ty="TabListItemData">"The tab list, from "<Code inline=true>"use_tab_list"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The tab\u{2019}s key in the collection. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
                             "Disables this tab. The arrow keys only skip tabs disabled in the collection or through "
@@ -231,6 +233,10 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             "Select when the press ends instead of when it starts: "<Code inline=true>"Always"</Code>", "
                             <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (only for tabs that are links in the collection)."
                         </ApiRow>
+                        <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus leaves the element."</ApiRow>
+                        <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus enters the element."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focused state changes."</ApiRow>
+                        <ApiRow name="state" ty="TabListState">"Required. The tab list state shared by the list, tabs and panels."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -260,15 +266,23 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{Key, TabListItemData, UseTabInput, collections::SelectOnPressUp, use_tab};
+                            use leptonic::{
+                                hooks::{
+                                    collections::{Key, SelectOnPressUp},
+                                    tabs::{TabListState, UseTabInput, use_tab},
+                                },
+                            };
 
                             #[component]
-                            fn MyTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
+                            fn MyTab(state: TabListState, key: &'static str, label: &'static str) -> impl IntoView {
                                 let input = UseTabInput {
-                                    list,
+                                    state,
                                     key: Key::from(key),
                                     is_disabled: Signal::stored(false),
                                     should_select_on_press_up: SelectOnPressUp::Auto,
+                                    on_focus: None,
+                                    on_blur: None,
+                                    on_focus_change: None,
                                 };
                                 let (attrs, styles) = use_tab(input).props.into_parts();
 
@@ -291,7 +305,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Input" id="use-tab-panel-input">
                     <ApiTable kind=ApiKind::Input of="UseTabPanelInput">
-                        <ApiRow name="tabs" ty="TabListData">"The tab list. Required."</ApiRow>
                         <ApiRow name="key" ty="Option<Key>">
                             "The panel\u{2019}s tab. "<Code inline=true>"None"</Code>": the selected tab; id and label follow the "
                             "selection. Required."
@@ -299,6 +312,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         <ApiRow name="aria_describedby, aria_details" ty="Option<String>" default="None">
                             "The ids of elements describing the panel, or holding details about it."
                         </ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Accessible label when visible content does not provide one."</ApiRow>
+                        <ApiRow name="state" ty="TabListState">"Required. The tab list state shared by the list, tabs and panels."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -316,9 +331,12 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-panel-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{IntoAttrs, UseTabPanelInput, use_tab_panel};
+                            use leptonic::{
+                                IntoAttrs,
+                                hooks::tabs::{UseTabPanelInput, use_tab_panel},
+                            };
 
-                            let panel = use_tab_panel(UseTabPanelInput { tabs, key: None, aria_describedby: None, aria_details: None });
+                            let panel = use_tab_panel(UseTabPanelInput { state, key: None, aria_label: MaybeProp::default(), aria_describedby: None, aria_details: None });
                             let text = move || match state.selected_key().map(|key| key.to_string()).as_deref() {
                                 Some("shipping") => "Ships within two days.",
                                 _ => "A foldable reading lamp.",

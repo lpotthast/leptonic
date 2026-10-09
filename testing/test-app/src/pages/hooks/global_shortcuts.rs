@@ -1,15 +1,14 @@
+use std::borrow::Cow;
+
 use leptonic::{
+    KeyboardKey, KeyboardShortcuts, Shortcut,
     atoms::{
         field::Label,
         input::Input,
         kbd::{Keys, ShortcutKeys},
         text_field::TextField,
     },
-    hooks::{UseGlobalShortcutsInput, use_global_shortcuts},
-    utils::{
-        key::KeyboardKey,
-        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
-    },
+    hooks::interactions::{UseGlobalShortcutsInput, use_global_shortcuts},
 };
 use leptos::{html, prelude::*};
 
@@ -26,18 +25,19 @@ pub fn PageHookGlobalShortcuts() -> impl IntoView {
     let show_nested = RwSignal::new(false);
     let filter = NodeRef::<html::Input>::new();
     use_global_shortcuts(UseGlobalShortcutsInput {
-        anywhere: KeyboardShortcuts::new().on(Shortcut::key("k").primary(), move |_| {
+        anywhere: KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::K).primary(), move |_| {
             palette.update(|count| *count += 1);
         }),
         outside_text_fields: KeyboardShortcuts::new()
-            .on(Shortcut::key("/"), move |_| {
+            .on(Shortcut::new(KeyboardKey::Slash), move |_| {
                 if let Some(filter) = filter.get_untracked() {
                     let _ = filter.focus();
                 }
             })
-            .on(Shortcut::key("?"), move |_| {
-                help.update(|count| *count += 1)
-            }),
+            .on(
+                Shortcut::new(KeyboardKey::Other(Cow::Borrowed("?"))),
+                move |_| help.update(|count| *count += 1),
+            ),
     });
     view! {
         <h1>"Global shortcuts"</h1>
@@ -47,7 +47,7 @@ pub fn PageHookGlobalShortcuts() -> impl IntoView {
                 <Label>"Filter"</Label>
                 <Input
                     node_ref=filter
-                    attr:aria-keyshortcuts=Shortcut::key("/").to_aria_keyshortcuts(false)
+                    attr:aria-keyshortcuts=Shortcut::new(KeyboardKey::Slash).to_aria_keyshortcuts(false)
                 />
             </TextField>
         </div>
@@ -61,7 +61,7 @@ pub fn PageHookGlobalShortcuts() -> impl IntoView {
         <Show when=move || show_nested.get()>
             <NestedShortcuts count=nested />
         </Show>
-        <ShortcutKeys shortcut=Shortcut::key("k").primary() attr:id="test-gs-keys" />
+        <ShortcutKeys shortcut=Shortcut::new(KeyboardKey::K).primary() attr:id="test-gs-keys" />
         <Keys keys=vec![KeyboardKey::Command, KeyboardKey::X] attr:id="test-gs-literal" />
     }
 }
@@ -70,7 +70,7 @@ pub fn PageHookGlobalShortcuts() -> impl IntoView {
 #[component]
 fn NestedShortcuts(count: RwSignal<i32>) -> impl IntoView {
     use_global_shortcuts(UseGlobalShortcutsInput {
-        anywhere: KeyboardShortcuts::new().on(Shortcut::key("k").primary(), move |_| {
+        anywhere: KeyboardShortcuts::new().on(Shortcut::new(KeyboardKey::K).primary(), move |_| {
             count.update(|count| *count += 1);
         }),
         ..UseGlobalShortcutsInput::default()

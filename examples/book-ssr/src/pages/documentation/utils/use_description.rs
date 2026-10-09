@@ -11,7 +11,7 @@ pub fn PageUseDescription() -> impl IntoView {
             <p>
                 "Some elements need a description that screen readers read after their name, but that nobody needs to "
                 "see: how to operate a long press, what a drag handle does. The "<Code inline=true>"use_description"</Code>
-                " hook (in "<Code inline=true>"leptonic::utils::use_description"</Code>") puts such a text into a hidden "
+                " hook (in "<Code inline=true>"leptonic::use_description"</Code>") puts such a text into a hidden "
                 "element and returns its id, for the "<Code inline=true>"aria-describedby"</Code>" attribute of your element. "
                 "It is one of the building blocks for screen readers, next to "
                 <Link href=routes::doc::screen_readers::VisuallyHidden.materialize()>"VisuallyHidden"</Link>" and "
@@ -38,7 +38,7 @@ pub fn PageUseDescription() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::use_description::use_description;
+                        use leptonic::use_description;
 
                         let description = use_description(Signal::stored(Some(String::from("Opens the archive."))));
 
@@ -70,7 +70,7 @@ pub fn PageUseDescription() -> impl IntoView {
                 <p>
                     "Leptonic\u{2019}s hooks use it for their own descriptions: "
                     <Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>" for "
-                    <Code inline=true>"long_press_accessibility_description"</Code>", and the "
+                    <Code inline=true>"LongPress::accessibility_description"</Code>", and the "
                     <Link href=routes::doc::DragAndDrop.materialize()>"Drag & Drop"</Link>" hooks for their drag instructions."
                 </p>
             </Section>

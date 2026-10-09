@@ -1,6 +1,11 @@
-use leptonic::hooks::{
-    IntoAttrs, UseNumberFieldInput, UseNumberFieldStateInput, use_button, use_number_field,
-    use_number_field_state,
+use leptonic::{
+    IntoAttrs,
+    hooks::{
+        button::use_button,
+        form::{
+            UseNumberFieldInput, UseNumberFieldStateInput, use_number_field, use_number_field_state,
+        },
+    },
 };
 use leptos::prelude::*;
 

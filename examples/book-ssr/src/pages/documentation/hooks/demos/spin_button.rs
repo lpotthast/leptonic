@@ -1,4 +1,11 @@
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::{
+        button::{UseButtonInput, use_button},
+        spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
+    },
+};
 use leptos::prelude::*;
 
 const MIN: i32 = 0;
@@ -19,10 +26,10 @@ pub fn SpinButtonDemo() -> impl IntoView {
         increment_button,
         decrement_button,
     } = use_spin_button(UseSpinButtonInput {
-        value: Signal::derive(move || Some(f64::from(cups.get()))),
+        value: Signal::derive(move || Some(cups.get())),
         text_value: Signal::derive(move || Some(cups_text())),
-        min_value: Signal::stored(Some(f64::from(MIN))),
-        max_value: Signal::stored(Some(f64::from(MAX))),
+        min_value: Signal::stored(Some(MIN)),
+        max_value: Signal::stored(Some(MAX)),
         is_disabled: disabled.into(),
         on_increment: Some(Callback::new(move |()| step(1))),
         on_decrement: Some(Callback::new(move |()| step(-1))),
@@ -40,7 +47,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
     let (decrement_attrs, decrement_styles) = use_button(UseButtonInput {
         aria_label: "Fewer cups".into(),
         is_disabled: Signal::derive(move || decrement_disabled.get() || cups.get() <= MIN),
-        allow_focus_when_disabled: true,
+        allow_focus_when_disabled: true.into(),
         ..decrement_button
     })
     .props
@@ -49,7 +56,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
     let (increment_attrs, increment_styles) = use_button(UseButtonInput {
         aria_label: "More cups".into(),
         is_disabled: Signal::derive(move || increment_disabled.get() || cups.get() >= MAX),
-        allow_focus_when_disabled: true,
+        allow_focus_when_disabled: true.into(),
         ..increment_button
     })
     .props

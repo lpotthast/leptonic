@@ -1,8 +1,11 @@
-use leptonic::atoms::{
-    field::Label,
-    slider::{
-        Slider, SliderFill, SliderOutput, SliderPopover, SliderThumb, SliderThumbTooltip,
-        SliderTrack,
+use leptonic::{
+    NumberFormatOptions, NumberStyle,
+    atoms::{
+        field::Label,
+        slider::{
+            Slider, SliderFill, SliderOutput, SliderPopover, SliderThumb, SliderThumbTooltip,
+            SliderTrack,
+        },
     },
 };
 use leptos::prelude::*;
@@ -11,12 +14,23 @@ use leptos::prelude::*;
 /// - "Volume": labelled, one `f64` thumb at 30 (0..=100, step 5) with an output and a fill from
 ///   `offset` 50; `#test-slider-volume-ends` counts `on_change_end`.
 /// - "Price": two `i32` thumbs bound to app state (`#test-slider-price` shows it).
-/// - "Vertical" (one thumb at 50) and "Disabled".
-/// - Tooltips: "Always" and "On hover".
+/// - "Vertical" (one thumb at 50, with a fill) and "Disabled"; "Vertical offset" (at 30, a fill
+///   from 50).
+/// - Tooltips: "Always" (with a fill from the start) and "On hover".
+/// - "Percent": an `f64` slider from 0 to 1 (step 0.01) formatted as percentages, at 0.2;
+///   "Percent range": two thumbs at 0.2 and 0.6.
+/// - `#test-slider-form`: "Reset bound" (one thumb bound to app state at 10), "Reset range" (two
+///   bound thumbs at 10 and 40) and "Reset own" (at 10), with a reset button.
 #[component]
 pub fn PageAtomSlider() -> impl IntoView {
     let ends = RwSignal::new(0u32);
     let price = RwSignal::new(vec![20_i32, 80]);
+    let reset_bound = RwSignal::new(vec![10_i32]);
+    let reset_range = RwSignal::new(vec![10_i32, 40]);
+    let percent = || NumberFormatOptions {
+        style: NumberStyle::Percent,
+        ..NumberFormatOptions::default()
+    };
 
     view! {
         <div id="test-page-atom-slider">
@@ -58,10 +72,23 @@ pub fn PageAtomSlider() -> impl IntoView {
                 min_value=0
                 max_value=100
                 default_values=vec![50_i32]
-                orientation=leptonic::utils::orientation::Orientation::Vertical
+                orientation=leptonic::Orientation::Vertical
                 aria_label="Vertical"
             >
                 <SliderTrack classes="test-slider-track-vertical">
+                    <SliderFill attr:id="test-slider-vertical-fill" />
+                    <SliderThumb classes="test-slider-thumb" />
+                </SliderTrack>
+            </Slider>
+            <Slider
+                min_value=0
+                max_value=100
+                default_values=vec![30_i32]
+                orientation=leptonic::Orientation::Vertical
+                aria_label="Vertical offset"
+            >
+                <SliderTrack classes="test-slider-track-vertical">
+                    <SliderFill offset=50.0 attr:id="test-slider-vertical-offset-fill" />
                     <SliderThumb classes="test-slider-thumb" />
                 </SliderTrack>
             </Slider>
@@ -74,6 +101,7 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <Slider min_value=0 max_value=100 default_values=vec![30_i32] aria_label="Always">
                 <SliderTrack classes="test-slider-track">
+                    <SliderFill attr:id="test-slider-always-fill" />
                     <SliderThumb classes="test-slider-thumb">
                         <SliderThumbTooltip popover=SliderPopover::Always classes="tooltip" />
                     </SliderThumb>
@@ -82,13 +110,57 @@ pub fn PageAtomSlider() -> impl IntoView {
             <Slider min_value=0 max_value=100 default_values=vec![60_i32] aria_label="On hover">
                 <SliderTrack classes="test-slider-track">
                     <SliderThumb classes="test-slider-thumb">
-                        <SliderThumbTooltip
-                            popover=SliderPopover::When { hovered: true, dragged: true }
-                            classes="tooltip"
-                        />
+                        <SliderThumbTooltip popover=SliderPopover::OnHoverOrDrag classes="tooltip" />
                     </SliderThumb>
                 </SliderTrack>
             </Slider>
+            <Slider
+                min_value=0.0
+                max_value=1.0
+                step=0.01
+                default_values=vec![0.2_f64]
+                format_options=percent()
+                aria_label="Percent"
+            >
+                <SliderOutput />
+                <SliderTrack classes="test-slider-track">
+                    <SliderThumb classes="test-slider-thumb" />
+                </SliderTrack>
+            </Slider>
+            <Slider
+                min_value=0.0
+                max_value=1.0
+                step=0.01
+                default_values=vec![0.2_f64, 0.6]
+                format_options=percent()
+                aria_label="Percent range"
+            >
+                <SliderOutput />
+                <SliderTrack classes="test-slider-track">
+                    <SliderThumb index=0 classes="test-slider-thumb" />
+                    <SliderThumb index=1 classes="test-slider-thumb" />
+                </SliderTrack>
+            </Slider>
+
+            <form id="test-slider-form">
+                <Slider min_value=0 max_value=100 values=reset_bound set_values=reset_bound aria_label="Reset bound">
+                    <SliderTrack classes="test-slider-track">
+                        <SliderThumb classes="test-slider-thumb" />
+                    </SliderTrack>
+                </Slider>
+                <Slider min_value=0 max_value=100 values=reset_range set_values=reset_range aria_label="Reset range">
+                    <SliderTrack classes="test-slider-track">
+                        <SliderThumb index=0 classes="test-slider-thumb" />
+                        <SliderThumb index=1 classes="test-slider-thumb" />
+                    </SliderTrack>
+                </Slider>
+                <Slider min_value=0 max_value=100 default_values=vec![10_i32] aria_label="Reset own">
+                    <SliderTrack classes="test-slider-track">
+                        <SliderThumb classes="test-slider-thumb" />
+                    </SliderTrack>
+                </Slider>
+                <button type="reset" id="test-slider-reset">"Reset"</button>
+            </form>
         </div>
     }
 }

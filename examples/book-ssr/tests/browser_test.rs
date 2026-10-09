@@ -18,7 +18,8 @@
 //!   `BROWSER_TEST_VISIBLE=1`).
 //! - `BROWSER_TEST_LOG_STEPS=1`: log every step of every test with its duration.
 //!
-//! The book is built in `target/browser-test`: two runs at the same time share it and break each other.
+//! - `BOOK_TARGET_DIR=<dir>`: build the book and its site there (default: inherited
+//!   `CARGO_TARGET_DIR`, else `target/browser-test`). Two runs must not share one target directory.
 #![cfg(not(target_arch = "wasm32"))]
 
 mod cases;
@@ -27,7 +28,7 @@ mod pages;
 mod ui_tests;
 
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
@@ -46,14 +47,18 @@ async fn browser_tests() -> Result<(), Report> {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
     let app_start = Instant::now();
-    let app = LeptosTestAppConfig::new(env!("CARGO_MANIFEST_DIR"))
+    let app_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let target_dir = std::env::var_os("BOOK_TARGET_DIR")
+        .or_else(|| std::env::var_os("CARGO_TARGET_DIR"))
+        .map_or_else(|| app_dir.join("target/browser-test"), PathBuf::from);
+    let target_dir = std::path::absolute(target_dir)?;
+    let app = LeptosTestAppConfig::new(app_dir)
         .with_app_name("leptonic book")
         // The book serves TLS with a self-signed certificate (`certs/`).
         .with_site_scheme(SiteScheme::Https)
-        // A separate build and site output, so that a running `just serve` is not disturbed. Relative to the book's
-        // directory, where cargo-leptos runs: with an absolute site root, it misses the wasm-bindgen output.
-        .with_env("CARGO_TARGET_DIR", "target/browser-test")
-        .with_env("LEPTOS_SITE_ROOT", "target/browser-test/site")
+        // Keep the build and site output together, separate from a running `just serve`.
+        .with_env("CARGO_TARGET_DIR", &target_dir)
+        .with_env("LEPTOS_SITE_ROOT", target_dir.join("browser-test-site"))
         .start()
         .await
         .map_err(Report::into_dynamic)?;
@@ -74,7 +79,7 @@ async fn browser_tests() -> Result<(), Report> {
 }
 
 /// `BROWSER_TEST_PARALLELISM`, default 8 (every parallel test is a browser; more gains little, see the library's
-/// `documentation/browser-tests.md`, "Speed and memory"). An invalid value is an error.
+/// `documentation/testing.md`, "Speed and memory"). An invalid value is an error.
 fn parallelism() -> Result<Parallelism, Report> {
     Ok(Parallelism::from_env()?.unwrap_or(Parallelism::parallel(8)))
 }

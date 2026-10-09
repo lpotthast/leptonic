@@ -52,7 +52,7 @@ pub fn PageAtomGrid() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::grid::{Grid, GridCell, GridRow},
-                            hooks::{Key, use_collection},
+                            hooks::collections::{Key, use_collection},
                         };
                         use leptos::prelude::*;
 
@@ -101,13 +101,13 @@ pub fn PageAtomGrid() -> impl IntoView {
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>" rows."
                         </ApiRow>
-                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">
+                        <ApiRow name="selection_behavior" ty="Signal<SelectionBehavior>" default="Toggle">
                             <Code inline=true>"Toggle"</Code>": a click toggles the row. "<Code inline=true>"Replace"</Code>
                             ": a click replaces the selection, and keyboard focus selects."
                         </ApiRow>
-                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">"The initially selected rows."</ApiRow>
+                        <ApiRow name="default_selection" ty="Selection" default="empty">"The initially selected rows."</ApiRow>
                         <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
-                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                            "The selection (controlled), replacing "<Code inline=true>"default_selection"</Code>": a value or any signal."
                         </ApiRow>
                         <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
                             "Receives the new selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>
@@ -122,7 +122,7 @@ pub fn PageAtomGrid() -> impl IntoView {
                             <Code inline=true>"All"</Code>": disabled rows can\u{2019}t be focused or used. "
                             <Code inline=true>"Selection"</Code>": they only can\u{2019}t be selected."
                         </ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
+                        <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">
                             <Code inline=true>"ClearSelection"</Code>": "<Keys keys="Escape"/>" clears the selection. "
                             <Code inline=true>"None"</Code>": the key press bubbles, e.g. to close a dialog."
@@ -136,11 +136,12 @@ pub fn PageAtomGrid() -> impl IntoView {
                         <ApiRow name="on_row_action, on_cell_action" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of an activated row or cell."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
                             "Names the grid. One of them is needed."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the grid element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The rows, directly or in "<Code inline=true>"GridRowGroup"</Code>"s."</ApiRow>
+                        <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends instead of when it starts."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

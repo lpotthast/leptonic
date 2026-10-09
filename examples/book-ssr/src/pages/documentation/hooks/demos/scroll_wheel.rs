@@ -1,4 +1,8 @@
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::interactions::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel},
+};
 use leptos::prelude::*;
 
 #[component]

@@ -1,27 +1,26 @@
 // Upstream: react-aria/src/spinbutton/useSpinButton.ts @ 99e6102368
+// Upstream: react-aria/test/spinbutton/useSpinButton.test.js @ 99e6102368
 use std::time::Duration;
 
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::{attr, attr::Attr, ev, prelude::*};
 use leptos_use::use_window;
 use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
+    EventHandler, IntoAttrs, NumberValue, OnEvent,
     hooks::{
-        IntoAttrs, PressEvent, UseButtonInput,
-        interactions::use_keyboard::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
+        button::UseButtonInput,
+        interactions::{
+            PressEvent,
+            use_keyboard::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
+        },
     },
     utils::{
-        EventHandler,
         aria::{AriaDisabled, AriaReadonly, AriaRequired, AriaRole},
         event_listeners::{Listener, listen_to},
         intl_strings::{SpinButtonStrings, use_localized_strings},
+        key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         live_announcer::{Assertiveness, announce, clear_announcer},
         pointer_type::PointerType,
@@ -39,8 +38,12 @@ use crate::{
 // - Without a value and text, `aria-valuetext` is "Empty" (react-aria: "undefined").
 // - The returned stepper buttons are disabled while the spin button is disabled or read-only
 //   (react-aria leaves that to the caller, e.g. `useNumberField`).
+// - Holding either stepper button blocks the context menu (react-aria: only the increment
+//   button's; a touch hold on the decrement button would open it).
 //
 // ## API DIFFERENCES
+// - Generic over the value type `T: NumberValue` (react-aria: JS numbers): a held stepper stops
+//   exactly at the bounds, also for integers beyond 2^53. `None` replaces `undefined`/`NaN`.
 // - The stepper buttons are returned as `UseButtonInput` (react-aria: `AriaButtonProps`).
 //   Pass them to `use_button`, adding labels and other settings with struct update syntax.
 // - `text_value: None` means "derive from `value`"; `Some("")` announces "Empty".
@@ -56,15 +59,15 @@ const INITIAL_SPIN_DELAY_TOUCH: Duration = Duration::from_millis(600);
 const SPIN_INTERVAL: Duration = Duration::from_millis(60);
 
 /// Input of [`use_spin_button`].
-#[derive(Debug, Clone, Default)]
-pub struct UseSpinButtonInput {
+#[derive(Debug, Clone)]
+pub struct UseSpinButtonInput<T: NumberValue> {
     /// The current value. `None` (or NaN) when empty.
-    pub value: Signal<Option<f64>>,
+    pub value: Signal<Option<T>>,
     /// A textual representation of the value, announced to screen readers and exposed as
     /// `aria-valuetext`. `None` uses `value`.
     pub text_value: Signal<Option<String>>,
-    pub min_value: Signal<Option<f64>>,
-    pub max_value: Signal<Option<f64>>,
+    pub min_value: Signal<Option<T>>,
+    pub max_value: Signal<Option<T>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub is_required: Signal<bool>,
@@ -80,6 +83,31 @@ pub struct UseSpinButtonInput {
     pub on_decrement_to_min: Option<Callback<()>>,
     /// Jump to the maximum (End).
     pub on_increment_to_max: Option<Callback<()>>,
+}
+
+impl<T: NumberValue> Default for UseSpinButtonInput<T> {
+    fn default() -> Self {
+        Self {
+            value: Signal::default(),
+            text_value: Signal::default(),
+            min_value: Signal::default(),
+            max_value: Signal::default(),
+            is_disabled: Signal::default(),
+            is_read_only: Signal::default(),
+            is_required: Signal::default(),
+            on_increment: None,
+            on_increment_page: None,
+            on_decrement: None,
+            on_decrement_page: None,
+            on_decrement_to_min: None,
+            on_increment_to_max: None,
+        }
+    }
+}
+
+/// Whether `value` is a number (not a float's NaN).
+fn is_number<T: NumberValue>(value: &T) -> bool {
+    value.partial_cmp(value).is_some()
 }
 
 /// Return value of [`use_spin_button`].
@@ -119,10 +147,10 @@ pub type UseSpinButtonAttrs = (
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::keydown>,
+    OnEvent<ev::keyup>,
+    OnEvent<ev::focus>,
+    OnEvent<ev::blur>,
 );
 
 impl IntoAttrs for UseSpinButtonProps {
@@ -155,45 +183,41 @@ enum Direction {
 /// Steps the value while a stepper button is held: once after an initial delay, then every
 /// [`SPIN_INTERVAL`] until the limit is reached or the button is released.
 #[derive(Clone, Copy)]
-struct Spinner {
+struct Spinner<T: NumberValue> {
     timeout: StoredValue<Option<TimeoutHandle>>,
-    /// Whether a step is scheduled.
-    is_spinning: StoredValue<bool>,
     /// Whether the current press already stepped through spinning (reset per press).
     spun: StoredValue<bool>,
-    value: Signal<Option<f64>>,
-    min_value: Signal<Option<f64>>,
-    max_value: Signal<Option<f64>>,
+    value: Signal<Option<T>>,
+    min_value: Signal<Option<T>>,
+    max_value: Signal<Option<T>>,
     on_increment: Option<Callback<()>>,
     on_decrement: Option<Callback<()>>,
 }
 
-impl Spinner {
+impl<T: NumberValue> Spinner<T> {
     fn clear(self) {
         if let Some(handle) = self.timeout.get_value() {
             handle.clear();
         }
         self.timeout.set_value(None);
-        self.is_spinning.set_value(false);
     }
 
     fn start(self, direction: Direction, delay: Duration) {
         self.clear();
-        self.is_spinning.set_value(true);
         let handle = set_timeout_with_handle(move || self.step(direction), delay).ok();
         self.timeout.set_value(handle);
     }
 
     fn step(self, direction: Direction) {
         // Missing or NaN bounds and values never stop the spinning.
-        let value = self.value.get_untracked().filter(|v| !v.is_nan());
+        let value = self.value.get_untracked().filter(is_number);
         let can_step = match direction {
             Direction::Up => {
-                let max = self.max_value.get_untracked().filter(|v| !v.is_nan());
+                let max = self.max_value.get_untracked().filter(is_number);
                 value.zip(max).is_none_or(|(value, max)| value < max)
             }
             Direction::Down => {
-                let min = self.min_value.get_untracked().filter(|v| !v.is_nan());
+                let min = self.min_value.get_untracked().filter(is_number);
                 value.zip(min).is_none_or(|(value, min)| value > min)
             }
         };
@@ -218,7 +242,7 @@ impl Spinner {
 /// page and Home/End keys, plus increment/decrement buttons that keep stepping while held.
 ///
 /// Value changes are announced to screen readers while the spin button has focus.
-pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
+pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinButtonReturn {
     let UseSpinButtonInput {
         value,
         text_value,
@@ -237,7 +261,6 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
 
     let spinner = Spinner {
         timeout: StoredValue::new(None),
-        is_spinning: StoredValue::new(false),
         spun: StoredValue::new(false),
         value,
         min_value,
@@ -260,20 +283,29 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
     };
     let shortcuts = KeyboardShortcuts::new()
         .on(
-            Shortcut::key("PageUp"),
+            Shortcut::new(KeyboardKey::PageUp),
             run_first([on_increment_page, on_increment]),
         )
-        .on(Shortcut::key("ArrowUp"), run_first([on_increment, None]))
         .on(
-            Shortcut::key("PageDown"),
+            Shortcut::new(KeyboardKey::ArrowUp),
+            run_first([on_increment, None]),
+        )
+        .on(
+            Shortcut::new(KeyboardKey::PageDown),
             run_first([on_decrement_page, on_decrement]),
         )
-        .on(Shortcut::key("ArrowDown"), run_first([on_decrement, None]))
         .on(
-            Shortcut::key("Home"),
+            Shortcut::new(KeyboardKey::ArrowDown),
+            run_first([on_decrement, None]),
+        )
+        .on(
+            Shortcut::new(KeyboardKey::Home),
             run_first([on_decrement_to_min, None]),
         )
-        .on(Shortcut::key("End"), run_first([on_increment_to_max, None]));
+        .on(
+            Shortcut::new(KeyboardKey::End),
+            run_first([on_increment_to_max, None]),
+        );
     let UseKeyboardReturn {
         props: keyboard_props,
     } = use_keyboard(UseKeyboardInput {
@@ -296,7 +328,7 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
         Some(text) if text.is_empty() => strings.read().empty(),
         Some(text) => text.replacen('-', "\u{2212}", 1),
         // Without a value: "Empty" as well (react-aria: the text "undefined").
-        None => value.get().map_or_else(
+        None => value.get().filter(is_number).map_or_else(
             || strings.read().empty(),
             |v| v.to_string().replacen('-', "\u{2212}", 1),
         ),
@@ -382,8 +414,8 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
         }
     };
 
-    let format_bound = |bound: Signal<Option<f64>>| {
-        Signal::derive(move || bound.get().filter(|v| !v.is_nan()).map(|v| v.to_string()))
+    let format_bound = |bound: Signal<Option<T>>| {
+        Signal::derive(move || bound.get().filter(is_number).map(|v| v.to_string()))
     };
 
     UseSpinButtonReturn {

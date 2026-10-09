@@ -1,8 +1,16 @@
 //! Headless date and time field and picker atoms.
 // Upstream: react-aria-components/src/DateField.tsx @ 99e6102368
+// Upstream: react-aria-components/src/DatePicker.tsx @ 99e6102368
+// Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/TimeField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/DatePicker.test.js @ 99e6102368
+// Upstream: react-aria-components/test/DateRangePicker.test.js @ 99e6102368
+// Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
 use std::sync::Arc;
 
+use jiff::civil::Time;
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::{
     calendar::{CalendarPickerContext, RangeCalendarPickerContext},
@@ -12,16 +20,15 @@ use super::{
     popover::PopoverDefaults,
 };
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, PropsWithStyles, ValueBinding,
     hooks::{
-        IntoAttrs, Placement, PropsWithStyles, UseButtonInput, UseButtonReturn, UseFocusRingInput,
-        UseFocusRingReturn, UseHoverInput, ValidateFn, ValidationBehavior,
+        button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::DateAvailabilityQuery,
         datepicker::{
-            DateFieldData, DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions,
-            DateSegment, DateSegmentType, DateValue, Granularity, HourCycle, RangePart, RangeValue,
-            TimeValue, UseDateFieldInput, UseDateFieldProps, UseDateFieldReturn,
-            UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
+            DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions, DatePickerState,
+            DateRangePickerState, DateSegment, DateSegmentType, DateValue, Granularity, HourCycle,
+            RangePart, RangeValue, TimeValue, UseDateFieldInput, UseDateFieldProps,
+            UseDateFieldReturn, UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
             UseDatePickerStateInput, UseDateRangePickerInput, UseDateRangePickerStateInput,
             UseDateSegmentInput, UseDateSegmentReturn, UseHiddenDateInputInput,
             UseHiddenDateInputReturn, UseTimeFieldInput, UseTimeFieldStateInput, use_date_field,
@@ -29,15 +36,16 @@ use crate::{
             use_date_range_picker_state, use_date_segment, use_hidden_date_input, use_time_field,
             use_time_field_state,
         },
-        use_button, use_focus_ring, use_hover,
+        focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        form::{ValidateFn, ValidationBehavior},
+        interactions::{UseHoverInput, use_hover},
+        overlay::Placement,
     },
     utils::{
-        CapturedElement, ValueBinding,
-        classes::Classes,
         data_attributes::flag,
         default_class::with_default_class,
         intl_strings::{DatePickerStrings, use_localized_strings},
-        scoped_context::scoped_view,
+        scoped_context::{ClearContexts, clear_context, scoped_view},
         styles::Styles,
     },
 };
@@ -53,6 +61,9 @@ use crate::{
 // - `DateInput`'s children render a segment from a `Signal<DateSegment>` (react-aria-components:
 //   a function of the segment); segments are kept by position, their content changes.
 // - State props per C4: `value` + `set_value`, `default_value`, `on_change`.
+// - The pickers' states are typed contexts read with `use_date_picker_state_context::<V>()` and
+//   `use_date_range_picker_state_context::<V>()` (react-aria-components: `DatePickerStateContext`,
+//   `DateRangePickerStateContext`), e.g. for a `TimeField` in the popover.
 //
 // =============================================================================
 
@@ -79,8 +90,8 @@ fn group_state(
     is_disabled: Signal<bool>,
 ) -> (
     (
-        <crate::hooks::UseHoverProps as IntoAttrs>::Attrs,
-        <crate::hooks::UseFocusRingProps as IntoAttrs>::Attrs,
+        <crate::hooks::interactions::UseHoverProps as IntoAttrs>::Attrs,
+        <crate::hooks::focus::UseFocusRingProps as IntoAttrs>::Attrs,
     ),
     impl Fn() -> Option<&'static str> + Clone + Send + Sync,
     impl Fn() -> Option<&'static str> + Clone + Send + Sync,
@@ -95,7 +106,7 @@ fn group_state(
         is_focused,
         is_focus_visible,
     } = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     (
@@ -330,8 +341,12 @@ pub fn TimeField<T: TimeValue>(
     /// The time the segments start from when edited. Default: midnight.
     #[prop(into, optional)]
     placeholder_value: MaybeProp<T>,
-    #[prop(into, optional)] min_value: Signal<Option<T>>,
-    #[prop(into, optional)] max_value: Signal<Option<T>>,
+    /// The earliest time of day (on the value's day for values with a date).
+    #[prop(into, optional)]
+    min_value: Signal<Option<Time>>,
+    /// The latest time of day (on the value's day for values with a date).
+    #[prop(into, optional)]
+    max_value: Signal<Option<Time>>,
     /// Hour, minute (default) or second.
     #[prop(into, optional)]
     granularity: MaybeProp<Granularity>,
@@ -449,7 +464,11 @@ where
     let (attrs, field_styles) = field_props.into_parts();
     let segments = context.segments;
     let children = Arc::new(children);
-    let (is_disabled, is_invalid) = (context.is_disabled, context.is_invalid);
+    let (is_disabled, is_read_only, is_invalid) = (
+        context.is_disabled,
+        context.is_read_only,
+        context.is_invalid,
+    );
     let (group_attrs, hovered, focus_within, focus_visible) = group_state(is_disabled);
     view! {
         <div
@@ -458,6 +477,7 @@ where
             class=classes
             style=field_styles.merge(styles)
             data-disabled=flag(is_disabled)
+            data-readonly=flag(is_read_only)
             data-invalid=flag(is_invalid)
             data-hovered=hovered
             data-focus-within=focus_within
@@ -523,7 +543,15 @@ pub fn DateSegment(
     let text = move || segment.with(|segment| segment.text.clone());
     if kind == DateSegmentType::Literal {
         return view! {
-            <span class=classes style=styles aria-hidden="true" data-type="literal">
+            <span
+                class=classes
+                style=styles
+                aria-hidden="true"
+                data-type="literal"
+                data-disabled=flag(context.is_disabled)
+                data-readonly=flag(context.is_read_only)
+                data-invalid=flag(context.is_invalid)
+            >
                 {text}
             </span>
         }
@@ -570,6 +598,20 @@ struct DatePickerContext {
     is_open: Signal<bool>,
     is_disabled: Signal<bool>,
     is_invalid: Signal<bool>,
+}
+
+/// The state of the [`DatePicker`] of value type `V` around (react-aria-components'
+/// `DatePickerStateContext`), e.g. for a `TimeField` in its popover: `value=state.time_value`
+/// and `set_value` calling `state.select_time(..)`.
+pub fn use_date_picker_state_context<V: DateValue>() -> Option<DatePickerState<V>> {
+    use_context::<DatePickerState<V>>()
+}
+
+/// The state of the [`DateRangePicker`] of value type `V` around (react-aria-components'
+/// `DateRangePickerStateContext`), e.g. for `TimeField`s of the start and end in its popover
+/// (`state.select_time(RangePart::Start, ..)`).
+pub fn use_date_range_picker_state_context<V: DateValue>() -> Option<DateRangePickerState<V>> {
+    use_context::<DateRangePickerState<V>>()
 }
 
 /// A date picker (react-aria-components' `DatePicker`): a date field with a button opening a
@@ -730,22 +772,18 @@ pub fn DatePicker<V: DateValue>(
         element: field_element,
         input_element,
         options: DateFieldOptions {
+            aria_label,
             auto_focus,
             form,
             picker: Some(DateFieldPicker {
                 overlay: state.overlay,
                 focus_manager: None,
+                labelledby,
+                describedby: field_describedby,
             }),
             ..DateFieldOptions::default()
         },
     });
-    // The segments are labelled and described by the picker (react-aria: `useDatePicker`'s
-    // field props).
-    let data = DateFieldData {
-        aria_labelledby: labelledby,
-        aria_describedby: field_describedby,
-        ..data
-    };
 
     let is_disabled_state = field_state.is_disabled;
     let is_invalid = state.is_invalid;
@@ -791,12 +829,18 @@ pub fn DatePicker<V: DateValue>(
             is_disabled: is_disabled_state,
             is_invalid,
         });
+        provide_context(state);
         // The generic `Popover` and `Dialog` open from the group (react-aria-components'
         // `PopoverContext`), starting at its start edge.
         provide_context(trigger.with_dialog_labelledby(dialog_labelledby));
         provide_context(Some(PopoverDefaults {
             placement: Placement::BottomStart,
             offset: 8.0,
+            scroll: None,
+            clear_contexts: ClearContexts(&[
+                clear_context::<LabelContext>,
+                clear_context::<FieldContext>,
+            ]),
         }));
         provide_context(CalendarPickerContext {
             value: state.date_value,
@@ -1096,16 +1140,13 @@ pub fn DateRangePicker<V: DateValue>(
                 form: form.clone(),
                 picker: Some(DateFieldPicker {
                     overlay: state.overlay,
-                    focus_manager: Some(focus_manager.clone()),
+                    focus_manager: Some(focus_manager),
+                    labelledby,
+                    describedby: field_describedby,
                 }),
                 ..DateFieldOptions::default()
             },
         });
-        let data = DateFieldData {
-            aria_labelledby: labelledby,
-            aria_describedby: field_describedby,
-            ..data
-        };
         (
             DateInputContext {
                 segments: field_state.segments,
@@ -1163,10 +1204,16 @@ pub fn DateRangePicker<V: DateValue>(
             is_disabled: is_disabled_state,
             is_invalid,
         });
+        provide_context(state);
         provide_context(trigger.with_dialog_labelledby(dialog_labelledby));
         provide_context(Some(PopoverDefaults {
             placement: Placement::BottomStart,
             offset: 8.0,
+            scroll: None,
+            clear_contexts: ClearContexts(&[
+                clear_context::<LabelContext>,
+                clear_context::<FieldContext>,
+            ]),
         }));
         provide_context(RangeCalendarPickerContext {
             value: state.date_range,

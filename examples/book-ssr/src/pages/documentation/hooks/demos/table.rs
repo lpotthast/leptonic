@@ -1,21 +1,24 @@
 use std::sync::Arc;
 
-use leptonic::hooks::GridFocusMode;
-use leptonic::hooks::KeyboardNavigationBehavior;
-use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
+    CapturedElement, IntoAttrs,
     hooks::{
-        ColumnKind, DisabledBehavior, IntoAttrs, NodeKind, SelectionMode, SortDescriptor,
-        SortDirection, TableCollection, TableData, TableOptions, UseTableCellInput,
-        UseTableColumnHeaderInput, UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn,
-        UseTableRowInput, UseTableSelectAllCheckboxInput, UseTableSelectionCheckboxInput,
-        UseTableStateInput,
-        collections::{Key, SelectionOptions},
-        use_checkbox, use_grid_row_group, use_table, use_table_cell, use_table_column_header,
-        use_table_header_placeholder, use_table_header_row, use_table_row,
-        use_table_select_all_checkbox, use_table_selection_checkbox, use_table_state,
+        collections::{
+            CollectionOptions, DisabledBehavior, Key, NodeKind, SelectionMode, SelectionOptions,
+        },
+        form::use_checkbox,
+        grid::{GridFocusMode, use_grid_row_group},
+        gridlist::KeyboardNavigationBehavior,
+        table::{
+            ColumnKind, SortDescriptor, SortDirection, TableCollection, TableData,
+            UseTableCellInput, UseTableColumnHeaderInput, UseTableHeaderPlaceholderInput,
+            UseTableInput, UseTableReturn, UseTableRowInput, UseTableSelectAllCheckboxInput,
+            UseTableSelectionCheckboxInput, UseTableStateInput, use_table, use_table_cell,
+            use_table_column_header, use_table_header_placeholder, use_table_header_row,
+            use_table_row, use_table_select_all_checkbox, use_table_selection_checkbox,
+            use_table_state,
+        },
     },
-    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -93,33 +96,29 @@ pub fn TableHookDemo() -> impl IntoView {
     // Columns and rows, rebuilt whenever the order of the books changes. The first column holds the selection
     // checkboxes, so the data cells of a row are cells 1 to 4.
     let table = Memo::new(move |_| {
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                t.column("title", "Title").row_header().allows_sorting();
-                t.column("author", "Author").allows_sorting();
-                t.column_group("inventory", "Inventory", |g| {
-                    g.column("stock", "In stock").allows_sorting();
-                    g.column("price", "Price");
-                });
-                books.with(|books| {
-                    for book in books {
-                        t.row(book.title, book.title, |r| {
-                            r.cell(book.title);
-                            r.cell(book.author);
-                            r.cell(book.stock.to_string());
-                            r.cell(book.price);
-                        })
-                        .disabled(book.out_of_print);
-                    }
-                });
-            },
-        ))
+        Arc::new(TableCollection::build(|t| {
+            t.column("title", "Title").row_header().allows_sorting();
+            t.column("author", "Author").allows_sorting();
+            t.column_group("inventory", "Inventory", |g| {
+                g.column("stock", "In stock").allows_sorting();
+                g.column("price", "Price");
+            });
+            books.with(|books| {
+                for book in books {
+                    t.row(book.title, book.title, |r| {
+                        r.cell(book.title);
+                        r.cell(book.author);
+                        r.cell(book.stock.to_string());
+                        r.cell(book.price);
+                    })
+                    .disabled(book.out_of_print);
+                }
+            });
+        }))
     });
 
     let state = use_table_state(UseTableStateInput {
+        show_selection_checkboxes: Signal::stored(true),
         tree: None,
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
@@ -138,7 +137,7 @@ pub fn TableHookDemo() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         id: None,
-        aria_labelledby: None,
+        aria_labelledby: Signal::stored(None),
         keyboard_delegate: None,
         options: CollectionOptions::default(),
         keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
@@ -238,7 +237,11 @@ fn ColumnHeader(table: TableData, column: Key) -> impl IntoView {
         })
     });
     let content = if is_checkbox_column {
-        let checkbox = use_checkbox(use_table_select_all_checkbox(UseTableSelectAllCheckboxInput { table: table.clone() }));
+        let checkbox = use_checkbox(use_table_select_all_checkbox(
+            UseTableSelectAllCheckboxInput {
+                table: table.clone(),
+            },
+        ));
         let (attrs, styles) = checkbox.input_props.into_parts();
         view! { <input {..attrs} style=styles/> }.into_any()
     } else {
@@ -264,7 +267,12 @@ fn BookRow(table: TableData, book: Book) -> impl IntoView {
     });
     let allows_selection = row.allows_selection;
     let (attrs, styles) = row.row_props.into_parts();
-    let checkbox = use_checkbox(use_table_selection_checkbox(UseTableSelectionCheckboxInput { table: table.clone(), key: key.clone() }));
+    let checkbox = use_checkbox(use_table_selection_checkbox(
+        UseTableSelectionCheckboxInput {
+            table: table.clone(),
+            key: key.clone(),
+        },
+    ));
     let (checkbox_attrs, checkbox_styles) = checkbox.input_props.into_parts();
 
     view! {

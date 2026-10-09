@@ -3,7 +3,7 @@ use leptonic::{
         checkbox::{CheckboxButton, CheckboxField},
         tabs::{Tab, TabList, TabPanel, Tabs},
     },
-    hooks::{collections::Key, use_collection},
+    hooks::collections::{Key, use_collection},
 };
 use leptos::prelude::*;
 

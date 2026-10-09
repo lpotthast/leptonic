@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/grid/useGrid.ts @ 99e6102368
+// Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
@@ -14,12 +15,12 @@ use super::{
     use_highlight_selection_description,
 };
 use crate::{
+    CapturedElement, EventHandler, IntoAttrs,
     hooks::{
-        IntoAttrs,
         collections::{
             CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, SelectionMode,
             UseSelectableCollectionAttrs, UseSelectableCollectionInput,
-            UseSelectableCollectionProps, use_selectable_collection,
+            UseSelectableCollectionProps, keyboard_delegate_memo, use_selectable_collection,
         },
         focus::use_has_tabbable_child::{
             UseHasTabbableChildAttrs, UseHasTabbableChildInput, UseHasTabbableChildProps,
@@ -28,8 +29,8 @@ use crate::{
         gridlist::KeyboardNavigationBehavior,
     },
     utils::{
-        CapturedElement, EventAccessors, EventHandler,
         aria::{AriaMultiselectable, AriaRole},
+        dom_ext::EventAccessors,
         filter::{CollatorOptions, use_collator},
         i18n::use_direction,
         id::use_id,
@@ -71,7 +72,8 @@ pub struct UseGridInput {
     /// The element id. Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    /// Ids of elements labelling the grid.
+    pub aria_labelledby: Signal<Option<String>>,
     /// Replaces the grid keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Keyboard and focus behavior.
@@ -124,7 +126,7 @@ pub struct UseGridProps {
     pub id: String,
     pub role: Signal<AriaRole>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
     /// E.g. a table's sort description.
     pub aria_describedby: Signal<Option<String>>,
@@ -137,7 +139,7 @@ pub type UseGridAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, Signal<AriaRole>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     UseSelectableCollectionAttrs,
@@ -161,17 +163,25 @@ impl IntoAttrs for UseGridProps {
     }
 }
 
+/// Input of [`use_grid_keyboard_delegate`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseGridKeyboardDelegateInput {
+    pub state: GridState,
+    /// The grid element, in which the delegate measures the rendered rows and cells.
+    pub element: CapturedElement,
+}
+
 /// The keyboard delegate of a grid: a [`GridKeyboardDelegate`] measuring the rendered rows and
 /// cells in `element`, with the current locale's reading direction and collation.
 pub fn use_grid_keyboard_delegate(
-    state: GridState,
-    element: CapturedElement,
+    input: UseGridKeyboardDelegateInput,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
+    let UseGridKeyboardDelegateInput { state, element } = input;
     // One collator per locale, not per read of the delegate.
     let collator = use_collator(CollatorOptions::default());
     let direction = use_direction();
     let layout_delegate = Arc::new(DomLayoutDelegate::new(element, state.list.item_elements));
-    Signal::derive(move || {
+    keyboard_delegate_memo(move || {
         let collator = collator.get();
         Arc::new(
             GridKeyboardDelegate::new(
@@ -203,13 +213,15 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
         on_cell_action,
     } = input;
 
-    if aria_label.get_untracked().is_none() && aria_labelledby.is_none() {
+    if aria_label.get_untracked().is_none() && aria_labelledby.with_untracked(Option::is_none) {
         crate::utils::dev_warn!(
             "use_grid: an aria_label or aria_labelledby is required for accessibility"
         );
     }
     let id = id.unwrap_or_else(|| use_id("grid"));
-    let delegate = keyboard_delegate.unwrap_or_else(|| use_grid_keyboard_delegate(state, element));
+    let delegate = keyboard_delegate.unwrap_or_else(|| {
+        use_grid_keyboard_delegate(UseGridKeyboardDelegateInput { state, element })
+    });
 
     let mut collection = use_selectable_collection(UseSelectableCollectionInput {
         selection: state.list.selection,

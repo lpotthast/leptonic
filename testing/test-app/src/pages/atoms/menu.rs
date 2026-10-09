@@ -1,14 +1,19 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::prelude::{
-        Button, Menu, MenuItem, MenuItemDescription, MenuItemLabel, MenuItemShortcut, MenuItems,
-        MenuSection, MenuTrigger, Popover, Separator,
+    atoms::{
+        button::Button,
+        menu::{
+            Menu, MenuItem, MenuItemDescription, MenuItemLabel, MenuItemShortcut, MenuItems,
+            MenuSection, MenuTrigger,
+        },
+        popover::Popover,
+        separator::Separator,
     },
     hooks::{
-        MenuTriggerType, SelectionMode,
-        collections::{Key, Selection, use_collection},
-        use_interaction_modality,
+        collections::{Key, Selection, SelectionMode, use_collection},
+        focus::use_interaction_modality,
+        menu::MenuTriggerType,
     },
 };
 use leptos::prelude::*;
@@ -88,7 +93,7 @@ pub fn PageAtomMenu() -> impl IntoView {
             <button id="test-menu-atoms-before">"Before"</button>
 
             <MenuTrigger>
-                <Button attr:id="test-menu-atoms-actions-trigger">"Actions"</Button>
+                <Button id="test-menu-atoms-actions-trigger">"Actions"</Button>
                 <Popover>
                     <Menu
                         collection=action_items
@@ -101,7 +106,7 @@ pub fn PageAtomMenu() -> impl IntoView {
             </MenuTrigger>
 
             <MenuTrigger>
-                <Button attr:id="test-menu-atoms-view-trigger">"View"</Button>
+                <Button id="test-menu-atoms-view-trigger">"View"</Button>
                 <Popover>
                     <Menu
                         collection=view_items
@@ -129,7 +134,7 @@ pub fn PageAtomMenu() -> impl IntoView {
             // Opens on a long press (or Alt+ArrowDown); a press performs the button's own action.
             <MenuTrigger trigger=MenuTriggerType::LongPress>
                 <Button
-                    attr:id="test-menu-atoms-long-trigger"
+                    id="test-menu-atoms-long-trigger"
                     on_press=move |_| actions.update(|a| a.push("More pressed".to_owned()))
                 >
                     "More"
@@ -145,7 +150,7 @@ pub fn PageAtomMenu() -> impl IntoView {
             </MenuTrigger>
 
             <MenuTrigger>
-                <Button attr:id="test-menu-atoms-sandwich-trigger">"Sandwich"</Button>
+                <Button id="test-menu-atoms-sandwich-trigger">"Sandwich"</Button>
                 <Popover>
                     <Menu collection=sandwich_items selection_mode=SelectionMode::Multiple>
                         <MenuSection
@@ -173,7 +178,7 @@ pub fn PageAtomMenu() -> impl IntoView {
             </MenuTrigger>
 
             <MenuTrigger>
-                <Button attr:id="test-menu-atoms-file-trigger">"File"</Button>
+                <Button id="test-menu-atoms-file-trigger">"File"</Button>
                 <Popover>
                     <Menu
                         collection=file_items
@@ -191,7 +196,7 @@ pub fn PageAtomMenu() -> impl IntoView {
             </MenuTrigger>
 
             <MenuTrigger>
-                <Button attr:id="test-menu-atoms-edit-trigger">"Edit"</Button>
+                <Button id="test-menu-atoms-edit-trigger">"Edit"</Button>
                 <Popover>
                     <Menu
                         collection=edit_items
@@ -203,7 +208,6 @@ pub fn PageAtomMenu() -> impl IntoView {
                 </Popover>
             </MenuTrigger>
 
-            <button id="test-menu-atoms-after">"After"</button>
             <div>"Actions: " <span id="test-menu-atoms-actions">{move || actions.get().join(",")}</span></div>
             <div>"View: " <span id="test-menu-atoms-view-selection">{view_selection}</span></div>
             <div>

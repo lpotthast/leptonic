@@ -2,15 +2,16 @@
 //! `use_focus_within`: focus entering and leaving an element tree, also when the focused element
 //! is removed or disabled. Every case starts on a fresh page.
 use assertr::prelude::*;
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions};
+use crate::pages::{ElementActions, Page};
 
 const PATH: &str = "/hooks/focus-within";
 
-/// Basic focus within behavior: enter, move within, leave, re-enter ("does handle focus events on
-/// children").
+/// Clicking a child starts focus within, moving between children changes nothing, and clicking
+/// outside ends it ("does handle focus events on children").
+#[browser_test]
 pub async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input_a = page.element("#test-fw-input-a").await?;
@@ -19,9 +20,24 @@ pub async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
     let is_focus_within = page.element("#test-fw-is-focus-within").await?;
     let focus_count = page.element("#test-fw-focus-within-count").await?;
     let blur_count = page.element("#test-fw-blur-within-count").await?;
-    assert_that!(is_focus_within.inner_text().await?.parse::<bool>()?).is_false();
-    assert_that!(focus_count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
-    assert_that!(blur_count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
+    assert_that!(is_focus_within)
+        .inner_text()
+        .await
+        .map_owned(|value| value.parse::<bool>())
+        .get_ok()
+        .is_false();
+    assert_that!(focus_count)
+        .inner_text()
+        .await
+        .map_owned(|value| value.parse::<u32>())
+        .get_ok()
+        .is_equal_to(0);
+    assert_that!(blur_count)
+        .inner_text()
+        .await
+        .map_owned(|value| value.parse::<u32>())
+        .get_ok()
+        .is_equal_to(0);
 
     input_a.click().await?;
     is_focus_within.wait_for_inner_text("true").await?;
@@ -30,9 +46,15 @@ pub async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
     // Moving within: no new focus within, no blur within.
     input_b.click().await?;
     page.wait_for_focus(&input_b).await?;
-    focus_count.inner_text_stays("1").await?;
-    blur_count.inner_text_stays("0").await?;
-    is_focus_within.inner_text_stays("true").await?;
+    focus_count
+        .inner_text_stays("1", std::time::Duration::from_millis(100))
+        .await?;
+    blur_count
+        .inner_text_stays("0", std::time::Duration::from_millis(100))
+        .await?;
+    is_focus_within
+        .inner_text_stays("true", std::time::Duration::from_millis(100))
+        .await?;
 
     outside.click().await?;
     is_focus_within.wait_for_inner_text("false").await?;
@@ -44,7 +66,9 @@ pub async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "does not handle focus events if disabled".
+/// With `disabled`, focusing a child neither starts focus within nor calls the focus handler ("does
+/// not handle focus events if disabled").
+#[browser_test]
 pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#test-fw-disabled-input").await?;
@@ -55,22 +79,38 @@ pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
     for _ in 0..2 {
         input.click().await?;
         page.wait_for_focus(&input).await?;
-        is_focus_within.inner_text_stays("false").await?;
-        focus_count.inner_text_stays("0").await?;
+        is_focus_within
+            .inner_text_stays("false", std::time::Duration::from_millis(100))
+            .await?;
+        focus_count
+            .inner_text_stays("0", std::time::Duration::from_millis(100))
+            .await?;
         outside.click().await?;
     }
     Ok(())
 }
 
-/// `on_focus_within_change` fires true on focus enter, false on focus leave.
+/// `on_focus_within_change` is called with `true` whenever focus enters the container and with
+/// `false` whenever it leaves.
+#[browser_test]
 pub async fn change_callback(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#test-fw-change-input").await?;
     let outside = page.element("#test-fw-outside").await?;
     let value = page.element("#test-fw-change-value").await?;
     let count = page.element("#test-fw-change-count").await?;
-    assert_that!(value.inner_text().await?.parse::<bool>()?).is_false();
-    assert_that!(count.inner_text().await?.parse::<u32>()?).is_equal_to(0);
+    assert_that!(value)
+        .inner_text()
+        .await
+        .map_owned(|value| value.parse::<bool>())
+        .get_ok()
+        .is_false();
+    assert_that!(count)
+        .inner_text()
+        .await
+        .map_owned(|value| value.parse::<u32>())
+        .get_ok()
+        .is_equal_to(0);
 
     input.click().await?;
     value.wait_for_inner_text("true").await?;
@@ -86,7 +126,9 @@ pub async fn change_callback(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Tab navigation into and out of the container.
+/// Tabbing into the container starts focus within, tabbing between its children changes nothing,
+/// and tabbing out ends it.
+#[browser_test]
 pub async fn tab_into_and_out_of_container(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input_a = page.element("#test-fw-input-a").await?;
@@ -103,8 +145,12 @@ pub async fn tab_into_and_out_of_container(page: &Page<'_>) -> Result<(), Report
 
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&input_b).await?;
-    focus_count.inner_text_stays("1").await?;
-    is_focus_within.inner_text_stays("true").await?;
+    focus_count
+        .inner_text_stays("1", std::time::Duration::from_millis(100))
+        .await?;
+    is_focus_within
+        .inner_text_stays("true", std::time::Duration::from_millis(100))
+        .await?;
 
     page.send_keys(Key::Tab).await?;
     is_focus_within.wait_for_inner_text("false").await?;
@@ -112,8 +158,9 @@ pub async fn tab_into_and_out_of_container(page: &Page<'_>) -> Result<(), Report
     Ok(())
 }
 
-/// Focusing a deeply nested input sets focus within on both containers ("events bubble by
-/// default": focus within doesn't stop the focus events).
+/// Focusing an input in two nested containers starts focus within on both, and clicking outside
+/// ends it on both ("events bubble by default").
+#[browser_test]
 pub async fn nested_focus_within(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let outer = page
@@ -133,9 +180,10 @@ pub async fn nested_focus_within(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should fire onBlur when focus occurs outside": no blur reached the container (a child stopped
-/// its `focusout`), so the next focus outside ends focus within, with a blur on the container. The
-/// outside input stops its `focusin` too, so this needs the capture-phase `focus` listener.
+/// When a child kept its blur from reaching the container, the next focus outside (which stops its
+/// `focusin` too) still ends focus within with a blur ("should fire onBlur when focus occurs
+/// outside").
+#[browser_test]
 pub async fn focus_outside_after_a_hidden_blur(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let events = page.element("#test-fw-removal-events").await?;
@@ -155,7 +203,8 @@ pub async fn focus_outside_after_a_hidden_blur(page: &Page<'_>) -> Result<(), Re
     Ok(())
 }
 
-/// Removing the focused child ends focus within (Chrome fires a blur for the removed element).
+/// Removing the focused child ends focus within, with a blur for the removed element.
+#[browser_test]
 pub async fn removal_of_the_focused_child(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
 
@@ -168,8 +217,9 @@ pub async fn removal_of_the_focused_child(page: &Page<'_>) -> Result<(), Report>
     Ok(())
 }
 
-/// "should fire onBlur when a focused element is disabled" (Firefox fires no blur then; the
-/// synthetic blur observer dispatches one).
+/// Disabling the focused child ends focus within with exactly one blur ("should fire onBlur when a
+/// focused element is disabled").
+#[browser_test]
 pub async fn disabling_the_focused_element(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let disable = page.element("#test-fw-removal-disable").await?;
@@ -180,6 +230,8 @@ pub async fn disabling_the_focused_element(page: &Page<'_>) -> Result<(), Report
     disable.wait_for_attr("disabled", Some("true")).await?;
     events.wait_for_inner_text(expected).await?;
     // Exactly one blur (native `focusout` and the observer's don't both count).
-    events.inner_text_stays(expected).await?;
+    events
+        .inner_text_stays(expected, std::time::Duration::from_millis(100))
+        .await?;
     Ok(())
 }

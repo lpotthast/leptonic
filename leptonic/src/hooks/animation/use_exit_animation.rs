@@ -47,6 +47,7 @@ pub struct UseExitAnimationInput {
 }
 
 /// Return value of [`use_exit_animation`].
+#[derive(Debug)]
 pub struct UseExitAnimationReturn {
     /// `true` while exit animation is in flight. Keep the element in the DOM while `true`.
     pub is_exiting: Signal<bool>,

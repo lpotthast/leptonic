@@ -32,7 +32,7 @@ pub fn PageUseLink() -> impl IntoView {
                             "The link target. Rendered on anchors only, and not while the link is disabled: a disabled link can\u{2019}t "
                             "be followed in any way."
                         </ApiRow>
-                        <ApiRow name="target" ty="LinkTarget" default="Same">
+                        <ApiRow name="target" ty="Signal<LinkTarget>" default="Same">
                             "Where to open the link, e.g. "<Code inline=true>"LinkTarget::Blank"</Code>" for a new tab."
                         </ApiRow>
                         <ApiRow name="rel" ty="Vec<LinkRel>" default="empty">
@@ -40,7 +40,7 @@ pub fn PageUseLink() -> impl IntoView {
                             <Code inline=true>"LinkRel::NoOpener"</Code>" is added automatically."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link is disabled."</ApiRow>
-                        <ApiRow name="element_type" ty="LinkElementType" default="Anchor">
+                        <ApiRow name="element_type" ty="Signal<LinkElementType>" default="Anchor">
                             "The element you spread the props onto, see "<AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the link when its content doesn\u{2019}t."</ApiRow>
@@ -56,6 +56,14 @@ pub fn PageUseLink() -> impl IntoView {
                         <ApiRow name="on_hover_start, on_hover_end" ty="Option<Callback<HoverStartEvent>>, Option<Callback<HoverEndEvent>>" default="None">
                             "Called when a pointer starts or stops hovering the link."
                         </ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focus this element when it mounts."</ApiRow>
+                        <ApiRow name="exclude_from_tab_order" ty="Signal<bool>" default="false">"Remove the element from sequential keyboard navigation."</ApiRow>
+                        <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus leaves the element."</ApiRow>
+                        <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus enters the element."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focused state changes."</ApiRow>
+                        <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">"Called when the hovered state changes."</ApiRow>
+                        <ApiRow name="on_key_down" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called when a key is pressed."</ApiRow>
+                        <ApiRow name="on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called when a key is released."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -83,7 +91,7 @@ pub fn PageUseLink() -> impl IntoView {
                 <Section title="Example" id="use-link-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{LinkTarget, UseLinkInput, use_link};
+                            use leptonic::hooks::link::{LinkTarget, UseLinkInput, use_link};
 
                             let link = use_link(UseLinkInput {
                                 href: Signal::stored(Some("https://leptos.dev".to_owned())),
@@ -208,8 +216,8 @@ pub fn PageUseLink() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r##"
                             use leptonic::{
-                                hooks::{UseAnchorLinkInput, UseLinkInput, use_anchor_link},
-                                utils::scroll_behavior::ScrollBehavior,
+                                ScrollBehavior,
+                                hooks::link::{UseAnchorLinkInput, UseLinkInput, use_anchor_link},
                             };
 
                             let link = use_anchor_link(UseAnchorLinkInput {

@@ -1,11 +1,11 @@
 // Upstream: react-aria/src/label/useLabel.ts @ 99e6102368
-// Upstream: react-aria/src/utils/useLabels.ts @ 99e6102368
+// Upstream: react-aria/test/label/useLabel.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
 };
 
-use crate::{hooks::IntoAttrs, utils::id::use_id};
+use crate::{IdRefs, IntoAttrs, labels, utils::id::use_id};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -17,9 +17,9 @@ use crate::{hooks::IntoAttrs, utils::id::use_id};
 //   hook never sees its content.
 // - `label_id` sets the label element's id (react-aria always generates it). Reason: lets a
 //   caller label further elements with an id it already knows.
-// - `aria_label`'s text is reactive, but whether there is one is read when the hook runs: it
-//   decides whether `aria-labelledby` lists the field itself (react-aria: on every render).
-//   Reason: `aria-labelledby` is a list of ids, plain `Option<String>` like all ids (C2).
+// - `aria_labelledby` is read once (a list of ids, plain `Option<String>` like all ids, C2);
+//   `aria_label` and `has_label` are reactive, and so is whether `aria-labelledby` lists the
+//   field itself.
 //
 // =============================================================================
 
@@ -145,23 +145,14 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
     let labelled_by = {
         let (id, label_id) = (id.clone(), label_id.clone());
         Signal::derive(move || {
-            let mut labelled_by = Vec::new();
+            let mut labelled_by = IdRefs::default();
             if has_label.get() {
-                labelled_by.push(label_id.clone());
+                labelled_by.push(&label_id);
             }
-            labelled_by.extend(
-                aria_labelledby
-                    .iter()
-                    .flat_map(|ids| ids.split_whitespace())
-                    .map(str::to_owned),
-            );
+            labelled_by.extend(aria_labelledby.as_deref());
             // With an `aria-label` next to other labels, the field labels itself too (first), so
-            // that both make up its name (react-aria's `useLabels`).
-            if aria_label.with(Option::is_some) && !labelled_by.is_empty() {
-                labelled_by.insert(0, id.clone());
-            }
-            dedup_ids(&mut labelled_by);
-            (!labelled_by.is_empty()).then(|| labelled_by.join(" "))
+            // that both make up its name.
+            labels(&id, aria_label.get(), labelled_by.into_value().as_deref()).aria_labelledby
         })
     };
 
@@ -179,43 +170,16 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
     }
 }
 
-/// Removes repeated ids, keeping the first occurrence (react-aria's `useLabels` collects them in
-/// a `Set`).
-pub(crate) fn dedup_ids(ids: &mut Vec<String>) {
-    let mut seen = std::collections::HashSet::new();
-    ids.retain(|id| seen.insert(id.clone()));
-}
-
-/// react-aria's `useLabels`: with both a label and labelling ids, the element's own id joins
-/// them (first), so that the label is part of its name.
-pub(crate) fn labels(
-    id: &str,
-    aria_label: Option<String>,
-    aria_labelledby: Option<String>,
-) -> (Option<String>, Option<String>) {
-    let labelledby = match (aria_label.as_ref(), aria_labelledby) {
-        (Some(_), Some(ids)) => {
-            let mut all = vec![id.to_owned()];
-            all.extend(ids.split_whitespace().map(str::to_owned));
-            dedup_ids(&mut all);
-            Some(all.join(" "))
-        }
-        (_, ids) => ids
-            .map(|ids| ids.trim().to_owned())
-            .filter(|ids| !ids.is_empty()),
-    };
-    (aria_label, labelledby)
-}
-
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
     #[test]
     fn a_visible_label_labels_the_field() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let label = use_label(UseLabelInput {
                 id: Some("f".to_owned()),
                 has_label: Signal::stored(true),
@@ -230,7 +194,7 @@ mod tests {
 
     #[test]
     fn labelled_by_lists_the_visible_label_first() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let label = use_label(UseLabelInput {
                 label_id: Some("l".to_owned()),
                 has_label: Signal::stored(true),
@@ -244,7 +208,7 @@ mod tests {
 
     #[test]
     fn aria_label_next_to_other_labels_adds_the_field_itself() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let label = use_label(UseLabelInput {
                 id: Some("f".to_owned()),
                 aria_label: "Name".into(),
@@ -260,7 +224,7 @@ mod tests {
     /// provided".
     #[test]
     fn aria_label_visible_label_and_labelled_by_combine_field_first() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let label = use_label(UseLabelInput {
                 id: Some("f".to_owned()),
                 label_id: Some("l".to_owned()),
@@ -276,7 +240,7 @@ mod tests {
 
     #[test]
     fn aria_label_alone_needs_no_labelled_by() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let label = use_label(UseLabelInput {
                 aria_label: "Name".into(),
                 ..UseLabelInput::default()
@@ -287,7 +251,7 @@ mod tests {
 
     #[test]
     fn span_labels_have_no_for_attribute() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let label = use_label(UseLabelInput {
                 has_label: Signal::stored(true),
                 label_element_type: LabelElementType::Span,

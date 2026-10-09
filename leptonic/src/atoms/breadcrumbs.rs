@@ -1,12 +1,18 @@
 // Upstream: react-aria-components/src/Breadcrumbs.tsx @ 99e6102368
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use super::link::{CurrentMatch, LinkContext};
 use crate::{
-    hooks::{IntoAttrs, PressEvent, UseBreadcrumbsInput, collections::Key, use_breadcrumbs},
+    IntoAttrs,
+    hooks::{
+        breadcrumbs::{UseBreadcrumbsInput, use_breadcrumbs},
+        collections::Key,
+        interactions::PressEvent,
+    },
     utils::{
-        aria::AriaCurrent, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, id::use_id, styles::Styles,
+        aria::AriaCurrent, data_attributes::flag, default_class::with_default_class, id::use_id,
+        styles::Styles,
     },
 };
 
@@ -57,7 +63,7 @@ pub fn Breadcrumbs(
     /// Whether all items are disabled.
     #[prop(into, optional)]
     is_disabled: Signal<bool>,
-    /// Called with the `id` of a pressed item.
+    /// Called with the `key` of a pressed item.
     #[prop(into, optional)]
     on_action: Option<Callback<Key>>,
     #[prop(into, optional)] classes: Classes,
@@ -93,7 +99,7 @@ pub fn Breadcrumbs(
 pub fn Breadcrumb(
     /// The item's key for the breadcrumbs' `on_action`. Default: generated.
     #[prop(into, optional)]
-    id: Option<Key>,
+    key: Option<Key>,
     /// Whether the item is the current page (the last item).
     #[prop(into, optional)]
     is_current: Signal<bool>,
@@ -106,7 +112,7 @@ pub fn Breadcrumb(
         crate::utils::dev_warn!("A <Breadcrumb> must be inside <Breadcrumbs>.");
         return children().into_any();
     };
-    let key = StoredValue::new(id.unwrap_or_else(|| Key::from(use_id("breadcrumb"))));
+    let key = StoredValue::new(key.unwrap_or_else(|| Key::from(use_id("breadcrumb"))));
     let is_disabled = Signal::derive(move || breadcrumbs.is_disabled.get() || is_current.get());
     let link = LinkContext {
         is_disabled,

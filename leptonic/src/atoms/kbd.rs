@@ -12,14 +12,11 @@
 //
 // =============================================================================
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
-use crate::{
-    Language,
-    utils::{
-        classes::Classes, default_class::with_default_class, key::KeyboardKey,
-        keyboard_shortcut::Shortcut, platform::device::is_mac, styles::Styles,
-        visually_hidden::visually_hidden_styles,
-    },
+use crate::utils::{
+    default_class::with_default_class, key::KeyboardKey, keyboard_shortcut::Shortcut,
+    platform::device::is_mac, styles::Styles, visually_hidden::visually_hidden_styles,
 };
 
 /// A keyboard shortcut as keys: a `<kbd>` holding one `<kbd>` per key, modifiers first in the
@@ -80,7 +77,7 @@ fn render_keys(keys: Vec<KeyboardKey>, separators: bool) -> impl IntoView {
     keys.into_iter()
         .enumerate()
         .map(|(index, key)| {
-            let display = key.display(Language::En).to_owned();
+            let display = key.display().to_owned();
             let content = match key.spoken_name() {
                 Some(name) => view! {
                     <span aria-hidden="true">{display}</span>

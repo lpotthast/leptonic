@@ -22,10 +22,7 @@ pub fn PageNumberFormatter() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::{
-                            i18n::{Locale, locale},
-                            number_formatter::{NumberFormatOptions, NumberFormatter},
-                        };
+                        use leptonic::{Locale, NumberFormatOptions, NumberFormatter, locale};
 
                         let formatter = NumberFormatter::new(
                             &Locale::from(locale!("de-DE")),
@@ -161,7 +158,7 @@ pub fn PageNumberFormatter() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::number_formatter::{NumberFormatOptions, NumberStyle, use_number_formatter};
+                        use leptonic::{NumberFormatOptions, NumberStyle, use_number_formatter};
 
                         let percent = use_number_formatter(Signal::stored(NumberFormatOptions {
                             style: NumberStyle::Percent,
@@ -218,11 +215,7 @@ pub fn PageNumberFormatter() -> impl IntoView {
                 </DocTable>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::{
-                            i18n::{Locale, locale},
-                            number_formatter::NumberFormatOptions,
-                            number_parser::NumberParser,
-                        };
+                        use leptonic::{Locale, NumberFormatOptions, NumberParser, locale};
 
                         let parser = NumberParser::new(&Locale::from(locale!("de-DE")), &NumberFormatOptions::default());
                         assert_eq!(parser.parse::<f64>("1.234,56"), Some(1234.56));
@@ -235,7 +228,7 @@ pub fn PageNumberFormatter() -> impl IntoView {
             <Section title="plural_category">
                 <p>
                     <Code inline=true>"plural_category(locale, number: u64) -> PluralCategory"</Code>" (in "
-                    <Code inline=true>"leptonic::utils::plurals"</Code>") tells which plural form a count takes in a "
+                    <Code inline=true>"leptonic"</Code>") tells which plural form a count takes in a "
                     "locale: English has \u{201c}one\u{201d} and \u{201c}other\u{201d} (1 item, 2 items), Polish adds "
                     "\u{201c}few\u{201d} and \u{201c}many\u{201d}, Arabic has six forms. Use it to pick the right text for "
                     "labels and announcements. Unsupported locales return "<Code inline=true>"Other"</Code>"."
@@ -243,7 +236,7 @@ pub fn PageNumberFormatter() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use icu_plurals::PluralCategory;
-                        use leptonic::utils::plurals::plural_category;
+                        use leptonic::plural_category;
 
                         let label = match plural_category(&locale.get(), count) {
                             PluralCategory::One => format!("{count} file"),

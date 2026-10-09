@@ -29,7 +29,7 @@ pub fn PageAtomColorSwatch() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::prelude::*, utils::color::RGB8};
+                        use leptonic::{RGB8, atoms::color_swatch::ColorSwatch};
                         use leptos::prelude::*;
 
                         view! {

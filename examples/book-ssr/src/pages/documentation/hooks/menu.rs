@@ -76,7 +76,19 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(
                         r#"
-                        use leptonic::hooks::*;
+                        use leptonic::{
+                            hooks::{
+                                button::use_button,
+                                menu::{
+                                    MenuTriggerType,
+                                    UseMenuTriggerInput,
+                                    UseMenuTriggerStateInput,
+                                    use_menu_trigger,
+                                    use_menu_trigger_state,
+                                },
+                                overlay::OverlayTriggerType,
+                            },
+                        };
                         use leptos::prelude::*;
 
                         let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
@@ -282,8 +294,18 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::{*, collections::{CollectionOptions, SelectionOptions, UseListStateInput}},
-                            utils::CapturedElement,
+                            CapturedElement,
+                            hooks::{
+                                collections::{
+                                    CollectionOptions,
+                                    Key,
+                                    SelectionOptions,
+                                    UseListStateInput,
+                                    use_collection,
+                                    use_list_state,
+                                },
+                                menu::{UseMenuInput, UseMenuReturn, use_menu, use_menu_trigger},
+                            },
                         };
                         use leptos::{logging::log, prelude::*};
 
@@ -369,12 +391,82 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         <ApiRow name="is_pressed, is_disabled" ty="Signal<bool>">
                             "Whether the item is being pressed, and whether it is disabled."
                         </ApiRow>
+                        <ApiRow name="is_hovered" ty="Signal<bool>">"Whether the pointer is hovering over this item."</ApiRow>
                     </ApiTable>
                 </Section>
                 <Section title="Example" id="use-menu-item-example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::{*, collections::CloseOnSelect};
+                        use leptonic::{
+                            hooks::{
+                                button::{UseButtonInput, use_button},
+                                collections::{
+                                    CloseOnSelect,
+                                    Collection,
+                                    CollectionOptions,
+                                    FocusStrategy,
+                                    Key,
+                                    KeyboardDelegate,
+                                    ListState,
+                                    Selection,
+                                    SelectionMode,
+                                    SelectionOptions,
+                                    UseListStateInput,
+                                    use_collection,
+                                    use_list_state,
+                                },
+                                focus::is_focus_visible,
+                                interactions::{
+                                    LongPress,
+                                    PressEvent,
+                                    UseKeyboardProps,
+                                    use_context_menu,
+                                },
+                                menu::{
+                                    MenuData,
+                                    MenuTriggerState,
+                                    MenuTriggerStateApi,
+                                    MenuTriggerType,
+                                    SubmenuKind,
+                                    SubmenuProps,
+                                    SubmenuTriggerItem,
+                                    SubmenuTriggerState,
+                                    UseMenuInput,
+                                    UseMenuItemInput,
+                                    UseMenuItemProps,
+                                    UseMenuItemReturn,
+                                    UseMenuProps,
+                                    UseMenuReturn,
+                                    UseMenuSectionGroupProps,
+                                    UseMenuSectionHeadingProps,
+                                    UseMenuSectionInput,
+                                    UseMenuSectionItemProps,
+                                    UseMenuSectionReturn,
+                                    UseMenuTriggerInput,
+                                    UseMenuTriggerMenuProps,
+                                    UseMenuTriggerReturn,
+                                    UseMenuTriggerStateInput,
+                                    UseSafelyMouseToSubmenuInput,
+                                    UseSubmenuTriggerInput,
+                                    UseSubmenuTriggerReturn,
+                                    UseSubmenuTriggerStateInput,
+                                    use_menu,
+                                    use_menu_item,
+                                    use_menu_section,
+                                    use_menu_trigger,
+                                    use_menu_trigger_state,
+                                    use_safely_mouse_to_submenu,
+                                    use_submenu_trigger,
+                                    use_submenu_trigger_state,
+                                },
+                                overlay::{
+                                    InteractOutsideFilter,
+                                    OverlayTriggerState,
+                                    OverlayTriggerType,
+                                    use_popover,
+                                },
+                            },
+                        };
 
                         let UseMenuItemReturn { props, label_props, is_focused, .. } = use_menu_item(UseMenuItemInput {
                             menu: data.clone(),
@@ -443,13 +535,13 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             "For the element wrapping heading and group (an "<Code inline=true>"<li>"</Code>" in a "
                             <Code inline=true>"<ul>"</Code>" menu): "<Code inline=true>"role=\"presentation\""</Code>"."
                         </ApiRow>
-                        <ApiRow name="heading_props" ty="Option<UseMenuSectionHeadingProps>">
+                        <ApiRow name="heading_props" ty="UseMenuSectionHeadingProps">
                             "For the heading element; "<Code inline=true>"None"</Code>" when the section has no header."
                         </ApiRow>
                         <ApiRow name="group_props" ty="UseMenuSectionGroupProps">
                             "For the element containing the items: "<Code inline=true>"role=\"group\""</Code>", labelled by the heading."
                         </ApiRow>
-                        <ApiRow name="heading" ty="Option<String>">"The header text."</ApiRow>
+                        <ApiRow name="heading" ty="Signal<Option<String>>">"The header text."</ApiRow>
                     </ApiTable>
                 </Section>
                 <Section title="Example" id="use-menu-section-example">
@@ -479,6 +571,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <ApiTable kind=ApiKind::Input of="UseSubmenuTriggerStateInput">
                     <ApiRow name="trigger_key" ty="Key">"The key of the item that opens the submenu. Required."</ApiRow>
                     <ApiRow name="root" ty="MenuTriggerState">"The state of the menu tree\u{2019}s root trigger. Required."</ApiRow>
+                    <ApiRow name="level" ty="usize" default="0">"Nesting depth of this submenu, from the parent menu data."</ApiRow>
                 </ApiTable>
                 </Section>
                 <Section title="Return" id="use-submenu-trigger-state-return">
@@ -571,11 +664,23 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             use std::time::Duration;
 
                             use leptonic::{
+                                CapturedElement,
                                 hooks::{
-                                    collections::{CloseOnSelect, CollectionOptions},
-                                    *,
+                                    collections::{CloseOnSelect, CollectionOptions, Key},
+                                    menu::{
+                                        MenuData,
+                                        SubmenuKind,
+                                        UseMenuInput,
+                                        UseMenuItemInput,
+                                        UseSubmenuTriggerInput,
+                                        UseSubmenuTriggerReturn,
+                                        UseSubmenuTriggerStateInput,
+                                        use_menu,
+                                        use_menu_item,
+                                        use_submenu_trigger,
+                                        use_submenu_trigger_state,
+                                    },
                                 },
-                                utils::CapturedElement,
                             };
 
                             // `root` is the state of the menu tree's trigger, `parent_menu` the element
@@ -584,6 +689,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             let state = use_submenu_trigger_state(UseSubmenuTriggerStateInput {
                                 trigger_key: Key::from("share"),
                                 root,
+                                level: data.submenu_level,
                             });
                             let submenu_element = CapturedElement::new();
                             let UseSubmenuTriggerReturn { trigger, submenu, should_close_on_interact_outside } =

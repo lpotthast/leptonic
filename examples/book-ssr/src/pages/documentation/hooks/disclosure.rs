@@ -63,9 +63,17 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 <Section title="Example" id="use-disclosure-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{
-                                IntoAttrs, UseDisclosureInput, UseDisclosureStateInput, use_button, use_disclosure,
-                                use_disclosure_state,
+                            use leptonic::{
+                                IntoAttrs,
+                                hooks::{
+                                    button::use_button,
+                                    disclosure::{
+                                        UseDisclosureInput,
+                                        UseDisclosureStateInput,
+                                        use_disclosure,
+                                        use_disclosure_state,
+                                    },
+                                },
                             };
 
                             let state = use_disclosure_state(UseDisclosureStateInput::default());
@@ -109,7 +117,10 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 <Section title="Example" id="use-disclosure-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r"
-                            use leptonic::{hooks::{UseDisclosureStateInput, use_disclosure_state}, utils::ValueBinding};
+                            use leptonic::{
+                                ValueBinding,
+                                hooks::disclosure::{UseDisclosureStateInput, use_disclosure_state},
+                            };
 
                             // The expanded state lives in the app, e.g. to expand the disclosure from elsewhere.
                             let expanded = RwSignal::new(true);
@@ -131,11 +142,11 @@ pub fn PageUseDisclosure() -> impl IntoView {
 
                 <Section title="Input" id="use-disclosure-group-state-input">
                     <ApiTable kind=ApiKind::Input of="UseDisclosureGroupStateInput">
-                        <ApiRow name="expansion" ty="DisclosureGroupExpansion" default="Single">
+                        <ApiRow name="expansion" ty="Signal<DisclosureGroupExpansion>" default="Single">
                             <Code inline=true>"Single"</Code>": expanding one collapses the others; "<Code inline=true>"Multiple"</Code>": any number."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether all disclosures are disabled."</ApiRow>
-                        <ApiRow name="default_expanded_keys" ty="Vec<Key>" default="empty">
+                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="empty">
                             "The initially expanded disclosures, in order (a single-expansion group keeps the first)."
                         </ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<HashSet<Key>>>" default="None">"The expanded keys as app state."</ApiRow>
@@ -145,7 +156,7 @@ pub fn PageUseDisclosure() -> impl IntoView {
 
                 <Section title="Return" id="use-disclosure-group-state-return">
                     <ApiTable kind=ApiKind::Fields of="DisclosureGroupState">
-                        <ApiRow name="expansion" ty="DisclosureGroupExpansion">"From the input."</ApiRow>
+                        <ApiRow name="expansion" ty="Signal<DisclosureGroupExpansion>">"From the input."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"From the input."</ApiRow>
                         <ApiRow name="expanded_keys" ty="Signal<HashSet<Key>>">
                             "The expanded disclosures. "<Code inline=true>"is_expanded(&key)"</Code>", "<Code inline=true>"toggle_key(&key)"</Code>
@@ -157,10 +168,18 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 <Section title="Example" id="use-disclosure-group-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{Key, UseDisclosureGroupStateInput, use_disclosure_group_state};
+                            use leptonic::{
+                                hooks::{
+                                    collections::Key,
+                                    disclosure::{
+                                        UseDisclosureGroupStateInput,
+                                        use_disclosure_group_state,
+                                    },
+                                },
+                            };
 
                             let group = use_disclosure_group_state(UseDisclosureGroupStateInput {
-                                default_expanded_keys: vec![Key::from("shipping")],
+                                default_expanded_keys: HashSet::from([Key::from("shipping")]),
                                 ..UseDisclosureGroupStateInput::default()
                             });
                             // Expanding "returns" collapses "shipping".

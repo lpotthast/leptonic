@@ -1,4 +1,6 @@
 // Upstream: react-stately/src/grid/useGridState.ts @ 99e6102368
+// Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::prelude::*;
@@ -90,7 +92,7 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
         if let (Some(previous), Some(focused)) = (&previous, focused)
             && !current.contains_key(&focused)
         {
-            let next = untrack(|| refocus(previous, &current, &focused, manager));
+            let next = untrack(|| refocus(previous, &current, &focused, &manager));
             manager.set_focused_key(next, None);
         }
         current
@@ -114,21 +116,25 @@ fn refocus(
     previous: &Collection,
     current: &Collection,
     key: &Key,
-    manager: SelectionManager,
+    manager: &SelectionManager,
 ) -> Option<Key> {
     let node = previous.get(key)?;
-    let row = if matches!(node.kind, NodeKind::Cell) {
-        previous.get(node.parent_key.as_ref()?)?
-    } else {
-        node
+    // A cell or column header: its row (a header row), and the column to focus in the new row.
+    let (row, column) = match node.kind {
+        NodeKind::Cell => (previous.get(node.parent_key.as_ref()?)?, Some(node.index)),
+        NodeKind::Column => (
+            previous.get(node.parent_key.as_ref()?)?,
+            Some(node.col_index.unwrap_or(node.index)),
+        ),
+        _ => (node, None),
     };
     // A row collapsed out of view (tree grids): its closest ancestor row still shown, to the
     // same column.
     let mut ancestor = row.parent_key.as_ref();
     while let Some(parent) = ancestor {
         if current.get(parent).is_some_and(Node::is_item) {
-            if node.kind == NodeKind::Cell
-                && let Some(cell) = current.cells(parent).nth(node.index)
+            if let Some(column) = column
+                && let Some(cell) = current.cells(parent).nth(column)
             {
                 return Some(cell.key.clone());
             }
@@ -141,7 +147,13 @@ fn refocus(
     if rows.is_empty() {
         return None;
     }
-    let row_index = previous_rows.iter().position(|k| **k == row.key)?;
+    // A column header (of a header row, before every body row) moves to the first body row
+    // (react-stately: the header row's index, skipping header rows).
+    let row_index = if row.kind == NodeKind::HeaderRow {
+        0
+    } else {
+        previous_rows.iter().position(|k| **k == row.key)?
+    };
     let removed = previous_rows.len().saturating_sub(rows.len());
     let index = if removed > 1 {
         (row_index + 1).saturating_sub(removed)
@@ -154,11 +166,10 @@ fn refocus(
         .iter()
         .find(|k| usable(k))
         .or_else(|| rows[..index].iter().rev().find(|k| usable(k)))?;
-    if node.kind == NodeKind::Cell {
-        let cells: Vec<Key> = current.cells(new_row).map(|n| n.key.clone()).collect();
-        if let Some(cell) = cells.get(node.index) {
-            return Some(cell.clone());
-        }
+    if let Some(column) = column
+        && let Some(cell) = current.cells(new_row).nth(column)
+    {
+        return Some(cell.key.clone());
     }
     Some(new_row.clone())
 }
@@ -349,6 +360,43 @@ mod tests {
 
             remove(rows, &["alice", "bob"]);
             assert_that!(focused(&state)).is_none();
+        });
+    }
+
+    /// react-stately's `useGridState` moves focus from a removed column header to the same column
+    /// of the nearest body row.
+    #[test]
+    fn a_removed_column_header_moves_focus_to_the_same_column_of_the_first_row() {
+        with_owner(|| {
+            let columns = RwSignal::new(vec!["name", "role", "city"]);
+            let collection: CollectionMemo = Memo::new(move |_| {
+                let columns = columns.get();
+                crate::hooks::table::TableCollection::build(|t| {
+                    for column in &columns {
+                        t.column(*column, *column);
+                    }
+                    for row in ["alice", "bob"] {
+                        t.row(row, row, |r| {
+                            for column in &columns {
+                                r.cell(*column);
+                            }
+                        });
+                    }
+                })
+                .collection()
+                .clone()
+            });
+            let state = use_grid_state(UseGridStateInput {
+                collection,
+                selection: SelectionOptions::default(),
+                focus_mode: GridFocusMode::Cell,
+            });
+            flush_effects();
+            focus(&state, Key::from("role"));
+
+            columns.set(vec!["name", "city"]);
+            flush_effects();
+            assert_that!(focused(&state)).is_equal_to(Some(Key::cell(&Key::from("alice"), 1)));
         });
     }
 

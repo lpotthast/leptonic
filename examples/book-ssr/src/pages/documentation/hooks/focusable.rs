@@ -72,7 +72,10 @@ pub fn PageUseFocusable() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::button::Button, hooks::*};
+                        use leptonic::{
+                            atoms::button::Button,
+                            hooks::focus::{UseFocusableInput, UseFocusableReturn, use_focusable},
+                        };
                         use leptos::{logging::log, prelude::*};
 
                         // A scrollable region has to be focusable, so keyboard users can scroll it.
@@ -136,7 +139,7 @@ pub fn PageUseFocusable() -> impl IntoView {
                 <Section title="focus_safely">
                     <p>
                         <Code inline=true>"FocusHandle::focus"</Code>" calls "
-                        <Code inline=true>"leptonic::utils::focus::focus_safely(&element)"</Code>", which you can also call "
+                        <Code inline=true>"leptonic::focus_safely(&element)"</Code>", which you can also call "
                         "with any element. It focuses without scrolling the page. While a screen reader drives the "
                         "interaction, it waits until running CSS transitions have ended and focuses only if focus hasn\u{2019}t "
                         "moved elsewhere meanwhile. It does nothing for elements that aren\u{2019}t in the document, and during SSR."
@@ -180,7 +183,7 @@ pub fn PageUseFocusable() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::{hooks::FocusableContext, utils::EventHandler};
+                        use leptonic::{EventHandler, hooks::focus::FocusableContext};
 
                         // In the parent:
                         provide_context(FocusableContext {
@@ -200,12 +203,17 @@ pub fn PageUseFocusable() -> impl IntoView {
                         "Describes the element as well (e.g. a tooltip), added to its own description."
                     </ApiRow>
                     <ApiRow name="attrs" ty="Option<FocusableContextAttrs>">
-                        "Further attributes for the element (e.g. pointer handlers), spread as given; "
-                        <Code inline=true>"FocusableContextAttrs::new(|| attrs.into_any_attr())"</Code>"."
+                        "Further attributes for the element (e.g. pointer handlers). The factory receives the child's disabled signal: "
+                        <Code inline=true>"FocusableContextAttrs::new(|is_disabled: Signal<bool>| { /* build attrs */ })"</Code>"."
                     </ApiRow>
                     <ApiRow name="element" ty="Option<CapturedElement>">"Receives the focusable element as well."</ApiRow>
                 </ApiTable>
-                <p>"A disabled element gets none of the context\u{2019}s props."</p>
+                <p>
+                    "Context attributes stay attached when disabled, so they also work after the child is enabled. "
+                    "The context's focus and keyboard handlers are gated by the hook. Custom handlers from "
+                    <Code inline=true>"attrs"</Code>" must read "<Code inline=true>"is_disabled.get_untracked()"</Code>
+                    " before handling each event."
+                </p>
             </Section>
 
             <SeeAlso>

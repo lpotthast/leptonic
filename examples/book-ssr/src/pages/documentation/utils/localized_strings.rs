@@ -61,7 +61,7 @@ pub fn PageLocalizedStrings() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::utils::intl_strings::{TableStrings, use_localized_strings};
+                        use leptonic::{TableStrings, use_localized_strings};
                         use leptos::prelude::*;
 
                         let strings = use_localized_strings::<TableStrings>();
@@ -76,10 +76,7 @@ pub fn PageLocalizedStrings() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::utils::{
-                            i18n::{Locale, locale},
-                            intl_strings::{LocalizedStrings, ToastStrings},
-                        };
+                        use leptonic::{Locale, LocalizedStrings, ToastStrings, locale};
 
                         let strings = ToastStrings::for_locale(Locale::from(locale!("de-DE")));
                         let region_name = strings.notifications(2);

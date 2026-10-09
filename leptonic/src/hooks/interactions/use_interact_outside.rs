@@ -1,18 +1,17 @@
 // Upstream: react-aria/src/interactions/useInteractOutside.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/useInteractOutside.test.js @ 99e6102368
 use leptos::prelude::*;
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{CapturedElement, ElementCaptureAttr},
-};
+use crate::{CapturedElement, ElementCaptureAttr, IntoAttrs};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Both callbacks get a `MouseEvent`: the `pointerdown` (a `PointerEvent`, which is one) and the
-//   `click` (react-aria's handlers are untyped).
+// - Both callbacks get an `InteractOutsideEvent` (the `pointerdown` that starts the interaction
+//   or the `click` that completes it; react-aria's handlers get the untyped DOM event), whose
+//   `target` is the element interacted with (inside open shadow roots too).
 // - The element is captured by the returned props, or given as `element` (react-aria: `ref`).
 // - Top-layer elements are marked `data-leptonic-top-layer` (react-aria:
 //   `data-react-aria-top-layer`).
@@ -23,6 +22,41 @@ use crate::{
 //
 // =============================================================================
 
+/// An interaction outside the element: the `pointerdown` that starts it
+/// ([`on_interact_outside_start`](UseInteractOutsideInput::on_interact_outside_start)) or the
+/// `click` that completes it ([`on_interact_outside`](UseInteractOutsideInput::on_interact_outside)).
+#[derive(Debug, Clone)]
+pub struct InteractOutsideEvent {
+    event: web_sys::MouseEvent,
+}
+
+impl InteractOutsideEvent {
+    /// The element interacted with: the event's target, inside an open shadow root the element
+    /// there (react-aria's `getEventTarget`).
+    pub fn target(&self) -> web_sys::EventTarget {
+        use crate::utils::dom_ext::EventAccessors;
+
+        crate::utils::shadow_dom::get_event_target(&self.event)
+            .unwrap_or_else(|| self.event.expect_target())
+    }
+
+    /// Keeps the event from reaching the element interacted with (its default action still
+    /// happens).
+    pub fn stop_propagation(&self) {
+        self.event.stop_propagation();
+    }
+
+    /// Prevents the event's default action.
+    pub fn prevent_default(&self) {
+        self.event.prevent_default();
+    }
+
+    /// The DOM event (a `PointerEvent` for the start, a `MouseEvent` for the click).
+    pub fn event(&self) -> &web_sys::MouseEvent {
+        &self.event
+    }
+}
+
 /// Input parameters for the `use_interact_outside` hook.
 #[derive(Debug, Clone, Default)]
 pub struct UseInteractOutsideInput {
@@ -30,11 +64,10 @@ pub struct UseInteractOutsideInput {
     pub is_disabled: Signal<bool>,
 
     /// Handler called when an interaction starts outside the element (with the `pointerdown`).
-    pub on_interact_outside_start: Option<Callback<web_sys::MouseEvent>>,
+    pub on_interact_outside_start: Option<Callback<InteractOutsideEvent>>,
 
-    /// Handler called when an interaction completes outside the element.
-    /// Receives a `MouseEvent` from the click listener (not `PointerEvent`).
-    pub on_interact_outside: Option<Callback<web_sys::MouseEvent>>,
+    /// Handler called when an interaction completes outside the element (with the `click`).
+    pub on_interact_outside: Option<Callback<InteractOutsideEvent>>,
     /// The element interactions are outside of (e.g. a popover group). Default: the element the
     /// returned props are spread on (the props then capture nothing).
     pub element: Option<CapturedElement>,
@@ -165,7 +198,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                         && is_valid_event(&e, element.get_untracked().as_ref())
                     {
                         if let Some(on_interact_outside_start) = on_interact_outside_start {
-                            on_interact_outside_start.run(e.into());
+                            on_interact_outside_start.run(InteractOutsideEvent { event: e.into() });
                         }
                         is_pointer_down.set_value(true);
                     }
@@ -182,7 +215,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                         && is_valid_event(&e, element.get_untracked().as_ref())
                         && let Some(on_interact_outside) = on_interact_outside
                     {
-                        on_interact_outside.run(e);
+                        on_interact_outside.run(InteractOutsideEvent { event: e });
                     }
                     is_pointer_down.set_value(false);
                 },

@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::AnchorLink;
+use leptonic::atoms::link::AnchorLink;
 use leptos::prelude::*;
 
 #[component]

@@ -29,11 +29,11 @@ pub fn PageUseInteractOutside() -> impl IntoView {
                         <Code inline=true>"None"</Code>", it is the element the returned props are spread on; with an element, "
                         "the props capture nothing."
                     </ApiRow>
-                    <ApiRow name="on_interact_outside_start" ty="Option<Callback<web_sys::MouseEvent>>" default="None">
+                    <ApiRow name="on_interact_outside_start" ty="Option<Callback<InteractOutsideEvent>>" default="None">
                         "Called on "<Code inline=true>"pointerdown"</Code>" outside the element, with the "
                         <Code inline=true>"PointerEvent"</Code>" (which is a "<Code inline=true>"MouseEvent"</Code>")."
                     </ApiRow>
-                    <ApiRow name="on_interact_outside" ty="Option<Callback<web_sys::MouseEvent>>" default="None">
+                    <ApiRow name="on_interact_outside" ty="Option<Callback<InteractOutsideEvent>>" default="None">
                         "Called on "<Code inline=true>"click"</Code>" outside the element, if the interaction also started outside."
                     </ApiRow>
                 </ApiTable>
@@ -51,7 +51,7 @@ pub fn PageUseInteractOutside() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::*;
+                        use leptonic::hooks::interactions::{UseInteractOutsideInput, UseInteractOutsideReturn, use_interact_outside};
                         use leptos::prelude::*;
 
                         let is_open = RwSignal::new(true);

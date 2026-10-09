@@ -25,6 +25,11 @@
 //! Tests that create Effects under a plain `Owner::new().with(..)` keep working: their Effects
 //! never run (with no executor installed yet, `any_spawner`'s `tracing` feature drops the task
 //! instead of panicking; with one installed, the task waits in that thread's queue).
+//!
+//! Leptos' warnings about signals read outside a tracking context (printed to stderr: shown for
+//! failed tests, or with `--nocapture`) are suppressed only for the test body's own code, whose
+//! reads of state are expected: Effects and the tasks they spawn run in [`flush_effects`], outside
+//! that zone, so their untracked reads warn as they would in the browser.
 
 use std::{cell::RefCell, sync::Once};
 
@@ -34,11 +39,14 @@ use futures::{
     task::LocalSpawnExt,
 };
 use leptos::prelude::Owner;
-use reactive_graph::diagnostics::SpecialNonReactiveZone;
+use reactive_graph::diagnostics::{SpecialNonReactiveZone, SpecialNonReactiveZoneGuard};
 
 thread_local! {
     static POOL: RefCell<LocalPool> = RefCell::new(LocalPool::new());
     static SPAWNER: LocalSpawner = POOL.with(|pool| pool.borrow().spawner());
+    /// While a [`with_owner`] body runs: the zone in which its reads of signals outside a tracking
+    /// context don't warn. [`flush_effects`] lifts it while Effects and tasks run.
+    static TEST_BODY_ZONE: RefCell<Option<SpecialNonReactiveZoneGuard>> = const { RefCell::new(None) };
 }
 
 /// Runs every task on the spawning thread's [`POOL`], also the `Send` ones (deterministic tests:
@@ -74,14 +82,17 @@ fn init_executor() {
 /// Runs `f` in a fresh reactive [`Owner`] (as a component body would run), with Effects enabled.
 ///
 /// Effects created in `f` run when `f` calls [`flush_effects`]. Reading signals outside a
-/// tracking context is expected in a test body, so `f` runs without Leptos' warnings about it.
-/// The owner is disposed when `f` returns, which ends its Effects.
+/// tracking context is expected in a test body, so `f`'s own code runs without Leptos' warnings
+/// about it; the Effects and tasks [`flush_effects`] runs get them. The owner is disposed when `f`
+/// returns, which ends its Effects.
 pub(crate) fn with_owner<T>(f: impl FnOnce() -> T) -> T {
     init_executor();
     let owner = Owner::new();
     let result = owner.with(|| {
-        let _zone = SpecialNonReactiveZone::enter();
-        f()
+        TEST_BODY_ZONE.set(Some(SpecialNonReactiveZone::enter()));
+        let result = f();
+        TEST_BODY_ZONE.take();
+        result
     });
     drop(owner);
     // Let the disposed Effects' tasks finish, so the next test on this thread starts clean.
@@ -96,11 +107,16 @@ pub(crate) fn with_owner<T>(f: impl FnOnce() -> T) -> T {
 ///
 /// When called from inside an Effect.
 pub(crate) fn flush_effects() {
+    // Effects and tasks run outside the test body's zone: their untracked reads warn.
+    let in_test_body = TEST_BODY_ZONE.take().is_some();
     POOL.with(|pool| {
         pool.try_borrow_mut()
             .expect("flush_effects() is not called from inside an Effect")
             .run_until_stalled();
     });
+    if in_test_body {
+        TEST_BODY_ZONE.set(Some(SpecialNonReactiveZone::enter()));
+    }
 }
 
 mod tests {

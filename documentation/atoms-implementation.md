@@ -87,6 +87,11 @@ Atoms expose react-aria-components' props, adapted to the conventions (`document
 - `node_ref` for atoms whose element callers need (react-aria-components forwards `ref` everywhere; done for
   `Input`/`TextArea`).
 - Event callbacks as `Option<Callback<Event>>`; settings with no meaning for an atom keep the hook's defaults.
+- **Generic atoms:** let a typed prop carry the type parameter, so callers rarely write it. Leptos components can't
+  default type parameters (a group without any typed prop is written `<RadioGroup<Key>>`, and leptosfmt mangles such
+  tags), and `#[prop(into)] Signal<T>` can't infer `T` (Leptos converts any value into `Signal<Option<_>>`): number
+  props are `NumberSignal<T>`/`OptionalNumberSignal<T>`, which convert from `NumberValue`s only
+  (`<NumberField value=Some(200)>` infers `i32`).
 
 ## Default Classes, Data Attributes and the Atom Theme
 
@@ -97,7 +102,7 @@ replaces the default). Atoms without an element of their own (providers, trigger
 
 State is exposed as data attributes, as react-aria-components' render props are: `data-hovered`, `data-pressed`,
 `data-focus-visible`, `data-selected`, `data-disabled`, ... Render boolean ones with `utils::data_attributes::flag`
-(present-and-empty or absent) and list them in the doc comment ("Data attributes: ..."). Inline styles only where
+(`"true"` or absent, as react-aria-components) and list them in the doc comment ("Data attributes: ..."). Inline styles only where
 the behavior needs them (thumb positions, visually hidden inputs).
 
 The optional atom theme (`leptonic-theme/scss/atoms/`, `documentation/atom-theme.md`) styles exactly these classes
@@ -113,9 +118,18 @@ When an atom comprises multiple cooperating elements (e.g., Slider with track, t
    usage error: warn with `dev_warn!` (debug builds) and render nothing, rather than panicking
    (`expect_slider()` in `atoms/slider.rs`).
 
+For a missing-parent guard, keep the component signature `-> impl IntoView` and return `None` or `Some(view)`
+from its body (`atoms/select.rs`). This avoids adding `AnyView` erasure. An explicit `-> Option<impl IntoView>`
+signature conflicts with the component macro's own `erase_components` transformation in debug builds.
+
 Provide contexts with `<Provider value=..>` around the children (or `scoped_view`), never with
 `provide_context` in the component body: a component has no owner of its own, so a context provided there
 reaches the atom's later siblings too.
+
+An overlay hides contexts of its surroundings from its content (react-aria-components' `clearContexts`): a combo
+box's popover passes `ClearContexts(&[clear_context::<LabelContext>, ..])`, so a `Label` or `Input` inside it doesn't
+render as the combo box's. Parts that may sit in such content read their context with `use_clearable_context`
+(`utils/scoped_context.rs`).
 
 ## Shared Atom Infrastructure
 
@@ -124,13 +138,15 @@ reaches the atom's later siblings too.
 | `Out<T>`                                         | `lib.rs`                                             | The writable half of state props (`set_<x>`): an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`; `Out::set` writes.                                                                                                                                                                                                                                                                                                                                                                     |
 | `ValueBinding::from_state_props`                 | `utils/value_binding.rs`                             | Turns `<x>` + `set_<x>` + `on_<x>_change` into the hook's binding and change callback.                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `with_default_class`, `flag`                     | `utils/default_class.rs`, `utils/data_attributes.rs` | The default class; boolean data attributes.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `LabelContext`, `LabelPresence`                  | `atoms/field.rs`                                     | The `Label` part: the root provides `LabelContext` (`label`/`span`, `with_on_click`). Whether the `Label` is rendered decides the element's `aria-labelledby`, so don't guess it from the ARIA props: create a `LabelPresence::new(aria_label, aria_labelledby.as_ref())`, pass its `has_label` to the hook and attach it with `LabelContext::with_presence`. Until mounted it guesses (so server HTML references a likely label), then follows the rendered `Label` (react-aria-components' `useSlot`). |
+| `LabelContext`, `LabelPresence`                  | `atoms/field.rs`                                     | The `Label` part: the root provides `LabelContext` (`label`/`span`, `with_on_click`, `with_default_text`). Whether the `Label` is rendered decides the element's `aria-labelledby`, so don't guess it from the ARIA props: create a `LabelPresence::new(aria_label, aria_labelledby.as_ref())`, pass its `has_label` to the hook and attach it with `LabelContext::with_presence`. Until mounted it guesses (so server HTML references a likely label), then follows the rendered `Label` (react-aria-components' `useSlot`). |
 | `FieldContext`                                   | `atoms/field.rs`                                     | One context for a field's `Description` and `FieldError` parts (C14): the hook's `description_props`/`error_message_props` (`SlotProps`) and the validation state. Every field atom provides it.                                                                                                                                                                                                                                                                                                         |
-| `Slot`, `SlotProps`, `use_slot`, `join_slot_ids` | `utils/slot_id.rs`                                   | Optional elements referenced by id (description, error message): `use_slot` captures the element and its `referenced_id` is `Some` only while it is rendered, so ARIA references never dangle (react-aria's `useSlotId`).                                                                                                                                                                                                                                                                                |
+| `Slot`, `SlotProps`, `use_slot`                   | `utils/slot_id.rs`                                   | Optional elements referenced by id (description, error message): `use_slot` captures the element and its `referenced_id` is `Some` only while it is rendered, so ARIA references never dangle (react-aria's `useSlotId`).                                                                                                                                                                                                                                                                                |
+| `IdRefs`, `labels`                               | `utils/id_refs.rs`, `utils/labels.rs`                | The one way to join id reference lists (`aria-describedby`, `aria-labelledby`, ...): `IdRefs::derive([..])` joins signals (absent ones skipped, each id once); `labels` is react-aria's `useLabels` (an element named by an `aria-label` and other elements lists itself first). |
 | `use_description`                                | `utils/use_description.rs`                           | A shared, visually hidden description element for `aria-describedby` (react-aria's `useDescription`), client-only.                                                                                                                                                                                                                                                                                                                                                                                       |
 | `scoped_view`                                    | `utils/scoped_context.rs`                            | Builds a view in a child owner whose contexts reach only its descendants, and forwards attributes set on the component to the view's root (where `<Provider>` would wrap the children instead).                                                                                                                                                                                                                                                                                                          |
+| `ClearContexts`, `clear_context`, `use_clearable_context` | `utils/scoped_context.rs`                   | Hide a context from part of the tree (an overlay's content); `use_clearable_context` finds no `T` there unless a descendant provides one again (react-aria-components' `clearContexts`). See "Context Pattern".                                                                                                                                                                                                                                                       |
 | Virtual focus                                    | `utils/virtual_focus.rs`                             | DOM focus stays on one element (a combo box input) while another (an option) is focused through `aria-activedescendant`; synthetic focus/blur events (`move_virtual_focus`). The collection hooks take `should_use_virtual_focus`.                                                                                                                                                                                                                                                                       |
-| `OwnerAlive`                                     | `utils/owner_alive.rs`                               | A flag outside the reactive arena that turns `false` when the owner is cleaned up: check it in deferred callbacks (timeouts, animation frames, global listeners) before touching the atom's signals (see also "Blur After Disposal" in `hooks-implementation.md`).                                                                                                                                                                                                                                       |
+| `OwnerAlive`                                     | `utils/owner_alive.rs`                               | A flag outside the reactive arena that turns `false` when the owner is cleaned up: check it in deferred callbacks (timeouts, animation frames, global listeners) before touching the atom's signals (see also "Blur After Disposal" in `leptos-and-dom.md`).                                                                                                                                                                                                                                       |
 
 ## Reference Implementations
 

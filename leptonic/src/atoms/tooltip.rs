@@ -1,23 +1,30 @@
 // Upstream: react-aria-components/src/Tooltip.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Tooltip.test.js @ 99e6102368
 use std::time::Duration;
 
 use leptos::{context::Provider, portal::Portal, prelude::*};
+use leptos_classes::Classes;
 
 use super::{overlay_arrow::OverlayArrowContext, press::ClearTriggerContexts};
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
-        FocusableContext, FocusableContextAttrs, IntoAttrs, Placement, PlacementAxis,
-        TooltipTiming, TooltipTriggerMode, TooltipTriggerState, UseEnterAnimationInput,
-        UseExitAnimationInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseTooltipInput,
-        UseTooltipTriggerInput, UseTooltipTriggerReturn, UseTooltipTriggerStateInput,
-        use_enter_animation, use_exit_animation, use_overlay_position, use_tooltip,
-        use_tooltip_trigger, use_tooltip_trigger_state,
+        animation::{
+            UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
+            use_enter_animation, use_exit_animation,
+        },
+        focus::{FocusableContext, FocusableContextAttrs},
+        overlay::{
+            OverlayPositionOptions, Placement, PlacementAxis, UseOverlayPositionInput,
+            UseOverlayPositionReturn, use_overlay_position,
+        },
+        tooltip::{
+            TooltipTiming, TooltipTriggerMode, TooltipTriggerState, UseTooltipInput,
+            UseTooltipTriggerInput, UseTooltipTriggerReturn, UseTooltipTriggerStateInput,
+            use_tooltip, use_tooltip_trigger, use_tooltip_trigger_state,
+        },
     },
-    utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
-    },
+    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -107,13 +114,28 @@ pub fn TooltipTrigger(
         on_keydown: Some(trigger_props.on_keydown),
         on_keyup: None,
         aria_describedby: Some(trigger_props.aria_describedby),
-        attrs: Some(FocusableContextAttrs::new(move || {
+        attrs: Some(FocusableContextAttrs::new(move |is_disabled| {
             use leptos::{attr::any_attribute::IntoAnyAttribute, ev};
             let (enter, leave, down) = pointer_handlers.get_value();
             (
-                enter.into_on(ev::pointerenter),
-                leave.into_on(ev::pointerleave),
-                down.into_on(ev::pointerdown),
+                crate::EventHandler::new(move |event| {
+                    if !is_disabled.get_untracked() {
+                        enter.call(event);
+                    }
+                })
+                .into_on(ev::pointerenter),
+                crate::EventHandler::new(move |event| {
+                    if !is_disabled.get_untracked() {
+                        leave.call(event);
+                    }
+                })
+                .into_on(ev::pointerleave),
+                crate::EventHandler::new(move |event| {
+                    if !is_disabled.get_untracked() {
+                        down.call(event);
+                    }
+                })
+                .into_on(ev::pointerdown),
             )
                 .into_any_attr()
         })),
@@ -183,22 +205,21 @@ pub fn Tooltip(
         trigger_anchor_point,
         ..
     } = use_overlay_position(UseOverlayPositionInput {
-        placement,
-        offset,
-        cross_offset,
-        container_padding,
-        should_flip,
-        arrow_boundary_offset,
+        position: OverlayPositionOptions {
+            placement,
+            offset,
+            cross_offset,
+            container_padding,
+            should_flip,
+            arrow_boundary_offset,
+            ..OverlayPositionOptions::default()
+        },
         // As react-aria: scrolling closes the tooltip right away.
         on_close: Some(Callback::new(move |()| {
             state.close(TooltipTiming::Immediate);
         })),
         target: trigger,
         is_open,
-        boundary: None,
-        max_height: Signal::stored(None),
-        arrow_size: Signal::stored(None),
-        should_update_position: Signal::stored(true),
         target_rect: Signal::stored(None),
         scroll: None,
     });
@@ -240,34 +261,40 @@ pub fn Tooltip(
             {
                 // Entering (per opening) once the placement is known (react-aria-components).
                 let entering = CapturedElement::new();
-                let enter_animation = use_enter_animation(UseEnterAnimationInput {
-                    is_ready: Signal::derive(move || resolved_placement.get().is_some()),
-                    element: entering,
-                    on_enter: None,
-                })
-                .is_entering;
+                let UseEnterAnimationReturn { is_entering: enter_animation, styles: hiding } =
+                    use_enter_animation(UseEnterAnimationInput {
+                        is_ready: Signal::derive(move || resolved_placement.get().is_some()),
+                        element: entering,
+                        on_enter: None,
+                    });
+                // Hidden until placed; the only writer of the tooltip's `style` (lessons.md).
+                let styles = StoredValue::new(hiding.merge(styles.get_value()));
                 // Not when opening instantly (replacing another tooltip during the warm-up).
                 let is_entering =
                     Signal::derive(move || !skip_animation.get() && enter_animation.get());
                 view! {
-            <Portal>
-                <div
-                    {..position_attrs.get_value()}
-                    {..tooltip_attrs.get_value()}
-                    {..element.attr().chain(entering.attr())}
-                    data-entering=flag(is_entering)
-                    data-exiting=flag(is_exiting)
-                    id=tooltip_id.get_value()
-                    class=classes.get_value()
-                    style=styles.get_value()
-                    data-placement=move || resolved_placement.get().map(PlacementAxis::as_str)
-                >
-                    // The tooltip's own content is no trigger.
-                    <ClearTriggerContexts>
-                        <Provider value=arrow_context.get_value()>{(children.get_value())()}</Provider>
-                    </ClearTriggerContexts>
-                </div>
-            </Portal>
+                    <Portal>
+                        <div
+                            {..position_attrs.get_value()}
+                            {..tooltip_attrs.get_value()}
+                            {..element.attr().chain(entering.attr())}
+                            data-entering=flag(is_entering)
+                            data-exiting=flag(is_exiting)
+                            id=tooltip_id.get_value()
+                            class=classes.get_value()
+                            style=styles.get_value()
+                            data-placement=move || {
+                                resolved_placement.get().map(PlacementAxis::as_str)
+                            }
+                        >
+                            // The tooltip's own content is no trigger.
+                            <ClearTriggerContexts>
+                                <Provider value=arrow_context.get_value()>
+                                    {(children.get_value())()}
+                                </Provider>
+                            </ClearTriggerContexts>
+                        </div>
+                    </Portal>
                 }
             }
         </Show>

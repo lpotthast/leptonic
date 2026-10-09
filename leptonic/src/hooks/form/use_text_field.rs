@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/textfield/useTextField.ts @ 99e6102368
+// Upstream: react-aria/test/textfield/useTextField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
     tachys::html::property::{Property, prop},
 };
@@ -21,10 +22,10 @@ use super::{
     use_text_field_state::TextFieldState,
 };
 use crate::{
+    CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, SlotProps,
     hooks::{
-        IntoAttrs,
         focus::{
-            use_focus_ring::{UseFocusRingInput, use_focus_ring},
+            use_focus_ring::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
             use_focusable::{
                 UseFocusableAttrs, UseFocusableInput, UseFocusableProps, use_focusable,
             },
@@ -32,8 +33,8 @@ use crate::{
         interactions::use_keyboard::KeyboardEventWrapper,
     },
     utils::{
-        CapturedElement, EventAccessors, EventHandler, SlotProps,
         aria::{AriaAutocomplete, AriaHasPopup, AriaInvalid, AriaRequired},
+        dom_ext::EventAccessors,
         keyboard_shortcut::KeyboardShortcuts,
     },
 };
@@ -194,7 +195,8 @@ pub struct UseTextFieldInput {
     pub auto_capitalize: Option<AutoCapitalize>,
     pub auto_correct: Option<bool>,
     pub spell_check: Option<bool>,
-    pub input_mode: Option<InputMode>,
+    /// The virtual keyboard (`inputmode`); a signal, as a number field's depends on the platform.
+    pub input_mode: Signal<Option<InputMode>>,
     pub enter_key_hint: Option<EnterKeyHint>,
     pub auto_focus: bool,
     pub exclude_from_tab_order: bool,
@@ -257,7 +259,7 @@ pub struct UseTextFieldInputProps {
     pub autocapitalize: Option<&'static str>,
     pub autocorrect: Option<&'static str>,
     pub spellcheck: Option<&'static str>,
-    pub inputmode: Option<&'static str>,
+    pub inputmode: Signal<Option<&'static str>>,
     pub enterkeyhint: Option<&'static str>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
@@ -293,7 +295,7 @@ pub type UseTextFieldInputAttrs = (
         Attr<attr::Autocapitalize, Option<&'static str>>,
         leptos::attr::custom::CustomAttr<&'static str, Option<&'static str>>,
         Attr<attr::Spellcheck, Option<&'static str>>,
-        Attr<attr::Inputmode, Option<&'static str>>,
+        Attr<attr::Inputmode, Signal<Option<&'static str>>>,
         Attr<attr::Enterkeyhint, Option<&'static str>>,
     ),
     (
@@ -309,7 +311,7 @@ pub type UseTextFieldInputAttrs = (
         Attr<attr::AriaControls, Signal<Option<String>>>,
     ),
     UseFocusableAttrs,
-    On<ev::input, SharedEventCallback<Event>>,
+    OnEvent<ev::input>,
 );
 
 impl IntoAttrs for UseTextFieldInputProps {
@@ -435,9 +437,8 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
 
     // Focus ring state (keyboard focus), as react-aria-components adds it.
     let focus_ring = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Element,
         is_disabled,
-        within: false,
-        auto_focus,
         is_text_input: true,
         on_focus: None,
         on_blur: None,
@@ -453,7 +454,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
             value: state.value,
             validate,
             validation_behavior,
-            name: name.clone(),
+            names: name.clone().into_iter().collect(),
         })
     });
     let initial_value = state.value.get_untracked();
@@ -533,19 +534,15 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
             autocapitalize: auto_capitalize.map(AutoCapitalize::as_str),
             autocorrect: auto_correct.map(on_off),
             spellcheck: spell_check.map(|on| if on { "true" } else { "false" }),
-            inputmode: input_mode.map(InputMode::as_str),
+            inputmode: Signal::derive(move || input_mode.get().map(InputMode::as_str)),
             enterkeyhint: enter_key_hint.map(EnterKeyHint::as_str),
             aria_label: field_props.aria_label,
             aria_labelledby: field_props.aria_labelledby,
-            aria_describedby: {
-                // The field's own description, then a `FocusableContext`'s (e.g. a tooltip).
-                let own = field_props.aria_describedby;
-                let context = focusable_props.context_aria_describedby;
-                Signal::derive(move || {
-                    let ids: Vec<String> = own.get().into_iter().chain(context.get()).collect();
-                    (!ids.is_empty()).then(|| ids.join(" "))
-                })
-            },
+            // The field's own description, then a `FocusableContext`'s (e.g. a tooltip).
+            aria_describedby: IdRefs::derive([
+                field_props.aria_describedby,
+                focusable_props.context_aria_describedby,
+            ]),
             aria_required: Signal::derive(move || {
                 (is_required.get() && validation_behavior == ValidationBehavior::Aria)
                     .then_some(AriaRequired::True)

@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/utils/number.ts @ 99e6102368
+// Upstream: react-stately/test/utils/number.test.ts @ 99e6102368
 //! Numeric value types of number fields: all primitive integers and floats.
 
 use std::fmt::{Debug, Display};
@@ -150,7 +151,9 @@ macro_rules! impl_integer {
                     (Some(min), _) if snapped < min => min,
                     // The largest step from `min` not above `max`.
                     (Some(min), Some(max)) if snapped > max => max - difference_mod(max, min),
-                    (None, Some(max)) if snapped > max => max - max.rem_euclid(step),
+                    (None, Some(max)) if snapped > max => {
+                        max.checked_sub(max.rem_euclid(step)).unwrap_or(max)
+                    }
                     _ => snapped,
                 }
             }
@@ -423,6 +426,8 @@ mod tests {
         assert_that!(u128::MAX.snap_to_step(None, None, 1)).is_equal_to(u128::MAX);
         assert_that!(i64::MIN.snap_to_step(None, None, 3)).is_greater_or_equal_to(i64::MIN);
         assert_that!(5_u64.snap_to_step(Some(1), Some(u64::MAX), 2)).is_equal_to(5);
+        // The step below the maximum (-130) is beyond the type: the maximum itself.
+        assert_that!((-100_i8).snap_to_step(None, Some(-127), 5)).is_equal_to(-127);
     }
 
     #[test]

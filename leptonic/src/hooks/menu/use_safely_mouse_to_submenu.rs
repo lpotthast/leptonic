@@ -1,7 +1,8 @@
 // Upstream: react-aria/src/menu/useSafelyMouseToSubmenu.ts @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/SubMenuTrigger.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::CapturedElement;
+use crate::CapturedElement;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -170,10 +171,7 @@ mod client {
             };
             let menu_el = (*menu_el).clone();
             let on_pointer_move = move |e: PointerEvent| {
-                if matches!(
-                    PointerType::from(e.pointer_type()),
-                    PointerType::Touch | PointerType::Pen
-                ) {
+                if matches!(PointerType::of(&e), PointerType::Touch | PointerType::Pen) {
                     return;
                 }
                 let Some(submenu_rect) = submenu

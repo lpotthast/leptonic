@@ -6,7 +6,7 @@ use leptonic::{
         listbox::{ListBox, ListBoxItem},
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
-    hooks::collections::{Key, use_collection, use_list_collection},
+    hooks::collections::{Key, UseListCollectionInput, use_collection, use_list_collection},
 };
 use leptos::prelude::*;
 
@@ -15,12 +15,13 @@ const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Durian", "Elderberry"];
 /// A single select with a default value. "Cherry" is disabled.
 #[component]
 pub fn PageAtomSelect() -> impl IntoView {
-    let fruits = use_list_collection(
-        Signal::stored(FRUITS.to_vec()),
-        |fruit| Key::from(*fruit),
-        |fruit| (*fruit).to_owned(),
-    );
+    let fruits = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(FRUITS.to_vec()),
+        key: |fruit| Key::from(*fruit),
+        text_value: |fruit| (*fruit).to_owned(),
+    });
     let changes = RwSignal::new(Vec::<String>::new());
+    let show_orphans = RwSignal::new(false);
     // As crudkit's page size select: options from a memo, a derived value with its setter, `<For>` items.
     let page_size = RwSignal::new(10_u32);
     let bound_changes = RwSignal::new(0_u32);
@@ -101,6 +102,17 @@ pub fn PageAtomSelect() -> impl IntoView {
             <div>"Bound changes: " <span id="test-sel-bound-changes">{bound_changes}</span></div>
             <button id="test-sel-bound-reset" on:click=move |_| page_size.set(10)>"Reset page size"</button>
             <div>"Changes: " <span id="test-sel-changes">{move || changes.get().join(" | ")}</span></div>
+            <button id="test-sel-mount-orphans" on:click=move |_| show_orphans.set(true)>
+                "Mount select parts without a parent"
+            </button>
+            <div id="test-sel-orphans" data-mounted=move || show_orphans.get().then_some("true")>
+                <Show when=move || show_orphans.get()>
+                    <SelectTrigger>"Misplaced trigger"</SelectTrigger>
+                    <SelectValue placeholder="Misplaced value" />
+                    <SelectPopover><span>"Misplaced popover"</span></SelectPopover>
+                    <HiddenSelect />
+                </Show>
+            </div>
         </div>
     }
 }

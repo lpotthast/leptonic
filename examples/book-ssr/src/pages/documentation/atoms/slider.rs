@@ -256,7 +256,7 @@ pub fn PageAtomSlider() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="SliderThumbTooltip">
                         <ApiRow name="popover" ty="SliderPopover" default="Never">
                             "When it is visible: "<Code inline=true>"SliderPopover::Never"</Code>", "
-                            <Code inline=true>"When { hovered, dragged }"</Code>" (while the thumb is hovered, dragged or both) or "
+                            <Code inline=true>"OnHover"</Code>", "<Code inline=true>"OnDrag"</Code>", "<Code inline=true>"OnHoverOrDrag"</Code>" (while the thumb is hovered, dragged or either) or "
                             <Code inline=true>"Always"</Code>"."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the tooltip."</ApiRow>
@@ -277,8 +277,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                 <p>"Computes the marks of the slider and renders its children with them, in a "<Code inline=true>"<div>"</Code>" hidden from assistive technology."</p>
                 <Section title="Props" id="slider-marks-props">
                     <ApiTable kind=ApiKind::Props of="atoms::slider::SliderMarks">
-                        <ApiRow name="marks" ty="SliderMarks">
-                            "Which marks: "<Code inline=true>"SliderMarks::None"</Code>", "<Code inline=true>"Automatic { create_names }"</Code>
+                        <ApiRow name="marks" ty="SliderMarkPlacement">
+                            "Which marks: "<Code inline=true>"SliderMarkPlacement::None"</Code>", "<Code inline=true>"Automatic { create_names }"</Code>
                             " (one per step, at most about 20, optionally named by the formatted value) or "
                             <Code inline=true>"Custom { marks }"</Code>" (see "<Link href=hook("use-slider-marks")>"use_slider_marks"</Link>"). Required."
                         </ApiRow>

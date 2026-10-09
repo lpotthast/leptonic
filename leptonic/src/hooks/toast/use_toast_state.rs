@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/toast/useToastState.ts @ 99e6102368
+// Upstream: react-stately/test/toast/useToastState.test.js @ 99e6102368
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -14,7 +15,8 @@ use leptos::prelude::*;
 // - `ToastQueue` is a `Copy` handle of signals, created where it lives (e.g. at the app's
 //   root) and used from anywhere (react-aria: a class instance with subscriptions); its
 //   `visible_toasts` is a signal (react-aria: `useSyncExternalStore`).
-// - Timeouts are `Duration`s; keys count up (react-aria: random strings).
+// - Timeouts are `Duration`s; keys are a `Copy` `ToastKey` counting up (react-aria: random
+//   strings).
 //
 // ## OMITTED FEATURES
 // - `wrapUpdate` (react-aria-components wraps updates in view transitions).
@@ -50,12 +52,14 @@ impl std::fmt::Debug for ToastTimer {
     }
 }
 
+/// The time for pausing a timer. The JS clock exists only in WebAssembly; natively (server-side
+/// rendering, native tests) no timer runs (`resume` needs the browser's `setTimeout`): a constant.
 fn now() -> f64 {
-    #[cfg(not(feature = "ssr"))]
+    #[cfg(target_arch = "wasm32")]
     {
         js_sys::Date::now()
     }
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     {
         0.0
     }
@@ -122,10 +126,14 @@ impl ToastTimer {
     }
 }
 
+/// Identifies a toast in its [`ToastQueue`] (returned by [`ToastQueue::add`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ToastKey(u64);
+
 /// A toast in the queue.
 #[derive(Debug, Clone)]
 pub struct QueuedToast<T> {
-    pub key: String,
+    pub key: ToastKey,
     pub content: T,
     pub timeout: Option<Duration>,
     pub on_close: Option<Callback<()>>,
@@ -178,20 +186,19 @@ impl<T: Clone + Send + Sync + 'static> ToastQueue<T> {
     }
 
     /// Adds a toast (shown first); returns its key.
-    pub fn add(&self, content: T, options: ToastOptions) -> String {
+    pub fn add(&self, content: T, options: ToastOptions) -> ToastKey {
         let number = self.next_key.get_value() + 1;
         self.next_key.set_value(number);
-        let key = format!("toast-{number}");
+        let key = ToastKey(number);
         let queue = *self;
-        let closing = key.clone();
         let timer = options
             .timeout
-            .map(|timeout| ToastTimer::new(move || queue.close(&closing), timeout));
+            .map(|timeout| ToastTimer::new(move || queue.close(key), timeout));
         self.toasts.update(|toasts| {
             toasts.insert(
                 0,
                 QueuedToast {
-                    key: key.clone(),
+                    key,
                     content,
                     timeout: options.timeout,
                     on_close: options.on_close,
@@ -203,7 +210,7 @@ impl<T: Clone + Send + Sync + 'static> ToastQueue<T> {
     }
 
     /// Closes a toast.
-    pub fn close(&self, key: &str) {
+    pub fn close(&self, key: ToastKey) {
         let Some(toast) = self
             .toasts
             .try_with_untracked(|toasts| toasts.iter().find(|toast| toast.key == key).cloned())
@@ -241,24 +248,186 @@ impl<T: Clone + Send + Sync + 'static> ToastQueue<T> {
     }
 }
 
-/// A toast queue for one place (react-stately's `useToastState`): showing up to
-/// `max_visible_toasts` (default 1).
-pub fn use_toast_state<T: Clone + Send + Sync + 'static>(
-    max_visible_toasts: Option<usize>,
-) -> ToastQueue<T> {
-    ToastQueue::new(Some(max_visible_toasts.unwrap_or(1)))
+/// Input of [`use_toast_state`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseToastStateInput {
+    /// How many toasts show at once (react-stately's default: 1).
+    pub max_visible_toasts: usize,
 }
 
+impl Default for UseToastStateInput {
+    fn default() -> Self {
+        Self {
+            max_visible_toasts: 1,
+        }
+    }
+}
+
+/// A toast queue for one place (react-stately's `useToastState`): showing up to
+/// `max_visible_toasts`.
+pub fn use_toast_state<T: Clone + Send + Sync + 'static>(
+    input: UseToastStateInput,
+) -> ToastQueue<T> {
+    ToastQueue::new(Some(input.max_visible_toasts))
+}
+
+// Timeouts that run out ("should be able to display three toasts and remove the middle toast via
+// timeout") need the browser's `setTimeout`: the browser tests cover them (`test_toast.rs`).
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::with_owner;
 
+    fn contents(queue: ToastQueue<&'static str>) -> Vec<&'static str> {
+        queue
+            .visible_toasts
+            .get_untracked()
+            .into_iter()
+            .map(|toast| toast.content)
+            .collect()
+    }
+
+    fn key_of(queue: ToastQueue<&'static str>, index: usize) -> ToastKey {
+        queue.visible_toasts.get_untracked()[index].key
+    }
+
+    /// "should add a new toast via add": a toast without a timeout has no timer.
+    #[test]
+    fn adds_a_toast() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            assert_that!(contents(queue)).is_empty();
+            let key = queue.add("Toast Message", ToastOptions::default());
+            let toasts = queue.visible_toasts.get_untracked();
+            assert_that!(toasts.len()).is_equal_to(1);
+            assert_that!(toasts[0].content).is_equal_to("Toast Message");
+            assert_that!(toasts[0].timeout).is_none();
+            assert_that!(toasts[0].timer.is_none()).is_true();
+            assert_that!(toasts[0].key).is_equal_to(key);
+        });
+    }
+
+    /// "should add a new toast with a timer": a toast with a timeout gets a timer (started by the
+    /// toast once it shows).
+    #[test]
+    fn adds_a_toast_with_a_timer() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            queue.add(
+                "Test",
+                ToastOptions {
+                    timeout: Some(Duration::from_secs(5)),
+                    ..ToastOptions::default()
+                },
+            );
+            let toasts = queue.visible_toasts.get_untracked();
+            assert_that!(toasts.len()).is_equal_to(1);
+            assert_that!(toasts[0].content).is_equal_to("Test");
+            assert_that!(toasts[0].timeout).is_equal_to(Some(Duration::from_secs(5)));
+            assert_that!(toasts[0].timer.is_some()).is_true();
+        });
+    }
+
+    /// "should be able to add multiple toasts": the newest shows first.
+    #[test]
+    fn adds_several_toasts() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput {
+                max_visible_toasts: 2,
+            });
+            queue.add("Toast Message", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["Toast Message"]);
+            queue.add("Second Toast", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["Second Toast", "Toast Message"]);
+        });
+    }
+
+    /// "should be able to display one toast, add multiple toasts, and remove the middle not visible
+    /// one programmatically": closing a queued toast leaves the visible one, and the one before it
+    /// shows next.
+    #[test]
+    fn closes_a_queued_toast() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            queue.add("First Toast", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["First Toast"]);
+            let second = queue.add("Second Toast", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["Second Toast"]);
+            queue.add("Third Toast", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["Third Toast"]);
+            queue.close(second);
+            assert_that!(contents(queue)).is_equal_to(vec!["Third Toast"]);
+            queue.close(key_of(queue, 0));
+            assert_that!(contents(queue)).is_equal_to(vec!["First Toast"]);
+        });
+    }
+
+    /// "should be able to display one toast, add multiple toasts": by default only the newest
+    /// toast shows.
+    #[test]
+    fn shows_one_toast_by_default() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            for toast in ["First Toast", "Second Toast", "Third Toast"] {
+                queue.add(toast, ToastOptions::default());
+                assert_that!(contents(queue)).is_equal_to(vec![toast]);
+            }
+        });
+    }
+
+    /// "should maintain the toast queue order on close": closing the middle of three visible
+    /// toasts keeps the others' order.
+    #[test]
+    fn keeps_the_order_on_close() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput {
+                max_visible_toasts: 3,
+            });
+            queue.add("First Toast", ToastOptions::default());
+            queue.add("Second Toast", ToastOptions::default());
+            queue.add("Third Toast", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec![
+                "Third Toast",
+                "Second Toast",
+                "First Toast",
+            ]);
+            queue.close(key_of(queue, 1));
+            assert_that!(contents(queue)).is_equal_to(vec!["Third Toast", "First Toast"]);
+        });
+    }
+
+    /// "should close a toast".
+    #[test]
+    fn closes_a_toast() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            queue.add("Toast Message", ToastOptions::default());
+            queue.close(key_of(queue, 0));
+            assert_that!(contents(queue)).is_empty();
+        });
+    }
+
+    /// "should queue toasts": a closed toast makes room for the one before it.
+    #[test]
+    fn queues_toasts() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            queue.add("Toast Message", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["Toast Message"]);
+            queue.add("Second Toast", ToastOptions::default());
+            assert_that!(contents(queue)).is_equal_to(vec!["Second Toast"]);
+            queue.close(key_of(queue, 0));
+            assert_that!(contents(queue)).is_equal_to(vec!["Toast Message"]);
+        });
+    }
+
+    /// A queue showing two toasts shows the newest two; closing one shows the next and calls its
+    /// `on_close` once.
     #[test]
     fn shows_the_newest_toasts_and_closes_them() {
-        let owner = Owner::new();
-        owner.with(|| {
+        with_owner(|| {
             let closed = RwSignal::new(0);
             let queue = ToastQueue::<&'static str>::new(Some(2));
             queue.add("first", ToastOptions::default());
@@ -272,17 +441,9 @@ mod tests {
                 },
             );
             queue.add("third", ToastOptions::default());
-            let visible = || {
-                queue
-                    .visible_toasts
-                    .get_untracked()
-                    .into_iter()
-                    .map(|toast| toast.content)
-                    .collect::<Vec<_>>()
-            };
-            assert_that!(visible()).is_equal_to(vec!["third", "second"]);
-            queue.close(&second);
-            assert_that!(visible()).is_equal_to(vec!["third", "first"]);
+            assert_that!(contents(queue)).is_equal_to(vec!["third", "second"]);
+            queue.close(second);
+            assert_that!(contents(queue)).is_equal_to(vec!["third", "first"]);
             assert_that!(closed.get_untracked()).is_equal_to(1);
         });
     }

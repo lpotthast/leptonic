@@ -1,4 +1,7 @@
-use leptonic::hooks::{IntoAttrs, UseHasTabbableChildInput, use_has_tabbable_child};
+use leptonic::{
+    IntoAttrs,
+    hooks::focus::{UseHasTabbableChildInput, use_has_tabbable_child},
+};
 use leptos::prelude::*;
 
 #[component]

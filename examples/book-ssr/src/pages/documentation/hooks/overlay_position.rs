@@ -28,29 +28,6 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                         " onto it. Required."
                     </ApiRow>
                     <ApiRow name="is_open" ty="Signal<bool>">"Whether the overlay is open; it is positioned only while open. Required."</ApiRow>
-                    <ApiRow name="placement" ty="Signal<Placement>" default="Bottom">
-                        "The side of the target and the alignment along it, see "<AnchorLink href="#placements">"Placements"</AnchorLink>"."
-                    </ApiRow>
-                    <ApiRow name="offset" ty="Signal<f64>" default="0.0">"The distance from the target, along the main axis, in pixels."</ApiRow>
-                    <ApiRow name="cross_offset" ty="Signal<f64>" default="0.0">"The shift along the target\u{2019}s side, in pixels."</ApiRow>
-                    <ApiRow name="container_padding" ty="Signal<f64>" default="12.0">"The minimum distance from the boundary\u{2019}s edges, in pixels."</ApiRow>
-                    <ApiRow name="should_flip" ty="Signal<bool>" default="true">"Flip to the other side when that has more room."</ApiRow>
-                    <ApiRow name="boundary" ty="Option<CapturedElement>" default="None">
-                        "The element the overlay must stay within. "<Code inline=true>"None"</Code>": the document body."
-                    </ApiRow>
-                    <ApiRow name="max_height" ty="Signal<Option<f64>>" default="None">
-                        "A maximum height; the room available limits it further. "<Code inline=true>"None"</Code>": the room available."
-                    </ApiRow>
-                    <ApiRow name="arrow_size" ty="Signal<Option<f64>>" default="None">
-                        "The arrow\u{2019}s size across the main axis. "<Code inline=true>"None"</Code>": the width of the element "
-                        "captured by "<Code inline=true>"arrow_props"</Code>" (0 without one)."
-                    </ApiRow>
-                    <ApiRow name="arrow_boundary_offset" ty="Signal<f64>" default="0.0">
-                        "The minimum distance between the arrow and the overlay\u{2019}s edges."
-                    </ApiRow>
-                    <ApiRow name="should_update_position" ty="Signal<bool>" default="true">
-                        "Whether the position follows changes (resizes, a virtual keyboard opening)."
-                    </ApiRow>
                     <ApiRow name="target_rect" ty="Signal<Option<Rect>>" default="None">
                         "Replaces the target\u{2019}s bounding rectangle (viewport coordinates), e.g. with a point for a context menu."
                     </ApiRow>
@@ -64,7 +41,35 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                         <Link href=routes::doc::overlay_behavior::UseCloseOnScroll.materialize()>"use_close_on_scroll"</Link>
                         ". "<Code inline=true>"None"</Code>": the overlay stays open."
                     </ApiRow>
+                    <ApiRow name="position" ty="OverlayPositionOptions" default="OverlayPositionOptions::default()">"Placement, offsets, boundary and update behavior for the overlay."</ApiRow>
                 </ApiTable>
+                <Section title="OverlayPositionOptions">
+                    <ApiTable kind=ApiKind::Fields of="OverlayPositionOptions">
+                        <ApiRow name="placement" ty="Signal<Placement>" default="Bottom">
+                            "The side of the target and the alignment along it, see "<AnchorLink href="#placements">"Placements"</AnchorLink>"."
+                        </ApiRow>
+                        <ApiRow name="offset" ty="Signal<f64>" default="0.0">"The distance from the target, along the main axis, in pixels."</ApiRow>
+                        <ApiRow name="cross_offset" ty="Signal<f64>" default="0.0">"The shift along the target\u{2019}s side, in pixels."</ApiRow>
+                        <ApiRow name="container_padding" ty="Signal<f64>" default="12.0">"The minimum distance from the boundary\u{2019}s edges, in pixels."</ApiRow>
+                        <ApiRow name="should_flip" ty="Signal<bool>" default="true">"Flip to the other side when that has more room."</ApiRow>
+                        <ApiRow name="boundary" ty="Option<CapturedElement>" default="None">
+                            "The element the overlay must stay within. "<Code inline=true>"None"</Code>": the document body."
+                        </ApiRow>
+                        <ApiRow name="max_height" ty="Signal<Option<f64>>" default="None">
+                            "A maximum height; the room available limits it further. "<Code inline=true>"None"</Code>": the room available."
+                        </ApiRow>
+                        <ApiRow name="arrow_size" ty="Signal<Option<f64>>" default="None">
+                            "The arrow\u{2019}s size across the main axis. "<Code inline=true>"None"</Code>": the width of the element "
+                            "captured by "<Code inline=true>"arrow_props"</Code>" (0 without one)."
+                        </ApiRow>
+                        <ApiRow name="arrow_boundary_offset" ty="Signal<f64>" default="0.0">
+                            "The minimum distance between the arrow and the overlay\u{2019}s edges."
+                        </ApiRow>
+                        <ApiRow name="should_update_position" ty="Signal<bool>" default="true">
+                            "Whether the position follows changes (resizes, a virtual keyboard opening)."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
             </Section>
 
             <Section title="Return">
@@ -94,7 +99,10 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            CapturedElement,
+                            hooks::overlay::{OverlayPositionOptions, Placement, UseOverlayPositionInput, UseOverlayPositionReturn, use_overlay_position},
+                        };
                         use leptos::portal::Portal;
 
                         let target = CapturedElement::new();
@@ -103,16 +111,11 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                         let UseOverlayPositionReturn { props, .. } = use_overlay_position(UseOverlayPositionInput {
                             target,
                             is_open: is_open.into(),
-                            placement: Signal::stored(Placement::BottomStart),
-                            container_padding: Signal::stored(12.0),
-                            offset: Signal::stored(4.0),
-                            cross_offset: Signal::stored(0.0),
-                            should_flip: Signal::stored(true),
-                            boundary: None,
-                            max_height: Signal::stored(None),
-                            arrow_size: Signal::stored(None),
-                            arrow_boundary_offset: Signal::stored(0.0),
-                            should_update_position: Signal::stored(true),
+                            position: OverlayPositionOptions {
+                                placement: Signal::stored(Placement::BottomStart),
+                                offset: Signal::stored(4.0),
+                                ..Default::default()
+                            },
                             target_rect: Signal::stored(None),
                             scroll: None,
                             on_close: None,

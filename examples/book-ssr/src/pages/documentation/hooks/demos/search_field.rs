@@ -1,4 +1,15 @@
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::{
+        button::use_button,
+        form::{
+            InputType, TextFieldElement, UseSearchFieldInput, UseSearchFieldReturn,
+            UseTextFieldInput, UseTextFieldStateInput, ValidationBehavior, use_search_field,
+            use_text_field_state,
+        },
+    },
+};
 use leptos::prelude::*;
 
 #[component]
@@ -37,7 +48,7 @@ pub fn SearchFieldDemo() -> impl IntoView {
                 auto_capitalize: None,
                 auto_correct: None,
                 spell_check: None,
-                input_mode: None,
+                input_mode: Signal::stored(None),
                 enter_key_hint: None,
                 auto_focus: false,
                 exclude_from_tab_order: false,

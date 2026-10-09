@@ -2,19 +2,24 @@
 // Upstream: react-aria-components/src/ColorThumb.tsx @ 99e6102368
 
 use leptos::prelude::*;
+use leptos_classes::Classes;
 
 use crate::{
+    IntoAttrs, PropsWithStyles,
     hooks::{
-        IntoAttrs, PropsWithStyles, UseColorAreaInputAttrs, UseColorAreaInputProps,
-        UseColorAreaThumbAttrs, UseColorAreaThumbProps, UseColorWheelInputAttrs,
-        UseColorWheelInputProps, UseColorWheelThumbAttrs, UseColorWheelThumbProps,
-        UseFocusRingInput, UseFocusRingReturn, UseHoverInput, UseSliderThumbAttrs,
-        UseSliderThumbInputAttrs, UseSliderThumbInputProps, UseSliderThumbProps, use_focus_ring,
-        use_hover,
+        color::{
+            UseColorAreaInputAttrs, UseColorAreaInputProps, UseColorAreaThumbAttrs,
+            UseColorAreaThumbProps, UseColorWheelInputAttrs, UseColorWheelInputProps,
+            UseColorWheelThumbAttrs, UseColorWheelThumbProps,
+        },
+        focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        interactions::{UseHoverInput, use_hover},
+        slider::{
+            UseSliderThumbAttrs, UseSliderThumbInputAttrs, UseSliderThumbInputProps,
+            UseSliderThumbProps,
+        },
     },
-    utils::{
-        classes::Classes, data_attributes::flag, default_class::with_default_class, styles::Styles,
-    },
+    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
 
 /// The props a [`ColorThumb`] takes from the color atom around it (the hooks' props).
@@ -122,9 +127,7 @@ impl ColorThumbContext {
 /// Data attributes: `data-dragging`, `data-focused`, `data-focus-visible`, `data-hovered`,
 /// `data-disabled`.
 ///
-/// # Panics
-///
-/// Outside a color atom.
+/// Outside a color atom it renders nothing (with a development warning).
 ///
 /// Default class: `leptonic-ColorThumb`.
 #[component]
@@ -136,12 +139,18 @@ pub fn ColorThumb(
     children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorThumb", classes);
-    let ColorThumbContext {
+    let Some(ColorThumbContext {
         color,
         is_dragging,
         is_disabled,
         attrs,
-    } = expect_context::<ColorThumbContext>();
+    }) = use_context::<ColorThumbContext>()
+    else {
+        crate::utils::dev_warn!(
+            "A <ColorThumb> must be inside a <ColorArea>, <ColorSlider> or <ColorWheel>."
+        );
+        return None;
+    };
 
     // Focus is on the hidden inputs inside the thumb.
     let UseFocusRingReturn {
@@ -149,13 +158,12 @@ pub fn ColorThumb(
         is_focused,
         is_focus_visible,
     } = use_focus_ring(UseFocusRingInput {
-        within: true,
+        target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
-    let hover = use_hover(UseHoverInput {
-        is_disabled,
-        ..UseHoverInput::default()
-    });
+    // Hovered also while disabled (react-aria-components' `useHover(props)`: a thumb has no
+    // `isDisabled` prop).
+    let hover = use_hover(UseHoverInput::default());
     let thumb_styles = |thumb_styles: Styles| {
         thumb_styles
             // A computed color: no checked grammar in `leptos-css` yet.
@@ -164,7 +172,7 @@ pub fn ColorThumb(
     };
     let children = move || children.map(|children| children());
 
-    match attrs.get_value() {
+    Some(match attrs.get_value() {
         ThumbAttrs::Area {
             thumb: (thumb_attrs, area_thumb_styles),
             x_input: (x_attrs, x_styles),
@@ -230,5 +238,5 @@ pub fn ColorThumb(
             </div>
         }
         .into_any(),
-    }
+    })
 }

@@ -1,17 +1,15 @@
 // Upstream: react-aria/src/visually-hidden/VisuallyHidden.tsx @ 99e6102368
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use web_sys::FocusEvent;
 
 use crate::{
-    hooks::{
-        IntoAttrs,
-        focus::use_focus_within::{UseFocusWithinInput, use_focus_within},
-    },
-    utils::{EventHandler, visually_hidden::VISUALLY_HIDDEN_STYLE},
+    EventHandler, IntoAttrs, OnEvent,
+    hooks::focus::use_focus_within::{UseFocusWithinInput, use_focus_within},
+    utils::visually_hidden::VISUALLY_HIDDEN_STYLE,
 };
 
 // =============================================================================
@@ -48,8 +46,8 @@ pub struct UseVisuallyHiddenProps {
 
 pub type UseVisuallyHiddenAttrs = (
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
 );
 
 impl IntoAttrs for UseVisuallyHiddenProps {

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use leptonic::{
     atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
     hooks::{
-        SelectionBehavior, SelectionMode, TableCollection, TableOptions,
-        collections::{EscapeKeyBehavior, Key, Selection},
+        collections::{EscapeKeyBehavior, Key, Selection, SelectionBehavior, SelectionMode},
+        table::TableCollection,
     },
 };
 use leptos::prelude::*;
@@ -18,25 +18,20 @@ const FILES: [(&str, &str, &str, &str); 3] = [
     ("3", "bootmgr", "System file", "11/20/2010"),
 ];
 
-fn files_table(show_selection_checkboxes: bool) -> Memo<Arc<TableCollection>> {
+fn files_table() -> Memo<Arc<TableCollection>> {
     Memo::new(move |_| {
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes,
-            },
-            |t| {
-                t.column("name", "Name").row_header();
-                t.column("type", "Type");
-                t.column("date", "Date Modified");
-                for (key, name, kind, date) in FILES {
-                    t.row(key, name, |r| {
-                        r.cell(name);
-                        r.cell(kind);
-                        r.cell(date);
-                    });
-                }
-            },
-        ))
+        Arc::new(TableCollection::build(|t| {
+            t.column("name", "Name").row_header();
+            t.column("type", "Type");
+            t.column("date", "Date Modified");
+            for (key, name, kind, date) in FILES {
+                t.row(key, name, |r| {
+                    r.cell(name);
+                    r.cell(kind);
+                    r.cell(date);
+                });
+            }
+        }))
     })
 }
 
@@ -83,7 +78,7 @@ fn ReplaceTable(
     let (on_change, log) = selection_log(id);
     view! {
         <Table
-            table=files_table(false)
+            table=files_table()
             aria_label=label
             selection_mode=selection_mode
             selection_behavior=SelectionBehavior::Replace
@@ -102,7 +97,8 @@ fn EscapeTable() -> impl IntoView {
     let (on_change, log) = selection_log("escape");
     view! {
         <Table
-            table=files_table(true)
+            table=files_table()
+            show_selection_checkboxes=true
             aria_label="Escape table"
             selection_mode=SelectionMode::Multiple
             escape_key_behavior=EscapeKeyBehavior::None
@@ -125,7 +121,7 @@ fn PressTable(
     let (on_change, log) = selection_log(id);
     view! {
         <Table
-            table=files_table(false)
+            table=files_table()
             aria_label=label
             selection_mode=SelectionMode::Single
             should_select_on_press_up=should_select_on_press_up
@@ -145,7 +141,7 @@ fn ActionTable() -> impl IntoView {
     let count = RwSignal::new(0_usize);
     view! {
         <Table
-            table=files_table(false)
+            table=files_table()
             aria_label="Action table"
             on_row_action=Callback::new(move |key: Key| {
                 action.set(key.to_string());
@@ -165,7 +161,8 @@ fn ActionTable() -> impl IntoView {
 /// Changing columns: the files table with a selection column, whose "type" column can be hidden
 /// (`#test-ts-hide-type`), renamed (`#test-ts-rename-type`) and moved after "date"
 /// (`#test-ts-move-type`); "date" can be made sortable (`#test-ts-sort-date`), and the selection
-/// mode switched between multiple and single (`#test-ts-single`). Rows render a cell per
+/// mode switched between multiple and single (`#test-ts-single`) or to none
+/// (`#test-ts-no-selection`). Rows render a cell per
 /// current column (react-aria-components' `HidingColumnsExample`).
 #[component]
 fn ColumnsTable() -> impl IntoView {
@@ -174,6 +171,7 @@ fn ColumnsTable() -> impl IntoView {
     let move_type = RwSignal::new(false);
     let sort_date = RwSignal::new(false);
     let single = RwSignal::new(false);
+    let no_selection = RwSignal::new(false);
     let columns = Memo::new(move |_| {
         let mut columns = vec![("name", "Name")];
         if !hide_type.get() {
@@ -195,36 +193,38 @@ fn ColumnsTable() -> impl IntoView {
     let table = Memo::new(move |_| {
         let columns = columns.get();
         let sortable = sort_date.get();
-        Arc::new(TableCollection::build_with(
-            TableOptions {
-                show_selection_checkboxes: true,
-            },
-            |t| {
-                for (key, text) in &columns {
-                    let column = t.column(*key, *text);
-                    if *key == "name" {
-                        column.row_header();
-                    } else if *key == "date" && sortable {
-                        column.allows_sorting();
+        Arc::new(TableCollection::build(|t| {
+            for (key, text) in &columns {
+                let column = t.column(*key, *text);
+                if *key == "name" {
+                    column.row_header();
+                } else if *key == "date" && sortable {
+                    column.allows_sorting();
+                }
+            }
+            for file in FILES {
+                t.row(file.0, file.1, |r| {
+                    for (key, _) in &columns {
+                        r.cell(field(file, key));
                     }
-                }
-                for file in FILES {
-                    t.row(file.0, file.1, |r| {
-                        for (key, _) in &columns {
-                            r.cell(field(file, key));
-                        }
-                    });
-                }
-            },
-        ))
+                });
+            }
+        }))
     });
     let toggle = |signal: RwSignal<bool>| move |_| signal.update(|v| *v = !*v);
     view! {
         <Table
             table=table
+            show_selection_checkboxes=true
             aria_label="Columns table"
             selection_mode=Signal::derive(move || {
-                if single.get() { SelectionMode::Single } else { SelectionMode::Multiple }
+                if no_selection.get() {
+                    SelectionMode::None
+                } else if single.get() {
+                    SelectionMode::Single
+                } else {
+                    SelectionMode::Multiple
+                }
             })
         >
             <TableHeader />
@@ -251,13 +251,14 @@ fn ColumnsTable() -> impl IntoView {
         <button id="test-ts-move-type" on:click=toggle(move_type)>"Move type"</button>
         <button id="test-ts-sort-date" on:click=toggle(sort_date)>"Sort date"</button>
         <button id="test-ts-single" on:click=toggle(single)>"Single"</button>
+        <button id="test-ts-no-selection" on:click=toggle(no_selection)>"No selection"</button>
     }
 }
 
 /// Selection behaviors and row actions of the table atoms (react-aria-components'
 /// `Table.test.js`): replace selection, Escape without clearing, selecting on press up, row
-/// actions, and columns that change. Each table follows a "Before" button
-/// (`#test-ts-before-{name}`).
+/// actions, and columns that change. The replace and Escape tables follow a "Before" button
+/// (`#test-ts-before-replace`, `#test-ts-before-escape`).
 #[component]
 pub fn PageAtomTableSelection() -> impl IntoView {
     view! {
@@ -265,7 +266,6 @@ pub fn PageAtomTableSelection() -> impl IntoView {
             <h1>"Table selection"</h1>
             <button id="test-ts-before-replace">"Before"</button>
             <ReplaceTable label="Replace table" id="replace" selection_mode=SelectionMode::Multiple />
-            <button id="test-ts-before-single-replace">"Before"</button>
             <ReplaceTable
                 label="Single replace table"
                 id="single-replace"
@@ -273,13 +273,9 @@ pub fn PageAtomTableSelection() -> impl IntoView {
             />
             <button id="test-ts-before-escape">"Before"</button>
             <EscapeTable />
-            <button id="test-ts-before-press-down">"Before"</button>
             <PressTable label="Press down table" id="press-down" should_select_on_press_up=false />
-            <button id="test-ts-before-press-up">"Before"</button>
             <PressTable label="Press up table" id="press-up" should_select_on_press_up=true />
-            <button id="test-ts-before-action">"Before"</button>
             <ActionTable />
-            <button id="test-ts-before-columns">"Before"</button>
             <ColumnsTable />
         </div>
     }

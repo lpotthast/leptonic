@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/interactions/useContextMenu.ts @ 99e6102368
+// Upstream: react-aria/test/interactions/useContextMenu.test.tsx @ 99e6102368
 use std::time::Duration;
 
 use leptos::{
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use send_wrapper::SendWrapper;
@@ -10,9 +11,10 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::{
-    hooks::{IntoAttrs, LongPressEvent},
+    EventHandler, IntoAttrs, OnEvent, Point,
+    hooks::interactions::{LongPress, LongPressEvent},
     utils::{
-        EventAccessors, EventHandler,
+        dom_ext::EventAccessors,
         key::{KeyboardEventKey, KeyboardKey},
         platform::device::{is_ios, is_mac},
     },
@@ -24,9 +26,10 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The long press opening context menus on iOS (which fires no `contextmenu` event) is returned
-//   as `on_long_press_start`/`on_long_press` callbacks for the element's own `use_press` (as
-//   `use_button` does with `on_context_menu`), instead of `useLongPress` props: long presses are
-//   part of `use_press`, and an element has one press handler.
+//   as a `LongPress` group for the element's own `use_press` (as `use_button` does with
+//   `on_context_menu`), instead of `useLongPress` props: long presses are part of `use_press`,
+//   and an element has one press handler.
+// - `ContextMenuEvent` has the position as a `Point` (react-aria: `x`, `y`).
 //
 // =============================================================================
 
@@ -35,10 +38,8 @@ use crate::{
 pub struct ContextMenuEvent {
     /// The element the context menu is for.
     pub target: SendWrapper<web_sys::Element>,
-    /// The position relative to the target's left edge, in pixels.
-    pub x: f64,
-    /// The position relative to the target's top edge, in pixels.
-    pub y: f64,
+    /// The position relative to the target's top left corner, in CSS pixels.
+    pub point: Point,
 }
 
 /// Input of [`use_context_menu`].
@@ -53,8 +54,7 @@ pub struct UseContextMenuInput {
 pub struct UseContextMenuReturn {
     pub props: UseContextMenuProps,
     /// For the element's `use_press` (on iOS): a long press requests the context menu.
-    pub on_long_press_start: Option<Callback<LongPressEvent>>,
-    pub on_long_press: Option<Callback<LongPressEvent>>,
+    pub long_press: Option<LongPress>,
 }
 
 /// Props for the target element.
@@ -64,10 +64,7 @@ pub struct UseContextMenuProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-pub type UseContextMenuAttrs = (
-    On<ev::contextmenu, SharedEventCallback<MouseEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
+pub type UseContextMenuAttrs = (OnEvent<ev::contextmenu>, OnEvent<ev::keydown>);
 
 impl IntoAttrs for UseContextMenuProps {
     type Attrs = UseContextMenuAttrs;
@@ -91,18 +88,16 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
                 on_contextmenu: EventHandler::empty(),
                 on_keydown: EventHandler::empty(),
             },
-            on_long_press_start: None,
-            on_long_press: None,
+            long_press: None,
         };
     };
     // Whether the browser fired `contextmenu` itself (so the fallbacks stay quiet).
     let fired = StoredValue::new(false);
 
-    let at = move |target: &web_sys::Element, x: f64, y: f64| {
+    let at = move |target: &web_sys::Element, point: Point| {
         on_context_menu.run(ContextMenuEvent {
             target: SendWrapper::new(target.clone()),
-            x,
-            y,
+            point,
         });
     };
 
@@ -114,7 +109,10 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
             return;
         };
         let rect = target.get_bounding_client_rect();
-        at(&target, e.client_x() - rect.x(), e.client_y() - rect.y());
+        at(
+            &target,
+            Point::new(e.client_x() - rect.x(), e.client_y() - rect.y()),
+        );
     });
 
     // Some versions of Safari and Chrome fire no `contextmenu` event on macOS' Control+Enter.
@@ -138,7 +136,7 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
                     fired.set_value(false);
                 } else {
                     let rect = target.get_bounding_client_rect();
-                    at(&target, rect.width() / 2.0, rect.height() / 2.0);
+                    at(&target, Point::new(rect.width() / 2.0, rect.height() / 2.0));
                 }
             },
             Duration::from_millis(10),
@@ -152,18 +150,18 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
             on_contextmenu,
             on_keydown,
         },
-        on_long_press_start: ios
-            .then(|| Callback::new(move |_: LongPressEvent| fired.set_value(false))),
-        on_long_press: ios.then(|| {
-            Callback::new(move |e: LongPressEvent| {
+        long_press: ios.then(|| LongPress {
+            on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
+                fired.set_value(false);
+            })),
+            on_long_press: Some(Callback::new(move |e: LongPressEvent| {
                 if fired.get_value() {
                     fired.set_value(false);
-                    return;
+                } else {
+                    at(&e.target, e.point);
                 }
-                if let Some(target) = e.target.dyn_ref::<web_sys::Element>() {
-                    at(target, e.x.unwrap_or_default(), e.y.unwrap_or_default());
-                }
-            })
+            })),
+            ..LongPress::default()
         }),
     }
 }

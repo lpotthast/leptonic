@@ -1,17 +1,11 @@
 // Upstream: react-aria/src/interactions/useKeyboard.ts @ 99e6102368
-use std::sync::atomic::Ordering;
-
-use leptos::{
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+// Upstream: react-aria/test/interactions/useKeyboard.test.js @ 99e6102368
+use leptos::{ev, prelude::*};
 use web_sys::KeyboardEvent;
 
 use crate::{
-    hooks::IntoAttrs,
+    EventHandler, IntoAttrs, OnEvent, Propagation,
     utils::{
-        EventHandler, EventWrapper, Propagation,
         key::{KeyboardEventKey, KeyboardKey},
         keyboard_shortcut::KeyboardShortcuts,
         propagation_control::{PropagationControl, Sealed},
@@ -26,6 +20,13 @@ use crate::{
 // - `shortcuts`: typed `KeyboardShortcuts` built from `Shortcut` values instead of a record of
 //   shortcut strings. `Shortcut::parse` still accepts react-aria's string syntax.
 //
+// ## DIFFERENT BEHAVIOR
+// - With `shortcuts`, `on_key_down` and `on_key_up` still get a `KeyboardEventWrapper` and stop
+//   their events unless they call `continue_propagation()`, as without shortcuts. react-aria then
+//   chains them unwrapped (they get the raw event, which has no `continuePropagation`), so a key
+//   no shortcut handles, and every key up, propagates. One propagation model for every handler,
+//   with or without shortcuts.
+//
 // ## OMITTED FEATURES
 // - Ignoring events from React portals: React re-dispatches events through the component tree,
 //   so react-aria must skip events whose target is not a DOM descendant. Leptos uses native DOM
@@ -33,108 +34,95 @@ use crate::{
 //
 // =============================================================================
 
-/// A keyboard event with additional functionality.
-///
-/// Wraps a [`KeyboardEvent`] with propagation control following react-aria
-/// semantics: events stop propagation by default; call
-/// [`continue_propagation()`](Self::continue_propagation) to opt in to bubbling.
+/// A keyboard event whose propagation the handler controls (react-aria's
+/// `BaseEvent<KeyboardEvent>`): it stops propagating by default; call
+/// [`continue_propagation()`](Propagation::continue_propagation) to let it bubble.
+#[derive(Debug, Clone)]
 pub struct KeyboardEventWrapper {
-    inner: EventWrapper<KeyboardEvent>,
+    event: KeyboardEvent,
+    propagation: PropagationControl,
 }
 
 impl Sealed for KeyboardEventWrapper {}
 impl Propagation for KeyboardEventWrapper {
     fn propagation_control(&self) -> &PropagationControl {
-        self.inner.propagation_control()
+        &self.propagation
     }
 }
 
 impl KeyboardEventWrapper {
-    /// Create a new keyboard event wrapper.
-    fn new(event: KeyboardEvent) -> (Self, std::sync::Arc<std::sync::atomic::AtomicBool>) {
-        let (inner, state) = EventWrapper::new(event);
-        (Self { inner }, state)
+    /// Wraps `event`, sharing `propagation` with the caller, who stops the event afterwards unless
+    /// the handler continued it.
+    pub(crate) fn new(event: KeyboardEvent, propagation: &PropagationControl) -> Self {
+        Self {
+            event,
+            propagation: propagation.clone(),
+        }
     }
 
     /// Access the underlying [`KeyboardEvent`].
     pub fn event(&self) -> &KeyboardEvent {
-        self.inner.event()
+        &self.event
     }
 
     /// Prevent the browser's default action for this event.
     pub fn prevent_default(&self) {
-        self.inner.prevent_default();
+        self.event.prevent_default();
     }
 
     /// Whether `prevent_default()` has been called.
     pub fn is_default_prevented(&self) -> bool {
-        self.inner.is_default_prevented()
+        self.event.default_prevented()
     }
 
     /// Get the event target.
     pub fn target(&self) -> Option<web_sys::EventTarget> {
-        self.inner.target()
+        self.event.target()
     }
 
     /// Get the current target.
     pub fn current_target(&self) -> Option<web_sys::EventTarget> {
-        self.inner.current_target()
+        self.event.current_target()
     }
 
     /// The key that was pressed.
     pub fn key(&self) -> KeyboardKey {
-        self.inner.event().typed_key()
+        self.event.typed_key()
     }
 
     /// The key's DOM value (`KeyboardEvent.key`, e.g. `"Escape"`, `"a"`), e.g. to display it.
     pub fn key_value(&self) -> String {
-        self.inner.event().key()
+        self.event.key()
     }
 
     /// Get the key code.
     pub fn code(&self) -> String {
-        self.inner.event().code()
+        self.event.code()
     }
 
     /// Whether this is a repeat event (key held down).
     pub fn repeat(&self) -> bool {
-        self.inner.event().repeat()
+        self.event.repeat()
     }
 
     /// Whether the shift key was held.
     pub fn shift_key(&self) -> bool {
-        self.inner.event().shift_key()
+        self.event.shift_key()
     }
 
     /// Whether the ctrl key was held.
     pub fn ctrl_key(&self) -> bool {
-        self.inner.event().ctrl_key()
+        self.event.ctrl_key()
     }
 
     /// Whether the alt key was held.
     pub fn alt_key(&self) -> bool {
-        self.inner.event().alt_key()
+        self.event.alt_key()
     }
 
     /// Whether the meta key was held.
     pub fn meta_key(&self) -> bool {
-        self.inner.event().meta_key()
-    }
-}
-
-impl std::fmt::Debug for KeyboardEventWrapper {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("KeyboardEventWrapper")
-            .field("inner", &self.inner)
-            .finish()
-    }
-}
-
-impl Clone for KeyboardEventWrapper {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
+        self.event.meta_key()
     }
 }
 
@@ -188,10 +176,7 @@ impl IntoAttrs for UseKeyboardProps {
 }
 
 /// These attributes must be spread onto the target element.
-pub type UseKeyboardAttrs = (
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-);
+pub type UseKeyboardAttrs = (OnEvent<ev::keydown>, OnEvent<ev::keyup>);
 
 /// Handles keyboard interactions for a focusable element.
 ///
@@ -202,20 +187,19 @@ pub type UseKeyboardAttrs = (
 ///
 /// ```ignore
 /// let keyboard = use_keyboard(UseKeyboardInput {
-///     disabled: Signal::derive(|| false),
-///     on_key_down: Some(Callback::new(|e| {
-///         if e.key() == "Enter" {
+///     on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
+///         if e.key() == KeyboardKey::Enter {
 ///             // Handle enter key
 ///             e.prevent_default();
 ///         } else {
 ///             e.continue_propagation();
 ///         }
 ///     })),
-///     on_key_up: None,
+///     ..UseKeyboardInput::default()
 /// });
 ///
 /// view! {
-///     <div tabindex="0" {..keyboard.attrs}>
+///     <div tabindex="0" {..keyboard.props.into_attrs()}>
 ///         "Press a key"
 ///     </div>
 /// }
@@ -239,9 +223,9 @@ pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
         let mut continue_propagation = true;
 
         if let Some(on_key_down) = on_key_down {
-            let (wrapper, continue_state) = KeyboardEventWrapper::new(e.clone());
-            on_key_down.run(wrapper);
-            continue_propagation = continue_state.load(Ordering::Acquire);
+            let propagation = PropagationControl::new();
+            on_key_down.run(KeyboardEventWrapper::new(e.clone(), &propagation));
+            continue_propagation = !propagation.is_propagation_stopped();
         }
 
         if let Some(shortcuts) = &shortcuts
@@ -266,10 +250,9 @@ pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
         }
 
         if let Some(on_key_up) = on_key_up {
-            let (wrapper, continue_state) = KeyboardEventWrapper::new(e.clone());
-            on_key_up.run(wrapper);
-
-            if !continue_state.load(Ordering::Acquire) {
+            let propagation = PropagationControl::new();
+            on_key_up.run(KeyboardEventWrapper::new(e.clone(), &propagation));
+            if propagation.is_propagation_stopped() {
                 e.stop_propagation();
             }
         }

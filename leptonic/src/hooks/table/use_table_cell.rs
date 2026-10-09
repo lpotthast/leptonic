@@ -1,11 +1,15 @@
 // Upstream: react-aria/src/table/useTableCell.ts @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use super::TableData;
 use crate::{
+    PropsWithStyles,
     hooks::{
-        CellFocusMode, PropsWithStyles, UseGridCellInput, UseGridCellProps, UseGridCellReturn,
-        collections::Key, use_grid_cell,
+        collections::Key,
+        grid::{
+            CellFocusMode, UseGridCellInput, UseGridCellProps, UseGridCellReturn, use_grid_cell,
+        },
     },
     utils::aria::AriaRole,
 };

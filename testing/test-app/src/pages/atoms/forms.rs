@@ -1,12 +1,14 @@
+use std::collections::HashSet;
+
 use leptonic::{
+    I18nProvider, Locale, Orientation,
     atoms::{
         checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
         field::{Description, FieldError, Label},
         radio::{RadioButton, RadioField, RadioGroup},
         switch::{SwitchButton, SwitchField},
     },
-    hooks::{Orientation, ValidationBehavior, collections::Key},
-    utils::i18n::{I18nProvider, Locale},
+    hooks::{collections::Key, form::ValidationBehavior},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -30,7 +32,7 @@ pub fn PageAtomForms() -> impl IntoView {
         // Every control changes from its default; resetting the form restores them.
         <form id="fm-reset">
             <CheckboxField name="terms"><CheckboxButton>"Terms"</CheckboxButton></CheckboxField>
-            <CheckboxGroup name="pets" default_value=vec![Key::from("cats")]>
+            <CheckboxGroup name="pets" default_value=HashSet::from([Key::from("cats")])>
                 <Label>"Pets"</Label>
                 <CheckboxField value="dogs"><CheckboxButton>"Dogs"</CheckboxButton></CheckboxField>
                 <CheckboxField value="cats"><CheckboxButton>"Cats"</CheckboxButton></CheckboxField>
@@ -49,6 +51,20 @@ pub fn PageAtomForms() -> impl IntoView {
             <CheckboxField name="kept"><CheckboxButton>"Kept"</CheckboxButton></CheckboxField>
             <SwitchField name="kept-switch"><SwitchButton>"Kept switch"</SwitchButton></SwitchField>
             <button id="fm-reset-canceled-button" type="reset">"Reset"</button>
+        </form>
+
+        // A reset whose event the form's listener stops still resets every field.
+        <form id="fm-reset-stopped" on:reset=|e| e.stop_propagation()>
+            <CheckboxField name="stopped"><CheckboxButton>"Stopped"</CheckboxButton></CheckboxField>
+            <SwitchField name="stopped-switch"><SwitchButton>"Stopped switch"</SwitchButton></SwitchField>
+            <button id="fm-reset-stopped-button" type="reset">"Reset"</button>
+        </form>
+
+        // A reset canceled in the capture phase resets no field.
+        <form id="fm-reset-capture" on:reset:capture=|e| e.prevent_default()>
+            <CheckboxField name="captured"><CheckboxButton>"Captured"</CheckboxButton></CheckboxField>
+            <SwitchField name="captured-switch"><SwitchButton>"Captured switch"</SwitchButton></SwitchField>
+            <button id="fm-reset-capture-button" type="reset">"Reset"</button>
         </form>
 
         // Enter on a focused control submits the form (implicit submission).
@@ -105,12 +121,12 @@ pub fn PageAtomForms() -> impl IntoView {
             </CheckboxGroup<Key>>
         </form>
 
-        // A required group validated in realtime.
+        // Upstream uses native item validation with an Aria group, which displays it in realtime.
         <CheckboxGroup<Key> is_required=true validation_behavior=ValidationBehavior::Aria>
             <Label>"Favorite pet"</Label>
-            <CheckboxField value="dogs"><CheckboxButton>"Realtime dogs"</CheckboxButton></CheckboxField>
-            <CheckboxField value="cats"><CheckboxButton>"Realtime cats"</CheckboxButton></CheckboxField>
-            <CheckboxField value="dragons"><CheckboxButton>"Realtime dragons"</CheckboxButton></CheckboxField>
+            <CheckboxField value="dogs" validation_behavior=ValidationBehavior::Native><CheckboxButton>"Realtime dogs"</CheckboxButton></CheckboxField>
+            <CheckboxField value="cats" validation_behavior=ValidationBehavior::Native><CheckboxButton>"Realtime cats"</CheckboxButton></CheckboxField>
+            <CheckboxField value="dragons" validation_behavior=ValidationBehavior::Native><CheckboxButton>"Realtime dragons"</CheckboxButton></CheckboxField>
             <FieldError />
         </CheckboxGroup<Key>>
     }

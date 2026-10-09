@@ -1,6 +1,6 @@
 use leptonic::{
-    atoms::prelude::{AnchorLink as AnchorLinkAtom, CurrentMatch, Link as LinkAtom},
-    hooks::{Href, LinkRel, LinkTarget},
+    atoms::link::{AnchorLink as AnchorLinkAtom, CurrentMatch, Link as LinkAtom},
+    hooks::link::{Href, LinkRel, LinkTarget},
 };
 use leptos::prelude::*;
 use leptos_classes::Classes;

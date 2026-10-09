@@ -1394,7 +1394,6 @@ dependencies = [
  "send_wrapper",
  "serde",
  "serde_json",
- "smallvec",
  "strum",
  "tracing",
  "wasm-bindgen",
@@ -1410,16 +1409,19 @@ dependencies = [
  "axum",
  "console_error_panic_hook",
  "gloo-timers",
+ "http-body",
  "leptonic",
  "leptos",
  "leptos_axum",
  "leptos_meta",
  "leptos_router",
+ "send_wrapper",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

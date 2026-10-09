@@ -2,7 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
     atoms::table::{ResizableTableContainer, Table, TableBody, TableCell, TableHeader, TableRow},
-    hooks::{ColumnBound, ColumnSize, TableCollection, collections::Key},
+    hooks::{
+        collections::Key,
+        table::{ColumnBound, ColumnSize, TableCollection},
+    },
 };
 use leptos::prelude::*;
 

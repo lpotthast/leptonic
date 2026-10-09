@@ -1,26 +1,44 @@
+// Upstream: react-aria-components/src/GridList.tsx @ 99e6102368
+// Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
+// Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
 use crate::{
-    Out,
+    CapturedElement, IntoAttrs, Out, SlotProps, ValueBinding,
     hooks::{
-        DisabledBehavior, FocusMode, GridListData, IntoAttrs, KeyboardNavigationBehavior,
-        SelectionBehavior, SelectionMode, UseFocusRingInput, UseGridListInput,
-        UseGridListItemInput, UseGridListItemReturn, UseGridListReturn, UseGridListSectionInput,
-        UseGridListSectionReturn, UseGridListSectionRowHeaderProps, UseGridListSectionRowProps,
-        UseHoverInput,
         collections::{
-            AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout,
-            Selection, SelectionOptions, UseListStateInput, use_list_state,
+            AutoFocus, CollectionMemo, CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key,
+            ListLayout, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
+            UseListStateInput, use_list_state,
         },
-        use_focus_ring, use_grid_list, use_grid_list_item, use_grid_list_section, use_hover,
+        focus::{UseFocusRingInput, use_focus_ring},
+        gridlist::{
+            FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
+            UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
+            UseGridListSectionInput, UseGridListSectionReturn, UseGridListSectionRowHeaderProps,
+            UseGridListSectionRowProps, use_grid_list, use_grid_list_item, use_grid_list_section,
+        },
+        interactions::{UseHoverInput, use_hover},
     },
-    utils::{
-        CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
-    },
+    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The rows come from a `collection` (`CollectionMemo`); render one `GridListItem` per item, in
+//   collection order (react-aria-components builds the collection from the children).
+// - Section labels come from the collection (the section's header and `aria_label`).
+//
+// ## OMITTED FEATURES
+// - Virtualization, drag and drop, links rendered as `<a>`, `renderEmptyState`, load more.
+//
+// =============================================================================
 
 /// A headless grid list: a list of interactive rows that can be selected and navigated like a
 /// listbox, and may contain buttons, checkboxes or links.
@@ -48,8 +66,8 @@ pub fn GridList(
     selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected keys.
     #[prop(into, optional)]
-    default_selected_keys: Vec<Key>,
-    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
+    default_selection: Selection,
+    /// The selection (controlled), replacing `default_selection`: a value or any signal.
     #[prop(into, optional)]
     selection: Option<Signal<Selection>>,
     /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
@@ -58,11 +76,19 @@ pub fn GridList(
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] disabled_behavior: DisabledBehavior,
-    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Ids of elements labelling it.
+    #[prop(into, optional)]
+    aria_labelledby: MaybeProp<String>,
     #[prop(optional)] layout: ListLayout,
-    #[prop(optional)] keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// How the keyboard reaches the rows' interactive children. A grid layout always uses
+    /// `KeyboardNavigationBehavior::Tab` (the arrow keys move between rows in two dimensions).
+    #[prop(optional)]
+    keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Select rows when a press ends instead of when it starts (e.g. for draggable rows).
+    #[prop(optional)]
+    should_select_on_press_up: bool,
     /// Arrow keys wrap around at the ends.
     #[prop(optional)]
     should_focus_wrap: bool,
@@ -86,10 +112,10 @@ pub fn GridList(
             selection: SelectionOptions {
                 selection_mode,
                 selection_behavior,
-                default_selection: Selection::keys(default_selected_keys),
+                default_selection,
                 selection,
                 on_selection_change,
-                disallow_empty_selection: Signal::stored(disallow_empty_selection),
+                disallow_empty_selection,
                 disabled_keys: disabled_keys.unwrap_or_default(),
                 disabled_behavior,
                 ..SelectionOptions::default()
@@ -108,9 +134,13 @@ pub fn GridList(
 
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label,
-        aria_labelledby: Signal::stored(aria_labelledby),
+        aria_labelledby: Signal::derive(move || aria_labelledby.get()),
         layout,
-        keyboard_navigation_behavior,
+        // As react-aria-components: the arrow keys move between the rows of a grid layout.
+        keyboard_navigation_behavior: match layout {
+            ListLayout::Grid => KeyboardNavigationBehavior::Tab,
+            ListLayout::Stack => keyboard_navigation_behavior,
+        },
         options: CollectionOptions {
             auto_focus: Signal::stored(auto_focus),
             should_focus_wrap,
@@ -122,7 +152,7 @@ pub fn GridList(
         element: CapturedElement::new(),
         id: None,
         keyboard_delegate: None,
-        should_select_on_press_up: false,
+        should_select_on_press_up,
         tree: None,
     });
 
@@ -173,7 +203,10 @@ pub fn GridListItem(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridListItem", classes);
-    let list = expect_context::<GridListData>();
+    let Some(list) = use_context::<GridListData>() else {
+        crate::utils::dev_warn!("a <GridListItem> belongs in a <GridList>");
+        return ().into_any();
+    };
     let UseGridListItemReturn {
         row_props,
         grid_cell_props,
@@ -196,7 +229,7 @@ pub fn GridListItem(
     });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
-    let item = GridListItemCtx {
+    let item = GridListItemContext {
         description_props: StoredValue::new(Some(description_props)),
     };
     // Interactive rows show hover (react-aria-components' `GridListItem`).
@@ -223,11 +256,12 @@ pub fn GridListItem(
             </div>
         </div>
     }
+    .into_any()
 }
 
 /// What a [`GridListItem`] provides to its [`GridListItemDescription`].
 #[derive(Clone, Copy)]
-struct GridListItemCtx {
+struct GridListItemContext {
     description_props: StoredValue<Option<SlotProps>>,
 }
 
@@ -242,7 +276,10 @@ pub fn GridListItemDescription(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridListItemDescription", classes);
-    let ctx = expect_context::<GridListItemCtx>();
+    let Some(ctx) = use_context::<GridListItemContext>() else {
+        crate::utils::dev_warn!("a <GridListItemDescription> belongs in a <GridListItem>");
+        return ().into_any();
+    };
     if let Some(props) = ctx
         .description_props
         .try_update_value(Option::take)
@@ -267,15 +304,15 @@ pub fn GridListItemDescription(
 
 /// What a [`GridListSection`] provides to its [`GridListHeader`].
 #[derive(Clone, Copy)]
-struct GridListSectionCtx {
+struct GridListSectionContext {
     header: StoredValue<Option<(UseGridListSectionRowProps, UseGridListSectionRowHeaderProps)>>,
     /// The collection's header text.
-    heading: StoredValue<Option<String>>,
+    heading: Signal<Option<String>>,
 }
 
 /// A group of rows in a [`GridList`], for the collection section `key`: one `role="rowgroup"`
-/// element holding a [`GridListHeader`] (when the section has a header in the collection) and
-/// the section's rows.
+/// element holding an optional [`GridListHeader`] and the section's rows. It is labelled by the
+/// rendered header and the section's `aria_label` in the collection.
 ///
 /// Default class: `leptonic-GridListSection`.
 #[component]
@@ -288,16 +325,19 @@ pub fn GridListSection(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridListSection", classes);
-    let list = expect_context::<GridListData>();
+    let Some(list) = use_context::<GridListData>() else {
+        crate::utils::dev_warn!("a <GridListSection> belongs in a <GridList>");
+        return ().into_any();
+    };
     let UseGridListSectionReturn {
         row_props,
         row_header_props,
         row_group_props,
         heading,
     } = use_grid_list_section(UseGridListSectionInput { list, key });
-    let ctx = GridListSectionCtx {
-        header: StoredValue::new(heading.is_some().then_some((row_props, row_header_props))),
-        heading: StoredValue::new(heading),
+    let ctx = GridListSectionContext {
+        header: StoredValue::new(Some((row_props, row_header_props))),
+        heading,
     };
 
     view! {
@@ -305,6 +345,7 @@ pub fn GridListSection(
             <Provider value=ctx>{children()}</Provider>
         </div>
     }
+    .into_any()
 }
 
 /// The header row of a [`GridListSection`], labelling it: a `role="row"` element with a
@@ -319,10 +360,14 @@ pub fn GridListHeader(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridListHeader", classes);
-    let ctx = expect_context::<GridListSectionCtx>();
+    let Some(ctx) = use_context::<GridListSectionContext>() else {
+        crate::utils::dev_warn!("a <GridListHeader> belongs in a <GridListSection>");
+        return ().into_any();
+    };
+    let heading = ctx.heading;
     let content = match children {
         Some(children) => children().into_any(),
-        None => ctx.heading.get_value().into_any(),
+        None => (move || heading.get()).into_any(),
     };
     if let Some((row_props, row_header_props)) = ctx.header.try_update_value(Option::take).flatten()
     {
@@ -335,10 +380,7 @@ pub fn GridListHeader(
         }
         .into_any()
     } else {
-        crate::utils::dev_warn!(
-            "GridListHeader: one per section, and only for sections with a header in the \
-                 collection"
-        );
+        crate::utils::dev_warn!("GridListHeader: only one per GridListSection");
         view! { <div class=classes style=styles>{content}</div> }.into_any()
     }
 }

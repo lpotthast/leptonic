@@ -1,14 +1,11 @@
 use leptonic::{
+    I18nProvider, Locale, NumberFormatOptions, Orientation, WritingDirection,
     atoms::{
         field::Label,
         radio::{RadioButton, RadioField, RadioGroup},
     },
-    hooks::{Orientation, collections::Key},
-    utils::{
-        i18n::{I18nProvider, Locale, locale, use_direction, use_i18n, use_locale},
-        locale::WritingDirection,
-        number_formatter::{NumberFormatOptions, use_number_formatter},
-    },
+    hooks::collections::Key,
+    locale, use_direction, use_i18n, use_locale, use_number_formatter,
 };
 use leptos::prelude::*;
 
@@ -26,7 +23,7 @@ pub fn I18nProviderDemo() -> impl IntoView {
 fn LocaleSwitcher() -> impl IntoView {
     let locale = use_locale();
     let direction = use_direction();
-    let set_locale = use_i18n().map(|i18n| i18n.set_locale);
+    let i18n = use_i18n();
     // Follows the provider's locale, like the formatting of number fields and sliders.
     let formatter = use_number_formatter(Signal::stored(NumberFormatOptions::default()));
 
@@ -35,8 +32,8 @@ fn LocaleSwitcher() -> impl IntoView {
             .as_ref()
             .and_then(Key::as_str)
             .and_then(|tag| tag.parse::<Locale>().ok());
-        if let (Some(new_locale), Some(set_locale)) = (new_locale, set_locale) {
-            set_locale.run(new_locale);
+        if let (Some(new_locale), Some(i18n)) = (new_locale, i18n) {
+            i18n.set_locale(new_locale);
         }
     };
 

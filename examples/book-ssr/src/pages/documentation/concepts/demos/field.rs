@@ -6,7 +6,7 @@ use leptonic::{
         input::Input,
         text_field::TextField,
     },
-    hooks::ValidationBehavior,
+    hooks::form::ValidationBehavior,
 };
 use leptos::prelude::*;
 

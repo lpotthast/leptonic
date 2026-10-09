@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude as atoms;
+use leptonic::atoms;
 use leptos::prelude::*;
 
 #[component]
@@ -7,7 +7,7 @@ pub fn MeterAtomDemo() -> impl IntoView {
     let used = RwSignal::new(41.5_f64);
 
     view! {
-        <atoms::Meter
+        <atoms::meter::Meter
             value=used
             max_value=64.0
             // Replaces the percentage as value text (and `aria-valuetext`).
@@ -15,16 +15,16 @@ pub fn MeterAtomDemo() -> impl IntoView {
             classes="demo-value-bar-container"
         >
             <div class="demo-value-bar-header">
-                <atoms::Label>"Storage"</atoms::Label>
-                <atoms::MeterValueText />
+                <atoms::field::Label>"Storage"</atoms::field::Label>
+                <atoms::meter::MeterValueText />
             </div>
             <div class="demo-value-bar demo-value-bar-thick">
-                <atoms::MeterFill classes="demo-value-bar-fill" />
+                <atoms::meter::MeterFill classes="demo-value-bar-fill" />
             </div>
-        </atoms::Meter>
+        </atoms::meter::Meter>
         <div class="demo-inline-controls">
-            <atoms::Button on_press=move |_| used.update(|gb| *gb = (*gb - 8.0).max(0.0)) classes="demo-btn">"Free 8 GB"</atoms::Button>
-            <atoms::Button on_press=move |_| used.update(|gb| *gb = (*gb + 8.0).min(64.0)) classes="demo-btn">"Use 8 GB"</atoms::Button>
+            <atoms::button::Button on_press=move |_| used.update(|gb| *gb = (*gb - 8.0).max(0.0)) classes="demo-btn">"Free 8 GB"</atoms::button::Button>
+            <atoms::button::Button on_press=move |_| used.update(|gb| *gb = (*gb + 8.0).min(64.0)) classes="demo-btn">"Use 8 GB"</atoms::button::Button>
         </div>
     }
 }

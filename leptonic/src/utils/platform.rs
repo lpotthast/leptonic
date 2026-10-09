@@ -14,10 +14,16 @@
 //   `is_webkit`, ...) modules: they read better at the call site.
 // - The detection is a pure function over a `NavigatorInfo` snapshot (unit-testable); react-aria
 //   tests regular expressions against `window.navigator` directly.
+// - `use_platform_check`: a check as a signal for rendering, `false` until the app is mounted.
+//   The server knows no platform and hydration keeps the server's attributes, so a check read
+//   while rendering would leave the server's answer in the page (react-aria re-renders after
+//   hydration instead).
 //
 // =============================================================================
 
 use std::cell::OnceCell;
+
+use leptos::prelude::*;
 
 /// Tests for device types.
 pub mod device {
@@ -229,6 +235,25 @@ fn navigator_info() -> NavigatorInfo {
         platform,
         max_touch_points: navigator.max_touch_points(),
     }
+}
+
+thread_local! {
+    /// Whether the app is mounted: hydrated, or rendered on the client. Never set on the server
+    /// (Effects don't run there).
+    static MOUNTED: ArcRwSignal<bool> = ArcRwSignal::new(false);
+}
+
+/// A platform check ([`device::is_ios`], ...) as a signal for rendering: `false` on the server and
+/// while hydrating, the check's answer once the app is mounted (the first Effect after hydration
+/// flips it for every check at once; components created later get the answer right away).
+/// Event handlers call the checks directly.
+pub fn use_platform_check(check: fn() -> bool) -> Signal<bool> {
+    let mounted = MOUNTED.with(Clone::clone);
+    if !mounted.get_untracked() {
+        let mounted = mounted.clone();
+        Effect::new(move |_| mounted.set(true));
+    }
+    Signal::derive(move || mounted.get() && check())
 }
 
 #[cfg(test)]

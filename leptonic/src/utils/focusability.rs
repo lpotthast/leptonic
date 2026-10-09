@@ -1,6 +1,7 @@
 // Upstream: react-aria/src/utils/isFocusable.ts @ 99e6102368
 // Upstream: react-aria/src/utils/isElementVisible.ts @ 99e6102368
 // Upstream: react-aria/src/utils/keyboard.tsx @ 99e6102368
+// Upstream: react-aria/test/utils/isFocusable.test.tsx @ 99e6102368
 //! Focusability and tabbability detection utilities.
 //!
 //! Shared infrastructure for determining whether DOM elements are focusable or tabbable,
@@ -23,6 +24,16 @@
 
 use js_sys::Function;
 use wasm_bindgen::{JsCast, JsValue};
+
+/// Which elements a focus walk visits (react-aria's `tabbable` option).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum Focusability {
+    /// Every focusable element, including `tabindex="-1"` ones (react-aria: `tabbable: false`).
+    #[default]
+    Focusable,
+    /// Only elements reachable with Tab (react-aria: `tabbable: true`).
+    Tabbable,
+}
 
 /// Selector for focusable elements.
 ///
@@ -102,7 +113,8 @@ pub const PREVENT_FOCUS_ATTRIBUTE: &str = "data-leptonic-prevent-focus";
 pub type PreventFocusAttr =
     leptos::tachys::html::attribute::custom::CustomAttr<&'static str, &'static str>;
 
-/// The [`PREVENT_FOCUS_ATTRIBUTE`], to spread onto an element.
+/// An attribute to spread onto an element to exclude it and its descendants from Leptonic's
+/// focus walks, such as focus scopes and grid cell navigation.
 pub fn prevent_focus_attr() -> PreventFocusAttr {
     leptos::tachys::html::attribute::custom::custom_attribute(PREVENT_FOCUS_ATTRIBUTE, "true")
 }
@@ -254,8 +266,19 @@ pub fn is_focusable(element: &web_sys::Element) -> bool {
 
 /// Check if an element is focusable regardless of its visibility (react-aria's
 /// `isFocusable(element, {skipVisibilityCheck: true})`).
+#[cfg(not(feature = "ssr"))]
 pub fn is_focusable_ignoring_visibility(element: &web_sys::Element) -> bool {
     element.matches(FOCUSABLE_SELECTOR).unwrap_or(false) && !is_inert(element)
+}
+
+/// Whether `element` is in a top layer (e.g. toasts), where focus may always move.
+#[cfg(not(feature = "ssr"))]
+pub(crate) fn is_in_top_layer(element: &web_sys::Element) -> bool {
+    element
+        .closest("[data-leptonic-top-layer]")
+        .ok()
+        .flatten()
+        .is_some()
 }
 
 /// Check if an element is tabbable (reachable via Tab key).
@@ -279,24 +302,18 @@ pub fn is_tabbable(element: &web_sys::Element) -> bool {
         return false;
     }
 
-    // Double-check tabindex (the selector already filters -1, but be defensive).
-    if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>()
-        && html_el.tab_index() < 0
+    // A negative `tabindex` other than -1 (the selector rejects that one). The attribute, not the
+    // IDL `tabIndex`, which is -1 by default for some focusable elements (e.g. contenteditable
+    // hosts in some browsers).
+    if element
+        .get_attribute("tabindex")
+        .and_then(|tabindex| tabindex.trim().parse::<i32>().ok())
+        .is_some_and(|tabindex| tabindex < 0)
     {
         return false;
     }
 
     true
-}
-
-/// Get the radio group name for an element, if it is an `input[type=radio]` with a name.
-pub fn get_radio_group_name(element: &web_sys::Element) -> Option<String> {
-    let input = element.dyn_ref::<web_sys::HtmlInputElement>()?;
-    if input.type_() != "radio" {
-        return None;
-    }
-    let name = input.name();
-    if name.is_empty() { None } else { Some(name) }
 }
 
 /// Get all radio buttons in the same group as `element`.
@@ -418,9 +435,8 @@ fn css_escape(value: &str) -> String {
 ///
 /// A radio is tabbable if:
 /// - It is checked, OR
-/// - No radio in its group is checked (the first one encountered by the `TreeWalker`
-///   will be accepted, and all subsequent ones in the same group will be skipped
-///   via the `from_radio_group` check in the walker).
+/// - No radio in its group is checked (the walker visits the first one it meets and skips the
+///   others of the group, as the node it is at then is a radio of that group).
 pub fn is_tabbable_radio(element: &web_sys::HtmlInputElement) -> bool {
     if element.checked() {
         return true;
@@ -446,9 +462,9 @@ pub fn is_text_input(element: &web_sys::Element) -> bool {
     false
 }
 
-/// Whether keys pressed at `element` are the user typing: a text input (see [`is_text_input`]) or
-/// a `<select>` (typing picks an option). Shortcuts without modifiers (e.g. `/`) shouldn't act
-/// there.
+/// Whether keys pressed at `element` are the user typing: a text input, text area, editable
+/// element or `<select>` (typing picks an option). Shortcuts without modifiers (e.g. `/`)
+/// shouldn't act there.
 pub fn is_typing_target(element: &web_sys::Element) -> bool {
     is_text_input(element) || element.dyn_ref::<web_sys::HtmlSelectElement>().is_some()
 }

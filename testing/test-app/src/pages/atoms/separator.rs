@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude::Separator, utils::orientation::Orientation};
+use leptonic::{Orientation, atoms::separator::Separator};
 use leptos::prelude::*;
 
 /// Separator atoms (react-aria-components' `Separator.test.js` setups): a plain one

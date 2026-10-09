@@ -1,8 +1,12 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::prelude::{Button, CheckboxButton, CheckboxField, Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
-    hooks::Key,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+        disclosure::{Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
+    },
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;
@@ -16,7 +20,7 @@ pub fn DisclosureAtomDemo() -> impl IntoView {
     view! {
         // An accordion: expanding one disclosure collapses the other.
         <DisclosureGroup is_disabled=disabled expanded_keys=expanded set_expanded_keys=expanded>
-            <Disclosure id="shipping" classes="demo-disclosure">
+            <Disclosure key="shipping" classes="demo-disclosure">
                 <h4 class="demo-disclosure-heading">
                     <DisclosureTrigger>
                         <Button classes="demo-disclosure-trigger">
@@ -29,7 +33,7 @@ pub fn DisclosureAtomDemo() -> impl IntoView {
                     <p>"Orders ship within two working days."</p>
                 </DisclosurePanel>
             </Disclosure>
-            <Disclosure id="returns" classes="demo-disclosure">
+            <Disclosure key="returns" classes="demo-disclosure">
                 <h4 class="demo-disclosure-heading">
                     <DisclosureTrigger>
                         <Button classes="demo-disclosure-trigger">

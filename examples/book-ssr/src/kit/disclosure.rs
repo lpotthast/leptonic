@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude as atoms;
+use leptonic::atoms;
 use leptos::prelude::*;
 
 use super::Icon;
@@ -14,14 +14,14 @@ pub fn Disclosure(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <atoms::Disclosure default_expanded=default_expanded classes="doc-disclosure">
-            <atoms::DisclosureTrigger>
-                <atoms::Button classes="doc-disclosure-trigger">
+        <atoms::disclosure::Disclosure default_expanded=default_expanded classes="doc-disclosure">
+            <atoms::disclosure::DisclosureTrigger>
+                <atoms::button::Button classes="doc-disclosure-trigger">
                     <Icon icon=icondata::BsChevronRight classes="doc-disclosure-chevron"/>
                     {label}
-                </atoms::Button>
-            </atoms::DisclosureTrigger>
-            <atoms::DisclosurePanel classes="doc-disclosure-panel">{children()}</atoms::DisclosurePanel>
-        </atoms::Disclosure>
+                </atoms::button::Button>
+            </atoms::disclosure::DisclosureTrigger>
+            <atoms::disclosure::DisclosurePanel classes="doc-disclosure-panel">{children()}</atoms::disclosure::DisclosurePanel>
+        </atoms::disclosure::Disclosure>
     }
 }

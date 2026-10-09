@@ -1,13 +1,17 @@
 // Upstream: react-stately/src/menu/useMenuTriggerState.ts @ 99e6102368
+// Upstream: react-aria/test/menu/useMenuTrigger.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/menu/MenuTrigger.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::{
-        OverlayState, OverlayTriggerState, UseOverlayTriggerStateInput,
         collections::{FocusStrategy, Key},
-        use_overlay_trigger_state,
+        overlay::{
+            OverlayState, OverlayTriggerState, UseOverlayTriggerStateInput,
+            use_overlay_trigger_state,
+        },
     },
-    utils::ValueBinding,
 };
 
 // =============================================================================
@@ -81,20 +85,24 @@ impl MenuTriggerState {
 
     /// Opens the submenu of the item `trigger_key` at `level` (closing deeper ones).
     pub fn open_submenu(&self, trigger_key: Key, level: usize) {
-        self.set_expanded_keys_stack.update(|stack| {
-            if level <= stack.len() {
-                stack.truncate(level);
-                stack.push(trigger_key);
+        self.set_expanded_keys_stack.maybe_update(|stack| {
+            if level > stack.len() || (stack.len() == level + 1 && stack[level] == trigger_key) {
+                return false;
             }
+            stack.truncate(level);
+            stack.push(trigger_key);
+            true
         });
     }
 
     /// Closes the submenu of the item `trigger_key` at `level` (and deeper ones).
     pub fn close_submenu(&self, trigger_key: &Key, level: usize) {
-        self.set_expanded_keys_stack.update(|stack| {
-            if stack.get(level) == Some(trigger_key) {
-                stack.truncate(level);
+        self.set_expanded_keys_stack.maybe_update(|stack| {
+            if stack.get(level) != Some(trigger_key) {
+                return false;
             }
+            stack.truncate(level);
+            true
         });
     }
 }
@@ -107,7 +115,7 @@ pub trait MenuTriggerStateApi: OverlayState {
     fn open(&self, focus_strategy: Option<FocusStrategy>);
     fn toggle(&self, focus_strategy: Option<FocusStrategy>);
     /// Sets where a context menu opened (viewport coordinates).
-    fn set_point(&self, point: Option<crate::utils::Point>);
+    fn set_point(&self, point: Option<crate::Point>);
 }
 
 impl OverlayState for MenuTriggerState {
@@ -119,7 +127,7 @@ impl OverlayState for MenuTriggerState {
         MenuTriggerState::close(self);
     }
 
-    fn point(&self) -> Signal<Option<crate::utils::Point>> {
+    fn point(&self) -> Signal<Option<crate::Point>> {
         self.overlay.point
     }
 }
@@ -137,7 +145,7 @@ impl MenuTriggerStateApi for MenuTriggerState {
         MenuTriggerState::toggle(self, focus_strategy);
     }
 
-    fn set_point(&self, point: Option<crate::utils::Point>) {
+    fn set_point(&self, point: Option<crate::Point>) {
         self.overlay.set_point(point);
     }
 }
@@ -184,10 +192,11 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::{flush_effects, with_owner};
 
     #[test]
     fn closing_closes_submenus() {
-        Owner::new().with(|| {
+        with_owner(|| {
             let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
             state.open(Some(FocusStrategy::First));
             assert_that!(state.focus_strategy.get_untracked())
@@ -207,6 +216,28 @@ mod tests {
             state.close();
             assert_that!(state.overlay.is_open.get_untracked()).is_false();
             assert_that!(state.expanded_keys_stack.get_untracked()).is_empty();
+        });
+    }
+
+    #[test]
+    fn reopening_the_open_submenu_notifies_nobody() {
+        with_owner(|| {
+            let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
+            state.open(None);
+            state.open_submenu(Key::from("a"), 0);
+            let runs = RwSignal::new(0);
+            Effect::new(move |_| {
+                state.expanded_keys_stack.track();
+                runs.update(|runs| *runs += 1);
+            });
+            flush_effects();
+            state.open_submenu(Key::from("a"), 0);
+            state.close_submenu(&Key::from("x"), 0);
+            flush_effects();
+            assert_that!(runs.get_untracked()).is_equal_to(1);
+            state.close_submenu(&Key::from("a"), 0);
+            flush_effects();
+            assert_that!(runs.get_untracked()).is_equal_to(2);
         });
     }
 }

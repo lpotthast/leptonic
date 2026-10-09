@@ -1,3 +1,6 @@
+// No upstream: building collections from application data (react-aria builds them from rendered
+// children); `Collection` ports react-aria's `BaseCollection`.
+
 use std::sync::Arc;
 
 use leptos::prelude::*;
@@ -41,15 +44,38 @@ pub fn use_collection(
     Memo::new(move |_| Arc::new(Collection::build(&build)))
 }
 
+/// Input of [`use_list_collection`].
+pub struct UseListCollectionInput<T, K, Tx, S>
+where
+    T: Send + Sync + 'static,
+    K: Fn(&T) -> Key + Send + Sync + 'static,
+    Tx: Fn(&T) -> S + Send + Sync + 'static,
+    S: Into<Arc<str>>,
+{
+    /// The values, in order.
+    pub items: Signal<Vec<T>>,
+    /// Identifies a value: `Fn(&T) -> Key`.
+    pub key: K,
+    /// Describes a value in plain text (for type-ahead and filtering): `Fn(&T) -> S`, with `S`
+    /// a `String`, `&'static str`, `Arc<str>`, ...
+    pub text_value: Tx,
+}
+
 /// Build a flat collection (no sections) from a list of values.
-///
-/// `key` identifies each value, `text_value` describes it in plain text (for type-ahead and
-/// filtering).
-pub fn use_list_collection<T: Send + Sync + 'static>(
-    items: Signal<Vec<T>>,
-    key: impl Fn(&T) -> Key + Send + Sync + 'static,
-    text_value: impl Fn(&T) -> String + Send + Sync + 'static,
-) -> CollectionMemo {
+pub fn use_list_collection<T, K, Tx, S>(
+    input: UseListCollectionInput<T, K, Tx, S>,
+) -> CollectionMemo
+where
+    T: Send + Sync + 'static,
+    K: Fn(&T) -> Key + Send + Sync + 'static,
+    Tx: Fn(&T) -> S + Send + Sync + 'static,
+    S: Into<Arc<str>>,
+{
+    let UseListCollectionInput {
+        items,
+        key,
+        text_value,
+    } = input;
     use_collection(move |b| {
         items.with(|items| {
             for item in items {
@@ -67,14 +93,13 @@ mod tests {
 
     #[test]
     fn rebuilds_when_the_data_changes() {
-        let owner = Owner::new();
-        owner.with(|| {
+        crate::testing::with_owner(|| {
             let items = RwSignal::new(vec!["Apple".to_owned(), "Banana".to_owned()]);
-            let collection = use_list_collection(
-                items.into(),
-                |s: &String| Key::from(s.as_str()),
-                Clone::clone,
-            );
+            let collection = use_list_collection(UseListCollectionInput {
+                items: items.into(),
+                key: |s: &String| Key::from(s.as_str()),
+                text_value: Clone::clone,
+            });
             assert_that!(collection.with_untracked(|c| c.size())).is_equal_to(2);
             items.update(|items| items.push("Cherry".to_owned()));
             assert_that!(collection.with_untracked(|c| c.size())).is_equal_to(3);

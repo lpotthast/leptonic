@@ -1,6 +1,17 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
-use leptonic::{atoms::checkbox::{CheckboxButton, CheckboxField}, hooks::*};
+use leptonic::{
+    IntoAttrs,
+    atoms::checkbox::{CheckboxButton, CheckboxField},
+    hooks::{
+        collections::Key,
+        form::{
+            CheckboxGroupData, ToggleOptions, UseCheckboxGroupInput, UseCheckboxGroupItemInput,
+            UseCheckboxGroupStateInput, use_checkbox_group, use_checkbox_group_item,
+            use_checkbox_group_state,
+        },
+    },
+};
 use leptos::prelude::*;
 
 const TOPPINGS: [&str; 4] = ["Cheese", "Mushrooms", "Olives", "Peppers"];
@@ -10,10 +21,10 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
-        default_value: vec![Key::from("Cheese")],
+        default_value: HashSet::from([Key::from("Cheese")]),
         is_required: Signal::stored(true),
         // Uncheck everything to see the error message.
-        validate: Some(Arc::new(|toppings: &Vec<Key>| {
+        validate: Some(Arc::new(|toppings: &HashSet<Key>| {
             if toppings.is_empty() {
                 Err(vec!["Choose at least one topping.".to_owned()])
             } else {

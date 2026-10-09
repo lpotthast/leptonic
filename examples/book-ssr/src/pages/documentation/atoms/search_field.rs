@@ -31,7 +31,7 @@ pub fn PageAtomSearchField() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "Import the atoms from their modules or from "<Code inline=true>"leptonic::atoms::prelude"</Code>":"
+                    "Import the atoms from their modules:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"

@@ -1,24 +1,28 @@
 // Upstream: react-aria/src/calendar/useCalendarCell.ts @ 99e6102368
+// Upstream: react-aria/test/calendar/useCalendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
+// Upstream: react-aria-components/test/RangeCalendar.test.tsx @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/CalendarBase.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/Calendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
 use std::time::Duration;
 
 use jiff::civil::Date;
 use leptos::{
     attr::{self, Attr},
-    ev::{self, On, SharedEventCallback},
+    ev::{self},
     prelude::*,
 };
 use web_sys::{FocusEvent, MouseEvent, PointerEvent};
 
 use super::states::CalendarData;
 use crate::{
-    hooks::{
-        IntoAttrs, PressEvent, PropsWithStyles, UsePressAttrs, UsePressInput, UsePressProps,
-        use_press,
-    },
+    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    hooks::interactions::{PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press},
     utils::{
-        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaInvalid, AriaRole, AriaSelected},
         date::use_today,
+        dom_ext::EventAccessors,
         intl_strings::{CalendarStrings, use_localized_strings},
         pointer_type::PointerType,
         use_description::use_description,
@@ -134,10 +138,10 @@ pub type UseCalendarCellButtonAttrs = (
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     ),
     (
-        On<ev::focus, SharedEventCallback<FocusEvent>>,
-        On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-        On<ev::contextmenu, SharedEventCallback<MouseEvent>>,
+        OnEvent<ev::focus>,
+        OnEvent<ev::pointerenter>,
+        OnEvent<ev::pointerdown>,
+        OnEvent<ev::contextmenu>,
         ElementCaptureAttr,
     ),
 );
@@ -183,7 +187,7 @@ fn memo<T: PartialEq + Clone + Send + Sync + 'static>(
 #[cfg(not(feature = "ssr"))]
 fn focus_cell(button: &web_sys::Element) {
     use crate::{
-        hooks::{Modality, get_modality},
+        hooks::focus::{Modality, get_modality},
         utils::{
             focus::focus_element,
             scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
@@ -196,7 +200,7 @@ fn focus_cell(button: &web_sys::Element) {
         .as_ref()
         .and_then(get_active_element)
         .is_some_and(|active| &active == button);
-    if get_modality() != Modality::Pointer && is_active {
+    if get_modality() != Some(Modality::Pointer) && is_active {
         scroll_into_viewport(
             Some(button),
             &ScrollIntoViewportOpts {
@@ -462,16 +466,10 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     });
 
     let error_message_id = data.error_message_id;
-    let aria_describedby = Signal::derive(move || {
-        let ids: Vec<String> = [
-            is_invalid.get().then(|| error_message_id.get()).flatten(),
-            prompt_id.get(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
-    });
+    let aria_describedby = IdRefs::derive([
+        Signal::derive(move || is_invalid.get().then(|| error_message_id.get()).flatten()),
+        prompt_id,
+    ]);
 
     let formatted_date = memo(move || formatters.day(date.get()));
 
@@ -501,7 +499,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
                 // Hovering (or dragging over) a date while selecting a range highlights it.
                 on_pointerenter: EventHandler::new(move |e: PointerEvent| {
                     if let Some(range) = range
-                        && (PointerType::from(e.pointer_type()) != PointerType::Touch
+                        && (PointerType::of(&e) != PointerType::Touch
                             || range.is_dragging.get_untracked())
                         && is_selectable.get_untracked()
                     {

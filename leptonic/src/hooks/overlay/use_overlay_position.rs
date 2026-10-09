@@ -1,24 +1,26 @@
 // Upstream: react-aria/src/overlays/useOverlayPosition.ts @ 99e6102368
+// Upstream: react-aria/test/overlays/useOverlayPosition.test.tsx @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
 };
 
-pub use super::calculate_position::{Placement, PlacementAxis, PositionResult, Rect};
+pub use super::calculate_position::{Placement, PlacementAxis, Position, PositionResult, Rect};
 use super::use_close_on_scroll::{UseCloseOnScrollInput, use_close_on_scroll};
 use crate::{
-    hooks::{IntoAttrs, PropsWithStyles},
+    CapturedElement, ElementCaptureAttr, IntoAttrs, PropsWithStyles,
     utils::{
-        CapturedElement, ElementCaptureAttr,
-        aria::AriaHidden,
-        css::{LengthPercentageAuto, MaxSize, NonNegativeLengthPercentage, ZIndex, try_px},
+        aria::{AriaHidden, AriaRole},
         i18n::use_direction,
         point::Point,
-        style::{
-            BottomProperty, LeftProperty, MaxHeightProperty, RightProperty, TopProperty,
-            ZIndexProperty,
+        styles::{
+            Styles,
+            css::{LengthPercentageAuto, MaxSize, NonNegativeLengthPercentage, ZIndex, try_px},
+            property::{
+                BottomProperty, LeftProperty, MaxHeightProperty, RightProperty, TopProperty,
+                ZIndexProperty,
+            },
         },
-        styles::Styles,
     },
 };
 
@@ -27,6 +29,9 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
+// - The positioning options are one `OverlayPositionOptions` with defaults, shared by
+//   `use_popover` and the overlay atoms (react-aria: `AriaPositionProps` spread into each props
+//   object).
 // - `placement` is the typed `Placement` enum; the result's side is `PlacementAxis`.
 // - Elements are `CapturedElement`s: the overlay and arrow elements are captured by the
 //   returned props, the target (and optional boundary and scroll elements) are passed in.
@@ -43,25 +48,20 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_overlay_position`].
+/// How an overlay is positioned at its target: shared by [`use_overlay_position`],
+/// `use_popover` and the overlay atoms (react-aria's `AriaPositionProps`).
 #[derive(Debug, Clone, Copy)]
-pub struct UseOverlayPositionInput {
-    /// The element the overlay is positioned at.
-    pub target: CapturedElement,
-    /// Whether the overlay is open; positioning only happens while it is.
-    pub is_open: Signal<bool>,
+pub struct OverlayPositionOptions {
     /// Where the overlay goes relative to the target. Default: [`Placement::Bottom`].
     pub placement: Signal<Placement>,
-    /// The minimum distance between the overlay and the boundary's edges. Default: 12.
-    pub container_padding: Signal<f64>,
     /// The distance from the target, along the main axis. Default: 0.
     pub offset: Signal<f64>,
     /// The shift along the target's side. Default: 0.
     pub cross_offset: Signal<f64>,
+    /// The minimum distance between the overlay and the boundary's edges. Default: 12.
+    pub container_padding: Signal<f64>,
     /// Whether the overlay flips to the other side when there is more room there. Default: `true`.
     pub should_flip: Signal<bool>,
-    /// The element the overlay must stay within. Default: the document body.
-    pub boundary: Option<CapturedElement>,
     /// The overlay's maximum height. Default: the room available.
     pub max_height: Signal<Option<f64>>,
     /// The arrow's size across the main axis. Default: the width of the element captured by
@@ -69,8 +69,38 @@ pub struct UseOverlayPositionInput {
     pub arrow_size: Signal<Option<f64>>,
     /// The minimum distance between the arrow and the overlay's edges. Default: 0.
     pub arrow_boundary_offset: Signal<f64>,
+    /// The element the overlay must stay within. Default: the document body.
+    pub boundary: Option<CapturedElement>,
     /// Whether the position follows changes (resizes, ...). Default: `true`.
     pub should_update_position: Signal<bool>,
+}
+
+impl Default for OverlayPositionOptions {
+    fn default() -> Self {
+        Self {
+            placement: Signal::stored(Placement::Bottom),
+            offset: Signal::stored(0.0),
+            cross_offset: Signal::stored(0.0),
+            container_padding: Signal::stored(12.0),
+            should_flip: Signal::stored(true),
+            max_height: Signal::stored(None),
+            arrow_size: Signal::stored(None),
+            arrow_boundary_offset: Signal::stored(0.0),
+            boundary: None,
+            should_update_position: Signal::stored(true),
+        }
+    }
+}
+
+/// Input of [`use_overlay_position`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseOverlayPositionInput {
+    /// The element the overlay is positioned at.
+    pub target: CapturedElement,
+    /// Whether the overlay is open; positioning only happens while it is.
+    pub is_open: Signal<bool>,
+    /// Where and how the overlay is placed.
+    pub position: OverlayPositionOptions,
     /// Replaces the target's bounding rectangle (viewport coordinates), e.g. a point for a
     /// context menu. Default: none.
     pub target_rect: Signal<Option<Rect>>,
@@ -143,7 +173,7 @@ impl IntoAttrs for UseOverlayArrowProps {
         (
             self.element_capture,
             Attr(attr::AriaHidden, AriaHidden::True),
-            Attr(attr::Role, "presentation"),
+            Attr(attr::Role, AriaRole::Presentation),
         )
     }
 }
@@ -151,7 +181,7 @@ impl IntoAttrs for UseOverlayArrowProps {
 pub type UseOverlayArrowAttrs = (
     ElementCaptureAttr,
     Attr<attr::AriaHidden, AriaHidden>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
 );
 
 fn px(value: f64) -> Option<LengthPercentageAuto> {
@@ -167,16 +197,11 @@ fn px(value: f64) -> Option<LengthPercentageAuto> {
 /// let position = use_overlay_position(UseOverlayPositionInput {
 ///     target: trigger,
 ///     is_open,
-///     placement: Signal::stored(Placement::Top),
-///     container_padding: Signal::stored(12.0),
-///     offset: Signal::stored(8.0),
-///     cross_offset: Signal::stored(0.0),
-///     should_flip: Signal::stored(true),
-///     boundary: None,
-///     max_height: Signal::stored(None),
-///     arrow_size: Signal::stored(None),
-///     arrow_boundary_offset: Signal::stored(0.0),
-///     should_update_position: Signal::stored(true),
+///     position: OverlayPositionOptions {
+///         placement: Signal::stored(Placement::Top),
+///         offset: Signal::stored(8.0),
+///         ..OverlayPositionOptions::default()
+///     },
 ///     target_rect: Signal::stored(None),
 ///     scroll: None,
 ///     on_close: None,
@@ -189,16 +214,19 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
     let UseOverlayPositionInput {
         target,
         is_open,
-        placement,
-        container_padding,
-        offset,
-        cross_offset,
-        should_flip,
-        boundary,
-        max_height,
-        arrow_size,
-        arrow_boundary_offset,
-        should_update_position,
+        position:
+            OverlayPositionOptions {
+                placement,
+                offset,
+                cross_offset,
+                container_padding,
+                should_flip,
+                max_height,
+                arrow_size,
+                arrow_boundary_offset,
+                boundary,
+                should_update_position,
+            },
         target_rect,
         scroll,
         on_close,

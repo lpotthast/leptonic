@@ -1,27 +1,30 @@
 // Upstream: react-aria/src/table/useTableColumnHeader.ts @ 99e6102368
+// Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/table/TableTests.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    ev,
-    ev::{On, SharedEventCallback},
     prelude::*,
 };
-use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::{ColumnKind, SortDirection, TableData};
 use crate::{
+    IdRefs, IntoAttrs, PropsWithStyles,
     hooks::{
-        CellFocusMode, IntoAttrs, PropsWithStyles, UseGridCellAttrs, UseGridCellInput,
-        UseGridCellProps, UseGridCellReturn,
         collections::{Key, SelectionMode},
         focus::use_focusable::{
-            FocusableContextAttr, UseFocusableInput, UseFocusableProps, use_focusable,
+            UseFocusableInput, UseFocusableItemAttrs, UseFocusableItemProps, use_focusable,
+        },
+        grid::{
+            CellFocusMode, UseGridCellAttrs, UseGridCellInput, UseGridCellProps, UseGridCellReturn,
+            use_grid_cell,
         },
         interactions::use_press::{UsePressAttrs, UsePressInput, UsePressProps, use_press},
-        use_grid_cell,
     },
     utils::{
-        ElementCaptureAttr, EventHandler,
         aria::{AriaRole, AriaSort},
+        intl_strings::{TableStrings, use_localized_strings},
+        platform::device::is_android,
+        use_description::use_description,
     },
 };
 
@@ -34,9 +37,10 @@ use crate::{
 //   description and attributes (e.g. from a `TooltipTrigger`); the cell keeps its own tabindex
 //   (react-aria merges `useFocusable`'s props first, so the grid cell's tabindex wins there too).
 //
-// ## OMITTED FEATURES
-// - The "sortable" description (`aria-describedby`): it needs localized messages.
-// - Android's sort direction description (Android gets `aria-sort` as well).
+// ## DIFFERENT BEHAVIOR
+// - Android gets `aria-sort` too (react-aria omits it there, as TalkBack doesn't support it):
+//   the server can't know the platform, and the attribute must hydrate. The sort direction is
+//   also in the description on Android, as upstream.
 //
 // =============================================================================
 
@@ -67,67 +71,14 @@ pub struct UseTableColumnHeaderProps {
     pub press: UsePressProps,
     pub aria_sort: Signal<Option<AriaSort>>,
     /// What a `FocusableContext` (e.g. a `TooltipTrigger` around the header) adds.
-    pub focusable: UseTableColumnHeaderFocusableProps,
-}
-
-/// The parts of `use_focusable`'s props a column header takes: a `FocusableContext`'s handlers,
-/// element capture, description and attributes (the cell keeps its own tabindex).
-#[derive(Debug)]
-pub struct UseTableColumnHeaderFocusableProps {
-    pub on_focus: EventHandler<FocusEvent>,
-    pub on_blur: EventHandler<FocusEvent>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_keyup: EventHandler<KeyboardEvent>,
-    pub element_capture: ElementCaptureAttr,
-    pub aria_describedby: Signal<Option<String>>,
-    pub context_attrs: FocusableContextAttr,
-}
-
-impl From<UseFocusableProps> for UseTableColumnHeaderFocusableProps {
-    fn from(props: UseFocusableProps) -> Self {
-        Self {
-            on_focus: props.on_focus,
-            on_blur: props.on_blur,
-            on_keydown: props.on_keydown,
-            on_keyup: props.on_keyup,
-            element_capture: props.element_capture,
-            aria_describedby: props.context_aria_describedby,
-            context_attrs: FocusableContextAttr(props.context_attrs),
-        }
-    }
-}
-
-pub type UseTableColumnHeaderFocusableAttrs = (
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
-    ElementCaptureAttr,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    FocusableContextAttr,
-);
-
-impl IntoAttrs for UseTableColumnHeaderFocusableProps {
-    type Attrs = UseTableColumnHeaderFocusableAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
-            self.on_keydown.into_on(ev::keydown),
-            self.on_keyup.into_on(ev::keyup),
-            self.element_capture,
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            self.context_attrs,
-        )
-    }
+    pub focusable: UseFocusableItemProps,
 }
 
 pub type UseTableColumnHeaderAttrs = (
     UseGridCellAttrs,
     UsePressAttrs,
     Attr<attr::AriaSort, Signal<Option<AriaSort>>>,
-    UseTableColumnHeaderFocusableAttrs,
+    UseFocusableItemAttrs,
 );
 
 impl IntoAttrs for UseTableColumnHeaderProps {
@@ -157,10 +108,13 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     let column = {
         let key = key.clone();
         Memo::new(move |_| {
-            state.table.with(|t| {
-                t.column(&key).map_or((false, false), |c| {
-                    (c.allows_sorting, c.kind == ColumnKind::SelectionCheckbox)
-                })
+            state.columns.with(|columns| {
+                columns
+                    .iter()
+                    .find(|c| c.key == key)
+                    .map_or((false, false), |c| {
+                        (c.allows_sorting, c.kind == ColumnKind::SelectionCheckbox)
+                    })
             })
         })
     };
@@ -227,7 +181,31 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     });
     let is_pressed = press.is_pressed;
     // Picks up a `FocusableContext` (e.g. a tooltip on the header).
-    let focusable = use_focusable(UseFocusableInput::default()).props.into();
+    let mut focusable: UseFocusableItemProps =
+        use_focusable(UseFocusableInput::default()).props.into();
+
+    // Sortable columns are described as such (on Android also with their sort direction).
+    let strings = use_localized_strings::<TableStrings>();
+    let sort_description = use_description(Signal::derive(move || {
+        if !allows_sorting.get() {
+            return None;
+        }
+        let strings = strings.read();
+        let sortable = strings.sortable();
+        let direction = is_android()
+            .then(|| match aria_sort.get() {
+                Some(AriaSort::Ascending) => Some(strings.ascending()),
+                Some(AriaSort::Descending) => Some(strings.descending()),
+                _ => None,
+            })
+            .flatten();
+        Some(match direction {
+            Some(direction) => format!("{sortable}, {direction}"),
+            None => sortable,
+        })
+    }));
+    let context_describedby = focusable.aria_describedby;
+    focusable.aria_describedby = IdRefs::derive([context_describedby, sort_description]);
 
     UseTableColumnHeaderReturn {
         column_header_props: PropsWithStyles::new(

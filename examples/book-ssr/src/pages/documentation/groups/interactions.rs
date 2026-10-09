@@ -67,41 +67,26 @@ pub fn PageInteractions() -> impl IntoView {
                 <Section title="Combining Hooks">
                     <p>
                         <Code inline=true>"use_press"</Code>" and "<Code inline=true>"use_hover"</Code>" are the most "
-                        "commonly paired hooks. Spreading the props of two hooks onto one element would set some event "
-                        "handlers twice, so "<Code inline=true>"merge_with"</Code>" (from the "<Code inline=true>"MergeWith"</Code>
-                        " trait) combines them into one set of attributes and chains the handlers both hooks set:"
+                        "commonly paired hooks. Convert each hook\u{2019}s props to attributes and spread both onto the same "
+                        "element. Leptos attaches each event handler, so both hooks receive the events they need:"
                     </p>
 
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{hooks::*, utils::MergeWith};
+                            use leptonic::{
+                                IntoAttrs,
+                                hooks::interactions::{UseHoverInput, UsePressInput, use_hover, use_press},
+                            };
                             use leptos::prelude::*;
 
                             let press = use_press(UsePressInput::default());
                             let hover = use_hover(UseHoverInput::default());
-                            // `use_press` returns its props with styles; the merge keeps them.
-                            let (attrs, styles) = press.props.merge_with(hover.props).into_parts();
+                            let (press_attrs, styles) = press.props.into_parts();
+                            let hover_attrs = hover.props.into_attrs();
 
-                            view! { <button {..attrs} style=styles>"Press or hover me"</button> }
+                            view! { <button {..press_attrs} {..hover_attrs} style=styles>"Press or hover me"</button> }
                         "#)}
                     </Code>
-
-                    <p>"These combinations can be merged:"</p>
-
-                    <DocTable headers=&["Merged type", "Combines"]>
-                        <TableRow><TableCell><Code inline=true>"MergedPressHoverProps"</Code></TableCell><TableCell>"use_press + use_hover"</TableCell></TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"MergedPressHoverFocusRingProps"</Code></TableCell>
-                            <TableCell>"use_press + use_hover + use_focus_ring"</TableCell>
-                        </TableRow>
-                        <TableRow><TableCell><Code inline=true>"MergedPressFocusRingProps"</Code></TableCell><TableCell>"use_press + use_focus_ring"</TableCell></TableRow>
-                        <TableRow><TableCell><Code inline=true>"MergedHoverFocusRingProps"</Code></TableCell><TableCell>"use_hover + use_focus_ring"</TableCell></TableRow>
-                        <TableRow><TableCell><Code inline=true>"MergedFocusablePressProps"</Code></TableCell><TableCell>"use_focusable + use_press"</TableCell></TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"MergedFocusablePressFocusRingProps"</Code></TableCell>
-                            <TableCell>"use_focusable + use_press + use_focus_ring"</TableCell>
-                        </TableRow>
-                    </DocTable>
 
                 </Section>
 

@@ -73,7 +73,7 @@ pub fn PageAtomTimeField() -> impl IntoView {
                         <ApiRow name="set_value" ty="Option<Out<Option<T>>>" default="None">"Receives the new value."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">"Called with each new value."</ApiRow>
                         <ApiRow name="placeholder_value" ty="MaybeProp<T>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
-                        <ApiRow name="min_value, max_value" ty="Signal<Option<T>>" default="None">"The earliest and latest valid time."</ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<Option<Time>>" default="None">"The earliest and latest valid time."</ApiRow>
                         <ApiRow name="granularity" ty="MaybeProp<Granularity>" default="None">
                             "The finest segment: "<Code inline=true>"Hour"</Code>", "<Code inline=true>"Minute"</Code>" (the default) or "
                             <Code inline=true>"Second"</Code>"."

@@ -1,15 +1,12 @@
 use leptonic::{
+    Collator, CollatorOptions, Filter, FilterQuery, Locale, Orientation,
     atoms::{
         field::Label,
         input::Input,
         radio::{RadioButton, RadioField, RadioGroup},
         search_field::SearchField,
     },
-    hooks::{Orientation, collections::Key},
-    utils::{
-        filter::{Collator, CollatorOptions, Filter},
-        i18n::Locale,
-    },
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 
@@ -37,9 +34,10 @@ pub fn CollatorDemo() -> impl IntoView {
         let mut words = WORDS.to_vec();
         words.sort_by(|a, b| collator.compare(a, b));
         query.with(|query| {
+            let query = FilterQuery::new(query);
             words
                 .into_iter()
-                .filter(|word| filter.contains(word, query))
+                .filter(|word| filter.contains(word, &query))
                 .collect::<Vec<_>>()
         })
     };

@@ -7,8 +7,7 @@ use super::{
     HSV, RGB8, to_fixed_percent,
 };
 use crate::utils::{
-    i18n::Locale,
-    locale::WritingDirection,
+    i18n::{Locale, WritingDirection},
     number_formatter::{NumberFormatOptions, NumberStyle},
 };
 
@@ -103,13 +102,19 @@ impl<C: ColorValue> ColorValue for Alpha<C> {
                 max_value: 1.0,
                 step: 0.01,
                 page_size: 0.1,
-                gradient_stops: None,
             },
         }
     }
 
-    fn channels() -> Vec<Self::Channel> {
-        C::channels().into_iter().map(AlphaChannel::Color).collect()
+    fn channels() -> [Self::Channel; 3] {
+        C::channels().map(AlphaChannel::Color)
+    }
+
+    fn gradient_stops(channel: Self::Channel) -> &'static [f64] {
+        match channel {
+            AlphaChannel::Color(channel) => C::gradient_stops(channel),
+            AlphaChannel::Alpha => &[0.0, 1.0],
+        }
     }
 
     fn color_space_axes(

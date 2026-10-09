@@ -5,10 +5,11 @@
 //! reordering, sortability and the selection mode). Spec: react-aria-components
 //! `Table.test.js`.
 use assertr::{matchers::eq, prelude::*};
-use browser_test::thirtyfour::prelude::*;
+use browser_test::{browser_test, thirtyfour::prelude::*};
+use leptonic::AriaRole;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, PageActions, xpath};
+use crate::pages::{ElementActions, Page, css, role};
 
 const PATH: &str = "/atoms/table-selection";
 
@@ -21,9 +22,7 @@ async fn table(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
 async fn row(page: &Page<'_>, label: &str, name: &str) -> Result<WebElement, Report> {
     table(page, label)
         .await?
-        .element(xpath(format!(
-            ".//tbody/*[@role='row'][.//*[@role='rowheader'][normalize-space(.)='{name}']]"
-        )))
+        .element(css("tbody > [role=row]").has(role(AriaRole::Rowheader).text(name)))
         .await
 }
 
@@ -37,24 +36,21 @@ async fn column_headers(page: &Page<'_>, label: &str) -> Result<Vec<String>, Rep
 
 /// The cell or row header with `text` in `row`.
 async fn cell_in(row: &WebElement, text: &str) -> Result<WebElement, Report> {
-    row.element(xpath(format!(
-        ".//*[@role='gridcell' or @role='rowheader'][normalize-space(.)='{text}']"
-    )))
-    .await
+    row.element(css("[role=gridcell], [role=rowheader]").text(text))
+        .await
 }
 
 /// The column header with `text` of the table `label`.
 async fn column_header(page: &Page<'_>, label: &str, text: &str) -> Result<WebElement, Report> {
     table(page, label)
         .await?
-        .element(xpath(format!(
-            ".//*[@role='columnheader'][normalize-space(.)='{text}']"
-        )))
+        .element(role(AriaRole::Columnheader).text(text))
         .await
 }
 
 async fn click_with_control(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    page.driver
+    page.low_level()
+        .driver()
         .action_chain()
         .key_down(Key::Control)
         .click_element(element)
@@ -93,18 +89,20 @@ async fn selection_stays(
 ) -> Result<(), Report> {
     page.element(format!("#test-ts-{id}-selection"))
         .await?
-        .inner_text_stays(expected)
+        .inner_text_stays(expected, std::time::Duration::from_millis(100))
         .await?;
     page.element(format!("#test-ts-{id}-changes"))
         .await?
-        .inner_text_stays(&changes.to_string())
+        .inner_text_stays(&changes.to_string(), std::time::Duration::from_millis(100))
         .await?;
     Ok(())
 }
 
-/// "should not render checkboxes for selection with selectionBehavior=replace" and "should
-/// perform replace selection in highlight mode when not using modifier keys" / "should
-/// perform toggle selection in highlight mode when using modifier keys" (mouse).
+/// With replace selection there are no checkboxes, and clicking a row replaces the selection while
+/// Ctrl+click toggles the row ("should not render checkboxes for selection with
+/// selectionBehavior=replace", "should perform replace selection in highlight mode when not using
+/// modifier keys", "should perform toggle selection in highlight mode when using modifier keys").
+#[browser_test]
 pub async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
     const REPLACE: &str = "Replace table";
     page.goto_path(PATH).await?;
@@ -115,8 +113,9 @@ pub async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Rep
 
     let bootmgr = row(page, REPLACE, "bootmgr").await?;
     let program_files = row(page, REPLACE, "Program Files").await?;
-    assert_that!(bootmgr.attr("aria-selected").await?)
-        .get_some()
+    assert_that!(bootmgr)
+        .has_attribute("aria-selected")
+        .await
         .is_equal_to("false");
     bootmgr.click().await?;
     expect_selection(page, "replace", "3", 1).await?;
@@ -138,7 +137,9 @@ pub async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Rep
     Ok(())
 }
 
-/// "should perform selection with single selection" (mouse).
+/// With single replace selection, Ctrl+click selects a row in place of the selected one and
+/// Ctrl+click on the selected row deselects it ("should perform selection with single selection").
+#[browser_test]
 pub async fn replace_selection_in_single_mode(page: &Page<'_>) -> Result<(), Report> {
     const SINGLE: &str = "Single replace table";
     page.goto_path(PATH).await?;
@@ -153,8 +154,9 @@ pub async fn replace_selection_in_single_mode(page: &Page<'_>) -> Result<(), Rep
     Ok(())
 }
 
-/// Replace selection follows keyboard focus, from the first focused row on; Shift extends it
-/// ("keyboard" variants).
+/// Replace selection follows keyboard focus from the first row tabbed into on, and Shift+ArrowDown
+/// extends it ("should perform replace selection in highlight mode when not using modifier keys").
+#[browser_test]
 pub async fn replace_selection_with_the_keyboard(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-ts-before-replace")
@@ -177,7 +179,9 @@ pub async fn replace_selection_with_the_keyboard(page: &Page<'_>) -> Result<(), 
     Ok(())
 }
 
-/// "should prevent Esc from clearing selection if escapeKeyBehavior is "none"".
+/// With `escapeKeyBehavior` "none", Escape keeps the selection ("should prevent Esc from clearing
+/// selection if escapeKeyBehavior is "none"").
+#[browser_test]
 pub async fn escape_without_clearing(page: &Page<'_>) -> Result<(), Report> {
     const ESCAPE: &str = "Escape table";
     page.goto_path(PATH).await?;
@@ -195,51 +199,40 @@ pub async fn escape_without_clearing(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "shouldSelectOnPressUp": without it, the press start selects; with it, the press end. With
-/// it, a row the browser would drag doesn't lose focus to the pressed cell: the cell drops its
-/// tabindex during the pointer down (useGridCell).
+/// A row is selected on pointer down, or on pointer up with `shouldSelectOnPressUp`, where a
+/// draggable row keeps focus over its pressed cell ("should select an item on pressing down when
+/// shouldSelectOnPressUp is not provided", "should select an item on pressing up when
+/// shouldSelectOnPressUp is true").
+#[browser_test]
 pub async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
     const UP: &str = "Press up table";
     page.goto_path(PATH).await?;
     let down = row(page, "Press down table", "Games").await?;
-    page.driver
-        .action_chain()
-        .click_and_hold_element(&down)
-        .perform()
-        .await?;
+    let held = down.press_and_hold().await?;
     expect_selection(page, "press-down", "1", 1).await?;
-    page.driver.action_chain().release().perform().await?;
+    held.release().await?;
     selection_stays(page, "press-down", "1", 1).await?;
 
     let up = row(page, UP, "Games").await?;
-    page.driver
-        .action_chain()
-        .click_and_hold_element(&up)
-        .perform()
-        .await?;
+    let held = up.press_and_hold().await?;
     selection_stays(page, "press-up", "", 0).await?;
-    page.driver.action_chain().release().perform().await?;
+    held.release().await?;
     expect_selection(page, "press-up", "1", 1).await?;
 
     // A draggable row: the browser's default focus on pointer down skips the pressed cell.
     let program_files = row(page, UP, "Program Files").await?;
-    page.eval::<()>(
-        "arguments[0].setAttribute('draggable', 'true');",
-        vec![program_files.to_json()?],
-    )
-    .await?;
+    page.low_level()
+        .eval::<()>(
+            "arguments[0].setAttribute('draggable', 'true');",
+            vec![program_files.to_json()?],
+        )
+        .await?;
     let type_cell = program_files
-        .element(xpath(
-            ".//*[@role='gridcell'][normalize-space(.)='File folder']",
-        ))
+        .element(role(AriaRole::Gridcell).text("File folder"))
         .await?;
-    page.driver
-        .action_chain()
-        .click_and_hold_element(&type_cell)
-        .perform()
-        .await?;
+    let held = type_cell.press_and_hold().await?;
     page.wait_for_focus(&program_files).await?;
-    page.driver.action_chain().release().perform().await?;
+    held.release().await?;
     expect_selection(page, "press-up", "2", 2).await?;
     page.wait_for_focus(&program_files).await?;
     // The cell gets its tabindex back.
@@ -247,19 +240,19 @@ pub async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should support row actions": the row is pressed while the pointer is down, and the press
-/// runs the action; Enter runs it too.
+/// A row is pressed while the pointer is down, and pressing it or Enter on it runs its action
+/// ("should support row actions").
+#[browser_test]
 pub async fn row_actions(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let games = row(page, "Action table", "Games").await?;
-    assert_that!(games.attr("data-pressed").await?).is_none();
-    page.driver
-        .action_chain()
-        .click_and_hold_element(&games)
-        .perform()
-        .await?;
+    assert_that!(games)
+        .attribute("data-pressed")
+        .await
+        .is_none();
+    let held = games.press_and_hold().await?;
     games.wait_for_attr("data-pressed", Some("true")).await?;
-    page.driver.action_chain().release().perform().await?;
+    held.release().await?;
     games.wait_for_attr("data-pressed", None).await?;
     let action = page.element("#test-ts-action").await?;
     let action_count = page.element("#test-ts-action-count").await?;
@@ -273,9 +266,10 @@ pub async fn row_actions(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Columns change while the rows stay: hidden and shown again ("supports removing a column and
-/// adding it back"), renamed, moved, made sortable; the selection mode switches. Headers, kept
-/// cells and navigation follow.
+/// Headers, cells and arrow-key navigation follow columns that are hidden and shown again, renamed,
+/// moved or made sortable, and "select all" follows the selection mode ("supports removing a
+/// column and adding it back static").
+#[browser_test]
 pub async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     const COLUMNS: &str = "Columns table";
     page.goto_path(PATH).await?;
@@ -332,10 +326,14 @@ pub async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     // Sortability follows the column ("should support column hover when sorting is allowed",
     // "should not show column hover state when column is not sortable").
     let date = column_header(page, COLUMNS, "Date Modified").await?;
-    assert_that!(date.attr("aria-sort").await?).is_none();
-    assert_that!(date.attr("data-allows-sorting").await?).is_none();
+    assert_that!(date).attribute("aria-sort").await.is_none();
+    assert_that!(date)
+        .attribute("data-allows-sorting")
+        .await
+        .is_none();
     date.hover().await?;
-    date.attr_stays("data-hovered", None).await?;
+    date.attr_stays("data-hovered", None, std::time::Duration::from_millis(100))
+        .await?;
     page.element("#test-ts-sort-date").await?.click().await?;
     date.wait_for_attr("aria-sort", Some("none")).await?;
     date.wait_for_attr("data-allows-sorting", Some("true"))
@@ -356,9 +354,101 @@ pub async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// `data-hovered` on interactive rows and their cells, and
-/// `data-focus-visible` on cells focused by keyboard (react-aria-components' `Row`, `Cell` and
-/// `Column` render states).
+/// In single selection mode, Ctrl+A selects nothing ("should not select all with Mod+A when
+/// selection mode is single").
+#[browser_test]
+pub async fn select_all_shortcut_in_single_mode(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let games = row(page, "Press down table", "Games").await?;
+    games.focus().await?;
+    page.wait_for_focus(&games).await?;
+    page.send_keys(Key::Control + "a").await?;
+    page.element("#test-ts-press-down-changes")
+        .await?
+        .inner_text_stays("0", std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
+}
+
+/// The selection checkbox column shows only while rows can be selected: switching the selection
+/// mode to none removes the column and every row's checkbox cell, switching back restores them
+/// (react-stately's `useTableState`: `showSelectionCheckboxes && selectionMode !== 'none'`).
+#[browser_test]
+pub async fn the_selection_column_follows_the_selection_mode(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    const COLUMNS: &str = "Columns table";
+    page.goto_path(PATH).await?;
+    let expect = |headers: Vec<&'static str>, cells: Vec<&'static str>| async move {
+        assert_that!(|| column_headers(page, COLUMNS))
+            .eventually_ok()
+            .matches(eq(headers))
+            .await;
+        assert_that!(|| async { row(page, COLUMNS, "Games").await?.inner_texts("td").await })
+            .eventually_ok()
+            .matches(eq(cells.as_slice()))
+            .await;
+        Ok::<(), Report>(())
+    };
+    expect(
+        vec!["", "Name", "Type", "Date Modified"],
+        vec!["", "Games", "File folder", "6/7/2020"],
+    )
+    .await?;
+    let toggle = page.element("#test-ts-no-selection").await?;
+    toggle.click().await?;
+    expect(
+        vec!["Name", "Type", "Date Modified"],
+        vec!["Games", "File folder", "6/7/2020"],
+    )
+    .await?;
+    assert_that!(
+        page.count(css("[aria-label='Columns table'] input[type=checkbox]"))
+            .await?
+    )
+    .is_equal_to(0);
+    toggle.click().await?;
+    expect(
+        vec!["", "Name", "Type", "Date Modified"],
+        vec!["", "Games", "File folder", "6/7/2020"],
+    )
+    .await?;
+    Ok(())
+}
+
+/// Removing the focused column header moves the focus to the same column of the first row
+/// (react-stately's `useGridState`: a removed column header refocuses the nearest row's cell).
+#[browser_test]
+pub async fn removing_the_focused_column_header(page: &Page<'_>) -> Result<(), Report> {
+    const COLUMNS: &str = "Columns table";
+    page.goto_path(PATH).await?;
+    let games = row(page, COLUMNS, "Games").await?;
+    games.focus().await?;
+    page.wait_for_focus(&games).await?;
+    // Games' type cell, then up to the "Type" header.
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&cell_in(&games, "File folder").await?)
+        .await?;
+    page.send_keys(Key::Up).await?;
+    page.wait_for_focus(&column_header(page, COLUMNS, "Type").await?)
+        .await?;
+    // Hide the column from script, as an app would: the focus stays in the table.
+    page.element("#test-ts-hide-type")
+        .await?
+        .virtual_click()
+        .await?;
+    // Games is the first row: its cell now in the Type column's place.
+    page.wait_for_focus(&cell_in(&games, "6/7/2020").await?)
+        .await?;
+    Ok(())
+}
+
+/// Hovering an interactive row marks it and its cells `data-hovered`, and cells and column headers
+/// focused by keyboard get `data-focus-visible` ("should support hover", "should support focus
+/// ring").
+#[browser_test]
 pub async fn hover_and_focus_states(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let games = row(page, "Replace table", "Games").await?;

@@ -1,11 +1,20 @@
 use leptonic::{
-    atoms::{button::Button, checkbox::{CheckboxButton, CheckboxField}, focus_scope::FocusScope},
-    hooks::*,
+    IntoAttrs,
+    atoms::{
+        button::Button,
+        checkbox::{CheckboxButton, CheckboxField},
+        focus_scope::FocusScope,
+    },
+    hooks::{
+        dialog::{UseDialogInput, UseDialogReturn, use_dialog},
+        modal::{UseModalBackdropInput, UseModalBackdropReturn, use_modal_backdrop},
+        overlay::{UseOverlayTriggerStateInput, use_overlay_trigger_state},
+    },
 };
 use leptos::{portal::Portal, prelude::*};
 
 /// A modal dialog built from the hooks: the open state, the backdrop (dismissal, scroll lock, inert page),
-/// `aria-modal`, the dialog semantics and a focus scope. The checkboxes choose how the user can dismiss it.
+/// the dialog semantics and a focus scope. The checkboxes choose how the user can dismiss it.
 #[component]
 pub fn ModalHooksDemo() -> impl IntoView {
     let close_on_outside_click = RwSignal::new(true);
@@ -41,10 +50,6 @@ pub fn ModalHooksDemo() -> impl IntoView {
         should_close_on_interact_outside: None,
         is_entering: Signal::stored(false),
     });
-    // `aria-modal="true"`.
-    let UseModalReturn {
-        modal_props: aria_modal_props,
-    } = use_modal(UseModalInput::default());
     // The dialog role, the name from the title, and focus when it opens.
     let UseDialogReturn {
         dialog_props,
@@ -54,7 +59,6 @@ pub fn ModalHooksDemo() -> impl IntoView {
 
     // `<Show>` renders the modal anew on every opening: keep the attributes to spread them each time.
     let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let aria_modal_attrs = StoredValue::new(aria_modal_props.into_attrs());
     let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
     let title_attrs = StoredValue::new(title_props.into_attrs());
 
@@ -89,7 +93,6 @@ pub fn ModalHooksDemo() -> impl IntoView {
                     <FocusScope contain=true restore_focus=true auto_focus=true>
                         <div
                             {..modal_attrs.get_value()}
-                            {..aria_modal_attrs.get_value()}
                             {..dialog_attrs.get_value()}
                             class="demo-dialog"
                         >

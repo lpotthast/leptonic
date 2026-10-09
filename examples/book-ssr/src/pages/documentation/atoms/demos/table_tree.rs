@@ -3,8 +3,8 @@ use std::{collections::HashSet, sync::Arc};
 use leptonic::{
     atoms::table::{Table, TableBody, TableCell, TableExpandButton, TableHeader, TableRow},
     hooks::{
-        TableCollection,
         collections::{CollectionBuilder, Key},
+        table::TableCollection,
     },
 };
 use leptos::prelude::*;
@@ -18,7 +18,12 @@ struct File {
     children: &'static [File],
 }
 
-const fn file(key: &'static str, name: &'static str, kind: &'static str, size: &'static str) -> File {
+const fn file(
+    key: &'static str,
+    name: &'static str,
+    kind: &'static str,
+    size: &'static str,
+) -> File {
     File {
         key,
         name,

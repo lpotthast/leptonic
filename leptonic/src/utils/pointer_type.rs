@@ -1,48 +1,46 @@
-use std::str::FromStr;
+// Upstream: @react-types/shared/src/events.d.ts @ 99e6102368
+//! The kind of input behind an interaction (react-aria's `PointerType`).
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+use std::fmt;
+
+/// The kind of input behind an interaction: a pointer (`Mouse`, `Pen`, `Touch`), the keyboard, or
+/// assistive technology (`Virtual`).
+///
+/// API DIFFERENCES: react-aria's `PointerType` is a string union; pointer events whose
+/// `pointerType` is none of `"mouse"`, `"pen"` and `"touch"` (an empty string when the browser
+/// can't tell, or a vendor-specific type) are `Unknown` here (react-aria passes the string on).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PointerType {
     Mouse,
     Pen,
     Touch,
     Keyboard,
     Virtual,
-    Other(String),
+    /// A pointer of a type the browser can't tell or names otherwise.
+    Unknown,
 }
 
-impl std::fmt::Display for PointerType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Mouse => f.write_str("mouse"),
-            Self::Pen => f.write_str("pen"),
-            Self::Touch => f.write_str("touch"),
-            Self::Keyboard => f.write_str("keyboard"),
-            Self::Virtual => f.write_str("virtual"),
-            Self::Other(other) => f.write_str(other.as_str()),
+impl PointerType {
+    /// The pointer type of a DOM pointer event (its `pointerType`).
+    pub fn of(event: &web_sys::PointerEvent) -> Self {
+        match event.pointer_type().as_str() {
+            "mouse" => Self::Mouse,
+            "pen" => Self::Pen,
+            "touch" => Self::Touch,
+            _ => Self::Unknown,
         }
     }
 }
 
-impl From<String> for PointerType {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "mouse" => PointerType::Mouse,
-            "touch" => PointerType::Touch,
-            "pen" => PointerType::Pen,
-            _other => PointerType::Other(value),
-        }
-    }
-}
-
-impl FromStr for PointerType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "mouse" => Ok(Self::Mouse),
-            "touch" => Ok(Self::Touch),
-            "pen" => Ok(Self::Pen),
-            _ => Err(()),
-        }
+impl fmt::Display for PointerType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Mouse => "mouse",
+            Self::Pen => "pen",
+            Self::Touch => "touch",
+            Self::Keyboard => "keyboard",
+            Self::Virtual => "virtual",
+            Self::Unknown => "unknown",
+        })
     }
 }

@@ -1,9 +1,12 @@
 // Upstream: react-stately/src/select/useSelectState.ts @ 99e6102368
+// Upstream: react-stately/src/list/useSingleSelectListState.ts @ 99e6102368
+// Upstream: react-aria-components/test/Select.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::prelude::*;
 
 use crate::{
+    ValueBinding,
     hooks::{
         collections::{
             CloseOnSelect, CollectionMemo, FocusStrategy, Key, ListState, Node, Selection,
@@ -18,7 +21,6 @@ use crate::{
         },
         overlay::use_overlay_trigger_state::OverlayState,
     },
-    utils::ValueBinding,
 };
 
 // =============================================================================
@@ -28,8 +30,9 @@ use crate::{
 // ## API DIFFERENCES
 // - Hook-owned state (C4): `default_value` and `set_value`, or `value` bound to app state, instead
 //   of a controlled `value`; likewise `default_open` or `is_open` bound to app state.
-// - The value is a `Vec<Key>` in both modes (at most one key in `Single` mode), in collection
-//   order. react-aria: `Key | null` or `Key[]` depending on the mode.
+// - The value is a `Vec<Key>` in both modes (at most one key in `Single` mode: of a longer
+//   default or bound value, the first), in collection order. react-aria: `Key | null` or
+//   `Key[]` depending on the mode.
 // - The deprecated `selectedKey`/`defaultSelectedKey`/`onSelectionChange` aliases are not
 //   offered.
 //
@@ -123,7 +126,7 @@ impl OverlayState for SelectState {
         SelectState::close(self);
     }
 
-    fn point(&self) -> Signal<Option<crate::utils::Point>> {
+    fn point(&self) -> Signal<Option<crate::Point>> {
         self.menu_trigger.overlay.point
     }
 }
@@ -141,7 +144,7 @@ impl MenuTriggerStateApi for SelectState {
         SelectState::toggle(self, focus_strategy);
     }
 
-    fn set_point(&self, point: Option<crate::utils::Point>) {
+    fn set_point(&self, point: Option<crate::Point>) {
         self.menu_trigger.overlay.set_point(point);
     }
 }
@@ -165,12 +168,9 @@ impl SelectState {
             .with(|c| value.iter().filter_map(|key| c.get(key).cloned()).collect())
     }
 
-    /// Select `keys` (at most one in `Single` mode).
+    /// Select `keys` (in `Single` mode: the first of them).
     pub fn set_value(&self, keys: Vec<Key>) {
-        let keys = match self.selection_mode {
-            SelectMode::Single => keys.into_iter().take(1).collect(),
-            SelectMode::Multiple => keys,
-        };
+        // The selection manager keeps one key in single selection mode.
         self.list.selection.set_selected_keys(keys);
     }
 
@@ -254,6 +254,12 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
     } = input;
     let should_close_on_select =
         should_close_on_select.resolve(|| selection_mode == SelectMode::Single);
+    // A single select holds at most one key, however many it is given.
+    let at_most_one = move |keys: Vec<Key>| match selection_mode {
+        SelectMode::Single => keys.into_iter().take(1).collect(),
+        SelectMode::Multiple => keys,
+    };
+    let default_value = at_most_one(default_value);
 
     let menu_trigger = use_menu_trigger_state(UseMenuTriggerStateInput {
         default_open,
@@ -267,19 +273,19 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
     // counts as reported (picking the previous value again is a change).
     let last_value = StoredValue::new(value.map_or_else(
         || default_value.clone(),
-        |value| value.value.get_untracked(),
+        |value| at_most_one(value.value.get_untracked()),
     ));
     if let Some(value) = value {
         Effect::watch(
             move || value.value.get(),
-            move |value, _, _| last_value.set_value(value.clone()),
+            move |value, _, _| last_value.set_value(at_most_one(value.clone())),
             false,
         );
     }
     // The bound value as the list's selection ("select all" doesn't apply to selects).
     let selection_binding = value.map(|value| {
         ValueBinding::new(
-            Signal::derive(move || Selection::keys(value.value.get())),
+            Signal::derive(move || Selection::keys(at_most_one(value.value.get()))),
             Callback::new(move |selection: Selection| {
                 if let Selection::Keys(keys) = selection {
                     value.set(ordered(collection, keys));
@@ -331,7 +337,7 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
         value: Signal::derive(move || ordered(collection, selection.selected_keys())),
         validate,
         validation_behavior,
-        name: name.clone(),
+        names: name.clone().into_iter().collect(),
     });
     commit_validation.set_value(Some(validation));
 
@@ -374,7 +380,7 @@ mod tests {
 
     #[test]
     fn on_change_fires_only_when_the_value_changes() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let changes = RwSignal::new(Vec::new());
             let state = use_select_state(UseSelectStateInput {
                 default_value: vec![Key::from("b")],
@@ -402,7 +408,7 @@ mod tests {
 
     #[test]
     fn a_bound_value_is_shown_and_written() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let value = RwSignal::new(vec![Key::from("b")]);
             let state = use_select_state(UseSelectStateInput {
                 value: Some(value.into()),
@@ -435,7 +441,7 @@ mod tests {
 
     #[test]
     fn selecting_closes_in_single_mode() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_select_state(UseSelectStateInput {
                 collection: fruits(&["a", "b"]),
                 selection_mode: SelectMode::Single,
@@ -462,7 +468,7 @@ mod tests {
 
     #[test]
     fn multiple_mode_keeps_collection_order_and_stays_open() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_select_state(UseSelectStateInput {
                 selection_mode: SelectMode::Multiple,
                 collection: fruits(&["a", "b", "c"]),
@@ -490,7 +496,7 @@ mod tests {
 
     #[test]
     fn single_mode_keeps_one_key() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_select_state(UseSelectStateInput {
                 collection: fruits(&["a", "b"]),
                 selection_mode: SelectMode::Single,
@@ -513,9 +519,48 @@ mod tests {
         });
     }
 
+    // Single selection holds one key, also when given more (two selected options otherwise).
+    #[test]
+    fn single_mode_keeps_one_key_of_a_default_or_bound_value() {
+        crate::testing::with_owner(|| {
+            let input = |default_value: Vec<Key>, value: Option<ValueBinding<Vec<Key>>>| {
+                UseSelectStateInput {
+                    collection: fruits(&["a", "b", "c"]),
+                    selection_mode: SelectMode::Single,
+                    default_value,
+                    value,
+                    on_change: None,
+                    disabled_keys: Signal::stored(HashSet::new()),
+                    should_close_on_select: CloseOnSelect::Auto,
+                    allows_empty_collection: false,
+                    default_open: false,
+                    is_open: None,
+                    on_open_change: None,
+                    is_invalid: Signal::stored(false),
+                    validate: None,
+                    validation_behavior: ValidationBehavior::default(),
+                    name: None,
+                }
+            };
+            let state = use_select_state(input(vec![Key::from("c"), Key::from("a")], None));
+            assert_that!(untrack(|| state.value())).is_equal_to(vec![Key::from("c")]);
+            assert_that!(untrack(|| state.list.selection.selected_keys()))
+                .is_equal_to(HashSet::from([Key::from("c")]));
+
+            let bound = RwSignal::new(vec![Key::from("b"), Key::from("c")]);
+            let state = use_select_state(input(Vec::new(), Some(bound.into())));
+            assert_that!(untrack(|| state.value())).is_equal_to(vec![Key::from("b")]);
+            assert_that!(untrack(|| state
+                .list
+                .selection
+                .is_selected(&Key::from("c"))))
+            .is_false();
+        });
+    }
+
     #[test]
     fn does_not_open_without_options() {
-        Owner::new().with(|| {
+        crate::testing::with_owner(|| {
             let state = use_select_state(UseSelectStateInput {
                 collection: fruits(&[]),
                 selection_mode: SelectMode::Single,
