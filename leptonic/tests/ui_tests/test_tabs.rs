@@ -5,14 +5,11 @@
 //! `Tab::is_disabled`), state as data attributes, force-mounted panels, a bound selected key,
 //! added and removed tabs, and nested tabs.
 //! Spec: react-aria-components `Tabs.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 const PATH: &str = "/atoms/tabs";
 
@@ -61,10 +58,11 @@ async fn selected_tabs(page: &Page<'_>, name: &str) -> Result<Vec<usize>, Report
 
 /// Wait until the tab at `index` is the selected one.
 async fn expect_selected(page: &Page<'_>, name: &str, index: usize) -> Result<(), Report> {
-    wait_for(format!("{name}: the selected tabs"))
-        .observing(|| selected_tabs(page, name))
-        .to_be_equal_to(vec![index])
-        .await?;
+    assert_that!(|| selected_tabs(page, name))
+        .with_subject_name(format!("{name}: the selected tabs"))
+        .eventually_ok()
+        .matches(eq(vec![index]))
+        .await;
     Ok(())
 }
 
@@ -354,10 +352,11 @@ pub async fn tab_is_disabled(page: &Page<'_>) -> Result<(), Report> {
     expect_focus(page, "tab-disabled", 2).await?;
     // A press doesn't select it.
     list[1].click().await?;
-    expect("tab-disabled: the selected tabs")
-        .observing(|| selected_tabs(page, "tab-disabled"))
-        .to_stay_equal_to(vec![2])
-        .await?;
+    page.settle().await?;
+    assert_that!(|| selected_tabs(page, "tab-disabled"))
+        .consistently_ok()
+        .matches(eq(vec![2]))
+        .await;
 
     let first = tabs(page, "tab-first-disabled").await?;
     assert_that!(first[0].attr("aria-disabled").await?)
@@ -480,16 +479,17 @@ pub async fn tab_panels(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     assert_that!(panel_height(page).await?).is_equal_to("auto");
     tabs(page, "Animated").await?[1].click().await?;
-    wait_for("--tab-panel-height")
-        .observing(|| panel_height(page))
-        .to_be("a pixel size (while animating)", |height| {
-            height.ends_with("px")
+    // A pixel size, while animating.
+    assert_that!(|| panel_height(page))
+        .eventually_ok()
+        .satisfies(|height| {
+            height.ends_with("px");
         })
-        .await?;
-    wait_for("--tab-panel-height")
-        .observing(|| panel_height(page))
-        .to_be_equal_to("auto")
-        .await?;
+        .await;
+    assert_that!(|| panel_height(page))
+        .eventually_ok()
+        .matches(eq("auto"))
+        .await;
     Ok(())
 }
 

@@ -25,14 +25,13 @@
 //! keys, a changing visible duration, month and year pickers (RAC `Calendar.test.js`,
 //! `RangeCalendar.test.tsx`), the live announcements and the commit behaviors of a range being
 //! selected (react-spectrum `RangeCalendar.test.js`, "announcing", "pointer events").
-use assertr::prelude::*;
+use std::time::Duration;
+
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, bail};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath};
 
 /// The button of the date `label` ("Wednesday, June 5, 2019") in the calendar `name`: its label
 /// is the date, possibly with additions ("Today, ", " selected", ", First available date", a
@@ -837,10 +836,11 @@ async fn wait_for_selected_days(
     name: &str,
     expected: &[&str],
 ) -> Result<(), Report> {
-    wait_for(format!("the selected days of {name}"))
-        .observing(|| selected_days(page, name))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| selected_days(page, name))
+        .with_subject_name(format!("the selected days of {name}"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -851,11 +851,13 @@ pub async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
     let june11 = date(page, "range-touch", "Tuesday, June 11, 2019").await?;
     touch_tap(&june11).await?;
     wait_for_selected_days(page, "range-touch", &["11"]).await?;
-    // Past the drag delay: still only started.
-    expect("the selected days")
-        .observing(|| selected_days(page, "range-touch"))
-        .to_stay_equal_to(["11"])
-        .await?;
+    // Past the touch drag delay (200 ms): still only started.
+    page.settle().await?;
+    assert_that!(|| selected_days(page, "range-touch"))
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(400))
+        .matches(eq(["11"]))
+        .await;
     value(page, "range-touch")
         .await?
         .inner_text_stays("2019-06-05 - 2019-06-10")
@@ -909,10 +911,14 @@ pub async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Repo
     let june10 = date(page, "range-touch", "Monday, June 10, 2019").await?;
     touch(&june10, "pointerdown").await?;
     touch(&june10, "pointercancel").await?;
-    value(page, "range-touch")
-        .await?
-        .inner_text_stays("2019-06-05 - 2019-06-10")
-        .await?;
+    // Past the touch drag delay (200 ms), after which a pressed date starts dragging.
+    let range_value = value(page, "range-touch").await?;
+    page.settle().await?;
+    assert_that!(|| range_value.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(400))
+        .matches(eq("2019-06-05 - 2019-06-10"))
+        .await;
     date(page, "range-touch", "Tuesday, June 25, 2019")
         .await?
         .click()
@@ -976,10 +982,11 @@ async fn wait_for_grid_labels(
     name: &str,
     expected: &[&str],
 ) -> Result<(), Report> {
-    wait_for(format!("the grid labels of {name}"))
-        .observing(|| grid_labels(page, name))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| grid_labels(page, name))
+        .with_subject_name(format!("the grid labels of {name}"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -1138,22 +1145,22 @@ pub async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(year.inner_texts("option").await?).is_equal_to(years(2016..2036));
     option(&year, "2030").await?.click().await?;
     wait_for_grid_label(page, "pickers", "Appointment date, June 2030").await?;
-    wait_for("the year picker's first year")
-        .observing(|| async { Ok(year.inner_texts("option").await?.first().cloned()) })
-        .to_be_equal_to(Some("2020".to_owned()))
-        .await?;
+    assert_that!(|| async { Ok::<_, Report>(year.inner_texts("option").await?.first().cloned()) })
+        .eventually_ok()
+        .matches(eq(Some("2020".to_owned())))
+        .await;
     assert_that!(year.inner_texts("option").await?).is_equal_to(years(2020..2040));
     Ok(())
 }
 
 /// Wait for a polite live announcement.
 async fn wait_for_announcement(page: &Page<'_>, text: &str) -> Result<(), Report> {
-    wait_for("the polite announcements")
-        .observing(|| announcements_now(page))
-        .to_be(&format!("including {text:?}"), |entries| {
-            entries.iter().any(|entry| entry == text)
+    assert_that!(|| announcements_now(page))
+        .eventually_ok()
+        .satisfies(|entries| {
+            entries.contains(text);
         })
-        .await?;
+        .await;
     Ok(())
 }
 

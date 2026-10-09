@@ -2,7 +2,9 @@
 //! `use_context_menu` on a non-Apple platform: a right click requests the menu at its position
 //! relative to the element, prevents the browser's menu and stops propagation; without a handler
 //! nothing happens; Ctrl+Enter is macOS-only. (The macOS and iOS paths need those platforms.)
-use assertr::prelude::*;
+use std::time::Duration;
+
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
@@ -77,6 +79,13 @@ pub async fn ctrl_enter_is_mac_only(page: &Page<'_>) -> Result<(), Report> {
         .focus()
         .await?;
     page.send_keys(Key::Control + Key::Enter).await?;
-    log(page).await?.inner_text_stays("").await?;
+    // Past the delay after which macOS' Ctrl+Enter requests the menu (10 ms).
+    let log = log(page).await?;
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(200))
+        .matches(eq(""))
+        .await;
     Ok(())
 }

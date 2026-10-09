@@ -1,14 +1,11 @@
 // Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
 //! Behavior of `use_text_field`: labelling, description and validation wiring, the value
 //! staying in sync with the hook-owned state in both directions, and form reset.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/hooks/text-field";
 
@@ -59,18 +56,18 @@ pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
     input.send_keys(Key::End + Key::Backspace).await?;
     state_value(page).await?.wait_for_inner_text("Ad").await?;
     input.wait_for_attr("aria-invalid", Some("true")).await?;
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Your first name. At least 3 characters.")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Your first name. At least 3 characters."))
+        .await;
 
     input.send_keys("a").await?;
     state_value(page).await?.wait_for_inner_text("Ada").await?;
     input.wait_for_attr("aria-invalid", None).await?;
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Your first name.")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Your first name."))
+        .await;
     Ok(())
 }
 

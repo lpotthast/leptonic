@@ -3,14 +3,11 @@
 //! row headers labelling rows, `aria-sort`, column groups), navigation between body and column
 //! headers, sorting, select all, disabled rows, type-ahead and refocusing after removing the
 //! focused row. Spec: react-aria-components `Table.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 const PATH: &str = "/atoms/table";
 
@@ -68,10 +65,10 @@ async fn row_names(page: &Page<'_>) -> Result<Vec<String>, Report> {
 }
 
 async fn expect_rows(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    wait_for("the rows")
-        .observing(|| row_names(page))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| row_names(page))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -237,12 +234,14 @@ pub async fn sorting(page: &Page<'_>) -> Result<(), Report> {
     let announcer = page
         .element("[data-live-announcer] [aria-live=assertive]")
         .await?;
-    wait_for("the assertive announcements")
-        .observing(|| async { Ok(announcer.prop("textContent").await?.unwrap_or_default()) })
-        .to_be(&format!("containing {expected:?}"), |text| {
-            text.contains(expected)
-        })
-        .await?;
+    assert_that!(|| async {
+        Ok::<_, Report>(announcer.prop("textContent").await?.unwrap_or_default())
+    })
+    .eventually_ok()
+    .satisfies(|text| {
+        text.contains(expected);
+    })
+    .await;
 
     // With the keyboard: Enter on the focused header.
     page.wait_for_focus(&kind).await?;
@@ -363,10 +362,10 @@ pub async fn localized(page: &Page<'_>) -> Result<(), Report> {
     select_row
         .wait_for_attr("aria-label", Some("Auswählen"))
         .await?;
-    wait_for("the German sort description")
-        .observing(|| table.referenced_text("aria-describedby"))
-        .to_be_equal_to("sortiert nach Spalte Name in aufsteigender Reihenfolge")
-        .await?;
+    assert_that!(|| table.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("sortiert nach Spalte Name in aufsteigender Reihenfolge"))
+        .await;
 
     page.element("#test-table-to-french").await?.click().await?;
     select_all
@@ -375,9 +374,11 @@ pub async fn localized(page: &Page<'_>) -> Result<(), Report> {
     select_row
         .wait_for_attr("aria-label", Some("Sélectionner"))
         .await?;
-    wait_for("the French sort description")
-        .observing(|| table.referenced_text("aria-describedby"))
-        .to_be_equal_to("trié en fonction de la colonne\u{a0}Name par ordre croissant")
-        .await?;
+    assert_that!(|| table.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq(
+            "trié en fonction de la colonne\u{a0}Name par ordre croissant",
+        ))
+        .await;
     Ok(())
 }

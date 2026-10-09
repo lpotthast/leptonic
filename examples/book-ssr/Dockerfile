@@ -61,6 +61,8 @@ WORKDIR /app
 ARG DEFAULT_LEPTOS_OUTPUT_NAME
 
 COPY --from=builder /build/examples/book-ssr/target/x86_64-unknown-linux-musl/release/book-ssr .
+# The content hashes of the wasm, JS and CSS file names (`hash-files`), read next to the binary.
+COPY --from=builder /build/examples/book-ssr/target/x86_64-unknown-linux-musl/release/hash.txt .
 COPY --from=builder /build/examples/book-ssr/target/site ./site
 COPY --from=builder /build/examples/book-ssr/certs/ssl_cert.pem ./certs/www.leptonic.dev-cert.pem
 COPY --from=builder /build/examples/book-ssr/certs/ssl_key.pem ./certs/www.leptonic.dev-key.pem
@@ -70,6 +72,7 @@ ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
 ENV LEPTOS_OUTPUT_NAME=${DEFAULT_LEPTOS_OUTPUT_NAME}
 ENV LEPTOS_SITE_ROOT="site"
 ENV LEPTOS_SITE_PKG_DIR="pkg"
+ENV LEPTOS_HASH_FILES="true"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:443"
 
 CMD ["/app/book-ssr"]

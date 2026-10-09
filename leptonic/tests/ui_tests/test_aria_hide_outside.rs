@@ -5,13 +5,10 @@
 //! overlays registered from inside after its observer hid them, follows elements added while it
 //! is active (outside, into hidden containers, inside a target, top-layer, reparented), and
 //! restores rows that were reordered while hidden.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/hooks/aria-hide-outside";
 
@@ -251,15 +248,15 @@ pub async fn unhide_after_reorder(page: &Page<'_>) -> Result<(), Report> {
     page.element("#test-aho-reorder > [role=presentation][aria-hidden=true]")
         .await?;
     click(page, "test-aho-reorder-button").await?;
-    wait_for("the row order")
-        .observing(|| row_order(page))
-        .to_be_equal_to(["b", "a", "c", "d"])
-        .await?;
+    assert_that!(|| row_order(page))
+        .eventually_ok()
+        .matches(eq(["b", "a", "c", "d"]))
+        .await;
     click(page, "test-aho-reorder-button").await?;
-    wait_for("the row order")
-        .observing(|| row_order(page))
-        .to_be_equal_to(["a", "b", "c", "d"])
-        .await?;
+    assert_that!(|| row_order(page))
+        .eventually_ok()
+        .matches(eq(["a", "b", "c", "d"]))
+        .await;
     click(page, "test-aho-revert-reorder").await?;
     page.wait_for_count("#test-aho-reorder [aria-hidden]", 0)
         .await?;

@@ -2,14 +2,11 @@
 //! Behavior of the `GridList` atoms, asserted on the DOM/ARIA level so that these tests keep
 //! passing while the collection hooks underneath are rewritten. Elements are found by role and
 //! text, as users perceive them. Spec: react-aria-components `GridList.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 const PATH: &str = "/atoms/grid-list";
 
@@ -259,29 +256,29 @@ async fn last_announcement(page: &Page<'_>) -> Result<String, Report> {
 pub async fn selection_announcements(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     row(page, "Inbox").await?.click().await?;
-    wait_for("the announcement")
-        .observing(|| last_announcement(page))
-        .to_be_equal_to("Inbox selected.")
-        .await?;
+    assert_that!(|| last_announcement(page))
+        .eventually_ok()
+        .matches(eq("Inbox selected."))
+        .await;
     row(page, "Drafts").await?.click().await?;
-    wait_for("the announcement")
-        .observing(|| last_announcement(page))
-        .to_be_equal_to("Drafts selected. 2 items selected.")
-        .await?;
+    assert_that!(|| last_announcement(page))
+        .eventually_ok()
+        .matches(eq("Drafts selected. 2 items selected."))
+        .await;
     row(page, "Drafts").await?.click().await?;
-    wait_for("the announcement")
-        .observing(|| last_announcement(page))
-        .to_be_equal_to("Drafts not selected. 1 item selected.")
-        .await?;
+    assert_that!(|| last_announcement(page))
+        .eventually_ok()
+        .matches(eq("Drafts not selected. 1 item selected."))
+        .await;
     page.send_keys(Key::Control + "a").await?;
-    wait_for("the announcement")
-        .observing(|| last_announcement(page))
-        .to_be_equal_to("All items selected.")
-        .await?;
+    assert_that!(|| last_announcement(page))
+        .eventually_ok()
+        .matches(eq("All items selected."))
+        .await;
     page.send_keys(Key::Escape).await?;
-    wait_for("the announcement")
-        .observing(|| last_announcement(page))
-        .to_be_equal_to("No items selected.")
-        .await?;
+    assert_that!(|| last_announcement(page))
+        .eventually_ok()
+        .matches(eq("No items selected."))
+        .await;
     Ok(())
 }

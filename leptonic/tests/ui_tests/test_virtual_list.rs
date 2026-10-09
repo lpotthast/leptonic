@@ -20,15 +20,15 @@
 //! regression test is the unit test `anchoring_changes_keep_measured_sizes`.
 use std::time::Duration;
 
-use assertr::prelude::*;
+use assertr::{
+    matchers::{all_of, eq, ge, gt, lt, predicate},
+    prelude::*,
+};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// Runs `script` with `log` bound to the log element and `arg` to `arg`; `script` returns its
 /// result (`return ...`) if any.
@@ -88,20 +88,22 @@ impl Coverage {
 
 /// Wait until the log is scrolled to its end (within 2px).
 async fn wait_for_the_end(page: &Page<'_>) -> Result<(), Report> {
-    wait_for("the log's distance from its end")
-        .observing(|| on_log::<f64>(page, DISTANCE_TO_END, ()))
-        .to_be("less than 2px", |distance| distance.abs() < 2.0)
-        .await
+    assert_that!(|| on_log::<f64>(page, DISTANCE_TO_END, ()))
+        .eventually_ok()
+        .matches(all_of(matchers![gt(-2.0), lt(2.0)]))
+        .await;
+    Ok(())
 }
 
 /// Wait until the line with the text `line` is rendered.
 async fn wait_for_rendered(page: &Page<'_>, line: &str) -> Result<(), Report> {
-    wait_for("the rendered lines")
-        .observing(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
-        .to_be(&format!("including {line:?}"), |lines| {
-            lines.iter().any(|rendered| rendered == line)
+    assert_that!(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
+        .eventually_ok()
+        .satisfies(|lines| {
+            lines.contains(line.to_owned());
         })
-        .await
+        .await;
+    Ok(())
 }
 
 /// Scrolls the log to its top, which stops following.
@@ -161,16 +163,43 @@ pub async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report
     Ok(())
 }
 
+/// Scrolling the page is not the user scrolling the list away from its end: lines appended while
+/// the page scrolls come into view, and the list keeps following once the scrolling ended. (Found
+/// in Chrome Headless Shell, where clicking the append button scrolled the page.)
+pub async fn page_scroll_keeps_following(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
+    // The append button out of view: the click scrolls the page to it first, so the lines are
+    // appended while the page scrolls.
+    page.eval::<()>(
+        "document.body.style.minHeight = '300vh'; window.scrollBy(0, 1000);",
+        vec![],
+    )
+    .await?;
+    page.element("#test-vl-append").await?.click().await?;
+    wait_for_rendered(page, "Line 2049").await?;
+    wait_for_the_end(page).await?;
+    let follow = page.element("#test-vl-follow").await?;
+    // Past the end of the page's scrolling (300ms after its last scroll event).
+    page.settle().await?;
+    assert_that!(|| follow.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(500))
+        .matches(eq("following"))
+        .await;
+    Ok(())
+}
+
 /// After scroll jumps too, the rows are in visual order; a selection from one visible row to
 /// another holds exactly the rows between.
 pub async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/virtual_list").await?;
     for top in [10_000, 5_000, 20_000] {
         on_log::<()>(page, "log.scrollTop = arg;", top).await?;
-        wait_for(format!("the rendered rows, scrolled to {top}"))
-            .observing(|| on_log::<Coverage>(page, COVERAGE, ()))
-            .to_be("covering the viewport", Coverage::covers_the_view)
-            .await?;
+        assert_that!(|| on_log::<Coverage>(page, COVERAGE, ()))
+            .with_subject_name(format!("the rendered rows, scrolled to {top}"))
+            .eventually_ok()
+            .matches(predicate(Coverage::covers_the_view).described_as("covering the viewport"))
+            .await;
         assert_rows_in_visual_order(page)
             .await
             .context_with(|| format!("scrolled to {top}"))?;
@@ -216,19 +245,19 @@ pub async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> 
     .await?;
     // `selectionchange` is dispatched later; the list's own listener (registered at mount) has
     // run once this one did. A user doesn't select and scroll within one task.
-    wait_for("the number of selection changes")
-        .observing(|| on_log::<u32>(page, "return window.selectionChanges;", ()))
-        .to_be("at least 1", |changes| *changes >= 1)
-        .await?;
+    assert_that!(|| on_log::<u32>(page, "return window.selectionChanges;", ()))
+        .eventually_ok()
+        .matches(ge(1))
+        .await;
     // Scrolling back to the end follows again; the selected row stays rendered.
     let follow = page.element("#test-vl-follow").await?;
-    wait_for("the following state, scrolled to the end")
-        .observing(|| async {
-            on_log::<()>(page, "log.scrollTop = log.scrollHeight;", ()).await?;
-            follow.inner_text().await
-        })
-        .to_be_equal_to("following")
-        .await?;
+    assert_that!(|| async {
+        on_log::<()>(page, "log.scrollTop = log.scrollHeight;", ()).await?;
+        follow.inner_text().await
+    })
+    .eventually_ok()
+    .matches(eq("following"))
+    .await;
     wait_for_rendered(page, "Line 1999").await?;
     assert_that!(on_log::<Vec<String>>(page, RENDERED_LINES, ()).await?)
         .contains("Line 1".to_owned());
@@ -236,12 +265,12 @@ pub async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> 
         .is_equal_to("Line 1");
 
     on_log::<()>(page, "window.getSelection().removeAllRanges();", ()).await?;
-    wait_for("the rendered lines")
-        .observing(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
-        .to_be("without \"Line 1\"", |lines| {
-            lines.iter().all(|line| line != "Line 1")
+    assert_that!(|| on_log::<Vec<String>>(page, RENDERED_LINES, ()))
+        .eventually_ok()
+        .satisfies(|lines| {
+            lines.does_not_contain("Line 1".to_owned());
         })
-        .await?;
+        .await;
     Ok(())
 }
 
@@ -328,18 +357,20 @@ pub async fn follow_toggle_keeps_measured_sizes(page: &Page<'_>) -> Result<(), R
         on_log::<()>(page, "log.scrollTop += arg;", step).await?;
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    tokio::time::sleep(Duration::from_millis(70)).await;
+    // The page handled the last step (well before the scroll ends).
+    page.settle().await?;
     let before = on_log::<String>(page, ANCHOR, ()).await?;
     page.element("#test-vl-follow")
         .await?
         .wait_for_inner_text("not following")
         .await?;
     // Settle (a re-layout runs in effects and frames), then check: the content didn't move.
-    expect("the anchor row and its offset")
-        .observing(|| on_log::<String>(page, ANCHOR, ()))
+    page.settle().await?;
+    assert_that!(|| on_log::<String>(page, ANCHOR, ()))
+        .consistently_ok()
         .for_at_least(Duration::from_millis(500))
-        .to_stay_equal_to(before)
-        .await?;
+        .matches(eq(before))
+        .await;
     assert_that!(on_log::<Vec<String>>(page, "return window.__vlReestimated;", ()).await?)
         .is_empty();
     Ok(())

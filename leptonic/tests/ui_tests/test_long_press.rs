@@ -4,14 +4,11 @@
 //! description; no context menu on touch (only during the press); nothing for the keyboard.
 use std::time::Duration;
 
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, SyntheticEvent},
-    polling::expect,
-};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
 const PATH: &str = "/hooks/long-press";
 
@@ -54,17 +51,27 @@ pub async fn long_press(page: &Page<'_>) -> Result<(), Report> {
     let log = log(page).await?;
     let basic = target(page, "basic").await?;
     basic.dispatch(touch("pointerdown")).await?;
-    // Well before the threshold.
-    log.inner_text_stays("basic:longpressstart:touch").await?;
+    // Well before the 500 ms threshold: a window of its own, independent of `BROWSER_TEST_STAYS_MS`.
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(100))
+        .matches(eq("basic:longpressstart:touch"))
+        .await;
     log.wait_for_inner_text(
         "basic:longpressstart:touch,basic:longpressend:touch,basic:longpress:touch",
     )
     .await?;
     basic.dispatch(touch("pointerup")).await?;
-    log.inner_text_stays(
-        "basic:longpressstart:touch,basic:longpressend:touch,basic:longpress:touch",
-    )
-    .await?;
+    // Past the press's click fallback (80 ms after a pointer up without a click).
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(300))
+        .matches(eq(
+            "basic:longpressstart:touch,basic:longpressend:touch,basic:longpress:touch",
+        ))
+        .await;
     reset(page).await?;
     Ok(())
 }
@@ -78,11 +85,12 @@ pub async fn cancelled_when_released_early(page: &Page<'_>) -> Result<(), Report
     basic.dispatch(touch("pointerup")).await?;
     log.wait_for_inner_text("basic:longpressstart:touch,basic:longpressend:touch")
         .await?;
-    expect("the press log")
-        .observing(|| log.inner_text())
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
         .for_at_least(Duration::from_millis(700))
-        .to_stay_equal_to("basic:longpressstart:touch,basic:longpressend:touch")
-        .await?;
+        .matches(eq("basic:longpressstart:touch,basic:longpressend:touch"))
+        .await;
     reset(page).await?;
     Ok(())
 }
@@ -130,11 +138,12 @@ pub async fn custom_threshold(page: &Page<'_>) -> Result<(), Report> {
     threshold.dispatch(touch("pointerdown")).await?;
     log.wait_for_inner_text("threshold:longpressstart:touch")
         .await?;
-    expect("the press log")
-        .observing(|| log.inner_text())
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
         .for_at_least(Duration::from_millis(600))
-        .to_stay_equal_to("threshold:longpressstart:touch")
-        .await?;
+        .matches(eq("threshold:longpressstart:touch"))
+        .await;
     log.wait_for_inner_text(
         "threshold:longpressstart:touch,threshold:longpressend:touch,threshold:longpress:touch",
     )
@@ -200,12 +209,13 @@ pub async fn no_long_press_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
         "with-press:pressstart:keyboard,with-press:pressend:keyboard,with-press:press:keyboard",
     )
     .await?;
-    expect("the press log")
-        .observing(|| log.inner_text())
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
         .for_at_least(Duration::from_millis(600))
-        .to_stay_equal_to(
+        .matches(eq(
             "with-press:pressstart:keyboard,with-press:pressend:keyboard,with-press:press:keyboard",
-        )
-        .await?;
+        ))
+        .await;
     Ok(())
 }

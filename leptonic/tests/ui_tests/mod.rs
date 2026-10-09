@@ -914,6 +914,7 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .case(test_tag_group_atoms::focus_moves_to_the_grid_when_no_tag_can_take_it)
         .case(test_virtual_list::follows_its_end)
         .case(test_virtual_list::appended_lines_come_into_view)
+        .case(test_virtual_list::page_scroll_keeps_following)
         .case(test_virtual_list::scroll_jumps_render_rows_in_order)
         .case(test_virtual_list::scrolling_away_stops_following)
         .case(test_virtual_list::selected_row_stays_rendered)

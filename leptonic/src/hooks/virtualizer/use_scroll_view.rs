@@ -24,13 +24,18 @@ use crate::{
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `scroll_to` scrolls the view (after the next frame, once the content has its new size,
-//   unless the user scrolled meanwhile) and the scroll event it causes doesn't count as the user
-//   scrolling: items are measured in effects
-//   after that event (react-aria: in layout effects before it), and anchoring skips while the
-//   user scrolls.
+//   unless the user scrolled meanwhile; of several requests in a frame, the last) and its scroll
+//   event doesn't count as the user scrolling: items are measured in effects after that event
+//   (react-aria: in layout effects before it), and anchoring skips while the user scrolls. Its
+//   event is one of the next two frames at the position it scrolled to, or at the end if
+//   re-measured rows made the browser clamp it there.
 // - Scrollbars appearing or disappearing after a size change (the content laid out for the new
 //   size) are picked up by measuring again in the next frame (react-aria measures again
 //   synchronously after `flushSync`); at most once per change, as react-aria.
+//
+// ## ADDITIONS
+// - `is_user_scrolling`: the user scrolls the view itself (not an ancestor or the window, not
+//   `scroll_to`), until the scrolling ends. `is_scrolling` covers every scroll, as react-aria's.
 //
 // ## OMITTED FEATURES
 // - Typekit's `tk.disconnect-observer`/`tk.connect-observer` events.
@@ -75,10 +80,25 @@ pub struct UseScrollViewReturn {
     /// Styles of the content box inside it: the content size, `position: relative`, no pointer
     /// events while scrolling.
     pub content_styles: Styles,
+    /// Something scrolls: the view, an ancestor or the window. Kept true until 300ms after the last
+    /// scroll event.
     pub is_scrolling: Signal<bool>,
+    /// The user scrolls the view itself (not an ancestor or the window, not [`Self::scroll_to`]).
+    /// Kept true until the scrolling ends: e.g. to decide whether they scrolled away from an end.
+    pub is_user_scrolling: Signal<bool>,
     /// Scrolls the view so `rect`'s position is the visible rectangle's (e.g. where the
     /// virtualizer moved the viewport).
-    pub scroll_to: Callback<crate::hooks::collections::Rect>,
+    pub scroll_to: Callback<Rect>,
+    /// Scrolls the view to its end (vertically), as laid out when the scroll happens: in the next
+    /// frame, taking precedence over [`Self::scroll_to`] requests of the same frame.
+    pub scroll_to_end: Callback<()>,
+}
+
+/// What the next frame scrolls to.
+#[derive(Debug, Clone, Copy)]
+enum ScrollTarget {
+    Rect(Rect),
+    End,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -107,8 +127,13 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
     } = input;
     let state = StoredValue::new(ScrollState::default());
     let is_scrolling = RwSignal::new(false);
-    // The position `scroll_to` scrolled to, until its scroll event arrived.
-    let expected_position = StoredValue::new(None::<(f64, f64)>);
+    let is_user_scrolling = RwSignal::new(false);
+    // The position `scroll_to` last scrolled to (and the scroll's number), for two frames: its
+    // scroll event comes with the next frame.
+    let own_scroll = StoredValue::new(None::<(u64, (f64, f64))>);
+    let own_scroll_count = StoredValue::new(0_u64);
+    // Where the next frame scrolls to (the last request; the end over a rectangle).
+    let pending_scroll = StoredValue::new(None::<ScrollTarget>);
     // Counts the user's scrolls: a `scroll_to` requested before one is dropped (the user wins).
     let user_scrolls = StoredValue::new(0_u64);
 
@@ -252,10 +277,14 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
                         top.min(content.height - size.height).max(0.0),
                     );
                 });
-                // Our own scroll (`scroll_to`): not the user scrolling.
-                let expected = expected_position.get_value();
-                if expected.is_some_and(|(x, y)| (x - left).abs() < 1.0 && (y - top).abs() < 1.0) {
-                    expected_position.set_value(None);
+                // Our own scroll (`scroll_to`): not the user scrolling. At the position it scrolled
+                // to, or clamped to the end since (re-measured rows shrank the content).
+                let end = f64::from(view.scroll_height() - view.client_height());
+                let ours = own_scroll.get_value().is_some_and(|(_, (x, y))| {
+                    (x - left).abs() < 1.0
+                        && ((y - top).abs() < 1.0 || (top < y && (end - top).abs() < 1.0))
+                });
+                if ours {
                     update_visible_rect();
                     return;
                 }
@@ -271,6 +300,9 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
             }
             if target == *view_node {
                 user_scrolls.update_value(|count| *count += 1);
+                if !is_user_scrolling.get_untracked() {
+                    is_user_scrolling.set(true);
+                }
             }
             update_visible_rect();
             if !is_scrolling.get_untracked() {
@@ -289,6 +321,7 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
                     }
                     *timeout = set_timeout_with_handle(
                         move || {
+                            let _ = is_user_scrolling.try_set(false);
                             if is_scrolling.try_set(false).is_none()
                                 && let Some(on_scroll_end) = on_scroll_end
                             {
@@ -393,10 +426,29 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
         .add_optional_unchecked("height", move || px(content_size.get().height));
 
     let direction = use_direction();
-    let scroll_to = Callback::new(move |rect: crate::hooks::collections::Rect| {
-        // Once the content box has its new size (else the browser clamps the position).
+    // Scrolls to the pending target in the next frame, once the content box has its new size
+    // (else the browser clamps the position), unless the user scrolled meanwhile.
+    let request_scroll = move |target: ScrollTarget| {
+        let Some(already_scheduled) = pending_scroll.try_update_value(|pending| {
+            let scheduled = pending.is_some();
+            if !matches!(
+                (*pending, target),
+                (Some(ScrollTarget::End), ScrollTarget::Rect(_))
+            ) {
+                *pending = Some(target);
+            }
+            scheduled
+        }) else {
+            return;
+        };
+        if already_scheduled {
+            return;
+        }
         let requested_after = user_scrolls.try_get_value();
         request_animation_frame(move || {
+            let Some(Some(target)) = pending_scroll.try_update_value(Option::take) else {
+                return;
+            };
             if user_scrolls.try_get_value() != requested_after {
                 return;
             }
@@ -407,10 +459,18 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
             let Some(view) = element.get_untracked() else {
                 return;
             };
-            // The visible rectangle includes the view's offset in the window (window scrolling):
-            // the view's own scroll position is without it.
-            let (x, y) = ((rect.x - offset.0).max(0.0), (rect.y - offset.1).max(0.0));
             let before = (view.scroll_left().abs(), view.scroll_top());
+            let (x, y) = match target {
+                // The visible rectangle includes the view's offset in the window (window
+                // scrolling): the view's own scroll position is without it.
+                ScrollTarget::Rect(rect) => {
+                    ((rect.x - offset.0).max(0.0), (rect.y - offset.1).max(0.0))
+                }
+                ScrollTarget::End => (
+                    before.0,
+                    f64::from(view.scroll_height() - view.client_height()).max(0.0),
+                ),
+            };
             if (before.0 - x).abs() < 1.0 && (before.1 - y).abs() < 1.0 {
                 return;
             }
@@ -418,18 +478,34 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
             let rtl = direction.get_untracked() == WritingDirection::Rtl;
             view.set_scroll_left(if rtl { -x } else { x });
             view.set_scroll_top(y);
-            // The browser may clamp the position: expect the scroll event of where it went (none
-            // if it didn't move).
+            // Its scroll event comes with the next frame, at the position the browser clamped it to
+            // (or at the end, if re-measured rows clamp it there meanwhile).
             let after = (view.scroll_left().abs(), view.scroll_top());
-            let moved = (after.0 - before.0).abs() >= 1.0 || (after.1 - before.1).abs() >= 1.0;
-            let _ = expected_position.try_set_value(moved.then_some(after));
+            if (after.0 - before.0).abs() >= 1.0 || (after.1 - before.1).abs() >= 1.0 {
+                let number = own_scroll_count.with_value(|count| count + 1);
+                own_scroll_count.set_value(number);
+                own_scroll.set_value(Some((number, after)));
+                request_animation_frame(move || {
+                    request_animation_frame(move || {
+                        let _ = own_scroll.try_update_value(|own| {
+                            if own.is_some_and(|(n, _)| n == number) {
+                                *own = None;
+                            }
+                        });
+                    });
+                });
+            }
         });
-    });
+    };
+    let scroll_to = Callback::new(move |rect| request_scroll(ScrollTarget::Rect(rect)));
+    let scroll_to_end = Callback::new(move |()| request_scroll(ScrollTarget::End));
 
     UseScrollViewReturn {
         scroll_view_styles,
         content_styles,
         is_scrolling: is_scrolling.into(),
+        is_user_scrolling: is_user_scrolling.into(),
         scroll_to,
+        scroll_to_end,
     }
 }

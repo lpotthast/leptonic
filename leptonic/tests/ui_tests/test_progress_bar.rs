@@ -2,14 +2,11 @@
 // Upstream: react-aria-components/test/Meter.test.js @ 99e6102368
 //! The progress bar and meter atoms: role and value attributes, the label, the value text and
 //! the fill width; custom and empty ranges, indeterminate progress, a value label, a meter.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/atoms/progress-bar";
 
@@ -49,10 +46,10 @@ pub async fn follows_its_value(page: &Page<'_>) -> Result<(), Report> {
         .get_some()
         .is_equal_to("50%");
     let fill = fill(&basic).await?;
-    wait_for("the fill's width")
-        .observing(|| async { Ok(fill.css_value("width").await?) })
-        .to_be_equal_to("100px")
-        .await?;
+    assert_that!(|| fill.css_value("width"))
+        .eventually_ok()
+        .matches(eq("100px"))
+        .await;
     Ok(())
 }
 

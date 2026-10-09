@@ -4,14 +4,11 @@
 //! presses), the props of a surrounding trigger, hover/focus/press state, Enter, a disabled
 //! `use_link` anchor, and `AnchorLink` (scrolls, sets the hash without a history entry, leaves
 //! modified clicks to the browser).
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/atoms/link";
 
@@ -211,10 +208,12 @@ pub async fn replace(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let before = history_length(page).await?;
     page.element("#test-link-replace").await?.click().await?;
-    wait_for("the query of the URL")
-        .observing(|| async { Ok(page.driver.current_url().await?.query().map(str::to_owned)) })
-        .to_be_equal_to(Some("replaced".to_owned()))
-        .await?;
+    assert_that!(|| async {
+        Ok::<_, Report>(page.driver.current_url().await?.query().map(str::to_owned))
+    })
+    .eventually_ok()
+    .matches(eq(Some("replaced".to_owned())))
+    .await;
     page.element("body[data-hydrated]").await?;
     assert_that!(history_length(page).await?).is_equal_to(before);
     Ok(())

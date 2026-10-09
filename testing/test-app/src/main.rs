@@ -3,6 +3,24 @@
 #[cfg(feature = "ssr")]
 static SERVER_PANICS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
+/// Lets browsers cache the files under `/pkg/` for good, as a production server would: their names
+/// carry their content's hash (`hash-files` in `Cargo.toml`), so a changed file has a new name.
+#[cfg(feature = "ssr")]
+async fn cache_hashed_files(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let hashed = request.uri().path().starts_with("/pkg/");
+    let mut response = next.run(request).await;
+    if hashed && response.status().is_success() {
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+    response
+}
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
@@ -59,7 +77,8 @@ async fn main() {
             move || shell(leptos_options.clone())
         })
         .fallback(leptos_axum::file_and_error_handler(shell))
-        .with_state(leptos_options);
+        .with_state(leptos_options)
+        .layer(axum::middleware::from_fn(cache_hashed_files));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     tracing::info!("listening on http://{}", &addr);

@@ -1,5 +1,6 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
+use assertr::{matchers::eq, prelude::*};
 use browser_test::{StepExt, thirtyfour::WebDriver};
 use leptos_browser_test::{Report, ResultExt, bail};
 
@@ -40,21 +41,69 @@ impl BookPage<'_> {
     }
 
     /// Navigate to `path` and wait until the book finished hydrating, so that the page shows its final state.
+    ///
+    /// The page it leaves must not have reported errors. Runs as a `page_load` step (navigation and hydration), so the
+    /// run summary shows what loading pages costs.
     pub async fn goto(&self, path: &str) -> Result<(), Report> {
+        self.expect_no_page_errors().await?;
         let url = format!("{}{path}", self.base_url);
-        self.driver
-            .goto(&url)
-            .step("navigate")
+        async {
+            self.driver
+                .goto(&url)
+                .step("navigate")
+                .detail(path)
+                .await
+                .context_with(|| format!("failed to go to {url}"))?;
+            self.wait_until(
+                &format!("{url} finished hydrating"),
+                "return document.body.hasAttribute('data-hydrated');",
+            )
+            .step("wait_for_hydration")
             .detail(path)
             .await
-            .context_with(|| format!("failed to go to {url}"))?;
-        self.wait_until(
-            &format!("{url} finished hydrating"),
-            "return document.body.hasAttribute('data-hydrated');",
-        )
-        .step("wait_for_hydration")
+        }
+        .step("page_load")
         .detail(path)
         .await
+    }
+
+    /// Makes `theme` (`"light"` or `"dark"`) the reader's theme, as if they had chosen it with the app bar's toggle
+    /// before: the book keeps it in a cookie, so the server renders the pages loaded afterwards in it.
+    pub async fn set_theme(&self, theme: &str) -> Result<(), Report> {
+        self.driver
+            .cdp()
+            .send_raw(
+                "Network.setCookie",
+                serde_json::json!({ "name": "theme", "value": theme, "url": self.base_url }),
+            )
+            .step("set_theme")
+            .detail(theme)
+            .await
+            .context_with(|| format!("failed to set the theme cookie to {theme}"))?;
+        Ok(())
+    }
+
+    /// Allows the page to read the clipboard back (writing during a press needs no permission). Granted for the
+    /// browser context of this tab: browser-test runs every test in a context of its own.
+    pub async fn allow_clipboard_read(&self) -> Result<(), Report> {
+        let tab = self
+            .driver
+            .cdp()
+            .send_raw("Target.getTargetInfo", serde_json::json!({}))
+            .await?;
+        self.driver
+            .cdp()
+            .send_raw(
+                "Browser.grantPermissions",
+                serde_json::json!({
+                    "origin": self.base_url.trim_end_matches('/'),
+                    "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"],
+                    "browserContextId": tab["targetInfo"]["browserContextId"],
+                }),
+            )
+            .await
+            .context("failed to allow reading the clipboard")?;
+        Ok(())
     }
 
     /// Moves the mouse pointer to the viewport coordinates `x`, `y` (CSS pixels), changing the hovered element.
@@ -75,6 +124,16 @@ impl BookPage<'_> {
     /// Uncaught errors (and Rust panics) the page reported since it loaded.
     pub async fn page_errors(&self) -> Result<Vec<String>, Report> {
         self.strings("return window.__pageErrors || [];").await
+    }
+
+    /// Fails if the page reported errors (see [`Self::page_errors`]). Every test checks this after it ran
+    /// (`ui_tests::CheckPageErrors`), and [`Self::goto`] for the page it leaves.
+    pub async fn expect_no_page_errors(&self) -> Result<(), Report> {
+        let errors = self.page_errors().await?;
+        if !errors.is_empty() {
+            bail!("the page reported errors: {errors:#?}");
+        }
+        Ok(())
     }
 
     /// Runs `script` (which returns an array of strings) and returns the strings.
@@ -120,40 +179,51 @@ impl BookPage<'_> {
         }
     }
 
-    /// Polls `script` (which returns a boolean) until it returns `true`.
-    pub async fn wait_until(&self, what: &str, script: &str) -> Result<(), Report> {
-        self.wait_until_within(what, script, POLL_TIMEOUT).await
+    /// Polls `script` (which returns a boolean) until it returns `true`: an eventual assertion
+    /// (assertr) on the script's result, named by `what`. A failing script fails at once.
+    ///
+    /// `#[track_caller]`: the assertion is built when called, so that a failure names the test's
+    /// line.
+    #[track_caller]
+    pub fn wait_until<'a>(
+        &'a self,
+        what: &'a str,
+        script: &'a str,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        self.wait_until_within(what, script, POLL_TIMEOUT)
     }
 
     /// [`Self::wait_until`] with its own `timeout`, for steps that wait on slow server work.
-    pub async fn wait_until_within(
-        &self,
-        what: &str,
-        script: &str,
+    #[track_caller]
+    pub fn wait_until_within<'a>(
+        &'a self,
+        what: &'a str,
+        script: &'a str,
         timeout: Duration,
-    ) -> Result<(), Report> {
-        self.poll_until(what, script, timeout)
-            .step("wait_until")
-            .detail(what)
-            .await
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || self.returns_true(script))
+            .with_subject_name(what)
+            .eventually_ok()
+            .within(timeout)
+            .polling_every(POLL_INTERVAL)
+            .giving_up_on(|_: &Report| true)
+            .matches(eq(true));
+        async move {
+            check.await;
+            Ok(())
+        }
+        .step("wait_until")
+        .detail(what)
     }
 
-    async fn poll_until(&self, what: &str, script: &str, timeout: Duration) -> Result<(), Report> {
-        let start = Instant::now();
-        loop {
-            let value = self
-                .driver
-                .execute(script, vec![])
-                .await
-                .context_with(|| format!("failed to check that {what}"))?;
-            if value.json().as_bool() == Some(true) {
-                return Ok(());
-            }
-            if start.elapsed() > timeout {
-                bail!("timed out waiting until {what}");
-            }
-            tokio::time::sleep(POLL_INTERVAL).await;
-        }
+    /// Whether `script` returns `true`.
+    async fn returns_true(&self, script: &str) -> Result<bool, Report> {
+        let value = self
+            .driver
+            .execute(script, vec![])
+            .await
+            .context_with(|| format!("failed to run {}", script_summary(script)))?;
+        Ok(value.json().as_bool() == Some(true))
     }
 }
 

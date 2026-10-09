@@ -6,14 +6,11 @@
 //!
 //! Where a keyboard drag starts in the collection (next to the focused or selected rows), and
 //! native drags.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, dnd::DndActions, role, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, dnd::DndActions, role, xpath};
 
 const LOG: &str = "test-dnd-collection-log";
 
@@ -71,10 +68,10 @@ pub async fn basic_drag_and_drop(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Down).await?;
     expect_focused_indicator(page, "Insert between One and Two").await?;
     page.send_keys(Key::Enter).await?;
-    wait_for("the rows")
-        .observing(|| page.inner_texts("[role=grid][aria-label=List] [role=row][aria-selected]"))
-        .to_be_equal_to(["One", "hello world", "Two", "Three"])
-        .await?;
+    assert_that!(|| page.inner_texts("[role=grid][aria-label=List] [role=row][aria-selected]"))
+        .eventually_ok()
+        .matches(eq(["One", "hello world", "Two", "Three"]))
+        .await;
     let inserted = row(page, "hello world").await?;
     page.wait_for_focus(&inserted).await?;
     inserted
@@ -351,10 +348,10 @@ pub async fn native_basic_drag_and_drop(page: &Page<'_>) -> Result<(), Report> {
     page.fire_drag_event_at(&three, "drop", &[], Some((2.0, 2.0)))
         .await?;
     page.fire_drag_event(&draggable, "dragend", &[]).await?;
-    wait_for("the rows")
-        .observing(|| page.inner_texts("[role=grid][aria-label=List] [role=row][aria-selected]"))
-        .to_be_equal_to(["One", "Two", "hello world", "Three"])
-        .await?;
+    assert_that!(|| page.inner_texts("[role=grid][aria-label=List] [role=row][aria-selected]"))
+        .eventually_ok()
+        .matches(eq(["One", "Two", "hello world", "Three"]))
+        .await;
     let inserted = row(page, "hello world").await?;
     page.wait_for_focus(&inserted).await?;
     inserted

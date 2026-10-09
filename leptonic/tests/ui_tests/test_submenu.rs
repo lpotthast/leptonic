@@ -2,14 +2,11 @@
 //! Submenus ("Submenus" in RAC's `Menu.test.tsx`): opening by hover and the arrow key, the trigger
 //! item's ARIA attributes, actions in (nested) submenus closing the whole tree, ArrowLeft and
 //! Escape returning to the trigger, focusing another item and interacting outside closing them.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 const PATH: &str = "/atoms/submenu";
 
@@ -209,13 +206,18 @@ pub async fn context_menu(page: &Page<'_>) -> Result<(), Report> {
     page.element(MENU).await?;
     let popover = page.element(".test-popover").await?;
     // Where it settles once its entry animation (a slide) ran.
-    wait_for("the popover's position")
-        .observing(|| popover.client_rect())
-        .to_be("at the pointer (±2px)", |popover_rect| {
-            (popover_rect.left - (rect.left + 10.0)).abs() <= 2.0
-                && (popover_rect.top - (rect.top + 15.0)).abs() <= 2.0
+    assert_that!(|| popover.client_rect())
+        .eventually_ok()
+        .satisfies(|popover_rect| {
+            // At the pointer (±2px).
+            popover_rect
+                .derive(|popover_rect| &popover_rect.left)
+                .is_close_to(rect.left + 10.0, 2.0);
+            popover_rect
+                .derive(|popover_rect| &popover_rect.top)
+                .is_close_to(rect.top + 15.0, 2.0);
         })
-        .await?;
+        .await;
     assert_that!(trigger.attr("aria-expanded").await?).is_none();
 
     item(page, "Paste").await?.click().await?;
@@ -380,10 +382,10 @@ pub async fn safe_triangle(page: &Page<'_>) -> Result<(), Report> {
         .get_some()
         .is_equal_to("true");
     // At rest, the menu takes pointer events again.
-    wait_for("the root menu's pointer-events at rest")
-        .observing(|| async { Ok(root.css_value("pointer-events").await?) })
-        .to_be_equal_to("auto")
-        .await?;
+    assert_that!(|| root.css_value("pointer-events"))
+        .eventually_ok()
+        .matches(eq("auto"))
+        .await;
     page.send_keys(Key::Escape).await?;
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(MENU, 0).await?;

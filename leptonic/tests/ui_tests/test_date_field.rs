@@ -12,10 +12,7 @@ use assertr::prelude::*;
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 const PATH: &str = "/atoms/date-field";
 
@@ -241,10 +238,12 @@ pub async fn min_validation(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Up).await?;
     wait_for_value(page, "min", "2024-05-30").await?;
     month.wait_for_attr("aria-invalid", None).await?;
-    wait_for("the min field's text")
-        .observing(|| section.inner_text())
-        .to_be("without the min error", |text| !text.contains("or later"))
-        .await?;
+    assert_that!(|| section.inner_text())
+        .eventually_ok()
+        .satisfies(|text| {
+            text.does_not_contain("or later");
+        })
+        .await;
     Ok(())
 }
 
@@ -490,12 +489,12 @@ pub async fn date_range_picker(page: &Page<'_>) -> Result<(), Report> {
     wait_for_value(page, "range", "2024-06-10 - 2024-05-14").await?;
     page.element("#test-df-range-after").await?.click().await?;
     let section = page.element("#test-df-range").await?;
-    wait_for("the range picker's text")
-        .observing(|| section.inner_text())
-        .to_be("showing the range order error", |text| {
-            text.contains("Start date must be before end date.")
+    assert_that!(|| section.inner_text())
+        .eventually_ok()
+        .satisfies(|text| {
+            text.contains("Start date must be before end date.");
         })
-        .await?;
+        .await;
     Ok(())
 }
 

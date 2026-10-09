@@ -437,9 +437,9 @@ fn guides() -> NavGroup {
                 Guide,
             ),
             page(
-                "Build Times & Bundle Size",
-                "Settings that keep rebuilds fast and the browser bundle small",
-                doc::BuildTimes.materialize(),
+                "Optimizing Compile Times & Binary Sizes",
+                "Profiles and settings for fast rebuilds, fast pages and a small browser bundle",
+                doc::OptimizingBuilds.materialize(),
                 Guide,
             ),
         ],

@@ -1,15 +1,12 @@
 // Upstream: react-aria/test/dnd/useClipboard.test.js @ 99e6102368
 //! `use_clipboard`: cut, copy and paste while the element has focus, with synthesized
 //! `ClipboardEvent`s carrying a `DataTransfer`. Fixture: `/hooks/clipboard`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 use serde::Deserialize;
 
-use crate::{
-    pages::{Page, PageActions, role},
-    polling::{expect, wait_for},
-};
+use crate::pages::{Page, PageActions, role};
 
 /// What dispatching a clipboard event did.
 #[derive(Debug, Deserialize)]
@@ -78,14 +75,15 @@ async fn open(page: &Page<'_>, query: &str, focus: bool) -> Result<(), Report> {
 
 /// Waits until the log is `expected`, and checks that nothing more is logged.
 async fn expect_log(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    wait_for("the clipboard log")
-        .observing(|| page.inner_texts("#test-clipboard-log li"))
-        .to_be_equal_to(expected)
-        .await?;
-    expect("the clipboard log")
-        .observing(|| page.inner_texts("#test-clipboard-log li"))
-        .to_stay_equal_to(expected)
-        .await?;
+    assert_that!(|| page.inner_texts("#test-clipboard-log li"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
+    page.settle().await?;
+    assert_that!(|| page.inner_texts("#test-clipboard-log li"))
+        .consistently_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 

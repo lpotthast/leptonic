@@ -19,7 +19,7 @@ use leptonic::{
 };
 use leptos::prelude::*;
 use leptos_meta::{
-    Html, Link as MetaLink, Meta, MetaTags, Stylesheet, Title, provide_meta_context,
+    HashedStylesheet, Html, Link as MetaLink, Meta, MetaTags, Title, provide_meta_context,
 };
 use leptos_router::{components::Router, hooks::use_location};
 use leptos_use::{
@@ -27,8 +27,6 @@ use leptos_use::{
 };
 
 use crate::{kit::Icon, pages::documentation::doc_search::DocSearch, routes};
-
-pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 
 /// The documented leptonic version, shown in the app bar.
 const VERSION_LABEL: &str = "v0.6.0 (main)";
@@ -57,8 +55,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         // outside the theme provider) has its theme colors from the start.
         <html lang="en">
             <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
                 // Collects uncaught page errors (and Rust panic messages, which the panic hook logs before the wasm
                 // traps), so that the browser tests (`tests/browser_test.rs`) can fail on them.
                 <script>
@@ -73,16 +71,21 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                     };"
                 </script>
                 <AutoReload options=options.clone() />
-                <HydrationScripts options/>
-                <MetaTags/>
+                // The content-hashed stylesheet (the server reads the hashes).
+                <HashedStylesheet options=options.clone() id="leptos" />
+                <HydrationScripts options />
+                <MetaTags />
 
-                <link rel="preconnect" href="https://fonts.googleapis.com"/>
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
                 // The weights of the style guide: 400 text, 600 emphasis, 700 headings, and italic text.
-                <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet"/>
+                <link
+                    href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+                    rel="stylesheet"
+                />
             </head>
             <body>
-                <App/>
+                <App />
             </body>
         </html>
     }
@@ -114,26 +117,22 @@ pub fn App() -> impl IntoView {
     provide_context(toasts);
 
     view! {
-        <Meta name="theme-color" content="#e66956"/>
+        <Meta name="theme-color" content="#e66956" />
 
-        <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css")/>
-
-        <MetaLink rel="icon" href="/res/icon/leptonic_x64.png"/>
-        <MetaLink rel="apple-touch-icon" href="/res/icon/maskable_icon_x192.png"/>
+        <MetaLink rel="icon" href="/res/icon/leptonic_x64.png" />
+        <MetaLink rel="apple-touch-icon" href="/res/icon/maskable_icon_x192.png" />
 
         // Fallback; every page sets its own title (and description).
-        <Title text="Leptonic"/>
+        <Title text="Leptonic" />
 
         // The theme on `<html>` in the server's HTML too (`ThemeProvider` sets it in the browser).
-        <Html {..} data-theme=move || theme.get().name()/>
+        <Html {..} data-theme=move || theme.get().name() />
 
         <ThemeProvider theme set_theme>
             <Router>
-                <Layout>
-                    { routes::route_tree() }
-                </Layout>
+                <Layout>{routes::route_tree()}</Layout>
             </Router>
-            <BookToastRegion toasts/>
+            <BookToastRegion toasts />
         </ThemeProvider>
     }
 }
@@ -169,11 +168,13 @@ fn BookToastRegion(toasts: BookToasts) -> impl IntoView {
         <ToastRegion queue=toasts.0 classes="book-toast-region" let:toast>
             <Toast toast=toast.clone() classes="book-toast">
                 <ToastContent classes="book-toast-content">
-                    <ToastTitle classes="book-toast-title">{toast.content.title.clone()}</ToastTitle>
+                    <ToastTitle classes="book-toast-title">
+                        {toast.content.title.clone()}
+                    </ToastTitle>
                     <ToastDescription>{toast.content.description.clone()}</ToastDescription>
                 </ToastContent>
                 <ToastCloseButton classes="book-icon-button">
-                    <Icon icon=icondata::BsXLg/>
+                    <Icon icon=icondata::BsXLg />
                 </ToastCloseButton>
             </Toast>
         </ToastRegion>
@@ -228,7 +229,7 @@ pub fn Layout(children: Children) -> impl IntoView {
     let logo = move || {
         view! {
             <Link href=routes::Root.materialize() classes="book-logo-link">
-                <img src="/res/leptonic.svg" id="book-logo" alt="Leptonic start page"/>
+                <img src="/res/leptonic.svg" id="book-logo" alt="Leptonic start page" />
             </Link>
         }
     };
@@ -236,32 +237,57 @@ pub fn Layout(children: Children) -> impl IntoView {
     view! {
         <AppBar>
             <div class="book-app-bar-group">
-                <SkipLink/>
+                <SkipLink />
                 {move || match (is_doc.get(), is_small.get()) {
                     (false, true) => logo().into_any(),
-                    (true, true) => view! {
-                        <MenuButton label="Documentation menu" icon=icondata::BsList open=ctx.doc_menu_open/>
-                        {logo}
-                    }.into_any(),
-                    (_, false) => view! {
-                        {logo}
-                        <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
-                    }.into_any(),
+                    (true, true) => {
+                        view! {
+                            <MenuButton
+                                label="Documentation menu"
+                                icon=icondata::BsList
+                                open=ctx.doc_menu_open
+                            />
+                            {logo}
+                        }
+                            .into_any()
+                    }
+                    (_, false) => {
+                        view! {
+                            {logo}
+                            <Link href=routes::Doc.materialize() classes="book-docs-link">
+                                "Docs"
+                            </Link>
+                        }
+                            .into_any()
+                    }
                 }}
             </div>
 
             <div class="book-app-bar-group book-app-bar-end">
-                <DocSearch/>
-                {move || if is_small.get() {
-                    view! {
-                        <MenuButton label="Menu" icon=icondata::BsThreeDots open=ctx.main_menu_open/>
-                    }.into_any()
-                } else {
-                    view! {
-                        <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
-                        <GithubLink/>
-                        <ThemeToggle/>
-                    }.into_any()
+                <DocSearch />
+                {move || {
+                    if is_small.get() {
+                        view! {
+                            <MenuButton
+                                label="Menu"
+                                icon=icondata::BsThreeDots
+                                open=ctx.main_menu_open
+                            />
+                        }
+                            .into_any()
+                    } else {
+                        view! {
+                            <Link
+                                href=routes::doc::Changelog.materialize()
+                                classes="book-version-link"
+                            >
+                                {VERSION_LABEL}
+                            </Link>
+                            <GithubLink />
+                            <ThemeToggle />
+                        }
+                            .into_any()
+                    }
                 }}
             </div>
         </AppBar>
@@ -275,10 +301,14 @@ pub fn Layout(children: Children) -> impl IntoView {
             open=ctx.main_menu_open
         >
             <nav class="book-main-menu" aria-label="Main">
-                <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
-                <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
-                <GithubLink/>
-                <ThemeToggle/>
+                <Link href=routes::Doc.materialize() classes="book-docs-link">
+                    "Docs"
+                </Link>
+                <Link href=routes::doc::Changelog.materialize() classes="book-version-link">
+                    {VERSION_LABEL}
+                </Link>
+                <GithubLink />
+                <ThemeToggle />
             </nav>
         </MenuDrawer>
     }
@@ -340,7 +370,7 @@ fn MenuButton(label: &'static str, icon: icondata::Icon, open: RwSignal<bool>) -
             aria_label=label
             classes="book-icon-button"
         >
-            <Icon icon/>
+            <Icon icon />
         </Button>
     }
 }
@@ -380,7 +410,7 @@ pub fn MenuDrawer(
                             aria_label="Close menu"
                             classes="book-icon-button"
                         >
-                            <Icon icon=icondata::BsXLg/>
+                            <Icon icon=icondata::BsXLg />
                         </Button>
                     </div>
                     {children.get_value()()}
@@ -394,7 +424,7 @@ pub fn MenuDrawer(
 fn GithubLink() -> impl IntoView {
     view! {
         <Link href=GITHUB_URL target=LinkTarget::Blank classes="book-github-link">
-            <Icon icon=icondata::BsGithub aria_label="Leptonic on GitHub"/>
+            <Icon icon=icondata::BsGithub aria_label="Leptonic on GitHub" />
         </Link>
     }
 }
@@ -420,8 +450,12 @@ fn ThemeToggle() -> impl IntoView {
                 <span class="book-theme-toggle-track" aria-hidden="true">
                     <span class="book-theme-toggle-knob">
                         {move || {
-                            let icon = if is_dark.get() { icondata::BsMoon } else { icondata::BsSun };
-                            view! { <Icon icon/> }
+                            let icon = if is_dark.get() {
+                                icondata::BsMoon
+                            } else {
+                                icondata::BsSun
+                            };
+                            view! { <Icon icon /> }
                         }}
                     </span>
                 </span>

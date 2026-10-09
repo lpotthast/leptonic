@@ -146,6 +146,8 @@ wall / CPU (user + sys) of single-edit rebuilds.
 | + library as `rlib` and a separate tiny `cdylib` frontend crate (pipelining; cargo-leptos workspace mode) | 107 s / 552 s | 13-15 s / 33-44 s | 17-19.5 s / 44-56 s | 190 MB | small gain: fresh only |
 | + `[profile.dev.build-override] opt-level = 3` (optimized proc macros) | 142 s / 1133 s | 12-15 s / 30-41 s | 17-18.5 s / 42-52 s | 190 MB | rejected: no gain |
 | + `strip = "symbols"` for the wasm (no `name` section)           |                  | 12.8-15.6 s / 36-48 s |           | 51 MB    | **applied** |
+| + `opt-level = "z"` for the wasm (`wasm-dev`; 2026-10-08)         |                  | 12-14 s wasm (was 17-18 s) | ~28 s wasm (same) | 19.7 MB (was 43.8 MB) | **applied** |
+| + `opt-level = 1` for the server (`server-dev`; 2026-10-08)       |                  | 79 s server (was 89 s) | 41 s server (was 56 s) | | **applied** |
 
 - `opt-level = 3` for leptonic made each leptonic edit 2x slower in wall time and 4x in CPU time, and its claimed
   benefit was smaller wasm: with `opt-level = 1` the dev wasm is even smaller (142 MB) than with 3 (167 MB). The
@@ -161,6 +163,20 @@ wall / CPU (user + sys) of single-edit rebuilds.
   `debug = false`. Pitfall: a profile-wide `strip = "symbols"` is silently not applied to a package that has its
   own profile override (the book's `[profile.dev.package.book-ssr]`): check the `-C strip=symbols` flag with
   `cargo rustc ... -v`.
+- `opt-level = 1` for the server in dev (`bin-profile-dev = "server-dev"`, 2026-10-08; server builds only, other
+  builds running, so ±10 s): server-side rendering of the book's 124 pages takes 51 ms per page instead of 82 ms, and
+  rebuilds are faster, not slower (less code to generate and link). The cold build takes 112 s instead of 82 s, once.
+  The test-app gained more (`server-release`: 6x faster rendering, its calendar page 87 ms instead of 550 ms): the
+  book's requests also pay for TLS and compressing the HTML.
+- The book serves its wasm, JS and CSS with content-hashed names (`hash-files`, `HashedStylesheet`) and
+  `cache-control: public, max-age=31536000, immutable` for `/pkg/` (2026-10-08): browsers keep them, and the code
+  compiled from the wasm, until a build changes them. Its Docker image copies `hash.txt` next to the server binary
+  and sets `LEPTOS_HASH_FILES`.
+- `opt-level = "z"` for `wasm-dev` (2026-10-08; wasm build + wasm-bindgen only, timed with the server not built, the
+  machine busy with other builds, so ±5 s): a book edit rebuilds the wasm in 12-14 s instead of 17-18 s (wasm-bindgen:
+  1.2 s instead of 3.7 s), a leptonic edit in 23-34 s either way (averages 27.5 s and 28.8 s). Pages load faster (the
+  browser tests: 500 ms page loads with 44 MB). Needs `[profile.dev.package."*"]` without an `opt-level`, which would
+  override the profile's for every dependency.
 
 | Change (release wasm)                                                         | Raw      | gzip    | brotli  |
 |-------------------------------------------------------------------------------|----------|---------|---------|
@@ -233,17 +249,28 @@ leptonic code, mostly a larger name section).
 
 ## Advice for users
 
-To be turned into a guide in the book ("Build times and bundle size"):
+The book's guide "Optimizing Compile Times & Binary Sizes" (`/doc/optimizing-builds`) turns these, and the
+2026-10-08 test-app measurements (release profile without LTO, server at `opt-level = 1`, hashed files, linkers), into
+copyable configuration. Keep the two in step:
 
-- Keep the dev profile at `opt-level = 0` for leptonic (no per-package override); optimize only dependencies that
-  rarely change if runtime speed in dev matters (`[profile.dev.package."*"] opt-level = 1`, which needs an explicit
-  `[profile.dev.package.leptonic] opt-level = 0` because `"*"` matches path dependencies outside the workspace).
+- Keep the dev profile at `opt-level = 0` for leptonic when editing it (path dependency). No `opt-level` in
+  `[profile.dev.package."*"]`: profiles inheriting dev (`wasm-dev`) inherit it, and it overrides their own for every
+  dependency. For a faster dev server: a `server-dev` profile (`bin-profile-dev`, inherits dev, `opt-level = 1`):
+  test app 2026-10-08, rendering 6x faster (calendar page 87 ms instead of 550 ms), rebuild after a leptonic change
+  24 s (dev: 26 s).
 - `[profile.dev.package."*"] debug = false` and `debug = "line-tables-only"` for the app: smaller target
   directories and faster links (the book's debug info exceeded 4 GiB without it).
 - `--cfg=erase_components` for every build (`.cargo/config.toml`), with `disable-erase-components = true` in
   cargo-leptos' metadata so that all builds share one set of flags.
-- Release wasm: `opt-level = "z"`, `lto = true`, `codegen-units = 1`, `panic = "abort"` in a `wasm-release` profile
-  (`lib-profile-release`), wasm-opt via cargo-leptos. Serve it compressed (brotli: 4.3 MB instead of 18.2 MB).
+- Release wasm (test app, 2026-10-08): `opt-level = "z"`, no LTO, default codegen units, `incremental = true` in a
+  `wasm-release` profile (`lib-profile-release`): 13 MB (dev 33 MB), page loads ~180 ms instead of ~450 ms, rebuild
+  after a leptonic change ~20 s (as fast as dev). `lto = true` + `codegen-units = 1` saved 1 MB but made that
+  rebuild 84 s: production builds only (`CARGO_PROFILE_WASM_RELEASE_LTO=true`, `..._CODEGEN_UNITS=1`). Opt-levels
+  1/2/3/`"s"` were close to `"z"` in speed, `"z"` smallest. Serve it compressed (book: brotli 2.94 MB of 13.01 MB);
+  `--precompress` (brotli 11) costs ~20 s per build on a 13 MB wasm. `hash-files = true` + `HashedStylesheet` +
+  `cache-control: public, max-age=31536000, immutable` for `/pkg/` lets browsers cache the wasm and its compiled code.
+- Linkers: rust-lld is the default on x86_64 Linux since Rust 1.90; mold linked the test server in 0.75 s instead of
+  1.2 s (not worth extra setup for leptonic's own builds).
 - Dev wasm: a `wasm-dev` profile without symbols (`lib-profile-dev`, see the experiments): 73% smaller.
 - Bake only the ICU4X locales the app supports: −20% wasm. `scripts/icu-datagen.sh` works for any app.
 - Enable only the leptonic features you use: `syntax-highlight` (syntect, regex: 68 s CPU, 1.35 MB wasm) is heavy.

@@ -6,14 +6,11 @@
 //! Dragging thumbs and tracks (react-spectrum's `ColorSlider.test.tsx`, "dragging the thumb
 //! works", "... when vertical", "clicking and dragging on the track works when vertical"), the
 //! `Label`'s default text, and parts that mount again.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, report};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The range input of the slider `#id`.
 async fn input(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -63,10 +60,10 @@ async fn last_hue(page: &Page<'_>) -> Result<String, Report> {
 
 /// Waits until the last entry of the hue log is `expected`.
 async fn wait_for_last_hue(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    wait_for("the last entry of the hue log")
-        .observing(|| last_hue(page))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| last_hue(page))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -78,14 +75,18 @@ fn hue_of(entry: &str, kind: &str) -> Option<f64> {
 /// Waits until the last hue log entry is `kind:<hue>` with the hue within 2° of `expected`;
 /// returns the hue.
 async fn wait_for_last_hue_near(page: &Page<'_>, kind: &str, expected: f64) -> Result<f64, Report> {
-    wait_for("the last entry of the hue log")
-        .observing(|| last_hue(page))
-        .to_be(&format!("{kind}:{expected} (±2)"), |entry| {
-            hue_of(entry, kind).is_some_and(|hue| (hue - expected).abs() <= 2.0)
+    let entry = assert_that!(|| last_hue(page))
+        .eventually_ok()
+        .satisfies(|entry| {
+            entry
+                .derive_owned(|entry| hue_of(entry, kind))
+                .is_some_satisfying(|hue| {
+                    hue.is_close_to(expected, 2.0);
+                });
         })
-        .await?;
-    let entry = last_hue(page).await?;
-    hue_of(&entry, kind).ok_or_else(|| report!("the last hue log entry changed to {entry:?}"))
+        .await
+        .unwrap_inner();
+    hue_of(&entry, kind).ok_or_else(|| report!("the last hue log entry {entry:?} has no hue"))
 }
 
 /// "sets input props"; the channel names a slider without labels.
@@ -181,10 +182,12 @@ pub async fn track_click(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .perform()
         .await?;
-    wait_for("the red value")
-        .observing(|| number(&red))
-        .to_be("64 (±1)", |red| (red - 64.0).abs() <= 1.0)
-        .await?;
+    assert_that!(|| number(&red))
+        .eventually_ok()
+        .satisfies(|red| {
+            red.is_close_to(64.0, 1.0);
+        })
+        .await;
     Ok(())
 }
 

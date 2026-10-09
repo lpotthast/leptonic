@@ -3,14 +3,11 @@
 //! in cells ("keyboardNavigationBehavior='tab' and textfields in row"), arrow navigation into
 //! cells with focusable children, right-to-left, PageUp/PageDown into the column headers,
 //! column spans ("colSpan") and an empty table. Spec: react-aria-components `Table.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::gt, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 const PATH: &str = "/atoms/table-navigation";
 
@@ -320,10 +317,11 @@ pub async fn page_up_reaches_the_column_headers(page: &Page<'_>) -> Result<(), R
     page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-paged", PAGED, "Row 1").await?;
     page.send_keys(Key::PageDown).await?;
-    wait_for("the focused row's number")
-        .observing(|| focused_row_number(page))
-        .to_be("past 5 (a page down)", |row| *row > 5)
-        .await?;
+    // Past 5: a page down.
+    assert_that!(|| focused_row_number(page))
+        .eventually_ok()
+        .matches(gt(5))
+        .await;
     // Each PageUp moves focus up (a page of rows, then into the column headers), until it
     // reaches the column header.
     let header = cell(page, PAGED, "Name").await?;
@@ -334,12 +332,13 @@ pub async fn page_up_reaches_the_column_headers(page: &Page<'_>) -> Result<(), R
         }
         let before = before.describe().await?;
         page.send_keys(Key::PageUp).await?;
-        wait_for("the focused element")
-            .observing(|| async { page.focused_element().await?.describe().await })
-            .to_be(&format!("another than {before} (moved up)"), |focused| {
-                *focused != before
+        // Another than before: moved up.
+        assert_that!(|| async { page.focused_element().await?.describe().await })
+            .eventually_ok()
+            .satisfies(|focused| {
+                focused.is_not_equal_to(&before);
             })
-            .await?;
+            .await;
     }
     page.wait_for_focus(&header).await?;
     Ok(())

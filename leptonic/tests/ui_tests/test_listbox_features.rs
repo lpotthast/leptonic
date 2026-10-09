@@ -18,14 +18,11 @@
 //! `disabledBehavior="selection"` (on the listbox and on one item: focusable but not
 //! selectable), "should support empty state", and focus moving on when the focused option is
 //! removed, labels following the collection.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath};
 
 /// The option with the text `text` in the listbox inside `container`.
 async fn option(page: &Page<'_>, container: &str, text: &str) -> Result<WebElement, Report> {
@@ -202,10 +199,10 @@ pub async fn links(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/listbox-features").await?;
     let one = option(page, "#lbf-links", "One").await?;
     one.click().await?;
-    wait_for("the location hash")
-        .observing(|| hash(page))
-        .to_be_equal_to("#lbf-one")
-        .await?;
+    assert_that!(|| hash(page))
+        .eventually_ok()
+        .matches(eq("#lbf-one"))
+        .await;
     page.wait_for_focus(&one).await?;
     let arrow_down = one
         .dispatch(SyntheticEvent::keyboard("keydown", "ArrowDown"))
@@ -214,10 +211,10 @@ pub async fn links(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_focus(&option(page, "#lbf-links", "Two").await?)
         .await?;
     page.send_keys(Key::Enter).await?;
-    wait_for("the location hash")
-        .observing(|| hash(page))
-        .to_be_equal_to("#lbf-two")
-        .await?;
+    assert_that!(|| hash(page))
+        .eventually_ok()
+        .matches(eq("#lbf-two"))
+        .await;
     Ok(())
 }
 
@@ -226,10 +223,10 @@ pub async fn links_with_single_selection(page: &Page<'_>) -> Result<(), Report> 
     page.goto_path("/atoms/listbox-features").await?;
     let one = option(page, "#lbf-links-single", "One").await?;
     one.click().await?;
-    wait_for("the location hash")
-        .observing(|| hash(page))
-        .to_be_equal_to("#lbf-one")
-        .await?;
+    assert_that!(|| hash(page))
+        .eventually_ok()
+        .matches(eq("#lbf-one"))
+        .await;
     one.attr_stays("aria-selected", Some("false")).await?;
     Ok(())
 }
@@ -291,14 +288,21 @@ pub async fn page_down_and_up(page: &Page<'_>) -> Result<(), Report> {
     first.click().await?;
     page.wait_for_focus(&first).await?;
     page.send_keys(Key::PageDown).await?;
-    wait_for("the focused option")
-        .observing(|| async { page.focused_element().await?.inner_text().await })
-        .to_be("Option 4 or later", |text| {
+    // Option 4 or later.
+    assert_that!(|| async {
+        let text = page.focused_element().await?.inner_text().await?;
+        Ok::<_, Report>(
             text.strip_prefix("Option ")
-                .and_then(|number| number.parse::<u32>().ok())
-                .is_some_and(|number| number >= 4)
-        })
-        .await?;
+                .and_then(|number| number.parse::<u32>().ok()),
+        )
+    })
+    .eventually_ok()
+    .satisfies(|number| {
+        number.is_some_satisfying(|number| {
+            number.is_greater_or_equal_to(4);
+        });
+    })
+    .await;
     page.send_keys(Key::PageUp).await?;
     page.wait_for_focus(&first).await?;
     Ok(())

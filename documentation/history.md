@@ -3,6 +3,34 @@
 Finished work, moved out of `PLAN.md` (which holds open work only). Most recent first within each part; git
 history has the details.
 
+## Book: guide "Optimizing Compile Times & Binary Sizes" (2026-10-08, evening)
+
+- The guide "Build Times & Bundle Size" became "Optimizing Compile Times & Binary Sizes" (`/doc/optimizing-builds`;
+  `/doc/build-times` redirects), written from build-performance.md's "Advice for users" and the test app's 2026-10-08
+  measurements: an "At a Glance" table (setting, buys, costs), then features (`default-features = false`,
+  `intl-strings`, `syntax-highlight` on the server only), dev builds (debug info, `erase_components`, a `wasm-dev`
+  bundle at `opt-level = "z"` without symbols, a `server-dev` profile at `opt-level = 1`), release builds (`opt-level =
+  "z"` without LTO, incremental; LTO + one codegen unit only for production via `CARGO_PROFILE_*` variables), serving
+  (precompression, compression without the wasm, `hash-files` + `HashedStylesheet` + `immutable` caching), ICU4X
+  locale data, linking (rust-lld default, mold) and large apps. Every number names the app it was measured on.
+
+## Library: browser test waits as assertr eventual assertions (2026-10-08, night)
+
+- assertr (the user's checkout, unreleased 0.8): eventual assertions on an observation, a closure returning a future
+  of a changing value: `assert_that!(|| log.inner_text()).eventually_ok().matches(eq("change:200")).await`, and
+  `consistently()` for "keeps holding". They end with any matcher or `satisfies(..)` callback; failures add how long
+  and how often the value was observed and the values seen. `Patience` (timeout, interval, consistency): fast defaults,
+  `set_global`, per-check overrides. Runtime-agnostic, and their futures are `Send` (the chain is detached while
+  waiting; panic presentations are `Send + Sync` now).
+- The tests' `polling` builders (`wait_for(..).observing(..)`, `page.expect(..)`) are gone: every wait and stays
+  check, including the helpers' (`wait_for_attr`, `count_stays`, focus, ...), is an eventual assertion. One timing
+  for the suite, `tests/timing/mod.rs` (10 s, 50 ms; thirtyfour's lookups poll the same); stays checks are
+  `page.settle()` then `consistently_ok()`. Subject names only where the expression can't show a runtime value.
+  822 of 822 pass in 50.55s.
+- borrow-for (the user's checkout, branch `owned-borrowed-sequences`): vectors and slices of `&str` compare with
+  those of `String` in both directions (and `CStr`, `Path`, `OsStr`), which assertr 0.8 had lost against 0.7
+  (`contains_exactly([vec!["a"]])` on `Vec<Vec<String>>`).
+
 ## Library: every browser test case a test of its own (2026-10-08, evening)
 
 - Every case is a test of its own: a `pub async fn` that loads its page itself, registered in `ui_tests::all()`
@@ -17,6 +45,31 @@ history has the details.
   tests) and quits the rest; `fresh_session()` tests get a session no test ran in. The report counts created and reset
   sessions and shows step averages; `goto_path` runs as a `page_load` step. The clipboard test grants its permission
   for its tab's browser context.
+- Faster page loads (2026-10-08, night): `goto_path` waits for hydration in the page instead of polling every 50 ms;
+  the test-app's server builds at `opt-level = 1` in release builds (6x faster server-side rendering, no slower
+  rebuilds; the book's dev server likewise, `server-dev`: 51 ms per page instead of 82 ms, faster rebuilds). The book
+  serves content-hashed, immutably cached wasm, JS and CSS like the test-app. Suite: 45-49 s at parallelism 8.
+- Two session resets (2026-10-08, night): browser-test's `SessionReset::NewContext` (a browser context per test,
+  nothing kept) and `SessionReset::manual([CachedData::Http])` (the tab reset item by item: windows, history, cookies,
+  storage of the origins visited, permissions, CDP emulation overrides; a new renderer process per test via a `data:`
+  page; only the listed cached data kept). Reusable sessions run without Chrome's back/forward cache
+  (`with_back_forward_cache`). The test-app serves content-hashed wasm, JS and CSS (`hash-files`, `HashedStylesheet`)
+  with `cache-control: immutable`. Leptonic runs `manual` keeping the HTTP cache (49s, 1.3 GB at parallelism 8) and
+  cross-checks with `BROWSER_TEST_SESSION_RESET=new-context` (50s, 3.3 GB); both pass.
+- Faster and lighter (2026-10-08, later): the test-app is built with `--release` (leptos-browser-test's new
+  `with_build_profile`; `wasm-release`: `opt-level = "z"`, no LTO, incremental, debug assertions; server in dev):
+  13 MB of wasm instead of 33 MB, page loads 180ms instead of 450ms, suite 1m 07-10s instead of 1m 50s at parallelism 8,
+  rebuilds after a library change as fast as dev (~20s). Spares with reuse default to one per eight parallel tests.
+  Speed and memory figures: `documentation/browser-tests.md`, "Speed and memory".
+- Headless shell and settled stays checks (2026-10-08, evening): the suite runs on Chrome Headless Shell (49s and
+  3.3 GB at parallelism 8, from 1m 10s and 4.9 GB). Stays checks read, wait until the page settled (two animation
+  frames and a task) and read again, instead of watching for 300 ms; behavior behind a timer observes past it for a
+  duration (`for_at_least`, 11 checks of timer-driven behavior), `BROWSER_TEST_STAYS_MS` lengthens all others.
+  (Counting frames for timers too was tried and dropped: timers run on the clock, not per frame.) The shell exposed a virtualizer bug: the scroll view counted its own scroll as the user's (several `scroll_to`s per frame, one expected position, the last
+  erasing it; Chrome passed by timing), so a `VirtualList` stopped following its end; also scrolls of the page counted
+  as scrolling the list. Fixed: `scroll_to`s of a frame are combined, own scroll events are recognized within two
+  frames at the position scrolled to (or clamped to the end), the follow logic uses the new `is_user_scrolling` and
+  `scroll_to_end`. Regression case `virtual_list::page_scroll_keeps_following`.
 - Measured (821 tests, 32 threads): parallelism 4: 2m 40s (old structure: 1m 41s for 139 tests); 8: 1m 44s; 16:
   1m 43s (CPU-bound: page loads avg 820ms instead of 330ms). At parallelism 8 with 2 spares: 10 sessions for 821
   tests, ~127 Chrome processes and 5.5 GB PSS on average. The first reset (new tab per test) let every browser grow by
@@ -92,6 +145,26 @@ history has the details.
   way: on a profile it doesn't create itself, chromedriver starts the page without focus (`document.hasFocus()`
   false, so script focus fires no `focus` events; 2 tests failed); the runner now brings every session's page to
   the front (`Page.bringToFront`), with a fail-first regression test there. Full suite: 126/126.
+
+## Book: browser tests on browser-test 0.6, every check a test of its own (2026-10-08, evening)
+
+- The book's suite adopts the library's test changes: browser-test 0.6 (the user's checkout, `rustls-no-provider` +
+  `ring`) with cancellation on Ctrl-C, Chrome profiles in `CARGO_TARGET_TMPDIR`, Chrome Headless Shell, session reuse
+  and parallelism 8. Every check is a test of its own: a case is a `pub async fn` registered in `ui_tests::all()`
+  (`.case(test_shell::search_opens_with_ctrl_k)`, named `shell::search_opens_with_ctrl_k`; `tests/cases/mod.rs`), the
+  page walk one test per page (`pages::dark_theme_and_phone_width /doc/button`, was 8 shards), contrast one per theme
+  and page; the search, page structure, narrow-screen and sidebar flows split into independent cases, plus a new
+  `shell::theme_toggle_switches_and_is_remembered` (pages and contrast checks set the theme cookie instead of
+  clicking the toggle). Every test fails on page errors afterwards (`CheckPageErrors`), `goto` checks the page it
+  leaves and runs as a `page_load` step, `BROWSER_TEST_FILTER` takes comma-separated texts. The clipboard cases grant
+  their permission for their tab's browser context.
+- `wasm-dev` (`just serve`, the browser tests) at `opt-level = "z"`: 19.7 MB of wasm instead of 43.8 MB, rebuilds no
+  slower (after a book change 12-14s instead of 17-18s, wasm-bindgen handles the smaller file faster; after a leptonic
+  change ~28s either way). `[profile.dev.package."*"]` lost its redundant `opt-level = 0`, which would override it.
+  Release builds were `z` already (the deployed `wasm-release` with LTO).
+- Measured (32 threads): 240 tests in 31.7s, 9 browsers (was 23 tests in 32.0s, 23 browsers); the checks other than
+  search and the LLM index finish after ~18s (was ~22s). The rest waits for the server's Markdown warm-up, and fresh
+  browser contexts fetch Google Fonts on every page load (`PLAN.md`, "Book").
 
 ## Book: tree tables, typed selects, snippet review (2026-10-08)
 

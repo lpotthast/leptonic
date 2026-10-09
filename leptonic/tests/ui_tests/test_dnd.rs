@@ -12,14 +12,11 @@
 //!
 //! Screen reader drags: started and dropped by (virtual) clicks, navigated by focus alone, the
 //! rest of the page inert ("screen reader").
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, dnd::DndActions, role, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, dnd::DndActions, role, xpath};
 
 const LOG: &str = "test-dnd-log";
 const TARGETS_LOG: &str = "test-dnd-targets-log";
@@ -620,10 +617,10 @@ pub async fn canceled_targets_are_hidden(page: &Page<'_>) -> Result<(), Report> 
     page.wait_for_focus(&source).await?;
     page.send_keys(Key::Escape).await?;
     source.wait_for_attr("data-dragging", Some("false")).await?;
-    wait_for("Drop here 2")
-        .observing(|| page.is_inert(&target_2))
-        .to_be("not inert", |inert| !inert)
-        .await?;
+    assert_that!(|| page.is_inert(&target_2))
+        .eventually_ok()
+        .matches(eq(false))
+        .await;
     Ok(())
 }
 
@@ -693,10 +690,11 @@ async fn start_virtual_drag(page: &Page<'_>, query: &str) -> Result<WebElement, 
     // The drag manager sets the session up one frame later (then the page becomes inert); clicks
     // before that would go to the drag source itself.
     let input = page.element("input[aria-label='Text field']").await?;
-    wait_for("the text field outside the drag session")
-        .observing(|| page.is_inert(&input))
-        .to_be("inert (the session started)", |inert| *inert)
-        .await?;
+    // The session started.
+    assert_that!(|| page.is_inert(&input))
+        .eventually_ok()
+        .matches(eq(true))
+        .await;
     Ok(source)
 }
 
@@ -706,10 +704,10 @@ pub async fn navigating_with_focus_events_only(page: &Page<'_>) -> Result<(), Re
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
     page.wait_for_focus(&source).await?;
-    wait_for("the drag source's description")
-        .observing(|| source.referenced_text("aria-describedby"))
-        .to_be_equal_to("Dragging. Click to cancel drag.")
-        .await?;
+    assert_that!(|| source.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Dragging. Click to cancel drag."))
+        .await;
     page.expect_log_settled(TARGETS_LOG, &["dragstart"]).await?;
 
     target_1.focus().await?;
@@ -751,10 +749,10 @@ pub async fn navigating_with_focus_events_only(page: &Page<'_>) -> Result<(), Re
 pub async fn hides_everything_but_drop_targets(page: &Page<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
     let input = page.element("input[aria-label='Text field']").await?;
-    wait_for("the text field outside the drag session")
-        .observing(|| page.is_inert(&input))
-        .to_be("inert", |inert| *inert)
-        .await?;
+    assert_that!(|| page.is_inert(&input))
+        .eventually_ok()
+        .matches(eq(true))
+        .await;
     for label in ["Before", "Not a drop target"] {
         let button = page.element(role("button").text(label)).await?;
         assert_that!(page.is_inert(&button).await?)
@@ -776,10 +774,10 @@ pub async fn hides_everything_but_drop_targets(page: &Page<'_>) -> Result<(), Re
     source.virtual_click().await?;
     source.wait_for_attr("data-dragging", Some("false")).await?;
     let before = page.element(role("button").text("Before")).await?;
-    wait_for("Before")
-        .observing(|| page.is_inert(&before))
-        .to_be("not inert", |inert| !inert)
-        .await?;
+    assert_that!(|| page.is_inert(&before))
+        .eventually_ok()
+        .matches(eq(false))
+        .await;
     Ok(())
 }
 
@@ -788,10 +786,10 @@ pub async fn clicking_the_drag_source_cancels(page: &Page<'_>) -> Result<(), Rep
     let source = start_virtual_drag(page, "").await?;
     source.virtual_click().await?;
     source.wait_for_attr("data-dragging", Some("false")).await?;
-    wait_for("the drag source's description")
-        .observing(|| source.referenced_text("aria-describedby"))
-        .to_be_equal_to("Click to start dragging.")
-        .await?;
+    assert_that!(|| source.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Click to start dragging."))
+        .await;
     page.expect_log_settled(TARGETS_LOG, &["dragstart", "dragend Cancel"])
         .await?;
     Ok(())

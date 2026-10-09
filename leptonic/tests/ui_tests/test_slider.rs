@@ -14,14 +14,11 @@
 //!
 //! Several thumbs (react-aria-components' `Slider.test.js`): three thumbs with an output, thumbs
 //! bound to app state, bound values out of the range, a thumb without a value.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 // -- Helpers --------------------------------------------------------------------------------------
 
@@ -77,10 +74,11 @@ async fn wait_for_last(
     kind: &str,
     expected: &str,
 ) -> Result<(), Report> {
-    wait_for(format!("the last {kind} of {name}"))
-        .observing(|| last_of(page, name, kind))
-        .to_be_equal_to(Some(format!("{kind}:{expected}")))
-        .await?;
+    assert_that!(|| last_of(page, name, kind))
+        .with_subject_name(format!("the last {kind} of {name}"))
+        .eventually_ok()
+        .matches(eq(Some(format!("{kind}:{expected}"))))
+        .await;
     Ok(())
 }
 
@@ -342,16 +340,18 @@ pub async fn closest_thumb_by_drag(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     wait_for_last(page, "drag", "change", "[40, 80]").await?;
-    expect("the ends of drag")
-        .observing(|| ends_of(page, "drag"))
-        .to_stay_equal_to(0)
-        .await?;
+    page.settle().await?;
+    assert_that!(|| ends_of(page, "drag"))
+        .consistently_ok()
+        .matches(eq(0))
+        .await;
     page.driver.action_chain().release().perform().await?;
     wait_for_last(page, "drag", "end", "[40, 80]").await?;
-    expect("the ends of drag")
-        .observing(|| ends_of(page, "drag"))
-        .to_stay_equal_to(1)
-        .await?;
+    page.settle().await?;
+    assert_that!(|| ends_of(page, "drag"))
+        .consistently_ok()
+        .matches(eq(1))
+        .await;
     Ok(())
 }
 
@@ -392,10 +392,11 @@ pub async fn disabled_track(page: &Page<'_>) -> Result<(), Report> {
         .release()
         .perform()
         .await?;
-    expect("the log of disabled")
-        .observing(|| log_of(page, "disabled"))
-        .to_stay_equal_to(Vec::<String>::new())
-        .await?;
+    page.settle().await?;
+    assert_that!(|| log_of(page, "disabled"))
+        .consistently_ok()
+        .matches(eq(Vec::<String>::new()))
+        .await;
     let disabled = inputs_of(page, "disabled").await?;
     assert_that!(disabled[0].value().await?)
         .get_some()

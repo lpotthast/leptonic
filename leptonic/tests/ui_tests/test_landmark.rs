@@ -6,14 +6,14 @@
 //! nested landmarks go in document order; a
 //! `LandmarkController` moves between them; landmarks sharing a role without distinct labels are
 //! reported.
-use assertr::prelude::*;
+use assertr::{
+    matchers::{eq, satisfying},
+    prelude::*,
+};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// "can F6 to a landmark region", "can F6 to the next landmark region", "landmark navigation
 /// forward wraps", "can shift+F6 to the previous landmark region", "landmark navigation backward
@@ -196,25 +196,28 @@ async fn warnings(page: &Page<'_>) -> Result<Vec<String>, Report> {
 pub async fn duplicate_role_warnings(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
     // The two distinctly labelled regions don't warn.
-    expect("the warnings")
-        .observing(|| warnings(page))
-        .to_stay_equal_to(Vec::<String>::new())
-        .await?;
+    page.settle().await?;
+    assert_that!(|| warnings(page))
+        .consistently_ok()
+        .matches(eq(Vec::<String>::new()))
+        .await;
 
     page.element("#test-lmn-add-unlabelled")
         .await?
         .click()
         .await?;
     page.element("#test-lmn-nav-2").await?;
-    wait_for("the warnings")
-        .observing(|| warnings(page))
-        .to_be("about unlabelled navigation landmarks", |warnings| {
-            warnings.iter().any(|warning| {
-                warning.contains("more than one landmark with the role Navigation")
-                    && warning.contains("label each")
-            })
+    // A warning about unlabelled navigation landmarks.
+    assert_that!(|| warnings(page))
+        .eventually_ok()
+        .satisfies(|warnings| {
+            warnings.contains_matching(satisfying(|warning: AssertThat<String, Capture>| {
+                warning
+                    .contains("more than one landmark with the role Navigation")
+                    .contains("label each");
+            }));
         })
-        .await?;
+        .await;
 
     page.goto_path("/hooks/landmark-nested").await?;
     page.element("#test-lmn-add-same-label")
@@ -222,13 +225,14 @@ pub async fn duplicate_role_warnings(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .await?;
     page.element("#test-lmn-same-2").await?;
-    wait_for("the warnings")
-        .observing(|| warnings(page))
-        .to_be("about equally labelled landmarks", |warnings| {
-            warnings
-                .iter()
-                .any(|warning| warning.contains("label them uniquely"))
+    // A warning about equally labelled landmarks.
+    assert_that!(|| warnings(page))
+        .eventually_ok()
+        .satisfies(|warnings| {
+            warnings.contains_matching(satisfying(|warning: AssertThat<String, Capture>| {
+                warning.contains("label them uniquely");
+            }));
         })
-        .await?;
+        .await;
     Ok(())
 }

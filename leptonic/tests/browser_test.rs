@@ -17,14 +17,19 @@
 //! - `BROWSER_TEST_LOG_STEPS=1`: log every step of every test with its duration.
 //! - `BROWSER_TEST_SESSION_REUSE=0`: give every test a fresh browser instead of resetting the one
 //!   of the test before.
-//! - `BROWSER_TEST_PARALLELISM=<n>`: how many tests run at the same time (default 4, `1`:
+//! - `BROWSER_TEST_SESSION_RESET=new-context`: reset sessions by giving every test a new browser
+//!   context (keeping no cache) instead of resetting the tab item by item (keeping the HTTP
+//!   cache), e.g. to cross-check that no test depends on how it is reset.
+//! - `BROWSER_TEST_STAYS_MS=<ms>`: stays checks also observe that long after the page settled
+//!   (default 0), to find checks that pass only because they don't observe long enough.
+//! - `BROWSER_TEST_PARALLELISM=<n>`: how many tests run at the same time (default 8, `1`:
 //!   sequential, e.g. with `BROWSER_TEST_VISIBLE=1`).
 #![cfg(not(target_arch = "wasm32"))]
 
 mod cases;
 mod common;
 mod pages;
-mod polling;
+mod timing;
 mod ui_tests;
 
 use std::{
@@ -33,10 +38,11 @@ use std::{
 };
 
 use browser_test::{
-    BrowserTestRunner, Cancellation, ChromeProfilesDir, DriverOutput, FailurePolicy, Parallelism,
-    Pause, SessionReuse, StderrSummary, Timeouts, Visibility, thirtyfour::ChromiumLikeCapabilities,
+    BrowserTestRunner, CachedData, Cancellation, ChromeBinary, ChromeProfilesDir, DriverOutput,
+    FailurePolicy, Parallelism, Pause, SessionReset, SessionReuse, StderrSummary, Timeouts,
+    Visibility, thirtyfour::ChromiumLikeCapabilities,
 };
-use leptos_browser_test::{LeptosTestAppConfig, Report};
+use leptos_browser_test::{BuildProfile, LeptosTestAppConfig, Report};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn browser_tests() -> Result<(), Report> {
@@ -44,12 +50,17 @@ async fn browser_tests() -> Result<(), Report> {
     // Chrome for Testing is downloaded through rustls with `ring` (browser-test's `rustls-no-provider`).
     // Installing fails only if a provider is installed already, which is as good.
     let _ = rustls::crypto::ring::default_provider().install_default();
+    // Before the runner reads it for thirtyfour's lookups.
+    timing::install();
 
     let app_start = Instant::now();
     // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
     // leptonic's build script generates none.
     let app_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../testing/test-app");
     let mut app = LeptosTestAppConfig::new(app_dir).with_app_name("leptonic test app");
+    // An optimized wasm bundle (the app's `wasm-release` profile, see its Cargo.toml): pages load and
+    // hydrate in less than half the time, and rebuild as fast as in dev.
+    app = app.with_build_profile(BuildProfile::Release);
     // The app's own target dir (`TEST_APP_TARGET_DIR`), so that a `CARGO_TARGET_DIR` set for this
     // crate doesn't also receive the app's server and wasm builds.
     if let Some(target_dir) = std::env::var_os("TEST_APP_TARGET_DIR") {
@@ -61,8 +72,8 @@ async fn browser_tests() -> Result<(), Report> {
         app_start.elapsed().as_secs_f64()
     );
 
-    // Tests run in parallel (`BROWSER_TEST_PARALLELISM=<n>`, default 4; 1: sequential), each in a
-    // fresh browser. They don't share app state: each loads its own page. The checks of the whole
+    // Tests run in parallel (`BROWSER_TEST_PARALLELISM=<n>`, default 8; 1: sequential), each in a
+    // fresh or reset browser. They don't share app state: each loads its own page. The checks of the whole
     // run follow, sequentially (see `ui_tests::all`).
     runner()?
         .run(app.base_url(), ui_tests::all(parallelism()?))
@@ -72,7 +83,22 @@ async fn browser_tests() -> Result<(), Report> {
     Ok(())
 }
 
-/// `BROWSER_TEST_PARALLELISM`, default 4. An invalid value is an error.
+/// `BROWSER_TEST_SESSION_RESET`: `manual` (the default) resets a session's tab item by item and
+/// keeps the HTTP cache (the test-app's content-hashed wasm and scripts, with their compiled code),
+/// `new-context` runs every test in a new browser context (keeping nothing), e.g. to cross-check.
+fn session_reset() -> Result<SessionReset, Report> {
+    match std::env::var("BROWSER_TEST_SESSION_RESET").as_deref() {
+        Err(_) | Ok("" | "manual") => Ok(SessionReset::manual([CachedData::Http])),
+        Ok("new-context") => Ok(SessionReset::NewContext),
+        Ok(other) => Err(rootcause::report!(
+            "BROWSER_TEST_SESSION_RESET is {other:?}, expected `manual` or `new-context`"
+        )
+        .into_dynamic()),
+    }
+}
+
+/// `BROWSER_TEST_PARALLELISM`, default 8 (every parallel test is a browser of ~0.5 GB; more than 8
+/// gains little on 32 threads, see `documentation/browser-tests.md`). An invalid value is an error.
 fn parallelism() -> Result<Parallelism, Report> {
     Ok(Parallelism::from_env()?.unwrap_or(Parallelism::parallel(8)))
 }
@@ -97,19 +123,27 @@ fn runner() -> Result<BrowserTestRunner, Report> {
             Ok(())
         })
         .with_failure_policy(FailurePolicy::RunAll)
-        // Every case is a test of its own (`cases`): a passed test's browser is reset and runs the
-        // next test instead of starting a new one. `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser
-        // per test.
-        .with_session_reuse(SessionReuse::from_env()?.unwrap_or(SessionReuse::enabled()))
+        // Chrome Headless Shell: a third less memory than Chrome and faster session resets
+        // (`documentation/browser-tests.md`, "Speed and memory"). Visible runs use Chrome.
+        .with_headless_chrome_binary(ChromeBinary::ChromeHeadlessShell)
+        // Every case is a test of its own (`cases`): a test's browser is reset and runs the next
+        // test instead of starting a new one. `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser per
+        // test.
+        .with_session_reuse(
+            SessionReuse::from_env()?
+                .unwrap_or(SessionReuse::enabled())
+                .with_reset(session_reset()?),
+        )
         .with_visibility(Visibility::from_env()?.unwrap_or_default())
         .with_pause(Pause::from_env()?.unwrap_or_default())
         .with_driver_output(DriverOutput::from_env()?.unwrap_or_default())
-        // Lookups and element waits poll with thirtyfour's element queries (`polling`); an implicit
-        // wait would make every lookup of a missing element block, and compound with the polling.
+        // Lookups poll with thirtyfour's element queries, as long and as often as eventual
+        // assertions (`timing`); an implicit wait would make every lookup of a missing element
+        // block, and compound with the polling.
         .with_timeouts(
             Timeouts::builder()
                 .implicit_wait_timeout(Duration::ZERO)
                 .build(),
         )
-        .with_element_query_wait(polling::element_query_wait()))
+        .with_element_query_wait(timing::element_query_wait()))
 }

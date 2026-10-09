@@ -256,7 +256,7 @@ behavior?". The sidebar answers each in its own part, framed by the guides:
 
 1. **Getting started**: what leptonic is, installing it, the changelog.
 2. **Guides**: topics every page builds on (the layers and styling atoms, event propagation, classes and styles,
-   themes and the atom theme, forms and validation, SSR, accessibility, build times and bundle size).
+   themes and the atom theme, forms and validation, SSR, accessibility, compile times and binary sizes).
 3. **Concepts**: every concept, in groups by purpose: Buttons, Fields, Pickers, Collections, Date & Time, Color,
    Overlays, Navigation, Status, Content & Layout. The groups follow react-aria-components' catalog, so readers
    who know it find things where they expect them.
@@ -328,8 +328,10 @@ component-only pages to their recipe or replacement.
 - `just book-browser-test` (`examples/book-ssr/tests/`): visits every page of the navigation and fails on page
   errors, demos unreadable in the dark theme, internal links or anchors that don't resolve, pages wider than a 390px
   screen, and pages missing from the Markdown export. Add checks there, in Rust, in the style of the library's browser
-  tests. `BOOK_TEST_PAGES=<text>` limits the page checks to matching pages. Never run two book suites at the same time:
-  they share the app's build directory.
+  tests: every case a `pub async fn` that loads its page itself, registered in `ui_tests::all()` and run as a test of
+  its own in a fresh or reset browser (no state of other tests; set the theme with `BookPage::set_theme`).
+  `BROWSER_TEST_FILTER=<text>` runs the matching tests (`shell::`, `/doc/table`), `BOOK_TEST_PAGES=<text>` limits the
+  page checks to matching pages. Never run two book suites at the same time: they share the app's build directory.
 - Clippy for both builds, zero findings: `cargo clippy --features ssr --tests` and
   `cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown`.
 - Screenshots of the affected pages when changing visuals (`just book-serve-isolated` serves a second instance).

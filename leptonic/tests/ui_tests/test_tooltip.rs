@@ -7,15 +7,12 @@
 //! the trigger is pressed; `trigger=Focus` ignores hovering; scrolling closes it.
 use std::time::{Duration, Instant};
 
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 use serde::Deserialize;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::expect,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/atoms/tooltip";
 
@@ -144,8 +141,13 @@ pub async fn close_on_press_disabled_and_close_delay(page: &Page<'_>) -> Result<
     saves.wait_for_inner_text("1").await?;
     page.send_keys(Key::Enter).await?;
     saves.wait_for_inner_text("2").await?;
-    // Settled: still open.
-    page.count_stays(TOOLTIP, 1).await?;
+    // Still open, also past the close delay (800 ms) a press could have started.
+    page.settle().await?;
+    assert_that!(|| page.count(TOOLTIP))
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(1000))
+        .matches(eq(1))
+        .await;
 
     // 800 ms close delay: closed only after it, measured from before the pointer left.
     let left = Instant::now();
@@ -163,11 +165,12 @@ pub async fn focus_trigger_mode(page: &Page<'_>) -> Result<(), Report> {
     let focus_only = page.element("#test-tooltip-focus-only").await?;
     focus_only.hover().await?;
     // Settled: hovering opened nothing.
-    expect("the number of open tooltips")
-        .observing(|| page.count(TOOLTIP))
+    page.settle().await?;
+    assert_that!(|| page.count(TOOLTIP))
+        .consistently_ok()
         .for_at_least(Duration::from_millis(400))
-        .to_stay_equal_to(0)
-        .await?;
+        .matches(eq(0))
+        .await;
 
     // Focused by keyboard (from "Save", focused by the press before).
     page.element("#test-tooltip-save").await?.focus().await?;

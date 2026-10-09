@@ -199,7 +199,9 @@ manual testing during development. It is named "book" following Rust ecosystem c
 - **Tests**: unit tests (`cargo test --features ssr --lib`, including `kit::api_check`, which compares every API table
   with the library source) and browser tests (`just book-browser-test`, `examples/book-ssr/tests/`): every page loads
   without errors, demos are readable in the dark theme, internal links and anchors resolve, pages fit a 390px screen,
-  and the Markdown export lists every page. `BOOK_TEST_PAGES=<text>` limits them to matching pages.
+  and the Markdown export lists every page. Set up like the library's: every case (and every page) a test of its own,
+  in a fresh or reset browser. `BROWSER_TEST_FILTER=<text>` runs the matching tests, `BOOK_TEST_PAGES=<text>` limits
+  the page checks to matching pages.
 - **Built with leptonic**: the book uses leptonic for everything leptonic provides (buttons, links, dialogs,
   disclosures, toggles, tables, keys, ...); its own widgets are compositions of leptonic hooks and atoms. Library
   gaps are fixed in the library, never worked around in the book. The book has its own look: it styles every atom
@@ -289,8 +291,10 @@ Native unit tests of hooks run inside `crate::testing::with_owner(|| ..)`; call 
 ### Browser Tests
 
 Browser tests live in `leptonic/tests/` and drive the test-app in `testing/test-app/`. They use `leptos-browser-test`
-(starts `cargo leptos serve` on a random port) and `browser-test` (Chrome for Testing + chromedriver, one fresh
-WebDriver session per test, 4 tests in parallel by default, `thirtyfour` re-exported as `browser_test::thirtyfour`).
+(starts `cargo leptos serve --release` on a random port: the test-app's `wasm-release` profile, `opt-level = "z"`
+without LTO, and `server-release`, `opt-level = 1`: rebuild as fast as dev, but pages load and render much faster) and `browser-test` (Chrome for Testing +
+chromedriver with Chrome Headless Shell, every test in a fresh or reset browser, 8 tests in parallel by default, `thirtyfour` re-exported as
+`browser_test::thirtyfour`).
 Tests must not depend on each other or on shared server state; checks of the whole run go into `ui_tests::after_all()`.
 
 - **Fixtures**: every test page lives in its own module under `testing/test-app/src/pages/{atoms,hooks}/`
@@ -300,7 +304,9 @@ Tests must not depend on each other or on shared server state; checks of the who
 - **Tests**: test implementations in `tests/ui_tests/test_*.rs`: every case is a `pub async fn` that loads its
   page itself and is a test of its own, registered in `ui_tests::all()` (`.case(test_x::case)`, named `x::case`;
   `tests/cases/mod.rs`). Cases never depend on each other. Sessions return to browser-test's pool after a test and
-  are reset for the next one (`SessionReuse`; `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser per test). Shared
+  are reset for the next one (`SessionReuse`; `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser per test): item by item,
+  keeping the HTTP cache of the test-app's content-hashed wasm and JS (`SessionReset::manual([CachedData::Http])`);
+  `BROWSER_TEST_SESSION_RESET=new-context` gives every test a new browser context instead, to cross-check. Shared
   helpers in `tests/pages/` (`PageActions` on a page, `ElementActions` on an element, `Locator`s, `SyntheticEvent`).
   **Style:**
   `documentation/browser-tests.md`: one way per check (find an element with a locator, then its method; every state
@@ -309,9 +315,11 @@ Tests must not depend on each other or on shared server state; checks of the who
   Assertions use `assertr` (panics are reported as test failures); helpers return `Result<_, rootcause::Report>`.
 - **Prefer waiting over sleeping**: the session's implicit wait is zero; `element(locator)` waits for its element,
   `wait_for_*` for a state (`wait_for_attr`, `wait_for_inner_text`, `wait_for_count`, `wait_for_focus`), never
-  `find`/`find_all` or a fixed sleep; focus and state often change in effects after the event. Negative checks
-  ("nothing changed") use the `*_stays` methods or `expect(..).observing(..).to_stay_equal_to(..)` (re-checked over
-  300 ms), not a single read.
+  `find`/`find_all` or a fixed sleep; focus and state often change in effects after the event. Other values are
+  waited for with assertr's eventual assertions: `assert_that!(|| read()).eventually_ok().matches(eq(v)).await`
+  (timing: the suite's `Patience`, `tests/timing/mod.rs`). Negative checks ("nothing changed") use the `*_stays`
+  methods or `page.settle()` followed by `assert_that!(..).consistently_ok()`, not a single read; behavior behind a
+  timer needs `.for_at_least(delay + margin)` (documentation/browser-tests.md, "Stays checks").
 - **Failure reports** (browser-test): every failure shows the failing test-code line and its callers, the test's last
   steps, and the error with the expected and last seen value. Pages also fail a test on Rust panics, uncaught errors
   and `console.error` output (`page.diagnostics()`).
@@ -329,8 +337,11 @@ Tests must not depend on each other or on shared server state; checks of the who
   each test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output (or `just browser-test-visible`).
   `BROWSER_TEST_FILTER=<text>` runs only the tests whose name contains `<text>` (e.g. `grid::` for one fixture's
   cases, `checkbox::hover` for one case).
-  `BROWSER_TEST_PARALLELISM=<n>` sets how many tests run at once (`1`: sequential). `TEST_APP_TARGET_DIR=<dir>`
-  builds the test-app there instead of in the inherited `CARGO_TARGET_DIR` (agents:
+  `BROWSER_TEST_PARALLELISM=<n>` sets how many tests run at once (`1`: sequential). Every parallel test is a browser
+  (Chrome Headless Shell, ~0.4 GB each; 8: 3.3 GB, 49s; documentation/browser-tests.md, "Speed and memory").
+  `BROWSER_TEST_STAYS_MS=<ms>` makes stays checks also observe that long (finds checks that don't observe long
+  enough).
+  `TEST_APP_TARGET_DIR=<dir>` builds the test-app there instead of in the inherited `CARGO_TARGET_DIR` (agents:
   `CARGO_TARGET_DIR=<repo>/target/agents TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`). The run summary lists the
   slowest tests and steps; `BROWSER_TEST_LOG_STEPS=1` logs every step. Never run two suites of one app at the same
   time: they share the app's build directory. Ctrl-C cancels a run cleanly (browsers and chromedriver shut down).

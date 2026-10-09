@@ -8,14 +8,11 @@
 //! defaults (not when the reset is canceled), Enter submits their form, right-to-left arrow keys,
 //! realtime re-validation of a checkbox group, and the `CheckboxField`/`SwitchField`/`RadioField`
 //! atoms.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, css, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, css, xpath};
 
 const PATH: &str = "/atoms/forms";
 
@@ -192,10 +189,10 @@ pub async fn checkbox_group_realtime_validation(page: &Page<'_>) -> Result<(), R
 
 /// Waits until the input's description (the texts `aria-describedby` refers to) is `expected`.
 async fn wait_for_description(input: &WebElement, expected: &str) -> Result<(), Report> {
-    wait_for("the description")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 

@@ -7,14 +7,11 @@
 //! react-aria-components' `AriaTreeTests` ("can select items", "should not be able to interact
 //! with the tree"), RTL expansion keys, a focused row hidden by collapsing its parent, and an
 //! item getting children.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 async fn row(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
     page.element(xpath(format!(
@@ -33,10 +30,10 @@ async fn visible_rows(page: &Page<'_>) -> Result<Vec<String>, Report> {
 }
 
 async fn expect_rows(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    wait_for("the visible rows")
-        .observing(|| visible_rows(page))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| visible_rows(page))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -174,10 +171,10 @@ async fn tree_rows(page: &Page<'_>, tree: &str) -> Result<Vec<String>, Report> {
 }
 
 async fn expect_tree_rows(page: &Page<'_>, tree: &str, expected: &[&str]) -> Result<(), Report> {
-    wait_for("the visible rows")
-        .observing(|| tree_rows(page, tree))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| tree_rows(page, tree))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 

@@ -15,14 +15,11 @@
 //!
 //! "should support filtering sections", disabled keys, Enter without a focused option, and the
 //! option count announcement.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 const LISTBOX: &str = "[role=listbox]";
 
@@ -33,10 +30,10 @@ async fn input_in(page: &Page<'_>, container: &str) -> Result<WebElement, Report
 
 /// Waits until the open listbox shows exactly `expected`.
 async fn expect_options(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    wait_for("the options")
-        .observing(|| page.inner_texts("[role=listbox] [role=option]"))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| page.inner_texts("[role=listbox] [role=option]"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -208,10 +205,10 @@ pub async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     input.wait_for_prop("value", "Dog").await?;
     input.wait_for_attr("aria-invalid", Some("true")).await?;
-    wait_for("the error")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Dogs are not allowed")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Dogs are not allowed"))
+        .await;
     input.send_keys(Key::Control + "a").await?;
     input.send_keys("Ca").await?;
     page.element(role("option").text("Cat"))
@@ -267,20 +264,20 @@ pub async fn multiple_form_reset(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .click()
         .await?;
-    wait_for("the submitted animals")
-        .observing(|| form.form_values("animals"))
-        .to_be_equal_to(vec!["1".to_owned()])
-        .await?;
+    assert_that!(|| form.form_values("animals"))
+        .eventually_ok()
+        .matches(eq(vec!["1".to_owned()]))
+        .await;
     input_in(page, "#cbf-multiple")
         .await?
         .send_keys(Key::Escape)
         .await?;
     page.wait_for_count(LISTBOX, 0).await?;
     page.element("#cbf-multiple-reset").await?.click().await?;
-    wait_for("the submitted animals")
-        .observing(|| form.form_values("animals"))
-        .to_be_equal_to(vec![String::new()])
-        .await?;
+    assert_that!(|| form.form_values("animals"))
+        .eventually_ok()
+        .matches(eq(vec![String::new()]))
+        .await;
     Ok(())
 }
 
@@ -416,10 +413,10 @@ pub async fn disabled_option_is_skipped(page: &Page<'_>) -> Result<(), Report> {
         .get_some()
         .is_equal_to("true");
     input.send_keys(Key::Down).await?;
-    wait_for("the active descendant's text")
-        .observing(|| active_descendant_text(page, &input))
-        .to_be_equal_to("Owl")
-        .await?;
+    assert_that!(|| active_descendant_text(page, &input))
+        .eventually_ok()
+        .matches(eq("Owl"))
+        .await;
     input.send_keys(Key::Enter).await?;
     input.wait_for_prop("value", "Owl").await?;
     page.wait_for_count(LISTBOX, 0).await?;

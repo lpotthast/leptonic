@@ -3,14 +3,11 @@
 //! The `Pressable` atom: its press handling goes onto the child itself (no wrapper), merged with
 //! the child's own handlers; the child becomes focusable unless disabled; a surrounding
 //! `PressResponder` applies to it.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/atoms/pressable";
 
@@ -76,14 +73,15 @@ pub async fn press_responder_warns_without_pressable(page: &Page<'_>) -> Result<
     page.clear_diagnostics().await?;
     page.element("#test-pressable-mount").await?.click().await?;
     page.element("#test-responder-pressable").await?;
-    wait_for("the PressResponder warnings")
-        .observing(|| responder_warnings(page))
-        .to_be_equal_to(1)
-        .await?;
-    expect("the PressResponder warnings")
-        .observing(|| responder_warnings(page))
-        .to_stay_equal_to(1)
-        .await?;
+    assert_that!(|| responder_warnings(page))
+        .eventually_ok()
+        .matches(eq(1))
+        .await;
+    page.settle().await?;
+    assert_that!(|| responder_warnings(page))
+        .consistently_ok()
+        .matches(eq(1))
+        .await;
     page.clear_diagnostics().await?;
     Ok(())
 }

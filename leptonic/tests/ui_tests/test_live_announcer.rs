@@ -3,13 +3,10 @@
 //! request and removed after their timeout. Event handlers run without a reactive owner;
 //! announcing must still work.
 // asserting announcements); this checks leptonic's regions and messages.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use rootcause::Report;
 
-use crate::{
-    pages::{Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{Page, PageActions};
 
 const PATH: &str = "/hooks/live-announcer";
 
@@ -34,25 +31,25 @@ pub async fn announcements(page: &Page<'_>) -> Result<(), Report> {
 pub async fn clear(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-la-polite").await?.click().await?;
-    wait_for("the polite log")
-        .observing(|| log_text(page, "polite"))
-        .to_be_equal_to("Polite hello")
-        .await?;
+    assert_that!(|| log_text(page, "polite"))
+        .eventually_ok()
+        .matches(eq("Polite hello"))
+        .await;
     page.element("#test-la-assertive").await?.click().await?;
-    wait_for("the assertive log")
-        .observing(|| log_text(page, "assertive"))
-        .to_be_equal_to("Urgent hello")
-        .await?;
+    assert_that!(|| log_text(page, "assertive"))
+        .eventually_ok()
+        .matches(eq("Urgent hello"))
+        .await;
 
     page.element("#test-la-clear").await?.click().await?;
-    wait_for("the polite log")
-        .observing(|| log_text(page, "polite"))
-        .to_be_equal_to("")
-        .await?;
-    wait_for("the assertive log")
-        .observing(|| log_text(page, "assertive"))
-        .to_be_equal_to("")
-        .await?;
+    assert_that!(|| log_text(page, "polite"))
+        .eventually_ok()
+        .matches(eq(""))
+        .await;
+    assert_that!(|| log_text(page, "assertive"))
+        .eventually_ok()
+        .matches(eq(""))
+        .await;
     Ok(())
 }
 

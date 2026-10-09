@@ -2,14 +2,14 @@
 // Upstream: @adobe/react-spectrum/test/numberfield/NumberField.test.js @ 99e6102368
 //! The NumberField atoms: slots, states, form value, validation, keyboard, typing, paste,
 //! commit behavior and typed values.
-use assertr::prelude::*;
+use assertr::{
+    matchers::{eq, predicate},
+    prelude::*,
+};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, SyntheticEvent},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
 const PATH: &str = "/atoms/number-field";
 
@@ -59,16 +59,18 @@ async fn paste(page: &Page<'_>, input: &WebElement, text: &str) -> Result<(), Re
 
 /// Wait until `input` is described by its validation error, the browser's validation message.
 async fn wait_for_error(input: &WebElement) -> Result<(), Report> {
-    wait_for("the input's validation message and description")
-        .observing(|| async {
-            let message = input.prop("validationMessage").await?.unwrap_or_default();
-            Ok((message, input.referenced_text("aria-describedby").await?))
+    assert_that!(|| async {
+        let message = input.prop("validationMessage").await?.unwrap_or_default();
+        Ok::<_, Report>((message, input.referenced_text("aria-describedby").await?))
+    })
+    .eventually_ok()
+    .matches(
+        predicate(|(message, description): &(String, String)| {
+            !message.is_empty() && description == message
         })
-        .to_be(
-            "a message the input is described by",
-            |(message, description)| !message.is_empty() && description == message,
-        )
-        .await?;
+        .described_as("is a message the input is described by"),
+    )
+    .await;
     Ok(())
 }
 
@@ -87,10 +89,10 @@ pub async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
         .get_some()
         .is_equal_to("1,024");
     assert_that!(input.referenced_text("aria-labelledby").await?).is_equal_to("Width");
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Description Error")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Description Error"))
+        .await;
     let buttons = page.elements("#nf-slots button").await?;
     assert_that!(&buttons).has_length(2);
     let (decrease, increase) = (&buttons[0], &buttons[1]);
@@ -351,10 +353,10 @@ pub async fn server_errors_survive_an_unchanged_blur(page: &Page<'_>) -> Result<
     let input = input(page, "nf-server-form").await?;
     let field = field_in(page, "#nf-server-form").await?;
     field.wait_for_attr("data-invalid", Some("true")).await?;
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("This field has an error.")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("This field has an error."))
+        .await;
     input.focus().await?;
     page.blur_focused().await?;
     field.attr_stays("data-invalid", Some("true")).await?;

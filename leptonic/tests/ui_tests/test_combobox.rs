@@ -3,14 +3,11 @@
 //! the input, `aria-activedescendant` points at the focused option), keyboard and pointer
 //! selection, reverting with Escape, a controlled value changed from outside, and a combo box
 //! in a modal dialog.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role, xpath};
 
 const PATH: &str = "/atoms/combobox";
 
@@ -19,10 +16,10 @@ const LISTBOX: &str = "[role=listbox]";
 
 /// Waits until the listbox shows exactly `expected`.
 async fn expect_options(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
-    wait_for("the options")
-        .observing(|| page.inner_texts("[role=option]"))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| page.inner_texts("[role=option]"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
     Ok(())
 }
 
@@ -30,17 +27,17 @@ async fn expect_options(page: &Page<'_>, expected: &[&str]) -> Result<(), Report
 /// focus); DOM focus stays in the input.
 async fn expect_virtual_focus(page: &Page<'_>, option: &str) -> Result<(), Report> {
     let input = page.element(INPUT).await?;
-    wait_for("the active descendant's text")
-        .observing(|| async {
-            Ok(match input.attr("aria-activedescendant").await? {
-                Some(id) if !id.is_empty() => {
-                    Some(page.element(format!("#{id}")).await?.inner_text().await?)
-                }
-                _ => None,
-            })
+    assert_that!(|| async {
+        Ok::<_, Report>(match input.attr("aria-activedescendant").await? {
+            Some(id) if !id.is_empty() => {
+                Some(page.element(format!("#{id}")).await?.inner_text().await?)
+            }
+            _ => None,
         })
-        .to_be_equal_to(Some(option.to_owned()))
-        .await?;
+    })
+    .eventually_ok()
+    .matches(eq(Some(option.to_owned())))
+    .await;
     page.focus_stays(&input).await?;
     Ok(())
 }
@@ -208,10 +205,10 @@ pub async fn arrow_down_opens_with_the_selected_option_focused(
     .await?;
     input.send_keys(Key::Escape).await?;
     page.wait_for_count(LISTBOX, 0).await?;
-    wait_for("the virtual focus events on the input")
-        .observing(|| page.eval::<u64>("return window.__virtualInputFocus;", vec![]))
-        .to_be_equal_to(1)
-        .await?;
+    assert_that!(|| page.eval::<u64>("return window.__virtualInputFocus;", vec![]))
+        .eventually_ok()
+        .matches(eq(1))
+        .await;
     Ok(())
 }
 

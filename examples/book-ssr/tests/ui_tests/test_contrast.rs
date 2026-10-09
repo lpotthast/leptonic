@@ -5,11 +5,8 @@
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{
-    BrowserTest, async_trait,
-    thirtyfour::{By, WebDriver},
-};
-use leptos_browser_test::{Report, ResultExt};
+use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use leptos_browser_test::Report;
 
 use super::test_pages::{IS_DARK, TRANSITIONS_FINISHED};
 use crate::pages::BookPage;
@@ -57,49 +54,49 @@ const CONTRAST_PROBLEMS: &str = r"
     }
     return [...new Set(out)];";
 
-/// The chrome of [`PAGES`] in the light theme (the default), then in the dark theme.
-pub struct ContrastTests {}
+/// A test per theme and page of [`PAGES`].
+pub fn contrast_tests() -> impl Iterator<Item = ContrastTest> {
+    ["light", "dark"]
+        .into_iter()
+        .flat_map(|theme| PAGES.map(|path| ContrastTest { theme, path }))
+}
+
+/// The chrome of a page in a theme.
+pub struct ContrastTest {
+    theme: &'static str,
+    path: &'static str,
+}
 
 #[async_trait]
-impl BrowserTest<str> for ContrastTests {
+impl BrowserTest<str> for ContrastTest {
     fn name(&self) -> Cow<'_, str> {
-        "chrome_text_meets_wcag_aa_in_both_themes".into()
+        format!(
+            "contrast::chrome_text_meets_wcag_aa {} {}",
+            self.theme, self.path
+        )
+        .into()
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = BookPage { driver, base_url };
+        let path = self.path;
+        // The reader chose the theme before, so the server renders the page in it.
+        page.set_theme(self.theme).await?;
         page.set_viewport(1600, 1000).await?;
         // Hover styles must not count: park the pointer where no page has content (the app bar's top left corner).
         page.move_pointer_to(0, 0).await?;
 
-        let mut problems = Vec::new();
-        for theme in ["light", "dark"] {
-            for path in PAGES {
-                page.goto(path).await?;
-                if theme == "dark" && path == PAGES[0] {
-                    // Switch as a user would; the choice is remembered for the following pages.
-                    driver
-                        .find(By::Css("#book-app-bar .book-theme-toggle"))
-                        .await
-                        .context("the app bar has a theme toggle")?
-                        .click()
-                        .await?;
-                    page.move_pointer_to(0, 0).await?;
-                }
-                if theme == "dark" {
-                    page.wait_until(&format!("{path} shows the dark theme"), IS_DARK)
-                        .await?;
-                }
-                page.wait_until(
-                    &format!("{path} finished its transitions"),
-                    TRANSITIONS_FINISHED,
-                )
+        page.goto(path).await?;
+        if self.theme == "dark" {
+            page.wait_until(&format!("{path} shows the dark theme"), IS_DARK)
                 .await?;
-                for problem in page.strings(CONTRAST_PROBLEMS).await? {
-                    problems.push(format!("{theme} {path}: {problem}"));
-                }
-            }
         }
+        page.wait_until(
+            &format!("{path} finished its transitions"),
+            TRANSITIONS_FINISHED,
+        )
+        .await?;
+        let problems = page.strings(CONTRAST_PROBLEMS).await?;
         assert_that!(problems).is_empty();
         Ok(())
     }

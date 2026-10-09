@@ -21,6 +21,9 @@ lib-features = ["hydrate"]
 lib-default-features = false
 lib-profile-dev = "wasm-dev"
 lib-profile-release = "wasm-release"
+bin-profile-dev = "server-dev"
+# Content-hashed file names for the wasm, JS and CSS, which the server lets browsers cache for good (`src/main.rs`).
+hash-files = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -101,9 +104,15 @@ web-sys = { version = "0.3.106", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-assertr = { version = "0.7.1", default-features = false, features = ["std"] }
-browser-test = { version = "0.5.0", default-features = false }
+# The user's checkout, as in leptonic: eventual assertions (unreleased 0.8).
+assertr = { path = "../../../assertr/assertr", default-features = false, features = ["std"] }
+# The user's checkout, as in leptonic: 0.6.0 is unreleased (session reuse, Chrome Headless Shell, failure reports).
+# `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
+# without compiling `aws-lc-rs`.
+browser-test = { path = "../../../browser-test", default-features = false, features = ["rustls-no-provider"] }
+futures = { version = "0.3.34", default-features = false, features = ["std"] }
 leptos-browser-test = { version = "0.3.0", default-features = false }
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"] }
 serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
 syn = { version = "3.0.6", default-features = false, features = ["clone-impls", "full", "parsing"] }
 tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt-multi-thread", "time"] }
@@ -130,8 +139,8 @@ similar_names = "allow"
 # can address, and with `split-debuginfo = "unpacked"` piled up as new `.dwo` files on every build (rust#161824).
 debug = "line-tables-only"
 
+# No `opt-level` here: `wasm-dev` inherits these overrides, and one for every package would override its `opt-level`.
 [profile.dev.package."*"]
-opt-level = 0
 # No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): much
 # smaller build directories and faster linking of the server and the wasm bundle.
 debug = false
@@ -156,8 +165,19 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
+[profile.server-dev]
+inherits = "dev"
+# Measured 2026-10-08 (124 pages): server-side rendering 82 ms per page in dev, 51 ms at `opt-level = 1`; rebuilds
+# are faster, too (after a book change 79 s instead of 89 s, after a leptonic change 41 s instead of 56 s): less code to
+# generate and link.
+opt-level = 1
+
 [profile.wasm-dev]
 inherits = "dev"
+# Measured 2026-10-08: 19.7 MB of wasm instead of 43.8 MB at opt-level 0; pages load faster (`just serve`, the browser
+# tests). Rebuilds are no slower: after a book change 12-14s instead of 17-18s (wasm-bindgen handles the smaller
+# file faster), after a leptonic change ~28s either way.
+opt-level = "z"
 debug = false
 strip = "symbols"
 

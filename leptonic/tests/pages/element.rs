@@ -1,18 +1,14 @@
 //! Everything a test does with an element it found: look up below it, read, wait, check
 //! stability, act.
 
-use std::sync::Arc;
-
-use browser_test::{
-    StepExt,
-    thirtyfour::{By, WebElement, prelude::*},
-};
-use rootcause::{Report, bail, prelude::ResultExt};
+use assertr::{matchers::eq, prelude::*};
+use browser_test::thirtyfour::{By, WebElement, error::WebDriverErrorInner, prelude::*};
+use rootcause::{Report, prelude::ResultExt};
 use serde::{Deserialize, de::DeserializeOwned};
 
 use crate::{
     pages::{Locator, event::SyntheticEvent, lookup},
-    polling::{TIMEOUT, expect},
+    timing,
 };
 
 /// The rectangle of an element in CSS pixels (`getBoundingClientRect()`), not rounded like
@@ -58,18 +54,20 @@ pub trait ElementActions {
     async fn inner_texts(&self, locator: impl Into<Locator> + Send) -> Result<Vec<String>, Report>;
 
     /// Wait until exactly `expected` elements below this one match `locator`.
-    async fn wait_for_count(
+    #[track_caller]
+    fn wait_for_count(
         &self,
         locator: impl Into<Locator> + Send,
         expected: usize,
-    ) -> Result<(), Report>;
+    ) -> impl Future<Output = Result<(), Report>>;
 
     /// Exactly `expected` elements below this one match `locator`, and keep doing so.
-    async fn count_stays(
+    #[track_caller]
+    fn count_stays(
         &self,
         locator: impl Into<Locator> + Send,
         expected: usize,
-    ) -> Result<(), Report>;
+    ) -> impl Future<Output = Result<(), Report>>;
 
     // Reads (thirtyfour has `attr` and `prop`).
 
@@ -91,28 +89,53 @@ pub trait ElementActions {
     /// label and the start of its text (`<div role="row"> "Inbox"`).
     async fn describe(&self) -> Result<String, Report>;
 
-    // Waits: until a state is reached, failing after `polling::TIMEOUT` with the state it was in.
+    // Waits: until a state is reached, failing after the timeout (`crate::timing`) with the values
+    // it went through, or at once when the page removed the element. Waits and stays are
+    // `#[track_caller]` and build their assertion when called, so that a failure names the test's
+    // line.
 
     /// Wait until the attribute `name` is `expected` (`None`: absent).
-    async fn wait_for_attr(&self, name: &str, expected: Option<&str>) -> Result<(), Report>;
+    #[track_caller]
+    fn wait_for_attr<'a>(
+        &'a self,
+        name: &'a str,
+        expected: Option<&'a str>,
+    ) -> impl Future<Output = Result<(), Report>> + 'a;
 
     /// Wait until the DOM property `name` is `expected`, e.g. an input's `value` (which the
     /// `value` attribute doesn't follow once the user typed).
-    async fn wait_for_prop(&self, name: &str, expected: &str) -> Result<(), Report>;
+    #[track_caller]
+    fn wait_for_prop<'a>(
+        &'a self,
+        name: &'a str,
+        expected: &'a str,
+    ) -> impl Future<Output = Result<(), Report>> + 'a;
 
     /// Wait until the [inner text](Self::inner_text) is `expected`.
-    async fn wait_for_inner_text(&self, expected: &str) -> Result<(), Report>;
+    #[track_caller]
+    fn wait_for_inner_text(&self, expected: &str) -> impl Future<Output = Result<(), Report>>;
 
-    // Stays: the state holds now and for `polling::STAYS` ("nothing happens").
+    // Stays: once the page settled, the state holds ("nothing happens", `crate::timing`).
 
     /// The attribute `name` is `expected` (`None`: absent) and stays so.
-    async fn attr_stays(&self, name: &str, expected: Option<&str>) -> Result<(), Report>;
+    #[track_caller]
+    fn attr_stays<'a>(
+        &'a self,
+        name: &'a str,
+        expected: Option<&'a str>,
+    ) -> impl Future<Output = Result<(), Report>> + 'a;
 
     /// The DOM property `name` is `expected` and stays so.
-    async fn prop_stays(&self, name: &str, expected: &str) -> Result<(), Report>;
+    #[track_caller]
+    fn prop_stays<'a>(
+        &'a self,
+        name: &'a str,
+        expected: &'a str,
+    ) -> impl Future<Output = Result<(), Report>> + 'a;
 
     /// The [inner text](Self::inner_text) is `expected` and stays so.
-    async fn inner_text_stays(&self, expected: &str) -> Result<(), Report>;
+    #[track_caller]
+    fn inner_text_stays(&self, expected: &str) -> impl Future<Output = Result<(), Report>>;
 
     // Actions beyond thirtyfour's `click`, `focus`, `send_keys` and `scroll_into_view`.
 
@@ -170,20 +193,22 @@ impl ElementActions for WebElement {
         lookup::inner_texts(self, locator.into()).await
     }
 
-    async fn wait_for_count(
+    #[track_caller]
+    fn wait_for_count(
         &self,
         locator: impl Into<Locator> + Send,
         expected: usize,
-    ) -> Result<(), Report> {
-        lookup::wait_for_count(self, locator.into(), expected).await
+    ) -> impl Future<Output = Result<(), Report>> {
+        lookup::wait_for_count(self, locator.into(), expected)
     }
 
-    async fn count_stays(
+    #[track_caller]
+    fn count_stays(
         &self,
         locator: impl Into<Locator> + Send,
         expected: usize,
-    ) -> Result<(), Report> {
-        lookup::count_stays(self, locator.into(), expected).await
+    ) -> impl Future<Output = Result<(), Report>> {
+        lookup::count_stays(self.handle(), self, locator.into(), expected)
     }
 
     async fn inner_text(&self) -> Result<String, Report> {
@@ -253,84 +278,96 @@ impl ElementActions for WebElement {
         Ok(format!("<{tag}{role}{label}> {text:?}"))
     }
 
-    async fn wait_for_attr(&self, name: &str, expected: Option<&str>) -> Result<(), Report> {
-        let attr: Arc<str> = name.into();
-        let wanted = expected.map(str::to_owned);
-        let waited = self
-            .wait_until()
-            .ignore_errors(false)
-            .condition(move |element: WebElement| {
-                let attr = attr.clone();
-                let wanted = wanted.clone();
-                async move { Ok(element.attr(&attr).await? == wanted) }
-            })
-            .step("wait_for_attr")
-            .detail(format!("{name} = {}", shown(expected)))
-            .await;
-        if waited.is_err() {
-            let actual = self.attr(name).await;
-            explain_timeout(self, &format!("attribute {name}"), expected, actual).await?;
+    #[track_caller]
+    fn wait_for_attr<'a>(
+        &'a self,
+        name: &'a str,
+        expected: Option<&'a str>,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || self.attr(name))
+            .with_subject_name(format!("attribute {name}"))
+            .eventually_ok()
+            .giving_up_on(RemovedElement::element_was_removed)
+            .matches(eq(expected.map(str::to_owned)));
+        async move {
+            check.await;
+            Ok(())
         }
-        Ok(())
     }
 
-    async fn wait_for_prop(&self, name: &str, expected: &str) -> Result<(), Report> {
-        let waited = self
-            .wait_until()
-            .ignore_errors(false)
-            .has_property(name, expected.to_owned())
-            .step("wait_for_prop")
-            .detail(format!("{name} = {expected:?}"))
-            .await;
-        if waited.is_err() {
-            let actual = self.prop(name).await;
-            explain_timeout(self, &format!("property {name}"), Some(expected), actual).await?;
+    #[track_caller]
+    fn wait_for_prop<'a>(
+        &'a self,
+        name: &'a str,
+        expected: &'a str,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || self.prop(name))
+            .with_subject_name(format!("property {name}"))
+            .eventually_ok()
+            .giving_up_on(RemovedElement::element_was_removed)
+            .matches(eq(Some(expected.to_owned())));
+        async move {
+            check.await;
+            Ok(())
         }
-        Ok(())
     }
 
-    async fn wait_for_inner_text(&self, expected: &str) -> Result<(), Report> {
-        let wanted = expected.to_owned();
-        let waited = self
-            .wait_until()
-            .ignore_errors(false)
-            .condition(move |element: WebElement| {
-                let wanted = wanted.clone();
-                async move {
-                    let text = element.prop("innerText").await?.unwrap_or_default();
-                    Ok(text.trim() == wanted)
-                }
-            })
-            .step("wait_for_inner_text")
-            .detail(format!("{expected:?}"))
-            .await;
-        if waited.is_err() {
-            let actual = self.prop("innerText").await;
-            let actual = actual.map(|text| text.map(|text| text.trim().to_owned()));
-            explain_timeout(self, "the inner text", Some(expected), actual).await?;
+    #[track_caller]
+    fn wait_for_inner_text(&self, expected: &str) -> impl Future<Output = Result<(), Report>> {
+        let check = assert_that_owned!(move || self.inner_text())
+            .eventually_ok()
+            .giving_up_on(RemovedElement::element_was_removed)
+            .matches(eq(expected.to_owned()));
+        async move {
+            check.await;
+            Ok(())
         }
-        Ok(())
     }
 
-    async fn attr_stays(&self, name: &str, expected: Option<&str>) -> Result<(), Report> {
-        expect(format!("attribute {name} of {}", self.describe().await?))
-            .observing(|| async { Ok(self.attr(name).await?) })
-            .to_stay_equal_to(expected.map(str::to_owned))
-            .await
+    #[track_caller]
+    fn attr_stays<'a>(
+        &'a self,
+        name: &'a str,
+        expected: Option<&'a str>,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || self.attr(name))
+            .with_subject_name(format!("attribute {name}"))
+            .consistently_ok()
+            .matches(eq(expected.map(str::to_owned)));
+        async move {
+            timing::settle(self.handle()).await?;
+            check.await;
+            Ok(())
+        }
     }
 
-    async fn prop_stays(&self, name: &str, expected: &str) -> Result<(), Report> {
-        expect(format!("property {name} of {}", self.describe().await?))
-            .observing(|| async { Ok(self.prop(name).await?) })
-            .to_stay_equal_to(Some(expected.to_owned()))
-            .await
+    #[track_caller]
+    fn prop_stays<'a>(
+        &'a self,
+        name: &'a str,
+        expected: &'a str,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || self.prop(name))
+            .with_subject_name(format!("property {name}"))
+            .consistently_ok()
+            .matches(eq(Some(expected.to_owned())));
+        async move {
+            timing::settle(self.handle()).await?;
+            check.await;
+            Ok(())
+        }
     }
 
-    async fn inner_text_stays(&self, expected: &str) -> Result<(), Report> {
-        expect(format!("the inner text of {}", self.describe().await?))
-            .observing(|| self.inner_text())
-            .to_stay_equal_to(expected)
-            .await
+    #[track_caller]
+    fn inner_text_stays(&self, expected: &str) -> impl Future<Output = Result<(), Report>> {
+        let check = assert_that_owned!(move || self.inner_text())
+            .consistently_ok()
+            .matches(eq(expected.to_owned()));
+        async move {
+            timing::settle(self.handle()).await?;
+            check.await;
+            Ok(())
+        }
     }
 
     async fn hover(&self) -> Result<(), Report> {
@@ -426,31 +463,27 @@ async fn script<T: DeserializeOwned>(
         .context_with(summary)?)
 }
 
-/// How a value appears in messages: quoted, or `absent` (an attribute that isn't set).
-fn shown(value: Option<&str>) -> String {
-    value.map_or_else(|| "absent".to_owned(), |value| format!("{value:?}"))
+/// The errors of reads that tell whether the page removed the element read (e.g. re-rendered
+/// it): no retry reads it again, so waits give up at once (look the element up after the change).
+pub trait RemovedElement {
+    fn element_was_removed(&self) -> bool;
 }
 
-/// The error of a wait on `element` that timed out: what it waited for, the element and the value
-/// it ended with. A removed element (a stale handle) gets its own explanation.
-async fn explain_timeout(
-    element: &WebElement,
-    what: &str,
-    expected: Option<&str>,
-    actual: Result<Option<String>, WebDriverError>,
-) -> Result<(), Report> {
-    if !element.is_present().await.unwrap_or(false) {
-        bail!(
-            "waited for {what} to become {}, but the element was removed from the page \
-             (re-rendered?): look it up after the change",
-            shown(expected)
-        );
+impl RemovedElement for WebDriverError {
+    fn element_was_removed(&self) -> bool {
+        matches!(
+            self.as_inner(),
+            WebDriverErrorInner::StaleElementReference(_)
+        )
     }
-    let actual = actual?;
-    bail!(
-        "{what} of {} did not become {} within {TIMEOUT:?}; it is {}",
-        element.describe().await?,
-        shown(expected),
-        shown(actual.as_deref())
-    )
+}
+
+impl RemovedElement for Report {
+    fn element_was_removed(&self) -> bool {
+        self.iter_reports().any(|report| {
+            report
+                .downcast_current_context::<WebDriverError>()
+                .is_some_and(RemovedElement::element_was_removed)
+        })
+    }
 }

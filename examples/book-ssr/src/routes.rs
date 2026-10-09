@@ -84,9 +84,15 @@ pub mod routes {
             page!(crate::pages::documentation::getting_started::accessibility::PageAccessibility);
         }
 
+        #[route("/optimizing-builds")]
+        mod optimizing_builds {
+            page!(crate::pages::documentation::getting_started::optimizing_builds::PageOptimizingBuilds);
+        }
+
+        // The guide "Build Times & Bundle Size" became "Optimizing Compile Times & Binary Sizes".
         #[route("/build-times")]
-        mod build_times {
-            page!(crate::pages::documentation::getting_started::build_times::PageBuildTimes);
+        mod moved_build_times {
+            page!(|| view! { <Redirect path=crate::routes::doc::OptimizingBuilds.materialize()/> });
         }
 
         // ── Concepts: buttons ───────────────────────────────────────────

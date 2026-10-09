@@ -11,10 +11,7 @@ use assertr::prelude::*;
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The x and y inputs of the area `#id`.
 async fn inputs(page: &Page<'_>, id: &str) -> Result<(WebElement, WebElement), Report> {
@@ -49,12 +46,12 @@ async fn clear(page: &Page<'_>) -> Result<(), Report> {
 
 /// Waits until the log's last entry starts with `expected` (dragging logs many changes).
 async fn wait_for_last_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
-    wait_for("the last entry of the change log")
-        .observing(|| last_log(page))
-        .to_be(&format!("starting with {expected:?}"), |entry| {
-            entry.starts_with(expected)
+    assert_that!(|| last_log(page))
+        .eventually_ok()
+        .satisfies(|entry| {
+            entry.starts_with(expected);
         })
-        .await?;
+        .await;
     Ok(())
 }
 
@@ -330,12 +327,13 @@ pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
         .click()
         .perform()
         .await?;
-    wait_for("the channels (x, y)")
-        .observing(|| async { Ok((number(&rtl_x).await?, number(&rtl_y).await?)) })
-        .to_be("(191, 64) (±1)", |(x, y)| {
-            (x - 191.0).abs() <= 1.0 && (y - 64.0).abs() <= 1.0
+    assert_that!(|| async { Ok::<_, Report>((number(&rtl_x).await?, number(&rtl_y).await?)) })
+        .eventually_ok()
+        .satisfies(|channels| {
+            channels.derive(|(x, _)| x).is_close_to(191.0, 1.0);
+            channels.derive(|(_, y)| y).is_close_to(64.0, 1.0);
         })
-        .await?;
+        .await;
     let before = number(&rtl_x).await?;
     rtl_x.focus().await?;
     page.send_keys(Key::Left).await?;

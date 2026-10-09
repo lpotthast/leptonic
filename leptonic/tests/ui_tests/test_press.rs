@@ -3,7 +3,9 @@
 //! keys released while Meta is held, so releasing Meta ends their presses ("should fire press
 //! events when Meta key is held to work around macOS bug").
 
-use assertr::prelude::*;
+use std::time::Duration;
+
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
@@ -170,11 +172,15 @@ pub async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Rep
         .await?
         .wait_for_inner_text("false")
         .await?;
-    // No press after all (the click fallback mustn't fire one either).
-    log(page)
-        .await?
-        .inner_text_stays("start:mouse,end:mouse")
-        .await?;
+    // No press after all (the click fallback, 80 ms after the pointer up, mustn't fire one
+    // either).
+    let log = log(page).await?;
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(300))
+        .matches(eq("start:mouse,end:mouse"))
+        .await;
     Ok(())
 }
 
@@ -218,10 +224,15 @@ pub async fn becoming_disabled_cancels_active_press(page: &Page<'_>) -> Result<(
         .await?;
 
     page.driver.action_chain().release().perform().await?;
-    page.element("#test-press-self-disabling-log")
-        .await?
-        .inner_text_stays("start:mouse,end:mouse")
-        .await?;
+    // Past the click fallback (80 ms after a pointer up without a click; a disabled button gets
+    // no click).
+    let log = page.element("#test-press-self-disabling-log").await?;
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(300))
+        .matches(eq("start:mouse,end:mouse"))
+        .await;
     Ok(())
 }
 
@@ -295,10 +306,14 @@ pub async fn prevent_focus_on_press_keeps_the_focus(page: &Page<'_>) -> Result<(
         .await?;
     page.wait_for_focus(&page.element("#test-press-keep-input").await?)
         .await?;
-    page.element("#test-press-keep-blurs")
-        .await?
-        .inner_text_stays("0")
-        .await?;
+    // Past the click fallback (80 ms after the pointer up), which focuses the pressed element.
+    let blurs = page.element("#test-press-keep-blurs").await?;
+    page.settle().await?;
+    assert_that!(|| blurs.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(300))
+        .matches(eq("0"))
+        .await;
     Ok(())
 }
 
@@ -356,10 +371,14 @@ pub async fn a_drag_inside_cancels_the_press(page: &Page<'_>) -> Result<(), Repo
         .wait_for_inner_text("start,end")
         .await?;
     page.driver.action_chain().release().perform().await?;
-    page.element("#test-press-drag-log")
-        .await?
-        .inner_text_stays("start,end")
-        .await?;
+    // Past the click fallback (80 ms after a pointer up without a click; none follows a drag).
+    let log = page.element("#test-press-drag-log").await?;
+    page.settle().await?;
+    assert_that!(|| log.inner_text())
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(300))
+        .matches(eq("start,end"))
+        .await;
     Ok(())
 }
 

@@ -1,3 +1,21 @@
+/// Lets browsers cache the files under `/pkg/` for good: their names carry their content's hash
+/// (`hash-files` in `Cargo.toml`), so a changed file has a new name.
+#[cfg(feature = "ssr")]
+async fn cache_hashed_files(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let hashed = request.uri().path().starts_with("/pkg/");
+    let mut response = next.run(request).await;
+    if hashed && response.status().is_success() {
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+    response
+}
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
@@ -66,6 +84,7 @@ async fn main() {
         // a router with `layer` runs after routing, therefore the pages are wrapped in an outer router.
         let app = Router::new()
             .fallback_service(pages)
+            .layer(axum::middleware::from_fn(cache_hashed_files))
             .layer(axum::middleware::from_fn_with_state(
                 md_cache,
                 markdown::markdown_middleware,

@@ -1,11 +1,9 @@
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 use serde::de::DeserializeOwned;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath};
 
 /// A script: a `DragEvent` carries a `DataTransfer`, which no event init from WebDriver can.
 /// Fires a drag event at the center of an element (`arguments[0]`, type `arguments[1]`) with the
@@ -52,23 +50,41 @@ pub trait DndActions: PageActions {
     }
 
     /// Waits until the log `#<id>` is exactly `expected`.
-    async fn expect_log(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
-        wait_for(format!("the log #{id}"))
-            .observing(|| self.log(id))
-            .to_be_equal_to(expected)
-            .await?;
-        Ok(())
+    #[track_caller]
+    fn expect_log<'a>(
+        &'a self,
+        id: &'a str,
+        expected: &'a [&'a str],
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || self.log(id))
+            .with_subject_name(format!("the log #{id}"))
+            .eventually_ok()
+            .matches(eq(expected));
+        async move {
+            check.await;
+            Ok(())
+        }
     }
 
     /// Waits until the log `#<id>` is exactly `expected`, and checks it stays so (nothing more
     /// is logged).
-    async fn expect_log_settled(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
-        self.expect_log(id, expected).await?;
-        expect(format!("the log #{id}"))
-            .observing(|| self.log(id))
-            .to_stay_equal_to(expected)
-            .await?;
-        Ok(())
+    #[track_caller]
+    fn expect_log_settled<'a>(
+        &'a self,
+        id: &'a str,
+        expected: &'a [&'a str],
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let reached = self.expect_log(id, expected);
+        let kept = assert_that_owned!(move || self.log(id))
+            .with_subject_name(format!("the log #{id}"))
+            .consistently_ok()
+            .matches(eq(expected));
+        async move {
+            reached.await?;
+            self.settle().await?;
+            kept.await;
+            Ok(())
+        }
     }
 
     /// Dispatches the fixture's custom event `event` with the `action` as its detail on the

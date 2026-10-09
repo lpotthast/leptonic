@@ -5,14 +5,11 @@
 //! indeterminate, disabled, read-only, invalid and required states; a checkbox bound to a
 //! signal; groups (shared name, description, disabled and read-only groups, native required
 //! validation). Spec: react-aria-components `Checkbox.test.js`, `CheckboxGroup.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, css},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, css};
 
 const PATH: &str = "/atoms/checkbox";
 
@@ -347,10 +344,10 @@ pub async fn group_validation(page: &Page<'_>) -> Result<(), Report> {
         .filter(|text| !text.is_empty())
         .collect::<Vec<_>>()
         .join(" ");
-    wait_for("the group's description")
-        .observing(|| group.referenced_text("aria-describedby"))
-        .to_be_equal_to(invalid_description)
-        .await?;
+    assert_that!(|| group.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq(invalid_description))
+        .await;
 
     a.click().await?;
     group.wait_for_attr("data-invalid", None).await?;
@@ -358,9 +355,9 @@ pub async fn group_validation(page: &Page<'_>) -> Result<(), Report> {
         label.wait_for_attr("data-invalid", None).await?;
         assert_that!(input(label).await?.attr("required").await?).is_none();
     }
-    wait_for("the group's description")
-        .observing(|| group.referenced_text("aria-describedby"))
-        .to_be_equal_to(description.clone())
-        .await?;
+    assert_that!(|| group.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq(description.clone()))
+        .await;
     Ok(())
 }

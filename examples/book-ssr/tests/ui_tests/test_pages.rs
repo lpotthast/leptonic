@@ -11,7 +11,7 @@ use browser_test::{
     BrowserTest, async_trait,
     thirtyfour::{By, WebDriver},
 };
-use leptos_browser_test::{Report, ResultExt};
+use leptos_browser_test::Report;
 
 use crate::pages::BookPage;
 
@@ -60,35 +60,7 @@ const OVERFLOWING: &str = r"
         .slice(0, 3)
         .map(e => e.tagName.toLowerCase() + '.' + e.className + ': ' + e.textContent.trim().slice(0, 40));";
 
-/// A part of the pages: every `count`-th page, starting at `index`. The page walks are split into shards that run in
-/// parallel, as visiting (and hydrating) every page one after the other takes minutes.
-#[derive(Debug, Clone, Copy)]
-pub struct Shard {
-    pub index: usize,
-    pub count: usize,
-}
-
-impl Shard {
-    /// All shards of a walk split into `count` parts.
-    pub fn all(count: usize) -> impl Iterator<Item = Shard> {
-        (0..count).map(move |index| Shard { index, count })
-    }
-
-    /// This shard's pages.
-    fn paths(self) -> Vec<String> {
-        BookPage::paths()
-            .into_iter()
-            .skip(self.index)
-            .step_by(self.count)
-            .collect()
-    }
-
-    fn label(self) -> String {
-        format!("{}/{}", self.index + 1, self.count)
-    }
-}
-
-/// The internal links and element ids the dark-theme shards found, for [`LinkTests`] (after all shards).
+/// The internal links and element ids the page tests found, for [`LinkTests`] (after all page tests).
 #[derive(Default)]
 struct SiteLinks {
     /// `(page, link)` pairs.
@@ -99,97 +71,78 @@ struct SiteLinks {
 
 static SITE_LINKS: LazyLock<Mutex<SiteLinks>> = LazyLock::new(Mutex::default);
 
-/// Visits a shard of the pages in the dark theme: no page errors, readable demos, and nothing makes the page wider than
-/// a phone screen. Records the pages' internal links and ids for [`LinkTests`].
+/// A test per documentation page ([`BookPage::paths`]).
+pub fn page_tests() -> impl Iterator<Item = PageContentTest> {
+    BookPage::paths()
+        .into_iter()
+        .map(|path| PageContentTest { path })
+}
+
+/// Visits a page in the dark theme: no page errors (`ui_tests::CheckPageErrors`), readable demos, and nothing makes
+/// the page wider than a phone screen. Records the page's internal links and ids for [`LinkTests`].
 ///
-/// One visit per page serves both checks (loading and hydrating a page is most of the time): the page loads at
-/// desktop width, then the viewport shrinks to a phone's for the width check. So the phone check sees a resized page,
-/// not one loaded at phone width (the shell tests load pages at phone width).
-pub struct PageContentTests {
-    pub shard: Shard,
+/// One visit serves both checks (loading and hydrating the page is most of the time): the page loads at desktop
+/// width, then the viewport shrinks to a phone's for the width check. So the phone check sees a resized page, not one
+/// loaded at phone width (the shell tests load pages at phone width).
+pub struct PageContentTest {
+    path: String,
 }
 
 #[async_trait]
-impl BrowserTest<str> for PageContentTests {
+impl BrowserTest<str> for PageContentTest {
     fn name(&self) -> Cow<'_, str> {
-        format!(
-            "pages_load_cleanly_in_the_dark_theme_and_fit_a_phone ({})",
-            self.shard.label()
-        )
-        .into()
+        format!("pages::dark_theme_and_phone_width {}", self.path).into()
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = BookPage { driver, base_url };
-        let paths = self.shard.paths();
+        let path = &self.path;
 
-        // The desktop layout, where the app bar shows the theme toggle.
+        // The reader chose the dark theme before, so the server renders the page in it. The desktop layout.
+        page.set_theme("dark").await?;
         page.set_viewport(1600, 1000).await?;
-
-        // Switch to the dark theme as a user would; it is remembered for all following pages.
-        page.goto("/doc/overview").await?;
-        driver
-            .find(By::Css("#book-app-bar .book-theme-toggle"))
-            .await
-            .context("the app bar has a theme toggle")?
-            .click()
-            .await?;
-        page.wait_until("the dark theme applies", IS_DARK).await?;
         // Hover styles must not count: park the pointer where no page has demos (the app bar's top left corner).
         page.move_pointer_to(0, 0).await?;
 
-        let mut problems = Vec::new();
-        for path in &paths {
-            page.goto(path).await?;
-            page.wait_until(&format!("{path} shows the dark theme"), IS_DARK)
-                .await?;
-            page.wait_until(
-                &format!("{path} finished its transitions to the dark theme"),
-                TRANSITIONS_FINISHED,
-            )
+        page.goto(path).await?;
+        page.wait_until(&format!("{path} shows the dark theme"), IS_DARK)
             .await?;
-            for error in page.page_errors().await? {
-                problems.push(format!("{path}: page error: {error}"));
-            }
-            for problem in page.strings(DARK_THEME_PROBLEMS).await? {
-                problems.push(format!("{path}: {problem}"));
-            }
-            let links = page.strings(INTERNAL_LINKS).await?;
-            let ids = page.strings(IDS).await?;
-            {
-                let mut site = SITE_LINKS.lock().unwrap_or_else(PoisonError::into_inner);
-                site.links
-                    .extend(links.into_iter().map(|link| (path.clone(), link)));
-                site.ids.insert(path.clone(), ids.into_iter().collect());
-            }
-
-            page.set_viewport(PHONE_WIDTH, 844).await?;
-            page.wait_until(
-                &format!("{path} shows the small-screen layout"),
-                SMALL_SCREEN_LAYOUT,
-            )
-            .await?;
-            let width = page
-                .number("return document.documentElement.scrollWidth;")
-                .await?;
-            if width > f64::from(PHONE_WIDTH) + 1.0 {
-                let culprits = page.strings(OVERFLOWING).await?;
-                problems.push(format!(
-                    "{path}: {width}px wide at {PHONE_WIDTH}px: {culprits:?}"
-                ));
-            }
-            page.set_viewport(1600, 1000).await?;
+        page.wait_until(
+            &format!("{path} finished its transitions to the dark theme"),
+            TRANSITIONS_FINISHED,
+        )
+        .await?;
+        let mut problems = page.strings(DARK_THEME_PROBLEMS).await?;
+        let links = page.strings(INTERNAL_LINKS).await?;
+        let ids = page.strings(IDS).await?;
+        {
+            let mut site = SITE_LINKS.lock().unwrap_or_else(PoisonError::into_inner);
+            site.links
+                .extend(links.into_iter().map(|link| (path.clone(), link)));
+            site.ids.insert(path.clone(), ids.into_iter().collect());
         }
 
-        assert_that!(problems)
-            .with_detail_message(format!("checked {} pages", paths.len()))
-            .is_empty();
+        page.set_viewport(PHONE_WIDTH, 844).await?;
+        page.wait_until(
+            &format!("{path} shows the small-screen layout"),
+            SMALL_SCREEN_LAYOUT,
+        )
+        .await?;
+        let width = page
+            .number("return document.documentElement.scrollWidth;")
+            .await?;
+        if width > f64::from(PHONE_WIDTH) + 1.0 {
+            let culprits = page.strings(OVERFLOWING).await?;
+            problems.push(format!("{width}px wide at {PHONE_WIDTH}px: {culprits:?}"));
+        }
+
+        assert_that!(problems).is_empty();
         Ok(())
     }
 }
 
-/// Every internal link the [`PageContentTests`] shards found resolves to a page, and every fragment to an element id.
-/// Runs after all shards.
+/// Every internal link the [`PageContentTest`]s found resolves to a page, and every fragment to an element id. Runs
+/// after all page tests.
 pub struct LinkTests {}
 
 #[async_trait]
@@ -200,7 +153,7 @@ impl BrowserTest<str> for LinkTests {
 
     async fn run(&self, _driver: &WebDriver, _base_url: &str) -> Result<(), Report> {
         let site = std::mem::take(&mut *SITE_LINKS.lock().unwrap_or_else(PoisonError::into_inner));
-        // Links to pages outside `BOOK_TEST_PAGES` (or of a failed shard) can only be checked for existence, not for
+        // Links to pages outside `BOOK_TEST_PAGES` (or of a failed page test) can only be checked for existence, not for
         // their fragments.
         let all_pages: BTreeSet<&str> = book_ssr::nav::nav().pages().collect();
         let mut problems = Vec::new();
@@ -240,29 +193,28 @@ impl BrowserTest<str> for LinkTests {
     }
 }
 
-/// The Markdown export: the LLM index lists every page, and pages are served as Markdown with frontmatter.
-pub struct MarkdownExportTests {}
+/// The Markdown export's LLM index lists every page.
+pub async fn llm_index_lists_every_page(page: &BookPage<'_>) -> Result<(), Report> {
+    page.driver
+        .goto(&format!("{}/doc/llm-index.md", page.base_url))
+        .await?;
+    let index = page.driver.find(By::Tag("body")).await?.text().await?;
+    let unlisted: Vec<_> = book_ssr::nav::nav()
+        .pages()
+        .filter(|path| path.starts_with("/doc/") && !index.contains(&format!("({path}.md)")))
+        .collect();
+    assert_that!(unlisted)
+        .with_detail_message("pages missing from the LLM index")
+        .is_empty();
+    Ok(())
+}
 
-#[async_trait]
-impl BrowserTest<str> for MarkdownExportTests {
-    fn name(&self) -> Cow<'_, str> {
-        "markdown_export_lists_and_serves_every_page".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        driver.goto(&format!("{base_url}/doc/llm-index.md")).await?;
-        let index = driver.find(By::Tag("body")).await?.text().await?;
-        let unlisted: Vec<_> = book_ssr::nav::nav()
-            .pages()
-            .filter(|path| path.starts_with("/doc/") && !index.contains(&format!("({path}.md)")))
-            .collect();
-        assert_that!(unlisted)
-            .with_detail_message("pages missing from the LLM index")
-            .is_empty();
-
-        driver.goto(&format!("{base_url}/doc/button.md")).await?;
-        let markdown = driver.find(By::Tag("body")).await?.text().await?;
-        assert_that!(markdown.as_str()).starts_with("---\ntitle: \"Button\"");
-        Ok(())
-    }
+/// Pages are served as Markdown (`<page>.md`), starting with their frontmatter.
+pub async fn pages_are_served_as_markdown(page: &BookPage<'_>) -> Result<(), Report> {
+    page.driver
+        .goto(&format!("{}/doc/button.md", page.base_url))
+        .await?;
+    let markdown = page.driver.find(By::Tag("body")).await?.text().await?;
+    assert_that!(markdown.as_str()).starts_with("---\ntitle: \"Button\"");
+    Ok(())
 }

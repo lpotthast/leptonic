@@ -5,14 +5,11 @@
 //!
 //! Dragging the thumb, the input's `value` property and `input` event (assistive technology),
 //! RGB colors (the hue of their HSL form), and parts that mount again.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 /// The range input of the wheel `#id`.
 async fn input(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -37,18 +34,19 @@ async fn clear(page: &Page<'_>) -> Result<(), Report> {
 /// Waits until the log's last entry is `expected` (dragging logs many changes).
 async fn wait_for_last_log(page: &Page<'_>, expected: &str) -> Result<(), Report> {
     let log = log(page).await?;
-    wait_for("the last entry of the change log")
-        .observing(|| async {
-            Ok(log
-                .inner_text()
+    assert_that!(|| async {
+        Ok::<_, Report>(
+            log.inner_text()
                 .await?
                 .rsplit(',')
                 .next()
                 .unwrap_or_default()
-                .to_owned())
-        })
-        .to_be_equal_to(expected)
-        .await?;
+                .to_owned(),
+        )
+    })
+    .eventually_ok()
+    .matches(eq(expected))
+    .await;
     Ok(())
 }
 

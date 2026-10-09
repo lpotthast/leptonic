@@ -353,9 +353,18 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                             "Styles of the content box inside it: the content size, "<Code inline=true>"position: relative"</Code>
                             ", and no pointer events while scrolling."
                         </ApiRow>
-                        <ApiRow name="is_scrolling" ty="Signal<bool>">"Whether the user is scrolling."</ApiRow>
+                        <ApiRow name="is_scrolling" ty="Signal<bool>">
+                            "Whether something scrolls: the element, an ancestor or the window (until 300 ms after the last scroll)."
+                        </ApiRow>
+                        <ApiRow name="is_user_scrolling" ty="Signal<bool>">
+                            "Whether the user scrolls the element itself (not an ancestor or the window, not "
+                            <Code inline=true>"scroll_to"</Code>"), until the scrolling ends: e.g. to tell whether they scrolled away from an end."
+                        </ApiRow>
                         <ApiRow name="scroll_to" ty="Callback<Rect>">
                             "Scrolls the element so that the visible area starts at the rectangle\u{2019}s position."
+                        </ApiRow>
+                        <ApiRow name="scroll_to_end" ty="Callback<()>">
+                            "Scrolls the element to its end, as laid out when it scrolls (the next frame)."
                         </ApiRow>
                     </ApiTable>
                 </Section>

@@ -5,14 +5,11 @@
 //! dismissal disabled, Escape reaches the page; only the top-most overlay closes. Nested modals:
 //! only the top one closes, the outer one becomes usable again, and the page stays unscrollable
 //! until the last one closed.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::expect,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/hooks/overlay";
 
@@ -22,11 +19,14 @@ async fn shown_overlay(page: &Page<'_>, id: &str) -> Result<WebElement, Report> 
 }
 
 /// Negative check: `overlay` is shown (`display: block`) and stays so.
-async fn still_open(overlay: &WebElement) -> Result<(), Report> {
-    expect(format!("the display of {}", overlay.describe().await?))
-        .observing(|| async { Ok(overlay.css_value("display").await?) })
-        .to_stay_equal_to("block")
-        .await?;
+async fn still_open(page: &Page<'_>, overlay: &WebElement) -> Result<(), Report> {
+    let subject = format!("the display of {}", overlay.describe().await?);
+    page.settle().await?;
+    assert_that!(|| overlay.css_value("display"))
+        .with_subject_name(subject)
+        .consistently_ok()
+        .matches(eq("block"))
+        .await;
     Ok(())
 }
 
@@ -60,7 +60,7 @@ pub async fn dismissable(page: &Page<'_>) -> Result<(), Report> {
     let overlay = shown_overlay(page, "test-ov-a").await?;
     // The filter keeps it open for `#test-ov-keep`.
     page.element("#test-ov-keep").await?.click().await?;
-    still_open(&overlay).await?;
+    still_open(page, &overlay).await?;
     assert_that!(closes.inner_text().await?).is_equal_to("0");
     outside.click().await?;
     closes.wait_for_inner_text("1").await?;
@@ -86,7 +86,7 @@ pub async fn not_dismissable(page: &Page<'_>) -> Result<(), Report> {
     page.element("#test-ov-open-b").await?.click().await?;
     let overlay = shown_overlay(page, "test-ov-b").await?;
     page.element("#test-ov-outside").await?.click().await?;
-    still_open(&overlay).await?;
+    still_open(page, &overlay).await?;
     assert_that!(closes.inner_text().await?).is_equal_to("0");
     page.element("#test-ov-b-inside").await?.click().await?;
     page.send_keys(Key::Escape).await?;
@@ -107,7 +107,7 @@ pub async fn keyboard_dismiss_disabled(page: &Page<'_>) -> Result<(), Report> {
     escapes
         .wait_for_inner_text(&(escapes_before + 1).to_string())
         .await?;
-    still_open(&overlay).await?;
+    still_open(page, &overlay).await?;
     assert_that!(closes.inner_text().await?).is_equal_to("0");
     // Interacting outside still closes it.
     page.element("#test-ov-outside").await?.click().await?;
@@ -129,7 +129,7 @@ pub async fn top_most_only(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .wait_for_inner_text("1")
         .await?;
-    still_open(&a).await?;
+    still_open(page, &a).await?;
     assert_that!(a_closes.inner_text().await?.parse::<u32>()?).is_equal_to(a_closes_before);
     outside.click().await?;
     a_closes

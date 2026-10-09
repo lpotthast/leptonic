@@ -62,9 +62,9 @@ serve:
 serve-release:
   cd ./examples/book-ssr && cargo leptos serve --release
 
-# Serve the test app for manual inspection (http://127.0.0.1:4200)
+# Serve the test app for manual inspection (http://127.0.0.1:4200), built like the browser tests build it
 serve-test-app:
-  cd ./testing/test-app && cargo leptos serve
+  cd ./testing/test-app && cargo leptos serve --release
 
 # Serve the CSR template (http://127.0.0.1:4001)
 serve-template-csr:
@@ -119,7 +119,7 @@ book-browser-test:
 
 # Run the book's browser tests with visible browser (for debugging)
 book-browser-test-visible:
-  cd ./examples/book-ssr && BROWSER_TEST_VISIBLE=1 cargo test --test browser_test -- --nocapture
+  cd ./examples/book-ssr && BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --test browser_test -- --nocapture
 
 # Serve the book on its own port, target directory and site output, next to `just serve` (default port 4300).
 # Builds against the live library sources. The reload port is port + 1.

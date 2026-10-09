@@ -4,14 +4,11 @@
 //! change while rows stay ("supports removing a column and adding it back", plus renaming,
 //! reordering, sortability and the selection mode). Spec: react-aria-components
 //! `Table.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 const PATH: &str = "/atoms/table-selection";
 
@@ -283,17 +280,17 @@ pub async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     const COLUMNS: &str = "Columns table";
     page.goto_path(PATH).await?;
     let expect_headers = |expected: Vec<&'static str>| async move {
-        wait_for("the column headers")
-            .observing(|| column_headers(page, COLUMNS))
-            .to_be_equal_to(expected)
-            .await?;
+        assert_that!(|| column_headers(page, COLUMNS))
+            .eventually_ok()
+            .matches(eq(expected))
+            .await;
         Ok::<(), Report>(())
     };
     let expect_cells = |expected: Vec<&'static str>| async move {
-        wait_for("the cells of Games")
-            .observing(|| async { row(page, COLUMNS, "Games").await?.inner_texts("td").await })
-            .to_be_equal_to(expected)
-            .await?;
+        assert_that!(|| async { row(page, COLUMNS, "Games").await?.inner_texts("td").await })
+            .eventually_ok()
+            .matches(eq(expected.as_slice()))
+            .await;
         Ok::<(), Report>(())
     };
     expect_headers(vec!["", "Name", "Type", "Date Modified"]).await?;

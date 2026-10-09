@@ -2,14 +2,11 @@
 // Upstream: react-aria/test/searchfield/useSearchField.test.js @ 99e6102368
 //! The SearchField atom and `use_search_field`: slots, Enter/Escape, the clear button,
 //! validation and states.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/atoms/search-field";
 
@@ -34,10 +31,10 @@ pub async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
         .get_some()
         .is_equal_to("bar");
     assert_that!(input.referenced_text("aria-labelledby").await?).is_equal_to("Test");
-    wait_for("the description")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Description Error")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Description Error"))
+        .await;
 
     let button = page.element("#sf-slots button").await?;
     assert_that!(button.attr("aria-label").await?)

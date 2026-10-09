@@ -8,6 +8,10 @@ output-name = "leptonic-test-app"
 disable-erase-components = true
 site-root = "target/site"
 site-pkg-dir = "pkg"
+# Content-hashed file names for the wasm, JS and CSS, which the server lets browsers cache for good (`src/main.rs`), as
+# a production server would: a test whose browser keeps its HTTP cache (browser-test's `SessionReset::Manual`) loads
+# them, and the code compiled from them, from the cache.
+hash-files = true
 style-file = "style/main.scss"
 assets-dir = "public"
 site-addr = "127.0.0.1:4200"
@@ -17,8 +21,11 @@ bin-features = ["ssr"]
 bin-default-features = false
 lib-features = ["hydrate"]
 lib-default-features = false
-lib-profile-dev = "wasm-dev"
+# The app is only built with `--release`, by the browser tests (`leptonic/tests/browser_test.rs`) and by
+# `just serve-test-app`: an optimized wasm bundle loads and hydrates much faster in every test, and an optimized server
+# renders pages faster (`server-release`).
 lib-profile-release = "wasm-release"
+bin-profile-release = "server-release"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -53,19 +60,23 @@ wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std
 
 [profile.dev.package."*"]
 # No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): smaller
-# build directories and faster linking of the server and the wasm bundle.
+# build directories and faster linking of the server (`server-release` inherits dev).
 debug = false
-
-[profile.wasm-dev]
-inherits = "dev"
-
-[profile.wasm-dev.package.leptonic-test-app]
-debug = false
-strip = "symbols"
 
 [profile.wasm-release]
 inherits = "release"
-opt-level = 'z'
-lto = true
-codegen-units = 1
-panic = "abort"
+# Measured 2026-10-08 (821 browser tests, parallelism 8): `z` gives the smallest bundle (13 MB, dev: 33 MB) and the
+# fastest runs (page loads 180ms, dev: 450ms; suite 1m 07s, dev: 1m 50s); opt-levels 1-3 and `s` were close. No LTO and
+# the default codegen units: with `lto = true` and `codegen-units = 1`, a rebuild after a leptonic change took 84s
+# instead of 20s (as fast as dev) for 1 MB less.
+opt-level = "z"
+incremental = true
+# The tests check dev warnings and debug-only checks.
+debug-assertions = true
+overflow-checks = true
+
+[profile.server-release]
+inherits = "dev"
+# Measured 2026-10-08: server-side rendering 6x faster than in dev (1.8 ms per fixture page instead of 11 ms, the
+# calendar page 87 ms instead of 550 ms), with no slower rebuilds (24 s after a leptonic change, dev: 26 s).
+opt-level = 1

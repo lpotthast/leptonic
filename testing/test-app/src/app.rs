@@ -1,11 +1,9 @@
 use leptonic::atoms::theme::{LeptonicTheme, ThemeProvider};
 use leptos::prelude::*;
-use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
+use leptos_meta::{HashedStylesheet, MetaTags, Title, provide_meta_context};
 use leptos_router::{components::*, hooks::use_params_map, path};
 
 use crate::pages::{FIXTURES, find_fixture};
-
-pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -43,6 +41,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                     };"
                 </script>
                 <AutoReload options=options.clone() />
+                // The content-hashed stylesheet (the server reads the hashes).
+                <HashedStylesheet options=options.clone() id="leptos" />
                 <HydrationScripts options />
                 <MetaTags />
             </head>
@@ -58,7 +58,6 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css") />
         <Title text="Leptonic Test App" />
 
         <ThemeProvider default_theme=LeptonicTheme::default()>

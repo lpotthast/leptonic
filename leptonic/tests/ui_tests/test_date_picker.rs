@@ -13,14 +13,14 @@
 //! Spec: react-aria-components `DatePicker.test.js`, `DateRangePicker.test.js`,
 //! `DateField.test.js`, `TimeField.test.js`; react-aria `useDatePicker.test.tsx`;
 //! react-spectrum `DatePickerBase.test.js` (RTL arrows).
-use assertr::prelude::*;
+use assertr::{
+    matchers::{eq, gt, lt},
+    prelude::*,
+};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, bail};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, SyntheticEvent},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
 const PATH: &str = "/atoms/date-picker";
 
@@ -144,10 +144,12 @@ pub async fn programmatic_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input_text(page, "empty").await?).contains("mm");
     page.element("#test-dp-empty-set").await?.click().await?;
     wait_for_value(page, "empty", "2020-02-03").await?;
-    wait_for("the field's text")
-        .observing(|| input_text(page, "empty"))
-        .to_be("showing the year 2020", |text| text.contains("2020"))
-        .await?;
+    assert_that!(|| input_text(page, "empty"))
+        .eventually_ok()
+        .satisfies(|text| {
+            text.contains("2020");
+        })
+        .await;
     Ok(())
 }
 
@@ -157,17 +159,16 @@ async fn wait_for_description(
     text: &str,
     present: bool,
 ) -> Result<(), Report> {
-    let expectation = if present {
-        format!("containing {text:?}")
-    } else {
-        format!("without {text:?}")
-    };
-    wait_for("the description")
-        .observing(|| element.referenced_text("aria-describedby"))
-        .to_be(&expectation, |description| {
-            description.contains(text) == present
+    assert_that!(|| element.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .satisfies(|description| {
+            if present {
+                description.contains(text);
+            } else {
+                description.does_not_contain(text);
+            }
         })
-        .await?;
+        .await;
     Ok(())
 }
 
@@ -205,10 +206,10 @@ pub async fn required_picker(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Up).await?;
     page.send_keys(Key::Tab).await?;
     page.send_keys(Key::Up).await?;
-    wait_for("the picker's input's validation message")
-        .observing(|| async { Ok(input.prop("validationMessage").await?.unwrap_or_default()) })
-        .to_be_equal_to("")
-        .await?;
+    assert_that!(|| input.prop("validationMessage"))
+        .eventually_ok()
+        .matches(eq(Some(String::new())))
+        .await;
     assert_that!(group.referenced_text("aria-describedby").await?).contains(&message);
 
     page.element("#test-dp-required-after")
@@ -249,10 +250,10 @@ pub async fn required_time_field(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Up).await?;
     page.send_keys(Key::Tab).await?;
     page.send_keys(Key::Up).await?;
-    wait_for("the time field's input's validation message")
-        .observing(|| async { Ok(input.prop("validationMessage").await?.unwrap_or_default()) })
-        .to_be_equal_to("")
-        .await?;
+    assert_that!(|| input.prop("validationMessage"))
+        .eventually_ok()
+        .matches(eq(Some(String::new())))
+        .await;
     assert_that!(group.referenced_text("aria-describedby").await?).contains(&message);
     page.element("#test-dp-time-required-after")
         .await?
@@ -415,10 +416,10 @@ pub async fn autofill(page: &Page<'_>) -> Result<(), Report> {
         .get_some()
         .is_equal_to("true");
     fill_hidden_date_input(page, "empty-field", "2000-05-30").await?;
-    wait_for("the autofilled field's text")
-        .observing(|| input_text(page, "empty-field"))
-        .to_be_equal_to("5/30/2000")
-        .await?;
+    assert_that!(|| input_text(page, "empty-field"))
+        .eventually_ok()
+        .matches(eq("5/30/2000"))
+        .await;
 
     fill_hidden_date_input(page, "empty", "2000-05-30").await?;
     wait_for_value(page, "empty", "2000-05-30").await?;
@@ -519,17 +520,17 @@ pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
             bail!("ArrowLeft didn't reach the button from the day");
         }
         page.send_keys(Key::Left).await?;
-        wait_for("the focused element's left edge")
-            .observing(|| active_left(page))
-            .to_be(&format!("left of {left}"), |x| *x < left)
-            .await?;
+        assert_that!(|| active_left(page))
+            .eventually_ok()
+            .matches(lt(left))
+            .await;
         left = active_left(page).await?;
     }
     page.send_keys(Key::Right).await?;
-    wait_for("the focused element's left edge")
-        .observing(|| active_left(page))
-        .to_be(&format!("right of the button's {left}"), |x| *x > left)
-        .await?;
+    assert_that!(|| active_left(page))
+        .eventually_ok()
+        .matches(gt(left))
+        .await;
     Ok(())
 }
 
@@ -554,11 +555,13 @@ pub async fn switching_to_right_to_left(page: &Page<'_>) -> Result<(), Report> {
     let day = segment(page, "switch", "day").await?;
     assert_that!(style_of(&day).await?).does_not_contain("unicode-bidi");
     page.element("#test-dp-switch-he").await?.click().await?;
-    wait_for("the day segment's style in he-IL")
-        .observing(|| async { style_of(&segment(page, "switch", "day").await?).await })
-        .to_be("embedded left to right", |style| {
-            style.contains("unicode-bidi:embed") && style.contains("direction:ltr")
+    assert_that!(|| async { style_of(&segment(page, "switch", "day").await?).await })
+        .eventually_ok()
+        .satisfies(|style| {
+            style
+                .contains("unicode-bidi:embed")
+                .contains("direction:ltr");
         })
-        .await?;
+        .await;
     Ok(())
 }

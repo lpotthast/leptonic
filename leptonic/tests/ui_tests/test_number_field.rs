@@ -3,14 +3,11 @@
 //! no tab stops), keyboard steps, and Enter committing the value and submitting the form.
 use std::time::Duration;
 
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::expect,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/hooks/number-field";
 
@@ -54,11 +51,12 @@ pub async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), R
     page.element(INCREMENT).await?.click().await?;
     value.wait_for_inner_text("2").await?;
     // Past the delay after which a held button starts spinning.
-    expect("the value")
-        .observing(|| value.inner_text())
+    page.settle().await?;
+    assert_that!(|| value.inner_text())
+        .consistently_ok()
         .for_at_least(Duration::from_millis(600))
-        .to_stay_equal_to("2")
-        .await?;
+        .matches(eq("2"))
+        .await;
     page.wait_for_focus(&page.element(INPUT).await?).await?;
 
     page.element(DECREMENT).await?.click().await?;

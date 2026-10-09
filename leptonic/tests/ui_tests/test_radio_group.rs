@@ -3,14 +3,11 @@
 //! selection by press, the group as one tab stop (roving tabindex), arrow keys moving the
 //! selection (wrapping, skipping disabled radios, both orientations), disabled and read-only
 //! groups, and native required validation. Spec: react-aria-components `RadioGroup.test.js`.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, css},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, css};
 
 const PATH: &str = "/atoms/radio-group";
 
@@ -262,10 +259,10 @@ pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
         .filter(|text| !text.is_empty())
         .collect::<Vec<_>>()
         .join(" ");
-    wait_for("the description of the group")
-        .observing(|| group.referenced_text("aria-describedby"))
-        .to_be_equal_to(expected)
-        .await?;
+    assert_that!(|| group.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq(expected))
+        .await;
 
     label(page, "Required A").await?.click().await?;
     group.wait_for_attr("data-invalid", None).await?;

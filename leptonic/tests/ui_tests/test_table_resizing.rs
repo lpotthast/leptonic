@@ -6,14 +6,11 @@
 //! `TableSizing` keyboard tests, reaching the resizer the react-aria-components way: arrowing onto
 //! the column header focuses its resizer).
 
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 const PATH: &str = "/atoms/table-resizing";
 
@@ -39,10 +36,11 @@ async fn widths(page: &Page<'_>, label: &str) -> Result<Vec<f64>, Report> {
 
 /// Wait until the column headers of the table `label` have the widths `expected`.
 async fn expect_widths(page: &Page<'_>, label: &str, expected: &[f64]) -> Result<(), Report> {
-    wait_for(format!("the column widths of {label}"))
-        .observing(|| widths(page, label))
-        .to_be_equal_to(expected.to_vec())
-        .await?;
+    assert_that!(|| widths(page, label))
+        .with_subject_name(format!("the column widths of {label}"))
+        .eventually_ok()
+        .matches(eq(expected.to_vec()))
+        .await;
     Ok(())
 }
 

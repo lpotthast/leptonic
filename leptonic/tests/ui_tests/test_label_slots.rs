@@ -3,13 +3,11 @@
 // Upstream: react-aria-components/test/FieldError.test.js @ 99e6102368
 //! The parts of a field named after its label follow whether the label is rendered: the
 //! select's trigger, the combo box's button, the number field's steppers and the slider's thumb.
+use assertr::prelude::*;
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{Page, PageActions};
 
 const PATH: &str = "/atoms/label-slots";
 
@@ -57,36 +55,42 @@ async fn toggle_labels(page: &Page<'_>) -> Result<(), Report> {
 /// text. Label presence is applied in effects.
 async fn expect_parts(page: &Page<'_>, shown: bool) -> Result<(), Report> {
     for (field, part, text) in PARTS {
-        wait_for(format!("the id of {field}'s label"))
-            .observing(|| label_id(page, field, text))
-            .to_be(if shown { "rendered" } else { "gone" }, |id| {
-                id.is_some() == shown
+        assert_that!(|| label_id(page, field, text))
+            .with_subject_name(format!("the id of {field}'s label"))
+            .eventually_ok()
+            .satisfies(|id| {
+                if shown {
+                    id.is_some();
+                } else {
+                    id.is_none();
+                }
             })
-            .await?;
+            .await;
         let part = page.element(format!("#test-ls-{field} {part}")).await?;
         if let Some(label_id) = label_id(page, field, text).await? {
-            wait_for(format!("the aria-labelledby of {field}"))
-                .observing(|| labelled_by(&part))
-                .to_be(&format!("including the label {label_id:?}"), |ids| {
-                    ids.split(' ').any(|id| id == label_id)
-                })
-                .await?;
+            assert_that!(|| async {
+                let ids = labelled_by(&part).await?;
+                Ok::<_, Report>(ids.split(' ').map(str::to_owned).collect::<Vec<_>>())
+            })
+            .with_subject_name(format!("the ids of {field}'s aria-labelledby"))
+            .eventually_ok()
+            .satisfies(|ids| {
+                ids.contains(label_id.clone());
+            })
+            .await;
         } else {
-            wait_for(format!("the texts {field}'s aria-labelledby refers to"))
-                .observing(|| async {
-                    referenced_text_contents(page, &labelled_by(&part).await?).await
-                })
-                .to_be(
-                    "existing elements, none with the label's text",
-                    |referenced| {
-                        referenced.iter().all(Option::is_some)
-                            && !referenced
-                                .iter()
-                                .flatten()
-                                .any(|referenced| referenced == text)
-                    },
-                )
-                .await?;
+            // Existing elements, none with the label's text.
+            assert_that!(|| async {
+                referenced_text_contents(page, &labelled_by(&part).await?).await
+            })
+            .with_subject_name(format!("the texts {field}'s aria-labelledby refers to"))
+            .eventually_ok()
+            .satisfies(|referenced| {
+                referenced
+                    .does_not_contain(None)
+                    .does_not_contain(Some(text.to_owned()));
+            })
+            .await;
         }
     }
     Ok(())

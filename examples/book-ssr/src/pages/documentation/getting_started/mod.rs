@@ -1,5 +1,4 @@
 pub mod accessibility;
-pub mod build_times;
 pub mod architecture;
 pub mod callbacks;
 pub mod changelog;
@@ -8,6 +7,7 @@ pub mod demos;
 pub mod event_propagation;
 pub mod forms;
 pub mod installation;
+pub mod optimizing_builds;
 pub mod overview;
 pub mod ssr;
 pub mod themes;

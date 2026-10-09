@@ -5,13 +5,10 @@
 //! `aria-current="page"` and no `href`, also while the trail grows and shrinks; pressed items
 //! report their id; the whole trail can be disabled. The hooks: the navigation's default label,
 //! items as anchors and spans, disabled and current.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 const PATH: &str = "/atoms/breadcrumbs";
 
@@ -61,10 +58,10 @@ pub async fn dynamic_collections(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .wait_for_inner_text("3")
         .await?;
-    wait_for("the current items")
-        .observing(|| current_items(page))
-        .to_be_equal_to(vec!["Item 3".to_owned()])
-        .await?;
+    assert_that!(|| current_items(page))
+        .eventually_ok()
+        .matches(eq(vec!["Item 3".to_owned()]))
+        .await;
     Ok(())
 }
 

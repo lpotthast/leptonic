@@ -5,24 +5,24 @@
 //! to a remaining toast and finally back to where it came from.
 use std::time::{Duration, Instant};
 
-use assertr::prelude::*;
+use assertr::{
+    matchers::{eq, one_of},
+    prelude::*,
+};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, bail};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::{expect, wait_for},
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const TOAST: &str = "[role=alertdialog]";
 const REGION: &str = "[role=region]";
 
 /// Wait until `toast` is named `title` (its title mounts after the toast).
 async fn wait_for_title(toast: &WebElement, title: &str) -> Result<(), Report> {
-    wait_for("the toast's title")
-        .observing(|| toast.referenced_text("aria-labelledby"))
-        .to_be_equal_to(title)
-        .await?;
+    assert_that!(|| toast.referenced_text("aria-labelledby"))
+        .eventually_ok()
+        .matches(eq(title))
+        .await;
     Ok(())
 }
 
@@ -96,11 +96,12 @@ pub async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
     // Hovered, it stays; left, it closes after the rest of its time.
     add_timed.click().await?;
     page.element(TOAST).await?.hover().await?;
-    expect("the number of open toasts (hovered)")
-        .observing(|| page.count(TOAST))
+    page.settle().await?;
+    assert_that!(|| page.count(TOAST))
+        .consistently_ok()
         .for_at_least(Duration::from_millis(2500))
-        .to_stay_equal_to(1)
-        .await?;
+        .matches(eq(1))
+        .await;
     closed.hover().await?;
     page.wait_for_count(TOAST, 0).await?;
 
@@ -110,11 +111,12 @@ pub async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .focus()
         .await?;
-    expect("the number of open toasts (focused)")
-        .observing(|| page.count(TOAST))
+    page.settle().await?;
+    assert_that!(|| page.count(TOAST))
+        .consistently_ok()
         .for_at_least(Duration::from_millis(2500))
-        .to_stay_equal_to(1)
-        .await?;
+        .matches(eq(1))
+        .await;
     page.element("#test-toast-add").await?.focus().await?;
     page.wait_for_count(TOAST, 0).await?;
     closed.wait_for_inner_text("3").await?;
@@ -201,18 +203,20 @@ pub async fn remaining_time_after_pause(page: &Page<'_>) -> Result<(), Report> {
     // A real timer: a second of the toast's timeout runs before the pause.
     tokio::time::sleep(Duration::from_millis(1000)).await;
     toast.hover().await?;
-    expect("the number of open toasts (hovered)")
-        .observing(|| page.count(TOAST))
+    page.settle().await?;
+    assert_that!(|| page.count(TOAST))
+        .consistently_ok()
         .for_at_least(Duration::from_millis(2500))
-        .to_stay_equal_to(1)
-        .await?;
+        .matches(eq(1))
+        .await;
     page.element("#test-toast-closed").await?.hover().await?;
     let left = Instant::now();
-    expect("the number of open toasts (left, time remaining)")
-        .observing(|| page.count(TOAST))
+    page.settle().await?;
+    assert_that!(|| page.count(TOAST))
+        .consistently_ok()
         .for_at_least(Duration::from_millis(1200))
-        .to_stay_equal_to(1)
-        .await?;
+        .matches(eq(1))
+        .await;
     page.wait_for_count(TOAST, 0).await?;
     // About 2 seconds were left; a restarted timeout would take 3.
     assert_that!(left.elapsed())
@@ -243,10 +247,10 @@ pub async fn one_at_a_time(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Tab).await?;
     page.send_keys(Key::Tab).await?;
     page.send_keys(Key::Enter).await?;
-    wait_for("the shown toast's title")
-        .observing(|| async { Ok(shown_toast_title(page).await) })
-        .to_be_equal_to(Some("Alert 1".to_owned()))
-        .await?;
+    assert_that!(|| shown_toast_title(page))
+        .eventually()
+        .matches(eq(Some("Alert 1".to_owned())))
+        .await;
     page.wait_for_focus(&page.element(TOAST).await?).await?;
     page.send_keys(Key::Tab).await?;
     page.send_keys(Key::Enter).await?;
@@ -307,13 +311,11 @@ pub async fn focused_toast_after_new_toast(page: &Page<'_>) -> Result<(), Report
     for toast in page.elements(TOAST).await? {
         remaining.push(toast.describe().await?);
     }
-    wait_for("the focused element")
-        .observing(|| async { page.focused_element().await?.describe().await })
-        .to_be(
-            &format!("one of the remaining toasts {remaining:?}"),
-            |focused| remaining.contains(focused),
-        )
-        .await?;
+    assert_that!(|| async { page.focused_element().await?.describe().await })
+        .eventually_ok()
+        // One of the remaining toasts.
+        .matches(one_of(&remaining))
+        .await;
     page.element("#test-toast-closed")
         .await?
         .wait_for_inner_text("1")

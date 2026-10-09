@@ -3,46 +3,72 @@ pub mod test_pages;
 pub mod test_shell;
 pub mod test_sidebar;
 
-use browser_test::{BrowserTest, BrowserTests, Parallelism};
+use std::{borrow::Cow, panic::AssertUnwindSafe};
+
+use browser_test::{
+    BrowserTest, BrowserTests, ElementQueryWait, Parallelism, async_trait, thirtyfour::WebDriver,
+};
+use futures::FutureExt as _;
+use leptos_browser_test::{Report, ResultExt};
+
+use crate::{
+    cases::{Case, CaseFn},
+    pages::BookPage,
+};
 
 /// Every browser test of the book: the checks at `parallelism` at once, then the checks of the whole run
-/// ([`after_all`]). With `BROWSER_TEST_FILTER=<text>`, only the tests whose name contains `<text>` run.
+/// ([`after_all`]).
 pub fn all(parallelism: Parallelism) -> BrowserTests<str> {
     BrowserTests::sequential()
         .with_group(checks(BrowserTests::parallel(parallelism)))
-        .with_group(after_all(BrowserTests::sequential().named("after all")))
+        .with_group(after_all(
+            BrowserTests::sequential().named("after all").run_always(),
+        ))
 }
 
-/// The independent checks, each visiting its pages itself. Register new tests here.
+/// The independent checks, each loading its pages itself. Register new tests here.
+///
+/// With `BROWSER_TEST_FILTER=<text>`, only the tests whose name contains `<text>` run (several texts separated by
+/// commas: any of them).
 fn checks(group: BrowserTests<str>) -> BrowserTests<str> {
     Selected::new(group)
-        .with_all(
-            test_pages::Shard::all(PAGE_SHARDS).map(|shard| test_pages::PageContentTests { shard }),
-        )
-        .with(test_pages::MarkdownExportTests {})
-        .with(test_shell::SearchTests {})
-        .with(test_shell::SearchShortcutTests {})
-        .with(test_shell::DocMenuTests {})
-        .with(test_shell::DemoSourceTests {})
-        .with(test_shell::CopyMarkdownTests {})
-        .with(test_shell::FontTests {})
-        .with(test_shell::CodeCopyTests {})
-        .with(test_shell::KeyCapTests {})
-        .with(test_shell::CodeHighlightTests {})
-        .with(test_shell::ShellStructureTests {})
-        .with(test_shell::NarrowShellTests {})
-        .with(test_contrast::ContrastTests {})
-        .with(test_sidebar::SidebarTests {})
+        // The page tests first: the search and LLM index cases wait until the server has converted every page to
+        // Markdown (`markdown::warm_markdown_cache`, ~15-30s after it started), and would only hold slots meanwhile.
+        .with_all(test_pages::page_tests())
+        .case(test_pages::llm_index_lists_every_page)
+        .case(test_pages::pages_are_served_as_markdown)
+        .case(test_shell::search_lists_plain_text_results)
+        .case(test_shell::search_escape_empties_the_field_then_closes)
+        .case(test_shell::search_enter_opens_the_first_result)
+        .case(test_shell::search_opens_with_ctrl_k)
+        .case(test_shell::theme_toggle_switches_and_is_remembered)
+        .case(test_shell::doc_menu_opens_at_phone_width_and_closes_on_escape)
+        .case(test_shell::demo_view_source_toggles_the_code)
+        .case(test_shell::code_blocks_are_highlighted_after_client_side_navigation)
+        .case(test_shell::pages_have_titles_descriptions_and_landmarks)
+        .case(test_shell::search_button_names_its_shortcut)
+        .case(test_shell::sidebar_controls_have_distinct_names)
+        .case(test_shell::skip_link_moves_focus_to_the_content)
+        .case(test_shell::copy_button_leaves_the_title_free_on_a_phone)
+        .case(test_shell::concept_tabs_fit_a_phone)
+        .case(test_shell::main_menu_links_the_docs_on_a_phone)
+        .case(test_shell::welcome_cards_fit_a_tablet)
+        .case(test_shell::copy_as_markdown_downloads_only_on_press_and_once)
+        .case(test_shell::text_controls_and_code_use_the_book_fonts)
+        .case(test_shell::code_block_copy_button_copies_the_code)
+        .case(test_shell::keys_are_key_caps_and_descriptions_are_text)
+        .with_all(test_contrast::contrast_tests())
+        .case(test_sidebar::current_group_is_expanded)
+        .case(test_sidebar::concepts_show_layers_and_building_blocks_badges)
+        .case(test_sidebar::concept_tabs_are_named_after_the_layers)
+        .case(test_sidebar::toggles_and_navigation_expand_groups)
         .tests
 }
 
-/// Checks of the whole run, after [`checks`]: they use what the checks collected.
+/// Checks of the whole run, after [`checks`]: they use what the checks collected. They run even when a check failed.
 fn after_all(group: BrowserTests<str>) -> BrowserTests<str> {
     Selected::new(group).with(test_pages::LinkTests {}).tests
 }
-
-/// Into how many parallel shards the walks over all pages are split.
-const PAGE_SHARDS: usize = 8;
 
 /// The tests matching `BROWSER_TEST_FILTER`.
 struct Selected {
@@ -58,18 +84,77 @@ impl Selected {
         }
     }
 
+    fn case(self, case: impl for<'a> CaseFn<'a>) -> Self {
+        self.with(Case(case))
+    }
+
     fn with(mut self, test: impl BrowserTest<str> + 'static) -> Self {
         if self
             .filter
             .as_deref()
-            .is_none_or(|filter| test.name().contains(filter))
+            .is_none_or(|filter| filter.split(',').any(|part| test.name().contains(part)))
         {
-            self.tests = self.tests.with(test);
+            self.tests = self.tests.with(CheckPageErrors(test));
         }
         self
     }
 
     fn with_all<T: BrowserTest<str> + 'static>(self, tests: impl IntoIterator<Item = T>) -> Self {
         tests.into_iter().fold(self, Self::with)
+    }
+}
+
+/// Runs a test, then checks what the page reported (uncaught errors and Rust panics; see
+/// `BookPage::expect_no_page_errors`; `goto` checks the page it leaves):
+/// - the test passed: page errors fail it;
+/// - the test failed: page errors are added to its failure, as they are often the cause (a panic in an event handler
+///   shows as a wait that times out);
+/// - an assertion panicked: page errors are logged, then the panic continues.
+struct CheckPageErrors<T>(T);
+
+#[async_trait]
+impl<T: BrowserTest<str>> BrowserTest<str> for CheckPageErrors<T> {
+    fn name(&self) -> Cow<'_, str> {
+        self.0.name()
+    }
+
+    fn timeouts(&self) -> Option<browser_test::Timeouts> {
+        self.0.timeouts()
+    }
+
+    fn element_query_wait(&self) -> Option<ElementQueryWait> {
+        self.0.element_query_wait()
+    }
+
+    fn fresh_session(&self) -> bool {
+        self.0.fresh_session()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = BookPage { driver, base_url };
+        let outcome = AssertUnwindSafe(self.0.run(driver, base_url))
+            .catch_unwind()
+            .await;
+        let page_errors = page.expect_no_page_errors().await;
+        match (outcome, page_errors) {
+            (Ok(Ok(())), page_errors) => {
+                page_errors.context("the page reported problems after the test passed")?;
+                Ok(())
+            }
+            (Ok(Err(failure)), Ok(())) => Err(failure),
+            (Ok(Err(failure)), Err(page_errors)) => Err(failure
+                .context(format!(
+                    "the page also reported problems, possibly the cause:\n{page_errors}"
+                ))
+                .into_dynamic()),
+            (Err(panic), page_errors) => {
+                if let Err(page_errors) = page_errors {
+                    tracing::error!(
+                        "The page reported problems, possibly the cause of the panic:\n{page_errors}"
+                    );
+                }
+                std::panic::resume_unwind(panic)
+            }
+        }
     }
 }

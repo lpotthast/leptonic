@@ -1,14 +1,11 @@
 // Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Form.test.js @ 99e6102368
 //! The TextField, Input, TextArea, Label, Description, FieldError and Form atoms.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions};
 
 const PATH: &str = "/atoms/text-field";
 
@@ -48,10 +45,10 @@ async fn provides_slots(page: &Page<'_>, element: &str) -> Result<(), Report> {
     let label = page.element(format!("{container} label")).await?;
     let id = input.id().await?;
     assert_that!(label.attr("for").await?).is_equal_to(id);
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Description Error")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Description Error"))
+        .await;
     Ok(())
 }
 
@@ -131,10 +128,10 @@ async fn native_validation_errors(page: &Page<'_>, form: &str) -> Result<(), Rep
     assert_that!(page.element(&container).await?.check_validity().await?).is_false();
     let message = input.prop("validationMessage").await?.unwrap_or_default();
     assert_that!(&message).is_not_blank();
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to(message.as_str())
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq(message.as_str()))
+        .await;
     field.wait_for_attr("data-invalid", Some("true")).await?;
     page.wait_for_focus(&input).await?;
 
@@ -162,10 +159,10 @@ pub async fn customized_validation_errors(page: &Page<'_>) -> Result<(), Report>
             .await?
     )
     .is_false();
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Please enter a name")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Please enter a name"))
+        .await;
     page.wait_for_focus(&input).await?;
     page.send_keys("Devon").await?;
     assert_that!(input.is_valid().await?).is_true();
@@ -221,10 +218,10 @@ pub async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
         // Submitting twice doesn't clear the server error.
         page.element("#form-server-submit").await?.click().await?;
         assert_that!(page.element("#form-server").await?.check_validity().await?).is_false();
-        wait_for("the description of the input")
-            .observing(|| input.referenced_text("aria-describedby"))
-            .to_be_equal_to("Invalid name.")
-            .await?;
+        assert_that!(|| input.referenced_text("aria-describedby"))
+            .eventually_ok()
+            .matches(eq("Invalid name."))
+            .await;
         assert_that!(input.is_valid().await?).is_false();
         page.wait_for_focus(&input).await?;
     }
@@ -238,10 +235,10 @@ pub async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
     // The server answers with the same errors again: they show again (react-aria resets on
     // every new errors object).
     page.element("#form-server-submit").await?.click().await?;
-    wait_for("the description of the input")
-        .observing(|| input.referenced_text("aria-describedby"))
-        .to_be_equal_to("Invalid name.")
-        .await?;
+    assert_that!(|| input.referenced_text("aria-describedby"))
+        .eventually_ok()
+        .matches(eq("Invalid name."))
+        .await;
     assert_that!(input.is_valid().await?).is_false();
     Ok(())
 }

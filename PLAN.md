@@ -99,8 +99,9 @@ The components layer is gone (2026-10-07, see history); leptonic is hooks + atom
 The 2026-10-07 react-aria fidelity review was applied the same day by nine agents (history: "Fidelity review
 2026-10-07"). What is open from it is below, by family.
 
-- [ ] Flaky: `overlay_position_tests` fails under load (the full suite, 2026-10-07 twice: no
-  `.test-op-flip-popover[data-placement=bottom]` within 10 s; passes alone).
+- [ ] Flaky: `overlay_position` cases fail under load (the full suite, 2026-10-07 twice: no
+  `.test-op-flip-popover[data-placement=bottom]` within 10 s; 2026-10-08: `placed_above`, `reopened_with_arrow`, no
+  `[data-placement=top]`; they pass alone).
 - [ ] `TabPanel`s rendered before their `TabList` don't know about tabs disabled through `Tab::is_disabled` (the
   default selection skips them only once the tabs have rendered).
 - [ ] Tree: on a page where the tree never had focus, clicking a row's expand button leaves the focus on the button
@@ -202,7 +203,6 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
 - [ ] typed-builder `PropsBuilder::build` is instantiated per combination of props a call site sets (5.5% of the
   book's IR): measure what grouping rarely used props of the biggest atoms (`TextField`, `DatePicker`,
   `SearchField`, `Calendar`, `NumberField`) into `Default` structs saves.
-- [ ] Users' guide in the book ("Build times and bundle size"), from the document's "Advice for users".
 - [ ] Decide (user): route splitting with `#[lazy_route]` + `--split` (main module −38%, but ~90 files per first
   page visit and an unstable Leptos feature: try a coarser grouping first).
 
@@ -217,7 +217,20 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   git: untrack it (`git rm -r --cached`, the user's call).
 - [ ] `browser-test` is a path dependency on the user's checkout (`../../browser-test`, 0.6.0 unreleased: per-session
   Chrome profiles in `<target>/tmp/browser-test-profiles`, cancellation, `rustls-no-provider` + `ring`, focused
-  session pages, failure reports, session reuse). Switch to the crates.io release once it is published (the user's call).
+  session pages, failure reports, session reuse; leptonic's and the book's browser tests). Switch to the crates.io release
+  once it is published (the user's call).
+- [ ] `assertr` is a path dependency on the user's checkout (`../../assertr/assertr`, 0.8.0 unreleased: eventual
+  assertions `eventually`/`consistently` and `Patience`, used by the browser tests). Switch `leptonic`'s dev-dependency
+  to the release once published (the user's call); the book's tests stay on 0.7.1 until then.
+  assertr in turn depends on the user's `borrow-for` checkout (`../../borrow-for`, branch `owned-borrowed-sequences`:
+  `Vec<&str>` in a `Vec<String>` context and siblings, unreleased 0.1.1), so borrow-for is released first.
+- [ ] `leptos-browser-test` is a path dependency on the user's checkout (`../../leptos-browser-test`, unreleased:
+  `LeptosTestAppConfig::with_build_profile`). Switch to the crates.io release once it is published (the user's call).
+- [ ] The test-app writes its site (`target/site`, the wasm and JS) next to its `Cargo.toml`, whatever the
+  `CARGO_TARGET_DIR`: any other build of it (`just serve-test-app`, another session's suite) replaces the files under a
+  running suite (2026-10-08: 64 tests failed with "Failed to fetch dynamically imported module"). Let
+  leptos-browser-test build the site into the suite's own target dir (cargo-leptos' `LEPTOS_SITE_ROOT`), so that runs
+  of different sessions can't collide.
 - [ ] browser-test's own runner tests (they kill child runs on purpose) left one empty
   `/tmp/org.chromium.Chromium.scoped_dir.*` (2026-10-08): find which session still lets chromedriver create one.
 - [ ] The test-app's `cargo check` needs `LEPTOS_OUTPUT_NAME=...` set (note it in CLAUDE.md's commands).
@@ -230,12 +243,18 @@ and, while the book waits for them, under "Waiting on the library" below. Finish
 `documentation/history.md` ("Book").
 
 ### Next
-- [ ] The book's browser tests still use browser-test 0.5, which leaks a Chrome profile into `/tmp` (a RAM disk) for
-  every session not quit cleanly. Switch as the library did (2026-10-08, `leptonic/tests/browser_test.rs`): browser-test
-  0.6 with `Cancellation::on_shutdown_signals()`, `ChromeProfilesDir` in `CARGO_TARGET_TMPDIR`, features
-  `rustls-no-provider` + `rustls` with `ring` (installed as the default provider), and a direct `thirtyfour` with
-  `cdp` if the book's tests use `driver.cdp()`. Failure reports (test-code frames, last steps) then come with it;
-  `documentation/browser-tests.md` describes the library suite's helpers and checks, which the book's may follow.
+- [ ] The installation page's Feature Flags table says `hooks` is "the only default feature" and doesn't list
+  `intl-strings`; leptonic's defaults are now `hooks` and `intl-strings` (found 2026-10-08 by the guide on compile
+  times and binary sizes).
+- [ ] The book's browser suite (240 tests, ~32s) waits ~15-30s for `markdown::warm_markdown_cache`, which renders and
+  converts the ~210 pages one after another at server start (dev server; search and the LLM index wait for it). The
+  four cases needing it bound the run; the other tests finish after ~18s. Converting several pages at a time would
+  shorten the run and the production server's warm-up. Found 2026-10-08 by the test port (library session).
+- [ ] Decide (user): self-host the book's fonts instead of Google Fonts. Every browser test runs in a fresh browser
+  context, so every page load fetches the Google Fonts stylesheet (render-blocking) and font files again: blocking
+  them made the page tests 25% faster (18.97s to 14.28s, 205 tests, 2026-10-08). The suite also depends on the
+  internet for them, and the fonts the page checks lay out with. (Embedding Google Fonts is also a known GDPR issue
+  in Germany.)
 - [ ] The Dockerfile builds from the repository root (path dependency on `../../leptonic`); not yet test-built. A test
   build (images, a downloaded install script, a full release build) is the user's call (main, 2026-10-07).
 

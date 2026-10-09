@@ -90,7 +90,10 @@ impl VirtualizerRenderer {
 struct VirtualizedParts<L: Layout> {
     root: VirtualizedRoot,
     state: VirtualizerState<L>,
-    scroll_to: Callback<Rect>,
+    /// Scrolls the view to its end, as laid out then.
+    scroll_to_end: Callback<()>,
+    /// The user scrolls the view itself (not the page, not `scroll_to`).
+    is_user_scrolling: Signal<bool>,
 }
 
 fn create_virtualized<L: Layout>(
@@ -152,7 +155,8 @@ fn create_virtualized<L: Layout>(
     VirtualizedParts {
         root,
         state,
-        scroll_to: scroll_view.scroll_to,
+        scroll_to_end: scroll_view.scroll_to_end,
+        is_user_scrolling: scroll_view.is_user_scrolling,
     }
 }
 
@@ -295,7 +299,8 @@ where
     let VirtualizedParts {
         root,
         state,
-        scroll_to,
+        scroll_to_end,
+        is_user_scrolling,
     } = create_virtualized(
         ListLayout::new(layout_options.get_untracked()),
         Signal::derive(move || {
@@ -332,9 +337,10 @@ where
             .max(1.0);
         distance_from_end().is_none_or(|distance| distance <= threshold)
     };
-    // The user scrolled: anchored when they stopped at the end.
+    // The user scrolled the list: anchored when they stopped at the end. Scrolls of the page or an
+    // ancestor (e.g. a click scrolling its target into view) don't count: the list didn't move.
     Effect::new(move |was_scrolling: Option<bool>| {
-        let is_scrolling = state.is_scrolling().get();
+        let is_scrolling = is_user_scrolling.get();
         if was_scrolling == Some(true) && !is_scrolling {
             set_anchored(is_at_end());
         }
@@ -342,26 +348,22 @@ where
     });
     // While anchored, the end stays in view: when anchoring turns on and whenever the content
     // changes (e.g. rows measured after the layout's anchoring settled), unless the user is
-    // scrolling (anchoring then turns off when the scroll ends away from the end).
+    // scrolling the list (anchoring then turns off when the scroll ends away from the end).
     Effect::new(move |_| {
         if !is_anchored.get() {
             return;
         }
         // Runs again whenever the content changes.
         state.content_size().track();
-        if state.is_scrolling().get_untracked() {
+        if is_user_scrolling.get_untracked() {
             return;
         }
-        let visible = state.visible_rect().get_untracked();
-        if visible.area() > 0.0
-            && let Some(distance) = untrack(distance_from_end)
-            && distance > 1.0
+        if state.visible_rect().get_untracked().area() > 0.0
+            && untrack(distance_from_end).is_some_and(|distance| distance > 1.0)
         {
-            // In the visible rectangle's coordinates (`scroll_to` takes them).
-            scroll_to.run(Rect {
-                y: visible.y + distance,
-                ..visible
-            });
+            // To the end as laid out when it scrolls (the next frame): the visible rectangle may
+            // already be where the virtualizer moves the view, the view not yet there.
+            scroll_to_end.run(());
         }
     });
 

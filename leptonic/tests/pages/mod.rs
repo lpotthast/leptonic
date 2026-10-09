@@ -3,7 +3,8 @@
 //! fixtures live in the submodules.
 //!
 //! Every state has the same three methods: read it (`attr`, `prop`, `inner_text`, `count`), wait
-//! until it is a value (`wait_for_*`), check that it stays a value (`*_stays`). Lookups take a
+//! until it is a value (`wait_for_*`), check that it stays a value (`*_stays`). Other values are
+//! observed with assertr's eventual assertions (`crate::timing`). Lookups take a
 //! [`Locator`] and exist on pages and elements alike (`element`, `elements`, `count`,
 //! `inner_texts`, `wait_for_count`, `count_stays`).
 
@@ -14,6 +15,10 @@ pub mod focus_manager;
 mod locator;
 mod lookup;
 
+use assertr::{
+    pattern,
+    prelude::{EventualAssertions, Patience, assert_that_owned},
+};
 use browser_test::{
     StepExt,
     thirtyfour::{TypingData, WebDriver, WebElement},
@@ -24,7 +29,21 @@ pub use locator::{Locator, css, role, xpath};
 use rootcause::{Report, bail, prelude::ResultExt};
 use serde::{Deserialize, de::DeserializeOwned};
 
-use crate::polling::{TIMEOUT, expect, wait_for};
+use crate::timing;
+
+/// Resolves with `true` as soon as `<body>` has `data-hydrated` (the test-app sets it once
+/// hydration finished), or with `false` after `arguments[0]` milliseconds: a wait in the page,
+/// without polling.
+const WAIT_FOR_HYDRATION: &str = "const [timeout, done] = arguments;
+    const hydrated = () => document.body?.hasAttribute('data-hydrated') ?? false;
+    if (hydrated()) return done(true);
+    const observer = new MutationObserver(() => {
+        if (hydrated()) { observer.disconnect(); done(true); }
+    });
+    observer.observe(document.documentElement, {
+        attributes: true, attributeFilter: ['data-hydrated'], subtree: true,
+    });
+    setTimeout(() => { observer.disconnect(); done(hydrated()); }, timeout);";
 
 /// A page object without page-specific helpers. Tests that only need [`PageActions`] use this
 /// instead of defining their own page type.
@@ -59,7 +78,7 @@ pub struct Diagnostics {
 
 /// Shared page-object actions. Page objects only need to provide the driver and base URL.
 ///
-/// Lookups wait for their element with thirtyfour's element query (see `crate::polling`).
+/// Lookups wait for their element with thirtyfour's element query (see `crate::timing`).
 /// Navigations, lookups and waits run as `browser_test` steps, which failure reports list.
 #[allow(dead_code)] // Not every test binary uses every helper.
 pub trait PageActions {
@@ -84,19 +103,25 @@ pub trait PageActions {
                 .detail(path)
                 .await
                 .context_with(|| format!("failed to go to {url}"))?;
-            if let Err(error) = self
-                .element("body[data-hydrated]")
-                .step("wait_for_hydration")
-                .detail(path)
-                .await
-            {
+            let hydrated = async {
+                let timeout =
+                    u64::try_from(Patience::global().timeout().as_millis()).unwrap_or(u64::MAX);
+                self.driver()
+                    .execute_async(WAIT_FOR_HYDRATION, vec![timeout.into()])
+                    .await?
+                    .convert::<bool>()
+            }
+            .step("wait_for_hydration")
+            .detail(path)
+            .await
+            .context_with(|| format!("failed to wait for {url} to hydrate"))?;
+            if !hydrated {
                 // Usually a panic while hydrating: report what the page caught.
                 let diagnostics = self.diagnostics().await.unwrap_or_default();
-                return Err(error
-                    .context(format!(
-                        "{url} did not finish hydrating; the page reported {diagnostics:#?}"
-                    ))
-                    .into_dynamic());
+                bail!(
+                    "{url} did not finish hydrating within {:?}; the page reported {diagnostics:#?}",
+                    Patience::global().timeout()
+                );
             }
             Ok(())
         }
@@ -203,21 +228,23 @@ pub trait PageActions {
     }
 
     /// Wait until exactly `expected` elements match `locator` (`0`: they are gone).
-    async fn wait_for_count(
+    #[track_caller]
+    fn wait_for_count(
         &self,
         locator: impl Into<Locator> + Send,
         expected: usize,
-    ) -> Result<(), Report> {
-        lookup::wait_for_count(&**self.driver(), locator.into(), expected).await
+    ) -> impl Future<Output = Result<(), Report>> {
+        lookup::wait_for_count(&**self.driver(), locator.into(), expected)
     }
 
     /// Exactly `expected` elements match `locator`, and keep doing so.
-    async fn count_stays(
+    #[track_caller]
+    fn count_stays(
         &self,
         locator: impl Into<Locator> + Send,
         expected: usize,
-    ) -> Result<(), Report> {
-        lookup::count_stays(&**self.driver(), locator.into(), expected).await
+    ) -> impl Future<Output = Result<(), Report>> {
+        lookup::count_stays(self.driver(), &**self.driver(), locator.into(), expected)
     }
 
     // Focus: the focused element, compared by identity.
@@ -232,35 +259,40 @@ pub trait PageActions {
     }
 
     /// Wait until `element` has focus.
-    async fn wait_for_focus(&self, element: &WebElement) -> Result<(), Report> {
-        let waited = wait_for("the focus")
-            .observing(|| async { Ok(self.focused_element().await? == *element) })
-            .to_be_equal_to(true)
-            .await;
-        if waited.is_err() {
-            bail!(
-                "focus did not move to {} within {TIMEOUT:?}; it is on {}",
-                element.describe().await?,
-                self.focused_element().await?.describe().await?
-            );
+    #[track_caller]
+    fn wait_for_focus<'a>(
+        &'a self,
+        element: &'a WebElement,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || focus(self, element))
+            .eventually_ok()
+            .matches(pattern!(Focus::OnTarget));
+        async move {
+            check.await;
+            Ok(())
         }
-        Ok(())
     }
 
-    /// `element` has focus and keeps it.
-    async fn focus_stays(&self, element: &WebElement) -> Result<(), Report> {
-        let kept = expect("the focus")
-            .observing(|| async { Ok(self.focused_element().await? == *element) })
-            .to_stay_equal_to(true)
-            .await;
-        if kept.is_err() {
-            bail!(
-                "focus left {}; it is on {}",
-                element.describe().await?,
-                self.focused_element().await?.describe().await?
-            );
+    /// `element` has focus and keeps it, once the page [settled](Self::settle).
+    #[track_caller]
+    fn focus_stays<'a>(
+        &'a self,
+        element: &'a WebElement,
+    ) -> impl Future<Output = Result<(), Report>> + 'a {
+        let check = assert_that_owned!(move || focus(self, element))
+            .consistently_ok()
+            .matches(pattern!(Focus::OnTarget));
+        async move {
+            self.settle().await?;
+            check.await;
+            Ok(())
         }
-        Ok(())
+    }
+
+    /// Wait until the page settled: it ran what an interaction caused (`crate::timing`). "Nothing
+    /// happens" checks settle first.
+    async fn settle(&self) -> Result<(), Report> {
+        timing::settle(self.driver()).await
     }
 
     // Keyboard input, to whatever has focus.
@@ -331,4 +363,29 @@ pub trait PageActions {
             .convert()
             .context_with(summary)?)
     }
+}
+
+/// Where the focus is, as focus checks observe it. Both elements are described only when the
+/// focus is elsewhere, for the failure report.
+#[derive(Debug)]
+#[expect(
+    dead_code,
+    reason = "the descriptions are read through `Debug`: failure reports show them"
+)]
+enum Focus {
+    /// On the element the check expects it on.
+    OnTarget,
+    /// On another element ([described](ElementActions::describe)).
+    Elsewhere { focused: String, target: String },
+}
+
+async fn focus<P: PageActions + ?Sized>(page: &P, target: &WebElement) -> Result<Focus, Report> {
+    let focused = page.focused_element().await?;
+    if focused == *target {
+        return Ok(Focus::OnTarget);
+    }
+    Ok(Focus::Elsewhere {
+        focused: focused.describe().await?,
+        target: target.describe().await?,
+    })
 }

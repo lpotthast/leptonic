@@ -4,14 +4,14 @@
 //! reaches and renders the last option. A log anchored to the end stays at the end when lines are
 //! appended, with measured variable heights (rows don't overlap once measured). A list box next to
 //! a `Virtualizer` isn't virtualized.
-use assertr::prelude::*;
+use assertr::{
+    matchers::{all_of, eq, gt, lt, predicate},
+    prelude::*,
+};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 const PATH: &str = "/atoms/virtualizer";
 
@@ -80,38 +80,49 @@ fn stacked(extents: &[(f64, f64)]) -> bool {
 
 /// Wait until the focused option is fully inside the visible part of `list` (1px tolerance).
 async fn wait_for_focused_in_view(page: &Page<'_>, list: &WebElement) -> Result<(), Report> {
-    wait_for("the focused option's margins inside the list")
-        .observing(|| focused_margins(page, list))
-        .to_be("at least -1px each", |margins| {
-            margins.top >= -1.0 && margins.bottom >= -1.0
+    assert_that!(|| focused_margins(page, list))
+        .eventually_ok()
+        .satisfies(|margins| {
+            margins
+                .derive(|margins| &margins.top)
+                .is_greater_or_equal_to(-1.0);
+            margins
+                .derive(|margins| &margins.bottom)
+                .is_greater_or_equal_to(-1.0);
         })
-        .await
+        .await;
+    Ok(())
 }
 
 /// Wait until `log` is scrolled to its end (within 2px).
 async fn wait_for_the_end(page: &Page<'_>, log: &WebElement) -> Result<(), Report> {
-    wait_for("the log's distance from its end")
-        .observing(|| distance_to_end(page, log))
-        .to_be("less than 2px", |distance| distance.abs() < 2.0)
-        .await
+    assert_that!(|| distance_to_end(page, log))
+        .eventually_ok()
+        .matches(all_of(matchers![gt(-2.0), lt(2.0)]))
+        .await;
+    Ok(())
 }
 
 /// Wait until `log`'s rendered rows are stacked without overlapping.
 async fn wait_for_stacked_rows(page: &Page<'_>, log: &WebElement) -> Result<(), Report> {
-    wait_for("the log's rendered rows (top, bottom)")
-        .observing(|| option_extents(page, log))
-        .to_be("at least 5, not overlapping", |extents| stacked(extents))
-        .await
+    assert_that!(|| option_extents(page, log))
+        .eventually_ok()
+        .matches(
+            predicate(|extents: &Vec<(f64, f64)>| stacked(extents))
+                .described_as("at least 5, not overlapping"),
+        )
+        .await;
+    Ok(())
 }
 
 /// 100px of 25px rows, a third of overscan, snapped to rows: Items 0 to 6, each with its position
 /// in the set of 50.
 pub async fn renders_the_visible_options(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    wait_for("the rendered options")
-        .observing(|| option_texts(page))
-        .to_be_equal_to(items(0..7))
-        .await?;
+    assert_that!(|| option_texts(page))
+        .eventually_ok()
+        .matches(eq(items(0..7)))
+        .await;
     let first = page.element("#test-virt-list [role=option]").await?;
     assert_that!(first.attr("aria-setsize").await?)
         .get_some()
@@ -129,10 +140,10 @@ pub async fn scrolling_renders_other_options(page: &Page<'_>) -> Result<(), Repo
         .await?
         .scroll_to_top(200.0)
         .await?;
-    wait_for("the rendered options")
-        .observing(|| option_texts(page))
-        .to_be_equal_to(items(7..15))
-        .await?;
+    assert_that!(|| option_texts(page))
+        .eventually_ok()
+        .matches(eq(items(7..15)))
+        .await;
     Ok(())
 }
 
@@ -143,10 +154,10 @@ pub async fn focused_option_scrolls_into_view(page: &Page<'_>) -> Result<(), Rep
     let list = page.element("#test-virt-list [role=listbox]").await?;
     page.element("#test-virt-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
-    wait_for("the role of the focused element")
-        .observing(|| async { Ok(page.focused_element().await?.attr("role").await?) })
-        .to_be_equal_to(Some("option".to_owned()))
-        .await?;
+    assert_that!(|| async { Ok::<_, Report>(page.focused_element().await?.attr("role").await?) })
+        .eventually_ok()
+        .matches(eq(Some("option".to_owned())))
+        .await;
     page.send_keys(Key::PageDown).await?;
     wait_for_focused_in_view(page, &list).await?;
 

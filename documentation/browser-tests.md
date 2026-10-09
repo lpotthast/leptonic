@@ -2,8 +2,8 @@
 
 How the browser tests in `leptonic/tests/` are written. Running them, fixtures and registration: CLAUDE.md, "Browser
 Tests". Reference file: `ui_tests/test_checkbox.rs`. The helpers (`tests/pages/`): `PageActions` on a page,
-`ElementActions` on an element, `Locator`s (`css`, `role`, `xpath`), `SyntheticEvent`s; `wait_for`/`expect` in
-`tests/polling/mod.rs`; `Case` in `tests/cases/mod.rs`.
+`ElementActions` on an element, `Locator`s (`css`, `role`, `xpath`), `SyntheticEvent`s; the suite's timing (assertr's
+`Patience`, settling) in `tests/timing/mod.rs`; `Case` in `tests/cases/mod.rs`.
 
 Three rules behind everything below:
 
@@ -78,14 +78,27 @@ Never thirtyfour's `find`/`find_all`/`query`: the session's implicit wait is zer
 | Layer          | Checks                                       | Fails with                                                    |
 |----------------|----------------------------------------------|---------------------------------------------------------------|
 | 1. Lookups     | the element exists (and returns it)          | `Report`: the locator                                         |
-| 2. Waits       | a state is reached, within 10 s              | `Report`: the element, the expected and the last seen value   |
-| 3. Stays       | a state holds for 300 ms ("nothing happens") | `Report`: the element, the value it changed to                |
+| 2. Waits       | a state is reached, within 10 s              | assertr panic: the expectation, the last value, the values seen and when |
+| 3. Stays       | a state holds once the page settled ("nothing happens") | assertr panic: the expectation, the value it changed to, how long it held |
 | 4. Assertions  | a value read now                             | assertr panic: the expression, the expected and actual value  |
+
+Waits and stays are assertr's eventual assertions (`eventually`, `consistently`) on an observation of the page; the
+state helpers below use them, too.
 
 Which one, by what the check is about:
 
 - **The effect of something the test just did** (a click, a key, a script): a wait. If the effect is that nothing
   changes: a stays check. Never an assertion: it reads before effects, animation frames and timers ran.
+
+**Stays checks** wait until the page settled (`page.settle()`: two animation frames and a task, by when the event
+handlers, effects, frame callbacks and zero-delay timers an interaction caused ran), then check the state. Settling is
+counted in frames, as the page's reactions happen per frame; timers run on the clock, so behavior behind one (a
+tooltip's delay, a long press, the press's 80 ms click fallback, a toast's timeout) is covered by observing past it:
+`consistently_ok().for_at_least(delay + margin)`, with a comment naming the timer; a check that must end before a timer
+fires states its window as well. React-aria's tests need no such checks: `act()`
+flushes updates synchronously and fake timers advance on demand, so a single read after an action is final there.
+`BROWSER_TEST_STAYS_MS=<ms>` makes every other stays check also observe that long (the suite's patience,
+`tests/timing/mod.rs`): a check that then fails passes by default only because it doesn't observe long enough.
 - **A state nothing is changing** (the initial render, values related to a state a wait just confirmed): an assertion.
 - **That an element is there**: its lookup.
 
@@ -98,37 +111,48 @@ Which one, by what the check is about:
 | Inner text     | `element.inner_text()`                 | `element.wait_for_inner_text(t)`        | `element.inner_text_stays(t)`         |
 | Count          | `count(locator)`                       | `wait_for_count(locator, n)`            | `count_stays(locator, n)`             |
 | Focus          | `page.focused_element()`               | `page.wait_for_focus(&element)`         | `page.focus_stays(&element)`          |
-| Anything else  | any read                               | `wait_for(what).observing(read).to_be_equal_to(v)`, `.to_be("description", condition)` | `expect(what).observing(read).to_stay_equal_to(v)` |
+| Anything else  | any read                               | `assert_that!(read).eventually_ok().matches(..)` | `page.settle()`, then `assert_that!(read).consistently_ok().matches(..)` |
 
-For anything else, `crate::polling` observes a value until it meets the expectation, in a sentence:
+For anything else, assert on an observation (a closure returning the read's future) with assertr's eventual
+assertions, ending with any matcher or assertion callback:
 
 ```rust
-wait_for("the last change")
-    .observing(|| log.inner_text())
-    .to_be_equal_to("change:200")
-    .await?;
-wait_for("the red value")
-    .observing(|| number(&red))
-    .to_be("64 (±1)", |red| (red - 64.0).abs() <= 1.0)
-    .await?;
-expect("the number of open toasts")
-    .observing(|| page.count(TOAST))
+assert_that!(|| log.inner_text())
+    .eventually_ok()
+    .matches(eq("change:200"))
+    .await;
+assert_that!(|| number(&red))
+    .eventually_ok()
+    .satisfies(|red| {
+        red.is_close_to(64.0, 1.0);
+    })
+    .await;
+page.settle().await?;
+assert_that!(|| page.count(TOAST))
+    .consistently_ok()
+    // Past the toast's timeout (2 s).
     .for_at_least(Duration::from_millis(2500))
-    .to_stay_equal_to(1)
-    .await?;
+    .matches(eq(1))
+    .await;
 ```
 
-- Observe the value the expectation is about, not a `bool` computed from it: a failure shows the last value seen
-  ("the red value did not become 64 (±1) within 10s; last seen 70"). Several values: a tuple or a struct.
-- `what` names the observed thing ("the last change"); the `to_be` description completes "to be …".
-- The observation is a closure returning the read's future: `|| log.inner_text()` for one of the helpers above,
-  `|| async { Ok(element.attr("x").await?) }` for a thirtyfour read or several steps.
-- `for_at_least` only for real timers the check must outlast (a toast's timeout, a long-press delay).
+- Observe the value the expectation is about, not a `bool` computed from it: a failure shows the last value and the
+  values seen before it. Several values: a tuple or a struct.
+- The failure shows the observation's expression (`|| log.inner_text()`), so it names itself. `with_subject_name` only
+  for a runtime value the expression can't show, in helpers: `format!("attribute {name}")`.
+- `eventually_ok`/`consistently_ok` for observations returning a `Result` (every helper read): an error is an
+  observation that failed, retried until the timeout by `eventually_ok`. `eventually`/`consistently` for plain values.
+- The expectation: `matches(eq(v))`, another matcher (`ge`, `all_of`, ...), or `satisfies(|it| { .. })` with any
+  assertr assertion. `predicate(..).described_as(..)` only when no typed assertion says it.
+- The timing is the suite's (`tests/timing/mod.rs`: 10 s, every 50 ms); `within(d)` and `for_at_least(d)` override it
+  for one check, `for_at_least` only for real timers the check must outlast (a toast's timeout, a long-press delay).
+- Every check is awaited, and ends the statement: `.await;`. A failure panics, which the runner reports as the test's
+  failure.
 
 The inner text is `innerText`, trimmed: what the element shows (never thirtyfour's `text()`, which skips
 `display: contents` children). Waits pass the moment the state is reached, so waiting for a state that may already hold
-costs nothing. An element handle waits on that element; if the page replaces it (re-rendering), the wait fails at once
-with "the element was removed from the page": look it up after the change.
+costs nothing. An element handle waits on that element; if the page replaces it (re-rendering), every observation fails
+with a stale element error until the timeout, which the failure shows: look the element up after the change.
 
 ### Other reads
 
@@ -162,6 +186,7 @@ assert_that!(rect.width).is_close_to(200.0, 0.5);
 - An `Option<String>` attribute: `.is_none()`, `.get_some().is_equal_to("v")`; against an `Option` variable:
   `assert_that!(a.as_deref()).is_equal_to(b.as_deref())`.
 - No `.await` inside an assertion's arguments (the chain is not `Send` across an await): read into a local first.
+  Eventual assertions are the exception: they await their observation themselves.
 
 ## Acting
 
@@ -221,6 +246,53 @@ pub async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
 - A check that isn't a case of one fixture (`test_hydration_ids.rs`, `test_server_panics.rs`) implements `BrowserTest`
   itself.
 
+## Speed and memory
+
+Measured 2026-10-08 (822 tests, 32 threads, 64 GB), Chrome Headless Shell and settle-based stays checks: 49s and
+3.3 GB of browser memory (PSS, avg; 66 processes) at `BROWSER_TEST_PARALLELISM=8`, the default. Before, with Chrome
+and 300 ms stays checks:
+
+| `BROWSER_TEST_PARALLELISM` | wall time | Chrome memory (PSS, avg) |
+|----------------------------|-----------|--------------------------|
+| 8                          | 1m 10s    | 4.9 GB                   |
+| 12                         | 1m 01s    | 6.1 GB                   |
+| 16                         | 58s       | 7.2 GB                   |
+
+- Every parallel test is a browser (~0.4 GB with the shell, ~0.5 GB with Chrome: renderers, network service, browser
+  and GPU processes), plus one spare browser per eight. Above 8 the CPU is saturated: page loads slow down and the
+  run barely gets faster.
+- Chrome Headless Shell (`ChromeBinary::ChromeHeadlessShell`): a third less memory than Chrome, session resets in 25ms
+  instead of 100ms. Visible runs use Chrome.
+- The test-app is built with `--release` (`wasm-release`: `opt-level = "z"`, no LTO, incremental, debug assertions),
+  by the suite and by `just serve-test-app` alike; it has no dev profiles of its own.
+  Dev builds (33 MB of wasm instead of 13 MB) made every page load 2.5 times slower (450ms) and the suite 40s slower;
+  LTO and one codegen unit saved 1 MB but made a rebuild after a library change take 84s instead of 20s.
+- Session resets (browser-test's `SessionReset`), measured at parallelism 8 with the content-hashed, cacheable wasm and
+  JS (`hash-files`, `cache-control: immutable` for `/pkg/`):
+
+  | `BROWSER_TEST_SESSION_RESET` | wall time | browser memory (PSS, avg / max) | page load avg |
+  |------------------------------|-----------|---------------------------------|---------------|
+  | `manual` (default)           | 49s       | 1.3 GB / 2.3 GB                 | 155ms         |
+  | `new-context`                | 50s       | 3.3 GB / 4.8 GB                 | 165ms         |
+
+  `manual` resets the tab item by item and keeps the HTTP cache (the wasm and JS, and the code V8 compiled for them);
+  every test still gets a new renderer process (the reset's `data:` page). Keeping the renderer too (`about:blank`)
+  ran in 43-46s, but its memory grew with every test (4.2 GB on average, 5.7 GB at the end) and it kept caches beyond
+  the HTTP cache (decoded resources, compiled code in the process). `new-context` keeps nothing (a cold load per test)
+  and is the cross-check: both must pass alike. Clearing storage of type `all` took 1-2s per reset on these pages
+  (shader cache and more); the manual reset clears the types pages use, and file systems only when used.
+- Page loads (navigation and hydration) are the biggest part of the test bodies' time: 107-135 ms on average (45-49 s
+  runs). The test-app's server renders at `opt-level = 1` in release builds (`server-release`: 1.8 ms per fixture page
+  instead of 11 ms, the calendar page 87 ms instead of 550 ms, no slower rebuilds), and `goto_path` waits for
+  hydration in the page (a `MutationObserver` on `data-hydrated`) instead of polling every 50 ms. Stays checks
+  watched for 300 ms each before (~20% of the bodies' time); settling takes ~30 ms.
+- Tried without gain: V8 without wasm tier-up, a minimal HTTP cache, longest-tests-first ordering (the run is CPU-bound,
+  not waiting for one long test), mold (links the test server in 0.75s instead of 1.2s with Rust's default lld; the user decided against it,
+  2026-10-08).
+- Not compressed: the wasm (13.9 MB) downloads in ~35 ms over loopback during a run, part of it hidden by streaming
+  compilation; decompressing it takes ~30 ms of CPU per page load, and cargo-leptos' `--precompress` (brotli 11) 20 s
+  per build. Compression pays off over real networks (the book precompresses its release build), not here.
+
 ## Failure reports
 
 browser-test's failure reports (browser-test README, "Failure Reports") show for every failure, without anything in the
@@ -228,9 +300,24 @@ test code:
 
 - **where**: the test code's frames, from the helper that failed up to the case and line that called it (for a panic,
   e.g. a failed assertion: its location);
-- **when**: the test's last steps (page loads, lookups, waits) with their timing;
-- **what**: the error, e.g. "the inner text of `<span id="test-cb-basic-value">` did not become "checked" within 10s;
-  it is "false"".
+- **when**: the test's last steps (page loads, lookups) with their timing;
+- **what**: the error, or for a failed check assertr's report, e.g. for a wait:
 
-The helpers keep this working: every wait and stays check names the element (`ElementActions::describe`), the expected
-and the last seen value, and runs as a step. A new helper does the same; test code propagates errors with `?`.
+  ```text
+  Assertion failed at leptonic/tests/pages/element.rs:274:14
+
+  Expression: `|| self.inner_text()`
+
+  Expected: "checked"
+
+    Actual: "true"
+
+  Details:
+    - Waited: 10.01s (193 observations)
+  ```
+
+  followed by the test code's frames (`tests/ui_tests/test_checkbox.rs:46  test_checkbox::selected_state`) and the
+  last steps. A value that changed while observed adds `Observed values`, each with its time.
+
+The helpers keep this working: a check names runtime values its expression can't show (`with_subject_name`), focus
+checks name the focused element (`ElementActions::describe`). A new helper does the same; test code propagates errors with `?`.

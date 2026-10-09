@@ -4,7 +4,9 @@
 //! trigger opens and controls the menu, which is labelled by it; keyboard opening focuses the first
 //! or last item; actions close the menu and return focus; a selection menu has checkbox items and
 //! stays open; sections and item slots are wired up.
-use assertr::prelude::*;
+use std::time::Duration;
+
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
@@ -192,7 +194,13 @@ pub async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .wait_for_inner_text("More pressed")
         .await?;
-    page.count_stays(MENU, 0).await?;
+    // Past the long-press delay (500 ms after the pointer down).
+    page.settle().await?;
+    assert_that!(|| page.count(MENU))
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(700))
+        .matches(eq(0))
+        .await;
 
     // A long press opens the menu.
     page.driver
@@ -201,7 +209,7 @@ pub async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     // A real timer: hold past the long-press delay (500 ms).
-    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+    tokio::time::sleep(Duration::from_millis(800)).await;
     page.driver.action_chain().release().perform().await?;
     let trigger_id = trigger.id().await?;
     page.element(MENU)

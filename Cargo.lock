@@ -64,6 +64,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "assertr"
+version = "0.8.0"
+dependencies = [
+ "borrow-for",
+ "num-traits",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
 name = "async-lock"
 version = "3.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -231,6 +241,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "borrow-for"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51bd8d7b925146b37a30598dfd8d1162c24f45a27fba4a61174e238c48cd5560"
+
+[[package]]
 name = "browser-test"
 version = "0.6.0"
 dependencies = [
@@ -245,6 +261,7 @@ dependencies = [
  "tokio",
  "tracing",
  "typed-builder",
+ "url",
 ]
 
 [[package]]
@@ -1673,7 +1690,7 @@ version = "0.5.0"
 dependencies = [
  "any_spawner",
  "anyhow",
- "assertr",
+ "assertr 0.8.0",
  "atomic_enum",
  "browser-test",
  "cargo_toml",
@@ -1726,7 +1743,7 @@ name = "leptonic-theme"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "assertr",
+ "assertr 0.7.1",
  "include_dir",
 ]
 
@@ -1773,8 +1790,6 @@ dependencies = [
 [[package]]
 name = "leptos-browser-test"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "480b1b698ee00e0b70e7e52f7647b2aa519bf97f8203998f27303b2e611259a7"
 dependencies = [
  "rootcause",
  "thiserror 2.0.21",

@@ -10,14 +10,11 @@
 //! "shouldn't allow the user to open the select if there are no items", "should support empty
 //! state", "should support multiple selection form integration with many items" (hidden inputs
 //! instead of a `<select>`, with validation and form reset).
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, role},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, role};
 
 const LISTBOX: &str = "[role=listbox]";
 
@@ -253,10 +250,10 @@ pub async fn many_items_selection_and_reset(page: &Page<'_>) -> Result<(), Repor
     page.wait_for_count("#sf-many .leptonic-FieldError", 0)
         .await?;
     page.element("#sf-many-reset").await?.click().await?;
-    wait_for("the submitted values")
-        .observing(|| form.form_values("many"))
-        .to_be_equal_to(vec![String::new()])
-        .await?;
+    assert_that!(|| form.form_values("many"))
+        .eventually_ok()
+        .matches(eq(vec![String::new()]))
+        .await;
     trigger.wait_for_inner_text("Select an item").await?;
     Ok(())
 }

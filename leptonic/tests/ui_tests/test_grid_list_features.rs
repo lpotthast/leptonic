@@ -7,14 +7,11 @@
 //!
 //! "should support onAction on items", `selectionBehavior="replace"` (Ctrl toggles, the action
 //! on double click), links, type-ahead, sections ("should support sections") and descriptions.
-use assertr::prelude::*;
+use assertr::{matchers::eq, prelude::*};
 use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::{
-    pages::{ElementActions, Page, PageActions, xpath},
-    polling::wait_for,
-};
+use crate::pages::{ElementActions, Page, PageActions, xpath};
 
 /// Focuses a fresh focusable element right before the grid list in `container` (so Tab enters
 /// the grid list).
@@ -232,17 +229,18 @@ pub async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
 pub async fn links_open_on_press(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/grid-list-features").await?;
     row(page, "#glf-links", "One").await?.click().await?;
-    wait_for("the URL's fragment")
-        .observing(|| async {
-            Ok(page
-                .driver
+    assert_that!(|| async {
+        Ok::<_, Report>(
+            page.driver
                 .current_url()
                 .await?
                 .fragment()
-                .map(str::to_owned))
-        })
-        .to_be_equal_to(Some("glf-one".to_owned()))
-        .await?;
+                .map(str::to_owned),
+        )
+    })
+    .eventually_ok()
+    .matches(eq(Some("glf-one".to_owned())))
+    .await;
     Ok(())
 }
 
