@@ -1,7 +1,7 @@
 //! Page context, health checks, and cleanup around browser tests.
 use std::{any::Any, borrow::Cow, panic::AssertUnwindSafe};
 
-use browser_test::{BrowserTest, ElementQueryWait, async_trait, thirtyfour::WebDriver};
+use browser_test::{BrowserTest, SessionSettings, async_trait, thirtyfour::WebDriver};
 use futures::FutureExt as _;
 use rootcause::{Report, prelude::ResultExt};
 
@@ -35,16 +35,8 @@ impl<T: for<'a> BrowserTest<Page<'a>>> BrowserTest<str> for FixtureTest<T> {
         self.0.description()
     }
 
-    fn timeouts(&self) -> Option<browser_test::Timeouts> {
-        self.0.timeouts()
-    }
-
-    fn element_query_wait(&self) -> Option<ElementQueryWait> {
-        self.0.element_query_wait()
-    }
-
-    fn fresh_session(&self) -> bool {
-        self.0.fresh_session()
+    fn session_settings(&self) -> SessionSettings {
+        self.0.session_settings()
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {

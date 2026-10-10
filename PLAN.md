@@ -500,9 +500,9 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
 - [ ] Fail-first: most 2026-10-07 regression tests were written together with their fix. Spot-check the important
   ones against the old code (revert the fix in a scratch copy; `git stash` is off limits).
 - [ ] Path dependencies on the user's checkouts; switch each to its crates.io release once published (the user's
-  call): `browser-test` (`../../browser-test`, 0.6.0; leptonic's and the book's browser tests), `assertr`
+  call): `browser-test` (`../../browser-test/browser-test`, 0.6.0; leptonic's and the book's browser tests), `assertr`
   (`../../assertr/assertr`, 0.8.0: eventual assertions, `Patience`, the thirtyfour integration; leptonic and the
-  book), `leptos-browser-test` (`../../leptos-browser-test`, 0.4.0, for `with_build_profile`; the book uses 0.3.0).
+  book).
 
 ## Book
 

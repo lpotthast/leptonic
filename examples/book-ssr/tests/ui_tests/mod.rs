@@ -6,7 +6,7 @@ pub mod test_sidebar;
 use std::{borrow::Cow, panic::AssertUnwindSafe};
 
 use browser_test::{
-    BrowserTest, BrowserTests, ElementQueryWait, Parallelism, async_trait, thirtyfour::WebDriver,
+    BrowserTest, BrowserTests, Parallelism, SessionSettings, async_trait, thirtyfour::WebDriver,
 };
 use futures::FutureExt as _;
 use leptos_browser_test::{Report, ResultExt};
@@ -20,8 +20,8 @@ use crate::{
 /// ([`after_all`]).
 pub fn all(parallelism: Parallelism) -> BrowserTests<str> {
     BrowserTests::sequential()
-        .with_group(checks(BrowserTests::parallel(parallelism)))
-        .with_group(after_all(
+        .with_nested(checks(BrowserTests::parallel(parallelism)))
+        .with_nested(after_all(
             BrowserTests::sequential().named("after all").run_always(),
         ))
 }
@@ -118,16 +118,12 @@ impl<T: BrowserTest<str>> BrowserTest<str> for CheckPageErrors<T> {
         self.0.name()
     }
 
-    fn timeouts(&self) -> Option<browser_test::Timeouts> {
-        self.0.timeouts()
+    fn description(&self) -> Option<Cow<'_, str>> {
+        self.0.description()
     }
 
-    fn element_query_wait(&self) -> Option<ElementQueryWait> {
-        self.0.element_query_wait()
-    }
-
-    fn fresh_session(&self) -> bool {
-        self.0.fresh_session()
+    fn session_settings(&self) -> SessionSettings {
+        self.0.session_settings()
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {

@@ -88,13 +88,20 @@ Headless Shell, 8 tests in parallel by default, `thirtyfour` re-exported as `bro
 - **Running**: `just browser-test` (`cargo test -p leptonic --test browser_test`; a plain `cargo test` or `just test`
   skips the suite, `[[test]] test = false`). Variables (documented in `tests/browser_test.rs`):
   `BROWSER_TEST_VISIBLE=1` shows the browser (`just browser-test-visible`), `BROWSER_TEST_PAUSE=1` pauses before each
-  test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output, `BROWSER_TEST_LOG_STEPS=1` logs every step,
+  test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output, `BROWSER_TEST_APP_OUTPUT=1` the test-app's
+  (its build and server logs), `BROWSER_TEST_LOG=<filter>` chooses the logs (below),
   `BROWSER_TEST_PARALLELISM=<n>` (`1`: sequential; every parallel test is a browser, "Speed and memory"); selection:
   "Selecting tests". `TEST_APP_TARGET_DIR=<dir>` builds the test-app and its site (`<dir>/browser-test-site`)
   there instead of in the inherited `CARGO_TARGET_DIR` (agents: `CARGO_TARGET_DIR=<repo>/target/agents
   TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`). Two suites with the same target dir must never run at
   the same time; with different ones they can. Ctrl-C cancels a run cleanly. Sessions keep their Chrome profiles in
   `<target>/tmp/browser-test-profiles` (never in `/tmp`, a RAM disk here).
+- **Logs**: failure reports and the run summary explain a failing test, so a run logs little: milestones, warnings and
+  errors at `info` (the default of `BROWSER_TEST_LOG`, which the `just` recipes set explicitly, to edit there).
+  Noisy events belong at `debug`: each test's start and timing, every step with its duration (no per-step slowness
+  warnings; the summary lists the slowest steps). `BROWSER_TEST_LOG` takes a level (`debug`) or levels per target
+  (`info,browser_test::step=debug`), as `tracing-subscriber`'s `Targets` parses them; a plain `debug` includes tokio's
+  events (`debug,tokio=warn,runtime=warn`). One line per event.
 - **Toolchain**: the installed `wasm-bindgen` CLI must match the `wasm-bindgen` version in the test-app's
   `Cargo.lock`, otherwise `cargo leptos serve` fails: update the lockfile (`cargo update -p wasm-bindgen -p js-sys
   -p web-sys -p wasm-bindgen-futures`) or the CLI.

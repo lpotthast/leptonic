@@ -10,7 +10,7 @@ use crate::pages::Page;
 /// Runs last, also in filtered runs: fails if any page made the server panic while rendering, which
 /// the browser alone would not notice (the page may still load, or hydrate over a broken server
 /// render). The failure lists every panic: the request it happened in, where, and its message.
-pub struct ServerPanicTests {}
+pub struct ServerPanicTests;
 
 #[async_trait]
 impl<'page> BrowserTest<Page<'page>> for ServerPanicTests {

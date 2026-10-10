@@ -113,9 +113,9 @@ assertr = { path = "../../../assertr/assertr", default-features = false, feature
 # The user's checkout, as in leptonic: 0.6.0 is unreleased (session reuse, Chrome Headless Shell, failure reports).
 # `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
 # without compiling `aws-lc-rs`.
-browser-test = { path = "../../../browser-test", default-features = false, features = ["rustls-no-provider"] }
+browser-test = { path = "../../../browser-test/browser-test", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std"] }
-leptos-browser-test = { version = "0.3.0", default-features = false }
+leptos-browser-test = { version = "0.4.0", default-features = false }
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"] }
 serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
 syn = { version = "3.0.6", default-features = false, features = ["clone-impls", "full", "parsing"] }

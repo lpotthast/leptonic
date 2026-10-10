@@ -165,11 +165,10 @@ any_spawner = { version = "0.3.0", default-features = false, features = ["tracin
 assertr = { path = "../../assertr/assertr", default-features = false, features = ["std", "num", "thirtyfour-cdp"] }
 # `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
 # without compiling `aws-lc-rs`.
-browser-test = { path = "../../browser-test", default-features = false, features = ["rustls-no-provider"] }
+browser-test = { path = "../../browser-test/browser-test", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
 # `http::Method` for WebDriver commands thirtyfour has no method for (`computedlabel`).
-# The user's checkout: `LeptosTestAppConfig::with_build_profile` (unreleased).
-leptos-browser-test = { path = "../../leptos-browser-test", default-features = false }
+leptos-browser-test = { version = "0.4.0", default-features = false }
 # `effects`: Effects run in native unit tests (`testing::with_owner`); Leptos enables it only for csr/hydrate.
 reactive_graph = { version = "0.2.15", default-features = false, features = ["effects"] }
 rootcause = { version = "0.13.0", default-features = false }

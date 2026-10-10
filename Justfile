@@ -106,21 +106,21 @@ verify:
   just unit-test
   just browser-test
 
-# Run browser tests (headless by default)
+# Run browser tests (headless by default). `BROWSER_TEST_LOG` filters the logs (use for example: `debug`, `info,browser_test::step=debug`).
 browser-test:
-  cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+  BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
 # Run browser tests with visible browser (for debugging)
 browser-test-visible:
-  BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+  BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
 # Run the book's browser tests (every documentation page: errors, dark theme, links, phone width, Markdown export).
 book-browser-test:
-  cd ./examples/book-ssr && cargo test --test browser_test -- --nocapture
+  cd ./examples/book-ssr && BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} cargo test --test browser_test -- --nocapture
 
 # Run the book's browser tests with visible browser (for debugging)
 book-browser-test-visible:
-  cd ./examples/book-ssr && BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --test browser_test -- --nocapture
+  cd ./examples/book-ssr && BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --test browser_test -- --nocapture
 
 # Serve the book on its own port, target directory and site output, next to `just serve` (default port 4300).
 # Builds against the live library sources. The reload port is port + 1.

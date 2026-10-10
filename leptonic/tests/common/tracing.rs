@@ -1,33 +1,44 @@
+use std::str::FromStr;
+
+use leptos_browser_test::{Report, report};
 use tracing_subscriber::{
-    Layer, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
+    Layer, filter::Targets, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
 };
 
-pub fn init_subscriber() {
-    let log_filter = tracing_subscriber::filter::Targets::new()
-        .with_default(tracing::Level::INFO)
-        .with_target("tokio", tracing::Level::WARN)
-        .with_target("runtime", tracing::Level::WARN)
-        // `BROWSER_TEST_LOG_STEPS=1`: log every `browser_test::step` with its duration.
-        .with_target(
-            "browser_test::step",
-            if std::env::var("BROWSER_TEST_LOG_STEPS").is_ok_and(|v| v == "1") {
-                tracing::Level::DEBUG
-            } else {
-                tracing::Level::INFO
-            },
-        );
+/// The log filter when `BROWSER_TEST_LOG` is unset or empty: the run's milestones, warnings and errors. A failing test
+/// is explained by its failure report, not by logs.
+const DEFAULT_LOG_FILTER: &str = "info,tokio=warn,runtime=warn";
+
+/// Logs one line per event, filtered by `BROWSER_TEST_LOG`: a level (`debug`) or levels per target
+/// (`info,browser_test::step=debug` logs every step with its duration), as `tracing-subscriber`'s `Targets` parses
+/// them. A plain level also applies to tokio's events; `debug,tokio=warn,runtime=warn` keeps them out.
+///
+/// # Errors
+///
+/// Returns an error if `BROWSER_TEST_LOG` is no such filter.
+pub fn init_subscriber() -> Result<(), Report> {
+    let directives = match std::env::var("BROWSER_TEST_LOG") {
+        Ok(directives) if !directives.is_empty() => directives,
+        _ => DEFAULT_LOG_FILTER.to_owned(),
+    };
+    let log_filter = Targets::from_str(&directives).map_err(|error| {
+        report!(
+            "BROWSER_TEST_LOG is {directives:?}, expected a level (`debug`) or levels per target \
+             (`info,browser_test::step=debug`): {error}"
+        )
+        .into_dynamic()
+    })?;
 
     let fmt_layer = tracing_subscriber::fmt::layer()
-        .pretty()
+        .compact()
         .with_file(true)
         .with_line_number(true)
         .with_ansi(true)
         .with_thread_names(false)
         .with_thread_ids(false);
 
-    let fmt_layer_filtered = fmt_layer.with_filter(log_filter);
-
     tracing_subscriber::Registry::default()
-        .with(fmt_layer_filtered)
+        .with(fmt_layer.with_filter(log_filter))
         .init();
+    Ok(())
 }

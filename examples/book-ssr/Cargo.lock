@@ -417,13 +417,13 @@ dependencies = [
  "browser-test-macros",
  "chrome-for-testing-manager",
  "futures-util",
+ "nix",
  "rootcause",
  "serde_json",
  "thirtyfour",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
- "typed-builder",
  "url",
 ]
 
@@ -2205,9 +2205,9 @@ dependencies = [
 
 [[package]]
 name = "leptos-browser-test"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "480b1b698ee00e0b70e7e52f7647b2aa519bf97f8203998f27303b2e611259a7"
+checksum = "1e7fceee6124465ce71890202e2415307880558d2e332ea2c8e187d47fd3fe78"
 dependencies = [
  "rootcause",
  "thiserror 2.0.21",
