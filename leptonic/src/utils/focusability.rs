@@ -1,7 +1,7 @@
-// Upstream: react-aria/src/utils/isFocusable.ts @ 99e6102368
-// Upstream: react-aria/src/utils/isElementVisible.ts @ 99e6102368
-// Upstream: react-aria/src/utils/keyboard.tsx @ 99e6102368
-// Upstream: react-aria/test/utils/isFocusable.test.tsx @ 99e6102368
+// Upstream: react-aria/src/utils/isFocusable.ts @ 740c6c5c4a
+// Upstream: react-aria/src/utils/isElementVisible.ts @ 740c6c5c4a
+// Upstream: react-aria/src/utils/keyboard.tsx @ 740c6c5c4a
+// Upstream: react-aria/test/utils/isFocusable.test.tsx @ 740c6c5c4a
 //! Focusability and tabbability detection utilities.
 //!
 //! Shared infrastructure for determining whether DOM elements are focusable or tabbable,
@@ -15,10 +15,6 @@
 // - The prevent-focus attribute is `data-leptonic-prevent-focus` (react-aria:
 //   `data-react-aria-prevent-focus`), as leptonic's other marker attributes
 //   (`data-leptonic-top-layer`).
-//
-// ## DIFFERENT BEHAVIOR
-// - `is_tabbable` also rejects a negative `tabIndex` other than -1 (e.g. `tabindex="-2"`), which
-//   the browser never tabs to. React-aria's selector only excludes `tabindex="-1"`.
 //
 // =============================================================================
 
@@ -35,10 +31,10 @@ pub enum Focusability {
     Tabbable,
 }
 
-/// Selector for focusable elements.
-///
-/// Aligned with react-aria's `FOCUSABLE_ELEMENT_SELECTOR`. Each segment includes
-/// `:not([hidden])` to exclude elements with the HTML `hidden` attribute.
+/// Selector for focusable elements: react-aria's `FOCUSABLE_ELEMENT_SELECTOR`, character for
+/// character (built there by joining its `focusableElements` with `:not([hidden]),`, so the last
+/// of them, `permission`, has no `:not([hidden])`). Any `tabindex` value makes an element
+/// focusable, also an invalid one.
 pub const FOCUSABLE_SELECTOR: &str = concat!(
     "input:not([disabled]):not([type=hidden]):not([hidden]),",
     "select:not([disabled]):not([hidden]),",
@@ -52,15 +48,14 @@ pub const FOCUSABLE_SELECTOR: &str = concat!(
     "embed:not([hidden]),",
     "audio[controls]:not([hidden]),",
     "video[controls]:not([hidden]),",
-    "permission:not([hidden]),",
     "[contenteditable]:not([contenteditable^=\"false\"]):not([hidden]),",
+    "permission,",
     "[tabindex]:not([disabled]):not([hidden])"
 );
 
-/// Selector for tabbable elements (focusable elements that are reachable via Tab).
-///
-/// Extends `FOCUSABLE_SELECTOR` by additionally excluding elements with `tabindex="-1"`
-/// and adding `:not([disabled])` to the `[tabindex]` segment.
+/// Selector for tabbable elements (focusable elements that are reachable via Tab): react-aria's
+/// `TABBABLE_ELEMENT_SELECTOR`, character for character. It excludes exactly `tabindex="-1"`:
+/// other negative values (`-2`) and invalid ones match, as in react-aria.
 pub const TABBABLE_SELECTOR: &str = concat!(
     "input:not([disabled]):not([type=hidden]):not([hidden]):not([tabindex=\"-1\"]),",
     "select:not([disabled]):not([hidden]):not([tabindex=\"-1\"]),",
@@ -74,9 +69,9 @@ pub const TABBABLE_SELECTOR: &str = concat!(
     "embed:not([hidden]):not([tabindex=\"-1\"]),",
     "audio[controls]:not([hidden]):not([tabindex=\"-1\"]),",
     "video[controls]:not([hidden]):not([tabindex=\"-1\"]),",
-    "permission:not([hidden]):not([tabindex=\"-1\"]),",
     "[contenteditable]:not([contenteditable^=\"false\"]):not([hidden]):not([tabindex=\"-1\"]),",
-    "[tabindex]:not([tabindex=\"-1\"]):not([disabled]):not([hidden])"
+    "permission:not([hidden]):not([tabindex=\"-1\"]),",
+    "[tabindex]:not([tabindex=\"-1\"]):not([disabled])"
 );
 
 /// Check if an element or any ancestor has the `inert` property set.
@@ -283,8 +278,8 @@ pub(crate) fn is_in_top_layer(element: &web_sys::Element) -> bool {
 
 /// Check if an element is tabbable (reachable via Tab key).
 ///
-/// An element is tabbable if it matches the tabbable selector,
-/// is visible, is not inside an `inert` subtree, and has a non-negative tabindex.
+/// An element is tabbable if it matches the tabbable selector, is visible and is not inside an
+/// `inert` subtree.
 pub fn is_tabbable(element: &web_sys::Element) -> bool {
     if let Ok(matches) = element.matches(TABBABLE_SELECTOR) {
         if !matches {
@@ -299,17 +294,6 @@ pub fn is_tabbable(element: &web_sys::Element) -> bool {
     }
 
     if !is_element_visible(element) {
-        return false;
-    }
-
-    // A negative `tabindex` other than -1 (the selector rejects that one). The attribute, not the
-    // IDL `tabIndex`, which is -1 by default for some focusable elements (e.g. contenteditable
-    // hosts in some browsers).
-    if element
-        .get_attribute("tabindex")
-        .and_then(|tabindex| tabindex.trim().parse::<i32>().ok())
-        .is_some_and(|tabindex| tabindex < 0)
-    {
         return false;
     }
 
@@ -501,4 +485,67 @@ pub(crate) fn is_text_input_or_active_text_input(
 /// Based on react-aria's `willOpenKeyboard` from `keyboard.tsx`.
 pub fn will_open_keyboard(target: &web_sys::Element) -> bool {
     is_text_input(target)
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+
+    /// react-aria's `focusableElements` (`utils/isFocusable.ts`).
+    const UPSTREAM_FOCUSABLE_ELEMENTS: [&str; 14] = [
+        "input:not([disabled]):not([type=hidden])",
+        "select:not([disabled])",
+        "textarea:not([disabled])",
+        "button:not([disabled])",
+        "a[href]",
+        "area[href]",
+        "summary",
+        "iframe",
+        "object",
+        "embed",
+        "audio[controls]",
+        "video[controls]",
+        "[contenteditable]:not([contenteditable^=\"false\"])",
+        "permission",
+    ];
+
+    #[test]
+    fn focusable_selector_is_react_arias() {
+        // FOCUSABLE_ELEMENT_SELECTOR = focusableElements.join(':not([hidden]),') +
+        //   ',[tabindex]:not([disabled]):not([hidden])'
+        let upstream = UPSTREAM_FOCUSABLE_ELEMENTS.join(":not([hidden]),")
+            + ",[tabindex]:not([disabled]):not([hidden])";
+        assert_that!(FOCUSABLE_SELECTOR).is_equal_to(upstream.as_str());
+    }
+
+    #[test]
+    fn tabbable_selector_is_react_arias() {
+        // focusableElements.push('[tabindex]:not([tabindex="-1"]):not([disabled])');
+        // TABBABLE_ELEMENT_SELECTOR =
+        //   focusableElements.join(':not([hidden]):not([tabindex="-1"]),')
+        let mut elements = UPSTREAM_FOCUSABLE_ELEMENTS.to_vec();
+        elements.push("[tabindex]:not([tabindex=\"-1\"]):not([disabled])");
+        let upstream = elements.join(":not([hidden]):not([tabindex=\"-1\"]),");
+        assert_that!(TABBABLE_SELECTOR).is_equal_to(upstream.as_str());
+    }
+
+    /// The only `tabindex` value the tabbable selector excludes is exactly `-1`: `-2`, `0`,
+    /// positive and invalid values (and `-1` with whitespace) all match, as in react-aria.
+    #[test]
+    fn only_tabindex_minus_one_is_excluded_from_tabbing() {
+        let tabindex_conditions: Vec<&str> = TABBABLE_SELECTOR
+            .split("[tabindex")
+            .skip(1)
+            .map(|rest| rest.split(']').next().unwrap_or_default())
+            .collect();
+        assert_that!(
+            tabindex_conditions
+                .iter()
+                .all(|c| *c == "=\"-1\"" || c.is_empty())
+        )
+        .is_true();
+        assert_that!(FOCUSABLE_SELECTOR.contains("tabindex=")).is_false();
+    }
 }

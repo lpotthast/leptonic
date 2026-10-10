@@ -125,26 +125,13 @@ pub fn PageUseTextField() -> impl IntoView {
                             <TableCell><Code inline=true>"set_value(value)"</Code></TableCell>
                             <TableCell>"Changes the value."</TableCell>
                         </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"with_on_change(callback)"</Code></TableCell>
-                            <TableCell>"The same state, also calling "<Code inline=true>"callback"</Code>" when the value changes."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"TextFieldState::new(value, set_value)"</Code></TableCell>
-                            <TableCell>
-                                "A state whose value lives elsewhere, such as the input text of a "
-                                <Link href=routes::doc::combobox::Hook.materialize()>"combobox"</Link>"."
-                            </TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"TextFieldState::from(signal)"</Code></TableCell>
-                            <TableCell>
-                                "A state bound to an "<Code inline=true>"RwSignal<String>"</Code>" or a "
-                                <Code inline=true>"(ReadSignal, WriteSignal)"</Code>" pair, like Leptos\u{2019} "
-                                <Code inline=true>"bind:value"</Code>"."
-                            </TableCell>
-                        </TableRow>
                     </DocTable>
+                    <p>
+                        "A value that lives elsewhere, such as the input text of a "
+                        <Link href=routes::doc::combobox::Hook.materialize()>"combobox"</Link>", is bound with "
+                        <Code inline=true>"value: Some(ValueBinding::new(signal, callback))"</Code>": the field reads the signal "
+                        "and hands every change to the callback."
+                    </p>
                 </Section>
             </Section>
 

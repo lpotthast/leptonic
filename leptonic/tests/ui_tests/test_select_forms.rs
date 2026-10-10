@@ -144,7 +144,7 @@ pub async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(select)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -198,7 +198,7 @@ pub async fn required_blocks_submission(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(page.element("#sf-submit select").await?)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_empty();
     Ok(())
 }
@@ -281,7 +281,7 @@ pub async fn many_items_validation(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(required)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();

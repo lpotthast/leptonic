@@ -457,7 +457,7 @@ pub fn Menu(
 
     // Inside a trigger: labelled by the trigger.
     let trigger_id = trigger_ctx.as_ref().map(|ctx| ctx.trigger.trigger_id);
-    let labelledby = MaybeProp::derive(move || {
+    let labelledby = Signal::derive(move || {
         aria_labelledby.clone().or_else(|| {
             aria_label
                 .read()
@@ -704,12 +704,17 @@ pub fn SubmenuTrigger(
         should_close_on_interact_outside: StoredValue::new(should_close_on_interact_outside),
         aria_labelledby: StoredValue::new(submenu_props.aria_labelledby.clone()),
     };
+    // The popover finds the submenu's state and the trigger item here; an untitled dialog in it
+    // is named by the trigger item (whose id no `PressResponder` assigns).
+    let dialog_trigger = DialogTriggerContext::new(state.overlay, trigger);
+    dialog_trigger
+        .trigger_id
+        .set(submenu_props.aria_labelledby.clone());
     scoped_view(
         move || {
             provide_context(SubmenuItemContext(Some((key, item))));
             provide_context(SubmenuMenuContext(Some((submenu_props, submenu))));
-            // The popover finds the submenu's state and the trigger item here.
-            provide_context(DialogTriggerContext::new(state.overlay, trigger));
+            provide_context(dialog_trigger);
             provide_context(Some(popover));
         },
         children,

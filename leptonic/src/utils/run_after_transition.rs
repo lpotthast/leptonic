@@ -8,14 +8,14 @@
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// ## OMITTED FEATURES
-// - The cancel function `runAfterTransition` returns: no caller cancels (react-aria's don't
-//   either).
-//
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - The global `transitionrun`/`transitionend` listeners are registered on first use instead of
 //   at module load (Rust has no module initializers). Transitions that started before the first
 //   call are not tracked. React-aria: registers when the module loads.
+//
+// ## OMITTED FEATURES
+// - The cancel function `runAfterTransition` returns: no caller cancels (react-aria's don't
+//   either).
 //
 // =============================================================================
 

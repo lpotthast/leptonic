@@ -416,6 +416,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "hooks",
+        name: "focusability",
+        title: "Focusability",
+        view: || view! { <hooks::focusability::PageHookFocusability /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
         name: "has-tabbable-child",
         title: "Has Tabbable Child",
         view: || view! { <hooks::has_tabbable_child::PageHookHasTabbableChild /> }.into_any(),

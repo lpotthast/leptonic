@@ -14,8 +14,6 @@ use crate::{EventHandler, IntoAttrs, OnEvent};
 //   none when there are no callbacks): `is_disabled` is reactive.
 // - A blur is reported only after a reported focus, once: Chrome fires its own blur for an
 //   element disabled while focused after the synthetic one (react-aria would report both).
-// - The disabled-while-focused observer is set up only with a blur callback (`on_blur` or
-//   `on_focus_change`), react-aria: whenever the focus handler is attached.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - The blur handler reads `is_disabled` with `try_get_untracked` and runs callbacks with
@@ -105,27 +103,23 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         // disabled while focused only after the synthetic blur was dispatched.
         let has_focus = StoredValue::new(false);
 
-        // Only blurs that are reported need the observer (react-aria: the synthetic blur event
-        // calls `onBlur`).
-        let reports_blur = on_blur.is_some() || on_focus_change.is_some();
-
         let handle_focus = move |e: FocusEvent| {
-            // The event is the element's own (as for blur: its target, retargeted to a shadow
-            // host, is the element), and the active element is the focused one, in case a
-            // previously chained focus handler already moved focus somewhere else (react-aria:
-            // `getActiveElement() === getEventTarget(e)`, across shadow roots and iframes).
-            let target = e.expect_target();
-            let focused = shadow_dom::get_event_target(&e).unwrap_or_else(|| target.clone());
-            let owner_doc = focused
+            // The event is the element's own, and the active element is the focused one, in case
+            // a previously chained focus handler already moved focus somewhere else (react-aria:
+            // `getEventTarget(e) === e.currentTarget && getEventTarget(e) === activeElement`,
+            // across shadow roots and iframes). Focus inside a shadow host's own shadow root is
+            // not the host's.
+            let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
+            let owner_doc = target
                 .dyn_ref::<web_sys::Node>()
                 .and_then(web_sys::Node::owner_document);
             let active = owner_doc.as_ref().and_then(shadow_dom::get_active_element);
 
             if target == e.expect_current_target()
-                && active == focused.to_element()
+                && active == target.to_element()
                 && !disabled.get_untracked()
             {
-                if reports_blur && let Some(el) = target.dyn_ref::<web_sys::Element>() {
+                if let Some(el) = target.dyn_ref::<web_sys::Element>() {
                     blur_observer.set_value(SyntheticBlurObserver::observe(el));
                 }
                 has_focus.set_value(true);
@@ -151,7 +145,8 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
 
             // Removing a focused element blurs it after its owner was disposed: the callbacks
             // may be gone then (`try_run`).
-            if e.expect_target() == e.expect_current_target()
+            let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
+            if target == e.expect_current_target()
                 && !is_disabled
                 && has_focus.try_update_value(|f| std::mem::replace(f, false)) == Some(true)
             {

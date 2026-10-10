@@ -37,6 +37,11 @@ use crate::{
 //   option as `<a>` with them, or keep another element (links then open through a temporary
 //   `<a>`).
 //
+// ## DIFFERENT BEHAVIOR
+// - Option ids escape the key's whitespace (`Key::id_fragment`), so different keys never share
+//   an id. react-aria removes the whitespace and prints integer and string keys alike (`"Ice
+//   cream"` and `"Icecream"`, `1` and `"1"` get the same id).
+//
 // =============================================================================
 
 /// Input of [`use_option`].

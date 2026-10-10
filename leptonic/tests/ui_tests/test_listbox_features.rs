@@ -136,14 +136,7 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
     selection.wait_for_inner_text("Cat").await?;
     dog.click().await?;
     selection.wait_for_inner_text("Dog").await?;
-    page.low_level()
-        .driver()
-        .action_chain()
-        .key_down(Key::Control)
-        .click_element(&kangaroo)
-        .key_up(Key::Control)
-        .perform()
-        .await?;
+    page.click_with_primary_modifier(&kangaroo).await?;
     selection.wait_for_inner_text("Dog,Kangaroo").await?;
     page.low_level()
         .driver()
@@ -168,9 +161,10 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// With replace selection behavior, arrow keys move the selection with the focus, Ctrl+arrow moves
-/// only the focus, Ctrl+Space toggles and Enter performs the action ("replaces selection as focus
-/// moves with arrow keys", "navigates focus when Control is held (non-contiguous)").
+/// With replace selection behavior, arrow keys move the selection with the focus, Ctrl+arrow
+/// (Option+arrow on Apple devices) moves only the focus, Ctrl+Space toggles and Enter performs the
+/// action ("replaces selection as focus moves with arrow keys", "navigates focus when Control is
+/// held (non-contiguous)").
 #[browser_test]
 pub async fn replace_selection_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -183,12 +177,14 @@ pub async fn replace_selection_by_keyboard(page: &Page<'_>) -> Result<(), Report
     page.send_keys(Key::Down).await?;
     page.wait_for_focus(&kangaroo).await?;
     selection.wait_for_inner_text("Kangaroo").await?;
-    page.send_keys(Key::Control + Key::Up).await?;
+    page.send_keys(page.non_contiguous_selection_modifier().await? + Key::Up)
+        .await?;
     page.wait_for_focus(&dog).await?;
     selection
         .inner_text_stays("Kangaroo", std::time::Duration::from_millis(100))
         .await?;
-    page.send_keys(Key::Control + " ").await?;
+    page.send_keys(page.non_contiguous_selection_modifier().await? + " ")
+        .await?;
     selection.wait_for_inner_text("Dog,Kangaroo").await?;
     page.send_keys(Key::Enter).await?;
     page.element("#lbf-replace-actions")

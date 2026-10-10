@@ -129,7 +129,7 @@ pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
         (Key::End, "5"),
         (Key::Down, "4"),
     ] {
-        input.send_keys(key).await?;
+        input.type_keys(key).await?;
         value.wait_for_inner_text(expected).await?;
     }
     Ok(())
@@ -156,9 +156,11 @@ pub async fn enter_commits_and_submits(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element(INPUT).await?;
     input.click().await?;
-    input.send_keys(Key::Control + "a").await?;
-    input.send_keys("3").await?;
-    input.send_keys(Key::Enter).await?;
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
+    input.type_keys("3").await?;
+    input.type_keys(Key::Enter).await?;
     page.element(VALUE).await?.wait_for_inner_text("3").await?;
     page.element("#test-nf-submits")
         .await?

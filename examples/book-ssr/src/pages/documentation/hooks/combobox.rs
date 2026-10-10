@@ -126,7 +126,9 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "The initial input text. "<Code inline=true>"None"</Code>" starts with the selected option\u{2019}s text."
                         </ApiRow>
                         <ApiRow name="input_value" ty="Option<ValueBinding<String>>" default="None">
-                            "The input text as app state ("<Code inline=true>"Some(rw_signal.into())"</Code>"), replacing "<Code inline=true>"default_input_value"</Code>"."
+                            "The input text as app state ("<Code inline=true>"Some(rw_signal.into())"</Code>"), replacing "<Code inline=true>"default_input_value"</Code>
+                            ". Bound text doesn\u{2019}t follow a change of the selected option\u{2019}s own text (e.g. reloaded "
+                            "options): update it yourself."
                         </ApiRow>
                         <ApiRow name="on_input_change" ty="Option<Callback<String>>" default="None">
                             "Called when the input text changes."

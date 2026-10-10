@@ -48,18 +48,6 @@ async fn column_header(page: &Page<'_>, label: &str, text: &str) -> Result<WebEl
         .await
 }
 
-async fn click_with_control(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
-    page.low_level()
-        .driver()
-        .action_chain()
-        .key_down(Key::Control)
-        .click_element(element)
-        .key_up(Key::Control)
-        .perform()
-        .await?;
-    Ok(())
-}
-
 /// Wait until the selection of the table `id` is `expected`, then check that it took
 /// `changes` selection changes.
 async fn expect_selection(
@@ -120,19 +108,33 @@ pub async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Rep
     bootmgr.click().await?;
     expect_selection(page, "replace", "3", 1).await?;
     bootmgr.wait_for_attr("data-selected", Some("true")).await?;
+    // Its cells share the row's selection; they know their column.
+    let bootmgr_name = bootmgr.element("[role=rowheader]").await?;
+    bootmgr_name
+        .wait_for_attr("data-selected", Some("true"))
+        .await?;
+    assert_that!(bootmgr_name)
+        .has_attribute("data-column-index")
+        .await
+        .is_equal_to("0");
+    assert_that!(bootmgr)
+        .has_attribute("data-selection-mode")
+        .await
+        .is_equal_to("multiple");
     // Without modifiers: replaced.
     program_files.click().await?;
     expect_selection(page, "replace", "2", 2).await?;
     bootmgr
         .wait_for_attr("aria-selected", Some("false"))
         .await?;
+    bootmgr_name.wait_for_attr("data-selected", None).await?;
     // Pressing it again doesn't deselect it.
     program_files.click().await?;
     selection_stays(page, "replace", "2", 2).await?;
     // With a modifier: toggled.
-    click_with_control(page, &bootmgr).await?;
+    page.click_with_primary_modifier(&bootmgr).await?;
     expect_selection(page, "replace", "2,3", 3).await?;
-    click_with_control(page, &program_files).await?;
+    page.click_with_primary_modifier(&program_files).await?;
     expect_selection(page, "replace", "3", 4).await?;
     Ok(())
 }
@@ -145,11 +147,11 @@ pub async fn replace_selection_in_single_mode(page: &Page<'_>) -> Result<(), Rep
     page.goto_path(PATH).await?;
     let bootmgr = row(page, SINGLE, "bootmgr").await?;
     let program_files = row(page, SINGLE, "Program Files").await?;
-    click_with_control(page, &bootmgr).await?;
+    page.click_with_primary_modifier(&bootmgr).await?;
     expect_selection(page, "single-replace", "3", 1).await?;
-    click_with_control(page, &program_files).await?;
+    page.click_with_primary_modifier(&program_files).await?;
     expect_selection(page, "single-replace", "2", 2).await?;
-    click_with_control(page, &program_files).await?;
+    page.click_with_primary_modifier(&program_files).await?;
     expect_selection(page, "single-replace", "", 3).await?;
     Ok(())
 }
@@ -362,7 +364,7 @@ pub async fn select_all_shortcut_in_single_mode(page: &Page<'_>) -> Result<(), R
     let games = row(page, "Press down table", "Games").await?;
     games.focus().await?;
     page.wait_for_focus(&games).await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     page.element("#test-ts-press-down-changes")
         .await?
         .inner_text_stays("0", std::time::Duration::from_millis(100))
@@ -482,10 +484,31 @@ pub async fn hover_and_focus_states(page: &Page<'_>) -> Result<(), Report> {
     games_header
         .wait_for_attr("data-focus-visible", Some("true"))
         .await?;
+    // The focused cell, and keyboard focus within its row (after the selection checkbox column).
+    games_header
+        .wait_for_attr("data-focused", Some("true"))
+        .await?;
+    games_header
+        .wait_for_attr("data-focus-visible-within-row", Some("true"))
+        .await?;
+    assert_that!(games_header)
+        .has_attribute("data-column-index")
+        .await
+        .is_equal_to("1");
+    escape_games
+        .wait_for_attr("data-focus-visible-within", Some("true"))
+        .await?;
     page.send_keys(Key::Up).await?;
     page.wait_for_focus(&name_header).await?;
     name_header
         .wait_for_attr("data-focus-visible", Some("true"))
+        .await?;
+    games_header.wait_for_attr("data-focused", None).await?;
+    games_header
+        .wait_for_attr("data-focus-visible-within-row", None)
+        .await?;
+    escape_games
+        .wait_for_attr("data-focus-visible-within", None)
         .await?;
     Ok(())
 }

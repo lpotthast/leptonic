@@ -571,7 +571,7 @@ fn TableBodySections() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="expand_button_attrs" ty="PreventFocusAttr">"Spread onto the expand button too: focus walks skip it."</ApiRow>
                     <ApiRow name="is_expanded, has_child_rows" ty="Signal<bool>">"Tree tables: whether the row\u{2019}s child rows are shown, and whether it has any."</ApiRow>
-                    <ApiRow name="level" ty="Signal<Option<usize>>">"The row\u{2019}s level in a tree table, from 1 for top-level rows; "<Code inline=true>"None"</Code>" otherwise."</ApiRow>
+                    <ApiRow name="level" ty="Signal<usize>">"The row\u{2019}s level, from 1 for top-level rows (always 1 outside tree tables)."</ApiRow>
                 </ApiTable>
             </Section>
 

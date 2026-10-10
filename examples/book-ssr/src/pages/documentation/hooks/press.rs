@@ -28,7 +28,8 @@ pub fn PageUsePress() -> impl IntoView {
 
                 <ApiTable kind=ApiKind::Input of="UsePressInput">
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                        "Whether the element is disabled. A disabled element ignores all press interactions."
+                        "Whether the element is disabled. A disabled element ignores all press interactions and lets its pointer, "
+                        "key and click events propagate; the default action of its clicks is prevented."
                     </ApiRow>
                     <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">
                         "Called when a press completes: the pointer or key is released over the element."

@@ -251,8 +251,12 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     let collection_keydown = collection.on_keydown;
 
     // Shortcuts ignore auto-repeated key presses (`use_keyboard`); the arrow keys below don't.
+    // A read-only combo box handles no keys (react-aria passes only the caller's `onKeyDown`).
     let shortcuts = KeyboardShortcuts::new()
         .on(Shortcut::new(KeyboardKey::Enter), move |_| {
+            if is_read_only.get_untracked() {
+                return ShortcutOutcome::Ignored;
+            }
             let was_open = untrack(|| state.is_open());
             state.commit();
             // Enter submits forms only while the popover is closed.
@@ -262,6 +266,9 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             }
         })
         .on(Shortcut::new(KeyboardKey::Tab), move |_| {
+            if is_read_only.get_untracked() {
+                return ShortcutOutcome::Ignored;
+            }
             if untrack(|| state.is_open()) {
                 state.commit();
             }
@@ -271,6 +278,9 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             }
         })
         .on(Shortcut::new(KeyboardKey::Escape), move |_| {
+            if is_read_only.get_untracked() {
+                return ShortcutOutcome::Ignored;
+            }
             let continue_propagation = !untrack(|| state.list.selection.is_empty())
                 || untrack(|| state.input_value()).is_empty()
                 || untrack(|| state.allows_custom_value());
@@ -280,7 +290,8 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 continue_propagation,
             }
         });
-    // The arrow keys also act on auto-repeated key presses (react-aria: `allowRepeats`).
+    // The arrow keys also act on auto-repeated key presses (react-aria: `allowRepeats`), but not
+    // while an input method editor composes text.
     let arrow_shortcuts = KeyboardShortcuts::new()
         .on(Shortcut::new(KeyboardKey::ArrowDown), move |_| {
             state.open(Some(FocusStrategy::First), MenuTriggerAction::Manual);
@@ -427,14 +438,16 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         on_blur: Some(on_input_blur),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
             if is_read_only.get_untracked() {
+                e.continue_propagation();
                 return;
             }
             if untrack(|| state.is_open()) {
                 collection_keydown.call(e.event().clone());
             }
-            if arrow_shortcuts
-                .handle(e.event())
-                .is_some_and(|outcome| !outcome.continue_propagation())
+            if !e.event().is_composing()
+                && arrow_shortcuts
+                    .handle(e.event())
+                    .is_some_and(|outcome| !outcome.continue_propagation())
             {
                 return;
             }

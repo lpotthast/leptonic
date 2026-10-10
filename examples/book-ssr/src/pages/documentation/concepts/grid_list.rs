@@ -78,7 +78,11 @@ pub fn PageGridListOverview() -> impl IntoView {
 
                 <KeyboardTable>
                     <KeyRow keys="ArrowUp / ArrowDown">"Move between rows (in a card layout, to the row in the same column)."</KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Move between a row and its interactive elements."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowRight">
+                        "Move between a row and its interactive elements; in a card layout, between rows. In a horizontal "
+                        "list, to the neighboring column (see "
+                        <Link href=format!("{}#layout-and-orientation", routes::doc::grid_list::Atom.materialize())>"Layout and Orientation"</Link>")."
+                    </KeyRow>
                     <KeyRow keys="Home / End">"First or last row."</KeyRow>
                     <KeyRow keys="PageUp / PageDown">"Move by the visible height."</KeyRow>
                     <KeyRow keys="Space">"Select or deselect the focused row."</KeyRow>

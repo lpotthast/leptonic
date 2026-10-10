@@ -26,7 +26,7 @@
 //
 // =============================================================================
 
-use std::{cmp::Ordering, fmt::Debug};
+use std::{cmp::Ordering, convert::Infallible, fmt::Debug};
 
 use jiff::{
     Timestamp, Zoned,
@@ -386,15 +386,24 @@ pub trait TimeValue: Clone + PartialEq + Debug + Send + Sync + 'static {
     /// The date value the field edits.
     type Field: DateValue;
 
+    /// The absolute bounds of a field of this type ([`TimeBound::Absolute`]): the value type
+    /// itself for values with a date; uninhabited ([`Infallible`]) for times, which have no date
+    /// to bound and only take times of day.
+    type Absolute: Clone + PartialEq + Debug + Send + Sync + 'static;
+
     /// As the field's value, on `date` if it has no date of its own.
     fn to_field(&self, date: Date) -> Self::Field;
 
     /// From the field's value.
     fn from_field(field: Self::Field) -> Self;
+
+    /// An absolute bound as the field's value.
+    fn absolute_to_field(absolute: &Self::Absolute) -> Self::Field;
 }
 
 impl TimeValue for Time {
     type Field = DateTime;
+    type Absolute = Infallible;
 
     fn to_field(&self, date: Date) -> DateTime {
         date.to_datetime(*self)
@@ -403,10 +412,15 @@ impl TimeValue for Time {
     fn from_field(field: DateTime) -> Self {
         field.time()
     }
+
+    fn absolute_to_field(absolute: &Infallible) -> DateTime {
+        match *absolute {}
+    }
 }
 
 impl TimeValue for DateTime {
     type Field = DateTime;
+    type Absolute = DateTime;
 
     fn to_field(&self, _: Date) -> DateTime {
         *self
@@ -415,10 +429,15 @@ impl TimeValue for DateTime {
     fn from_field(field: DateTime) -> Self {
         field
     }
+
+    fn absolute_to_field(absolute: &DateTime) -> DateTime {
+        *absolute
+    }
 }
 
 impl TimeValue for Zoned {
     type Field = Zoned;
+    type Absolute = Zoned;
 
     fn to_field(&self, _: Date) -> Zoned {
         self.clone()
@@ -426,6 +445,56 @@ impl TimeValue for Zoned {
 
     fn from_field(field: Zoned) -> Self {
         field
+    }
+
+    fn absolute_to_field(absolute: &Zoned) -> Zoned {
+        absolute.clone()
+    }
+}
+
+/// The minimum or maximum of a time field of `T` (react-aria's `minValue`/`maxValue` of a time
+/// field, a `TimeValue`).
+///
+/// Convert a [`Time`] into a time of day for any field, a [`DateTime`] or [`Zoned`] into an
+/// absolute bound of a field of that type.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TimeBound<T: TimeValue> {
+    /// A time of day, on the day of the value (else of the placeholder; today for times), in the
+    /// value's time zone: "not before 9:00" on any day.
+    TimeOfDay(Time),
+    /// A date and time of the field's value type, compared as is (zoned values by their
+    /// instants): "not before 9:00 on June 5". Fields of times have none.
+    Absolute(T::Absolute),
+}
+
+impl<T: TimeValue> TimeBound<T> {
+    /// The bound as the field's value: a time of day on the date of `day`, in its time zone.
+    pub(crate) fn to_field(&self, day: impl FnOnce() -> T::Field) -> T::Field {
+        match self {
+            Self::TimeOfDay(time) => {
+                let day = day();
+                day.with_fields(day.date(), *time, None)
+            }
+            Self::Absolute(absolute) => T::absolute_to_field(absolute),
+        }
+    }
+}
+
+impl<T: TimeValue> From<Time> for TimeBound<T> {
+    fn from(time: Time) -> Self {
+        Self::TimeOfDay(time)
+    }
+}
+
+impl From<DateTime> for TimeBound<DateTime> {
+    fn from(date_time: DateTime) -> Self {
+        Self::Absolute(date_time)
+    }
+}
+
+impl From<Zoned> for TimeBound<Zoned> {
+    fn from(zoned: Zoned) -> Self {
+        Self::Absolute(zoned)
     }
 }
 

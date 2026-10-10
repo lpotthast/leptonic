@@ -40,7 +40,10 @@ use crate::{
 // ## ADDITIONS
 // - `VirtualList`: a virtualized list of plain, app-rendered rows (no collection semantics: no
 //   roles, focus or selection handling, so the rows' text stays selectable), e.g. a log. Rows
-//   holding the text selection stay rendered; "anchored to the end" is state (C4).
+//   holding the text selection stay rendered; "anchored to the end" is state (C4). Rows wider
+//   than the list widen its content, so it scrolls horizontally, as a plain scrolling element
+//   would (its `ListLayout` has `allows_overflow_across`; upstream's layouts keep the content as
+//   wide as the view and hide the overflow).
 //
 // ## OMITTED FEATURES
 // - Sections and headers in virtualized list boxes (only items are rendered), drop indicators.
@@ -169,7 +172,7 @@ fn create_virtualized<L: Layout>(
 /// stays rendered, so keyboard navigation and screen readers reach every item.
 ///
 /// ```ignore
-/// <Virtualizer layout=ListLayout::new(ListLayoutOptions { row_size: Some(32.0), ..ListLayoutOptions::default() })>
+/// <Virtualizer layout=ListLayout::new(ListLayoutOptions { row_size: ItemSize::Fixed(32.0), ..ListLayoutOptions::default() })>
 ///     <ListBox collection=items aria_label="Items" styles=...height...>
 ///         <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
 ///     </ListBox>
@@ -227,6 +230,7 @@ impl VirtualListOptions {
             anchor_to_end: is_anchored_to_end.then_some(EndAnchor {
                 threshold: self.end_threshold,
             }),
+            allows_overflow_across: true,
             ..ListLayoutOptions::default()
         }
     }
@@ -240,6 +244,12 @@ impl VirtualListOptions {
 /// The list element scrolls: give it a height. `is_focusable` puts it in the tab order (to scroll
 /// it with the keyboard). Attributes go to it (`attr:role`, `attr:aria-label`). Each item's key must be unique and
 /// stable; a row renders once per key (a changed item needs a new key).
+///
+/// Rows wider than the list (long lines that don't wrap) widen its content, so it scrolls
+/// horizontally. Rows count once measured: rows of estimated size when they render, fixed-size rows
+/// only with `should_observe_item_size`. So the content widens as wider rows render; a row's own
+/// width stays the list's (style its content to make it as wide as its text, e.g. for a hover
+/// background: `width: max-content; min-width: 100%`).
 ///
 /// With `is_anchored_to_end`, the end stays in view while items are added (a log's "follow"):
 /// scrolling away from the end turns it off, scrolling back to the end (within

@@ -2,9 +2,9 @@ use leptonic::{
     CapturedElement, IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::datepicker::{
-        DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, UseDateFieldReturn,
-        UseDateSegmentInput, UseDateSegmentReturn, UseTimeFieldInput, UseTimeFieldStateInput,
-        use_date_segment, use_time_field, use_time_field_state,
+        DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, TimeBound,
+        UseDateFieldReturn, UseDateSegmentInput, UseDateSegmentReturn, UseTimeFieldInput,
+        UseTimeFieldStateInput, use_date_segment, use_time_field, use_time_field_state,
     },
     jiff::civil::{DateTime, Time, time},
 };
@@ -15,8 +15,8 @@ pub fn TimeFieldHookDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
     let state = use_time_field_state(UseTimeFieldStateInput::<Time> {
         default_value: Some(time(10, 0, 0, 0)),
-        min_value: Signal::stored(Some(time(8, 0, 0, 0))),
-        max_value: Signal::stored(Some(time(18, 0, 0, 0))),
+        min_value: Signal::stored(Some(TimeBound::TimeOfDay(time(8, 0, 0, 0)))),
+        max_value: Signal::stored(Some(TimeBound::TimeOfDay(time(18, 0, 0, 0)))),
         is_disabled: disabled.into(),
         ..UseTimeFieldStateInput::default()
     });

@@ -42,6 +42,11 @@ use crate::{
 // ## DIFFERENT BEHAVIOR
 // - The position is computed in an effect after rendering (react-aria: a layout effect) and
 //   written to the overlay's style at once; the returned styles hold the same values.
+// - When the overlay or the target resizes, the overlay is repositioned in the next animation
+//   frame (once per frame), not in the `ResizeObserver` callback as in react-aria: the new
+//   position changes the overlay's size (its `max-height`), which the browser can't deliver in
+//   the same pass and reports as an uncaught "ResizeObserver loop completed with undelivered
+//   notifications" error. Opening and changed inputs still position at once.
 //
 // ## OMITTED FEATURES
 // - Repositioning on scroll events of shadow roots (react-aria: `getPropagationTargets`).
@@ -266,6 +271,7 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
         use leptos_use::{use_event_listener, use_resize_observer, use_window};
 
         use super::calculate_position::dom::{PositionOptions, calculate_position, get_rect};
+        use crate::utils::next_frame::NextFrame;
 
         // The visual viewport's scale when the overlay opened: positioning pauses while pinch
         // zoomed differently, so the overlay doesn't jump around.
@@ -276,9 +282,14 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
                 .map(|vv| vv.scale())
         };
         let last_scale = StoredValue::new(visual_viewport_scale());
+        // Repositioning after the overlay or the target resized: in the next frame (see the
+        // deviation notes).
+        let resized = NextFrame::new(move || update.notify());
         Effect::new(move |_| {
             if is_open.get() {
                 last_scale.set_value(visual_viewport_scale());
+            } else {
+                resized.cancel();
             }
         });
 
@@ -450,11 +461,11 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
         let _ = use_event_listener(window, ev::resize, move |_| update.notify());
         let _ = use_resize_observer(
             Signal::derive(move || overlay_element.get()),
-            move |_, _| update.notify(),
+            move |_, _| resized.request(),
         );
         let _ = use_resize_observer(
             Signal::derive(move || is_open.get().then(|| target.get()).flatten()),
-            move |_, _| update.notify(),
+            move |_, _| resized.request(),
         );
 
         // The visual viewport resizing (e.g. a virtual keyboard): reposition, and for a moment

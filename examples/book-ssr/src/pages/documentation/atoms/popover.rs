@@ -298,7 +298,8 @@ pub fn PageAtomPopover() -> impl IntoView {
                     " you pass; target their state with the data attributes above. Positioning and layering come from the "
                     "atom. The popover also sets two CSS variables: "<Code inline=true>"--trigger-width"</Code>
                     " (the trigger\u{2019}s width, e.g. "<Code inline=true>"min-width: var(--trigger-width)"</Code>
-                    " for a popover as wide as its trigger) and "<Code inline=true>"--trigger-anchor-point"</Code>
+                    " for a popover as wide as its trigger; when the trigger resizes, it follows in the next animation frame) and "
+                    <Code inline=true>"--trigger-anchor-point"</Code>
                     " (the point closest to the trigger, e.g. as "<Code inline=true>"transform-origin"</Code>")."
                 </p>
                 <p>

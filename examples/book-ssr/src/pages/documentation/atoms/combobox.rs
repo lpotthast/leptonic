@@ -161,7 +161,9 @@ pub fn PageAtomComboBox() -> impl IntoView {
                             "The initial input text. By default, the selected option\u{2019}s text."
                         </ApiRow>
                         <ApiRow name="input_value" ty="Option<Signal<String>>" default="None">
-                            "The input text (controlled), replacing "<Code inline=true>"default_input_value"</Code>": a value or any signal."
+                            "The input text (controlled), replacing "<Code inline=true>"default_input_value"</Code>": a value or any signal. "
+                            "It doesn\u{2019}t follow a change of the selected option\u{2019}s own text (e.g. reloaded options): "
+                            "update it yourself."
                         </ApiRow>
                         <ApiRow name="set_input_value" ty="Option<Out<String>>" default="None">
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"

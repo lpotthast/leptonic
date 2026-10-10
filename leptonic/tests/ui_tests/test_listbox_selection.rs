@@ -109,7 +109,7 @@ pub async fn select_all_does_nothing_with_single_selection(page: &Page<'_>) -> R
     let cat = option(page, "single", "Cat").await?;
     cat.click().await?;
     changes.wait_for_inner_text("Cat").await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     changes.inner_text_stays("Cat", STAYS).await?;
     Ok(())
 }
@@ -222,8 +222,8 @@ pub async fn entering_focuses_the_selection(page: &Page<'_>) -> Result<(), Repor
     Ok(())
 }
 
-/// With replace selection behavior, Ctrl+arrow keys move the focus without selecting, and Space
-/// then selects only the focused option ("can navigate without replacing the selection in
+/// With replace selection behavior, Ctrl+arrow keys (Option+arrow on Apple devices) move the
+/// focus without selecting, and Space then selects only the focused option ("can navigate without replacing the selection in
 /// multiple selection selectOnFocus").
 #[browser_test]
 pub async fn space_replaces_after_moving_focus_only(page: &Page<'_>) -> Result<(), Report> {
@@ -232,7 +232,8 @@ pub async fn space_replaces_after_moving_focus_only(page: &Page<'_>) -> Result<(
     let cat = option(page, "replace", "Cat").await?;
     cat.click().await?;
     changes.wait_for_inner_text("Cat").await?;
-    page.send_keys(Key::Control + Key::Down).await?;
+    page.send_keys(page.non_contiguous_selection_modifier().await? + Key::Down)
+        .await?;
     page.wait_for_focus(&option(page, "replace", "Dog").await?)
         .await?;
     changes.inner_text_stays("Cat", STAYS).await?;
@@ -275,14 +276,7 @@ pub async fn replace_behavior_with_single_selection(page: &Page<'_>) -> Result<(
     kangaroo
         .wait_for_attr("aria-selected", Some("false"))
         .await?;
-    page.low_level()
-        .driver()
-        .action_chain()
-        .key_down(Key::Control)
-        .click_element(&dog)
-        .key_up(Key::Control)
-        .perform()
-        .await?;
+    page.click_with_primary_modifier(&dog).await?;
     changes.wait_for_inner_text("Kangaroo|Dog|").await?;
     dog.wait_for_attr("aria-selected", Some("false")).await?;
     Ok(())
@@ -386,7 +380,8 @@ pub async fn links_with_replace_selection(page: &Page<'_>) -> Result<(), Report>
         .matches(eq("#lbs-one"))
         .await;
     page.wait_for_focus(&one).await?;
-    page.send_keys(Key::Control + Key::Down).await?;
+    page.send_keys(page.non_contiguous_selection_modifier().await? + Key::Down)
+        .await?;
     page.wait_for_focus(&two).await?;
     page.send_keys(" ").await?;
     changes.wait_for_inner_text("one|two").await?;

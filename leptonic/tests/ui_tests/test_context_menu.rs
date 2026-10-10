@@ -90,6 +90,7 @@ async fn log_stays_past_the_ctrl_enter_delay(
 /// on non-macOS").
 #[browser_test]
 pub async fn ctrl_enter_is_mac_only(page: &Page<'_>) -> Result<(), Report> {
+    page.emulate_platform(Platform::Linux).await?;
     page.goto_path(PATH).await?;
     let element = page.element("#test-context-menu-handler").await?;
     element.focus().await?;

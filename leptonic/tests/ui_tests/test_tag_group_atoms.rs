@@ -88,8 +88,8 @@ pub async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Tab moves from a tag to its "Remove" button, where Space or Delete removes the tag, as does
-/// Delete on a focused tag ("should support tabbing to remove buttons").
+/// Tab moves from a tag to its "Remove" button, taking the focus ring along, where Space or Delete
+/// removes the tag, as does Delete on a focused tag ("should support tabbing to remove buttons").
 #[browser_test]
 pub async fn tabbing_to_remove_buttons(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -105,6 +105,11 @@ pub async fn tabbing_to_remove_buttons(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_focus(&remove).await?;
     remove
         .wait_for_attr("data-focus-visible", Some("true"))
+        .await?;
+    // The focus ring moved from the tag to its button.
+    tag(page, "Cat")
+        .await?
+        .wait_for_attr("data-focus-visible", None)
         .await?;
     page.send_keys(" ").await?;
     removed.wait_for_inner_text("cat").await?;

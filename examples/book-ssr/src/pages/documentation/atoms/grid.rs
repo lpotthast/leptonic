@@ -136,7 +136,7 @@ pub fn PageAtomGrid() -> impl IntoView {
                         <ApiRow name="on_row_action, on_cell_action" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of an activated row or cell."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
                             "Names the grid. One of them is needed."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the grid element."</ApiRow>

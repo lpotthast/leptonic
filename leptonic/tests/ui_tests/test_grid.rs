@@ -313,9 +313,11 @@ pub async fn two_dimensional_navigation(page: &Page<'_>) -> Result<(), Report> {
     expect_focus_on_cell(page, "Alice", "Alice").await?;
     page.send_keys(Key::End).await?;
     expect_focus_on_cell(page, "Alice", "Admin").await?;
-    page.send_keys(Key::Control + Key::End).await?;
+    page.send_keys(page.primary_modifier().await? + Key::End)
+        .await?;
     expect_focus_on_cell(page, "Dave", "User").await?;
-    page.send_keys(Key::Control + Key::Home).await?;
+    page.send_keys(page.primary_modifier().await? + Key::Home)
+        .await?;
     expect_focus_on_cell(page, "Alice", "Alice").await?;
     Ok(())
 }

@@ -533,9 +533,9 @@ pub async fn forms(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(form)
         .property("value")
         .await
-        .get_some()
+        .some()
         .map_owned(|value| value.parse::<f64>())
-        .get_ok()
+        .ok()
         .is_equal_to(127.0);
     form.focus().await?;
     page.send_keys(Key::Right).await?;

@@ -27,7 +27,7 @@ async fn hue(page: &Page<'_>) -> Result<WebElement, Report> {
 async fn enter_hex(page: &Page<'_>, hex: &str) -> Result<(), Report> {
     page.element("#test-cp-field input").await?.focus().await?;
     // Clear it (End would step to white: the field has a spin button's keys).
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     page.send_keys(Key::Backspace).await?;
     page.send_keys(hex).await?;
     page.send_keys(Key::Tab).await?;
@@ -49,18 +49,18 @@ pub async fn shared_color(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(saturation)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("1");
     assert_that!(hue)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("0");
     let field = page.element("#test-cp-field input").await?;
     assert_that!(field)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("#FF0000");
 
     enter_hex(page, "00f").await?;

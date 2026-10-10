@@ -39,8 +39,12 @@ use crate::{
 //
 // ## DIFFERENT BEHAVIOR
 // - Thumb ids derive from the group's id (react-aria: the label's id while there is a label), so
-//   they stay stable while the label comes and goes (ids must match between server and client);
-//   the thumbs' `aria-labelledby` follows the label.
+//   they stay stable while the label comes and goes (ids must match between server and client).
+// - The thumbs' `aria-labelledby` lists the group's labelling ids (its label, `aria_labelledby`,
+//   and its own id next to an `aria_label`; else only its own id), where react-aria lists the
+//   label's id, else the group's: accessible-name computation doesn't follow the group's own
+//   `aria-labelledby`, so a slider named only by `aria_labelledby` would name its thumbs by the
+//   group's text content.
 // - Track presses start on `pointerdown` only: PointerEvent is always available (CLAUDE.md), so
 //   react-aria's mouse and touch fallbacks are omitted.
 //
@@ -69,7 +73,8 @@ pub struct SliderData {
     /// The slider group's id. Thumb ids derive from it (stable, unlike react-aria's, which derive
     /// from the label's id when there is one).
     pub id: String,
-    /// The label ids the thumbs reference, or the group's id when it has an `aria-label`.
+    /// The ids the thumbs are labelled by: the group's `aria-labelledby` (its label, its
+    /// `aria_labelledby`, and its own id next to an `aria_label`), else the group's id.
     pub labelled_by: Signal<String>,
     /// What describes every thumb: the description while rendered, and `aria_describedby`.
     pub aria_describedby: Signal<Option<String>>,

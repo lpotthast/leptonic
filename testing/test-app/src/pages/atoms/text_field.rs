@@ -147,6 +147,26 @@ pub fn PageAtomTextField() -> impl IntoView {
                     <FieldError />
                 </TextField>
             </Form>
+
+            <StandaloneInputs />
+        </div>
+    }
+}
+
+/// `Input` and `TextArea` outside a field: plain elements (the first input mirrors its value),
+/// and a disabled, invalid input.
+#[component]
+fn StandaloneInputs() -> impl IntoView {
+    let value = RwSignal::new(String::new());
+    view! {
+        <div id="tf-standalone">
+            <Input
+                attr:aria-label="Standalone"
+                on:input=move |e| value.set(event_target_value(&e))
+            />
+            <output>{value}</output>
+            <Input is_disabled=true is_invalid=true attr:aria-label="Standalone disabled" />
+            <TextArea attr:aria-label="Standalone notes" />
         </div>
     }
 }

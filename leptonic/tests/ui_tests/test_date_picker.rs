@@ -222,7 +222,7 @@ pub async fn required_picker(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -283,7 +283,7 @@ pub async fn required_time_field(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -992,7 +992,7 @@ pub async fn range_validation_errors(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(start)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -2686,7 +2686,7 @@ pub async fn removing_the_era_focuses_the_previous_segment(page: &Page<'_>) -> R
     page.goto_sections(PATH, &["era"]).await?;
     let segments = spinbuttons(page, "era").await?;
     let era = segment(page, "era", "era").await?;
-    assert_that!(segments.last()).get_some().is_equal_to(&era);
+    assert_that!(segments.last()).some().is_equal_to(&era);
     era.focus().await?;
     page.wait_for_focus(&era).await?;
     page.send_keys(Key::Up).await?;
@@ -3097,7 +3097,7 @@ pub async fn native_error_updated_by_the_calendar(page: &Page<'_>) -> Result<(),
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();

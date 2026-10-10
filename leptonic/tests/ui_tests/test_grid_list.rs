@@ -172,7 +172,7 @@ async fn expect_selected(page: &Page<'_>, folder: &str, selected: bool) -> Resul
 pub async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     focus_drafts(page).await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     expect_selection(page, "all")
         .await
         .context("after pressing Ctrl+A")?;
@@ -239,7 +239,7 @@ pub async fn disabled_row_is_marked(page: &Page<'_>) -> Result<(), Report> {
 pub async fn select_all_skips_disabled_row(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     tab_into_list(page).await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     expect_selection(page, "all").await?;
     row(page, "Spam")
         .await?
@@ -292,7 +292,7 @@ pub async fn selection_announcements(page: &Page<'_>) -> Result<(), Report> {
         .eventually_ok()
         .matches(eq("Drafts not selected. 1 item selected."))
         .await;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     assert_that!(|| last_announcement(page))
         .eventually_ok()
         .matches(eq("All items selected."))

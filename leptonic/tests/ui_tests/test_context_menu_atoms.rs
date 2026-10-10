@@ -76,10 +76,11 @@ pub async fn escape_returns_focus_to_the_row(page: &Page<'_>) -> Result<(), Repo
     Ok(())
 }
 
-/// Shift+F10 on the focused row opens its context menu, labelled by the row; Escape closes it and
-/// returns focus to the row.
+/// The keyboard opens the focused row's context menu, labelled by the row; Escape closes it and
+/// returns focus to the row. The keys are the platform's: Shift+F10 makes the browser fire
+/// `contextmenu`, except on macOS, where `use_context_menu` takes Ctrl+Enter instead.
 #[browser_test]
-pub async fn shift_f10_opens_it(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_opens_it(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     // Tab into the list (its first row), then down to "Music".
     page.element("#test-cm-before").await?.click().await?;
@@ -90,7 +91,16 @@ pub async fn shift_f10_opens_it(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Down).await?;
     let music = row(page, "Music").await?;
     page.wait_for_focus(&music).await?;
-    page.send_keys(Key::Shift + Key::F10).await?;
+    if page
+        .reported_platform()
+        .await?
+        .to_ascii_lowercase()
+        .starts_with("mac")
+    {
+        page.send_keys(Key::Control + Key::Enter).await?;
+    } else {
+        page.send_keys(Key::Shift + Key::F10).await?;
+    }
     let menu = page.element(MENU).await?;
     let row_id = music.id().await?;
     assert_that!(menu)

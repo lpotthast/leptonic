@@ -619,8 +619,9 @@ The animation hooks (`hooks/animation/`) manage CSS animation lifecycles using t
 
 - **Input**: `element: CapturedElement` + `is_ready: Signal<bool>` + `on_enter: Option<Callback<_>>` (called with
   the element when the entry starts, e.g. to start a Web Animation)
-- **Output**: `is_entering: Signal<bool>`, `styles: Styles` (hide the element, without affecting layout, while it
-  isn't ready; merge them into the element's `style`)
+- **Output**: `is_entering: Signal<bool>`, `styles: Styles` (hide the element, without affecting layout, until it is
+  ready for the first time, so that a closing popover stays visible during its exit animation; merge them into the
+  element's `style`)
 - Watches the element's animations once `is_ready` is true. Reports `true` while they are running, `false` when
   complete.
 

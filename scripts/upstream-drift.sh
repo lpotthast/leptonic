@@ -36,7 +36,7 @@ if [[ "${1:-}" == "--mark-synced" ]]; then
   shift
   head_sha="$(git -C "$RS" rev-parse --short=10 HEAD)"
   for file in "$@"; do
-    sed -i -E "s|^(// Upstream: [^ ]+ @ )[0-9a-f]+$|\1$head_sha|" "$file"
+    perl -pi -e "s{^(// Upstream: [^ ]+ @ )[0-9a-f]+\$}{\${1}$head_sha}" "$file"
     echo "$file -> $head_sha"
   done
   exit 0

@@ -2,7 +2,8 @@
 //! A virtualized log (`VirtualList`, no react-aria equivalent): it renders a slice of its 2,000
 //! lines and follows its end while lines are appended; scrolling away stops following, toggling
 //! it on scrolls back to the end; rows holding the text selection stay rendered; the rows' text
-//! is selectable; rows of plain text are measured again when they resize.
+//! is selectable; rows of plain text are measured again when they resize; lines wider than the
+//! list scroll horizontally.
 //!
 //! A view rebuilt in place (the same type, a new owner: tachys reuses the DOM) whose elements carry
 //! a hook's props: the old owner's handlers must be gone (agnite dev-ui, 2026-10-07: a click
@@ -28,7 +29,7 @@ use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::{
-    fixtures::virtual_list::{LogView, VirtualListActions},
+    fixtures::virtual_list::{LogView, VirtualListActions, WideView},
     pages::{ElementActions, Page},
 };
 
@@ -327,6 +328,81 @@ pub async fn text_rows_are_measured_again_when_they_resize(page: &Page<'_>) -> R
         .eventually_ok()
         .satisfies(|rect| {
             rect.derive(|rect| &rect.height).is_greater_than(40.0);
+        })
+        .await;
+    Ok(())
+}
+
+/// Lines wider than the list (that don't wrap) widen its content: it scrolls horizontally to the
+/// end of the widest one, and the rows stay rendered there (react-aria's `ListLayout` keeps the
+/// content as wide as the view and hides the overflow; a plain scrolling element shows it).
+#[browser_test]
+pub async fn wide_lines_scroll_horizontally(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
+    assert_that!(|| list.wide_view())
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive(|view| &view.overflow_x).is_equal_to("auto");
+            view.derive_owned(|view| view.scroll_width - view.widest.ceil())
+                .matches(all_of(matchers![gt(-1.0), lt(1.0)]));
+            view.derive_owned(|view| view.scroll_width - view.client_width)
+                .is_greater_than(200.0);
+        })
+        .await;
+
+    list.scroll_wide_to_the_right().await?;
+    assert_that!(|| list.wide_view())
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive_owned(|view| view.scroll_width - view.client_width - view.left)
+                .matches(all_of(matchers![gt(-1.0), lt(1.0)]));
+        })
+        .await;
+    page.settle().await?;
+    assert_that!(|| async { Ok::<_, Report>(list.wide_view().await?.rendered) })
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(500))
+        .matches(gt(5))
+        .await;
+    Ok(())
+}
+
+/// Wrapping the lines (a change of their style, not of the items) makes them taller and no wider
+/// than the list: they are measured again and the list no longer scrolls horizontally; unwrapping
+/// them makes it scroll again.
+#[browser_test]
+pub async fn wrapping_lines_ends_horizontal_scrolling(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
+    let is_wide = |view: &WideView| view.scroll_width - view.client_width > 200.0;
+    assert_that!(|| list.wide_view())
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive_owned(is_wide).is_true();
+        })
+        .await;
+    let toggle = page.element("#test-vl-wide-wrap").await?;
+
+    toggle.click().await?;
+    toggle.wait_for_inner_text("wrapping").await?;
+    assert_that!(|| list.wide_view())
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive_owned(|view| view.scroll_width - view.client_width)
+                .matches(all_of(matchers![gt(-1.0), lt(1.0)]));
+            view.derive(|view| &view.overflow_x).is_equal_to("hidden");
+            view.derive(|view| &view.tallest).is_greater_than(60.0);
+        })
+        .await;
+
+    toggle.click().await?;
+    toggle.wait_for_inner_text("not wrapping").await?;
+    assert_that!(|| list.wide_view())
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive_owned(is_wide).is_true();
+            view.derive(|view| &view.tallest).is_less_than(30.0);
         })
         .await;
     Ok(())

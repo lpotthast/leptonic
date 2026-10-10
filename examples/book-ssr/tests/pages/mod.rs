@@ -160,7 +160,8 @@ impl BookPage<'_> {
     /// Whether the browser runs on a Mac, iPhone or iPad, where shortcuts use Meta (Command) instead of Control, as
     /// leptonic's `platform::is_apple_device` detects it.
     pub async fn is_apple_device(&self) -> Result<bool, Report> {
-        let script = "return [String(/Mac|iPhone|iPad|iPod/.test(navigator.userAgentData?.platform || navigator.platform))];";
+        // Case-insensitive: Chromium's `userAgentData.platform` is "macOS".
+        let script = "return [String(/^(Mac|iPhone|iPad)/i.test(navigator.userAgentData?.platform || navigator.platform))];";
         Ok(self.strings(script).await? == ["true"])
     }
 

@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement, IntoAttrs, Orientation,
     atoms::button::Button,
     hooks::{
         collections::{
@@ -53,6 +53,7 @@ pub fn GridListDemo() -> impl IntoView {
         id: None,
         aria_labelledby: Signal::stored(None),
         layout: ListLayout::Stack,
+        orientation: Orientation::Vertical.into(),
         keyboard_delegate: None,
         options: CollectionOptions::default(),
         keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),

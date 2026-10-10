@@ -39,6 +39,9 @@ use crate::{
 // ## DIFFERENT BEHAVIOR
 // - The hidden `<label>` holds the `label` text (react-aria-components renders it empty; Firefox
 //   identifies the `<select>` for autofill by its label).
+// - A selected key the collection doesn't hold (e.g. a bound value whose option is still
+//   loading) gets an `<option>` of its own, so the form submits it. react-aria renders such
+//   options only while the collection is empty; otherwise the form loses the value.
 //
 // =============================================================================
 
@@ -90,7 +93,8 @@ pub struct HiddenSelectOption {
 }
 
 impl HiddenSelectOption {
-    /// Tracks selection separately from the options, so changing the value retains option nodes.
+    /// Whether `state` selects this option (tracked). The options don't hold their selection, so
+    /// a changed value doesn't rebuild them.
     pub fn is_selected(&self, state: &SelectState) -> bool {
         let value = state.value();
         self.key

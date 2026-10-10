@@ -220,7 +220,7 @@ mod tests {
         assert_that!(accept_initial(&state, None)).is_err();
         state.diagnostics.console_warnings = vec![MISSING_LABEL.to_owned(); 4];
         assert_that!(accept_initial(&state, None))
-            .get_ok()
+            .ok()
             .has_length(4);
         state
             .diagnostics
@@ -237,12 +237,12 @@ mod tests {
         let mut state = health();
         state.path = "/atoms/slider-interactions".to_owned();
         assert_that!(accept_initial(&state, Some("basic")))
-            .get_ok()
+            .ok()
             .is_empty();
         assert_that!(accept_initial(&state, Some("missing"))).is_err();
         state.diagnostics.console_warnings = vec![SLIDER_WARNING.to_owned(); 1];
         assert_that!(accept_initial(&state, Some("basic,missing")))
-            .get_ok()
+            .ok()
             .has_length(1);
         assert_that!(accept_initial(&state, Some("basic"))).is_err();
     }
@@ -275,7 +275,7 @@ mod tests {
         let mut state = health();
         state.diagnostics.panics.push(warning().text);
         assert_that!(validate(state, vec![warning()]))
-            .get_err()
+            .err()
             .derive_owned(PagePanic::page_panicked)
             .is_true();
         let mut state = health();

@@ -105,6 +105,7 @@ pub fn PageUseKeyboard() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
+                            KeyboardKey,
                             KeyboardShortcuts,
                             Shortcut,
                             hooks::interactions::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
@@ -157,20 +158,20 @@ pub fn PageUseKeyboard() -> impl IntoView {
 
                 <Section title="Shortcut">
                     <p>
-                        "A "<Code inline=true>"Shortcut"</Code>" is one key plus the exact set of modifiers that must be held: "
-                        <Code inline=true>"Shortcut::key(\"z\").primary()"</Code>" matches "<Keys keys="Control + Z"/>" ("
-                        <Keys keys="Meta + Z"/>" on macOS), but not "<Keys keys="Control + Shift + Z"/>". Keys are "
-                        <Code inline=true>"KeyboardEvent.key"</Code>" values and compare case-insensitively; the aliases "
-                        <Code inline=true>"Space"</Code>", "<Code inline=true>"Esc"</Code>", "<Code inline=true>"Del"</Code>", "
-                        <Code inline=true>"Ins"</Code>", "<Code inline=true>"Left"</Code>", "<Code inline=true>"Right"</Code>", "
-                        <Code inline=true>"Up"</Code>" and "<Code inline=true>"Down"</Code>" are accepted. The builders are "
-                        <Code inline=true>"const"</Code>", so shortcuts can be constants."
+                        "A "<Code inline=true>"Shortcut"</Code>" is one "<Code inline=true>"KeyboardKey"</Code>" plus the exact set of "
+                        "modifiers that must be held: "<Code inline=true>"Shortcut::new(KeyboardKey::Z).primary()"</Code>" matches "
+                        <Keys keys="Control + Z"/>" ("<Keys keys="Meta + Z"/>" on macOS), but not "<Keys keys="Control + Shift + Z"/>
+                        ". Letters match in either case. The builders are "<Code inline=true>"const"</Code>
+                        ", so shortcuts can be constants."
                     </p>
 
                     <DocTable headers=&["Function", "Description"]>
                         <TableRow>
-                            <TableCell><Code inline=true>"Shortcut::key(key)"</Code></TableCell>
-                            <TableCell>"The key without modifiers. "<Code inline=true>"Shortcut::owned_key(String)"</Code>" takes a key known only at runtime."</TableCell>
+                            <TableCell><Code inline=true>"Shortcut::new(key)"</Code></TableCell>
+                            <TableCell>
+                                "The "<Code inline=true>"KeyboardKey"</Code>" without modifiers. A key without a variant of its own is "
+                                <Code inline=true>"KeyboardKey::Other(..)"</Code>", with its "<Code inline=true>"KeyboardEvent.key"</Code>" value."
+                            </TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>".primary()"</Code></TableCell>
@@ -190,7 +191,10 @@ pub fn PageUseKeyboard() -> impl IntoView {
                             <TableCell>
                                 "Parses modifiers and one key separated by "<Code inline=true>"+"</Code>", e.g. "
                                 <Code inline=true>"\"Mod+Shift+z\""</Code>" ("<Code inline=true>"Mod"</Code>" is the primary "
-                                "modifier), for shortcuts from configuration or user input. Fails with "
+                                "modifier), for shortcuts from configuration or user input. Names are case-insensitive, and the aliases "
+                                <Code inline=true>"Space"</Code>", "<Code inline=true>"Esc"</Code>", "<Code inline=true>"Del"</Code>", "
+                                <Code inline=true>"Ins"</Code>", "<Code inline=true>"Left"</Code>", "<Code inline=true>"Right"</Code>", "
+                                <Code inline=true>"Up"</Code>" and "<Code inline=true>"Down"</Code>" are accepted. Fails with "
                                 <Code inline=true>"InvalidShortcut"</Code>" unless exactly one key is named. "
                                 <Code inline=true>"Shortcut"</Code>" also implements "<Code inline=true>"FromStr"</Code>"."
                             </TableCell>

@@ -180,6 +180,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         state,
         element,
         layout: ListLayout::Stack,
+        orientation: Orientation::Horizontal.into(),
         should_select_on_press_up: false,
         tree: None,
     });

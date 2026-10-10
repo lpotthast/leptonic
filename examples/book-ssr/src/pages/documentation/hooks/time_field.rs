@@ -33,8 +33,9 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                     <ApiRow name="value" ty="Option<ValueBinding<Option<T>>>" default="None">"The value as app state, replacing "<Code inline=true>"default_value"</Code>"."</ApiRow>
                     <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">"Called with each new value."</ApiRow>
                     <ApiRow name="placeholder_value" ty="Signal<Option<T>>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
-                    <ApiRow name="min_value, max_value" ty="Signal<Option<Time>>" default="None">
-                        "The earliest and latest valid time (\u{201c}Value must be 8:00 AM or later.\u{201d})."
+                    <ApiRow name="min_value, max_value" ty="Signal<Option<TimeBound<T>>>" default="None">
+                        "The earliest and latest valid value: a time of day, or a date and time (see "
+                        <AnchorLink href="#timebound">"TimeBound"</AnchorLink>")."
                     </ApiRow>
                     <ApiRow name="granularity" ty="Signal<Option<Granularity>>" default="None">
                         "The finest segment: "<Code inline=true>"Hour"</Code>", "<Code inline=true>"Minute"</Code>" (the default) or "
@@ -112,6 +113,43 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                 <Demo description="Pickup time field of the hooks with a minimum, a maximum and a disabled toggle" source=include_str!("demos/time_field.rs")>
                     <TimeFieldHookDemo/>
                 </Demo>
+            </Section>
+
+            <Section title="TimeBound">
+                <p>
+                    "The minimum or maximum of a time field of "<Code inline=true>"T"</Code>", one of two kinds:"
+                </p>
+                <DocTable headers=&["Variant", "Meaning"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"TimeBound::TimeOfDay(Time)"</Code></TableCell>
+                        <TableCell>
+                            "A time of day: \u{201c}not before 9:00\u{201d} on any day. It applies on the day of the value (of the "
+                            "placeholder while the field is empty), in the value\u{2019}s time zone."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"TimeBound::Absolute(T::Absolute)"</Code></TableCell>
+                        <TableCell>
+                            "A date and time of the field\u{2019}s value type: \u{201c}not before 9:00 on June 5\u{201d}, compared "
+                            "as is. Zoned values compare by their instants, also across time zones. A field of a "
+                            <Code inline=true>"civil::Time"</Code>" has no absolute bounds (its "<Code inline=true>"Absolute"</Code>
+                            " type is uninhabited): it takes only times of day."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+                <p>
+                    "A "<Code inline=true>"civil::Time"</Code>" converts into a time of day for any field, a "
+                    <Code inline=true>"civil::DateTime"</Code>" or "<Code inline=true>"Zoned"</Code>" into an absolute bound of "
+                    "a field of that type ("<Code inline=true>"TimeBound::from(..)"</Code>", "<Code inline=true>".into()"</Code>
+                    "). The bounds are signals, so they can change while the field is shown."
+                </p>
+                <p>
+                    "Bounds only validate: stepping a segment past a bound isn\u{2019}t stopped, the value becomes invalid. "
+                    "The error message shows only the segments the field shows, also for an absolute bound "
+                    "(\u{201c}Value must be 9:00 AM or later.\u{201d}). The "
+                    <Link href=format!("{}#bounds", routes::doc::time_field::Atom.materialize())>"Time Field Atom"</Link>
+                    " page has a demo of an absolute bound."
+                </p>
             </Section>
 
             <SeeAlso>

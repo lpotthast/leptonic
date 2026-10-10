@@ -15,7 +15,7 @@ use leptos::prelude::*;
 // - Without a `locale`, the provider uses en-US (react-aria: `useDefaultLocale`, the browser's
 //   language; open item in PLAN.md).
 //
-// ## BEHAVIOR DIFFERENCES
+// ## DIFFERENT BEHAVIOR
 // - `isRTL`: the direction comes from ICU4X's `LocaleDirectionality` (CLDR's likely script and
 //   its direction), where react-aria asks `Intl.Locale` and falls back to hand-written script and
 //   language lists. Same results without a list to maintain.
@@ -251,7 +251,7 @@ mod tests {
         let locale = Locale::from(locale!("en-US"));
         assert_that!(locale.language()).is_equal_to("en".to_string());
         assert_that!(locale.region())
-            .get_some()
+            .some()
             .is_equal_to("US".to_string());
     }
 

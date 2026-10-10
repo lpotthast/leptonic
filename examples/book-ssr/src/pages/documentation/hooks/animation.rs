@@ -60,9 +60,10 @@ pub fn PageAnimationHooks() -> impl IntoView {
                 <p>
                     "Reports whether the element\u{2019}s enter animation is running: "<Code inline=true>"is_entering"</Code>
                     " is true from the moment the element is rendered and ready until its animations finished. Until "
-                    <Code inline=true>"is_ready"</Code>" is true, the element is hidden with styles that don\u{2019}t affect "
-                    "layout, so it doesn\u{2019}t flash, e.g. a popover before its position is calculated. Transitions that "
-                    "started before it was ready are cancelled and run again with the entry."
+                    <Code inline=true>"is_ready"</Code>" is true for the first time, the element is hidden with styles that "
+                    "don\u{2019}t affect layout, so it doesn\u{2019}t flash, e.g. a popover before its position is calculated. "
+                    "Once shown, it stays visible when it isn\u{2019}t ready any more, e.g. a closing popover while its exit "
+                    "animation runs. Transitions that started before it was ready are cancelled and run again with the entry."
                 </p>
                 <p>
                     "The hook tracks a single entry: once "<Code inline=true>"is_entering"</Code>" turned false, it stays "
@@ -79,7 +80,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
                             "The animated element. Capture it with "<Code inline=true>"{..element.attr()}"</Code>" on that element. Required."
                         </ApiRow>
                         <ApiRow name="is_ready" ty="Signal<bool>" default="true">
-                            "Whether the entry may start. The element is hidden until then."
+                            "Whether the entry may start. The element is hidden until it is ready for the first time."
                         </ApiRow>
                         <ApiRow name="on_enter" ty="Option<Callback<SendWrapper<Element>>>" default="None">
                             "Called with the element when the entry starts, e.g. to start a Web Animation, which is awaited "
@@ -94,7 +95,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
                             "True while the element is ready and its enter animations run. Render it as a "
                             <Code inline=true>"data-entering"</Code>" attribute."
                         </ApiRow>
-                        <ApiRow name="styles" ty="Styles">"Merge these styles onto the animated element so it stays hidden until ready."</ApiRow>
+                        <ApiRow name="styles" ty="Styles">"Merge these styles onto the animated element so it stays hidden until it is first ready."</ApiRow>
                     </ApiTable>
                 </Section>
 

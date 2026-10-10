@@ -26,6 +26,7 @@ pub fn PageGridListHooks() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             CapturedElement,
+                            Orientation,
                             hooks::{
                                 collections::{
                                     CollectionOptions,
@@ -63,6 +64,7 @@ pub fn PageGridListHooks() -> impl IntoView {
                             aria_label: "Files".into(),
                             aria_labelledby: Signal::stored(None),
                             layout: ListLayout::Stack,
+                            orientation: Orientation::Vertical.into(),
                             keyboard_delegate: None,
                             options: CollectionOptions::default(),
                             keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
@@ -122,6 +124,14 @@ pub fn PageGridListHooks() -> impl IntoView {
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
                             <Code inline=true>"Stack"</Code>": one row below the other. "<Code inline=true>"Grid"</Code>
                             ": rows wrap like cards, and "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" find the row in the same column."
+                        </ApiRow>
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
+                            "The direction the rows run, usually the one the list scrolls in. "<Code inline=true>"Horizontal"</Code>": "
+                            <Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" move to the previous / next row, "<Keys keys="ArrowLeft"/>
+                            " / "<Keys keys="ArrowRight"/>" to the neighboring column (in a grid layout, to the row in the same line). "
+                            "Ignored with a "<Code inline=true>"keyboard_delegate"</Code>". The "
+                            <Link href=format!("{}#layout-and-orientation", routes::doc::grid_list::Atom.materialize())>"Grid List Atoms"</Link>
+                            " page shows every combination."
                         </ApiRow>
                         <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">
                             <Code inline=true>"Arrow"</Code>": "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>

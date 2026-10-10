@@ -127,7 +127,7 @@ pub struct UseCalendarProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Option<String>,
     pub aria_details: Option<String>,
     pub on_focusout: EventHandler<FocusEvent>,
@@ -138,7 +138,7 @@ pub type UseCalendarAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaDetails, Option<String>>,
     OnEvent<ev::focusout>,
@@ -238,24 +238,29 @@ fn use_calendar_base(
         }
     });
 
-    let label = Signal::derive(move || {
-        let label = [aria_label.get(), Some(title.get())]
-            .into_iter()
-            .flatten()
-            .filter(|label| !label.is_empty())
-            .collect::<Vec<_>>()
-            .join(", ");
-        Some(label)
-    });
-    let aria_labelledby =
-        labels(&id, Some(String::new()), aria_labelledby.as_deref()).aria_labelledby;
+    // Named by its label and the visible range; with `aria_labelledby`, the label joins the
+    // labelling elements through the calendar's own id (react-aria: `useLabels`).
+    let labelling = {
+        let id = id.clone();
+        Memo::new(move |_| {
+            let label = [aria_label.get(), Some(title.get())]
+                .into_iter()
+                .flatten()
+                .filter(|label| !label.is_empty())
+                .collect::<Vec<_>>()
+                .join(", ");
+            labels(&id, Some(label), aria_labelledby.as_deref())
+        })
+    };
 
     UseCalendarReturn {
         calendar_props: UseCalendarProps {
             id,
             role: AriaRole::Application,
-            aria_label: label,
-            aria_labelledby,
+            aria_label: Signal::derive(move || labelling.with(|labels| labels.aria_label.clone())),
+            aria_labelledby: Signal::derive(move || {
+                labelling.with(|labels| labels.aria_labelledby.clone())
+            }),
             aria_describedby,
             aria_details,
             on_focusout: EventHandler::empty(),

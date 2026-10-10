@@ -162,3 +162,18 @@ Always prefer using `get_owner_document()` from `crate::utils::EventTargetExt`.
 Document "why", when deviating from this recommendation.
 
 **Reference**: `use_press`, `use_move`, `use_slider_thumb`
+
+## Resize Observers
+
+The browser delivers `ResizeObserver` observations in passes, each deeper in the DOM than the last. Work in a callback
+that resizes an element not deeper than an observed one (repositioning a portaled overlay, which writes its
+`max-height`; a measured size the overlay is styled with) can't be delivered in that pass: the browser fires
+"ResizeObserver loop completed with undelivered notifications" as an uncaught `error` event, which fails the browser
+tests' page health and shows up in apps' error monitoring. Leptos makes this easy to hit: an Effect notified from the
+callback runs in a microtask, still inside the delivery. Such work goes to the next animation frame, coalesced, with
+`utils::next_frame::NextFrame` (one pending frame at most, cancelled on cleanup), and is still applied before that
+frame is painted. Starting to observe an element from inside a delivery has the same problem (it would be skipped):
+defer that to the next frame too. Work that only follows from opening or a changed input stays immediate.
+
+**Reference**: `use_overlay_position` (overlay and target observers), `Popover` (`--trigger-width`),
+`use_virtualizer_item` (observing new rows)

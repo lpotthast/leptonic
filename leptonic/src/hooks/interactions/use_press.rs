@@ -78,7 +78,11 @@ use crate::{
 //   listeners added to the element while pressed (react-aria: the element's `onPointerEnter`/
 //   `onPointerLeave` props), so the props carry no handlers for them.
 // - A press of a disabled element starts no press state (react-aria records one that triggers
-//   nothing).
+//   nothing, which a disabled native button, firing pointer events but no click, would leave
+//   stuck). Its pointer downs, key downs and clicks (prevented) all propagate. Upstream's do
+//   while no press is recorded, and its clicks of a recorded pointer press and virtual clicks do
+//   too. Upstream stops the rest: key repeats and the native click during the recorded keyboard
+//   press (Enter on an `aria-disabled` submit button or link).
 // - A native click following Space's keyup on an input or submit/reset button completes the
 //   keyboard activation without firing a second virtual press. The default action still runs
 //   (e.g. toggling a checkbox); upstream's synthetic keyboard tests do not send this native click.
@@ -224,30 +228,54 @@ impl Default for LongPress {
     }
 }
 
-/// Merges two long press groups on one element (e.g. a responder's and the element's own):
-/// callbacks chained (`first`'s first), `second`'s threshold, `second`'s description (else
-/// `first`'s), disabled while both are.
+/// Merges two long press groups on one element (e.g. a responder's and the element's own), as
+/// two `useLongPress` hooks on one element in react-aria: each group's callbacks run only while
+/// that group is enabled (`first`'s before `second`'s), and the merged group is disabled while
+/// both are. The threshold is `second`'s unless it is disabled; the description is that of an
+/// enabled group with an `on_long_press` handler (`second`'s first).
 pub(crate) fn merge_long_press(
     first: Option<LongPress>,
     second: Option<LongPress>,
 ) -> Option<LongPress> {
+    fn while_enabled<T: Clone + Send + Sync + 'static>(
+        callback: Option<Callback<T>>,
+        is_disabled: Signal<bool>,
+    ) -> Option<Callback<T>> {
+        callback.map(|callback| {
+            Callback::new(move |e: T| {
+                if !is_disabled.get_untracked() {
+                    callback.run(e);
+                }
+            })
+        })
+    }
+
     match (first, second) {
         (Some(first), Some(second)) => Some(LongPress {
             on_long_press_start: chain_optional_callbacks(
-                first.on_long_press_start,
-                second.on_long_press_start,
+                while_enabled(first.on_long_press_start, first.is_disabled),
+                while_enabled(second.on_long_press_start, second.is_disabled),
             ),
-            on_long_press: chain_optional_callbacks(first.on_long_press, second.on_long_press),
+            on_long_press: chain_optional_callbacks(
+                while_enabled(first.on_long_press, first.is_disabled),
+                while_enabled(second.on_long_press, second.is_disabled),
+            ),
             on_long_press_end: chain_optional_callbacks(
-                first.on_long_press_end,
-                second.on_long_press_end,
+                while_enabled(first.on_long_press_end, first.is_disabled),
+                while_enabled(second.on_long_press_end, second.is_disabled),
             ),
-            threshold: second.threshold,
+            threshold: Signal::derive(move || {
+                if second.is_disabled.get() {
+                    first.threshold.get()
+                } else {
+                    second.threshold.get()
+                }
+            }),
             accessibility_description: MaybeProp::derive(move || {
-                second
-                    .accessibility_description
-                    .get()
-                    .or_else(|| first.accessibility_description.get())
+                [second, first]
+                    .into_iter()
+                    .filter(|group| group.on_long_press.is_some() && !group.is_disabled.get())
+                    .find_map(|group| group.accessibility_description.get())
             }),
             is_disabled: Signal::derive(move || {
                 first.is_disabled.get() && second.is_disabled.get()
@@ -472,22 +500,21 @@ pub struct UsePressReturn {
     pub is_pressed: Signal<bool>,
 }
 
-/// Props from `use_press` that can be extracted and merged programmatically.
+/// The handlers and attributes of `use_press` for the pressable element.
 ///
-/// Use [`UsePressProps::into_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
-/// spreading syntax (`<div {..props.into_attrs()}>`) (taking ownership).
-/// # Example
+/// [`UsePressReturn::props`] wraps them with the element's styles: `into_parts()` gives the
+/// attributes to spread (`<div {..attrs}>`) and the styles to apply; `into_inner()` gives these
+/// props, e.g. to chain a handler of the element's own before spreading them with
+/// [`into_attrs()`](IntoAttrs::into_attrs).
 ///
 /// ```ignore
-/// // Basic usage
 /// let press = use_press(input);
-/// view! { <button {..press.props.into_attrs()}>"Click"</button> }
+/// let (attrs, styles) = press.props.into_parts();
+/// view! { <button {..attrs} style=styles>"Click"</button> }
 ///
-/// // Merging multiple press hooks
-/// let press1 = use_press(input1);
-/// let press2 = use_press(input2);
-/// let merged = press1.props.merge(press2.props);
-/// view! { <button {..merged.into_attrs()}>"Both handlers fire"</button> }
+/// // A key handler of the element's own before the press handling.
+/// let (props, styles) = use_press(input).props.into_inner();
+/// let on_keydown = own_keydown.chain(props.on_keydown).into_on(ev::keydown);
 /// ```
 #[derive(Debug)]
 pub struct UsePressProps {
@@ -1257,10 +1284,12 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 return;
             }
 
+            // A disabled element's click does nothing and propagates. react-aria triggers its
+            // (inert) press callbacks for the click, which therefore stop nothing: that of the
+            // pointer press it recorded on pointer down, or a virtual press.
             if disabled.get_untracked() {
                 e.prevent_default();
-                // Nothing triggered: stopped, as react-aria's clicks that start no press.
-                stop_unless_forced(true, &EventRef::Mouse(&e));
+                saw_virtual_pointer_event.set_value(false);
                 return;
             }
 
@@ -1699,4 +1728,49 @@ fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: &web_sys::Element)
         || is_input
             && !is_valid_input_key(current_target.unchecked_ref::<HtmlInputElement>(), &key)
         || is_link && key != KeyboardKey::Enter)
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::testing::with_owner;
+
+    fn group(threshold_ms: u64, description: &str, is_disabled: RwSignal<bool>) -> LongPress {
+        LongPress {
+            on_long_press: Some(Callback::new(|_: LongPressEvent| {})),
+            threshold: Signal::stored(Duration::from_millis(threshold_ms)),
+            accessibility_description: MaybeProp::from(description.to_owned()),
+            is_disabled: is_disabled.into(),
+            ..LongPress::default()
+        }
+    }
+
+    /// A disabled group's threshold and description don't apply; the merged group is disabled
+    /// only while both are.
+    #[test]
+    fn merged_long_press_uses_the_enabled_group() {
+        with_owner(|| {
+            let first_disabled = RwSignal::new(false);
+            let second_disabled = RwSignal::new(true);
+            let merged = merge_long_press(
+                Some(group(300, "first", first_disabled)),
+                Some(group(700, "second", second_disabled)),
+            )
+            .unwrap();
+            assert_that!(merged.threshold.get()).is_equal_to(Duration::from_millis(300));
+            assert_that!(merged.accessibility_description.get()).is_equal_to(Some("first".into()));
+            assert_that!(merged.is_disabled.get()).is_false();
+
+            second_disabled.set(false);
+            assert_that!(merged.threshold.get()).is_equal_to(Duration::from_millis(700));
+            assert_that!(merged.accessibility_description.get()).is_equal_to(Some("second".into()));
+
+            first_disabled.set(true);
+            second_disabled.set(true);
+            assert_that!(merged.accessibility_description.get()).is_none();
+            assert_that!(merged.is_disabled.get()).is_true();
+        });
+    }
 }

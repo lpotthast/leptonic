@@ -611,6 +611,48 @@ mod tests {
         });
     }
 
+    // Upstream: GridList.test.js "should support horizontal orientation with grid layout", in a
+    // right-to-left locale.
+    #[test]
+    fn horizontal_grid_layout_mirrors_left_and_right_in_rtl() {
+        crate::testing::with_owner(|| {
+            // elderberry cherry apple
+            // fig        durian banana
+            let base = delegate(1, 200.0, &[]);
+            let mut layout = column_layout(&KEYS, 2);
+            for rect in layout.rects.values_mut() {
+                rect.x = 200.0 - rect.x;
+            }
+            let d = ListKeyboardDelegate::new(base.collection, base.selection, Arc::new(layout))
+                .with_layout(ListLayout::Grid)
+                .with_orientation(Orientation::Horizontal)
+                .with_direction(WritingDirection::Rtl);
+            assert_that!(d.key_left_of(&k("apple"), NAV)).is_equal_to(Some(k("cherry")));
+            assert_that!(d.key_left_of(&k("durian"), NAV)).is_equal_to(Some(k("fig")));
+            assert_that!(d.key_right_of(&k("cherry"), NAV)).is_equal_to(Some(k("apple")));
+            assert_that!(d.key_right_of(&k("fig"), NAV)).is_equal_to(Some(k("durian")));
+            assert_that!(d.key_below(&k("apple"), NAV)).is_equal_to(Some(k("banana")));
+            assert_that!(d.key_above(&k("banana"), NAV)).is_equal_to(Some(k("apple")));
+            // The edges.
+            assert_that!(d.key_right_of(&k("banana"), NAV)).is_none();
+            assert_that!(d.key_left_of(&k("elderberry"), NAV)).is_none();
+        });
+    }
+
+    // Upstream: GridList.test.js "should support horizontal orientation".
+    #[test]
+    fn horizontal_stack_moves_through_the_items_with_up_and_down() {
+        crate::testing::with_owner(|| {
+            let d = delegate(6, 200.0, &["banana"]).with_orientation(Orientation::Horizontal);
+            assert_that!(d.key_below(&k("apple"), NAV)).is_equal_to(Some(k("cherry")));
+            assert_that!(d.key_above(&k("cherry"), NAV)).is_equal_to(Some(k("apple")));
+            assert_that!(d.key_above(&k("apple"), NAV)).is_none();
+            let rtl = d.with_direction(WritingDirection::Rtl);
+            assert_that!(rtl.key_left_of(&k("apple"), NAV)).is_equal_to(Some(k("cherry")));
+            assert_that!(rtl.key_right_of(&k("cherry"), NAV)).is_equal_to(Some(k("apple")));
+        });
+    }
+
     #[test]
     fn grid_layout_moves_by_column_and_row() {
         crate::testing::with_owner(|| {

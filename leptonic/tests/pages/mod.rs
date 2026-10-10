@@ -11,6 +11,7 @@
 mod element;
 mod event;
 pub mod health;
+mod keyboard;
 mod locator;
 mod lookup;
 pub(crate) use lookup::terminal_lookup_error;
@@ -24,7 +25,7 @@ use assertr::{pattern, prelude::*};
 pub use browser_test::thirtyfour::WebElement;
 use browser_test::{
     StepExt,
-    thirtyfour::{TypingData, WebDriver},
+    thirtyfour::{Key, TypingData, WebDriver},
 };
 pub use element::{Dispatched, ElementActions, ScrollExtent};
 pub use event::{
@@ -160,17 +161,7 @@ impl<'d> Page<'d> {
 
     /// The deeply focused element, including inside open shadow roots (`<body>` when none).
     pub async fn focused_element(&self) -> Result<WebElement, Report> {
-        self.driver()
-            .execute(
-                "let element = document.activeElement;
-                 while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
-                 return element;",
-                vec![],
-            )
-            .await
-            .context("failed to get the focused element")?
-            .element()
-            .map_err(Into::into)
+        keyboard::focused_element(self.driver()).await
     }
 
     /// Wait for this specific node to receive focus. A detached node fails immediately.
@@ -240,8 +231,9 @@ impl<'d> Page<'d> {
 
     // The browser.
 
-    /// Make the browser report `platform` (user agent, `navigator.platform`) from the next page
-    /// load on: leptonic detects the platform once per page. Session resets end the emulation.
+    /// Make the browser report `platform` (user agent, `navigator.userAgentData`) from the next
+    /// page load on: leptonic detects the platform once per page. Session resets end the
+    /// emulation.
     pub async fn emulate_platform(&self, platform: Platform) -> Result<(), Report> {
         self.driver()
             .cdp()
@@ -249,6 +241,57 @@ impl<'d> Page<'d> {
             .await
             .context_with(|| format!("failed to emulate {platform:?}"))?;
         Ok(())
+    }
+
+    /// The platform as leptonic (like react-aria) reads it: `navigator.userAgentData.platform`,
+    /// else `navigator.platform`. The host's unless emulated (`emulate_platform`).
+    pub async fn reported_platform(&self) -> Result<String, Report> {
+        self.low_level()
+            .eval(
+                "return navigator.userAgentData?.platform || navigator.platform;",
+                vec![],
+            )
+            .await
+    }
+
+    /// The modifier that moves the focus through a collection without selecting (arrow keys)
+    /// and toggles the focused item's selection (Space): Alt (Option) on Apple devices, where
+    /// Ctrl+arrows have a system-wide meaning, else Control (react-aria's
+    /// `isNonContiguousSelectionModifier`).
+    pub async fn non_contiguous_selection_modifier(&self) -> Result<Key, Report> {
+        let platform = self.reported_platform().await?.to_ascii_lowercase();
+        let apple = ["mac", "iphone", "ipad"]
+            .iter()
+            .any(|prefix| platform.starts_with(prefix));
+        Ok(if apple { Key::Alt } else { Key::Control })
+    }
+
+    /// Click `element` with the primary modifier held (`primary_modifier`): a Ctrl-click
+    /// (Command-click on a Mac), which toggles selection where a plain click replaces it.
+    pub async fn click_with_primary_modifier(&self, element: &WebElement) -> Result<(), Report> {
+        let modifier = self.primary_modifier().await?;
+        self.low_level()
+            .driver()
+            .action_chain()
+            .key_down(modifier.clone())
+            .click_element(element)
+            .key_up(modifier)
+            .perform()
+            .await
+            .context("failed to click with the primary modifier held")?;
+        Ok(())
+    }
+
+    /// The modifier of select all, Ctrl+arrow focus moves and Ctrl-click toggling: Meta on a Mac,
+    /// else Control (react-aria's `isCtrlKeyPressed`), and the primary modifier of shortcuts
+    /// (`Mod`). Depends on the host unless the page emulates a platform.
+    pub async fn primary_modifier(&self) -> Result<Key, Report> {
+        let platform = self.reported_platform().await?;
+        Ok(if platform.to_ascii_lowercase().starts_with("mac") {
+            Key::Meta
+        } else {
+            Key::Control
+        })
     }
 
     /// Start measuring in the page, on its clock: from the next `event` (a pointer event, or a
@@ -301,6 +344,46 @@ impl<'d> Page<'d> {
         Ok(Dispatched { default_prevented })
     }
 
+    /// Dispatch each event to its element, in order and in one script: no WebDriver round trips
+    /// in between, for sequences that must finish before a timer in the page runs out (a touch
+    /// drag that starts after 200 ms). Returns whether each was default prevented.
+    pub async fn dispatch_all<I: Send>(
+        &self,
+        events: Vec<(&WebElement, SyntheticEvent<I>)>,
+    ) -> Result<Vec<Dispatched>, Report> {
+        let description = events
+            .iter()
+            .map(|(_, event)| event.to_string())
+            .collect::<Vec<_>>()
+            .join(", then ");
+        let mut steps = Vec::with_capacity(events.len());
+        for (target, event) in events {
+            let (interface, kind, init) = event.into_parts();
+            steps.push(serde_json::Value::from(vec![
+                target.to_json()?,
+                interface.into(),
+                kind.into(),
+                init,
+            ]));
+        }
+        let default_prevented: Vec<bool> = self
+            .low_level()
+            .eval(
+                "return arguments[0].map(([target, constructor, type, init]) => {
+                     const event = new window[constructor](type, init);
+                     target.dispatchEvent(event);
+                     return event.defaultPrevented;
+                 });",
+                vec![serde_json::Value::from(steps)],
+            )
+            .await
+            .context_with(|| format!("failed to dispatch {description}"))?;
+        Ok(default_prevented
+            .into_iter()
+            .map(|default_prevented| Dispatched { default_prevented })
+            .collect())
+    }
+
     /// Start recording the attribute `name` of the elements matching `selector`, also of those
     /// inserted later (an overlay opening): the value each had when inserted and every value it
     /// took after, in the page (no WebDriver round trips in between). `finish()` returns them.
@@ -314,15 +397,12 @@ impl<'d> Page<'d> {
 
     // Keyboard input, to whatever has focus.
 
-    /// Send `keys` to the focused element. Modifiers are held until the end, so
-    /// `Key::Shift + Key::Tab` is Shift+Tab.
+    /// Send `keys` to whatever has focus. Modifiers are held until the end (or `Key::Null`), so
+    /// `Key::Shift + Key::Tab` is Shift+Tab. Characters arrive as a US keyboard types them,
+    /// whatever the host's keyboard layout (`?` is Shift+Slash with `key` "?"); named keys and
+    /// chords go through WebDriver.
     pub async fn send_keys(&self, keys: impl Into<TypingData> + Send) -> Result<(), Report> {
-        self.focused_element()
-            .await?
-            .send_keys(keys)
-            .await
-            .context("failed to send keys to the focused element")?;
-        Ok(())
+        keyboard::send_keys(self.driver(), &keys.into()).await
     }
 
     /// Type `text` one key at a time, each to the element focused at that moment: for inputs

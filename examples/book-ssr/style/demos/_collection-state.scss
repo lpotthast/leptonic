@@ -78,6 +78,18 @@
     overflow-wrap: anywhere;
 }
 
+// A line of the access log, which doesn't wrap: as wide as its text and at least as wide as the list, so its hover
+// background spans the line wherever the list scrolls across.
+.demo-virt-wide-line {
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+    padding: var(--book-space-xs) var(--book-space-s);
+    white-space: pre;
+
+    &:hover { background-color: var(--book-hover-background-color); color: var(--main-color); }
+}
+
 // A list virtualized with the hooks: the scroll view and its rows.
 .demo-virt-scroll {
     height: 15em;

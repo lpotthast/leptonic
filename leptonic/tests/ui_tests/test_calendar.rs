@@ -37,7 +37,7 @@ use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::{Report, bail};
 
 use crate::pages::{
-    ElementActions, Page, PointerKind, PointerType, StopwatchEnd, SyntheticEvent, css,
+    ElementActions, Page, PointerKind, PointerType, StopwatchEnd, SyntheticEvent, css, interface,
 };
 
 const PATH: &str = "/atoms/calendar";
@@ -980,15 +980,19 @@ pub async fn unavailable_dates_depending_on_the_anchor(page: &Page<'_>) -> Resul
 /// Dispatches a touch pointer event (`pointerdown`, `pointerup`, `pointerenter`,
 /// `pointercancel`) at the center of `element`.
 async fn touch(element: &WebElement, kind: PointerKind) -> Result<(), Report> {
-    let rect = element.client_rect().await?;
-    element
-        .dispatch(
-            SyntheticEvent::pointer(kind)
-                .pointer_type(PointerType::Touch)
-                .at(rect.left + rect.width / 2.0, rect.top + rect.height / 2.0),
-        )
-        .await?;
+    element.dispatch(touch_event(element, kind).await?).await?;
     Ok(())
+}
+
+/// A touch pointer event of `kind` at the center of `element`.
+async fn touch_event(
+    element: &WebElement,
+    kind: PointerKind,
+) -> Result<SyntheticEvent<interface::Pointer>, Report> {
+    let rect = element.client_rect().await?;
+    Ok(SyntheticEvent::pointer(kind)
+        .pointer_type(PointerType::Touch)
+        .at(rect.left + rect.width / 2.0, rect.top + rect.height / 2.0))
 }
 
 /// A quick tap: pressed and released before the drag delay.
@@ -1341,7 +1345,7 @@ pub async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(month)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("4");
     assert_that!(month.inner_texts("option").await?).contains_exactly([
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -1351,7 +1355,7 @@ pub async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(month)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("6");
 
     let years =
@@ -3814,12 +3818,21 @@ pub async fn range_invalid_end_not_draggable_by_touch(page: &Page<'_>) -> Result
     let all = [
         "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
     ];
-    let june20 = day_of_month(page, name, 20).await?;
-    touch(&june20, PointerKind::Down).await?;
-    touch(&day_of_month(page, name, 21).await?, PointerKind::Enter).await?;
-    touch(&day_of_month(page, name, 19).await?, PointerKind::Enter).await?;
     let june19 = day_of_month(page, name, 19).await?;
-    touch(&june19, PointerKind::Up).await?;
+    let june20 = day_of_month(page, name, 20).await?;
+    let june21 = day_of_month(page, name, 21).await?;
+    // In one script: a touch held for 200 ms starts a new range at June 20 (the drag delay),
+    // which upstream's synchronous test never reaches either.
+    let mut drag = Vec::new();
+    for (day, kind) in [
+        (&june20, PointerKind::Down),
+        (&june21, PointerKind::Enter),
+        (&june19, PointerKind::Enter),
+        (&june19, PointerKind::Up),
+    ] {
+        drag.push((day, touch_event(day, kind).await?));
+    }
+    page.dispatch_all(drag).await?;
     page.settle().await?;
     assert_that!(|| selected_days(page, name))
         .consistently_ok()

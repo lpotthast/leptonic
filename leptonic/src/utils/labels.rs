@@ -8,7 +8,6 @@
 // ## API DIFFERENCES
 // - A plain function of the element's id (callers have one already, from `use_id`), instead of
 //   a hook generating it. Reactive callers call it inside their signal.
-// - An `aria_label` counts when given (`Some`), also when empty. React-aria: when non-empty.
 //
 // ## OMITTED FEATURES
 // - `defaultLabel` (no caller needs one).
@@ -27,11 +26,13 @@ pub struct Labels {
 }
 
 /// The labelling of the element `id`, named by `aria_label` and/or the elements `aria_labelledby`
-/// lists. With both, the element's own id joins the labelling ids (first), so that the label is
-/// part of its name; the ids are normalized (each once, single spaces). Upstream: `useLabels`.
+/// lists. With both (an empty `aria_label` counts as none), the element's own id joins the
+/// labelling ids (first), so that the label is part of its name; the ids are normalized (each
+/// once, single spaces). `aria_label` is returned as given. Upstream: `useLabels`.
 pub fn labels(id: &str, aria_label: Option<String>, aria_labelledby: Option<&str>) -> Labels {
     let mut refs = IdRefs::default();
-    if aria_label.is_some() && aria_labelledby.is_some_and(|ids| !ids.trim().is_empty()) {
+    let has_label = aria_label.as_deref().is_some_and(|label| !label.is_empty());
+    if has_label && aria_labelledby.is_some_and(|ids| !ids.trim().is_empty()) {
         refs.push(id);
     }
     refs.extend(aria_labelledby);
@@ -69,6 +70,14 @@ mod tests {
         assert_that!(labels("el", Some("Name".to_owned()), Some("a el b"))).is_equal_to(Labels {
             aria_label: Some("Name".to_owned()),
             aria_labelledby: Some("el a b".to_owned()),
+        });
+    }
+
+    #[test]
+    fn an_empty_label_counts_as_none() {
+        assert_that!(labels("el", Some(String::new()), Some("a"))).is_equal_to(Labels {
+            aria_label: Some(String::new()),
+            aria_labelledby: Some("a".to_owned()),
         });
     }
 

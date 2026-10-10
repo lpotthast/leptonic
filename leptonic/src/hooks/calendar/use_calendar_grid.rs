@@ -77,7 +77,7 @@ pub struct UseCalendarGridProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_multiselectable: Option<AriaMultiselectable>,
@@ -91,7 +91,7 @@ pub type UseCalendarGridAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
@@ -245,20 +245,23 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
 
     let id = use_id("calendar-grid");
     let aria_label = data.aria_label;
-    let label = Memo::new(move |_| {
-        let label = [
-            aria_label.get(),
-            Some(visible_range_description(range.get(), &locale.get())),
-        ]
-        .into_iter()
-        .flatten()
-        .filter(|label| !label.is_empty())
-        .collect::<Vec<_>>()
-        .join(", ");
-        Some(label)
-    });
-    let aria_labelledby =
-        labels(&id, Some(String::new()), data.aria_labelledby.as_deref()).aria_labelledby;
+    let aria_labelledby = data.aria_labelledby;
+    // Named as the calendar, plus its visible range (react-aria: `useLabels`).
+    let labelling = {
+        let id = id.clone();
+        Memo::new(move |_| {
+            let label = [
+                aria_label.get(),
+                Some(visible_range_description(range.get(), &locale.get())),
+            ]
+            .into_iter()
+            .flatten()
+            .filter(|label| !label.is_empty())
+            .collect::<Vec<_>>()
+            .join(", ");
+            labels(&id, Some(label), aria_labelledby.as_deref())
+        })
+    };
 
     let week_days = Memo::new(move |_| {
         let formatter = DateTimeFormatter::new(
@@ -284,8 +287,10 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
         grid_props: UseCalendarGridProps {
             id,
             role: AriaRole::Grid,
-            aria_label: label.into(),
-            aria_labelledby,
+            aria_label: Signal::derive(move || labelling.with(|labels| labels.aria_label.clone())),
+            aria_labelledby: Signal::derive(move || {
+                labelling.with(|labels| labels.aria_labelledby.clone())
+            }),
             aria_readonly: Signal::derive(move || {
                 calendar.is_read_only.get().then_some(AriaReadonly::True)
             }),

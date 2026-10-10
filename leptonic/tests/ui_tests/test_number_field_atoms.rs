@@ -35,9 +35,11 @@ async fn tab_into(page: &Page<'_>, input: &WebElement) -> Result<(), Report> {
 }
 
 /// Selects the input's whole text and deletes it.
-async fn clear(input: &WebElement) -> Result<(), Report> {
-    input.send_keys(Key::Control + "a").await?;
-    input.send_keys(Key::Backspace).await?;
+async fn clear(page: &Page<'_>, input: &WebElement) -> Result<(), Report> {
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
+    input.type_keys(Key::Backspace).await?;
     Ok(())
 }
 
@@ -92,7 +94,7 @@ pub async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("1,024");
     assert_that!(input)
         .accessible_name()
@@ -195,7 +197,7 @@ pub async fn form_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(hidden)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("25");
     assert_that!(hidden)
         .has_attribute("form")
@@ -204,7 +206,7 @@ pub async fn form_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input(page, "nf-form-value").await?)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("$25.00");
     let disabled = page
         .element("#nf-form-value-disabled input[name=test]")
@@ -328,7 +330,7 @@ pub async fn typing_and_enter_commit(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input(page, "nf-keys").await?;
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("2048").await?;
     page.send_keys(Key::Enter).await?;
     input.wait_for_prop("value", "2,048").await?;
@@ -348,7 +350,7 @@ pub async fn no_grouping_characters_without_grouping(page: &Page<'_>) -> Result<
     tab_into(page, &input).await?;
     page.send_keys("102,4").await?;
     input.wait_for_prop("value", "1024").await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     paste(page, &input, "1,024").await?;
     page.send_keys(Key::Tab).await?;
     // Unparsable pasted text keeps the previous (empty) value.
@@ -366,7 +368,7 @@ pub async fn no_grouping_characters_in_german(page: &Page<'_>) -> Result<(), Rep
     tab_into(page, &input).await?;
     page.send_keys("102.4").await?;
     input.wait_for_prop("value", "1024").await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     paste(page, &input, "1.024").await?;
     page.send_keys(Key::Tab).await?;
     // Unparsable pasted text keeps the previous (empty) value.
@@ -417,7 +419,7 @@ pub async fn pasting_into_a_format(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input(page, "nf-form-value").await?;
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     paste(page, &input, "1,024").await?;
     input.wait_for_prop("value", "$1,024.00").await?;
     Ok(())
@@ -430,7 +432,7 @@ pub async fn rejected_values_keep_the_text(page: &Page<'_>) -> Result<(), Report
     page.goto_path(PATH).await?;
     let input = input(page, "nf-rejecting").await?;
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     paste(page, &input, "1024").await?;
     input.wait_for_prop("value", "200").await?;
     page.send_keys(Key::Enter).await?;
@@ -481,7 +483,7 @@ pub async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
 
     // Over max.
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("1024").await?;
     page.send_keys(Key::Tab).await?;
     input.wait_for_prop("value", "1,024").await?;
@@ -512,7 +514,7 @@ pub async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
     // Valid, under min, off step: typed values are announced; invalid ones focus the field on a
     // validity check.
     for (typed, valid) in [("30", true), ("2", false), ("31", false)] {
-        clear(&input).await?;
+        clear(page, &input).await?;
         page.send_keys(typed).await?;
         assert_that!(|| assertive.inner_text())
             .eventually_ok()
@@ -540,7 +542,7 @@ pub async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
     }
 
     // Required.
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys(Key::Tab).await?;
     input.wait_for_prop("value", "").await?;
     assert_that!(input.is_valid().await?).is_false();
@@ -563,7 +565,7 @@ pub async fn validate_commit_behavior_and_enter_submit(page: &Page<'_>) -> Resul
     page.goto_path(PATH).await?;
     let input = input(page, "nf-validate").await?;
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("1024").await?;
     page.send_keys(Key::Enter).await?;
     wait_for_error(&input).await?;
@@ -573,7 +575,7 @@ pub async fn validate_commit_behavior_and_enter_submit(page: &Page<'_>) -> Resul
         .inner_text_stays("0", std::time::Duration::from_millis(100))
         .await?;
 
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("30").await?;
     page.send_keys(Key::Enter).await?;
     page.element("#nf-validate-submits")
@@ -604,11 +606,11 @@ pub async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
     unsigned.wait_for_prop("value", "5").await?;
 
     // A value beyond the type's range clamps to it, and stepping goes on from there.
-    clear(&unsigned).await?;
+    clear(page, &unsigned).await?;
     page.send_keys("300").await?;
     page.send_keys(Key::Enter).await?;
     unsigned.wait_for_prop("value", "255").await?;
-    clear(&unsigned).await?;
+    clear(page, &unsigned).await?;
     page.send_keys("1000").await?;
     page.send_keys(Key::Up).await?;
     unsigned.wait_for_prop("value", "255").await?;
@@ -624,10 +626,10 @@ pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("10");
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("100").await?;
     input.wait_for_prop("value", "100").await?;
     page.blur_focused().await?;
@@ -711,7 +713,7 @@ pub async fn native_validate_function(page: &Page<'_>) -> Result<(), Report> {
         .matches(eq("Invalid value"))
         .await;
     page.wait_for_focus(&input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("3").await?;
     assert_that!(input).has_attribute("aria-describedby").await;
     assert_that!(input.is_valid().await?).is_false();
@@ -780,7 +782,7 @@ pub async fn aria_validate_function(page: &Page<'_>) -> Result<(), Report> {
         .is_equal_to("true");
     assert_that!(input.is_valid().await?).is_true();
     tab_into(page, &input).await?;
-    clear(&input).await?;
+    clear(page, &input).await?;
     page.send_keys("4").await?;
     page.send_keys(Key::Tab).await?;
     input.wait_for_attr("aria-describedby", None).await?;

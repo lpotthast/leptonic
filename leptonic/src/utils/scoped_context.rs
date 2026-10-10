@@ -33,6 +33,13 @@ pub(crate) fn scoped_view<V>(provide: impl FnOnce(), view: impl FnOnce() -> V) -
 /// in place while their owner lives, which outlives every descendant of the clearing owner.
 #[cfg(any(feature = "atoms", test))]
 pub(crate) fn clear_context<T: 'static>() {
+    // Values of zero-sized types share one address: a clearing would hide them all.
+    const {
+        assert!(
+            size_of::<T>() > 0,
+            "clear_context needs a context type with a size"
+        );
+    }
     provide_context(Cleared::<T> {
         hidden: provided_value_address::<T>(),
         marker: PhantomData,

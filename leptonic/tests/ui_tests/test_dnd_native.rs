@@ -17,7 +17,7 @@ use rootcause::Report;
 
 use crate::{
     fixtures::dnd::{DndActions, DragImage, ExternalData},
-    pages::{DragKind, ElementActions, KeyKind, Modifier, Page, SyntheticEvent, role},
+    pages::{DragKind, ElementActions, KeyKind, Modifier, Page, Platform, SyntheticEvent, role},
 };
 
 const PATH: &str = "/hooks/dnd-native";
@@ -862,6 +862,7 @@ pub async fn effect_allowed_narrowed_to_a_refused_operation(page: &Page<'_>) -> 
 /// browser does not update effectAllowed").
 #[browser_test]
 pub async fn modifier_keys_pick_the_operation(page: &Page<'_>) -> Result<(), Report> {
+    page.emulate_platform(Platform::Linux).await?;
     page.goto_path(&format!("{PATH}?only=basic")).await?;
     let source = named(page, "source").await?;
     let target = named(page, "target").await?;
@@ -892,6 +893,7 @@ pub async fn modifier_keys_pick_the_operation(page: &Page<'_>) -> Result<(), Rep
 /// properly").
 #[browser_test]
 pub async fn wrong_effect_allowed_of_the_browser(page: &Page<'_>) -> Result<(), Report> {
+    page.emulate_platform(Platform::Linux).await?;
     page.goto_path(&format!("{PATH}?only=basic&allowed=copy"))
         .await?;
     let source = named(page, "source").await?;

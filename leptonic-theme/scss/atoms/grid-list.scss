@@ -10,7 +10,9 @@
 //     <span class="text description">"PNG • 2/3/2024"</span>
 //   </GridListItem>
 //
-// The layout follows the grid list's `data-layout` (`grid`, as the starter's default, or `stack`).
+// The layout follows the grid list's `data-layout` (`grid`, as the starter's default, or `stack`)
+// and `data-orientation` (`vertical` or `horizontal`: a scrolling row of cards, or two rows of cards
+// flowing into columns in a grid layout).
 // Variants: `attr:data-size="small"` on the grid list for smaller cards.
 
 .leptonic-GridList {
@@ -32,7 +34,10 @@
   &[data-layout='grid']:not([data-empty]) {
     display: grid;
     grid-auto-rows: min-content;
-    grid-template-columns: repeat(auto-fit, minmax(100px, var(--grid-item-size)));
+
+    &:not([data-orientation='horizontal']) {
+      grid-template-columns: repeat(auto-fit, minmax(100px, var(--grid-item-size)));
+    }
   }
 
   &[data-size='small'] {
@@ -50,6 +55,26 @@
     display: grid;
     grid-template-columns: auto;
     align-items: center;
+
+    &[data-orientation='horizontal'] {
+      display: flex;
+      flex-direction: row;
+      justify-content: normal;
+
+      .leptonic-GridListItem {
+        flex-shrink: 0;
+        width: var(--grid-item-size);
+      }
+    }
+  }
+
+  &[data-layout='grid'][data-orientation='horizontal'] {
+    grid-auto-flow: column;
+    grid-template-rows: auto auto;
+    grid-template-columns: none;
+    grid-auto-columns: var(--grid-item-size);
+    justify-content: normal;
+    max-height: none;
   }
 
   &[data-focus-visible] {

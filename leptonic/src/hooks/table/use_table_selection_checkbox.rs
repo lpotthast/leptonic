@@ -77,7 +77,16 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
                 selection.selection_mode() != SelectionMode::Multiple
                     || rows.with(|t| t.size() == 0)
             }),
-            aria_label: Signal::derive(move || Some(strings.read().select_all())).into(),
+            // "Select" in single selection mode, where it is disabled (as react-aria).
+            aria_label: Signal::derive(move || {
+                let strings = strings.read();
+                Some(if selection.selection_mode() == SelectionMode::Single {
+                    strings.select()
+                } else {
+                    strings.select_all()
+                })
+            })
+            .into(),
             ..ToggleOptions::default()
         },
         state,

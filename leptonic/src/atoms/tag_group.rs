@@ -24,7 +24,11 @@ use crate::{
             UseTagReturn, use_tag, use_tag_group,
         },
     },
-    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
+    utils::{
+        data_attributes::{self, flag},
+        default_class::with_default_class,
+        styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -255,7 +259,10 @@ pub fn Tag(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Tag", classes);
-    let group = expect_context::<TagGroupData>();
+    let Some(group) = use_context::<TagGroupData>() else {
+        crate::utils::dev_warn!("A <Tag> must be inside a <TagList>.");
+        return None;
+    };
     let selection = group.list.state.selection;
     let has_action = group.list.on_action.is_some();
     let UseTagReturn {
@@ -276,16 +283,11 @@ pub fn Tag(
     });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
-    let selection_mode = move || match selection.selection_mode() {
-        SelectionMode::None => None,
-        SelectionMode::Single => Some("single"),
-        SelectionMode::Multiple => Some("multiple"),
-    };
     let remove = TagRemoveContext {
         button: StoredValue::new(remove_button),
     };
 
-    view! {
+    Some(view! {
         <div
             {..attrs}
             {..hover.props.into_attrs()}
@@ -298,13 +300,13 @@ pub fn Tag(
             data-focus-visible=flag(is_focus_visible)
             data-pressed=flag(is_pressed)
             data-allows-removing=allows_removing.then_some("true")
-            data-selection-mode=selection_mode
+            data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
         >
             <div {..grid_cell_props.into_attrs()} style="display: contents">
                 <Provider value=remove>{children()}</Provider>
             </div>
         </div>
-    }
+    })
 }
 
 /// One [`Tag`] per item of the group's collection, rendered by `children`.
@@ -326,10 +328,13 @@ where
     F: Fn(Node) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
-    let group = expect_context::<TagGroupData>();
+    let Some(group) = use_context::<TagGroupData>() else {
+        crate::utils::dev_warn!("A <TagItems> must be inside a <TagList>.");
+        return None;
+    };
     let collection = group.list.state.collection;
     let children = Arc::new(children);
-    view! {
+    Some(view! {
         <For
             each=move || collection.with(|c| c.items().cloned().collect::<Vec<_>>())
             key=|node| node.key.clone()
@@ -345,7 +350,7 @@ where
                 }
             }
         </For>
-    }
+    })
 }
 
 /// The button removing its [`Tag`] (rendered only when the group has `on_remove`). Keyboard

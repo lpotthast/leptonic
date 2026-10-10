@@ -68,7 +68,7 @@ pub async fn input_props(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(wheel)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("0");
     assert_that!(wheel)
         .has_attribute("aria-valuetext")

@@ -200,7 +200,7 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="expanded_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"The expanded rows (controlled): a value or any signal."</ApiRow>
                         <ApiRow name="set_expanded_keys" ty="Option<Out<HashSet<Key>>>" default="None">"Receives the expanded rows."</ApiRow>
                         <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called when rows are expanded or collapsed."</ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">"Names the table."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the table."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<table>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"A "<Code inline=true>"TableHeader"</Code>" and a "<Code inline=true>"TableBody"</Code>". Required."</ApiRow>
                         <ApiRow name="show_selection_checkboxes" ty="Signal<bool>" default="false">"Show the selection column while selection is enabled."</ApiRow>
@@ -418,31 +418,49 @@ pub fn PageAtomTable() -> impl IntoView {
                     <ApiRow name="data-sort-direction" ty="\"ascending\" / \"descending\"">
                         "On a column header: the table is sorted by this column, in this direction."
                     </ApiRow>
-                    <ApiRow name="data-selected" ty="true">"On "<Code inline=true>"TableRow"</Code>": the row is selected."</ApiRow>
+                    <ApiRow name="data-selected" ty="true">"On "<Code inline=true>"TableRow"</Code>" and its cells: the row is selected."</ApiRow>
+                    <ApiRow name="data-selection-mode" ty="single, multiple">
+                        "On "<Code inline=true>"TableRow"</Code>": how many rows can be selected; absent without selection."
+                    </ApiRow>
                     <ApiRow name="data-focused" ty="true">
-                        "On "<Code inline=true>"TableRow"</Code>" and column headers: it has the table\u{2019}s focus (by keyboard "
-                        "or pointer). Not set while a cell of the row is focused."
+                        "On "<Code inline=true>"Table"</Code>", "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>
+                        " and column headers: it has focus (by keyboard or pointer). A row doesn\u{2019}t have it while one of "
+                        "its cells is focused; the table element only while it has the focus itself, e.g. while empty."
                     </ApiRow>
                     <ApiRow name="data-disabled" ty="true">
-                        "On "<Code inline=true>"TableRow"</Code>": the row is disabled. Only with "
+                        "On "<Code inline=true>"TableRow"</Code>" and its cells: the row is disabled. Only with "
                         <Code inline=true>"DisabledBehavior::All"</Code>"; with the default "<Code inline=true>"Selection"</Code>
                         ", a disabled row only shows through its disabled checkbox."
                     </ApiRow>
                     <ApiRow name="data-focus-visible" ty="true">
-                        "On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: it has "
-                        "keyboard focus, which should be shown."
+                        "On "<Code inline=true>"Table"</Code>", "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>
+                        " and column headers: it has keyboard focus, which should be shown."
+                    </ApiRow>
+                    <ApiRow name="data-focus-visible-within" ty="true">
+                        "On "<Code inline=true>"TableRow"</Code>": the row or an element in it has keyboard focus."
+                    </ApiRow>
+                    <ApiRow name="data-focus-visible-within-row" ty="true">
+                        "On "<Code inline=true>"TableCell"</Code>": the cell\u{2019}s row or an element in it has keyboard focus."
                     </ApiRow>
                     <ApiRow name="data-hovered" ty="true">
-                        "On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: a "
-                        "pointer is over it."
+                        "On "<Code inline=true>"TableHeader"</Code>", "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>
+                        " and column headers: a pointer is over it."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: being pressed."</ApiRow>
+                    <ApiRow name="data-column-index" ty="0, 1, \u{2026}">
+                        "On "<Code inline=true>"TableCell"</Code>": the index of the cell\u{2019}s first column, counting the "
+                        "selection checkbox column."
+                    </ApiRow>
+                    <ApiRow name="data-empty" ty="true">"On "<Code inline=true>"TableBody"</Code>": the table has no rows."</ApiRow>
                     <ApiRow name="data-expanded" ty="true">
                         "In a tree table, on "<Code inline=true>"TableRow"</Code>", its cells and "<Code inline=true>"TableExpandButton"</Code>
                         ": the row\u{2019}s child rows are shown."
                     </ApiRow>
                     <ApiRow name="data-has-child-items" ty="true">"In a tree table, on "<Code inline=true>"TableRow"</Code>" and its cells: the row has child rows."</ApiRow>
-                    <ApiRow name="data-level" ty="1, 2, \u{2026}">"In a tree table, on "<Code inline=true>"TableRow"</Code>" and its cells: the row\u{2019}s level."</ApiRow>
+                    <ApiRow name="data-level" ty="1, 2, \u{2026}">
+                        "On "<Code inline=true>"TableRow"</Code>" and its cells: the row\u{2019}s level, 1 for top-level rows and in "
+                        "flat tables. Rows also set it as the custom property "<Code inline=true>"--table-row-level"</Code>"."
+                    </ApiRow>
                     <ApiRow name="data-tree-column" ty="true">"On the cells of the tree column."</ApiRow>
                     <ApiRow name="data-resizing" ty="true">
                         "In a "<Code inline=true>"ResizableTableContainer"</Code>", on a column header and its resizer: the "

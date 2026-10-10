@@ -20,15 +20,15 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// ## OMITTED FEATURES
-// - Patching `form.reset()` to ignore React's automatic resets after server actions. Reason:
-//   React-specific; Leptos doesn't reset forms on its own.
-//
-// ## BEHAVIORAL DIFFERENCES
+// ## LEPTOS-SPECIFIC ADAPTATIONS
 // - The custom validity is synced (and the native validity read back) when the realtime
 //   validation changes, before each commit, on `change` and when a constraint attribute
 //   (`required`, `min`, ...) changes (react-aria: in a layout effect after every render).
 //   Reason: a render isn't an event in Leptos.
+//
+// ## OMITTED FEATURES
+// - Patching `form.reset()` to ignore React's automatic resets after server actions. Reason:
+//   React-specific; Leptos doesn't reset forms on its own.
 //
 // =============================================================================
 

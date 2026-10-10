@@ -1,6 +1,21 @@
 // Upstream: react-aria/src/interactions/utils.ts @ 99e6102368
 //! Keeping focus where it is when an element is pressed (react-aria's `preventFocus`).
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The cleanup is a `FocusPrevention` to `dispose` (react-aria returns a function).
+//
+// ## DIFFERENT BEHAVIOR
+// - With nothing focused (the active element is `<body>`), the element that got focus is blurred
+//   again. react-aria refocuses `<body>`, which `focus()` ignores, so the pressed element keeps
+//   the focus.
+// - The listeners are removed in a microtask after the refocus, not while one of them runs.
+//
+// =============================================================================
+
 #[cfg(not(feature = "ssr"))]
 use std::cell::Cell;
 

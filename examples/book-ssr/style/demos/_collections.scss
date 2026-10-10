@@ -156,6 +156,41 @@
     &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
 }
 
+// Cards in a grid layout (`ListLayout::Grid`), laid out by the grid list's `data-orientation`: vertical, they wrap
+// into rows; horizontal, they flow into two lines of columns and the list scrolls sideways.
+.demo-grid-list-cards {
+    display: grid;
+    gap: var(--book-space-s);
+    max-width: 100%;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+
+    &[data-orientation="vertical"] { width: 30em; grid-template-columns: repeat(auto-fill, minmax(6.5em, 1fr)); }
+    &[data-orientation="horizontal"] { grid-auto-flow: column; grid-template-rows: auto auto; grid-auto-columns: 6.5em; overflow-x: auto; }
+}
+
+.demo-grid-list-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--book-space-xs);
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--book-transition), outline-color var(--book-transition);
+
+    &[data-focus-visible] { outline-color: var(--book-focus-color); }
+    &[data-selected] { border-color: var(--brand-color); background-color: var(--brand-color-subtle); }
+    &[data-pressed] { background-color: var(--book-hover-background-color); }
+}
+
+.demo-grid-list-card-icon { font-size: var(--book-font-size-xl); }
+
 // A row of the hook demo, styled through the ARIA attributes `use_grid_list_item` sets.
 .demo-grid-list-row {
     padding: var(--book-space-xs) var(--book-space-m);

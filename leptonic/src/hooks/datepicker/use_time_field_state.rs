@@ -7,7 +7,7 @@ use jiff::civil::{Date, Time};
 use leptos::prelude::*;
 
 use super::{
-    types::{DateValue, Granularity, HourCycle, MaxGranularity, TimeValue},
+    types::{DateValue, Granularity, HourCycle, MaxGranularity, TimeBound, TimeValue},
     use_date_field_state::{DateFieldState, UseDateFieldStateInput, use_date_field_state},
 };
 use crate::{
@@ -22,12 +22,15 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - Generic over the value type (`T: TimeValue`: `civil::Time`, `civil::DateTime`, `Zoned`);
-//   min, max and the placeholder have that type as well. The date field state it is built on
-//   is `field` (react-aria: one merged state).
+//   the placeholder has that type as well. The date field state it is built on is `field`
+//   (react-aria: one merged state).
 // - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
 // - The format options are signals (C11), as in `use_date_field_state`.
-// - `min_value`/`max_value` are times of day (`civil::Time`), applied on the value's day
-//   (react-aria: `TimeValue`s, a time converted onto the value's day).
+// - `min_value`/`max_value` are `TimeBound`s (react-aria: any `TimeValue`, told apart at
+//   runtime): a time of day (`TimeOfDay`, react-aria's `Time` bound, on the value's day) or an
+//   absolute bound of the value type (`Absolute`, react-aria's `CalendarDateTime` and
+//   `ZonedDateTime` bounds). A field of times takes only times of day, and a date-time bound has
+//   the field's value type (react-aria also compares a zoned value with a `CalendarDateTime`).
 //
 // =============================================================================
 
@@ -39,10 +42,10 @@ pub struct UseTimeFieldStateInput<T: TimeValue> {
     pub on_change: Option<Callback<Option<T>>>,
     /// The time the segments start from when edited. Default: midnight.
     pub placeholder_value: Signal<Option<T>>,
-    /// The earliest time of day (on the value's day for values with a date).
-    pub min_value: Signal<Option<Time>>,
-    /// The latest time of day (on the value's day for values with a date).
-    pub max_value: Signal<Option<Time>>,
+    /// The earliest valid value: a time of day (on the value's day) or a date and time.
+    pub min_value: Signal<Option<TimeBound<T>>>,
+    /// The latest valid value: a time of day (on the value's day) or a date and time.
+    pub max_value: Signal<Option<TimeBound<T>>>,
     /// The finest unit: hour, minute (default) or second.
     pub granularity: Signal<Option<Granularity>>,
     /// 12 or 24 hours. Default: the locale's.
@@ -161,15 +164,16 @@ pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> T
             |placeholder| placeholder.to_field(day),
         )
     });
-    // A time of day as a bound: on the value's day (else the placeholder's), in its zone
-    // (react-aria's `convertValue(minValue, day)`).
-    let bound = move |time: Option<Time>| {
-        time.map(|time| {
-            let base = field_binding
-                .value
-                .get()
-                .unwrap_or_else(|| placeholder.get());
-            base.with_fields(base.date(), time, None)
+    // A bound as the field's value: a time of day on the value's day (else the placeholder's),
+    // in its zone, a date-time as is (react-aria's `convertValue(minValue, day)`).
+    let bound = move |bound: Option<TimeBound<T>>| {
+        bound.map(|bound| {
+            bound.to_field(|| {
+                field_binding
+                    .value
+                    .get()
+                    .unwrap_or_else(|| placeholder.get())
+            })
         })
     };
     let field = use_date_field_state(UseDateFieldStateInput {
@@ -210,36 +214,132 @@ pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> T
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
-    use jiff::civil::{DateTime, date, time};
+    use jiff::{
+        Zoned,
+        civil::{DateTime, date, time},
+    };
 
     use super::*;
     use crate::{hooks::datepicker::DateSegmentType, testing::with_owner};
 
+    /// The realtime validation of a time field: whether it is invalid, and its errors.
+    fn validation<T: TimeValue>(state: &TimeFieldState<T>) -> (bool, Vec<String>) {
+        let validation = state.field.validation.realtime_validation.get_untracked();
+        (validation.is_invalid, validation.validation_errors)
+    }
+
+    fn valid() -> (bool, Vec<String>) {
+        (false, Vec::new())
+    }
+
+    fn invalid(error: &str) -> (bool, Vec<String>) {
+        (true, vec![error.to_owned()])
+    }
+
+    fn zoned(text: &str) -> Zoned {
+        text.parse().expect("a zoned value")
+    }
+
+    /// react-spectrum's `TimeField.test.js`, "supports minValue and maxValue"
+    /// (`validationBehavior=aria`): 8:00 is before 9:00, stepping the hour up makes it valid,
+    /// stepping to 21:00 is not constrained but invalid.
+    #[test]
+    fn validates_times_against_times_of_day() {
+        with_owner(|| {
+            let state = use_time_field_state(UseTimeFieldStateInput::<Time> {
+                default_value: Some(time(8, 0, 0, 0)),
+                min_value: Signal::stored(Some(time(9, 0, 0, 0).into())),
+                max_value: Signal::stored(Some(time(17, 0, 0, 0).into())),
+                ..UseTimeFieldStateInput::default()
+            });
+            assert_that!(validation(&state))
+                .is_equal_to(invalid("Value must be 9:00\u{202f}AM or later."));
+            state.field.increment(DateSegmentType::Hour);
+            assert_that!(state.value.get_untracked()).is_equal_to(Some(time(9, 0, 0, 0)));
+            assert_that!(validation(&state)).is_equal_to(valid());
+            state.field.increment(DateSegmentType::DayPeriod);
+            assert_that!(state.value.get_untracked()).is_equal_to(Some(time(21, 0, 0, 0)));
+            assert_that!(validation(&state))
+                .is_equal_to(invalid("Value must be 5:00\u{202f}PM or earlier."));
+            state.field.decrement(DateSegmentType::DayPeriod);
+            assert_that!(validation(&state)).is_equal_to(valid());
+        });
+    }
+
     /// A time field of date-times bounded by times of day: "not before 9:00" on any day
     /// (react-stately's `useTimeFieldState`, `convertValue(minValue, day)`).
     #[test]
-    fn bounds_are_times_of_the_values_day() {
+    fn times_of_day_bound_the_values_day() {
         with_owner(|| {
             let value = RwSignal::new(Some(date(2024, 6, 5).at(8, 0, 0, 0)));
             let state = use_time_field_state(UseTimeFieldStateInput::<DateTime> {
                 value: Some(ValueBinding::from(value)),
-                min_value: Signal::stored(Some(time(9, 0, 0, 0))),
-                max_value: Signal::stored(Some(time(17, 0, 0, 0))),
+                min_value: Signal::stored(Some(TimeBound::TimeOfDay(time(9, 0, 0, 0)))),
+                max_value: Signal::stored(Some(TimeBound::TimeOfDay(time(17, 0, 0, 0)))),
                 ..UseTimeFieldStateInput::default()
             });
-            let is_invalid = || {
-                state
-                    .field
-                    .validation
-                    .realtime_validation
-                    .get_untracked()
-                    .is_invalid
-            };
-            assert_that!(is_invalid()).is_true();
+            assert_that!(validation(&state))
+                .is_equal_to(invalid("Value must be 9:00\u{202f}AM or later."));
             value.set(Some(date(2030, 1, 1).at(10, 0, 0, 0)));
-            assert_that!(is_invalid()).is_false();
+            assert_that!(validation(&state)).is_equal_to(valid());
             value.set(Some(date(2030, 1, 1).at(17, 30, 0, 0)));
-            assert_that!(is_invalid()).is_true();
+            assert_that!(validation(&state))
+                .is_equal_to(invalid("Value must be 5:00\u{202f}PM or earlier."));
+        });
+    }
+
+    /// A date-time bound is absolute (react-stately's `convertValue` keeps a value with a day):
+    /// 8:00 is valid on a later day than the minimum's, invalid on its day.
+    #[test]
+    fn date_times_bound_absolutely() {
+        with_owner(|| {
+            let value = RwSignal::new(Some(date(2024, 6, 6).at(8, 0, 0, 0)));
+            let state = use_time_field_state(UseTimeFieldStateInput::<DateTime> {
+                value: Some(ValueBinding::from(value)),
+                min_value: Signal::stored(Some(date(2024, 6, 5).at(9, 0, 0, 0).into())),
+                max_value: Signal::stored(Some(TimeBound::Absolute(
+                    date(2024, 6, 7).at(17, 0, 0, 0),
+                ))),
+                ..UseTimeFieldStateInput::default()
+            });
+            assert_that!(validation(&state)).is_equal_to(valid());
+            value.set(Some(date(2024, 6, 5).at(8, 0, 0, 0)));
+            assert_that!(validation(&state))
+                .is_equal_to(invalid("Value must be 9:00\u{202f}AM or later."));
+            value.set(Some(date(2024, 6, 7).at(16, 0, 0, 0)));
+            assert_that!(validation(&state)).is_equal_to(valid());
+            value.set(Some(date(2024, 6, 7).at(17, 30, 0, 0)));
+            assert_that!(validation(&state))
+                .is_equal_to(invalid("Value must be 5:00\u{202f}PM or earlier."));
+        });
+    }
+
+    /// Zoned values: a time of day is on the value's day in its time zone, a zoned bound is
+    /// compared by its instant, whatever its time zone (`ZonedDateTime.compare`).
+    #[test]
+    fn bounds_zoned_values() {
+        with_owner(|| {
+            let value = RwSignal::new(Some(zoned("2024-06-05T08:30[America/New_York]")));
+            let time_of_day = use_time_field_state(UseTimeFieldStateInput::<Zoned> {
+                value: Some(ValueBinding::from(value)),
+                min_value: Signal::stored(Some(time(9, 0, 0, 0).into())),
+                ..UseTimeFieldStateInput::default()
+            });
+            // 15:00 in Berlin is 9:00 in New York.
+            let absolute = use_time_field_state(UseTimeFieldStateInput::<Zoned> {
+                value: Some(ValueBinding::from(value)),
+                min_value: Signal::stored(Some(zoned("2024-06-05T15:00[Europe/Berlin]").into())),
+                ..UseTimeFieldStateInput::default()
+            });
+            assert_that!(validation(&time_of_day).0).is_true();
+            assert_that!(validation(&absolute).0).is_true();
+            value.set(Some(zoned("2024-06-05T09:30[America/New_York]")));
+            assert_that!(validation(&time_of_day)).is_equal_to(valid());
+            assert_that!(validation(&absolute)).is_equal_to(valid());
+            // 8:30 on the next day: after the absolute minimum, before 9:00 of that day.
+            value.set(Some(zoned("2024-06-06T08:30[America/New_York]")));
+            assert_that!(validation(&time_of_day).0).is_true();
+            assert_that!(validation(&absolute)).is_equal_to(valid());
         });
     }
 

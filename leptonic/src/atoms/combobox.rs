@@ -386,7 +386,7 @@ pub fn ComboBoxButton(
             class=classes
             style=styles
             data-open=flag(is_open)
-            data-pressed=flag(is_open)
+            data-pressed=flag(Signal::derive(move || is_open.get() || button.is_pressed.get()))
             data-hovered=flag(button.is_hovered)
             data-focused=flag(button.is_focused)
             data-focus-visible=flag(button.is_focus_visible)
@@ -417,17 +417,20 @@ pub fn ComboBoxValue(
     };
     let state = ctx.state;
     let locale = crate::utils::i18n::use_locale();
+    let selected_items = Memo::new(move |_| state.selected_items());
     let selected_text = Memo::new(move |_| {
-        let items = state.selected_items();
-        let texts: Vec<&str> = items
-            .iter()
-            .map(|node| &*node.text_value)
-            .filter(|text| !text.is_empty())
-            .collect();
-        locale
-            .with(|locale| ListFormatter::new(locale, &ListFormatOptions::default()).format(&texts))
+        selected_items.with(|items| {
+            let texts: Vec<&str> = items
+                .iter()
+                .map(|node| &*node.text_value)
+                .filter(|text| !text.is_empty())
+                .collect();
+            locale.with(|locale| {
+                ListFormatter::new(locale, &ListFormatOptions::default()).format(&texts)
+            })
+        })
     });
-    let is_placeholder = Signal::derive(move || state.value().is_empty());
+    let is_placeholder = Signal::derive(move || selected_items.with(Vec::is_empty));
     let text = move || {
         let text = selected_text.get();
         if text.is_empty() {

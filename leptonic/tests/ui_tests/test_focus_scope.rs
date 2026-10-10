@@ -230,13 +230,13 @@ pub async fn select_on_tab(page: &Page<'_>) -> Result<(), Report> {
             .property("selectionStart")
             .await
             .with_detail_message(next)
-            .get_some()
+            .some()
             .is_equal_to("0");
         assert_that!(input)
             .property("selectionEnd")
             .await
             .with_detail_message(next)
-            .get_some()
+            .some()
             .is_equal_to("5");
     }
     // Typing replaces the selected text.

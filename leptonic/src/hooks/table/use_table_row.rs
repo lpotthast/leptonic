@@ -80,8 +80,8 @@ pub struct UseTableRowReturn {
     pub is_expanded: Signal<bool>,
     /// Whether the row has child rows (tree tables; follows the collection).
     pub has_child_rows: Signal<bool>,
-    /// The row's level, from 1 for top-level rows (tree tables; `None` otherwise).
-    pub level: Signal<Option<usize>>,
+    /// The row's level, from 1 for top-level rows (always 1 outside tree tables).
+    pub level: Signal<usize>,
 }
 
 /// Props for the row element.
@@ -278,6 +278,6 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         expand_button_attrs: prevent_focus_attr(),
         is_expanded,
         has_child_rows: has_child_rows.into(),
-        level: Signal::derive(move || position.get().map(|p| p.level)),
+        level: Signal::derive(move || position.get().map_or(1, |p| p.level)),
     }
 }

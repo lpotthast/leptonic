@@ -256,8 +256,9 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             <Code inline=true>"menu_props.id"</Code>" of the menu trigger, which its "
                             <Code inline=true>"aria-controls"</Code>" points to."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
-                            "Names the menu. A menu trigger provides "<Code inline=true>"menu_props.aria_labelledby"</Code>"."
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the menu."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
+                            "The ids of the elements naming the menu. A menu trigger provides "<Code inline=true>"menu_props.aria_labelledby"</Code>"."
                         </ApiRow>
                         <ApiRow name="options" ty="CollectionOptions" default="should_focus_wrap: true">
                             "Keyboard and focus behavior, see "<Link href=format!("{}#collectionoptions", routes::doc::CollectionState.materialize())>"CollectionOptions"</Link>
@@ -717,7 +718,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                                 element: submenu_element,
                                 id: None,
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: MaybeProp::default(),
+                                aria_labelledby: Signal::stored(None),
                                 options: CollectionOptions {
                                     should_focus_wrap: true,
                                     ..CollectionOptions::default()

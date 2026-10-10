@@ -319,11 +319,12 @@ pub async fn subdialog(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// ArrowRight on a trigger item whose popover holds a `Dialog` focuses the dialog, and Escape (also
-/// from an input inside) closes it and returns focus to the item while the menu stays open.
+/// ArrowRight on a trigger item whose popover holds an untitled `Dialog` focuses the dialog, which
+/// the item names, and Escape (also from an input inside) closes it and returns focus to the item
+/// while the menu stays open.
 #[browser_test]
 pub async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
-    const DIALOG: &str = "[role=dialog][aria-label=Properties]";
+    const DIALOG: &str = ".leptonic-Dialog[role=dialog]";
     page.goto_path(PATH).await?;
     page.element("#test-submenu-trigger").await?.focus().await?;
     page.send_keys(Key::Enter).await?;
@@ -334,7 +335,13 @@ pub async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
     let properties = item(page, "Properties…").await?;
     page.wait_for_focus(&properties).await?;
     page.send_keys(Key::Right).await?;
-    page.wait_for_focus(&page.element(DIALOG).await?).await?;
+    let dialog = page.element(DIALOG).await?;
+    page.wait_for_focus(&dialog).await?;
+    let properties_id = properties.id().await?;
+    assert_that!(dialog)
+        .attribute("aria-labelledby")
+        .await
+        .is_equal_to(properties_id);
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(DIALOG, 0).await?;
     page.wait_for_focus(&properties).await?;

@@ -74,17 +74,17 @@ pub fn PageAtomKbd() -> impl IntoView {
 
                     <DocTable headers=&["Shortcut", "Windows, Linux, Android", "macOS, iOS"]>
                         <TableRow>
-                            <TableCell><Code inline=true>"Shortcut::key(\"k\").primary()"</Code></TableCell>
+                            <TableCell><Code inline=true>"Shortcut::new(KeyboardKey::K).primary()"</Code></TableCell>
                             <TableCell>"Ctrl + K"</TableCell>
                             <TableCell>"\u{2318}K"</TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"Shortcut::key(\"z\").primary().shift()"</Code></TableCell>
+                            <TableCell><Code inline=true>"Shortcut::new(KeyboardKey::Z).primary().shift()"</Code></TableCell>
                             <TableCell>"Ctrl + \u{21e7} + Z"</TableCell>
                             <TableCell>"\u{21e7}\u{2318}Z"</TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"Shortcut::key(\"ArrowDown\").alt()"</Code></TableCell>
+                            <TableCell><Code inline=true>"Shortcut::new(KeyboardKey::ArrowDown).alt()"</Code></TableCell>
                             <TableCell>"Alt + \u{2193}"</TableCell>
                             <TableCell>"\u{2325}\u{2193}"</TableCell>
                         </TableRow>
@@ -108,7 +108,7 @@ pub fn PageAtomKbd() -> impl IntoView {
                     </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{Shortcut, atoms::kbd::Keys};
+                            use leptonic::{KeyboardKey, Shortcut, atoms::kbd::Keys};
                             use leptos::prelude::*;
 
                             // [Control, Shift, Z]; with `true`: [Shift, Command, Z].

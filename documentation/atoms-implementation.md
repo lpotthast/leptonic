@@ -116,7 +116,9 @@ When an atom comprises multiple cooperating elements (e.g., Slider with track, t
    what its parts need (`SliderContext`, plus a `LabelContext`/`FieldContext` for the field parts).
 2. The parts (`SliderTrack`, `SliderThumb`, `SliderOutput`) read it with `use_context`. A part outside its root is a
    usage error: warn with `dev_warn!` (debug builds) and render nothing, rather than panicking
-   (`expect_slider()` in `atoms/slider.rs`).
+   (`expect_slider()` in `atoms/slider.rs`). Parts that react-aria-components renders standalone when no context
+   provides their props are no usage error: `Input` and `TextArea` outside a field render a plain input with their
+   own hover and focus ring (`atoms/input.rs`).
 
 For a missing-parent guard, keep the component signature `-> impl IntoView` and return `None` or `Some(view)`
 from its body (`atoms/select.rs`). This avoids adding `AnyView` erasure. An explicit `-> Option<impl IntoView>`

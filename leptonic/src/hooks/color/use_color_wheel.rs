@@ -91,19 +91,15 @@ pub struct UseColorWheelReturn {
 #[derive(Debug)]
 pub struct UseColorWheelTrackProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
-    pub element_capture: ElementCaptureAttr,
 }
 
-pub type UseColorWheelTrackAttrs = (OnEvent<ev::pointerdown>, ElementCaptureAttr);
+pub type UseColorWheelTrackAttrs = OnEvent<ev::pointerdown>;
 
 impl IntoAttrs for UseColorWheelTrackProps {
     type Attrs = UseColorWheelTrackAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            self.on_pointerdown.into_on(ev::pointerdown),
-            self.element_capture,
-        )
+        self.on_pointerdown.into_on(ev::pointerdown)
     }
 }
 
@@ -113,14 +109,12 @@ pub struct UseColorWheelThumbProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
-    pub element_capture: ElementCaptureAttr,
 }
 
 pub type UseColorWheelThumbAttrs = (
     OnEvent<ev::pointerdown>,
     OnEvent<ev::keydown>,
     OnEvent<ev::keyup>,
-    ElementCaptureAttr,
 );
 
 impl IntoAttrs for UseColorWheelThumbProps {
@@ -131,7 +125,6 @@ impl IntoAttrs for UseColorWheelThumbProps {
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown.into_on(ev::keydown),
             self.on_keyup.into_on(ev::keyup),
-            self.element_capture,
         )
     }
 }
@@ -252,8 +245,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     } = input;
     let is_disabled = state.is_disabled;
     let thumb_radius = move || f64::midpoint(inner_radius.get(), outer_radius.get());
-    let track_element = CapturedElement::new();
-    let thumb_element = CapturedElement::new();
     let input_element = CapturedElement::new();
     let focus_input = move || {
         if let Some(input) = input_element.get_untracked() {
@@ -493,7 +484,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         track_props: PropsWithStyles::new(
             UseColorWheelTrackProps {
                 on_pointerdown: on_track_down.chain(track_move.on_pointerdown),
-                element_capture: track_element.attr(),
             },
             track_styles,
         ),
@@ -502,7 +492,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                 on_pointerdown: on_thumb_down.chain(thumb_move.on_pointerdown),
                 on_keydown: keyboard.on_keydown.chain(thumb_move.on_keydown),
                 on_keyup: keyboard.on_keyup,
-                element_capture: thumb_element.attr(),
             },
             thumb_styles,
         ),

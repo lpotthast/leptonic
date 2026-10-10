@@ -31,6 +31,13 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
+// ## API DIFFERENCES
+// - Generic over the value type `T: NumberValue` (react-aria: JS numbers): a held stepper stops
+//   exactly at the bounds, also for integers beyond 2^53. `None` replaces `undefined`/`NaN`.
+// - The stepper buttons are returned as `UseButtonInput` (react-aria: `AriaButtonProps`).
+//   Pass them to `use_button`, adding labels and other settings with struct update syntax.
+// - `text_value: None` means "derive from `value`"; `Some("")` announces "Empty".
+//
 // ## DIFFERENT BEHAVIOR
 // - Touch: react-aria increments once more when a finger is lifted after the button already
 //   spun, because `onPressEnd` resets the "spinning" flag before checking it. Leptonic records
@@ -40,13 +47,6 @@ use crate::{
 //   (react-aria leaves that to the caller, e.g. `useNumberField`).
 // - Holding either stepper button blocks the context menu (react-aria: only the increment
 //   button's; a touch hold on the decrement button would open it).
-//
-// ## API DIFFERENCES
-// - Generic over the value type `T: NumberValue` (react-aria: JS numbers): a held stepper stops
-//   exactly at the bounds, also for integers beyond 2^53. `None` replaces `undefined`/`NaN`.
-// - The stepper buttons are returned as `UseButtonInput` (react-aria: `AriaButtonProps`).
-//   Pass them to `use_button`, adding labels and other settings with struct update syntax.
-// - `text_value: None` means "derive from `value`"; `Some("")` announces "Empty".
 //
 // =============================================================================
 

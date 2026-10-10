@@ -1,14 +1,14 @@
 // Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
 //! Cases of react-aria-components' `GridList.test.js` on `/atoms/grid-list-cases`, one section
 //! each: auto focus (with `selectionBehavior="replace"`), focus ring and press state, Escape with
-//! `escapeKeyBehavior="none"`, the empty state, a grid layout, sections labelled by a header
+//! `escapeKeyBehavior="none"`, the empty state, a grid layout, a horizontal grid layout, sections labelled by a header
 //! and/or an `aria-label`, `shouldSelectOnPressUp`, and clicking a text input in a row.
 use std::time::Duration;
 
 use assertr::prelude::*;
 use browser_test::{browser_test, thirtyfour::prelude::*};
 use leptonic::AriaRole;
-use rootcause::Report;
+use rootcause::{Report, prelude::ResultExt};
 
 use crate::pages::{ElementActions, Page, css, role};
 
@@ -102,8 +102,8 @@ pub async fn auto_focus_keeps_an_all_selection(page: &Page<'_>) -> Result<(), Re
     Ok(())
 }
 
-/// Tabbing to a row shows its focus ring (`data-focus-visible`), tabbing away removes it ("should
-/// support focus ring").
+/// Tabbing to a row shows its focus ring (`data-focus-visible`, `data-focus-visible-within`),
+/// tabbing away removes it ("should support focus ring").
 #[browser_test]
 pub async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
     page.goto_sections(PATH, &["interactive"]).await?;
@@ -120,8 +120,15 @@ pub async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_focus(&cat).await?;
     cat.wait_for_attr("data-focus-visible", Some("true"))
         .await?;
+    cat.wait_for_attr("data-focus-visible-within", Some("true"))
+        .await?;
+    assert_that!(cat)
+        .has_attribute("data-selection-mode")
+        .await
+        .is_equal_to("multiple");
     page.send_keys(Key::Tab).await?;
     cat.wait_for_attr("data-focus-visible", None).await?;
+    cat.wait_for_attr("data-focus-visible-within", None).await?;
     Ok(())
 }
 
@@ -213,6 +220,89 @@ pub async fn grid_layout(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&page.element("#test-glc-grid-after").await?)
+        .await
+}
+
+/// Press the keys of `steps` one after another, each expected to focus its row of the grid list
+/// labelled `label`.
+async fn arrows_focus(page: &Page<'_>, label: &str, steps: &[(Key, &str)]) -> Result<(), Report> {
+    for (key, text) in steps {
+        page.send_keys(key.clone()).await?;
+        page.wait_for_focus(&row(page, label, text).await?)
+            .await
+            .context_with(|| format!("after pressing {key:?}, expected {text}"))?;
+    }
+    Ok(())
+}
+
+/// In a horizontal grid layout (two rows flowing into columns), ArrowUp/ArrowDown move to the
+/// previous/next row in collection order, also across columns, and ArrowLeft/ArrowRight to the row
+/// in the same line of the neighboring column ("should support horizontal orientation with grid
+/// layout", ListBox.test.js "should support horizontal grid layout").
+#[browser_test]
+pub async fn horizontal_grid_layout(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_sections(PATH, &["horizontal-grid-layout"])
+        .await?;
+    let label = "Horizontal grid";
+    list(page, label)
+        .await?
+        .wait_for_attr("data-orientation", Some("horizontal"))
+        .await?;
+    page.element("#test-glc-hgrid-before")
+        .await?
+        .click()
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&row(page, label, "Cat").await?).await?;
+    arrows_focus(
+        page,
+        label,
+        &[
+            (Key::Down, "Dog"),
+            (Key::Right, "Koala"),
+            (Key::Up, "Kangaroo"),
+            (Key::Right, "Panda"),
+            (Key::Down, "Snake"),
+            (Key::Left, "Koala"),
+            (Key::Down, "Panda"),
+            (Key::Left, "Kangaroo"),
+            (Key::Left, "Cat"),
+        ],
+    )
+    .await?;
+    // The first column has nothing left of it.
+    page.send_keys(Key::Left).await?;
+    page.focus_stays(&row(page, label, "Cat").await?, Duration::from_millis(100))
+        .await
+}
+
+/// Right to left, the columns run from right to left: ArrowLeft moves to the next column and
+/// ArrowRight to the previous one.
+#[browser_test]
+pub async fn horizontal_grid_layout_right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_sections(PATH, &["horizontal-grid-layout-rtl"])
+        .await?;
+    let label = "Horizontal grid RTL";
+    page.element("#test-glc-hgrid-rtl-before")
+        .await?
+        .click()
+        .await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&row(page, label, "Cat").await?).await?;
+    arrows_focus(
+        page,
+        label,
+        &[
+            (Key::Left, "Kangaroo"),
+            (Key::Down, "Koala"),
+            (Key::Right, "Dog"),
+            (Key::Up, "Cat"),
+        ],
+    )
+    .await?;
+    // The first column has nothing right of it.
+    page.send_keys(Key::Right).await?;
+    page.focus_stays(&row(page, label, "Cat").await?, Duration::from_millis(100))
         .await
 }
 

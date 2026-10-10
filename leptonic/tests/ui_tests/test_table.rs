@@ -148,6 +148,26 @@ pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
         .accessible_name()
         .await
         .is_equal_to("Select Games");
+
+    // As in react-aria-components, rows and cells of a flat table are at level 1 (`data-level`
+    // and `--table-row-level`), without the treegrid's `aria-level`.
+    assert_that!(games)
+        .has_attribute("data-level")
+        .await
+        .is_equal_to("1");
+    assert_that!(header)
+        .has_attribute("data-level")
+        .await
+        .is_equal_to("1");
+    assert_that!(games).attribute("aria-level").await.is_none();
+    let row_level: String = page
+        .low_level()
+        .eval(
+            "return arguments[0].style.getPropertyValue('--table-row-level');",
+            vec![games.to_json()?],
+        )
+        .await?;
+    assert_that!(row_level).is_equal_to("1".to_owned());
     Ok(())
 }
 
@@ -323,7 +343,7 @@ pub async fn select_all(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let selection = page.element("#test-table-selection").await?;
     focus_row(page, "bootmgr").await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     selection
         .wait_for_inner_text("all")
         .await

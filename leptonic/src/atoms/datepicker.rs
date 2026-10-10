@@ -8,7 +8,6 @@
 // Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
 use std::sync::Arc;
 
-use jiff::civil::Time;
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
@@ -27,7 +26,7 @@ use crate::{
         datepicker::{
             DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions, DatePickerState,
             DateRangePickerState, DateSegment, DateSegmentType, DateValue, Granularity, HourCycle,
-            RangePart, RangeValue, TimeValue, UseDateFieldInput, UseDateFieldProps,
+            RangePart, RangeValue, TimeBound, TimeValue, UseDateFieldInput, UseDateFieldProps,
             UseDateFieldReturn, UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
             UseDatePickerStateInput, UseDateRangePickerInput, UseDateRangePickerStateInput,
             UseDateSegmentInput, UseDateSegmentReturn, UseHiddenDateInputInput,
@@ -61,6 +60,8 @@ use crate::{
 // - `DateInput`'s children render a segment from a `Signal<DateSegment>` (react-aria-components:
 //   a function of the segment); segments are kept by position, their content changes.
 // - State props per C4: `value` + `set_value`, `default_value`, `on_change`.
+// - `TimeField`'s `min_value`/`max_value` are `TimeBound`s, a time of day or an absolute bound of
+//   the value type (react-aria-components: any `TimeValue`; see `use_time_field_state`).
 // - The pickers' states are typed contexts read with `use_date_picker_state_context::<V>()` and
 //   `use_date_range_picker_state_context::<V>()` (react-aria-components: `DatePickerStateContext`,
 //   `DateRangePickerStateContext`), e.g. for a `TimeField` in the popover.
@@ -341,12 +342,12 @@ pub fn TimeField<T: TimeValue>(
     /// The time the segments start from when edited. Default: midnight.
     #[prop(into, optional)]
     placeholder_value: MaybeProp<T>,
-    /// The earliest time of day (on the value's day for values with a date).
+    /// The earliest valid value: a time of day (on the value's day) or a date and time.
     #[prop(into, optional)]
-    min_value: Signal<Option<Time>>,
-    /// The latest time of day (on the value's day for values with a date).
+    min_value: Signal<Option<TimeBound<T>>>,
+    /// The latest valid value: a time of day (on the value's day) or a date and time.
     #[prop(into, optional)]
-    max_value: Signal<Option<Time>>,
+    max_value: Signal<Option<TimeBound<T>>>,
     /// Hour, minute (default) or second.
     #[prop(into, optional)]
     granularity: MaybeProp<Granularity>,

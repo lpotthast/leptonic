@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use leptos::{context::Provider, html, prelude::*};
+use leptos::{context::Provider, ev, html, prelude::*};
 use leptos_classes::Classes;
 use leptos_use::use_resize_observer;
 
@@ -18,7 +18,10 @@ use crate::{
             CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key, NodeKind, Selection,
             SelectionBehavior, SelectionMode, SelectionOptions,
         },
-        focus::{UseFocusRingInput, UseFocusRingReturn, is_focus_visible, use_focus_ring},
+        focus::{
+            FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, is_focus_visible,
+            use_focus_ring,
+        },
         form::use_checkbox,
         grid::{CellFocusMode, GridFocusMode, use_grid_row_group},
         gridlist::KeyboardNavigationBehavior,
@@ -37,7 +40,7 @@ use crate::{
         },
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::{self, flag},
         default_class::with_default_class,
         i18n::{WritingDirection, use_direction},
         intl_strings::{AtomStrings, use_localized_strings},
@@ -158,9 +161,12 @@ pub fn ResizableTableContainer(
 ///
 /// A tree table (`tree_column`): rows with child rows (`ItemBuilder::children`) expand and
 /// collapse. Render every row, child rows after their parent (in collection order); rows under a
-/// collapsed row are built once shown, and `hidden` while collapsed. Put a [`TableExpandButton`] into the tree column's cells. Rows
-/// and cells carry `data-expanded`, `data-has-child-items` and `data-level`, rows the
-/// `--table-row-level` style (for indenting), tree column cells `data-tree-column`.
+/// collapsed row are built once shown, and `hidden` while collapsed. Put a [`TableExpandButton`]
+/// into the tree column's cells. Rows and cells carry `data-expanded` and `data-has-child-items`,
+/// tree column cells `data-tree-column`. Rows and cells of every table carry `data-level` (1 for
+/// top-level rows), rows the `--table-row-level` style (for indenting).
+///
+/// Data attributes: `data-focused`, `data-focus-visible` (focus on the table element itself).
 ///
 /// Default class: `leptonic-Table`.
 #[component]
@@ -233,7 +239,7 @@ pub fn Table(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// Ids of elements labelling it.
     #[prop(into, optional)]
-    aria_labelledby: MaybeProp<String>,
+    aria_labelledby: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -281,7 +287,7 @@ pub fn Table(
 
     let UseTableReturn { props, data } = use_table(UseTableInput {
         aria_label,
-        aria_labelledby: Signal::derive(move || aria_labelledby.get()),
+        aria_labelledby: Signal::stored(aria_labelledby),
         options: CollectionOptions {
             escape_key_behavior,
             ..CollectionOptions::default()
@@ -316,6 +322,8 @@ pub fn Table(
 
     // One keyboard-modality signal for the rows and column headers.
     let focus_visible = TableFocusVisible(Signal::derive(is_focus_visible));
+    // Focus on the table element itself (react-aria-components' `Table`).
+    let focus_ring = use_focus_ring(UseFocusRingInput::default());
     scoped_view(
         move || {
             provide_context(data);
@@ -326,7 +334,14 @@ pub fn Table(
         },
         move || {
             view! {
-                <table {..props.into_attrs()} class=classes style=styles>
+                <table
+                    {..props.into_attrs()}
+                    {..focus_ring.props.into_attrs()}
+                    class=classes
+                    style=styles
+                    data-focused=flag(focus_ring.is_focused)
+                    data-focus-visible=flag(focus_ring.is_focus_visible)
+                >
                     {children()}
                 </table>
             }
@@ -342,9 +357,9 @@ struct TableFocusVisible(Signal<bool>);
 /// The header of a [`Table`]: its header rows with the column headers (and, for a selection
 /// checkbox column, a "select all" checkbox in multiple selection mode).
 ///
-/// The header exposes `data-hovered`. Column headers expose `data-allows-sorting`, `data-sort-direction` (`ascending` /
-/// `descending`), `data-focused`, `data-focus-visible`, `data-hovered` (sortable columns) and
-/// `data-pressed` for styling.
+/// The header exposes `data-hovered`. Column headers expose `data-allows-sorting`,
+/// `data-sort-direction` (`ascending` / `descending`), `data-focused`, `data-focus-visible`,
+/// `data-hovered` (sortable columns) and `data-pressed` for styling.
 ///
 /// Default class: `leptonic-TableHeader`.
 #[component]
@@ -471,14 +486,17 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
         if is_selection_column.get() {
             shows_select_all
                 .get()
+                // Untracked: built again only when it is shown or hidden.
                 .then(|| {
-                    let checkbox = use_checkbox(use_table_select_all_checkbox(
-                        UseTableSelectAllCheckboxInput {
-                            table: select_all_table.clone(),
-                        },
-                    ));
-                    let (attrs, styles) = checkbox.input_props.into_parts();
-                    view! { <input {..attrs} style=styles /> }
+                    untrack(|| {
+                        let checkbox = use_checkbox(use_table_select_all_checkbox(
+                            UseTableSelectAllCheckboxInput {
+                                table: select_all_table.clone(),
+                            },
+                        ));
+                        let (attrs, styles) = checkbox.input_props.into_parts();
+                        view! { <input {..attrs} style=styles /> }
+                    })
                 })
                 .into_any()
         } else {
@@ -622,6 +640,8 @@ fn ColumnResizer(
 
 /// The body of a [`Table`]: its rows (none for an empty table).
 ///
+/// Data attributes: `data-empty` (the table has no rows).
+///
 /// Default class: `leptonic-TableBody`.
 #[component]
 pub fn TableBody(
@@ -631,8 +651,19 @@ pub fn TableBody(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableBody", classes);
     let row_group = use_grid_row_group();
+    let table = use_context::<TableData>().map(|data| data.state.table);
+    let is_empty = move || {
+        table
+            .is_some_and(|table| table.with(|t| t.size() == 0))
+            .then_some("true")
+    };
     view! {
-        <tbody {..row_group.row_group_props.into_attrs()} class=classes style=styles>
+        <tbody
+            {..row_group.row_group_props.into_attrs()}
+            class=classes
+            style=styles
+            data-empty=is_empty
+        >
             {children.map(|children| children())}
         </tbody>
     }
@@ -647,14 +678,22 @@ struct RowContext {
     expand_button: StoredValue<Option<UseButtonInput>>,
     has_child_rows: Signal<bool>,
     is_expanded: Signal<bool>,
-    level: Signal<Option<usize>>,
+    level: Signal<usize>,
+    is_selected: Signal<bool>,
+    is_disabled: Signal<bool>,
+    /// Keyboard focus on the row or inside it.
+    is_focus_visible_within: Signal<bool>,
 }
 
 /// A row of a [`Table`], for the collection row `key`. With a selection checkbox column, it
 /// renders the selection cell itself; add one [`TableCell`] per data column.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-hovered` (rows that can
-/// be selected or have an action), `data-disabled` and `data-pressed` for styling.
+/// Data attributes: `data-selected`, `data-disabled`, `data-hovered` (rows that can be selected or
+/// have an action), `data-focused`, `data-focus-visible`, `data-focus-visible-within` (keyboard
+/// focus on the row or inside it), `data-pressed`, `data-selection-mode` (`single`/`multiple`,
+/// absent without selection), `data-level` (the row's level, 1 for top-level rows), and in a tree
+/// table `data-expanded` and `data-has-child-items`. Style: `--table-row-level` (the level, for
+/// indenting).
 ///
 /// In a tree table, a row under a collapsed row is built (its hooks and children) only once it is
 /// shown, and `hidden` while collapsed again.
@@ -691,7 +730,10 @@ pub fn TableRow(
             return None;
         }
         let (data, key, classes, styles, children) = parts.lock().ok()?.take()?;
-        Some(table_row(data, key, classes, styles, children))
+        // Untracked: this closure must run only when `mounted` turns true. A signal read while
+        // building the row (its hooks, its children) would run it again, and with the parts
+        // taken, the row would disappear.
+        Some(untrack(|| table_row(data, key, classes, styles, children)))
     })
     .into_any()
 }
@@ -707,6 +749,7 @@ fn table_row(
 ) -> AnyView {
     let table = data.state.table;
     let data_rows = data.state.grid.list.collection;
+    let selection = data.state.grid.list.selection;
     // Follows the table (the selection column can come and go).
     let selection_column = Memo::new(move |_| {
         table.with(|t| {
@@ -735,11 +778,9 @@ fn table_row(
         key: key.clone(),
     });
     let (attrs, row_styles) = row_props.into_parts();
-    // A tree table's row level, for indenting (react-aria-components' `--table-row-level`).
+    // The row level, for indenting (react-aria-components' `--table-row-level`).
     let styles = row_styles
-        .add_optional_unchecked("--table-row-level", move || {
-            level.get().map(|level| level.to_string())
-        })
+        .add_optional_unchecked("--table-row-level", move || Some(level.get().to_string()))
         .merge(styles);
     let focus_visible = expect_context::<TableFocusVisible>().0;
     let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
@@ -747,6 +788,10 @@ fn table_row(
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
         ..UseHoverInput::default()
+    });
+    let focus_within = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Within,
+        ..UseFocusRingInput::default()
     });
 
     // In a tree table, rows under a collapsed row aren't part of the grid: hidden.
@@ -761,6 +806,9 @@ fn table_row(
         has_child_rows,
         is_expanded,
         level,
+        is_selected,
+        is_disabled,
+        is_focus_visible_within: focus_within.is_focus_visible,
     };
 
     view! {
@@ -768,18 +816,24 @@ fn table_row(
             <tr
                 {..attrs}
                 {..hover.props.into_attrs()}
+                {..(
+                    focus_within.props.on_focusin.into_on(ev::focusin),
+                    focus_within.props.on_focusout.into_on(ev::focusout),
+                )}
                 class=classes
                 style=styles
                 hidden=is_hidden
                 data-selected=flag(is_selected)
+                data-disabled=flag(is_disabled)
+                data-hovered=flag(hover.is_hovered)
                 data-focused=flag(is_focused)
                 data-focus-visible=flag(is_focus_visible)
-                data-hovered=flag(hover.is_hovered)
-                data-disabled=flag(is_disabled)
+                data-focus-visible-within=flag(focus_within.is_focus_visible)
                 data-pressed=flag(is_pressed)
+                data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
                 data-expanded=flag(is_expanded)
                 data-has-child-items=flag(has_child_rows)
-                data-level=move || level.get().map(|level| level.to_string())
+                data-level=move || level.get().to_string()
             >
                 {move || selection_column.get().map(|column| view! { <TableCell column /> })}
                 {children()}
@@ -795,7 +849,12 @@ fn table_row(
 /// The cell is rendered again (with its children) when its column moves, e.g. when columns
 /// before it are added or removed.
 ///
-/// Exposes `data-pressed`, `data-focus-visible` and `data-hovered` for styling.
+/// Data attributes: `data-focused`, `data-focus-visible`, `data-focus-visible-within-row`
+/// (keyboard focus on the cell's row or inside it), `data-hovered`, `data-pressed`,
+/// `data-selected` and `data-disabled` (the row's), `data-column-index` (the index of the cell's
+/// first column, the selection checkbox column included), `data-level` (the row's level, 1 for
+/// top-level rows), and in a tree table `data-tree-column`, `data-expanded` and
+/// `data-has-child-items`.
 ///
 /// Default class: `leptonic-TableCell`.
 #[component]
@@ -822,11 +881,15 @@ pub fn TableCell(
         return ().into_any();
     };
     let row = row_context.key.clone();
-    let (row_expanded, row_has_child_rows, row_level) = (
-        row_context.is_expanded,
-        row_context.has_child_rows,
-        row_context.level,
-    );
+    let RowContext {
+        is_expanded: row_expanded,
+        has_child_rows: row_has_child_rows,
+        level: row_level,
+        is_selected,
+        is_disabled,
+        is_focus_visible_within: is_focus_visible_within_row,
+        ..
+    } = row_context;
     let table = data.state.table;
     let row_key = row.clone();
     let is_tree_column = data
@@ -843,61 +906,70 @@ pub fn TableCell(
             let key = t
                 .cell_key(&row, index)
                 .unwrap_or_else(|| Key::cell(&row, index));
-            (key, kind)
+            (key, kind, index)
         })
     });
     (move || {
-        let (key, kind) = cell.get();
-        let content = if kind == ColumnKind::SelectionCheckbox {
-            let checkbox = use_checkbox(use_table_selection_checkbox(
-                UseTableSelectionCheckboxInput {
-                    table: data.clone(),
-                    key: row_key.clone(),
-                },
-            ));
-            let (attrs, styles) = checkbox.input_props.into_parts();
-            Some(view! { <input {..attrs} style=styles /> }.into_any())
-        } else {
-            children.as_ref().map(|children| children().into_any())
-        };
-        let UseTableCellReturn {
-            grid_cell_props,
-            is_pressed,
-        } = use_table_cell(UseTableCellInput {
-            focus_mode,
-            should_select_on_press_up: data.grid.should_select_on_press_up,
-            table: data.clone(),
-            key,
-            allows_arrow_navigation,
-        });
-        let (attrs, cell_styles) = grid_cell_props.into_parts();
-        let styles = cell_styles.merge(styles.clone());
-        // Focus on the cell itself, and hover (react-aria-components' `Cell`).
-        let UseFocusRingReturn {
-            props: focus_ring,
-            is_focus_visible,
-            ..
-        } = use_focus_ring(UseFocusRingInput::default());
-        let hover = use_hover(UseHoverInput::default());
+        let (key, kind, column_index) = cell.get();
+        // Untracked: the cell is rendered again when its key or kind changes, not whenever its
+        // hooks or children read a signal while being built.
+        untrack(|| {
+            let content = if kind == ColumnKind::SelectionCheckbox {
+                let checkbox = use_checkbox(use_table_selection_checkbox(
+                    UseTableSelectionCheckboxInput {
+                        table: data.clone(),
+                        key: row_key.clone(),
+                    },
+                ));
+                let (attrs, styles) = checkbox.input_props.into_parts();
+                Some(view! { <input {..attrs} style=styles /> }.into_any())
+            } else {
+                children.as_ref().map(|children| children().into_any())
+            };
+            let UseTableCellReturn {
+                grid_cell_props,
+                is_pressed,
+            } = use_table_cell(UseTableCellInput {
+                focus_mode,
+                should_select_on_press_up: data.grid.should_select_on_press_up,
+                table: data.clone(),
+                key,
+                allows_arrow_navigation,
+            });
+            let (attrs, cell_styles) = grid_cell_props.into_parts();
+            let styles = cell_styles.merge(styles.clone());
+            // Focus on the cell itself, and hover (react-aria-components' `Cell`).
+            let UseFocusRingReturn {
+                props: focus_ring,
+                is_focused,
+                is_focus_visible,
+            } = use_focus_ring(UseFocusRingInput::default());
+            let hover = use_hover(UseHoverInput::default());
 
-        view! {
-            <td
-                {..attrs}
-                {..focus_ring.into_attrs()}
-                {..hover.props.into_attrs()}
-                class=classes.clone()
-                style=styles
-                data-pressed=flag(is_pressed)
-                data-focus-visible=flag(is_focus_visible)
-                data-hovered=flag(hover.is_hovered)
-                data-tree-column=is_tree_column.then_some("")
-                data-expanded=flag(row_expanded)
-                data-has-child-items=flag(row_has_child_rows)
-                data-level=move || row_level.get().map(|level| level.to_string())
-            >
-                {content}
-            </td>
-        }
+            view! {
+                <td
+                    {..attrs}
+                    {..focus_ring.into_attrs()}
+                    {..hover.props.into_attrs()}
+                    class=classes.clone()
+                    style=styles
+                    data-focused=flag(is_focused)
+                    data-focus-visible=flag(is_focus_visible)
+                    data-focus-visible-within-row=flag(is_focus_visible_within_row)
+                    data-hovered=flag(hover.is_hovered)
+                    data-pressed=flag(is_pressed)
+                    data-selected=flag(is_selected)
+                    data-disabled=flag(is_disabled)
+                    data-column-index=column_index
+                    data-tree-column=is_tree_column.then_some("true")
+                    data-expanded=flag(row_expanded)
+                    data-has-child-items=flag(row_has_child_rows)
+                    data-level=move || row_level.get().to_string()
+                >
+                    {content}
+                </td>
+            }
+        })
     })
     .into_any()
 }

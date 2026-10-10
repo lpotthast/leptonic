@@ -231,12 +231,13 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
 
     let id = id.unwrap_or_else(|| use_id("listbox"));
 
-    // Pressing a link in a toggle-selection list opens it; selecting it needs a checkbox. Follows
-    // the selection behavior (a long press switches to `Toggle`).
+    // Pressing a link in a toggle-selection list opens it; selecting it needs a checkbox. Decided
+    // by the configured selection behavior: in the touch selection mode a long press enters
+    // (`Toggle`), tapping a link item still toggles its selection.
     let link_behavior = options.link_behavior;
     options.link_behavior = Memo::new(move |_| match link_behavior.get() {
         LinkBehavior::Action
-            if state.selection.selection_behavior() == SelectionBehavior::Toggle =>
+            if state.selection.configured_selection_behavior() == SelectionBehavior::Toggle =>
         {
             LinkBehavior::Override
         }

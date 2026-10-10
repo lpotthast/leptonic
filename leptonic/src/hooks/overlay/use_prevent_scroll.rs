@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/overlays/usePreventScroll.ts @ 99e6102368
+// Upstream: react-aria/src/overlays/usePreventScroll.ts @ 740c6c5c4a
 //! Locking the page's scroll position while an overlay is open (react-aria's `usePreventScroll`).
 
 // =============================================================================

@@ -167,7 +167,7 @@ pub async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
     let selection = selection_output(page).await?;
     let durian = option(page, "Durian").await?;
     tab_in(page).await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     selection.wait_for_inner_text("all").await?;
     assert_that!(durian)
         .has_attribute("aria-selected")

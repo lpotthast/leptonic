@@ -116,15 +116,21 @@ pub fn PageUseOverlayTriggerState() -> impl IntoView {
             <Section title="App State">
                 <p>
                     "To keep the open state in your app (e.g. to open a dialog from elsewhere), bind a signal with "
-                    <Code inline=true>"value"</Code>", or convert it directly: "<Code inline=true>"OverlayTriggerState"</Code>
-                    " implements "<Code inline=true>"From"</Code>" for "<Code inline=true>"RwSignal<bool>"</Code>", a "
-                    <Code inline=true>"(ReadSignal<bool>, WriteSignal<bool>)"</Code>" pair and "
-                    <Code inline=true>"ValueBinding<bool>"</Code>"."
+                    <Code inline=true>"value"</Code>": a "<Code inline=true>"ValueBinding<bool>"</Code>", which converts from an "
+                    <Code inline=true>"RwSignal<bool>"</Code>" or a "<Code inline=true>"(ReadSignal<bool>, WriteSignal<bool>)"</Code>
+                    " pair. The state then reads and writes your signal, and "<Code inline=true>"on_open_change"</Code>
+                    " still reports every change."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
+                        use leptonic::hooks::overlay::{UseOverlayTriggerStateInput, use_overlay_trigger_state};
+                        use leptos::prelude::*;
+
                         let is_open = RwSignal::new(false);
-                        let state = OverlayTriggerState::from(is_open);
+                        let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
+                            value: Some(is_open.into()),
+                            ..UseOverlayTriggerStateInput::default()
+                        });
 
                         state.open();
                         assert!(is_open.get_untracked());

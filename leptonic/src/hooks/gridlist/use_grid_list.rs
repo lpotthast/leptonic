@@ -40,6 +40,8 @@ use crate::{
 // ## API DIFFERENCES
 // - Rows get the grid list's settings through the returned `GridListData` (react-aria: a
 //   `WeakMap` keyed by the state), which the caller hands to `use_grid_list_item`.
+// - `layout` and `orientation` configure the default list keyboard delegate, which
+//   react-aria-components' `GridList` builds itself and passes as `keyboardDelegate`.
 //
 // ## OMITTED FEATURES
 // - Virtualization (`aria-rowcount`/`aria-colcount`).
@@ -69,6 +71,12 @@ pub struct UseGridListInput {
     pub aria_labelledby: Signal<Option<String>>,
     /// Rows stacked, or wrapping in a grid of cards.
     pub layout: ListLayout,
+    /// The primary orientation of the rows, usually the direction the list scrolls
+    /// (react-aria-components' default: `Vertical`). In a horizontal list, ArrowUp/ArrowDown move
+    /// to the previous/next row in collection order and ArrowLeft/ArrowRight to the neighboring
+    /// column (the row in the same line, in a grid layout). Ignored when a `keyboard_delegate` is
+    /// given.
+    pub orientation: Signal<Orientation>,
     /// Replaces the list keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Keyboard and focus behavior.
@@ -212,6 +220,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
         aria_label,
         aria_labelledby,
         layout,
+        orientation,
         keyboard_delegate,
         options,
         keyboard_navigation_behavior,
@@ -230,7 +239,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
     let mut collection = use_selectable_list(UseSelectableListInput {
         state,
         element,
-        orientation: Orientation::Vertical.into(),
+        orientation,
         layout,
         layout_delegate: None,
         keyboard_delegate,

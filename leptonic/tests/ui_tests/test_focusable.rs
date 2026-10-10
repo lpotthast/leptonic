@@ -49,13 +49,13 @@ pub async fn keyboard_events(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
     assert_that!(keyup_count)
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
 
     page.send_keys("a").await?;

@@ -160,7 +160,7 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
             <Section title="Behavior">
                 <p>
                     "The overlay is positioned while it is open, and again when the window, the overlay or the target resizes "
-                    "and when a virtual keyboard opens. It flips to the other side when that has more room, stays within the "
+                    "(for the overlay and the target, in the next animation frame) and when a virtual keyboard opens. It flips to the other side when that has more room, stays within the "
                     "boundary and gets a maximum height for the room available."
                 </p>
             </Section>

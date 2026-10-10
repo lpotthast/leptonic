@@ -4,7 +4,7 @@ use leptonic::{
         datepicker::{DateInput, DateSegment, TimeField},
         field::{Description, FieldError, Label},
     },
-    hooks::form::ValidationBehavior,
+    hooks::{datepicker::TimeBound, form::ValidationBehavior},
     jiff::civil::{Time, time},
 };
 use leptos::prelude::*;
@@ -18,8 +18,8 @@ pub fn TimeFieldAtomDemo() -> impl IntoView {
         <TimeField<Time>
             value=pickup
             set_value=pickup
-            min_value=time(8, 0, 0, 0)
-            max_value=time(18, 0, 0, 0)
+            min_value=TimeBound::TimeOfDay(time(8, 0, 0, 0))
+            max_value=TimeBound::TimeOfDay(time(18, 0, 0, 0))
             validation_behavior=ValidationBehavior::Aria
             is_disabled=disabled
             classes="demo-date-field"

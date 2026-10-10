@@ -645,13 +645,13 @@ mod tests {
     #[test]
     fn aliases_are_resolved() {
         assert_that!(Shortcut::parse("Down"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::ArrowDown));
         assert_that!(Shortcut::parse("Space"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Space));
         assert_that!(Shortcut::parse("esc"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Escape));
         assert_that!(Shortcut::new(KeyboardKey::Space).matches_key(" ", NONE, false)).is_true();
     }
@@ -659,29 +659,29 @@ mod tests {
     #[test]
     fn key_names_are_case_insensitive() {
         assert_that!(Shortcut::parse("escape"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Escape));
         assert_that!(Shortcut::parse("Mod+pageup"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::PageUp).primary());
         assert_that!(Shortcut::parse("Z"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Z));
     }
 
     #[test]
     fn parses_react_aria_syntax() {
         assert_that!(Shortcut::parse("Mod+Shift+z"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Z).primary().shift());
         assert_that!(Shortcut::parse("shift+MOD+z"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Z).primary().shift());
         assert_that!(Shortcut::parse("Ctrl+Alt+Enter"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Enter).ctrl().alt());
         assert_that!(Shortcut::parse("Escape"))
-            .get_ok()
+            .ok()
             .is_equal_to(Shortcut::new(KeyboardKey::Escape));
     }
 
@@ -697,7 +697,7 @@ mod tests {
         let shortcut = Shortcut::new(KeyboardKey::Z).primary().shift();
         assert_that!(shortcut.to_string()).is_equal_to("Mod+Shift+Z".to_owned());
         assert_that!(Shortcut::parse(&shortcut.to_string()))
-            .get_ok()
+            .ok()
             .is_equal_to(shortcut);
     }
 
@@ -786,7 +786,7 @@ mod tests {
             "Shift+Alt+Ctrl+K",
         ] {
             assert_that!(Shortcut::parse(spec))
-                .get_ok()
+                .ok()
                 .is_equal_to(expected.clone());
         }
     }

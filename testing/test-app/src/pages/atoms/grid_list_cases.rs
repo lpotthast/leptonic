@@ -1,4 +1,5 @@
 use leptonic::{
+    I18nProvider, Locale, Orientation,
     atoms::grid_list::{GridList, GridListHeader, GridListItem, GridListSection},
     hooks::{
         collections::{
@@ -22,6 +23,36 @@ fn animals() -> CollectionMemo {
         key: |animal| Key::from(*animal),
         text_value: |animal| (*animal).to_owned(),
     })
+}
+
+const MORE_ANIMALS: [&str; 6] = ["Cat", "Dog", "Kangaroo", "Koala", "Panda", "Snake"];
+
+/// A horizontal grid layout of six animals in two rows, flowing into three columns (Cat, Dog;
+/// Kangaroo, Koala; Panda, Snake), labelled `label`.
+#[component]
+fn HorizontalGrid(label: &'static str) -> impl IntoView {
+    let collection = use_list_collection(UseListCollectionInput {
+        items: Signal::stored(MORE_ANIMALS.to_vec()),
+        key: |animal| Key::from(*animal),
+        text_value: |animal| (*animal).to_owned(),
+    });
+    view! {
+        <style>
+            ".test-glc-hgrid { display: grid; grid-auto-flow: column; grid-template-rows: auto auto; \
+            grid-auto-columns: 100px; gap: 8px; }"
+        </style>
+        <GridList
+            collection=collection
+            aria_label=label
+            layout=ListLayout::Grid
+            orientation=Orientation::Horizontal
+            classes="test-glc-hgrid"
+        >
+            {MORE_ANIMALS
+                .map(|animal| view! { <GridListItem key=animal>{animal}</GridListItem> })
+                .collect_view()}
+        </GridList>
+    }
 }
 
 fn animal_rows() -> impl IntoView {
@@ -88,7 +119,8 @@ fn Animals(
 /// Cases of react-aria-components' `GridList.test.js`, one `Section` each (load one with
 /// `goto_sections`): auto focus (`autofocus*`), focus ring and press state (`interactive`,
 /// `static`), Escape with `EscapeKeyBehavior::None` (`escape`), an empty list (`empty`), a grid
-/// layout (`grid-layout`), sections labelled by a header and/or an `aria-label` (`sections`),
+/// layout (`grid-layout`), a horizontal grid layout (`horizontal-grid-layout`, and right to left in
+/// `horizontal-grid-layout-rtl`), sections labelled by a header and/or an `aria-label` (`sections`),
 /// selecting on press up (`press-up-*`) and a text input in a row with arrow navigation
 /// (`input-arrow`). Every grid list follows a "Before" button (`#test-glc-{id}-before`).
 #[component]
@@ -201,6 +233,18 @@ pub fn PageAtomGridListCases() -> impl IntoView {
                 <GridListItem key="Kangaroo">"Kangaroo"</GridListItem>
             </GridList>
             <button id="test-glc-grid-after">"After"</button>
+        </Section>
+        <Section name="horizontal-grid-layout">
+            <button id="test-glc-hgrid-before">"Before"</button>
+            <HorizontalGrid label="Horizontal grid" />
+        </Section>
+        <Section name="horizontal-grid-layout-rtl">
+            <div dir="rtl">
+                <I18nProvider locale={"ar-AE".parse::<Locale>().expect("a locale")}>
+                    <button id="test-glc-hgrid-rtl-before">"Before"</button>
+                    <HorizontalGrid label="Horizontal grid RTL" />
+                </I18nProvider>
+            </div>
         </Section>
         <Section name="sections">
             <GridList collection=sections aria_label="Sections">

@@ -406,7 +406,9 @@ mod tests {
             let years = |range: std::ops::RangeInclusive<i32>| -> Vec<String> {
                 range.map(|year| year.to_string()).collect()
             };
-            let today = crate::utils::date::today();
+            // Upstream focuses today, here a fixed date of its time (results independent of the
+            // day the test runs).
+            let today = date(2026, 10, 9);
             let items = limited_years(None, Some(date(2026, 6, 30)), today, 20);
             assert_that!(year_names(&items)).is_equal_to(years(2007..=2026));
             let items = limited_years(Some(date(2020, 6, 30)), None, today, 20);

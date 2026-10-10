@@ -196,7 +196,7 @@ pub async fn anchor_link(page: &Page<'_>) -> Result<(), Report> {
     link.click().await?;
     presses.wait_for_inner_text("2").await?;
     assert_that!(hash(page).await?)
-        .get_some()
+        .some()
         .is_equal_to("test-link-anchor-target");
     assert_that!(history_length(page).await?).is_equal_to(history_before);
     assert_that!(scroll_y(page).await?).is_greater_than(0.0);

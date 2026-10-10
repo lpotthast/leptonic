@@ -32,12 +32,12 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                 <ApiTable kind=ApiKind::Input of="UseGlobalShortcutsInput">
                     <ApiRow name="anywhere" ty="KeyboardShortcuts" default="empty">
                         "Shortcuts that work everywhere, also while the user types in a text field. Give them a modifier, "
-                        "e.g. "<Code inline=true>"Shortcut::key(\"k\").primary()"</Code>"."
+                        "e.g. "<Code inline=true>"Shortcut::new(KeyboardKey::K).primary()"</Code>"."
                     </ApiRow>
                     <ApiRow name="outside_text_fields" ty="KeyboardShortcuts" default="empty">
                         "Shortcuts that work only while the user isn\u{2019}t typing: not in text fields, "
                         <Code inline=true>"<select>"</Code>"s and editable content. For keys without modifiers, e.g. "
-                        <Code inline=true>"Shortcut::key(\"/\")"</Code>". See "
+                        <Code inline=true>"Shortcut::new(KeyboardKey::Slash)"</Code>". See "
                         <AnchorLink href="#typing">"Typing"</AnchorLink>"."
                     </ApiRow>
                 </ApiTable>
@@ -47,6 +47,7 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
+                            KeyboardKey,
                             KeyboardShortcuts,
                             Shortcut,
                             hooks::interactions::{UseGlobalShortcutsInput, use_global_shortcuts},
@@ -97,8 +98,8 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                     "A shortcut requires exactly its modifiers, with one exception: for a character without case ("
                     <Code inline=true>"/"</Code>", "<Code inline=true>"?"</Code>", digits), "<Keys keys="Shift"/>" is ignored unless the shortcut "
                     "requires it, as the keyboard layout decides whether typing the character takes it. So "
-                    <Code inline=true>"Shortcut::key(\"/\")"</Code>" also fires on a German keyboard, where "<Keys keys="/"/>
-                    " is "<Keys keys="Shift + 7"/>", and "<Code inline=true>"Shortcut::key(\"?\")"</Code>" needs no "
+                    <Code inline=true>"Shortcut::new(KeyboardKey::Slash)"</Code>" also fires on a German keyboard, where "<Keys keys="/"/>
+                    " is "<Keys keys="Shift + 7"/>", and a "<Code inline=true>"?"</Code>" shortcut ("<Code inline=true>"Shortcut::parse(\"?\")"</Code>") needs no "
                     <Code inline=true>".shift()"</Code>"."
                 </p>
             </Section>

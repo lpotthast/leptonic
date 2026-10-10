@@ -152,7 +152,7 @@ pub async fn structure(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_empty();
     Ok(())
 }
@@ -216,7 +216,7 @@ pub async fn typing(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("2024-06-15");
 
     // The group describes the value.
@@ -399,7 +399,7 @@ pub async fn zoned(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("2024-06-05T09:30:00-04:00[America/New_York]");
     let zone = segment(page, "zoned", "timeZoneName").await?;
     assert_that!(zone).inner_text().await.is_equal_to("EDT");
@@ -444,7 +444,7 @@ pub async fn time_field(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("21:30:00");
     Ok(())
 }
@@ -2032,6 +2032,41 @@ pub async fn time_bounds_on_the_values_day(page: &Page<'_>) -> Result<(), Report
     Ok(())
 }
 
+/// A time field of dates and times bounded by dates and times: 8:00 is valid on June 6, after the
+/// minimum's day, and invalid on June 5, where stepping the hour to 9:00 makes it valid; 17:30 on
+/// June 7 is after the maximum (react-stately's `useTimeFieldState`: `convertValue` keeps a bound
+/// with a day).
+#[browser_test]
+pub async fn time_bounds_with_dates(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_sections(PATH, &["time-absolute-bounds"]).await?;
+    let section = page.element("#test-df-time-absolute-bounds").await?;
+    let hour = segment(page, "time-absolute-bounds", "hour").await?;
+    hour.attr_stays("aria-invalid", None, std::time::Duration::from_millis(100))
+        .await?;
+    set(page, "time-absolute-bounds", "2024-06-05T08:00:00").await?;
+    hour.wait_for_attr("aria-invalid", Some("true")).await?;
+    assert_that!(|| section.inner_text())
+        .eventually_ok()
+        .satisfies(|text| {
+            text.contains("Value must be 9:00\u{202f}AM or later.");
+        })
+        .await;
+    hour.focus().await?;
+    page.wait_for_focus(&hour).await?;
+    page.send_keys(Key::Up).await?;
+    wait_for_value(page, "time-absolute-bounds", "2024-06-05T09:00:00").await?;
+    hour.wait_for_attr("aria-invalid", None).await?;
+    set(page, "time-absolute-bounds", "2024-06-07T17:30:00").await?;
+    hour.wait_for_attr("aria-invalid", Some("true")).await?;
+    assert_that!(|| section.inner_text())
+        .eventually_ok()
+        .satisfies(|text| {
+            text.contains("Value must be 5:00\u{202f}PM or earlier.");
+        })
+        .await;
+    Ok(())
+}
+
 // Focus.
 
 /// Pressing the field beside its segments focuses the first segment when empty, the first empty
@@ -2431,7 +2466,7 @@ pub async fn required_validation(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -2760,7 +2795,7 @@ pub async fn time_field_description_and_reset(page: &Page<'_>) -> Result<(), Rep
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("08:30:00");
     let hour = segment(page, "time-reset", "hour").await?;
     let describedby = group.attr("aria-describedby").await?;

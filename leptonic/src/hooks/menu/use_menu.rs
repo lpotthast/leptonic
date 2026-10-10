@@ -1,8 +1,8 @@
-// Upstream: react-aria/src/menu/useMenu.ts @ 99e6102368
-// Upstream: react-aria/src/menu/utils.ts @ 99e6102368
-// Upstream: react-aria/test/menu/useMenu.test.tsx @ 99e6102368
-// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
-// Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 99e6102368
+// Upstream: react-aria/src/menu/useMenu.ts @ 740c6c5c4a
+// Upstream: react-aria/src/menu/utils.ts @ 740c6c5c4a
+// Upstream: react-aria/test/menu/useMenu.test.tsx @ 740c6c5c4a
+// Upstream: react-aria-components/test/Menu.test.tsx @ 740c6c5c4a
+// Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 740c6c5c4a
 use std::sync::Arc;
 
 use leptos::{
@@ -50,8 +50,9 @@ pub struct UseMenuInput {
     /// The element id. Generated when `None`. A menu trigger provides one (`menu_props.id`).
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    /// A menu trigger provides this (`menu_props.aria_labelledby`).
-    pub aria_labelledby: MaybeProp<String>,
+    /// The ids of the elements naming the menu. A menu trigger provides them
+    /// (`menu_props.aria_labelledby`); a signal, as the trigger's id may change.
+    pub aria_labelledby: Signal<Option<String>>,
     /// Keyboard and focus behavior. react-aria's `useMenu` lets the arrow keys wrap around by
     /// default: set `should_focus_wrap` (the `Menu` atom does).
     pub options: CollectionOptions,
@@ -93,7 +94,7 @@ pub struct UseMenuProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: MaybeProp<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_list`).
     pub collection: UseSelectableCollectionProps,
 }
@@ -102,7 +103,7 @@ pub type UseMenuAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     UseSelectableCollectionAttrs,
 );
 
@@ -142,7 +143,7 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
     let submenu_level = submenu.as_ref().map_or(0, |submenu| submenu.level + 1);
     if let Some(submenu) = submenu {
         id = Some(submenu.id);
-        aria_labelledby = MaybeProp::from(submenu.aria_labelledby);
+        aria_labelledby = Signal::stored(Some(submenu.aria_labelledby));
         // The menu's own `on_close`, then the whole tree closes.
         let close_all = submenu.on_close;
         let own = on_close;

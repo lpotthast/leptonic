@@ -32,7 +32,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         "Whether the popover is open, and how to close it. Required. "<Code inline=true>"S"</Code>
                         " defaults to "<Code inline=true>"OverlayTriggerState"</Code>". Usually an "
                         <Code inline=true>"OverlayTriggerState"</Code>" ("<Link href=routes::doc::overlay_behavior::UseOverlayTriggerState.materialize()>"use_overlay_trigger_state"</Link>
-                        ", or "<Code inline=true>"OverlayTriggerState::from(rw_signal)"</Code>"); the menu, select and combo box "
+                        ", bound to a signal of yours with its "<Code inline=true>"value"</Code>"); the menu, select and combo box "
                         "states work too."
                     </ApiRow>
                     <ApiRow name="trigger" ty="CapturedElement" default="a new capture">

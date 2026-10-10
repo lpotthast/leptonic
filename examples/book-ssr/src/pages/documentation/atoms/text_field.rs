@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::text_field::TextFieldAtomDemo;
+use super::demos::{standalone_input::StandaloneInputDemo, text_field::TextFieldAtomDemo};
 use crate::{kit::*, routes};
 
 #[component]
@@ -22,7 +22,8 @@ pub fn PageAtomTextField() -> impl IntoView {
                     <Link href=format!("{}#use-text-field-state", routes::doc::text_field::Hook.materialize())>"use_text_field_state"</Link>
                     " and "<Link href=format!("{}#use-text-field", routes::doc::text_field::Hook.materialize())>"use_text_field"</Link>". "
                     <Code inline=true>"Input"</Code>" and "<Code inline=true>"TextArea"</Code>" call "
-                    <Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>"."
+                    <Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>", and outside a field also "
+                    <Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>"."
                 </p>
             </Section>
 
@@ -136,21 +137,48 @@ pub fn PageAtomTextField() -> impl IntoView {
 
             <Section title="Input, TextArea">
                 <p>
-                    "The "<Code inline=true>"<input>"</Code>" or "<Code inline=true>"<textarea>"</Code>" of the field around it "
-                    "(a "<Code inline=true>"TextField"</Code>", a "<Link href=routes::doc::search_field::Atom.materialize()>"SearchField"</Link>
-                    ", a "<Link href=routes::doc::number_field::Atom.materialize()>"NumberField"</Link>" or a "
-                    <Link href=routes::doc::combobox::Atom.materialize()>"ComboBox"</Link>"; a "<Code inline=true>"TextArea"</Code>
-                    " needs a text field). They take only a node ref, classes and styles; everything else comes from the field."
+                    "In a field ("<Code inline=true>"TextField"</Code>", "
+                    <Link href=routes::doc::search_field::Atom.materialize()>"SearchField"</Link>", "
+                    <Link href=routes::doc::number_field::Atom.materialize()>"NumberField"</Link>" or "
+                    <Link href=routes::doc::combobox::Atom.materialize()>"ComboBox"</Link>"), "<Code inline=true>"Input"</Code>
+                    " renders the field\u{2019}s "<Code inline=true>"<input>"</Code>": its value, attributes and state come from "
+                    "the field. "<Code inline=true>"TextArea"</Code>" does the same in a text field; in other fields it is a "
+                    "plain text area. Outside a field, both are plain, styled inputs (see "
+                    <AnchorLink href="#outside-a-field">"Outside a Field"</AnchorLink>")."
                 </p>
                 <Section title="Props" id="input-props">
                     <ApiTable kind=ApiKind::Props of="atoms::input::Input">
                         <ApiRow name="node_ref" ty="NodeRef<Input>" default="unset">"The "<Code inline=true>"<input>"</Code>" element, e.g. to focus it from a shortcut."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Outside a field: whether it is disabled. In a field, the field decides."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Outside a field: whether its value is invalid ("<Code inline=true>"aria-invalid"</Code>"). In a field, the field decides."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<input>"</Code>"."</ApiRow>
                     </ApiTable>
                     <ApiTable kind=ApiKind::Props of="atoms::input::TextArea">
                         <ApiRow name="node_ref" ty="NodeRef<Textarea>" default="unset">"The "<Code inline=true>"<textarea>"</Code>" element, e.g. to focus it."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Outside a field: whether it is disabled. In a field, the field decides."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Outside a field: whether its value is invalid ("<Code inline=true>"aria-invalid"</Code>"). In a field, the field decides."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<textarea>"</Code>"."</ApiRow>
                     </ApiTable>
+                </Section>
+
+                <Section title="Outside a Field">
+                    <p>
+                        "Without a field around it, an "<Code inline=true>"Input"</Code>" or "<Code inline=true>"TextArea"</Code>
+                        " renders a plain "<Code inline=true>"<input>"</Code>" or "<Code inline=true>"<textarea>"</Code>
+                        " that tracks its own hover and focus, so it gets the same data attributes and can share the styles "
+                        "of the inputs in your fields. "<Code inline=true>"is_disabled"</Code>" sets "<Code inline=true>"disabled"</Code>
+                        " and "<Code inline=true>"is_invalid"</Code>" sets "<Code inline=true>"aria-invalid"</Code>
+                        ", each with its data attribute. Everything else is up to you, as with any input: give it an accessible "
+                        "name ("<Code inline=true>"attr:aria-label"</Code>" or a "<Code inline=true>"<label>"</Code>
+                        "), read its value with "<Code inline=true>"on:input"</Code>", and link a message explaining an "
+                        "invalid value with "<Code inline=true>"attr:aria-describedby"</Code>"."
+                    </p>
+                    <Demo
+                        description="A tag input outside a field, invalid while it contains other characters than letters, digits and dashes, with a disabled toggle"
+                        source=include_str!("demos/standalone_input.rs")
+                    >
+                        <StandaloneInputDemo/>
+                    </Demo>
                 </Section>
             </Section>
 
@@ -170,8 +198,8 @@ pub fn PageAtomTextField() -> impl IntoView {
                         <ApiRow name="data-focused" ty="true">"The input has focus."</ApiRow>
                         <ApiRow name="data-focus-visible" ty="true">"The input has keyboard focus: show a focus ring."</ApiRow>
                         <ApiRow name="data-hovered" ty="true">"A mouse or pen is over the input."</ApiRow>
-                        <ApiRow name="data-disabled" ty="true">"The field is disabled."</ApiRow>
-                        <ApiRow name="data-invalid" ty="true">"The value is invalid."</ApiRow>
+                        <ApiRow name="data-disabled" ty="true">"The input is disabled: by its field, or outside a field by "<Code inline=true>"is_disabled"</Code>"."</ApiRow>
+                        <ApiRow name="data-invalid" ty="true">"The value is invalid: by its field\u{2019}s validation, or outside a field by "<Code inline=true>"is_invalid"</Code>"."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

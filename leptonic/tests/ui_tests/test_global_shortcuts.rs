@@ -4,10 +4,10 @@
 //! although typing it takes Shift; a later binding of `Mod+K` wins while it exists. The
 //! `ShortcutKeys` atom shows `Mod+K` as "Ctrl" (read "Control"), "+", "K" off Apple platforms.
 use assertr::prelude::*;
-use browser_test::{browser_test, thirtyfour::prelude::*};
+use browser_test::browser_test;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page};
+use crate::pages::{ElementActions, Page, Platform};
 
 const PATH: &str = "/hooks/global-shortcuts";
 
@@ -27,7 +27,7 @@ pub async fn slash_outside_text_fields(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(filter)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("");
     Ok(())
 }
@@ -45,15 +45,16 @@ pub async fn slash_in_text_field(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// Ctrl+K triggers its shortcut with nothing focused and with a button focused.
+/// Mod+K (Ctrl, Command on a Mac) triggers its shortcut with nothing focused and with a button
+/// focused.
 #[browser_test]
 pub async fn mod_k_anywhere(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let palette = page.element("#test-gs-palette").await?;
-    page.send_keys(Key::Control + "k").await?;
+    page.send_keys(page.primary_modifier().await? + "k").await?;
     palette.wait_for_inner_text("1").await?;
     page.element("#test-gs-before").await?.click().await?;
-    page.send_keys(Key::Control + "k").await?;
+    page.send_keys(page.primary_modifier().await? + "k").await?;
     palette.wait_for_inner_text("2").await?;
     Ok(())
 }
@@ -70,7 +71,7 @@ pub async fn shift_key(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// While a later binding of Ctrl+K is mounted only it is triggered, and once it unmounts the
+/// While a later binding of Mod+K is mounted only it is triggered, and once it unmounts the
 /// earlier binding is triggered again.
 #[browser_test]
 pub async fn later_binding_wins(page: &Page<'_>) -> Result<(), Report> {
@@ -80,7 +81,7 @@ pub async fn later_binding_wins(page: &Page<'_>) -> Result<(), Report> {
     let palette = page.element("#test-gs-palette").await?;
     toggle.click().await?;
     page.element("#test-gs-nested-shown").await?;
-    page.send_keys(Key::Control + "k").await?;
+    page.send_keys(page.primary_modifier().await? + "k").await?;
     nested.wait_for_inner_text("1").await?;
     palette
         .inner_text_stays("0", std::time::Duration::from_millis(100))
@@ -88,7 +89,7 @@ pub async fn later_binding_wins(page: &Page<'_>) -> Result<(), Report> {
 
     toggle.click().await?;
     page.wait_for_count("#test-gs-nested-shown", 0).await?;
-    page.send_keys(Key::Control + "k").await?;
+    page.send_keys(page.primary_modifier().await? + "k").await?;
     palette.wait_for_inner_text("1").await?;
     nested
         .inner_text_stays("1", std::time::Duration::from_millis(100))
@@ -96,10 +97,11 @@ pub async fn later_binding_wins(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// The `ShortcutKeys` atom shows `Mod+K` as "Ctrl" (read "Control"), "+", "K" in a `dir="ltr"`
-/// element, and literal keys as given.
+/// Off Apple platforms, the `ShortcutKeys` atom shows `Mod+K` as "Ctrl" (read "Control"), "+",
+/// "K" in a `dir="ltr"` element, and literal keys as given.
 #[browser_test]
 pub async fn shortcut_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.emulate_platform(Platform::Linux).await?;
     page.goto_path(PATH).await?;
     let keys = page.element("#test-gs-keys").await?;
     assert_that!(keys.inner_texts("kbd").await?).contains_exactly(["Ctrl\nControl", "K"]);

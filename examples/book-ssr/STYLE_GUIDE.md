@@ -34,7 +34,7 @@ behavior. Leptonic is hooks and unstyled atoms (its components layer is gone), s
 | Show/hide section                      | `use_disclosure` + `use_disclosure_state` (kit `Disclosure`)                                                                                       |
 | Checkbox, switch, radio, toggle button | `CheckboxField`/`SwitchField` (`is_selected`, `set_selected`) + `*Button`; `RadioGroup` + `RadioField` + `RadioButton`; `ToggleButton(Group)`      |
 | Text, search and number fields         | `TextField`, `SearchField`, `NumberField` atoms (`value` + `set_value`) with `Label`, `Input`, `FieldError`                                        |
-| Keyboard shortcut                      | `utils::keyboard_shortcut::Shortcut` (`Shortcut::key("k").primary()`)                                                                              |
+| Keyboard shortcut                      | `utils::keyboard_shortcut::Shortcut` (`Shortcut::new(KeyboardKey::K).primary()`)                                                                   |
 | Key caps                               | `ShortcutKeys` atom (a `Shortcut`, per platform), `Keys` atom (keys as given); in pages kit `Keys keys="Shift + Tab"`, in tables `KeyRow`          |
 | Data table                             | `Table*` atoms; in pages kit `DocTable` with `TableRow`/`TableCell` rows                                                                           |
 | Code                                   | kit `Code` (inline or with `language`; blocks are highlighted and get a copy button)                                                               |

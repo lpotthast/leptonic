@@ -30,6 +30,8 @@ pub mod list_formatter;
 pub mod live_announcer;
 pub mod math;
 pub(crate) mod modifiers;
+#[cfg(not(feature = "ssr"))]
+pub(crate) mod next_frame;
 pub mod number_formatter;
 pub mod number_parser;
 pub mod number_value;

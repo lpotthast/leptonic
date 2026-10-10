@@ -41,12 +41,6 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// ## DIFFERENT BEHAVIOR
-// - Hover and focus tracking are built in (`is_hovered`, `is_focused`, `is_focus_visible`,
-//   `data-focus-visible`). React-aria leaves this to the `Button` component of
-//   react-aria-components, which combines `useButton`, `useHover` and `useFocusRing`. Every
-//   leptonic button needs them, so the hook provides them.
-//
 // ## API DIFFERENCES
 // - Flat input with `Default`. Hooks that configure a button (menu trigger, spin button, ...)
 //   return a `UseButtonInput` instead of DOM props, mirroring how react-aria passes
@@ -57,6 +51,12 @@ use crate::{
 // - Of the DOM props react-aria forwards via `filterDOMProps`, only `id`, `aria-label` and
 //   `aria-labelledby` are part of the input (hooks configuring a button need them). Set others
 //   directly on the element.
+//
+// ## DIFFERENT BEHAVIOR
+// - Hover and focus tracking are built in (`is_hovered`, `is_focused`, `is_focus_visible`,
+//   `data-focus-visible`). React-aria leaves this to the `Button` component of
+//   react-aria-components, which combines `useButton`, `useHover` and `useFocusRing`. Every
+//   leptonic button needs them, so the hook provides them.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Press events on `ButtonElementType::Anchor` always propagate, so that client-side routers

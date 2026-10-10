@@ -104,7 +104,9 @@ pub async fn arrows_are_mirrored_right_to_left(page: &Page<'_>) -> Result<(), Re
 }
 
 /// Tab focuses the row and then walks its children, and Shift+Tab goes back to the row ("Tab into
-/// list focuses row, Tab from row enters child, Shift+Tab returns to row").
+/// list focuses row, Tab from row enters child, Shift+Tab returns to row"). The row shows its focus
+/// ring only while it has focus itself, not while a child has it (`data-focus-visible-within`
+/// shows both).
 #[browser_test]
 pub async fn tab_walks_the_children(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -112,16 +114,23 @@ pub async fn tab_walks_the_children(page: &Page<'_>) -> Result<(), Report> {
     let first = button(page, "Tab first").await?;
     let last = button(page, "Tab last").await?;
     focus_before(page, "#glf-tab").await?;
-    for (keys, target) in [
-        (TypingData::from(Key::Tab), &row),
-        (TypingData::from(Key::Tab), &first),
-        (TypingData::from(Key::Tab), &last),
-        (Key::Shift + Key::Tab, &first),
-        (Key::Shift + Key::Tab, &row),
+    for (keys, target, row_ring) in [
+        (TypingData::from(Key::Tab), &row, Some("true")),
+        (TypingData::from(Key::Tab), &first, None),
+        (TypingData::from(Key::Tab), &last, None),
+        (Key::Shift + Key::Tab, &first, None),
+        (Key::Shift + Key::Tab, &row, Some("true")),
     ] {
         let description = format!("after pressing {keys:?}");
         page.send_keys(keys).await?;
         page.wait_for_focus(target)
+            .await
+            .context_with(|| description.clone())?;
+        row.wait_for_attr("data-focus-visible", row_ring)
+            .await
+            .context_with(|| description.clone())?;
+        // Keyboard focus within the row, on itself or a child.
+        row.wait_for_attr("data-focus-visible-within", Some("true"))
             .await
             .context_with(|| description.clone())?;
     }
@@ -249,14 +258,7 @@ pub async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
     row(page, "#glf-replace", "Banana").await?.click().await?;
     selection.wait_for_inner_text("Banana").await?;
     let cherry = row(page, "#glf-replace", "Cherry").await?;
-    page.low_level()
-        .driver()
-        .action_chain()
-        .key_down(Key::Control)
-        .click_element(&cherry)
-        .key_up(Key::Control)
-        .perform()
-        .await?;
+    page.click_with_primary_modifier(&cherry).await?;
     selection.wait_for_inner_text("Banana,Cherry").await?;
     let apple = row(page, "#glf-replace", "Apple").await?;
     page.low_level()
@@ -325,7 +327,7 @@ pub async fn sections_and_descriptions(page: &Page<'_>) -> Result<(), Report> {
         .has_attribute("aria-labelledby")
         .await
         .derive_owned(|labelledby| labelledby.split_whitespace().last())
-        .get_some()
+        .some()
         .is_equal_to(description_id.as_str());
     // The row's own `aria-label` stands for the row in its `aria-labelledby`.
     assert_that!(banana)

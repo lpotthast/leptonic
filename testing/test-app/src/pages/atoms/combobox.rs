@@ -54,6 +54,8 @@ pub fn PageAtomComboBox() -> impl IntoView {
             <ModalComboBox />
             <ControlledComboBox />
             <DerivedComboBox />
+            <TimedComboBox />
+            <RenamedComboBoxes />
             <ReadOnlyComboBox />
             <DisabledComboBox />
             <ServerFilteredComboBox />
@@ -112,8 +114,6 @@ fn ModalComboBox() -> impl IntoView {
 /// "Banana" (an existing item), `#test-cb-controlled-add` adds "Fig" to the collection and
 /// selects it in the same update, `#test-cb-controlled-select-then-add` selects "Grape" before
 /// adding it.
-/// `#test-cb-timed-start` selects "Banana" after 300 ms, with no event or focus change around it,
-/// and `#test-cb-timed-effect` selects "Cherry" from an effect.
 #[component]
 fn ControlledComboBox() -> impl IntoView {
     let items = RwSignal::new(FRUITS.map(str::to_owned).to_vec());
@@ -123,25 +123,7 @@ fn ControlledComboBox() -> impl IntoView {
         text_value: |fruit: &String| fruit.clone(),
     });
     let value = RwSignal::new(Some(Key::from("Apple")));
-    let start = move |_| {
-        set_timeout(
-            move || value.set(Some(Key::from("Banana"))),
-            std::time::Duration::from_millis(300),
-        );
-    };
-    let trigger = RwSignal::new(false);
-    Effect::new(move |_| {
-        if trigger.get() {
-            value.set(Some(Key::from("Cherry")));
-        }
-    });
     view! {
-        <button id="test-cb-timed-start" on:click=start>
-            "Select Banana later"
-        </button>
-        <button id="test-cb-timed-effect" on:click=move |_| trigger.set(true)>
-            "Select Cherry from an effect"
-        </button>
         <button id="test-cb-controlled-set" on:click=move |_| value.set(Some(Key::from("Banana")))>
             "Select Banana"
         </button>
@@ -231,6 +213,80 @@ fn DerivedComboBox() -> impl IntoView {
                     <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
                 </ListBox>
             </ComboBoxPopover>
+        </ComboBox>
+    }
+}
+
+/// A controlled combo box over a fixed collection ("Timed fruit", "Apple" selected) whose value
+/// changes with no event or focus change around it: `#test-cb-timed-start` selects "Banana" after
+/// 300 ms, `#test-cb-timed-effect` selects "Cherry" from an effect.
+#[component]
+fn TimedComboBox() -> impl IntoView {
+    let value = RwSignal::new(Some(Key::from("Apple")));
+    let start = move |_| {
+        set_timeout(
+            move || value.set(Some(Key::from("Banana"))),
+            std::time::Duration::from_millis(300),
+        );
+    };
+    let trigger = RwSignal::new(false);
+    Effect::new(move |_| {
+        if trigger.get() {
+            value.set(Some(Key::from("Cherry")));
+        }
+    });
+    view! {
+        <button id="test-cb-timed-start" on:click=start>
+            "Select Banana later"
+        </button>
+        <button id="test-cb-timed-effect" on:click=move |_| trigger.set(true)>
+            "Select Cherry from an effect"
+        </button>
+        <ComboBox collection=fruits() value=value set_value=value>
+            <Label>"Timed fruit"</Label>
+            <Input />
+            <FruitOptions />
+        </ComboBox>
+    }
+}
+
+/// Two combo boxes over one collection whose "Apple" option `#test-cb-rename` renames to "Green
+/// apple" (same key), both with "Apple" selected: "Renamed fruit" owns its text, "Bound-text
+/// fruit" has its text bound to app state.
+#[component]
+fn RenamedComboBoxes() -> impl IntoView {
+    let items = RwSignal::new(FRUITS.map(|fruit| (fruit, fruit.to_owned())).to_vec());
+    let fruits = use_list_collection(UseListCollectionInput {
+        items: Signal::from(items),
+        key: |(key, _): &(&'static str, String)| Key::from(*key),
+        text_value: |(_, text): &(&'static str, String)| text.clone(),
+    });
+    let text = RwSignal::new("Apple".to_owned());
+    let rename = move |_| {
+        items.update(|items| {
+            if let Some((_, text)) = items.iter_mut().find(|(key, _)| *key == "Apple") {
+                "Green apple".clone_into(text);
+            }
+        });
+    };
+    view! {
+        <button id="test-cb-rename" on:click=rename>
+            "Rename Apple"
+        </button>
+        <ComboBox collection=fruits default_value=Some(Key::from("Apple"))>
+            <Label>"Renamed fruit"</Label>
+            <Input />
+            <FruitOptions />
+        </ComboBox>
+        <ComboBox
+            collection=fruits
+            default_value=Some(Key::from("Apple"))
+            input_value=text
+            set_input_value=text
+        >
+            <Label>"Bound-text fruit"</Label>
+            <Input />
+            <FruitOptions />
         </ComboBox>
     }
 }

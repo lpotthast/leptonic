@@ -315,14 +315,18 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         aria_labelledby: trigger_labelledby,
         aria_describedby: field_props.aria_describedby,
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
-            if let Some(outcome) = arrows.handle(e.event())
-                && outcome.prevent_default()
-            {
-                e.event().prevent_default();
-            }
+            // A handled arrow key stops (react-aria: a shortcut handled by `useKeyboard`); every
+            // other key bubbles on.
+            let handled = arrows.handle(e.event()).is_some_and(|outcome| {
+                if outcome.prevent_default() {
+                    e.event().prevent_default();
+                }
+                !outcome.continue_propagation()
+            });
             type_select_keydown.call(e.event().clone());
-            // The trigger's keys belong to the select.
-            e.continue_propagation();
+            if !handled {
+                e.continue_propagation();
+            }
         })),
         on_focus: Some(trigger_on_focus),
         on_blur: Some(trigger_on_blur),

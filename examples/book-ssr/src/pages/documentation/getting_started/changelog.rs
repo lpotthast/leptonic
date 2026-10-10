@@ -277,6 +277,32 @@ const RELEASES: &[Release] = &[
                  (the clickable `<label>`, with the data attributes the single atom had); likewise a `RadioField` with a \
                  `RadioButton` in a `RadioGroup`, and a `SwitchField` with a `SwitchButton`. Move `classes` and the \
                  children to the button; style `.leptonic-CheckboxButton` instead of `.leptonic-Checkbox`.",
+                    "`Shortcut::key(\"k\")` \u{2192} `Shortcut::new(KeyboardKey::K)`. `Shortcut::parse` reads the string \
+                 syntax (`\"Mod+Shift+Z\"`), e.g. for shortcuts from configuration.",
+                    "The constructors and conversions of hook states were removed: `ToggleState::new`, \
+                 `TextFieldState::new`, their `with_on_change` and their `From` conversions from signals, and \
+                 `OverlayTriggerState::from`. Create the state with its hook and bind your signal with the input\u{2019}s \
+                 `value` (a `ValueBinding`, e.g. `Some(rw_signal.into())`); `on_change` reports the changes.",
+                    "`min_value` and `max_value` of `TimeField` and `use_time_field_state` are `TimeBound`s: a time of day \
+                 (`TimeBound::TimeOfDay`, into which a `civil::Time` converts) or, for fields of `civil::DateTime` and \
+                 `Zoned` values, a date and time (`TimeBound::Absolute`).",
+                    "`aria_labelledby` of the `Grid`, `GridList` and `Table` atoms takes an `Option<String>`, as on every \
+                 other atom; `UseMenuInput.aria_labelledby` is a `Signal<Option<String>>`.",
+                    "`is_tabbable` treats only `tabindex=\"-1\"` as taking an element out of the tab order; other negative \
+                 values count as tabbable.",
+                    "New: `GridList` and `use_grid_list` take an `orientation` (`data-orientation`) for horizontal lists and \
+                 grids of cards, which the arrow keys follow. `VirtualList` scrolls horizontally when rows are wider than \
+                 the list (`ListLayoutOptions::allows_overflow_across`). `Input` and `TextArea` work outside a field, as \
+                 plain inputs with hover and focus data attributes and `is_disabled` and `is_invalid` props. Every table \
+                 row has its level (`data-level`, `--table-row-level`), also in flat tables, and tables, rows, cells and \
+                 grid list items have further data attributes (`data-focus-visible-within`, `data-selection-mode`, \
+                 `data-column-index`, `data-empty`, \u{2026}).",
+                    "Fixed: a disabled pressable element lets its pointer, key and click events propagate; a combo box \
+                 doesn\u{2019}t overwrite bound input text when the selected option\u{2019}s text changes; an empty \
+                 `aria_label` counts as no label; `use_enter_animation` hides an element only until it is first ready, \
+                 so a closing popover stays visible during its exit animation; an overlay whose size changes is \
+                 repositioned in the next animation frame, which avoids \u{201c}ResizeObserver loop\u{201d} errors; `Tag` \
+                 and `TagItems` outside a `TagList` render nothing (with a warning in debug builds) instead of panicking.",
                 ],
             ),
         ],

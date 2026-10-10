@@ -1,7 +1,10 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{grid_file_list::GridFileListDemo, grid_list_sections::GridListSectionsDemo};
+use super::demos::{
+    grid_file_list::GridFileListDemo, grid_list_horizontal::GridListHorizontalDemo,
+    grid_list_sections::GridListSectionsDemo,
+};
 use crate::{kit::*, routes};
 
 #[component]
@@ -103,10 +106,14 @@ pub fn PageAtomGridList() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the grid list."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
                             <Code inline=true>"Stack"</Code>": one row below the other. "<Code inline=true>"Grid"</Code>
                             ": rows wrap like cards, and "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" find the row in the same column."
+                        </ApiRow>
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
+                            "The direction the rows run, usually the one the list scrolls in. See "
+                            <AnchorLink href="#layout-and-orientation">"Layout and Orientation"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">
                             <Code inline=true>"Arrow"</Code>": "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>
@@ -127,6 +134,56 @@ pub fn PageAtomGridList() -> impl IntoView {
                         <ApiRow name="children" ty="Children">"The rows (a "<Code inline=true>"GridListItem"</Code>" per row) and sections."</ApiRow>
                         <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends instead of when it starts."</ApiRow>
                     </ApiTable>
+                </Section>
+
+                <Section title="Layout and Orientation">
+                    <p>
+                        <Code inline=true>"layout"</Code>" and "<Code inline=true>"orientation"</Code>" tell the arrow keys how "
+                        "your CSS arranges the rows; the grid list renders them as "<Code inline=true>"data-layout"</Code>" and "
+                        <Code inline=true>"data-orientation"</Code>" for your styles:"
+                    </p>
+                    <DocTable headers=&["Layout, orientation", "Rows", "Arrow keys"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Stack"</Code>", "<Code inline=true>"Vertical"</Code></TableCell>
+                            <TableCell>"One below the other."</TableCell>
+                            <TableCell><Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" step through the rows."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Stack"</Code>", "<Code inline=true>"Horizontal"</Code></TableCell>
+                            <TableCell>"Side by side."</TableCell>
+                            <TableCell>
+                                <Keys keys="ArrowLeft"/>" / "<Keys keys="ArrowRight"/>" and "<Keys keys="ArrowUp"/>" / "
+                                <Keys keys="ArrowDown"/>" step through the rows."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Grid"</Code>", "<Code inline=true>"Vertical"</Code></TableCell>
+                            <TableCell>"Wrapping into lines, like cards."</TableCell>
+                            <TableCell>
+                                <Keys keys="ArrowLeft"/>" / "<Keys keys="ArrowRight"/>" step through the rows, "<Keys keys="ArrowUp"/>
+                                " / "<Keys keys="ArrowDown"/>" find the row in the same column."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Grid"</Code>", "<Code inline=true>"Horizontal"</Code></TableCell>
+                            <TableCell>"Flowing into columns of lines."</TableCell>
+                            <TableCell>
+                                <Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" step through the rows, "<Keys keys="ArrowLeft"/>
+                                " / "<Keys keys="ArrowRight"/>" find the row in the same line of the neighboring column."
+                            </TableCell>
+                        </TableRow>
+                    </DocTable>
+                    <p>
+                        "In right-to-left locales, "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>
+                        " swap. The orientation is a signal: here a checkbox switches it, and the demo\u{2019}s CSS lays the "
+                        "cards out by "<Code inline=true>"data-orientation"</Code>"."
+                    </p>
+                    <Demo
+                        description="Photo cards in a grid layout with single selection, and a checkbox switching between horizontal and vertical orientation"
+                        source=include_str!("demos/grid_list_horizontal.rs")
+                    >
+                        <GridListHorizontalDemo/>
+                    </Demo>
                 </Section>
             </Section>
 
@@ -200,15 +257,19 @@ pub fn PageAtomGridList() -> impl IntoView {
                 </p>
                 <ApiTable kind=ApiKind::DataAttributes>
                     <ApiRow name="data-selected" ty="true">"The row is selected."</ApiRow>
+                    <ApiRow name="data-hovered" ty="true">"A mouse or pen is over the row."</ApiRow>
                     <ApiRow name="data-focused" ty="true">"The row has focus, by keyboard or pointer."</ApiRow>
                     <ApiRow name="data-focus-visible" ty="true">"The row has keyboard focus, which should be shown."</ApiRow>
+                    <ApiRow name="data-focus-visible-within" ty="true">"The row or an element in it has keyboard focus."</ApiRow>
                     <ApiRow name="data-pressed" ty="true">"The row is being pressed."</ApiRow>
                     <ApiRow name="data-disabled" ty="true">"The row is disabled."</ApiRow>
+                    <ApiRow name="data-selection-mode" ty="single, multiple">"How many rows can be selected; absent without selection."</ApiRow>
                 </ApiTable>
                 <p>
                     "On "<Code inline=true>"GridList"</Code>": "<Code inline=true>"data-empty"</Code>" (no rows), "<Code inline=true>"data-focused"</Code>" and "<Code inline=true>"data-focus-visible"</Code>
-                    " (the list itself has the focus, which it only takes while empty) and "<Code inline=true>"data-layout"</Code>" ("<Code inline=true>"stack"</Code>" or "
-                    <Code inline=true>"grid"</Code>")."
+                    " (the list itself has the focus, which it only takes while empty), "<Code inline=true>"data-layout"</Code>" ("<Code inline=true>"stack"</Code>" or "
+                    <Code inline=true>"grid"</Code>") and "<Code inline=true>"data-orientation"</Code>" ("<Code inline=true>"vertical"</Code>" or "
+                    <Code inline=true>"horizontal"</Code>")."
                 </p>
             </Section>
 

@@ -390,7 +390,17 @@ where
     let children = std::sync::Arc::new(children);
     let render = std::sync::Arc::new(move |key: Key| {
         let node_key = key.clone();
-        let node = Memo::new(move |_| collection.with(|c| c.get(&node_key).cloned()));
+        // The item's content renders again when it changes (e.g. its text), not when other items
+        // come or go.
+        let node = Memo::new_with_compare(
+            move |_| collection.with(|c| c.get(&node_key).cloned()),
+            |previous: Option<&Option<Node>>, current: Option<&Option<Node>>| match (
+                previous, current,
+            ) {
+                (Some(Some(previous)), Some(Some(current))) => !previous.same_content(current),
+                (previous, current) => previous != current,
+            },
+        );
         let children = children.clone();
         view! {
             <ListBoxItem key=key classes=classes.clone()>
@@ -459,7 +469,9 @@ pub fn ListBoxItemDescription(
     ))
 }
 
-/// Renders a label/description slot. The slot's props go to the first such element only.
+/// Renders a label/description slot. The slot's props go to the first such element only (until
+/// it is removed: content that renders again, as `ListBoxItems` does when an item changes, takes
+/// them again).
 fn slot(
     props: StoredValue<Option<SlotProps>>,
     component: &str,
@@ -467,9 +479,13 @@ fn slot(
     styles: Styles,
     children: Children,
 ) -> AnyView {
-    if let Some(props) = props.try_update_value(Option::take).flatten() {
+    if let Some(slot_props) = props.try_update_value(Option::take).flatten() {
+        let returned = slot_props.clone();
+        on_cleanup(move || {
+            props.try_set_value(Some(returned));
+        });
         view! {
-            <span {..props.into_attrs()} class=classes style=styles>
+            <span {..slot_props.into_attrs()} class=classes style=styles>
                 {children()}
             </span>
         }

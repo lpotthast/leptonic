@@ -30,7 +30,7 @@ pub async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("test");
     assert_that!(field_in(page, "#sf-slots").await?)
         .has_attribute("data-foo")
@@ -64,8 +64,8 @@ pub async fn enter_submits(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#sf-keys input").await?;
     input.click().await?;
-    input.send_keys("query").await?;
-    input.send_keys(Key::Enter).await?;
+    input.type_keys("query").await?;
+    input.type_keys(Key::Enter).await?;
     page.element("#sf-submitted")
         .await?
         .wait_for_inner_text("query")
@@ -82,21 +82,21 @@ pub async fn escape_clears_once(page: &Page<'_>) -> Result<(), Report> {
     let input = page.element("#sf-keys input").await?;
     let clears = page.element("#sf-clears").await?;
     let escapes_bubbled = page.element("#sf-escapes-bubbled").await?;
-    input.send_keys("query").await?;
+    input.type_keys("query").await?;
     page.element("#sf-keys > div:not([data-empty])").await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     clears.wait_for_inner_text("1").await?;
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_empty();
     page.element("#sf-keys > div[data-empty]").await?;
     escapes_bubbled
         .inner_text_stays("0", std::time::Duration::from_millis(100))
         .await?;
 
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     escapes_bubbled.wait_for_inner_text("1").await?;
     clears
         .inner_text_stays("1", std::time::Duration::from_millis(100))
@@ -110,7 +110,7 @@ pub async fn escape_clears_once(page: &Page<'_>) -> Result<(), Report> {
 pub async fn clear_button_clears_and_focuses_the_input(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#sf-keys input").await?;
-    input.send_keys("abc").await?;
+    input.type_keys("abc").await?;
     page.element("h1").await?.click().await?;
     page.element("#sf-keys button").await?.click().await?;
     page.element("#sf-clears")
@@ -120,7 +120,7 @@ pub async fn clear_button_clears_and_focuses_the_input(page: &Page<'_>) -> Resul
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_empty();
     page.wait_for_focus(&input).await?;
     Ok(())
@@ -132,7 +132,7 @@ pub async fn clear_button_clears_and_focuses_the_input(page: &Page<'_>) -> Resul
 pub async fn clear_button_shows_focus_visible(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#sf-keys input").await?;
-    input.send_keys("abc").await?;
+    input.type_keys("abc").await?;
     let button = page.element("#sf-keys button").await?;
     assert_that!(button)
         .attribute("data-focus-visible")
@@ -152,8 +152,8 @@ pub async fn enter_without_on_submit_submits_the_form(page: &Page<'_>) -> Result
     page.goto_path(PATH).await?;
     let input = page.element("#sf-form input").await?;
     input.click().await?;
-    input.send_keys("q").await?;
-    input.send_keys(Key::Enter).await?;
+    input.type_keys("q").await?;
+    input.type_keys(Key::Enter).await?;
     page.element("#sf-form-submits")
         .await?
         .wait_for_inner_text("1")
@@ -191,7 +191,7 @@ pub async fn validation_errors(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -284,7 +284,7 @@ pub async fn disabled_field_ignores_keys_and_the_clear_button(
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("test");
     Ok(())
 }

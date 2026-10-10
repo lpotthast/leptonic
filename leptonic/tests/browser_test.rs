@@ -62,9 +62,9 @@ async fn browser_tests() -> Result<(), Report> {
 
     // Install assertr timing defaults.
     Patience::DEFAULT
-        .within(Duration::from_secs(5))
-        .polling_every(Duration::from_millis(20))
-        .consistently_for(Duration::from_millis(100))
+        .with_timeout(Duration::from_secs(5))
+        .with_interval(Duration::from_millis(20))
+        .with_consistency_duration(Duration::from_millis(100))
         .set_global();
 
     let tests = ui_tests::all(parallelism()?)?;

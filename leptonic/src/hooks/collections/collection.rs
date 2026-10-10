@@ -903,6 +903,26 @@ mod tests {
         assert_that!(filtered.contains_key(&Key::from("child"))).is_true();
     }
 
+    #[test]
+    fn a_node_moved_by_other_nodes_keeps_its_content() {
+        let before = Collection::build(|b| {
+            b.item("a", "A");
+            b.item("b", "B");
+        });
+        let after = Collection::build(|b| {
+            b.item("x", "X");
+            b.item("b", "B");
+        });
+        let renamed = Collection::build(|b| {
+            b.item("a", "A");
+            b.item("b", "Bee");
+        });
+        let b = |c: &Collection| c.get(&Key::from("b")).cloned().unwrap();
+        assert_that!(b(&before)).is_not_equal_to(b(&after));
+        assert_that!(b(&before).same_content(&b(&after))).is_true();
+        assert_that!(b(&before).same_content(&b(&renamed))).is_false();
+    }
+
     // Upstream: CollectionBuilder.test.js "should throw when two items share a key" (here: the
     // first occurrence is kept).
     #[test]

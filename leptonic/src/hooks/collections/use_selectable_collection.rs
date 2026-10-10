@@ -689,8 +689,13 @@ pub fn use_selectable_collection(
                             );
                         }
                     });
-                    if let Ok(frame) = frame {
-                        pending_scroll.set_value(Some((key.clone(), frame)));
+                    // Replaces the frame of an earlier run (react-aria cancels it).
+                    if let Ok(frame) = frame
+                        && let Some((_, earlier)) = pending_scroll
+                            .try_update_value(|pending| pending.replace((key.clone(), frame)))
+                            .flatten()
+                    {
+                        earlier.cancel();
                     }
                 }
             }

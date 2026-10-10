@@ -3,18 +3,18 @@
 // Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::{context::Provider, ev, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    CapturedElement, IntoAttrs, Out, SlotProps, ValueBinding,
+    CapturedElement, IntoAttrs, Orientation, Out, SlotProps, ValueBinding,
     hooks::{
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key,
             ListLayout, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
             UseListStateInput, use_list_state,
         },
-        focus::{UseFocusRingInput, use_focus_ring},
+        focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
         gridlist::{
             FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
             UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
@@ -23,7 +23,11 @@ use crate::{
         },
         interactions::{UseHoverInput, use_hover},
     },
-    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
+    utils::{
+        data_attributes::{self, flag},
+        default_class::with_default_class,
+        styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -47,7 +51,7 @@ use crate::{
 /// collection order.
 ///
 /// Data attributes (as react-aria-components): `data-empty`, `data-focused`, `data-focus-visible`,
-/// `data-layout` (`stack`/`grid`).
+/// `data-layout` (`stack`/`grid`), `data-orientation` (`vertical`/`horizontal`).
 ///
 /// Default class: `leptonic-GridList`.
 #[component]
@@ -80,8 +84,12 @@ pub fn GridList(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// Ids of elements labelling it.
     #[prop(into, optional)]
-    aria_labelledby: MaybeProp<String>,
+    aria_labelledby: Option<String>,
     #[prop(optional)] layout: ListLayout,
+    /// The primary orientation of the rows, usually the direction the list scrolls. A horizontal
+    /// list moves between its columns with ArrowLeft/ArrowRight.
+    #[prop(into, default = Orientation::Vertical.into())]
+    orientation: Signal<Orientation>,
     /// How the keyboard reaches the rows' interactive children. A grid layout always uses
     /// `KeyboardNavigationBehavior::Tab` (the arrow keys move between rows in two dimensions).
     #[prop(optional)]
@@ -123,19 +131,21 @@ pub fn GridList(
         })
     };
 
-    // As react-aria-components: the layout, emptiness and focus for styling.
+    // As react-aria-components: the layout, orientation, emptiness and focus for styling.
     let data_layout = match layout {
         ListLayout::Stack => "stack",
         ListLayout::Grid => "grid",
     };
+    let data_orientation = move || orientation.get().as_str();
     let collection = state.collection;
     let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
 
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label,
-        aria_labelledby: Signal::derive(move || aria_labelledby.get()),
+        aria_labelledby: Signal::stored(aria_labelledby),
         layout,
+        orientation,
         // As react-aria-components: the arrow keys move between the rows of a grid layout.
         keyboard_navigation_behavior: match layout {
             ListLayout::Grid => KeyboardNavigationBehavior::Tab,
@@ -167,6 +177,7 @@ pub fn GridList(
                 data-focused=flag(focus_ring.is_focused)
                 data-focus-visible=flag(focus_ring.is_focus_visible)
                 data-layout=data_layout
+                data-orientation=data_orientation
             >
                 {children()}
             </div>
@@ -178,8 +189,12 @@ pub fn GridList(
 /// single `role="gridcell"` (`display: contents`, so the row lays out the children) holding the
 /// children.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
-/// `data-pressed` and `data-hovered` on the row for styling. A [`GridListItemDescription`] inside describes the row.
+/// Data attributes (on the row, as react-aria-components): `data-selected`, `data-disabled`,
+/// `data-hovered`, `data-focused`, `data-focus-visible`, `data-focus-visible-within` (keyboard
+/// focus on the row or inside it), `data-pressed`, `data-selection-mode` (`single`/`multiple`,
+/// absent without selection).
+///
+/// A [`GridListItemDescription`] inside describes the row.
 ///
 /// Default class: `leptonic-GridListItem`.
 #[component]
@@ -207,6 +222,7 @@ pub fn GridListItem(
         crate::utils::dev_warn!("a <GridListItem> belongs in a <GridList>");
         return ().into_any();
     };
+    let selection = list.state.selection;
     let UseGridListItemReturn {
         row_props,
         grid_cell_props,
@@ -237,19 +253,29 @@ pub fn GridListItem(
         is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
         ..UseHoverInput::default()
     });
+    let focus_within = use_focus_ring(UseFocusRingInput {
+        target: FocusRingTarget::Within,
+        ..UseFocusRingInput::default()
+    });
 
     view! {
         <div
             {..attrs}
             {..hover.props.into_attrs()}
+            {..(
+                focus_within.props.on_focusin.into_on(ev::focusin),
+                focus_within.props.on_focusout.into_on(ev::focusout),
+            )}
             class=classes
             style=styles
             data-selected=flag(is_selected)
+            data-disabled=flag(is_disabled)
+            data-hovered=flag(hover.is_hovered)
             data-focused=flag(is_focused)
             data-focus-visible=flag(is_focus_visible)
-            data-disabled=flag(is_disabled)
+            data-focus-visible-within=flag(focus_within.is_focus_visible)
             data-pressed=flag(is_pressed)
-            data-hovered=flag(hover.is_hovered)
+            data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
         >
             <div {..grid_cell_props.into_attrs()} style="display: contents">
                 <Provider value=item>{children()}</Provider>

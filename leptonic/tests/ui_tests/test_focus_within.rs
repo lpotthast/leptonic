@@ -24,19 +24,19 @@ pub async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<bool>())
-        .get_ok()
+        .ok()
         .is_false();
     assert_that!(focus_count)
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
     assert_that!(blur_count)
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
 
     input_a.click().await?;
@@ -103,13 +103,13 @@ pub async fn change_callback(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<bool>())
-        .get_ok()
+        .ok()
         .is_false();
     assert_that!(count)
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
 
     input.click().await?;

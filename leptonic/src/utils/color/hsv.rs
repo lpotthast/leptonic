@@ -237,7 +237,7 @@ impl From<HSV> for RGB8 {
         } else if (300.0..360.0).contains(&h) {
             (c, 0.0, x)
         } else {
-            // Only NaN: as 0°.
+            // NaN, or 360° (`rem_euclid` rounds tiny negative hues up to it): as 0°.
             (c, x, 0.0)
         };
 

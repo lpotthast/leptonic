@@ -293,15 +293,14 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
 
     // The virtual keyboard: numeric or decimal, by whether negative and fractional values are
     // possible (tested by react-aria on many devices).
-    let has_negative =
-        T::lower_bound(state.min_value.get_untracked()).is_none_or(|min| min < T::ZERO);
-    let has_decimals = !T::IS_INTEGER
-        && state
-            .format_options
-            .with_untracked(|options| options.fraction_digits().1 > 0);
     let is_iphone = use_platform_check(device::is_iphone);
     let is_android = use_platform_check(device::is_android);
     let input_mode = Signal::derive(move || {
+        let has_negative = T::lower_bound(state.min_value.get()).is_none_or(|min| min < T::ZERO);
+        let has_decimals = !T::IS_INTEGER
+            && state
+                .format_options
+                .with(|options| options.fraction_digits().1 > 0);
         Some(if is_iphone.get() {
             if has_negative {
                 InputMode::Text

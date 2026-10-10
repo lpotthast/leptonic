@@ -61,7 +61,8 @@ pub fn PageFocusability() -> impl IntoView {
                 <p>
                     <Code inline=true>"is_tabbable(&Element) -> bool"</Code>" is true if the element matches "
                     <AnchorLink href="#tabbable-selector">"TABBABLE_SELECTOR"</AnchorLink>
-                    ", is visible and not inert: it is focusable and has no negative "<Code inline=true>"tabindex"</Code>"."
+                    ", is visible and not inert: it is focusable and its "<Code inline=true>"tabindex"</Code>" isn\u{2019}t exactly "
+                    <Code inline=true>"-1"</Code>". Other negative values, such as "<Code inline=true>"-2"</Code>", count as tabbable."
                 </p>
             </Section>
 

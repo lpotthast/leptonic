@@ -42,7 +42,7 @@ pub async fn labelling(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Ada");
     Ok(())
 }
@@ -53,7 +53,7 @@ pub async fn typing_updates_the_state(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input(page).await?;
     input.click().await?;
-    input.send_keys(Key::End + "line").await?;
+    input.type_keys(Key::End + "line").await?;
     state_value(page)
         .await?
         .wait_for_inner_text("Adaline")
@@ -68,7 +68,7 @@ pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input(page).await?;
     input.click().await?;
-    input.send_keys(Key::End + Key::Backspace).await?;
+    input.type_keys(Key::End + Key::Backspace).await?;
     state_value(page).await?.wait_for_inner_text("Ad").await?;
     input.wait_for_attr("aria-invalid", Some("true")).await?;
     assert_that!(|| input.accessible_description())
@@ -76,7 +76,7 @@ pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
         .matches(eq("Your first name. At least 3 characters."))
         .await;
 
-    input.send_keys("a").await?;
+    input.type_keys("a").await?;
     state_value(page).await?.wait_for_inner_text("Ada").await?;
     input.wait_for_attr("aria-invalid", None).await?;
     assert_that!(|| input.accessible_description())
@@ -104,7 +104,7 @@ pub async fn form_reset_restores_the_default(page: &Page<'_>) -> Result<(), Repo
     page.goto_path(PATH).await?;
     let input = input(page).await?;
     input.click().await?;
-    input.send_keys(Key::End + "Grace").await?;
+    input.type_keys(Key::End + "Grace").await?;
     state_value(page)
         .await?
         .wait_for_inner_text("AdaGrace")

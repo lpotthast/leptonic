@@ -150,7 +150,7 @@ pub async fn labelled_group(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(volume)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("30");
     assert_that!(volume)
         .has_attribute("aria-valuetext")
@@ -712,7 +712,7 @@ pub async fn disabled_track(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(disabled[0])
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("10");
     let body = page.element("body").await?;
     page.focus_stays(&body, std::time::Duration::from_millis(100))
@@ -761,10 +761,25 @@ pub async fn drag_beyond_the_ends(page: &Page<'_>) -> Result<(), Report> {
     page.goto_sections(INTERACTIONS, &["keys"]).await?;
     let thumb = page.element("#keys-track .thumb").await?;
     thumb.scroll_into_view().await?;
+    let track = page.element("#keys-track").await?.client_rect().await?;
+    let viewport_width: f64 = page
+        .low_level()
+        .eval("return document.documentElement.clientWidth;", vec![])
+        .await?;
+    let rect = thumb.client_rect().await?;
+    let start = rect.left + rect.width / 2.0;
+    // Past each end of the track, but inside the viewport (WebDriver can't move the pointer out
+    // of it).
+    let before_the_start = (track.left - 5.0).max(1.0);
+    let past_the_end = (track.right + 5.0).min(viewport_width - 1.0);
     let held = thumb.press_and_hold().await?;
-    held.move_by(-100, 0).await?;
+    #[allow(clippy::cast_possible_truncation)]
+    held.move_by((before_the_start - start).round() as i64, 0)
+        .await?;
     wait_for_last(page, "keys", "change", "[0]").await?;
-    held.move_by(300, 0).await?;
+    #[allow(clippy::cast_possible_truncation)]
+    held.move_by((past_the_end - before_the_start).round() as i64, 0)
+        .await?;
     wait_for_last(page, "keys", "change", "[100]").await?;
     held.release().await?;
     wait_for_last(page, "keys", "end", "[100]").await?;
@@ -1242,7 +1257,7 @@ pub async fn controlled_thumbs(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(controlled[1])
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("100");
     page.element("#controlled-reset").await?.click().await?;
     controlled[0].wait_for_prop("value", "0").await?;
@@ -1257,7 +1272,7 @@ pub async fn controlled_thumbs(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(controlled[0])
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("0");
     Ok(())
 }
@@ -1310,7 +1325,7 @@ pub async fn missing_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(missing[1])
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("0");
     missing[1].focus().await?;
     page.send_keys(Key::Right).await?;
@@ -1321,7 +1336,7 @@ pub async fn missing_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(missing[0])
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("30");
     crate::fixtures::take_warnings(page, "Slider thumb 1 has no value", 1).await?;
     Ok(())

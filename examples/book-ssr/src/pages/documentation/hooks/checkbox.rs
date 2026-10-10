@@ -66,25 +66,15 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                             <TableCell><Code inline=true>"toggle()"</Code></TableCell>
                             <TableCell>"Flips the selection."</TableCell>
                         </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"with_on_change(Callback<bool>)"</Code></TableCell>
-                            <TableCell>"The same state, also calling the callback with each changed selection."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"new(is_selected, default_selected, set_selected)"</Code></TableCell>
-                            <TableCell>
-                                "A state whose selection lives elsewhere: it reads "<Code inline=true>"is_selected"</Code>
-                                " and hands changes to the "<Code inline=true>"set_selected"</Code>" callback."
-                            </TableCell>
-                        </TableRow>
                     </DocTable>
                     <p>
-                        "To bind a toggle to a signal of your app without "<Code inline=true>"use_toggle_state"</Code>
-                        ", convert the signal: "<Code inline=true>"ToggleState::from(rw_signal)"</Code>" or "
-                        <Code inline=true>"ToggleState::from((read, write))"</Code>
-                        ". The toggle then reads and writes the signal, like Leptos\u{2019} "
-                        <Code inline=true>"bind:checked"</Code>". The "<Code inline=true>"CheckboxField"</Code>" atom takes your state as its "
-                        <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" props instead."
+                        "To keep the selection in a signal of your app, bind it as "<Code inline=true>"value"</Code>": "
+                        <Code inline=true>"value: Some(rw_signal.into())"</Code>" ("<Code inline=true>"ValueBinding"</Code>
+                        " converts from an "<Code inline=true>"RwSignal"</Code>" or a "<Code inline=true>"(ReadSignal, WriteSignal)"</Code>
+                        " pair; "<Code inline=true>"ValueBinding::new(signal, callback)"</Code>" binds any other storage). The toggle "
+                        "then reads and writes the signal, like Leptos\u{2019} "<Code inline=true>"bind:checked"</Code>". The "
+                        <Code inline=true>"CheckboxField"</Code>" atom takes your state as its "<Code inline=true>"is_selected"</Code>
+                        " and "<Code inline=true>"set_selected"</Code>" props instead."
                     </p>
                 </Section>
             </Section>

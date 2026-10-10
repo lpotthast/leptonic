@@ -102,6 +102,14 @@ Headless Shell, 8 tests in parallel by default, `thirtyfour` re-exported as `bro
   warnings; the summary lists the slowest steps). `BROWSER_TEST_LOG` takes a level (`debug`) or levels per target
   (`info,browser_test::step=debug`), as `tracing-subscriber`'s `Targets` parses them; a plain `debug` includes tokio's
   events (`debug,tokio=warn,runtime=warn`). One line per event.
+- **Keyboard layout**: typing doesn't depend on the host's keyboard layout. chromedriver alone would type through the
+  host's active input source (on macOS with a German layout, `/` arrives as Shift+7 with `key` `&` and `z` as `y`),
+  so the helpers (`pages/keyboard.rs`) type every character a US keyboard has through CDP (`Input.dispatchKeyEvent`),
+  as that keyboard produces it: `key`, `code`, `keyCode` and text of its key, with a Shift `keydown`/`keyup` around
+  the characters that take Shift (`?` is Shift+Slash). Text fields get the text and their `input` events, type-ahead
+  sees the right `key`. Named keys (`Key::Enter`, `Key::Tab`, arrows) and chords (whatever follows a modifier, up to
+  `Key::Null`) stay on WebDriver, which sends them the same on every layout. So tests type only through
+  `page.send_keys`/`page.type_text` and `element.type_keys`, never thirtyfour's `WebElement::send_keys`.
 - **Toolchain**: the installed `wasm-bindgen` CLI must match the `wasm-bindgen` version in the test-app's
   `Cargo.lock`, otherwise `cargo leptos serve` fails: update the lockfile (`cargo update -p wasm-bindgen -p js-sys
   -p web-sys -p wasm-bindgen-futures`) or the CLI.
@@ -363,8 +371,11 @@ DOM measurements. Encapsulate reusable scripts behind typed arguments and return
   (`ActionChain::new_with_delay`), so WebDriver latency can't stretch it.
 - **Keyboard**, to the focused element: `page.send_keys(keys)` (`Key::Shift + Key::Tab` holds Shift),
   `page.type_text(text)` (one key at a time, for inputs that move focus while typing), `page.hold_key(key, n)`
-  (repeated `keydown`s). Focus: `element.focus()`, `page.blur_focused()`. The focused-element lookup descends into
-  open shadow roots before sending native element keys, preserving browser shortcuts such as Shift+F10.
+  (repeated `keydown`s); to an element: `element.type_keys(keys)` (focuses it first, a text field with the caret at
+  the end, as WebDriver's send keys does). Characters arrive as a US keyboard types them, whatever the host's layout
+  ("Browser test setup", "Keyboard layout"). Focus: `element.focus()`, `page.blur_focused()`. The focused-element
+  lookup descends into open shadow roots before sending native element keys, preserving browser shortcuts such as
+  Shift+F10.
 - **As assistive technology does** (from script): `element.virtual_click()`, `element.virtual_input(value)`.
 - **Forms**: `form.check_validity()` (fires `invalid`), `form.form_values(name)`, `form.submit()`, `form.reset()`.
 - **Events WebDriver can't produce** (touch and pen pointers, wheel, drag, `beforematch`, custom events), built
@@ -384,8 +395,16 @@ DOM measurements. Encapsulate reusable scripts behind typed arguments and return
   element.record_attr("style").await?`, perform the gesture, then `recording.finish()`: every value the attribute
   took, recorded in the page. `page.record_attr_of(selector, name)` also records elements inserted later (an overlay
   opening).
-- **Other platforms**: `page.emulate_platform(Platform::Mac)` (or `IPhone`, `Android`) before `goto_path`: the user
-  agent and `navigator.platform` leptonic's platform checks read; session resets end it.
+- **Other platforms**: `page.emulate_platform(Platform::Mac)` (or `Linux`, `IPhone`, `Android`) before `goto_path`:
+  the user agent and `navigator.userAgentData` leptonic's platform checks read (Chrome 155 ignores the override's
+  `navigator.platform`); session resets end it. Without emulation the browser reports the host. A case about
+  behavior that differs on a Mac (the `ShortcutKeys` labels, Ctrl+Enter, Alt in drag and drop) emulates the
+  platform it describes; a case using modifiers takes the page's: `page.primary_modifier()` (select all,
+  Ctrl+Home/End, `Mod` shortcuts: Meta on a Mac, else Control), `page.non_contiguous_selection_modifier()` (moving
+  through a collection without selecting: Alt on Apple devices, else Control), `page.click_with_primary_modifier`.
+  Never hard-code `Key::Control` for these: the suite runs on macOS and Linux hosts.
+- **Sequences faster than WebDriver** (a touch drag that must end before a 200 ms timer): `page.dispatch_all(vec![(
+  &element, event), ..])` dispatches them in one script.
 - **Behavior behind a timer that must not come early** (a tooltip's delay, a touch drag delay):
   `page.start_stopwatch(&target, PointerKind::Enter, StopwatchEnd::Appears(sel))` (or a plain `EventKind` start;
   `Disappears(sel)`, `AttributeChanges { element, name }` ends), act, then `stopwatch.finish()`: the `Duration` from

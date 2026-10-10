@@ -49,6 +49,13 @@ use crate::{
 // - `aria_label`/`aria_labelledby` name the popover only while it is the dialog itself
 //   (react-aria-components passes them on always).
 //
+// ## DIFFERENT BEHAVIOR
+// - `--trigger-width` follows a resized trigger in the next animation frame, not in the
+//   `ResizeObserver` callback (react-aria-components sets state there, which renders later too):
+//   the popover's size follows the width, and a resize the browser can't deliver in the same pass
+//   is reported as an uncaught "ResizeObserver loop completed with undelivered notifications"
+//   error. The width is measured at once on opening.
+//
 // ## OMITTED FEATURES
 // - `isEntering`/`isExiting` props (the entry and exit animations themselves are supported:
 //   `data-entering`/`data-exiting`), `shouldSkipAnimation`, `UNSTABLE_portalContainer`,
@@ -549,8 +556,8 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
 }
 
 /// Measures the trigger's width (from the left of the trigger and `with` to the right of both)
-/// into `width` now and whenever the trigger resizes, until the current owner (an opening of the
-/// popover) is disposed: a closed popover observes nothing.
+/// into `width` now and in the frame after the trigger resized, until the current owner (an
+/// opening of the popover) is disposed: a closed popover observes nothing.
 fn measure_trigger_width(
     trigger: CapturedElement,
     with: Option<CapturedElement>,
@@ -583,9 +590,11 @@ fn measure_trigger_width(
             let _ = trigger.get();
             measure();
         });
+        // After a resize: in the next frame, as the popover's size follows the width.
+        let resized = crate::utils::next_frame::NextFrame::new(measure);
         let _ =
             leptos_use::use_resize_observer(Signal::derive(move || trigger.get()), move |_, _| {
-                measure();
+                resized.request();
             });
     }
 }

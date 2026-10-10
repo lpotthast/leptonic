@@ -7,7 +7,7 @@ use browser_test::{browser_test, thirtyfour::prelude::*};
 use leptonic::AriaRole;
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page, css, role};
+use crate::pages::{ElementActions, KeyKind, Page, SyntheticEvent, css, role};
 
 const PATH: &str = "/atoms/select";
 
@@ -43,7 +43,7 @@ pub async fn initial_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(hidden_select(page).await?)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Banana");
     // Focus walks skip the hidden select (HiddenSelect.test.tsx, "should always add a data
     // attribute data-react-aria-prevent-focus"; here `data-leptonic-prevent-focus`).
@@ -216,7 +216,7 @@ pub async fn selecting_an_option(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(hidden_select(page).await?)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Durian");
     page.wait_for_focus(&trigger).await?;
     Ok(())
@@ -251,6 +251,34 @@ pub async fn trigger_keyboard(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .is_equal_to("Elderberry");
+    Ok(())
+}
+
+/// Right and Left on the trigger stop at the select, other keys bubble on (react-aria: a shortcut
+/// handled by `useKeyboard` stops its event).
+#[browser_test]
+pub async fn trigger_arrow_keys_dont_bubble(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let trigger = page.element(TRIGGER).await?;
+    let changes = page.element("#test-sel-changes").await?;
+    let keydowns = page
+        .element("body")
+        .await?
+        .count_synthetic_events("keydown")
+        .await?;
+    trigger
+        .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "ArrowRight"))
+        .await?;
+    changes.wait_for_inner_text("Durian").await?;
+    trigger
+        .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "ArrowLeft"))
+        .await?;
+    changes.wait_for_inner_text("Durian | Banana").await?;
+    assert_that!(keydowns.count().await?).is_equal_to(0);
+    trigger
+        .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "F2"))
+        .await?;
+    assert_that!(keydowns.finish().await?).is_equal_to(1);
     Ok(())
 }
 
@@ -297,7 +325,7 @@ pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(hidden_select(page).await?)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Banana");
     Ok(())
 }

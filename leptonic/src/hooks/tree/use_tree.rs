@@ -12,7 +12,7 @@ use crate::{
             KeyboardNavigationBehavior, UseGridListInput, UseGridListReturn, use_grid_list,
         },
     },
-    utils::aria::AriaRole,
+    utils::{aria::AriaRole, orientation::Orientation},
 };
 
 // =============================================================================
@@ -74,6 +74,7 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
         state: state.list,
         element,
         layout: ListLayout::Stack,
+        orientation: Orientation::Vertical.into(),
         keyboard_delegate: None,
         keyboard_navigation_behavior,
         should_select_on_press_up,

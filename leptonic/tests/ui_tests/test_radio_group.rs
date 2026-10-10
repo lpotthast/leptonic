@@ -66,7 +66,7 @@ pub async fn structure(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(cats)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("cats");
     // The group's description describes each radio.
     assert_that!(dogs)
@@ -336,7 +336,7 @@ pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(a)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();

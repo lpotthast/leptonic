@@ -37,10 +37,6 @@ use crate::{
 //   `routerOptions`).
 // - Render props become `data-*` attributes plus plain children.
 //
-// ## OMITTED FEATURES
-// - `data-current`: the router sets `aria-current`, which `<A>` doesn't expose; style
-//   `[aria-current]`.
-//
 // ## DIFFERENT BEHAVIOR
 // - The `href` is required: a link without one is `use_link` with `LinkElementType::Other`.
 //
@@ -49,6 +45,10 @@ use crate::{
 //   `--cfg=erase_components` (cargo-leptos' dev builds), Leptos applies attributes spread onto a
 //   component (`attr:id`, ...) only to the element it first rendered, so they are lost once
 //   `is_disabled` changes; the link's own props (`classes`, `aria_label`, ...) are not affected.
+//
+// ## OMITTED FEATURES
+// - `data-current`: the router sets `aria-current`, which `<A>` doesn't expose; style
+//   `[aria-current]`.
 //
 // =============================================================================
 

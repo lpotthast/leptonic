@@ -38,8 +38,12 @@ use crate::{
 //
 // ## DIFFERENT BEHAVIOR
 // - With both `value` and `input_value` bound to app state, the combo box still keeps the text in
-//   sync with the selection (the selected option's text on selection and commit, an emptied text
-//   clears a single selection); react-aria leaves both to the app then.
+//   sync with the selection (the selected option's text when the selection changes, on commit and
+//   on revert; an emptied text clears a single selection); react-aria leaves both to the app then
+//   (calling `onSelectionChange` on commit so that it can sync the text). The bindings make this
+//   safe: the text follows a selection only once the app accepted it, and the app's setter may
+//   still decline the text. As in react-aria, a bound `input_value` doesn't follow a change of the
+//   selected option's text (e.g. reloaded options): that is the app's to sync.
 //
 // =============================================================================
 
@@ -558,6 +562,8 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
     };
 
     let default_value = value.map_or(default_value, |value| value.value.get_untracked());
+    // react-aria: `props.inputValue !== undefined`.
+    let input_bound = input_binding.is_some();
     let default_input_value =
         input_binding.map_or(default_input_value, |text| Some(text.value.get_untracked()));
     let initial_text = default_input_value.clone().unwrap_or_else(|| {
@@ -808,8 +814,10 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
             } else if input_changed {
                 inner.last_value.set_value(input.clone());
             }
-            // The selected option's text changed (e.g. the collection was reloaded).
+            // The selected option's text changed (e.g. the collection was reloaded). Not while the
+            // user is in the field, and not into bound text (the app's to sync).
             if !focused
+                && !input_bound
                 && selection_mode == SelectMode::Single
                 && !value.is_empty()
                 && !value_changed
@@ -1194,6 +1202,211 @@ mod tests {
             assert_that!(state.value()).is_empty();
         });
     }
+
+    /// "One", "Two" and "Three" (keys "one", "two", "three"), with the texts of `texts`.
+    fn numbers(texts: RwSignal<[&'static str; 3]>) -> CollectionMemo {
+        Memo::new(move |_| {
+            let [one, two, three] = texts.get();
+            Arc::new(Collection::build(|b| {
+                b.item("one", one);
+                b.item("two", two);
+                b.item("three", three);
+            }))
+        })
+    }
+
+    /// Input text bound to `text`, whose setter only records the writes (an app that doesn't
+    /// accept them, as react-aria's tests with a fixed `inputValue` prop).
+    fn declining_text(text: RwSignal<String>) -> (ValueBinding<String>, RwSignal<Vec<String>>) {
+        let writes = RwSignal::new(Vec::new());
+        let binding = ValueBinding::new(
+            text.into(),
+            Callback::new(move |value: String| writes.update(|w| w.push(value))),
+        );
+        (binding, writes)
+    }
+
+    const NUMBERS: [&str; 3] = ["One", "Two", "Three"];
+
+    // Upstream: ComboBox.test.js "controlled items: should update the input value when items
+    // update and selectedKey textValue doesn't match" (uncontrolled and controlled value) and
+    // "... doesn't update the input value when items update but the combobox is focused".
+    #[test]
+    fn the_input_follows_the_selected_options_text_unless_bound_or_focused() {
+        with_owner(|| {
+            for bound in [false, true] {
+                let texts = RwSignal::new(NUMBERS);
+                let text = RwSignal::new("One".to_owned());
+                let state = use_combobox_state(UseComboBoxStateInput {
+                    collection: numbers(texts),
+                    default_value: vec![Key::from("one")],
+                    input_value: bound.then(|| text.into()),
+                    ..fruit_input()
+                });
+                flush_effects();
+                assert_that!(state.input_value()).is_equal_to("One".to_owned());
+
+                texts.set(["New Text", "Two", "Three"]);
+                flush_effects();
+                let expected = if bound { "One" } else { "New Text" };
+                assert_that!(state.input_value()).is_equal_to(expected.to_owned());
+                assert_that!(state.value()).is_equal_to(vec![Key::from("one")]);
+
+                // Focused: the user's text is never changed.
+                state.set_focused(true);
+                flush_effects();
+                texts.set(["Newer Text", "Two", "Three"]);
+                flush_effects();
+                assert_that!(state.input_value()).is_equal_to(expected.to_owned());
+            }
+        });
+    }
+
+    // DIFFERENT BEHAVIOR: with both the value and the text bound, the text still follows the
+    // selection (react-aria, "controlled by both selectedKey and inputValue": "does not update
+    // inputValue when only selectedKey changes").
+    #[test]
+    fn bound_text_follows_a_bound_selection() {
+        with_owner(|| {
+            let value = RwSignal::new(vec![Key::from("two")]);
+            let text = RwSignal::new("Two".to_owned());
+            let state = use_combobox_state(UseComboBoxStateInput {
+                collection: numbers(RwSignal::new(NUMBERS)),
+                value: Some(value.into()),
+                input_value: Some(text.into()),
+                ..fruit_input()
+            });
+            flush_effects();
+            value.set(vec![Key::from("one")]);
+            flush_effects();
+            assert_that!(text.get_untracked()).is_equal_to("One".to_owned());
+            value.set(Vec::new());
+            flush_effects();
+            assert_that!(text.get_untracked()).is_equal_to(String::new());
+            assert_that!(state.value()).is_empty();
+        });
+    }
+
+    // Upstream: ComboBox.test.js "controlled by inputValue: updates selectedKey but not
+    // inputValue": typing and selecting only propose texts to the app.
+    #[test]
+    fn bound_text_changes_only_when_the_app_accepts_it() {
+        with_owner(|| {
+            let text = RwSignal::new("T".to_owned());
+            let (binding, writes) = declining_text(text);
+            let (changes, on_change) = changes();
+            let state = use_combobox_state(UseComboBoxStateInput {
+                collection: numbers(RwSignal::new(NUMBERS)),
+                default_value: vec![Key::from("three")],
+                input_value: Some(binding),
+                on_change: Some(on_change),
+                ..fruit_input()
+            });
+            flush_effects();
+            state.set_focused(true);
+            state.open(None, MenuTriggerAction::Manual);
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("T".to_owned());
+            assert_that!(displayed(&state)).has_length(3);
+
+            state.set_input_value("Tw".to_owned());
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("T".to_owned());
+            assert_that!(writes.get_untracked()).is_equal_to(vec!["Tw".to_owned()]);
+            assert_that!(changes.get_untracked()).is_empty();
+
+            state.list.selection.select(&Key::from("two"), None);
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("T".to_owned());
+            assert_that!(writes.get_untracked().last()).is_equal_to(Some(&"Two".to_owned()));
+            assert_that!(changes.get_untracked()).is_equal_to(vec![vec![Key::from("two")]]);
+            // The (still focused) text differs from the selection's: the options stay shown,
+            // filtered by it.
+            assert_that!(state.is_open()).is_true();
+            assert_that!(displayed(&state)).is_equal_to(vec!["two".to_owned(), "three".to_owned()]);
+
+            // The app's text shows.
+            text.set("Tw".to_owned());
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Tw".to_owned());
+        });
+    }
+
+    // Upstream: ComboBox.test.js "clears selection when inputValue is controlled": emptying the
+    // text clears the selection once the app accepts the empty text.
+    #[test]
+    fn emptied_bound_text_clears_the_selection_once_accepted() {
+        with_owner(|| {
+            let text = RwSignal::new("Two".to_owned());
+            let (binding, writes) = declining_text(text);
+            let (changes, on_change) = changes();
+            let state = use_combobox_state(UseComboBoxStateInput {
+                collection: numbers(RwSignal::new(NUMBERS)),
+                default_value: vec![Key::from("two")],
+                input_value: Some(binding),
+                on_change: Some(on_change),
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "");
+            assert_that!(writes.get_untracked()).is_equal_to(vec![String::new()]);
+            assert_that!(changes.get_untracked()).is_empty();
+            assert_that!(state.input_value()).is_equal_to("Two".to_owned());
+            assert_that!(state.value()).is_equal_to(vec![Key::from("two")]);
+
+            text.set(String::new());
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to(String::new());
+            assert_that!(state.value()).is_empty();
+            assert_that!(changes.get_untracked()).is_equal_to(vec![Vec::new()]);
+        });
+    }
+
+    // Upstream: ComboBox.test.js "controlled by inputValue" blur and commit flows ("should reset
+    // the input text and close the menu on committing a previously selected option", "... on
+    // blur"): with only the text bound, committing and blurring write the selected option's text.
+    #[test]
+    fn commit_and_blur_write_the_selected_text_into_bound_text() {
+        with_owner(|| {
+            let text = RwSignal::new(String::new());
+            let state = use_combobox_state(UseComboBoxStateInput {
+                collection: numbers(RwSignal::new(NUMBERS)),
+                input_value: Some(text.into()),
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "On");
+            assert_that!(state.is_open()).is_true();
+            state.list.selection.select(&Key::from("one"), None);
+            flush_effects();
+            assert_that!(text.get_untracked()).is_equal_to("One".to_owned());
+            assert_that!(state.is_open()).is_false();
+
+            // Committing the selected option again resets the text.
+            state.set_input_value("On".to_owned());
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+            state
+                .list
+                .selection
+                .set_focused_key(Some(Key::from("one")), None);
+            state.commit();
+            flush_effects();
+            assert_that!(text.get_untracked()).is_equal_to("One".to_owned());
+            assert_that!(state.is_open()).is_false();
+
+            // Blurring resets it too.
+            state.set_input_value("On".to_owned());
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+            state.set_focused(false);
+            flush_effects();
+            assert_that!(text.get_untracked()).is_equal_to("One".to_owned());
+            assert_that!(state.is_open()).is_false();
+            assert_that!(state.value()).is_equal_to(vec![Key::from("one")]);
+        });
+    }
+
     /// A collection of `items` (key and text alike), changing with it.
     fn collection_of(items: RwSignal<Vec<&'static str>>) -> CollectionMemo {
         Memo::new(move |_| {

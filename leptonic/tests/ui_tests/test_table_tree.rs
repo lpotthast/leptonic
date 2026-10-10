@@ -458,7 +458,7 @@ pub async fn leaf_rows_are_never_expanded(page: &Page<'_>) -> Result<(), Report>
     wait_for_rows(page, "bound", 7).await?;
     let report = rows(page, "bound").await?[5].clone();
     assert_that!(row_names(page, "bound").await?.get(5))
-        .get_some()
+        .some()
         .is_equal_to("2024 Financial Report");
     expect_row(page, &report, None, 1, 3, 4).await?;
     assert_that!(report)

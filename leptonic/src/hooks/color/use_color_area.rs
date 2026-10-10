@@ -139,7 +139,6 @@ pub struct UseColorAreaThumbProps {
     pub on_keyup: EventHandler<KeyboardEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
-    pub element_capture: ElementCaptureAttr,
 }
 
 pub type UseColorAreaThumbAttrs = (
@@ -149,7 +148,6 @@ pub type UseColorAreaThumbAttrs = (
     OnEvent<ev::keyup>,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
-    ElementCaptureAttr,
 );
 
 impl IntoAttrs for UseColorAreaThumbProps {
@@ -163,7 +161,6 @@ impl IntoAttrs for UseColorAreaThumbProps {
             self.on_keyup.into_on(ev::keyup),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-            self.element_capture,
         )
     }
 }
@@ -303,7 +300,6 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     let direction = use_direction();
     let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
     let area_element = CapturedElement::new();
-    let thumb_element = CapturedElement::new();
     let x_input = CapturedElement::new();
     let y_input = CapturedElement::new();
 
@@ -776,7 +772,6 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 on_keyup: keyboard.on_keyup,
                 on_focusin: focus_within.on_focusin,
                 on_focusout: focus_within.on_focusout,
-                element_capture: thumb_element.attr(),
             },
             thumb_styles,
         ),

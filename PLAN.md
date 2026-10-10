@@ -479,6 +479,9 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   visit and an unstable Leptos feature: try a coarser grouping first).
 
 ### Testing infrastructure
+- [ ] Intermittent session start failures (2026-10-10): now and then one of the first sessions of a run fails with
+  `StartWebDriverSession` ("error sending request for url .../session", chrome-for-testing-manager 0.14), more often
+  under load; a rerun passes. Look into retrying session creation in browser-test.
 - [ ] Double clicks through raw action chains (`page.low_level().driver().action_chain().double_click_element`) in
   `test_press.rs`, `test_listbox_features.rs`, `test_grid_list_features.rs`, `test_listbox_selection.rs`: use
   `ElementActions::double_click` (added 2026-10-09).

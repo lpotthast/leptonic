@@ -21,12 +21,16 @@ use leptos::prelude::*;
 ///   (`#test-vl-rebuilt-wrapper`, a known Leptos bug: the old listeners stay).
 /// - `#test-vl-text`: 50 rows of plain text ("Text 0", ...; no element of their own), estimated
 ///   20px, observed; `#test-vl-text-bigger` switches its font size from 14px to 40px.
+/// - `#test-vl-wide`: 50 lines that don't wrap (`.wide-line`, as wide as their text, at least as
+///   the row), 200px wide and high, observed; "Wide 3" is far wider than the list.
+///   `#test-vl-wide-wrap` toggles wrapping them.
 #[component]
 pub fn PageAtomVirtualList() -> impl IntoView {
     let lines = RwSignal::new((0..2000).collect::<Vec<usize>>());
     let follow = RwSignal::new(true);
     let source = RwSignal::new(0_usize);
     let bigger = RwSignal::new(false);
+    let wrap = RwSignal::new(false);
     let line_text = |i: usize| {
         if i.is_multiple_of(7) {
             format!("Line {i} {}", "long text that wraps ".repeat(12))
@@ -90,6 +94,35 @@ pub fn PageAtomVirtualList() -> impl IntoView {
                 {format!("Text {i}")}
             </VirtualList>
         </div>
+        <button id="test-vl-wide-wrap" on:click=move |_| wrap.update(|w| *w = !*w)>
+            {move || if wrap.get() { "wrapping" } else { "not wrapping" }}
+        </button>
+        <VirtualList
+            items=Signal::stored((0..50).collect::<Vec<usize>>())
+            key=|i: &usize| Key::from(format!("wide-{i}"))
+            layout_options=VirtualListOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..VirtualListOptions::default()
+            }
+            should_observe_item_size=true
+            styles=Styles::new().add_unchecked("width", "200px").add_unchecked("height", "200px")
+            attr:id="test-vl-wide"
+            let:i
+        >
+            <div
+                class="wide-line"
+                style="font-family: monospace; min-width: 100%"
+                style:white-space=move || if wrap.get() { "pre-wrap" } else { "pre" }
+                style:overflow-wrap=move || if wrap.get() { "anywhere" } else { "normal" }
+                style:width=move || if wrap.get() { "auto" } else { "max-content" }
+            >
+                {if i == 3 {
+                    format!("Wide {i} {}", "wider than the list ".repeat(10))
+                } else {
+                    format!("Wide {i}")
+                }}
+            </div>
+        </VirtualList>
         <button id="test-vl-source" on:click=move |_| source.update(|s| *s += 1)>"Switch source"</button>
         <div id="test-vl-rebuilt">
             {move || {

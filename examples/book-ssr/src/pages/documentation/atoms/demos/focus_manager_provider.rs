@@ -33,8 +33,7 @@ fn EditButtons(manager: Manager, set_action: WriteSignal<Option<&'static str>>) 
         wrap: true,
         ..FocusManagerOptions::default()
     };
-    let (next, previous, first, last) =
-        (manager, manager, manager, manager);
+    let (next, previous, first, last) = (manager, manager, manager, manager);
 
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(

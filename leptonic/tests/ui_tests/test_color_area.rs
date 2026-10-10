@@ -66,16 +66,16 @@ async fn expect_channels(
     assert_that!(x)
         .property("value")
         .await
-        .get_some()
+        .some()
         .map_owned(|value| value.parse::<f64>())
-        .get_ok()
+        .ok()
         .is_close_to(expected_x, 1.0);
     assert_that!(y)
         .property("value")
         .await
-        .get_some()
+        .some()
         .map_owned(|value| value.parse::<f64>())
-        .get_ok()
+        .ok()
         .is_close_to(expected_y, 1.0);
     Ok(())
 }

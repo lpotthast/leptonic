@@ -4,6 +4,89 @@ Finished work, moved out of `PLAN.md` (which holds open work only), condensed to
 when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
 recent first within each part.
 
+## Library: review of commit 07f628b1 against react-aria (2026-10-10)
+
+The commit (1,254 files, another model's work) was reviewed area by area against react-spectrum `740c6c5c4a`.
+Most of it held up; these defects were fixed:
+- Interactions: merged long press groups ran a disabled group's callbacks; a disabled element's click propagates
+  again (pointer and virtual clicks, as upstream; the comment claiming otherwise was wrong).
+- Focus: `use_focus` compares the event target (`getEventTarget`) with the current target and the active
+  element, so focus inside a shadow host's own shadow root is no longer the host's; the synthetic blur observer
+  runs for every focus (Firefox: disabling a focused element with only `on_focus` dispatched no blur).
+- Collections: listbox links follow the configured selection behavior (not the touch-selection `Toggle`);
+  `ListBoxItems` no longer rebuilds every item's content when another item comes or goes (`Node::same_content`);
+  label/description slot ids survive a content re-render; an earlier scroll frame is cancelled; submenu dialogs
+  are labelled by their trigger item; rows and tags show `data-focus-visible` only while they have focus
+  themselves.
+- Tables: lazily mounted tree rows and cells no longer vanish or rebuild when a signal read while building them
+  changes (`untrack`); select-all checkbox says "Select" in single selection; Grid/GridList/Table
+  `aria_labelledby` back to `Option<String>` (C2); missing RAC data attributes on `TableCell`, `TableRow`,
+  `Table`, `TableBody`, `GridListItem`; `data-tree-column="true"`; `Tag`/`TagItems` warn instead of panicking.
+- Forms and pickers: number field `inputmode` tracks `min_value` and the format; a date-time range edited by day
+  keeps its times; the enter animation hides a popover only until it is first ready (closing popovers were
+  clipped away during their exit animation); read-only combo boxes let keys bubble; arrows wait for IME
+  composition; a handled Select trigger arrow stops; `ComboBoxButton` `data-pressed` and `ComboBoxValue`
+  `data-placeholder` as RAC; bound combo box text no longer follows a renamed option (upstream). `Input` and
+  `TextArea` work outside a field as plain styled inputs (RAC). `labels()` treats an empty `aria_label` as none
+  (calendar callers build upstream's label).
+- Dead code and docs: unused element captures in the color hooks, stale doc examples, deviation headings, the
+  `prevent_focus` deviation block; upstream headers synced (no-op commits); `upstream-drift.sh --mark-synced`
+  works with BSD sed.
+- Tests: 18 slider browser cases the commit added were never registered (one needed a fix to stay inside the
+  viewport); the "Timed fruit" fixture and its full timer sequence are back.
+
+The 42 browser failures blamed on Chrome 155 had host causes: the suite ran on macOS for the first time
+(Ctrl-based select all, Ctrl+arrow and Ctrl-click are Meta/Alt there, as react-aria's `isCtrlKeyPressed` and
+`isNonContiguousSelectionModifier`; Shift+F10 fires no `contextmenu`), Chrome 155 ignores the user-agent
+override's `navigator.platform` (iPhone emulation now sets `userAgentData`), and a touch drag case raced the
+200 ms drag delay. Tests now take the page's modifiers (`primary_modifier`, `non_contiguous_selection_modifier`,
+`click_with_primary_modifier`), emulate `Platform::Linux` where they describe non-Mac behavior, and
+`dispatch_all` sends timed sequences in one script. Four cases still fail with a German keyboard layout
+(`PLAN.md`, "Testing infrastructure").
+
+Then the leftovers, decided and fixed:
+- Overlays: resize-triggered repositioning (`use_overlay_position`) and the popover's `--trigger-width` run in the
+  next animation frame (`utils::next_frame::NextFrame`, coalesced, cancelled on close and cleanup): writing them in
+  the `ResizeObserver` callback, as upstream does, resized the shallower popover during the browser's delivery,
+  which reports "ResizeObserver loop completed with undelivered notifications" as an uncaught error (and in apps'
+  error monitoring). Rule in `leptos-and-dom.md`, "Resize Observers".
+- `aria_labelledby`: atoms take id lists as `Option<String>` (C2); hook inputs `Signal<Option<String>>` only where
+  composing callers supply changing ids; `UseMenuInput`'s `MaybeProp` aligned. Rule in `conventions.md` C2.
+- `TimeField` bounds: `TimeBound::{TimeOfDay(Time), Absolute(T::Absolute)}` (upstream's `TimeValue` bounds, typed;
+  a `TimeField<Time>` takes only times of day).
+- `GridList` `orientation` (prop, hook input, `data-orientation`, atom theme rules); table rows and cells always
+  carry `data-level` (`--table-row-level`), as RAC; `is_tabbable` excludes only `tabindex="-1"` and both
+  selectors equal upstream's.
+- Browser tests type printable characters through CDP with US key definitions (`tests/pages/keyboard.rs`,
+  `ElementActions::type_keys`), independent of the host's keyboard layout; chords and named keys stay on WebDriver.
+- Book: removed APIs (`Shortcut::key`, state constructors, `OverlayTriggerState::from`), standalone
+  `Input`/`TextArea`, `TimeBound`, GridList orientation, table/grid list data attributes, `VirtualList` wide rows,
+  the changelog; its own shell tests detected Apple platforms case-sensitively.
+
+Verification: 687 native tests, clippy (full, full+ssr, default, browser harness, test-app ssr and hydrate, book ssr
+and hydrate), all 1,575 library browser cases, all 240 book browser cases and 47 book native tests.
+
+## Library: `VirtualList` horizontal overflow, assertr 0.8 (2026-10-10)
+
+- `VirtualList` scrolls horizontally when rows are wider than the list (agnite dev-ui: its log lines, which don't
+  wrap, were cut off since it moved from a plain scrolling element to `VirtualList`). `ListLayout` gained
+  `ListLayoutOptions::allows_overflow_across` (an addition, off by default): measured items overflowing their layout
+  info widen the content to the widest one, items keep the view's breadth and stay visible wherever it scrolls
+  across. Upstream (react-stately's `ListLayout`, still on `main`) keeps the content as wide as the view, its
+  `ScrollView` then sets `overflow-x: hidden` (against scrollbar flicker while resizing), and the items'
+  `contain: size layout style` keeps their overflow out of the scrollable area; both stay. The widest overflow is
+  cached (recomputed only when the widest one narrows or goes), removed items are dropped with the cached layout
+  nodes they belong to, and a new view width forgets them (the items are measured again), so appends cost no extra
+  pass. Three native cases and two browser cases (`wide_lines_scroll_horizontally`,
+  `wrapping_lines_ends_horizontal_scrolling`: a wrap toggle restyles the rows, observed rows are measured again);
+  both browser cases failed with the option off.
+- Tests adapted to assertr's latest API: extractors without the `get_` prefix (`ok`, `some`, ...), `Patience`'s
+  `with_timeout`/`with_interval`/`with_consistency_duration`.
+- Verification: 668 native tests passed (one ignored benchmark), strict clippy passed for `--tests`, `--tests
+  --features full`, the browser harness and the test app. The browser suite (1,545 cases, Chrome for Testing
+  155.0.8059.39, browser-test 0.6) passed except 42 keyboard and iOS-emulation cases, which also fail in fresh
+  sessions and don't involve the virtualizer (`PLAN.md`, "Testing infrastructure").
+
 ## Library: focused PLAN fixes (2026-10-09)
 
 - Slider percentage conversion rounds to the step, then clamps once, matching upstream. A range of 0..230 with
@@ -99,7 +182,7 @@ recent first within each part.
 - Doubled accessible names fixed: resizers labelled by the column's name element ("Resizer Name"), table expand
   buttons by "Expand/Collapse <row text>" (upstream's structure gives "Collapse Collapse Games" in Chrome).
 - Tree hooks take `keyboard_navigation_behavior`, `should_select_on_press_up`, `focus_mode`,
-  `allows_arrow_navigation`, `on_context_menu`; atoms `should_select_on_press_up`, reactive `aria_labelledby`; a
+  `allows_arrow_navigation`, `on_context_menu`; atoms `should_select_on_press_up`, reactive `aria_labelledby` (undone 2026-10-10, C2); a
   grid-layout `GridList` uses Tab navigation (RAC); `TableHeader` hover; `expect_context` → `dev_warn`.
 - Performance: tree row positions once per table change, constant-time `(row, column)` cell lookups
   (`cell_key`), a columns-only memo (`TableState.columns`) for headers and the column layout, tree tables build
@@ -133,7 +216,7 @@ recent first within each part.
   leak). Tree walker: tri-state filter (`NodeFilterResult`), radios deduped by the walker's current node, `from`
   option removed (no upstream caller).
 - `use_focus_ring`: `target: FocusRingTarget` (was `within: bool`), `auto_focus` removed (no effect upstream; also
-  on the `FocusRing` atom). `use_focus`: target/current-target checks as upstream, blur observer only with a blur
+  on the `FocusRing` atom). `use_focus`: target/current-target checks as upstream (they weren't; fixed 2026-10-10), blur observer only with a blur
   callback. `use_has_tabbable_child` writes only on change; `Signal::stored` defaults. `is_tabbable` reads the
   `tabindex` attribute. Headers (incl. upstream test files) completed; deviation blocks for `Focusable`/`FocusRing`;
   stale doc examples fixed; unused `focus_html_element`/`get_radio_group_name` removed.

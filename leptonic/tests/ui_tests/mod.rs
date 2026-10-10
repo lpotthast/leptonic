@@ -31,6 +31,7 @@ pub mod test_focus_safely;
 pub mod test_focus_scope;
 pub mod test_focus_visible;
 pub mod test_focus_within;
+pub mod test_focusability;
 pub mod test_focusable;
 pub mod test_focusable_atoms;
 pub mod test_forms;
@@ -297,6 +298,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_focusable_atoms::PressableTooltipTrigger))
                 .with(fixture_test(test_focusable_atoms::AutoFocus))
                 .with(fixture_test(test_focusable_atoms::TooltipFollowsDisabled))
+                .with(fixture_test(test_focusability::TabindexValues))
                 .with(fixture_test(test_focusable::TabindexAttributes))
                 .with(fixture_test(test_focusable::KeyboardEvents))
                 .with(fixture_test(test_focusable::TabSkip))
@@ -628,7 +630,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(
                     test_context_menu_atoms::EscapeReturnsFocusToTheRow,
                 ))
-                .with(fixture_test(test_context_menu_atoms::ShiftF10OpensIt)),
+                .with(fixture_test(test_context_menu_atoms::KeyboardOpensIt)),
         )
         .with_test_group(
             TestGroup::new("interact_outside")
@@ -666,6 +668,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_press::SpacePresses))
                 .with(fixture_test(test_press::ReleasingOutsideDoesNotPress))
                 .with(fixture_test(test_press::DisabledElementIgnoresPresses))
+                .with(fixture_test(test_press::DisabledElementClickPropagates))
                 .with(fixture_test(test_press::BecomingDisabledCancelsActivePress))
                 .with(fixture_test(test_press::EnterOnCheckboxSubmitsForm))
                 .with(fixture_test(test_press::PreventFocusOnPressKeepsTheFocus))
@@ -929,6 +932,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_select::BoundSelect))
                 .with(fixture_test(test_select::SelectingAnOption))
                 .with(fixture_test(test_select::TriggerKeyboard))
+                .with(fixture_test(test_select::TriggerArrowKeysDontBubble))
                 .with(fixture_test(test_select::Labelling))
                 .with(fixture_test(test_select::FormReset))
                 .with(fixture_test(test_select_forms::TriggerHoverAndPlaceholder))
@@ -1108,6 +1112,10 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_grid_list_cases::EscapeKeepsTheSelection))
                 .with(fixture_test(test_grid_list_cases::EmptyState))
                 .with(fixture_test(test_grid_list_cases::GridLayout))
+                .with(fixture_test(test_grid_list_cases::HorizontalGridLayout))
+                .with(fixture_test(
+                    test_grid_list_cases::HorizontalGridLayoutRightToLeft,
+                ))
                 .with(fixture_test(test_grid_list_cases::Sections))
                 .with(fixture_test(
                     test_grid_list_cases::SelectsOnPressDownByDefault,
@@ -1433,6 +1441,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_date_field::TimeFieldThroughTheFallBack))
                 .with(fixture_test(test_date_field::TimeFieldKeepsItsTimeZone))
                 .with(fixture_test(test_date_field::TimeBoundsOnTheValuesDay))
+                .with(fixture_test(test_date_field::TimeBoundsWithDates))
                 .with(fixture_test(
                     test_date_field::PressingTheFieldFocusesASegment,
                 ))
@@ -1614,7 +1623,25 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_slider::ThreeThumbs))
                 .with(fixture_test(test_slider::ControlledThumbs))
                 .with(fixture_test(test_slider::RestrictedValues))
-                .with(fixture_test(test_slider::MissingValue)),
+                .with(fixture_test(test_slider::MissingValue))
+                .with(fixture_test(test_slider::AriaLabel))
+                .with(fixture_test(test_slider::FillFromTheStart))
+                .with(fixture_test(test_slider::VerticalFill))
+                .with(fixture_test(test_slider::FormatOptions))
+                .with(fixture_test(test_slider::FormReset))
+                .with(fixture_test(test_slider::ThumbFocusRing))
+                .with(fixture_test(test_slider::ThumbHover))
+                .with(fixture_test(test_slider::DragThumbs))
+                .with(fixture_test(test_slider::DragBeyondTheEnds))
+                .with(fixture_test(test_slider::DragThumbVertical))
+                .with(fixture_test(test_slider::DisabledThumbDrag))
+                .with(fixture_test(test_slider::SecondTouchWhileDragging))
+                .with(fixture_test(test_slider::RightToLeftKeys))
+                .with(fixture_test(test_slider::RightToLeftVerticalKeys))
+                .with(fixture_test(test_slider::KeysAtTheBounds))
+                .with(fixture_test(test_slider::VerticalKeysAtTheBounds))
+                .with(fixture_test(test_slider::TabSkipsDisabledThumbs))
+                .with(fixture_test(test_slider::FocusOrder)),
         )
         .with_test_group(
             TestGroup::new("dnd")
@@ -1856,7 +1883,12 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 ))
                 .with(fixture_test(test_text_field_atoms::AriaValidateFunction))
                 .with(fixture_test(test_text_field_atoms::AriaServerValidation))
-                .with(fixture_test(test_text_field_atoms::DisabledState)),
+                .with(fixture_test(test_text_field_atoms::DisabledState))
+                .with(fixture_test(test_text_field_atoms::StandaloneInput))
+                .with(fixture_test(
+                    test_text_field_atoms::StandaloneInputDisabledAndInvalid,
+                ))
+                .with(fixture_test(test_text_field_atoms::StandaloneTextarea)),
         )
         .with_test_group(
             TestGroup::new("search_field")
@@ -1906,6 +1938,9 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 ))
                 .with(fixture_test(test_combobox::ValueChangedByATimer))
                 .with(fixture_test(test_combobox::ValueWrittenInAnEffect))
+                .with(fixture_test(
+                    test_combobox::RenamedSelectedOptionUpdatesUnboundText,
+                ))
                 .with(fixture_test(test_combobox::PopoverInAModalStaysInteractive))
                 .with(fixture_test(test_combobox::ButtonIsPressedWhileOpen))
                 .with(fixture_test(test_combobox::ButtonTogglesThePopover))
@@ -1931,6 +1966,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 ))
                 .with(fixture_test(test_combobox::EscapeDoesntPreventTheDefault))
                 .with(fixture_test(test_combobox::HeldArrowKeysRepeat))
+                .with(fixture_test(test_combobox::ArrowKeysWaitForTheComposition))
+                .with(fixture_test(test_combobox::ReadOnlyLetsKeysBubble))
                 .with(fixture_test(test_combobox_forms::SelectAnOption))
                 .with(fixture_test(test_combobox_forms::CustomTextOnBlur))
                 .with(fixture_test(test_combobox_forms::EscapeKeepsCustomText))
@@ -2387,6 +2424,10 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
         .with_test_group(
             TestGroup::new("virtual_list")
                 .with(fixture_test(test_virtual_list::FollowsItsEnd))
+                .with(fixture_test(test_virtual_list::WideLinesScrollHorizontally))
+                .with(fixture_test(
+                    test_virtual_list::WrappingLinesEndsHorizontalScrolling,
+                ))
                 .with(fixture_test(test_virtual_list::AppendedLinesComeIntoView))
                 .with(fixture_test(test_virtual_list::PageScrollKeepsFollowing))
                 .with(fixture_test(

@@ -89,10 +89,10 @@ async fn hidden_values(page: &Page<'_>, container: &str) -> Result<Vec<(String, 
 async fn select_kangaroo(page: &Page<'_>) -> Result<(), Report> {
     let input = input_in(page, "#cbf-custom").await?;
     input.click().await?;
-    input.send_keys("Kan").await?;
+    input.type_keys("Kan").await?;
     expect_options(page, &["Kangaroo"]).await?;
-    input.send_keys(Key::Down).await?;
-    input.send_keys(Key::Enter).await?;
+    input.type_keys(Key::Down).await?;
+    input.type_keys(Key::Enter).await?;
     page.element("#cbf-custom-changes")
         .await?
         .wait_for_inner_text("[3]")
@@ -118,12 +118,16 @@ pub async fn custom_text_on_blur(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     select_kangaroo(page).await?;
     let input = input_in(page, "#cbf-custom").await?;
-    input.send_keys(Key::Control + "a").await?;
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
     // Text matching options opens the popover, text matching none closes it.
-    input.send_keys("Ca").await?;
+    input.type_keys("Ca").await?;
     expect_options(page, &["Cat"]).await?;
-    input.send_keys(Key::Control + "a").await?;
-    input.send_keys("Wombat").await?;
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
+    input.type_keys("Wombat").await?;
     page.wait_for_count(LISTBOX, 0).await?;
     page.send_keys(Key::Tab).await?;
     page.element("#cbf-custom-changes")
@@ -149,8 +153,8 @@ pub async fn escape_keeps_custom_text(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input_in(page, "#cbf-custom").await?;
     input.click().await?;
-    input.send_keys("x").await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys("x").await?;
+    input.type_keys(Key::Escape).await?;
     input
         .prop_stays("value", "x", std::time::Duration::from_millis(100))
         .await?;
@@ -164,11 +168,13 @@ pub async fn enter_commits_custom_text(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     select_kangaroo(page).await?;
     let input = input_in(page, "#cbf-custom").await?;
-    input.send_keys(Key::Control + "a").await?;
-    input.send_keys("Ca").await?;
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
+    input.type_keys("Ca").await?;
     expect_options(page, &["Cat"]).await?;
     assert_that!(active_descendant_text(page, &input).await?).is_empty();
-    input.send_keys(Key::Enter).await?;
+    input.type_keys(Key::Enter).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     let changes = page.element("#cbf-custom-changes").await?;
     changes.wait_for_inner_text("[3]|[]").await?;
@@ -218,7 +224,7 @@ pub async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -227,7 +233,7 @@ pub async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
         .matches(eq(message))
         .await;
 
-    input.send_keys("C").await?;
+    input.type_keys("C").await?;
     page.element(role(AriaRole::Option).text("Cat"))
         .await?
         .click()
@@ -248,7 +254,7 @@ pub async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input_in(page, "#cbf-validate").await?;
     input.click().await?;
-    input.send_keys("Do").await?;
+    input.type_keys("Do").await?;
     page.element(role(AriaRole::Option).text("Dog"))
         .await?
         .click()
@@ -259,8 +265,10 @@ pub async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
         .eventually_ok()
         .matches(eq("Dogs are not allowed"))
         .await;
-    input.send_keys(Key::Control + "a").await?;
-    input.send_keys("Ca").await?;
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
+    input.type_keys("Ca").await?;
     page.element(role(AriaRole::Option).text("Cat"))
         .await?
         .click()
@@ -307,7 +315,7 @@ pub async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
     .contains_exactly(["1", "2"]);
     cat.click().await?;
     changes.wait_for_inner_text("[1]|[1,2]|[2]").await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     Ok(())
 }
@@ -329,7 +337,7 @@ pub async fn multiple_form_reset(page: &Page<'_>) -> Result<(), Report> {
         .await;
     input_in(page, "#cbf-multiple")
         .await?
-        .send_keys(Key::Escape)
+        .type_keys(Key::Escape)
         .await?;
     page.wait_for_count(LISTBOX, 0).await?;
     page.element("#cbf-multiple-reset").await?.click().await?;
@@ -394,7 +402,7 @@ pub async fn form_value(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Dog");
     assert_that!(hidden_values(page, "#cbf-key").await?)
         .contains_exactly([("key-animal".to_owned(), "2".to_owned())]);
@@ -425,9 +433,9 @@ pub async fn focus_trigger(page: &Page<'_>) -> Result<(), Report> {
     input.click().await?;
     expect_options(page, &["Cat", "Dog", "Kangaroo"]).await?;
     open_changes.wait_for_inner_text("true:Some(Focus)").await?;
-    input.send_keys("g").await?;
+    input.type_keys("g").await?;
     expect_options(page, &["Dog"]).await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     open_changes
         .wait_for_inner_text("true:Some(Focus)|false:None")
@@ -442,16 +450,16 @@ pub async fn manual_trigger(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input_in(page, "#cbf-manual").await?;
     input.click().await?;
-    input.send_keys("a").await?;
+    input.type_keys("a").await?;
     page.count_stays(LISTBOX, 0, std::time::Duration::from_millis(100))
         .await?;
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     expect_options(page, &["Cat", "Dog", "Kangaroo"]).await?;
     page.element("#cbf-manual-open")
         .await?
         .wait_for_inner_text("true:Some(Manual)")
         .await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     Ok(())
 }
@@ -463,14 +471,14 @@ pub async fn filtering_sections(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input_in(page, "#cbf-sections").await?;
     input.click().await?;
-    input.send_keys("o").await?;
+    input.type_keys("o").await?;
     expect_options(page, &["Dog", "Owl", "Parrot"]).await?;
     let mut names = Vec::new();
     for group in page.elements("[role=listbox] [role=group]").await? {
         names.push(group.accessible_name().await?);
     }
     assert_that!(names).contains_exactly(["Animals", "Birds"]);
-    input.send_keys("w").await?;
+    input.type_keys("w").await?;
     expect_options(page, &["Owl"]).await?;
     assert_that!(page.count("[role=listbox] [role=group]").await?).is_equal_to(1);
     Ok(())
@@ -482,19 +490,19 @@ pub async fn disabled_option_is_skipped(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input_in(page, "#cbf-sections").await?;
     input.click().await?;
-    input.send_keys("o").await?;
+    input.type_keys("o").await?;
     expect_options(page, &["Dog", "Owl", "Parrot"]).await?;
     let dog = page.element(role(AriaRole::Option).text("Dog")).await?;
     assert_that!(dog)
         .has_attribute("aria-disabled")
         .await
         .is_equal_to("true");
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     assert_that!(|| active_descendant_text(page, &input))
         .eventually_ok()
         .matches(eq("Owl"))
         .await;
-    input.send_keys(Key::Enter).await?;
+    input.type_keys(Key::Enter).await?;
     input.wait_for_prop("value", "Owl").await?;
     page.wait_for_count(LISTBOX, 0).await?;
     Ok(())
@@ -508,15 +516,15 @@ pub async fn enter_without_a_focused_option(page: &Page<'_>) -> Result<(), Repor
     let input = input_in(page, "#cbf-submit").await?;
     let submits = page.element("#cbf-submits").await?;
     input.click().await?;
-    input.send_keys(Key::Enter).await?;
+    input.type_keys(Key::Enter).await?;
     submits.wait_for_inner_text("1").await?;
-    input.send_keys("Ca").await?;
+    input.type_keys("Ca").await?;
     page.element(LISTBOX).await?;
     page.element("[data-live-announcer] [aria-live=assertive]")
         .await?
         .wait_for_inner_text("1 option available.")
         .await?;
-    input.send_keys(Key::Enter).await?;
+    input.type_keys(Key::Enter).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     input.wait_for_prop("value", "").await?;
     submits

@@ -139,7 +139,11 @@ pub fn PageAtomTagGroup() -> impl IntoView {
             </Section>
 
             <Section title="Tag">
-                <p>"A tag for one item of the collection: a "<Code inline=true>"row"</Code>" with a single "<Code inline=true>"gridcell"</Code>" holding its content."</p>
+                <p>
+                    "A tag for one item of the collection: a "<Code inline=true>"row"</Code>" with a single "<Code inline=true>"gridcell"</Code>
+                    " holding its content. Tags (and "<Code inline=true>"TagItems"</Code>") belong in a "<Code inline=true>"TagList"</Code>
+                    ": elsewhere they render nothing, with a warning in debug builds."
+                </p>
                 <Section title="Props" id="tag-props">
                     <ApiTable kind=ApiKind::Props of="Tag">
                         <ApiRow name="key" ty="Key">"The tag\u{2019}s key in the group\u{2019}s collection. Required."</ApiRow>

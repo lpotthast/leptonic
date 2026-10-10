@@ -88,6 +88,8 @@ pub struct SelectionManager {
 #[derive(Debug, Clone, Copy)]
 struct SelectionStateSignals {
     selection_mode: Signal<SelectionMode>,
+    /// The `selection_behavior` option.
+    configured_selection_behavior: Signal<SelectionBehavior>,
     selection_behavior: RwSignal<SelectionBehavior>,
     disallow_empty_selection: Signal<bool>,
     disabled_keys: Signal<HashSet<Key>>,
@@ -209,6 +211,7 @@ impl SelectionManager {
         let focused_key = RwSignal::new(None::<Key>);
         let state = SelectionStateSignals {
             selection_mode,
+            configured_selection_behavior: selection_behavior,
             selection_behavior: RwSignal::new(selection_behavior.get_untracked()),
             disallow_empty_selection,
             disabled_keys,
@@ -320,6 +323,13 @@ impl SelectionManager {
 
     pub fn selection_behavior(&self) -> SelectionBehavior {
         self.state.selection_behavior.get()
+    }
+
+    /// The selection behavior the collection is configured with (the `selection_behavior` of
+    /// its [`SelectionOptions`]). [`Self::selection_behavior`] can differ from it: a long press
+    /// switches `Replace` to `Toggle` (touch selection mode).
+    pub fn configured_selection_behavior(&self) -> SelectionBehavior {
+        self.state.configured_selection_behavior.get()
     }
 
     pub fn set_selection_behavior(&self, behavior: SelectionBehavior) {
@@ -893,6 +903,20 @@ mod tests {
             m.select(&k("apple"), None);
             m.select(&k("apple"), None);
             assert_that!(selected(&m)).is_equal_to(vec!["apple".to_owned()]);
+        });
+    }
+
+    #[test]
+    fn the_touch_selection_mode_keeps_the_configured_selection_behavior() {
+        crate::testing::with_owner(|| {
+            let m = manager(SelectionOptions {
+                selection_behavior: Signal::stored(SelectionBehavior::Replace),
+                ..multiple()
+            });
+            // A long press enters the touch selection mode.
+            m.set_selection_behavior(SelectionBehavior::Toggle);
+            assert_that!(m.selection_behavior()).is_equal_to(SelectionBehavior::Toggle);
+            assert_that!(m.configured_selection_behavior()).is_equal_to(SelectionBehavior::Replace);
         });
     }
 

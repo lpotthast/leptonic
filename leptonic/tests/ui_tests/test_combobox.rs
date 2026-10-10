@@ -112,7 +112,7 @@ pub async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), 
     page.goto_path(PATH).await?;
     let input = input_labelled(page, "Fruit").await?;
     input.click().await?;
-    input.send_keys("an").await?;
+    input.type_keys("an").await?;
     let listbox = page.element(LISTBOX).await?;
     expect_options(page, &["Banana", "Durian"]).await?;
     input.wait_for_attr("aria-expanded", Some("true")).await?;
@@ -142,14 +142,14 @@ pub async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), 
     .matches(eq((false, false, 0)))
     .await;
 
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     expect_virtual_focus(page, "Banana").await?;
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     expect_virtual_focus(page, "Durian").await?;
-    input.send_keys(Key::Up).await?;
+    input.type_keys(Key::Up).await?;
     expect_virtual_focus(page, "Banana").await?;
 
-    input.send_keys(Key::Enter).await?;
+    input.type_keys(Key::Enter).await?;
     page.element("#test-cb-value")
         .await?
         .wait_for_inner_text("Banana")
@@ -158,7 +158,7 @@ pub async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), 
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Banana");
     Ok(())
 }
@@ -169,9 +169,9 @@ pub async fn escape_reverts_the_input(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     select(page, "Banana").await?;
     let input = input_labelled(page, "Fruit").await?;
-    input.send_keys("x").await?;
+    input.type_keys("x").await?;
     input.wait_for_prop("value", "Bananax").await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     input.wait_for_prop("value", "Banana").await?;
     page.element("#test-cb-value")
         .await?
@@ -200,7 +200,7 @@ pub async fn button_shows_all_options_and_click_selects(page: &Page<'_>) -> Resu
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("Durian");
     page.wait_for_focus(&input).await?;
     Ok(())
@@ -215,11 +215,11 @@ pub async fn arrow_down_opens_with_the_selected_option_focused(
     page.goto_path(PATH).await?;
     select(page, "Durian").await?;
     let input = input_labelled(page, "Fruit").await?;
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     expect_options(page, &["Apple", "Banana", "Cherry", "Durian", "Elderberry"]).await?;
     expect_virtual_focus(page, "Durian").await?;
     let focus_events = input.count_synthetic_events("focus").await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     assert_that!(|| focus_events.count())
         .eventually_ok()
@@ -244,11 +244,13 @@ pub async fn clearing_the_input_clears_the_value(page: &Page<'_>) -> Result<(), 
     select(page, "Durian").await?;
     let input = input_labelled(page, "Fruit").await?;
     let value = page.element("#test-cb-value").await?;
-    input.send_keys(Key::Control + "a").await?;
-    input.send_keys(Key::Backspace).await?;
+    input
+        .type_keys(page.primary_modifier().await? + "a")
+        .await?;
+    input.type_keys(Key::Backspace).await?;
     value.wait_for_inner_text("").await?;
     page.element(LISTBOX).await?;
-    input.send_keys(Key::Escape).await?;
+    input.type_keys(Key::Escape).await?;
     page.wait_for_count(LISTBOX, 0).await?;
     value
         .inner_text_stays("", std::time::Duration::from_millis(100))
@@ -321,14 +323,23 @@ pub async fn value_and_items_derived_from_one_signal(page: &Page<'_>) -> Result<
     Ok(())
 }
 
-/// A value changed by a timer, outside any event, shows in the input, and the next button press
-/// opens the popover.
+/// A value changed by a timer, outside any event, over a fixed collection (agnite dev-ui's
+/// minimal case) shows in the input, and the next button press opens the popover. Escape closes
+/// it and keeps the text, and a later value written while an effect runs shows as well.
 #[browser_test]
 pub async fn value_changed_by_a_timer(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    let input = input_labelled(page, "Controlled fruit").await?;
+    let input = input_labelled(page, "Timed fruit").await?;
+    input.wait_for_prop("value", "Apple").await?;
     page.element("#test-cb-timed-start").await?.click().await?;
     input.wait_for_prop("value", "Banana").await?;
+    button_of(&input).await?.click().await?;
+    page.element(LISTBOX).await?;
+    input.type_keys(Key::Escape).await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    input.wait_for_prop("value", "Banana").await?;
+    page.element("#test-cb-timed-effect").await?.click().await?;
+    input.wait_for_prop("value", "Cherry").await?;
     button_of(&input).await?.click().await?;
     page.element(LISTBOX).await?;
     Ok(())
@@ -339,11 +350,31 @@ pub async fn value_changed_by_a_timer(page: &Page<'_>) -> Result<(), Report> {
 #[browser_test]
 pub async fn value_written_in_an_effect(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    let input = input_labelled(page, "Controlled fruit").await?;
+    let input = input_labelled(page, "Timed fruit").await?;
+    input.wait_for_prop("value", "Apple").await?;
     page.element("#test-cb-timed-effect").await?.click().await?;
     input.wait_for_prop("value", "Cherry").await?;
     button_of(&input).await?.click().await?;
     page.element(LISTBOX).await?;
+    Ok(())
+}
+
+/// When the selected option's text changes while the combo box isn't focused, its own text
+/// follows, but text bound to app state stays (the app's to sync; upstream: "should update the
+/// input value when items update and selectedKey textValue doesn't match", controlled and
+/// uncontrolled `inputValue`).
+#[browser_test]
+pub async fn renamed_selected_option_updates_unbound_text(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let own = input_labelled(page, "Renamed fruit").await?;
+    let bound = input_labelled(page, "Bound-text fruit").await?;
+    own.wait_for_prop("value", "Apple").await?;
+    bound.wait_for_prop("value", "Apple").await?;
+    page.element("#test-cb-rename").await?.click().await?;
+    own.wait_for_prop("value", "Green apple").await?;
+    bound
+        .prop_stays("value", "Apple", std::time::Duration::from_millis(100))
+        .await?;
     Ok(())
 }
 
@@ -424,7 +455,7 @@ pub async fn arrow_up_opens_on_the_last_option(page: &Page<'_>) -> Result<(), Re
     page.goto_path(PATH).await?;
     let input = input_labelled(page, "Fruit").await?;
     input.click().await?;
-    input.send_keys(Key::Up).await?;
+    input.type_keys(Key::Up).await?;
     expect_options(page, &["Apple", "Banana", "Cherry", "Durian", "Elderberry"]).await?;
     expect_virtual_focus(page, "Elderberry").await?;
     Ok(())
@@ -437,7 +468,7 @@ pub async fn picking_the_selected_option_resets_the_text(page: &Page<'_>) -> Res
     page.goto_path(PATH).await?;
     select(page, "Banana").await?;
     let input = input_labelled(page, "Fruit").await?;
-    input.send_keys(Key::Backspace).await?;
+    input.type_keys(Key::Backspace).await?;
     input.wait_for_prop("value", "Banan").await?;
     page.element(role(AriaRole::Option).text("Banana"))
         .await?
@@ -459,11 +490,11 @@ pub async fn tab_commits_the_focused_option(page: &Page<'_>) -> Result<(), Repor
     page.goto_path(PATH).await?;
     let input = input_labelled(page, "Fruit").await?;
     input.click().await?;
-    input.send_keys("an").await?;
+    input.type_keys("an").await?;
     expect_options(page, &["Banana", "Durian"]).await?;
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     expect_virtual_focus(page, "Banana").await?;
-    input.send_keys(Key::Tab).await?;
+    input.type_keys(Key::Tab).await?;
     page.element("#test-cb-value")
         .await?
         .wait_for_inner_text("Banana")
@@ -483,7 +514,7 @@ pub async fn read_only(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input).has_attribute("readonly").await;
     input.click().await?;
     button_of(&input).await?.click().await?;
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     page.count_stays(LISTBOX, 0, std::time::Duration::from_millis(100))
         .await?;
     assert_that!(input)
@@ -546,8 +577,8 @@ pub async fn popover_spans_the_input_and_the_button(page: &Page<'_>) -> Result<(
 }
 
 /// A label, input and description inside the popover don't belong to the combo box: the label
-/// labels nothing, the input renders nothing, and the combo box isn't described by the text
-/// ("should clear contexts inside popover").
+/// labels nothing, the input is a plain input (no `combobox` role), and the combo box isn't
+/// described by the text ("should clear contexts inside popover").
 #[browser_test]
 pub async fn popover_content_isnt_part_of_the_combo_box(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -557,7 +588,10 @@ pub async fn popover_content_isnt_part_of_the_combo_box(page: &Page<'_>) -> Resu
     popover.element(role(AriaRole::Listbox)).await?;
     let label = popover.element(css("label").text("Hello")).await?;
     assert_that!(label).attribute("for").await.is_none();
-    assert_that!(popover.count("input").await?).is_equal_to(0);
+    assert_that!(popover.element("input").await?)
+        .attribute("role")
+        .await
+        .is_none();
     assert_that!(input)
         .attribute("aria-describedby")
         .await
@@ -565,7 +599,6 @@ pub async fn popover_content_isnt_part_of_the_combo_box(page: &Page<'_>) -> Resu
     let combobox_count = page.count("[role=combobox]").await?;
     let label_count = page.count("label").await?;
     assert_that!(combobox_count).is_equal_to(label_count - 1);
-    crate::fixtures::take_warnings(page, "An <Input> needs a field", 1).await?;
     crate::fixtures::take_warnings(page, "A <Description> describes nothing", 1).await?;
     Ok(())
 }
@@ -588,11 +621,11 @@ pub async fn server_filtered_options_reopen(page: &Page<'_>) -> Result<(), Repor
         ],
     )
     .await?;
-    input.send_keys("luk").await?;
+    input.type_keys("luk").await?;
     expect_options(page, &["Luke Skywalker"]).await?;
-    input.send_keys("a").await?;
+    input.type_keys("a").await?;
     page.wait_for_count(LISTBOX, 0).await?;
-    input.send_keys(Key::Backspace).await?;
+    input.type_keys(Key::Backspace).await?;
     expect_options(page, &["Luke Skywalker"]).await?;
     Ok(())
 }
@@ -613,7 +646,7 @@ pub async fn combo_box_value_lists_the_selection(page: &Page<'_>) -> Result<(), 
         .await
         .is_equal_to(Some("true".to_owned()));
     input.click().await?;
-    input.send_keys("an").await?;
+    input.type_keys("an").await?;
     page.element(role(AriaRole::Option).text("Banana"))
         .await?
         .click()
@@ -639,12 +672,12 @@ pub async fn left_and_right_clear_the_virtual_focus(page: &Page<'_>) -> Result<(
     page.goto_path(PATH).await?;
     let input = input_labelled(page, "Fruit").await?;
     input.click().await?;
-    input.send_keys("Dur").await?;
+    input.type_keys("Dur").await?;
     expect_options(page, &["Durian"]).await?;
     for key in [Key::Left, Key::Right] {
-        input.send_keys(Key::Down).await?;
+        input.type_keys(Key::Down).await?;
         expect_virtual_focus(page, "Durian").await?;
-        input.send_keys(key).await?;
+        input.type_keys(key).await?;
         input.wait_for_attr("aria-activedescendant", None).await?;
     }
     Ok(())
@@ -657,7 +690,7 @@ pub async fn escape_doesnt_prevent_the_default(page: &Page<'_>) -> Result<(), Re
     page.goto_path(PATH).await?;
     let input = input_labelled(page, "Fruit").await?;
     input.click().await?;
-    input.send_keys("an").await?;
+    input.type_keys("an").await?;
     page.element(LISTBOX).await?;
     let escape = input
         .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "Escape"))
@@ -675,11 +708,57 @@ pub async fn held_arrow_keys_repeat(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = input_labelled(page, "Fruit").await?;
     input.click().await?;
-    input.send_keys(Key::Down).await?;
+    input.type_keys(Key::Down).await?;
     expect_virtual_focus(page, "Apple").await?;
     input
         .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "ArrowDown").repeat(true))
         .await?;
     expect_virtual_focus(page, "Banana").await?;
+    Ok(())
+}
+
+/// ArrowDown pressed while an input method editor composes text doesn't open the options; once
+/// composing ended, it does (react-aria: `useKeyboard` ignores composing key presses).
+#[browser_test]
+pub async fn arrow_keys_wait_for_the_composition(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = input_labelled(page, "Fruit").await?;
+    input.click().await?;
+    input
+        .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "ArrowDown").composing(true))
+        .await?;
+    page.count_stays(LISTBOX, 0, std::time::Duration::from_millis(100))
+        .await?;
+    input
+        .dispatch(SyntheticEvent::keyboard(KeyKind::Down, "ArrowDown"))
+        .await?;
+    page.element(LISTBOX).await?;
+    Ok(())
+}
+
+/// A read-only combo box handles no keys: they all bubble on (react-aria gives a read-only combo
+/// box's input only the caller's `onKeyDown`), and its text stays.
+#[browser_test]
+pub async fn read_only_lets_keys_bubble(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = input_labelled(page, "Read-only fruit").await?;
+    let keydowns = page
+        .element("body")
+        .await?
+        .count_synthetic_events("keydown")
+        .await?;
+    let keys = ["Escape", "Enter", "ArrowDown", "ArrowLeft", "a"];
+    for key in keys {
+        input
+            .dispatch(SyntheticEvent::keyboard(KeyKind::Down, key))
+            .await?;
+    }
+    assert_that!(keydowns.finish().await?).is_equal_to(5);
+    page.count_stays(LISTBOX, 0, std::time::Duration::from_millis(100))
+        .await?;
+    assert_that!(input)
+        .property("value")
+        .await
+        .is_equal_to(Some("Apple".to_owned()));
     Ok(())
 }

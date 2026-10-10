@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::time_field::TimeFieldAtomDemo;
+use super::demos::{time_field::TimeFieldAtomDemo, time_field_bound::TimeFieldBoundDemo};
 use crate::{kit::*, routes};
 
 #[component]
@@ -65,6 +65,29 @@ pub fn PageAtomTimeField() -> impl IntoView {
                 </Demo>
             </Section>
 
+            <Section title="Bounds">
+                <p>
+                    <Code inline=true>"min_value"</Code>" and "<Code inline=true>"max_value"</Code>" are "
+                    <Link href=format!("{}#timebound", routes::doc::time_field::Hook.materialize())><Code inline=true>"TimeBound"</Code></Link>
+                    "s: a time of day ("<Code inline=true>"TimeBound::TimeOfDay"</Code>", \u{201c}not before 8 AM\u{201d} on any day, as "
+                    "in the demo above), or, for a field of a "<Code inline=true>"civil::DateTime"</Code>" or "
+                    <Code inline=true>"Zoned"</Code>", a date and time ("<Code inline=true>"TimeBound::Absolute"</Code>
+                    ", \u{201c}not before 2 PM on June 5\u{201d}). A field of a "<Code inline=true>"civil::Time"</Code>
+                    " takes only times of day. Bounds only validate: stepping a segment past one isn\u{2019}t stopped, the "
+                    "value becomes invalid."
+                </p>
+                <p>
+                    "Here the delivery\u{2019}s date comes from the checkbox and the field edits its time. The bound is "
+                    "absolute, so it applies on June 5 only: the next day, any time is valid."
+                </p>
+                <Demo
+                    description="A delivery time field of date and time values with an absolute minimum, and a checkbox moving the delivery to the next day"
+                    source=include_str!("demos/time_field_bound.rs")
+                >
+                    <TimeFieldBoundDemo/>
+                </Demo>
+            </Section>
+
             <Section title="TimeField">
                 <Section title="Props" id="timefield-props">
                     <ApiTable kind=ApiKind::Props of="atoms::datepicker::TimeField">
@@ -73,7 +96,11 @@ pub fn PageAtomTimeField() -> impl IntoView {
                         <ApiRow name="set_value" ty="Option<Out<Option<T>>>" default="None">"Receives the new value."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">"Called with each new value."</ApiRow>
                         <ApiRow name="placeholder_value" ty="MaybeProp<T>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
-                        <ApiRow name="min_value, max_value" ty="Signal<Option<Time>>" default="None">"The earliest and latest valid time."</ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<Option<TimeBound<T>>>" default="None">
+                            "The earliest and latest valid value: a time of day, or a date and time (see "
+                            <AnchorLink href="#bounds">"Bounds"</AnchorLink>"). Takes a "<Code inline=true>"TimeBound"</Code>
+                            ", an "<Code inline=true>"Option"</Code>" of one or any signal."
+                        </ApiRow>
                         <ApiRow name="granularity" ty="MaybeProp<Granularity>" default="None">
                             "The finest segment: "<Code inline=true>"Hour"</Code>", "<Code inline=true>"Minute"</Code>" (the default) or "
                             <Code inline=true>"Second"</Code>"."

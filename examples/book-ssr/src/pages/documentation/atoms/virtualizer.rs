@@ -1,7 +1,10 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::{virtual_list::VirtualListDemo, virtualizer::VirtualizerDemo};
+use super::demos::{
+    virtual_list::VirtualListDemo, virtual_list_wide::VirtualListWideDemo,
+    virtualizer::VirtualizerDemo,
+};
 use crate::{kit::*, routes};
 
 #[component]
@@ -171,7 +174,13 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                             "The space around the list. Use it instead of CSS padding on the scrolling element, which "
                             "the virtualizer sets to 0."
                         </ApiRow>
-                        <ApiRow name="anchor_to_end" ty="Option<EndAnchor>">"Keep a vertical list at its end while the viewport is within the configured threshold."</ApiRow>
+                        <ApiRow name="anchor_to_end" ty="Option<EndAnchor>" default="None">"Keep a vertical list at its end while the viewport is within the configured threshold."</ApiRow>
+                        <ApiRow name="allows_overflow_across" ty="bool" default="false">
+                            "Items whose content overflows them across the orientation (rows wider than a vertical list) "
+                            "widen the content to the widest one, so the view scrolls across too. Only measured items count, "
+                            "so the content widens as wider items render. Off, the content is as wide as the view, and "
+                            "overflowing content is cut off. "<AnchorLink href="#virtuallist">"VirtualList"</AnchorLink>" turns it on."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -202,6 +211,25 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                 >
                     <VirtualListDemo/>
                 </Demo>
+                <Section title="Wide Rows">
+                    <p>
+                        "Rows wider than the list, such as long lines that don\u{2019}t wrap, widen its content, so the list "
+                        "scrolls horizontally like any scrolling element. A row counts once it is measured: rows of estimated "
+                        "size when they render, fixed-size rows only with "<Code inline=true>"should_observe_item_size"</Code>
+                        ". So the content widens as wider rows render, not before."
+                    </p>
+                    <p>
+                        "The box around each row stays as wide as the list. Make a row\u{2019}s content as wide as its text with "
+                        <Code inline=true>"width: max-content; min-width: 100%"</Code>", so that its background (here on "
+                        "hover) spans the whole line, also when the line is shorter than the list:"
+                    </p>
+                    <Demo
+                        description="Access log of 500 lines that don\u{2019}t wrap, scrolling horizontally"
+                        source=include_str!("demos/virtual_list_wide.rs")
+                    >
+                        <VirtualListWideDemo/>
+                    </Demo>
+                </Section>
                 <Section title="Props" id="virtual-list-props">
                     <ApiTable kind=ApiKind::Props of="VirtualList">
                         <ApiRow name="items" ty="Signal<Vec<T>>">"The items, in order. Required."</ApiRow>
@@ -265,6 +293,8 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                         .demo-virt-log { height: 15em; font-family: monospace; }
                         .demo-virt-log[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                         .demo-virt-log-line { padding: 0.25rem 0.5rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+                        .demo-virt-wide-line { width: max-content; min-width: 100%; box-sizing: border-box; padding: 0.25rem 0.5rem; white-space: pre; }
+                        .demo-virt-wide-line:hover { background: var(--surface); }
                     ")}
                 </Code>
                 <p>

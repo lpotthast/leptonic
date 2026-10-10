@@ -38,7 +38,7 @@ async fn provides_slots(page: &Page<'_>, element: &str) -> Result<(), Report> {
     assert_that!(input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("test");
     assert_that!(input)
         .attribute("type")
@@ -174,7 +174,7 @@ async fn native_validation_errors(page: &Page<'_>, form: &str) -> Result<(), Rep
     let message = assert_that!(input)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
@@ -492,5 +492,96 @@ pub async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
         .has_attribute("data-disabled")
         .await
         .is_equal_to("true");
+    Ok(())
+}
+
+/// An `Input` outside a field renders a plain input with its default class: typing changes its
+/// value, and it tracks its own hover and focus (react-aria-components' `Input` without an
+/// `InputContext`).
+#[browser_test]
+pub async fn standalone_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = page.element("input[aria-label='Standalone']").await?;
+    assert_that!(input)
+        .attribute("class")
+        .await
+        .is_equal_to(Some("leptonic-Input".to_owned()));
+
+    assert_that!(input)
+        .attribute("data-hovered")
+        .await
+        .is_none();
+    input.hover().await?;
+    input.wait_for_attr("data-hovered", Some("true")).await?;
+    page.element("h1").await?.hover().await?;
+    input.wait_for_attr("data-hovered", None).await?;
+
+    // A click focuses it without a visible focus ring.
+    input.click().await?;
+    page.wait_for_focus(&input).await?;
+    input.wait_for_attr("data-focused", Some("true")).await?;
+    assert_that!(input)
+        .attribute("data-focus-visible")
+        .await
+        .is_none();
+    page.send_keys("hello").await?;
+    input.wait_for_prop("value", "hello").await?;
+    page.element("#tf-standalone output")
+        .await?
+        .wait_for_inner_text("hello")
+        .await?;
+
+    // Leaving and coming back with the keyboard shows it.
+    page.send_keys(Key::Tab).await?;
+    input.wait_for_attr("data-focused", None).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&input).await?;
+    input
+        .wait_for_attr("data-focus-visible", Some("true"))
+        .await?;
+    Ok(())
+}
+
+/// A disabled, invalid `Input` outside a field is disabled and `aria-invalid`, and shows both in
+/// its data attributes.
+#[browser_test]
+pub async fn standalone_input_disabled_and_invalid(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = page
+        .element("input[aria-label='Standalone disabled']")
+        .await?;
+    assert_that!(input).enabled().await.is_false();
+    assert_that!(input)
+        .has_attribute("aria-invalid")
+        .await
+        .is_equal_to("true");
+    assert_that!(input)
+        .has_attribute("data-disabled")
+        .await
+        .is_equal_to("true");
+    assert_that!(input)
+        .has_attribute("data-invalid")
+        .await
+        .is_equal_to("true");
+    Ok(())
+}
+
+/// A `TextArea` outside a field renders a plain textarea with its default class, which takes
+/// typed text.
+#[browser_test]
+pub async fn standalone_textarea(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let textarea = page
+        .element("textarea[aria-label='Standalone notes']")
+        .await?;
+    assert_that!(textarea)
+        .attribute("class")
+        .await
+        .is_equal_to(Some("leptonic-TextArea".to_owned()));
+    textarea.click().await?;
+    page.wait_for_focus(&textarea).await?;
+    textarea.wait_for_attr("data-focused", Some("true")).await?;
+    page.send_keys("notes").await?;
+    textarea.wait_for_prop("value", "notes").await?;
     Ok(())
 }

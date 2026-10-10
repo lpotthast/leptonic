@@ -7,6 +7,8 @@ use leptos::{
         Attribute,
         any_attribute::{AnyAttribute, IntoAnyAttribute},
     },
+    either::Either,
+    ev,
     prelude::*,
 };
 use leptos_classes::Classes;
@@ -14,6 +16,7 @@ use leptos_classes::Classes;
 use crate::{
     IntoAttrs,
     hooks::{
+        focus::use_focus_ring::{UseFocusRingInput, use_focus_ring},
         form::UseTextFieldInputProps,
         interactions::{UseHoverInput, use_hover},
     },
@@ -28,10 +31,24 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The field computes the focus state (`use_text_field`'s focus ring) and passes it through
-//   `InputContext`, instead of `Input` running its own `useFocusRing`. Reason: the field's hook
-//   already tracks focus; a second focus ring on the same element would duplicate it.
+// - In a field, the field computes the focus state (`use_text_field`'s focus ring) and passes it
+//   through `InputContext`, instead of `Input` running its own `useFocusRing`. Reason: the field's
+//   hook already tracks focus; a second focus ring on the same element would duplicate it.
+//   Outside a field, `Input`/`TextArea` run their own focus ring and hover, as in
+//   react-aria-components.
+// - Outside a field, `is_disabled` and `is_invalid` props set `disabled` and `aria-invalid` (and
+//   the data attributes); react-aria-components reads the DOM props `disabled` and
+//   `aria-invalid`. In a field, the field decides both.
+// - One `InputContext` serves `Input` and `TextArea` (react-aria-components: `InputContext` and
+//   `TextAreaContext`); a `TextArea` takes it only from a text field and is a plain textarea
+//   in other fields, as in react-aria-components, where only `TextField` provides
+//   `TextAreaContext`.
 // - Render props become `data-*` attributes.
+//
+// ## DIFFERENT BEHAVIOR
+// - A disabled `TextArea` doesn't track hover (react-aria-components' `TextArea` doesn't pass
+//   `isDisabled` to `useHover`, unlike its `Input`). Reason: `Input` and `TextArea` behave the
+//   same.
 //
 // =============================================================================
 
@@ -79,8 +96,9 @@ impl InputContext {
     }
 }
 
-/// The `<input>` of the field around it (outside a field, or inside a field's popover, nothing is
-/// rendered).
+/// A text input. In a field (`TextField`, `ComboBox`, ...), the field's `<input>`, with the
+/// field's attributes and state. Outside a field (or inside a field's popover), a plain `<input>`
+/// tracking its own hover and focus.
 ///
 /// Data attributes: `data-focused`, `data-focus-visible`, `data-hovered`, `data-disabled`,
 /// `data-invalid`.
@@ -92,13 +110,26 @@ pub fn Input(
     /// forwarded `ref`).
     #[prop(optional)]
     node_ref: NodeRef<leptos::html::Input>,
+    /// Outside a field: whether the input is disabled. In a field, the field decides.
+    #[prop(into, optional)]
+    is_disabled: Signal<bool>,
+    /// Outside a field: whether the value is invalid (`aria-invalid`). In a field, the field
+    /// decides.
+    #[prop(into, optional)]
+    is_invalid: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Input", classes);
     let Some(ctx) = use_clearable_context::<InputContext>() else {
-        crate::utils::dev_warn!("An <Input> needs a field around it (TextField, ComboBox, ...).");
-        return None;
+        return Either::Right(view! {
+            <input
+                {..standalone_attributes(is_disabled, is_invalid)}
+                node_ref=node_ref
+                class=classes
+                style=styles
+            />
+        });
     };
     let state = ctx.state;
     let hover = use_hover(UseHoverInput {
@@ -106,7 +137,7 @@ pub fn Input(
         ..UseHoverInput::default()
     });
 
-    Some(view! {
+    Either::Left(view! {
         <input
             {..(ctx.attrs)()}
             {..hover.props.into_attrs()}
@@ -118,7 +149,9 @@ pub fn Input(
     })
 }
 
-/// The `<textarea>` of the field around it (for multi-line text).
+/// A multi-line text input. In a text field, the field's `<textarea>`, with the field's
+/// attributes and state. Elsewhere (also in other fields), a plain `<textarea>` tracking its own
+/// hover and focus.
 ///
 /// Data attributes: as [`Input`].
 ///
@@ -128,18 +161,28 @@ pub fn TextArea(
     /// The `<textarea>` element (react-aria-components: a forwarded `ref`).
     #[prop(optional)]
     node_ref: NodeRef<leptos::html::Textarea>,
+    /// Outside a text field: whether the textarea is disabled. In a text field, the field decides.
+    #[prop(into, optional)]
+    is_disabled: Signal<bool>,
+    /// Outside a text field: whether the value is invalid (`aria-invalid`). In a text field, the
+    /// field decides.
+    #[prop(into, optional)]
+    is_invalid: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TextArea", classes);
-    let Some(ctx) = use_clearable_context::<InputContext>() else {
-        crate::utils::dev_warn!("A <TextArea> needs a text field around it.");
-        return None;
-    };
-    let state = ctx.state;
-    let Some(text_field) = ctx.text_field else {
-        crate::utils::dev_warn!("A <TextArea> needs a text field: use an <Input>.");
-        return None;
+    let Some((state, text_field)) =
+        use_clearable_context::<InputContext>().and_then(|ctx| Some((ctx.state, ctx.text_field?)))
+    else {
+        return Either::Right(view! {
+            <textarea
+                {..standalone_attributes(is_disabled, is_invalid)}
+                node_ref=node_ref
+                class=classes
+                style=styles
+            />
+        });
     };
     let mut props = text_field.get_value();
     // `type`, `pattern` and the `value` attribute only exist on inputs (react-aria:
@@ -152,7 +195,7 @@ pub fn TextArea(
         ..UseHoverInput::default()
     });
 
-    Some(view! {
+    Either::Left(view! {
         <textarea
             {..props.into_attrs()}
             {..hover.props.into_attrs()}
@@ -164,6 +207,38 @@ pub fn TextArea(
             {initial_value}
         </textarea>
     })
+}
+
+/// The attributes of an input outside a field: its own hover and focus ring
+/// (react-aria-components: `useHover` and `useFocusRing` with `isTextInput`), `disabled`,
+/// `aria-invalid` and the data attributes.
+fn standalone_attributes(
+    is_disabled: Signal<bool>,
+    is_invalid: Signal<bool>,
+) -> impl Attribute + 'static {
+    let hover = use_hover(UseHoverInput {
+        is_disabled,
+        ..UseHoverInput::default()
+    });
+    let focus_ring = use_focus_ring(UseFocusRingInput {
+        is_text_input: true,
+        ..UseFocusRingInput::default()
+    });
+    let state = InputState {
+        is_disabled,
+        is_invalid,
+        is_focused: focus_ring.is_focused,
+        is_focus_visible: focus_ring.is_focus_visible,
+    };
+    (
+        hover.props.into_attrs(),
+        // The focus ring's own `data-focus-visible` comes with the other data attributes.
+        focus_ring.props.on_focus.into_on(ev::focus),
+        focus_ring.props.on_blur.into_on(ev::blur),
+        state_attributes(state, hover.is_hovered),
+        leptos::attr::disabled(is_disabled),
+        leptos::attr::aria_invalid(flag(is_invalid)),
+    )
 }
 
 /// The data attributes of an input.

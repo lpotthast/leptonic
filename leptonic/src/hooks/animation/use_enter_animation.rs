@@ -15,9 +15,12 @@ use crate::utils::styles::Styles;
 // - Returns `is_entering: Signal<bool>` (react-aria: a boolean per render).
 // - `on_enter` is a `Callback` of the element: it can start Web Animations, which are awaited
 //   like CSS ones (react-aria: a function that may return a promise to await as well).
-// - The styles hiding the element until it is ready are returned (`styles`, for the element's
-//   `style`) instead of written to the element: an element's `style` attribute has one writer, its
-//   `Styles`, which rewrites the whole attribute whenever a reactive part changes.
+//
+// ## ADDITIONS
+// - Returns `styles` hiding the element until it is ready for the first time (react-aria hides
+//   nothing; a popover would flash before its placement is known). They are returned for the
+//   element's `style` instead of written to the element: an element's `style` attribute has one
+//   writer, its `Styles`, which rewrites the whole attribute whenever a reactive part changes.
 //
 // =============================================================================
 
@@ -35,7 +38,7 @@ pub struct UseEnterAnimationInput {
     /// The element to track enter animations on.
     pub element: CapturedElement,
     /// Delays the entry until ready (e.g. a popover until its placement is known); the element is
-    /// hidden until then. Default: always ready.
+    /// hidden until it is ready for the first time. Default: always ready.
     pub is_ready: Signal<bool>,
     /// Called with the element when the entry starts (e.g. to start a Web Animation).
     pub on_enter: Option<Callback<SendWrapper<web_sys::Element>>>,
@@ -46,29 +49,39 @@ pub struct UseEnterAnimationInput {
 pub struct UseEnterAnimationReturn {
     /// `true` while the element is ready and its enter animations run (for `data-entering`).
     pub is_entering: Signal<bool>,
-    /// Styles for the element: hide it while it isn't ready, with styles that don't affect layout
+    /// Styles for the element: hide it until it is ready, with styles that don't affect layout
     /// (they win over others merged after them: `hiding.merge(styles)`). Empty when it is always
     /// ready.
     pub styles: Styles,
 }
 
-/// Styles hiding an element while it isn't ready.
+/// Styles hiding an element until it is ready for the first time. Once entered, it stays
+/// visible when it isn't ready any more (e.g. a closing popover, while its exit animation runs).
 fn hiding_styles(is_ready: Signal<bool>) -> Styles {
+    let is_hidden = hidden_until_ready(is_ready);
     HIDING
         .iter()
         .fold(Styles::builder(), |builder, (property, value)| {
-            builder.with_optional_unchecked(*property, move || (!is_ready.get()).then_some(*value))
+            builder.with_optional_unchecked(*property, move || is_hidden.get().then_some(*value))
         })
         .build()
+}
+
+/// `true` until `is_ready` is `true` for the first time.
+fn hidden_until_ready(is_ready: Signal<bool>) -> Memo<bool> {
+    // Once shown, the memo stops tracking `is_ready`.
+    Memo::new(move |was_hidden: Option<&bool>| {
+        was_hidden.copied().unwrap_or(true) && !is_ready.get()
+    })
 }
 
 /// Tracks the enter animations of an element: `is_entering` is `true` from the moment it is
 /// ready until its animations (CSS animations started by `[data-entering]` styles, transitions
 /// from them, Web Animations of `on_enter`) finished.
 ///
-/// While not ready, the returned `styles` hide the element with styles that don't affect layout,
-/// so it doesn't flash (e.g. a popover before its placement is calculated). Transitions that
-/// started before it was ready are cancelled.
+/// Until it is ready for the first time, the returned `styles` hide the element with styles that
+/// don't affect layout, so it doesn't flash (e.g. a popover before its placement is calculated).
+/// Transitions that started before it was ready are cancelled.
 ///
 /// ```ignore
 /// let element = CapturedElement::new();
@@ -143,5 +156,28 @@ pub fn use_enter_animation(input: UseEnterAnimationInput) -> UseEnterAnimationRe
             is_entering: is_animation_ready,
             styles,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::testing::with_owner;
+
+    /// Hidden until ready; once shown, an element that isn't ready any more (a closing popover,
+    /// during its exit animation) stays visible.
+    #[test]
+    fn hidden_only_until_ready_for_the_first_time() {
+        with_owner(|| {
+            let is_ready = RwSignal::new(false);
+            let is_hidden = hidden_until_ready(is_ready.into());
+            assert_that!(is_hidden.get_untracked()).is_true();
+            is_ready.set(true);
+            assert_that!(is_hidden.get_untracked()).is_false();
+            is_ready.set(false);
+            assert_that!(is_hidden.get_untracked()).is_false();
+        });
     }
 }

@@ -51,6 +51,14 @@ use crate::{
 //   array of all nodes and a filter per build); deleted nodes are only searched if the build
 //   didn't visit every cached node.
 //
+// ## ADDITIONS
+// - `allows_overflow_across`: items whose measured content overflows them across the orientation
+//   (log lines wider than a vertical list) widen the content to the widest one, so the view scrolls
+//   across too; the items keep the view's breadth and stay visible wherever it scrolls across.
+//   Upstream's content is always as wide as the view (its `ScrollView` then hides the overflow),
+//   and wide content needs a layout of its own (e.g. a table's column widths). Only measured items
+//   count (estimated sizes, or observed ones), so the content widens as wider items render.
+//
 // ## OMITTED FEATURES
 // - The AI layout's bottom alignment of content shorter than the viewport (chat-style).
 // - Drop targets (`getDropTargetFromPoint`, `getDropTargetLayoutInfo`): with DnD on the atoms.
@@ -122,6 +130,11 @@ pub struct ListLayoutOptions {
     /// Keeps the viewport at the end while it is there (vertical lists only: ignored, with a
     /// warning in debug builds, in horizontal ones, as upstream).
     pub anchor_to_end: Option<EndAnchor>,
+    /// Items whose measured content overflows them across the orientation (wider than a vertical
+    /// list) widen the content to the widest one, so the view scrolls across. Only measured items
+    /// count, so the content widens as wider items render. Default: `false` (upstream: the content
+    /// is as wide as the view).
+    pub allows_overflow_across: bool,
 }
 
 impl Default for ListLayoutOptions {
@@ -134,6 +147,7 @@ impl Default for ListLayoutOptions {
             gap: 0.0,
             padding: 0.0,
             anchor_to_end: None,
+            allows_overflow_across: false,
         }
     }
 }
@@ -237,6 +251,11 @@ pub struct ListLayout {
     valid_rect: Rect,
     /// The rectangle of requested layout infos so far.
     requested_rect: Rect,
+    /// With `allows_overflow_across`: the far edge across (from the content's start) of each
+    /// measured item overflowing its layout info. Its keys are laid out nodes.
+    overflows: HashMap<Key, f64>,
+    /// The farthest of `overflows`, 0 without any.
+    widest_overflow: f64,
 }
 
 /// Warns about options the layout ignores (as upstream).
@@ -266,6 +285,8 @@ impl ListLayout {
             visited: 0,
             valid_rect: Rect::default(),
             requested_rect: Rect::default(),
+            overflows: HashMap::new(),
+            widest_overflow: 0.0,
         }
     }
 
@@ -310,6 +331,54 @@ impl ListLayout {
         } else {
             rect.width
         }
+    }
+
+    /// The position across the orientation.
+    fn cross_offset_of(&self, rect: &Rect) -> f64 {
+        if self.is_horizontal() { rect.y } else { rect.x }
+    }
+
+    /// Records the far edge across of `key`'s measured `size` if it overflows `info` (with
+    /// `allows_overflow_across`); whether that changed the widest overflow (the content's breadth).
+    fn record_overflow(&mut self, key: &Key, info: &LayoutInfo, size: Size) -> bool {
+        if !self.options.allows_overflow_across {
+            return false;
+        }
+        let measured = if self.is_horizontal() {
+            size.height
+        } else {
+            size.width
+        };
+        let previous = if measured > self.breadth_of(&info.rect) {
+            let edge = self.cross_offset_of(&info.rect) + measured;
+            self.overflows.insert(key.clone(), edge)
+        } else {
+            self.overflows.remove(key)
+        };
+        let widest = self.widest_overflow;
+        match self.overflows.get(key) {
+            Some(&edge) if edge > widest => self.widest_overflow = edge,
+            // The widest one got narrower or went: the next widest counts.
+            _ if previous == Some(widest) => self.widest_overflow = self.farthest_overflow(),
+            _ => {}
+        }
+        self.widest_overflow != widest
+    }
+
+    /// The content's size across the orientation: the view's, or the widest overflow's.
+    fn content_breadth(&self, ctx: &VirtualizerContext<'_>) -> f64 {
+        self.cross_size(ctx)
+            .max(self.widest_overflow + self.options.padding)
+    }
+
+    fn farthest_overflow(&self) -> f64 {
+        self.overflows.values().copied().fold(0.0, f64::max)
+    }
+
+    /// Forgets all overflows (the items are measured again).
+    fn clear_overflows(&mut self) {
+        self.overflows.clear();
+        self.widest_overflow = 0.0;
     }
 
     /// The size of a row not laid out yet, with the gap after it.
@@ -528,10 +597,11 @@ impl ListLayout {
         if !is_empty {
             offset += padding;
         }
+        let breadth = self.content_breadth(ctx);
         self.content_size = if self.is_horizontal() {
-            Size::new(offset, ctx.size.height)
+            Size::new(offset, breadth)
         } else {
-            Size::new(ctx.size.width, offset)
+            Size::new(breadth, offset)
         };
     }
 
@@ -795,6 +865,7 @@ impl ListLayout {
             || self.options.loader_size != options.loader_size
             || self.options.gap != options.gap
             || self.options.padding != options.padding
+            || self.options.allows_overflow_across != options.allows_overflow_across
     }
 }
 
@@ -821,6 +892,14 @@ impl Layout for ListLayout {
             self.set_length(&mut rect, (length / row_size).ceil() * row_size);
         }
         self.layout_if_needed(ctx, rect);
+        // Items overflowing across are as wide as the view: visible wherever it scrolls across.
+        if self.options.allows_overflow_across {
+            rect = if self.is_horizontal() {
+                Rect::new(rect.x, 0.0, rect.width, f64::INFINITY)
+            } else {
+                Rect::new(0.0, rect.y, f64::INFINITY, rect.height)
+            };
+        }
 
         // The root nodes overlapping the rectangle along the orientation (found by their
         // offsets), the ones always visible, and those of persisted keys (react-stately checks
@@ -890,6 +969,7 @@ impl Layout for ListLayout {
         if self.invalidate_everything {
             self.requested_rect = ctx.visible_rect;
             self.layout_nodes.clear();
+            self.clear_overflows();
         }
         if let Some(options) = &invalidation.layout_options
             && *options != self.options
@@ -908,6 +988,19 @@ impl Layout for ListLayout {
         if self.collection_changed && self.visited != self.layout_nodes.len() {
             self.layout_nodes
                 .retain(|key, _| ctx.collection.contains_key(key));
+            if !self.overflows.is_empty() {
+                let layout_nodes = &self.layout_nodes;
+                self.overflows
+                    .retain(|key, _| layout_nodes.contains_key(key));
+                self.widest_overflow = self.farthest_overflow();
+                // The build measured the content's breadth with the removed ones.
+                let breadth = self.content_breadth(ctx);
+                if self.is_horizontal() {
+                    self.content_size.height = breadth;
+                } else {
+                    self.content_size.width = breadth;
+                }
+            }
         }
         self.last_collection = Some(Arc::clone(ctx.collection));
         self.invalidate_everything = false;
@@ -932,8 +1025,10 @@ impl Layout for ListLayout {
             .node
             .as_ref()
             .is_some_and(|node| node.kind == NodeKind::Item);
+        let overflow_changed = self.record_overflow(key, &layout_info, size);
         if self.length_of(&layout_info.rect) == new_length {
-            return false;
+            // Laid out again for the content's new breadth.
+            return overflow_changed;
         }
         // A copy, so later caches are invalidated.
         let mut new_layout_info = layout_info.clone();
@@ -1012,6 +1107,7 @@ mod tests {
         persisted_keys: HashSet<Key>,
         size: Size,
         /// The scroll position.
+        scroll_x: f64,
         scroll_y: f64,
     }
 
@@ -1022,6 +1118,7 @@ mod tests {
                 collection,
                 persisted_keys: HashSet::new(),
                 size,
+                scroll_x: 0.0,
                 scroll_y: 0.0,
             };
             // The first pass: the scroll view got its size.
@@ -1039,7 +1136,12 @@ mod tests {
                 collection: &self.collection,
                 persisted_keys: &self.persisted_keys,
                 size: self.size,
-                visible_rect: Rect::new(0.0, self.scroll_y, self.size.width, self.size.height),
+                visible_rect: Rect::new(
+                    self.scroll_x,
+                    self.scroll_y,
+                    self.size.width,
+                    self.size.height,
+                ),
                 content_size: self.layout.content_size(),
             }
         }
@@ -1080,8 +1182,14 @@ mod tests {
                 .expect("laid out")
         }
 
-        /// Reports the measured height of `key` and lays out again, as the virtualizer does.
+        /// Reports the measured height of `key` (as wide as the view) and lays out again, as the
+        /// virtualizer does.
         fn measure(&mut self, key: impl Into<Key>, height: f64) -> bool {
+            self.measure_size(key, Size::new(self.size.width, height))
+        }
+
+        /// Reports the measured size of `key` and lays out again, as the virtualizer does.
+        fn measure_size(&mut self, key: impl Into<Key>, size: Size) -> bool {
             let collection = Arc::clone(&self.collection);
             let persisted_keys = self.persisted_keys.clone();
             let ctx = VirtualizerContext {
@@ -1089,9 +1197,7 @@ mod tests {
                 persisted_keys: &persisted_keys,
                 ..self.ctx()
             };
-            let changed =
-                self.layout
-                    .update_item_size(&ctx, &key.into(), Size::new(self.size.width, height));
+            let changed = self.layout.update_item_size(&ctx, &key.into(), size);
             if changed {
                 self.update(InvalidationContext {
                     item_size_changed: true,
@@ -1232,6 +1338,91 @@ mod tests {
             ..InvalidationContext::default()
         });
         assert_that!(harness.info("row-0").rect.height).is_equal_to(50.0);
+    }
+
+    /// Upstream behavior: measured rows never widen the content (their overflow is clipped by the
+    /// scroll view's `overflow-x: hidden`).
+    #[test]
+    fn rows_overflowing_across_keep_the_content_as_wide_as_the_view() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                padding: 10.0,
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        harness.visible();
+        assert_that!(harness.measure_size("row-1", Size::new(350.0, 20.0))).is_false();
+        assert_that!(harness.layout.content_size().width).is_equal_to(200.0);
+    }
+
+    /// With `allows_overflow_across`, the widest measured row widens the content (padding on both
+    /// sides), so the view scrolls across; rows stay as wide as the view.
+    #[test]
+    fn rows_overflowing_across_widen_the_content() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                padding: 10.0,
+                allows_overflow_across: true,
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        harness.visible();
+        // Not overflowing: as wide as the view.
+        assert_that!(harness.measure_size("row-0", Size::new(180.0, 20.0))).is_false();
+        assert_that!(harness.layout.content_size().width).is_equal_to(200.0);
+
+        // Its height unchanged, only its overflow: laid out again.
+        assert_that!(harness.measure_size("row-1", Size::new(350.0, 20.0))).is_true();
+        assert_that!(harness.layout.content_size().width).is_equal_to(370.0);
+        // A narrower overflow is recorded, but changes nothing (no layout).
+        assert_that!(harness.measure_size("row-2", Size::new(250.0, 20.0))).is_false();
+        assert_that!(harness.layout.content_size().width).is_equal_to(370.0);
+        assert_that!(harness.info("row-1").rect.width).is_equal_to(180.0);
+
+        // Scrolled across, past the rows' own width: they stay visible.
+        harness.scroll_x = 170.0;
+        assert_that!(keys(&harness.visible()).len()).is_equal_to(10);
+
+        // The widest one narrower again: the next widest counts.
+        assert_that!(harness.measure_size("row-1", Size::new(180.0, 20.0))).is_true();
+        assert_that!(harness.layout.content_size().width).is_equal_to(270.0);
+    }
+
+    /// Removed rows no longer widen the content, nor do rows measured before the view's width
+    /// changed (they are estimated and measured again).
+    #[test]
+    fn rows_overflowing_across_are_forgotten_when_removed_or_the_width_changes() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                allows_overflow_across: true,
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        harness.visible();
+        harness.measure_size("row-2", Size::new(300.0, 20.0));
+        harness.measure_size("row-8", Size::new(400.0, 20.0));
+        assert_that!(harness.layout.content_size().width).is_equal_to(400.0);
+
+        harness.collection = rows(5);
+        harness.update(InvalidationContext::default());
+        assert_that!(harness.layout.content_size().width).is_equal_to(300.0);
+
+        harness.size = Size::new(150.0, 1000.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            width_changed: true,
+            ..InvalidationContext::default()
+        });
+        assert_that!(harness.layout.content_size().width).is_equal_to(150.0);
     }
 
     #[test]

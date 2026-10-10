@@ -14,6 +14,7 @@ pub mod focus_ring;
 pub mod focus_safely;
 pub mod focus_visible;
 pub mod focus_within;
+pub mod focusability;
 pub mod focusable;
 pub mod global_shortcuts;
 pub mod has_tabbable_child;

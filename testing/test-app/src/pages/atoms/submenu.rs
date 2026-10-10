@@ -113,11 +113,12 @@ pub fn PageAtomSubmenu() -> impl IntoView {
                                 </form>
                             </Popover>
                         </SubmenuTrigger>
-                        // A subdialog with a `Dialog` inside its popover (RAC's docs example).
+                        // A subdialog with a `Dialog` inside its popover (RAC's docs example),
+                        // untitled: the trigger item names it.
                         <SubmenuTrigger key="properties" kind=SubmenuKind::Dialog>
                             <MenuItem key="properties">"Properties…"</MenuItem>
                             <Popover classes="test-popover">
-                                <Dialog aria_label="Properties">
+                                <Dialog>
                                     <TextField value=name set_value=name>
                                         <Label>"Name"</Label>
                                         <Input attr:id="test-properties-input" />

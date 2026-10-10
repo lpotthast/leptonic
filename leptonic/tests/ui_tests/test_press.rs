@@ -29,11 +29,7 @@ async fn open_on_a_mac(page: &Page<'_>) -> Result<(), Report> {
 #[browser_test]
 pub async fn meta_release_ends_held_key_presses(page: &Page<'_>) -> Result<(), Report> {
     open_on_a_mac(page).await?;
-    let platform: String = page
-        .low_level()
-        .eval("return navigator.platform;", vec![])
-        .await?;
-    assert_that!(platform).is_equal_to("MacIntel");
+    assert_that!(page.reported_platform().await?).is_equal_to("macOS");
 
     page.element("#test-press-target").await?.focus().await?;
     page.wait_for_focus(&page.element("#test-press-target").await?)
@@ -216,6 +212,41 @@ pub async fn disabled_element_ignores_presses(page: &Page<'_>) -> Result<(), Rep
     Ok(())
 }
 
+/// An enabled element's click stops propagating, a disabled element's (pointer or virtual) does
+/// nothing and propagates: react-aria's press callbacks of a disabled element are inert and
+/// continue it.
+#[browser_test]
+pub async fn disabled_element_click_propagates(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let target = page.element("#test-press-target").await?;
+    let parent_clicks = page.element("#test-press-parent-clicks").await?;
+    target.click().await?;
+    log(page)
+        .await?
+        .wait_for_inner_text("start:mouse,up:mouse,end:mouse,press:mouse")
+        .await?;
+    parent_clicks
+        .inner_text_stays("0", Duration::from_millis(100))
+        .await?;
+
+    page.element("#test-press-toggle-disabled")
+        .await?
+        .click()
+        .await?;
+    target.click().await?;
+    parent_clicks.wait_for_inner_text("1").await?;
+    target.virtual_click().await?;
+    parent_clicks.wait_for_inner_text("2").await?;
+    log(page)
+        .await?
+        .inner_text_stays(
+            "start:mouse,up:mouse,end:mouse,press:mouse",
+            Duration::from_millis(100),
+        )
+        .await?;
+    Ok(())
+}
+
 /// An element that becomes disabled while pressed ends the press at once and fires no press on
 /// release (react-spectrum #9813).
 #[browser_test]
@@ -255,7 +286,7 @@ pub async fn enter_on_checkbox_submits_form(page: &Page<'_>) -> Result<(), Repor
     page.element("#test-press-checkbox").await?.click().await?;
     page.element("#test-press-checkbox")
         .await?
-        .send_keys(Key::Enter)
+        .type_keys(Key::Enter)
         .await?;
     page.element("#test-press-submits")
         .await?

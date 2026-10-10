@@ -58,7 +58,7 @@ pub async fn defaults(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(primary)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("#AABBCC");
     assert_that!(primary)
         .accessible_name()
@@ -74,14 +74,14 @@ pub async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let primary = input(page, "test-cf-primary").await?;
     primary.focus().await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     page.send_keys(Key::Backspace).await?;
     blur(page).await?;
     log(page).await?.wait_for_inner_text("primary:none").await?;
     assert_that!(primary)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_empty();
     primary.focus().await?;
     page.send_keys("cbacba").await?;
@@ -93,7 +93,7 @@ pub async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(primary)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("#CBACBA");
     Ok(())
 }
@@ -112,10 +112,10 @@ pub async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(empty)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("#AABBCC");
     empty.focus().await?;
-    page.send_keys(Key::Control + "a").await?;
+    page.send_keys(page.primary_modifier().await? + "a").await?;
     page.send_keys(Key::Backspace).await?;
     page.send_keys("abcxyz8b").await?;
     empty.wait_for_prop("value", "abc8b").await?;
@@ -152,7 +152,7 @@ pub async fn stepping(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(max)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("#000000");
     Ok(())
 }
@@ -217,7 +217,7 @@ pub async fn channel(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(hue)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("10°");
     assert_that!(hue)
         .has_attribute("aria-label")
@@ -231,7 +231,7 @@ pub async fn channel(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(saturation)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("50%");
     Ok(())
 }

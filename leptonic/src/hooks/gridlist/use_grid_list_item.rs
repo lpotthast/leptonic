@@ -82,6 +82,8 @@ pub struct UseGridListItemReturn {
     pub description_props: SlotProps,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
+    /// Whether the row element itself has keyboard focus (react-aria-components: the row's
+    /// `useFocusRing`): not while one of its children has focus.
     pub is_focus_visible: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
@@ -107,6 +109,8 @@ pub struct UseGridListItemRowProps {
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     /// On `focusin` (React's bubbling `onFocus`): focus on a child makes the row the focused key.
     pub on_focus: EventHandler<FocusEvent>,
+    /// Tracks when the row element itself loses focus (for `is_focus_visible`).
+    pub on_focusout: EventHandler<FocusEvent>,
 }
 
 pub type UseGridListItemRowAttrs = (
@@ -124,6 +128,7 @@ pub type UseGridListItemRowAttrs = (
     UseSelectableItemAttrs,
     OnEvent<ev::Capture<ev::keydown>>,
     OnEvent<ev::focusin>,
+    OnEvent<ev::focusout>,
 );
 
 impl IntoAttrs for UseGridListItemRowProps {
@@ -145,6 +150,7 @@ impl IntoAttrs for UseGridListItemRowProps {
             self.item.into_attrs(),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
             self.on_focus.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
         )
     }
 }
@@ -516,6 +522,8 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
     });
 
     let alive = OwnerAlive::new();
+    // Whether the row element itself has focus (not one of its children).
+    let row_has_focus = RwSignal::new(false);
     let on_focus = move |e: FocusEvent| {
         key_when_focused.set_value(Some(row_key.get_value()));
         let Some(row) = element.get_untracked() else {
@@ -524,6 +532,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         let on_row = e
             .target()
             .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row);
+        row_has_focus.set(on_row);
         if !on_row {
             // A child got focus (e.g. by clicking it): the row becomes the focused key.
             if get_modality() == Some(Modality::Pointer) {
@@ -558,9 +567,18 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         }
     };
 
+    let on_focusout = move |e: FocusEvent| {
+        let on_row = element.get_untracked().is_some_and(|row| {
+            e.target()
+                .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row)
+        });
+        if on_row {
+            row_has_focus.set(false);
+        }
+    };
+
     let description = use_slot("description");
     let description_id = description.referenced_id;
-    let focus_visible = Signal::derive(is_focus_visible);
     let key = StoredValue::new(key);
 
     UseGridListItemReturn {
@@ -593,6 +611,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
                 item: item_props,
                 on_keydown_capture: EventHandler::new(on_keydown_capture),
                 on_focus: EventHandler::new(on_focus),
+                on_focusout: EventHandler::new(on_focusout),
             },
             item_styles,
         ),
@@ -603,7 +622,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         description_props: description.props,
         is_selected,
         is_focused,
-        is_focus_visible: Signal::derive(move || is_focused.get() && focus_visible.get()),
+        is_focus_visible: Signal::derive(move || row_has_focus.get() && is_focus_visible()),
         is_disabled,
         is_pressed,
         allows_selection,

@@ -41,35 +41,30 @@ session, found with `ListAgents`), and announce breaking changes to the APIs the
 
 ## agnite dev-ui
 
-- Where: `~/dev/agnite/dev/dev-ui`; session `dev-28` (was `dev-3f`, `dev-f8`); asked for `VirtualList` (done 2026-10-07).
+- Where: `~/dev/agnite/dev/dev-ui`; session `agnite-0e` (was `dev-28`, `dev-3f`, `dev-f8`); asked for `VirtualList`
+  (done 2026-10-07).
 - Depends on the working tree directly (`path = "../../../leptonic/leptonic"`, features `atoms` + `clipboard` and
   the default `intl-strings`): every library change reaches it at once, so the atoms feature must always compile.
-- Uses: the atoms Button, Link (`CurrentMatch`) + AnchorLink, ToggleButton(Group), Switch, Checkbox,
-  RadioGroup/Radio, TextField + Input, SearchField, Select + ListBox(Items), ComboBox, ListBox, GridList, Menu +
-  MenuTrigger + `ContextMenuTrigger`, Popover, Tooltip, Table, Disclosure, Breadcrumbs, Meter, ProgressBar, Toolbar,
-  Form, Focusable, VisuallyHidden, ModalBackdrop + ModalContent + Dialog, the toast atoms, `VirtualList`,
-  `ShortcutKeys`, the theme atoms (`ThemeProvider`, `LeptonicTheme`, `ThemeContext`); the hooks
-  `use_global_shortcuts`, `use_collection`/`use_list_collection`, `TableCollection`, `use_focus_ring`, `ToastQueue`;
-  the utilities `use_locale`, `Collator`/`Filter`, the live announcer, `KeyboardShortcuts`, `ListFormatter`,
-  `scroll_into_viewport`, `write_text`, `plural_category`.
-- Breaking (2026-10-07 evening, not yet told: no live session): the single `Checkbox`/`Radio`/`Switch` atoms were
-  removed (state props go on `CheckboxField`/`RadioField`/`SwitchField`, `classes` and children on the
-  `*Button`); dev-ui uses them in `src/app/process_card.rs:365`, `environments_view.rs:383-399`, `theme.rs:48`,
-  `shell.rs:148`.
-- Done for it (2026-10-08, not yet told): tree tables (`Table`'s `tree_column` + expansion props,
-  `TableExpandButton`, child rows with `ItemBuilder::children`).
-- Breaking (2026-10-08, not yet told): selection atoms are generic over typed values (`SelectionValue`);
-  `ToggleButtonGroup`'s `selected_keys`/`set_selected_keys`/`default_selected_keys`/`on_selection_change` are now
-  `value`/`set_value`/`default_value`/`on_change` (`src/app/tests/catalog_view.rs:219`). Its `RadioGroup`, `Select`,
-  `ComboBox` uses compile if their props are `Key`-typed (else name the type: `<atoms::Select<Key> ..>`).
-  Then (2026-10-08): `Select<S>`/`ComboBox<S>` take the selection's shape as their type, `Option<V>` (one value) or
-  `Vec<V>` (several), and lose `selection_mode` (`catalog_view.rs:337`, `log_panel.rs:259`, `palette.rs:132`).
-- Breaking (2026-10-09, not yet told): no prelude, one path per item (`documentation/conventions.md`): its
-  `use leptonic::atoms::prelude as atoms` (28 files) becomes imports from the atom modules
-  (`leptonic::atoms::button::Button`), `leptonic::hooks::{..}` the family modules (`hooks::collections::Key`),
-  `leptonic::utils::..` the crate root (`leptonic::use_locale`, `leptonic::write_text`, `leptonic::flag`).
-  `TableOptions` and `TableCollection::build_with` are gone: `show_selection_checkboxes` is a field of
-  `UseTableStateInput` (`src/app/tests/catalog_view.rs:156`).
+- Uses: the atoms Button, Link (`CurrentMatch`) + AnchorLink, ToggleButton(Group), SwitchField + SwitchButton,
+  CheckboxField + CheckboxButton, RadioGroup + RadioField + RadioButton, TextField + Input, SearchField, Select +
+  ListBox(Items), ComboBox, ListBox, GridList, Menu + MenuTrigger + `ContextMenuTrigger`, Popover, Tooltip, Table,
+  Disclosure, Breadcrumbs, Meter, ProgressBar, Toolbar, Form, Focusable, VisuallyHidden, ModalBackdrop +
+  ModalContent + Dialog, the toast atoms, `VirtualList` (its log lines don't wrap: horizontal overflow), `ShortcutKeys`, the theme
+  atoms (`ThemeProvider`, `LeptonicTheme`, `ThemeContext`); the hooks `use_global_shortcuts`,
+  `use_collection`/`use_list_collection`, `TableCollection`, `use_focus_ring`, `use_move`, `use_separator`, the
+  slider hooks, `ToastQueue`; the utilities `use_locale`, `Collator`/`Filter`, the live announcer,
+  `KeyboardShortcuts`, `ListFormatter`, `scroll_into_viewport`, `write_text`, `plural_category`.
+- Migrated (2026-10-10, by its session) to every breaking change up to then: the field + button checkbox, radio and
+  switch atoms, typed selection values (`Option<Key>` selects, `<ComboBox<Option<Key>>>` where only `on_change`
+  names the type), no prelude (imports from the atom and hook family modules and the crate root),
+  `UseListCollectionInput`, `FilterQuery`, `Shortcut::new(KeyboardKey::..)`, `VirtualListOptions`,
+  `show_selection_checkboxes` on `Table`, `use_move` without `axis`/`is_moving`.
+- Done for it (2026-10-10, told): `VirtualList` scrolls horizontally when rows are wider than the list
+  (`ListLayoutOptions::allows_overflow_across`); its lines lost horizontal scrolling when it moved from a plain
+  scrolling element to `VirtualList`. It considers a "wrap lines" toggle: wrapping restyles the rows, which observed
+  rows (`should_observe_item_size`) are measured again for (browser test `wrapping_lines_ends_horizontal_scrolling`).
+- Done for it (2026-10-08): tree tables (`Table`'s `tree_column` + expansion props, `TableExpandButton`, child rows
+  with `ItemBuilder::children`).
 - History: toasts, row context menus, the `clipboard` feature without components, global shortcuts, a public
   typing check, `ShortcutKeys`, the theme without components (2026-10-06/07); the ComboBox read-order bug and the
   modal hide-outside fix were found there.

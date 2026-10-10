@@ -46,7 +46,7 @@ use crate::{
 // - Drop handlers run synchronously (react-aria awaits each of them).
 // - `on_key_down` gets a `DropTargetKeyDownEvent` (react-aria: the `KeyboardEvent`).
 //
-// ## BEHAVIOR DIFFERENCES
+// ## DIFFERENT BEHAVIOR
 // - The default drop handling filters dropped items by `accepted_drag_types` with `DragTypes`,
 //   so wildcards (`image/*`, `*/*`) work at drop time as they do while dragging; react-aria
 //   compares the items' types exactly there and drops everything a wildcard accepted.

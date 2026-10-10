@@ -72,20 +72,25 @@ pub fn PageHookPress() -> impl IntoView {
     }
 }
 
-/// A plain `<div role="button">` with press handling and a disabled toggle.
+/// A plain `<div role="button">` with press handling and a disabled toggle. The clicks that
+/// propagate to its parent are counted in `#test-press-parent-clicks`.
 #[component]
 fn BasicPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
     let disabled = RwSignal::new(false);
+    let parent_clicks = RwSignal::new(0u32);
     let UsePressReturn { props, is_pressed } = use_press(press_input(log, disabled.into()));
     let (attrs, styles) = props.into_parts();
 
     view! {
         <section>
             <h2>"Basic"</h2>
-            <div id="test-press-target" role="button" tabindex="0" {..attrs} style=styles>
-                <span id="test-press-label">"Press me"</span>
+            <div on:click=move |_| parent_clicks.update(|c| *c += 1)>
+                <div id="test-press-target" role="button" tabindex="0" {..attrs} style=styles>
+                    <span id="test-press-label">"Press me"</span>
+                </div>
             </div>
+            <div>"Parent clicks: " <span id="test-press-parent-clicks">{parent_clicks}</span></div>
             <button id="test-press-toggle-disabled" on:click=move |_| disabled.update(|d| *d = !*d)>
                 "Toggle disabled"
             </button>

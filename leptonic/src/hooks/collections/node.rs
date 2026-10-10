@@ -133,4 +133,45 @@ impl Node {
     pub fn is_item(&self) -> bool {
         self.kind == NodeKind::Item
     }
+
+    /// Whether `other` describes the same node with the same content, wherever it is: its
+    /// position (index, neighbors, document order) doesn't count. Renderers of a node's content
+    /// compare with this, so that adding, removing or filtering other nodes doesn't render it
+    /// again.
+    pub fn same_content(&self, other: &Node) -> bool {
+        let Self {
+            key,
+            kind,
+            text_value,
+            aria_label,
+            level,
+            index: _,
+            parent_key,
+            prev_key: _,
+            next_key: _,
+            first_child_key,
+            last_child_key,
+            has_child_nodes,
+            is_disabled,
+            disabled_behavior,
+            link,
+            col_index,
+            col_span,
+            position: _,
+        } = self;
+        *key == other.key
+            && *kind == other.kind
+            && *text_value == other.text_value
+            && *aria_label == other.aria_label
+            && *level == other.level
+            && *parent_key == other.parent_key
+            && *first_child_key == other.first_child_key
+            && *last_child_key == other.last_child_key
+            && *has_child_nodes == other.has_child_nodes
+            && *is_disabled == other.is_disabled
+            && *disabled_behavior == other.disabled_behavior
+            && *link == other.link
+            && *col_index == other.col_index
+            && *col_span == other.col_span
+    }
 }

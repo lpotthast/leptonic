@@ -20,6 +20,24 @@ pub struct Row {
     pub height: f64,
 }
 
+/// The list of lines that don't wrap (`#test-vl-wide`), read at once.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct WideView {
+    /// `scrollLeft`, `clientWidth` and `scrollWidth`.
+    pub left: f64,
+    pub client_width: f64,
+    pub scroll_width: f64,
+    /// The computed `overflow-x`.
+    pub overflow_x: String,
+    /// The right edge of the widest rendered line, from the content's left (its row's left plus
+    /// its width).
+    pub widest: f64,
+    /// The height of the tallest rendered row (its wrapper's laid out `height`).
+    pub tallest: f64,
+    /// The number of rendered lines.
+    pub rendered: usize,
+}
+
 /// The rendered rows (in DOM order) and the log's scroll position, read at once.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct LogView {
@@ -79,6 +97,45 @@ impl<'a, 'd> VirtualListActions<'a, 'd> {
     /// The log element (it scrolls).
     pub async fn log(&self) -> Result<WebElement, Report> {
         self.page.element("#test-vl-log").await
+    }
+
+    /// The list of lines that don't wrap: its horizontal scroll position and its lines.
+    pub async fn wide_view(&self) -> Result<WideView, Report> {
+        let list = self.page.element("#test-vl-wide").await?;
+        self.page
+            .low_level()
+            .eval(
+                &format!(
+                    "{WRAPPER}
+                     const list = arguments[0];
+                     const lines = Array.from(list.querySelectorAll('.wide-line'));
+                     return {{
+                         left: list.scrollLeft,
+                         client_width: list.clientWidth,
+                         scroll_width: list.scrollWidth,
+                         overflow_x: getComputedStyle(list).overflowX,
+                         widest: Math.max(0, ...lines.map(line =>
+                             parseFloat(wrapper(line).style.left) + line.offsetWidth)),
+                         tallest: Math.max(0, ...lines.map(line =>
+                             parseFloat(wrapper(line).style.height))),
+                         rendered: lines.length,
+                     }};"
+                ),
+                vec![list.to_json()?],
+            )
+            .await
+    }
+
+    /// Scrolls the list of lines that don't wrap to its right end, as far as it goes.
+    pub async fn scroll_wide_to_the_right(&self) -> Result<(), Report> {
+        let list = self.page.element("#test-vl-wide").await?;
+        self.page
+            .low_level()
+            .eval::<()>(
+                "const list = arguments[0]; list.scrollLeft = list.scrollWidth;",
+                vec![list.to_json()?],
+            )
+            .await
     }
 
     /// The rendered rows and the scroll position.

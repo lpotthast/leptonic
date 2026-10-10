@@ -25,19 +25,19 @@ pub async fn basic_focus(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
     assert_that!(blur_count)
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
     assert_that!(is_focused)
         .inner_text()
         .await
         .map_owned(|value| value.parse::<bool>())
-        .get_ok()
+        .ok()
         .is_false();
 
     target.click().await?;
@@ -119,7 +119,7 @@ pub async fn focus_change_count(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
 
     target.click().await?;

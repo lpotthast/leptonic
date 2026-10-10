@@ -33,7 +33,7 @@ pub async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
     basic.click().await?;
     basic_count.wait_for_inner_text("1").await?;
@@ -49,7 +49,7 @@ pub async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
         .inner_text()
         .await
         .map_owned(|value| value.parse::<u32>())
-        .get_ok()
+        .ok()
         .is_equal_to(0);
     disabled.click().await?;
     disabled_count
@@ -89,7 +89,7 @@ pub async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
             .attribute(name)
             .await
             .with_detail_message(format!("attribute {name}"))
-            .get_some()
+            .some()
             .is_equal_to(value);
     }
     Ok(())
@@ -227,11 +227,11 @@ pub async fn pending_form_submission(page: &Page<'_>) -> Result<(), Report> {
     // Implicit: Enter in a text field submits through the submit button, unless it is pending.
     toggle.click().await?;
     submit.wait_for_attr("type", Some("submit")).await?;
-    input_1.send_keys(Key::Enter).await?;
+    input_1.type_keys(Key::Enter).await?;
     submits.wait_for_inner_text("3").await?;
     // The implicit submission clicks the button: a virtual press, which makes it pending.
     submit.wait_for_attr("type", Some("button")).await?;
-    input_1.send_keys(Key::Enter).await?;
+    input_1.type_keys(Key::Enter).await?;
     submits
         .inner_text_stays("3", std::time::Duration::from_millis(100))
         .await?;

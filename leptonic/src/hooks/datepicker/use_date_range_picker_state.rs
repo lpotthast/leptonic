@@ -201,7 +201,20 @@ impl<V: DateValue> DateRangePickerState<V> {
                 self.selected_range.set(Some(range));
             }
         } else {
-            self.commit(range, (Time::midnight(), Time::midnight()));
+            // Values with a time edited by day keep their times (react-stately's
+            // `useRangeCalendarState`: `oldValue.set(newValue)` for values with a time).
+            let time = |value: Option<V>| {
+                value
+                    .unwrap_or_else(|| self.placeholder.get_untracked())
+                    .time()
+            };
+            self.commit(
+                range,
+                (
+                    time(self.start.get_untracked()),
+                    time(self.end.get_untracked()),
+                ),
+            );
         }
         if should_close {
             self.overlay.set_open(false);
@@ -560,6 +573,30 @@ mod tests {
             assert_that!(state.value.get_untracked()).is_equal_to(Some(RangeValue {
                 start: date(2024, 7, 1).at(8, 0, 0, 0),
                 end: date(2024, 7, 3).at(18, 0, 0, 0),
+            }));
+        });
+    }
+
+    /// A date-time range picker editing days only keeps the ends' times when a range is selected
+    /// (react-stately's `useRangeCalendarState`: `oldValue.set(newValue)` for values with a time).
+    #[test]
+    fn keeps_the_times_of_a_date_time_range_edited_by_day() {
+        with_owner(|| {
+            let state = use_date_range_picker_state(UseDateRangePickerStateInput::<DateTime> {
+                default_value: Some(RangeValue {
+                    start: date(2024, 6, 1).at(14, 30, 0, 0),
+                    end: date(2024, 6, 5).at(9, 15, 0, 0),
+                }),
+                granularity: Signal::stored(Some(Granularity::Day)),
+                ..UseDateRangePickerStateInput::default()
+            });
+            state.select_range(DateRange {
+                start: date(2024, 6, 10),
+                end: date(2024, 6, 12),
+            });
+            assert_that!(state.value.get_untracked()).is_equal_to(Some(RangeValue {
+                start: date(2024, 6, 10).at(14, 30, 0, 0),
+                end: date(2024, 6, 12).at(9, 15, 0, 0),
             }));
         });
     }

@@ -82,7 +82,7 @@ pub fn Grid(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// Ids of elements labelling it.
     #[prop(into, optional)]
-    aria_labelledby: MaybeProp<String>,
+    aria_labelledby: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -108,7 +108,7 @@ pub fn Grid(
 
     let UseGridReturn { props, data } = use_grid(UseGridInput {
         aria_label,
-        aria_labelledby: Signal::derive(move || aria_labelledby.get()),
+        aria_labelledby: Signal::stored(aria_labelledby),
         options: CollectionOptions {
             should_focus_wrap,
             escape_key_behavior,

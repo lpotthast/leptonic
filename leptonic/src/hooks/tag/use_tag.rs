@@ -15,7 +15,7 @@ use crate::{
     hooks::{
         button::use_button::UseButtonInput,
         collections::Key,
-        focus::use_focus_visible::{Modality, is_focus_visible, use_interaction_modality},
+        focus::use_focus_visible::{Modality, use_interaction_modality},
         gridlist::{
             FocusMode, UseGridListItemCellProps, UseGridListItemInput, UseGridListItemReturn,
             UseGridListItemRowAttrs, UseGridListItemRowProps, grid_list_row_id, use_grid_list_item,
@@ -62,6 +62,7 @@ pub struct UseTagReturn {
     pub remove_button: Option<UseButtonInput>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
+    /// Whether the tag element itself has keyboard focus (not its remove button).
     pub is_focus_visible: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
@@ -110,6 +111,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         grid_cell_props,
         is_selected,
         is_focused,
+        is_focus_visible,
         is_pressed,
         allows_selection,
         ..
@@ -211,7 +213,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         remove_button,
         is_selected,
         is_focused,
-        is_focus_visible: Signal::derive(move || is_focused.get() && is_focus_visible()),
+        is_focus_visible,
         is_disabled,
         is_pressed,
         allows_selection,

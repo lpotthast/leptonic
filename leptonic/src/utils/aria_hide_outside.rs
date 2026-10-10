@@ -16,19 +16,30 @@
 //!
 //! Based on react-aria's `ariaHideOutside` from
 //! `react-aria/src/overlays/ariaHideOutside.ts`.
-//!
-//! ## Deviations from react-aria
-//!
-//! - `shouldUseInert: boolean` is the [`HideMode`] enum; `inert` is always supported (modern
-//!   browsers only), so there is no `aria-hidden` fallback for it.
-//! - Inert HTML elements also get `aria-hidden="true"`: Chromium otherwise drops text
-//!   referenced by `aria-labelledby`/`aria-describedby` inside inert content. Both attributes
-//!   are restored on cleanup, preserving the author's prior `aria-hidden` value.
-//! - Omitted: watching shadow roots around the targets (react-aria's `shadowDOM` flag, off by
-//!   default).
-//! - Registering an overlay opened from inside (`keep_visible`, a nested `aria_hide_outside`)
-//!   shows it again if the current observer hid it already: Leptos effects run after the
-//!   observer's callback, react-aria's layout effects before it.
+//
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `shouldUseInert: boolean` is the `HideMode` enum; `inert` is always supported (modern
+//   browsers only), so there is no `aria-hidden` fallback for it.
+//
+// ## DIFFERENT BEHAVIOR
+// - Inert HTML elements also get `aria-hidden="true"`: Chromium otherwise drops text
+//   referenced by `aria-labelledby`/`aria-describedby` inside inert content. Both attributes
+//   are restored on cleanup, preserving the author's prior `aria-hidden` value.
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - Registering an overlay opened from inside (`keep_visible`, a nested `aria_hide_outside`)
+//   shows it again if the current observer hid it already: Leptos effects run after the
+//   observer's callback, react-aria's layout effects before it.
+//
+// ## OMITTED FEATURES
+// - Watching shadow roots around the targets. Reason: react-aria does so only behind its
+//   `shadowDOM` feature flag, which is off by default.
+//
+// =============================================================================
 
 /// How [`aria_hide_outside`] hides elements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

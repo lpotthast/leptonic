@@ -6,7 +6,7 @@ use std::{sync::Arc, time::Duration};
 use assertr::{matchers::eq, prelude::*};
 use browser_test::{
     StepExt,
-    thirtyfour::{WebElement, session::handle::SessionHandle},
+    thirtyfour::{TypingData, WebElement, session::handle::SessionHandle},
 };
 use rootcause::{Report, bail, prelude::ResultExt};
 use serde::{Deserialize, de::DeserializeOwned};
@@ -14,7 +14,7 @@ use serde::{Deserialize, de::DeserializeOwned};
 use crate::pages::{
     Locator,
     event::SyntheticEvent,
-    health,
+    health, keyboard,
     lookup::{self, Root},
     script,
 };
@@ -346,6 +346,12 @@ pub trait ElementActions {
 
     /// Set the value and dispatch an input event, without typing keystrokes.
     async fn virtual_input(&self, value: &str) -> Result<(), Report>;
+
+    /// Focus the element unless it has focus (a text field with the caret at the end of its
+    /// value, as WebDriver's send keys does), then send `keys` like `Page::send_keys`: characters
+    /// as a US keyboard types them, whatever the host's layout. Use this, never thirtyfour's
+    /// `WebElement::send_keys`, which types through the host's layout.
+    async fn type_keys(&self, keys: impl Into<TypingData> + Send) -> Result<(), Report>;
 
     async fn dispatch<I: Send>(&self, event: SyntheticEvent<I>) -> Result<Dispatched, Report>;
 
@@ -682,6 +688,27 @@ impl ElementActions for WebElement {
             vec![value.into()],
         )
         .await
+    }
+
+    async fn type_keys(&self, keys: impl Into<TypingData> + Send) -> Result<(), Report> {
+        let keys = keys.into();
+        script::<()>(
+            self,
+            "const element = arguments[0];
+             let focused = document.activeElement;
+             while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
+             if (focused !== element) {
+                 element.focus();
+                 try {
+                     element.setSelectionRange?.(element.value.length, element.value.length);
+                 } catch {
+                     // Number inputs have no text selection.
+                 }
+             }",
+            vec![],
+        )
+        .await?;
+        keyboard::send_keys(self.handle(), &keys).await
     }
 
     async fn dispatch<I: Send>(&self, event: SyntheticEvent<I>) -> Result<Dispatched, Report> {

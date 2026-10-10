@@ -18,7 +18,7 @@ use leptonic::{
         popover::Popover,
     },
     hooks::{
-        datepicker::{Granularity, HourCycle, RangePart, RangeValue},
+        datepicker::{Granularity, HourCycle, RangePart, RangeValue, TimeBound},
         form::{ValidateFn, ValidationBehavior, ValidationResult},
     },
     jiff::{
@@ -169,6 +169,7 @@ fn EditingSections() -> impl IntoView {
         .expect("a zoned value");
     let nonexistent = RwSignal::new(None::<Zoned>);
     let time_bounds = RwSignal::new(Some(date(2024, 6, 5).at(8, 0, 0, 0)));
+    let time_absolute_bounds = RwSignal::new(Some(date(2024, 6, 6).at(8, 0, 0, 0)));
     view! {
         <Section name="edit-date">
             <section id="test-df-edit-date">
@@ -252,8 +253,8 @@ fn EditingSections() -> impl IntoView {
                 <TimeField<DateTime>
                     value=time_bounds
                     set_value=time_bounds
-                    min_value=time(9, 0, 0, 0)
-                    max_value=time(17, 0, 0, 0)
+                    min_value=TimeBound::TimeOfDay(time(9, 0, 0, 0))
+                    max_value=TimeBound::TimeOfDay(time(17, 0, 0, 0))
                     validation_behavior=ValidationBehavior::Aria
                 >
                     <Label>"Office hours"</Label>
@@ -261,6 +262,22 @@ fn EditingSections() -> impl IntoView {
                     <FieldError />
                 </TimeField<DateTime>>
                 <ValueControls name="time-bounds" value=time_bounds />
+            </section>
+        </Section>
+        <Section name="time-absolute-bounds">
+            <section id="test-df-time-absolute-bounds">
+                <TimeField<DateTime>
+                    value=time_absolute_bounds
+                    set_value=time_absolute_bounds
+                    min_value=TimeBound::Absolute(date(2024, 6, 5).at(9, 0, 0, 0))
+                    max_value=TimeBound::Absolute(date(2024, 6, 7).at(17, 0, 0, 0))
+                    validation_behavior=ValidationBehavior::Aria
+                >
+                    <Label>"Delivery window"</Label>
+                    <Segments />
+                    <FieldError />
+                </TimeField<DateTime>>
+                <ValueControls name="time-absolute-bounds" value=time_absolute_bounds />
             </section>
         </Section>
     }
@@ -417,8 +434,8 @@ fn ValidationSections() -> impl IntoView {
             <FormSection name="time-minmax">
                 <TimeField
                     name="time"
-                    min_value=time(9, 0, 0, 0)
-                    max_value=time(17, 0, 0, 0)
+                    min_value=TimeBound::TimeOfDay(time(9, 0, 0, 0))
+                    max_value=TimeBound::TimeOfDay(time(17, 0, 0, 0))
                     default_value=time(8, 0, 0, 0)
                 >
                     <Label>"Opening time"</Label>
@@ -602,7 +619,8 @@ fn LabellingSections() -> impl IntoView {
 /// 2019-02-03 8:05:10), arabic (`ar-EG`), dst (America/Los_Angeles, 2021-11-07 0:45, the night
 /// the clocks go back), dst-time (an empty zoned time field, placeholder 1:45 that night),
 /// nonexistent (an empty zoned field, placeholder in September 2024), time-bounds (a time field
-/// of dates and times between 9:00 and 17:00). Validation ([`ValidationSections`], each in a form
+/// of dates and times between 9:00 and 17:00 of any day), time-absolute-bounds (a time field of
+/// dates and times between June 5, 2024 9:00 and June 7, 2024 17:00). Validation ([`ValidationSections`], each in a form
 /// `#test-df-<name>-form` with `#test-df-<name>-reset` and `#test-df-<name>-after`): v-required,
 /// v-minmax, v-validate (years before 2022 are invalid), v-server (a server error on submit),
 /// v-custom (a custom message for a missing value), v-aria-minmax, v-aria-validate,

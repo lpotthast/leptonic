@@ -416,7 +416,11 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 <p>
                     "The trait of a "<Link href=routes::doc::TimeField.materialize()>"time field"</Link>"\u{2019}s value: a "
                     <Code inline=true>"civil::Time"</Code>" (edited as a "<Code inline=true>"civil::DateTime"</Code>" on today), "
-                    "or a "<Code inline=true>"civil::DateTime"</Code>" or "<Code inline=true>"Zoned"</Code>" whose time is edited."
+                    "or a "<Code inline=true>"civil::DateTime"</Code>" or "<Code inline=true>"Zoned"</Code>" whose time is edited. "
+                    "Its "<Code inline=true>"Absolute"</Code>" type is what an absolute "
+                    <Link href=format!("{}#timebound", routes::doc::time_field::Hook.materialize())><Code inline=true>"TimeBound"</Code></Link>
+                    " holds: the value type itself for a "<Code inline=true>"civil::DateTime"</Code>" or "<Code inline=true>"Zoned"</Code>
+                    ", none for a "<Code inline=true>"civil::Time"</Code>", which takes only times of day as bounds."
                 </p>
             </Section>
 

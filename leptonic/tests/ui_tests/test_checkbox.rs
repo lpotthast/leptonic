@@ -165,7 +165,7 @@ pub async fn indeterminate_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input)
         .property("indeterminate")
         .await
-        .get_some()
+        .some()
         .is_equal_to("true");
     Ok(())
 }
@@ -354,7 +354,7 @@ pub async fn group(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(dogs_input)
         .property("value")
         .await
-        .get_some()
+        .some()
         .is_equal_to("dogs");
     assert_that!(dogs_input)
         .accessible_description()
@@ -475,7 +475,7 @@ pub async fn group_validation(page: &Page<'_>) -> Result<(), Report> {
     let message = assert_that!(input(&a).await?)
         .property("validationMessage")
         .await
-        .get_some()
+        .some()
         .is_not_blank()
         .actual()
         .clone();
