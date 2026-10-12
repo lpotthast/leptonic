@@ -109,7 +109,7 @@ web-sys = { version = "0.3.106", default-features = false, features = [
 
 [dev-dependencies]
 # The user's checkout, as in leptonic: eventual assertions (unreleased 0.8).
-assertr = { path = "../../../assertr/assertr", default-features = false, features = ["std"] }
+assertr = { version = "0.8.0", default-features = false, features = ["std"] }
 # The user's checkout, as in leptonic: 0.6.0 is unreleased (session reuse, Chrome Headless Shell, failure reports).
 # `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
 # without compiling `aws-lc-rs`.

@@ -18,7 +18,7 @@ anyhow = { version = "1.0.104", default-features = false, features = ["std"] }
 include_dir = { version = "0.7.4", default-features = false }
 
 [dev-dependencies]
-assertr = { version = "0.7.1", default-features = false, features = ["std"] }
+assertr = { version = "0.8.0", default-features = false, features = ["std"] }
 
 [lints]
 workspace = true

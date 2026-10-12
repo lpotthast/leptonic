@@ -55,17 +55,9 @@ dependencies = [
 
 [[package]]
 name = "assertr"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0210ea68c03029bc1fb71fd9aa2b746302abdf5cdaf8ffcd055da4094e44fb63"
-dependencies = [
- "indoc",
- "num-traits",
-]
-
-[[package]]
-name = "assertr"
 version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc35f027e8a97b8ae5ce692f1754480720351129f476758077cf6336af16ec0d"
 dependencies = [
  "borrow-for",
  "http",
@@ -251,7 +243,7 @@ checksum = "51bd8d7b925146b37a30598dfd8d1162c24f45a27fba4a61174e238c48cd5560"
 
 [[package]]
 name = "browser-test"
-version = "0.6.1"
+version = "0.6.0"
 dependencies = [
  "async-trait",
  "backtrace",
@@ -270,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "browser-test-macros"
-version = "0.6.1"
+version = "0.6.0"
 dependencies = [
  "heck",
  "manyhow",
@@ -1510,15 +1502,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indoc"
-version = "2.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79cf5c93f93228cf8efb3ba362535fb11199ac548a09ce117c9b1adc3030d706"
-dependencies = [
- "rustversion",
-]
-
-[[package]]
 name = "interpolator"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1706,7 +1689,7 @@ version = "0.5.0"
 dependencies = [
  "any_spawner",
  "anyhow",
- "assertr 0.8.0",
+ "assertr",
  "atomic_enum",
  "browser-test",
  "cargo_toml",
@@ -1758,7 +1741,7 @@ name = "leptonic-theme"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "assertr 0.7.1",
+ "assertr",
  "include_dir",
 ]
 

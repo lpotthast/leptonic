@@ -71,6 +71,8 @@ dependencies = [
 [[package]]
 name = "assertr"
 version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc35f027e8a97b8ae5ce692f1754480720351129f476758077cf6336af16ec0d"
 dependencies = [
  "borrow-for",
  "num-traits",
@@ -410,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "browser-test"
-version = "0.6.1"
+version = "0.6.0"
 dependencies = [
  "async-trait",
  "backtrace",
@@ -429,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "browser-test-macros"
-version = "0.6.1"
+version = "0.6.0"
 dependencies = [
  "heck",
  "manyhow",

@@ -162,7 +162,7 @@ leptonic-theme = { version = "0.5", path = "../leptonic-theme", default-features
 # executor is installed is dropped instead of panicking (tests without the helper).
 any_spawner = { version = "0.3.0", default-features = false, features = ["tracing"] }
 # The user's checkout: eventual assertions (`eventually`, `consistently`, `Patience`; unreleased 0.8).
-assertr = { path = "../../assertr/assertr", default-features = false, features = ["std", "num", "thirtyfour-cdp"] }
+assertr = { version = "0.8.0", default-features = false, features = ["std", "num", "thirtyfour-cdp"] }
 # `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
 # without compiling `aws-lc-rs`.
 browser-test = { path = "../../browser-test/browser-test", default-features = false, features = ["rustls-no-provider"] }
