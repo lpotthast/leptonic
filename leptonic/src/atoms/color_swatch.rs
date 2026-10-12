@@ -30,7 +30,7 @@ pub fn ColorSwatch(
     /// Added to the color's name.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
@@ -52,7 +52,7 @@ pub fn ColorSwatch(
     let (attrs, swatch_styles) = use_color_swatch(UseColorSwatchInput {
         color_name,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         color,
         id: None,
     })

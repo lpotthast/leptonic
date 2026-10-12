@@ -222,8 +222,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of other elements labelling the select."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The id(s) of elements describing the select."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id(s) of other elements labelling the select."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The id(s) of elements describing the select."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the list keyboard navigation used by type-ahead and the arrow keys on the trigger."
                         </ApiRow>
@@ -292,8 +292,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 is_required: false.into(),
                                 has_label: true.into(),
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
                                 keyboard_delegate: None,
                                 on_focus: None,
                                 on_blur: None,

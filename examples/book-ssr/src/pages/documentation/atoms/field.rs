@@ -205,7 +205,6 @@ pub fn PageAtomField() -> impl IntoView {
 
                 <Section title="LabelContext">
                     <ApiTable kind=ApiKind::Fields of="LabelContext">
-                        <ApiRow name="props" ty="UseLabelProps">"The hook\u{2019}s "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="element_type" ty="LabelElementType">
                             <Code inline=true>"Label"</Code>" or "<Code inline=true>"Span"</Code>"."
                         </ApiRow>

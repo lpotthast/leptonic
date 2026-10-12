@@ -70,8 +70,8 @@ pub fn SwitchField(
     #[prop(into, optional)]
     id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
@@ -153,13 +153,19 @@ pub fn SwitchButton(
     let classes = with_default_class("leptonic-SwitchButton", classes);
     let Some(ctx) = use_context::<SwitchButtonContext>() else {
         dev_warn!("a <SwitchButton> belongs in a <SwitchField>");
-        return ().into_any();
+        return None;
     };
     let Some(switch) = ctx.switch.try_update_value(Option::take).flatten() else {
         dev_warn!("a <SwitchField> has one <SwitchButton>");
-        return ().into_any();
+        return None;
     };
-    switch_button(switch, ctx.is_required, classes, styles, children).into_any()
+    Some(switch_button(
+        switch,
+        ctx.is_required,
+        classes,
+        styles,
+        children,
+    ))
 }
 
 /// What a [`SwitchField`] hands its [`SwitchButton`].
@@ -187,8 +193,8 @@ struct SwitchSetup {
     form: Option<String>,
     id: Option<String>,
     aria_label: MaybeProp<String>,
-    aria_labelledby: Option<String>,
-    aria_describedby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
+    aria_describedby: MaybeProp<String>,
     auto_focus: bool,
     on_focus_change: Option<Callback<bool>>,
 }
@@ -236,8 +242,8 @@ fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
             form,
             value: form_value,
             aria_label,
-            aria_labelledby,
-            aria_describedby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
             auto_focus,
             on_focus_change,
             ..ToggleOptions::default()

@@ -45,9 +45,9 @@ pub struct UseTabPanelInput {
     /// Names the panel, next to its tab (the panel then labels itself too).
     pub aria_label: MaybeProp<String>,
     /// The ids of elements describing the panel.
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     /// The id of an element with details about the panel.
-    pub aria_details: Option<String>,
+    pub aria_details: Signal<Option<String>>,
 }
 
 /// Return value of [`use_tab_panel`].
@@ -68,8 +68,8 @@ pub struct UseTabPanelProps {
     pub aria_labelledby: Signal<Option<String>>,
     /// The panel is a tab stop unless it contains tabbable elements.
     pub tabindex: Signal<Option<i32>>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     pub tabbable_child: UseHasTabbableChildProps,
 }
 
@@ -79,8 +79,8 @@ pub type UseTabPanelAttrs = (
     Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::Tabindex, Signal<Option<i32>>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaDetails, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaDetails, Signal<Option<String>>>,
     UseHasTabbableChildAttrs,
 );
 

@@ -39,7 +39,7 @@ pub fn PageUseTag() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the tag group without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling and describing elements."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Further labelling and describing elements."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the horizontal "
                             <Link href=format!("{}#use-list-keyboard-delegate", routes::doc::CollectionState.materialize())>"list keyboard delegate"</Link>"."
@@ -100,8 +100,8 @@ pub fn PageUseTag() -> impl IntoView {
                                 id: None,
                                 has_label: true.into(),
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
                                 keyboard_delegate: None,
                                 on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
                                     tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));

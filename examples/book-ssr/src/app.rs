@@ -325,7 +325,7 @@ fn AppBar(children: Children) -> impl IntoView {
         element,
         role: LandmarkRole::Banner,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         focus: None,
     });
 
@@ -476,7 +476,7 @@ pub fn MainLandmark(class: &'static str, children: Children) -> impl IntoView {
         element,
         role: LandmarkRole::Main,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         focus: None,
     });
 
@@ -500,7 +500,7 @@ pub fn NavLandmark(
         element,
         role: LandmarkRole::Navigation,
         aria_label: label.into(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         focus: None,
     });
 

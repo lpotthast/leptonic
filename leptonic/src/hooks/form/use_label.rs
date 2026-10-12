@@ -49,7 +49,7 @@ pub struct UseLabelInput {
     /// field's name.
     pub aria_label: MaybeProp<String>,
     /// Further elements labelling the field.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 /// Return value of [`use_label`].
@@ -62,7 +62,7 @@ pub struct UseLabelReturn {
 }
 
 /// Props for a label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLabelProps {
     pub id: String,
     /// The field's id, for `<label>` elements.
@@ -80,7 +80,7 @@ impl IntoAttrs for UseLabelProps {
 }
 
 /// Props for the labelled field element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLabelFieldProps {
     pub id: String,
     pub aria_label: MaybeProp<String>,
@@ -132,9 +132,11 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
     // Checked once mounted: an atom knows only then whether its `Label` rendered.
     #[cfg(debug_assertions)]
     {
-        let has_aria_labelledby = aria_labelledby.is_some();
         Effect::new(move || {
-            if !has_label.get() && !has_aria_labelledby && aria_label.with(Option::is_none) {
+            if !has_label.get()
+                && aria_labelledby.with(Option::is_none)
+                && aria_label.with(Option::is_none)
+            {
                 crate::utils::dev_warn!(
                     "If you do not provide a visible label, you must specify an aria-label or \
                      aria-labelledby attribute for accessibility"
@@ -149,7 +151,7 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
             if has_label.get() {
                 labelled_by.push(&label_id);
             }
-            labelled_by.extend(aria_labelledby.as_deref());
+            labelled_by.extend(aria_labelledby.get().as_deref());
             // With an `aria-label` next to other labels, the field labels itself too (first), so
             // that both make up its name.
             labels(&id, aria_label.get(), labelled_by.into_value().as_deref()).aria_labelledby
@@ -198,7 +200,7 @@ mod tests {
             let label = use_label(UseLabelInput {
                 label_id: Some("l".to_owned()),
                 has_label: Signal::stored(true),
-                aria_labelledby: Some("other".to_owned()),
+                aria_labelledby: Signal::stored(Some("other".to_owned())),
                 ..UseLabelInput::default()
             });
             assert_that!(label.field_props.aria_labelledby.get_untracked())
@@ -212,7 +214,7 @@ mod tests {
             let label = use_label(UseLabelInput {
                 id: Some("f".to_owned()),
                 aria_label: "Name".into(),
-                aria_labelledby: Some("other".to_owned()),
+                aria_labelledby: Signal::stored(Some("other".to_owned())),
                 ..UseLabelInput::default()
             });
             assert_that!(label.field_props.aria_labelledby.get_untracked())
@@ -230,7 +232,7 @@ mod tests {
                 label_id: Some("l".to_owned()),
                 has_label: Signal::stored(true),
                 aria_label: "aria".into(),
-                aria_labelledby: Some("foo f".to_owned()),
+                aria_labelledby: Signal::stored(Some("foo f".to_owned())),
                 ..UseLabelInput::default()
             });
             assert_that!(label.field_props.aria_labelledby.get_untracked())

@@ -71,7 +71,8 @@ pub struct SelectContext {
 #[derive(Clone)]
 struct Parts {
     trigger: crate::hooks::button::UseButtonInput,
-    trigger_props: UseSelectTriggerProps,
+    /// The trigger's attributes from `use_select`.
+    trigger_props: <UseSelectTriggerProps as IntoAttrs>::Attrs,
     value_id: String,
     hidden_select: crate::hooks::select::UseHiddenSelectInput,
 }
@@ -142,7 +143,7 @@ pub fn Select<S: SelectedValues>(
     /// Labels the select when there is no `Label` inside.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] is_invalid: Signal<bool>,
     #[prop(optional)] validate: Option<ValidateFn<S>>,
     /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
@@ -189,7 +190,7 @@ pub fn Select<S: SelectedValues>(
     });
 
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseSelectReturn {
         label_props,
@@ -207,12 +208,12 @@ pub fn Select<S: SelectedValues>(
         is_required,
         has_label,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         on_focus_change,
         form,
         state,
         id: None,
-        aria_describedby: None,
+        aria_describedby: Signal::default(),
         keyboard_delegate: None,
         on_focus: None,
         on_blur: None,
@@ -225,7 +226,7 @@ pub fn Select<S: SelectedValues>(
         trigger_element: CapturedElement::new(),
         parts: StoredValue::new(Parts {
             trigger,
-            trigger_props,
+            trigger_props: trigger_props.into_attrs(),
             value_id: value_props.id,
             hidden_select,
         }),
@@ -309,7 +310,7 @@ pub fn SelectTrigger(
     Some(view! {
         <button
             {..attrs}
-            {..trigger_props.into_attrs()}
+            {..trigger_props}
             {..ctx.trigger_element.attr()}
             class=classes
             style=styles
@@ -511,7 +512,7 @@ pub fn HiddenSelect(
         label: MaybeProp::derive(move || label.get().or_else(|| default_label.get())),
         ..input
     });
-    let select_props = StoredValue::new(select_props);
+    let select_attrs = StoredValue::new(select_props.into_attrs());
     let input_props = StoredValue::new(input_props);
     let first_input_capture = StoredValue::new(first_input_capture);
 
@@ -527,16 +528,28 @@ pub fn HiddenSelect(
                                 .into_iter()
                                 .enumerate()
                                 .map(|(i, value)| {
-                                    let p = input_props.get_value();
+                                    // One input per value, from the hook's template.
+                                    let (r#type, style, auto_complete, name, form, disabled, required) =
+                                        input_props.with_value(|p| {
+                                            (
+                                                p.r#type,
+                                                p.style,
+                                                p.auto_complete.clone(),
+                                                p.name.clone(),
+                                                p.form.clone(),
+                                                p.disabled,
+                                                p.required,
+                                            )
+                                        });
                                     let input = view! {
                                         <input
-                                            type=p.r#type
-                                            style=p.style
-                                            autocomplete=p.auto_complete
-                                            name=p.name
-                                            form=p.form
-                                            disabled=p.disabled
-                                            required=move || i == 0 && p.required.get()
+                                            type=r#type
+                                            style=style
+                                            autocomplete=auto_complete
+                                            name=name
+                                            form=form
+                                            disabled=disabled
+                                            required=move || i == 0 && required.get()
                                             value=value
                                         />
                                     };
@@ -556,7 +569,7 @@ pub fn HiddenSelect(
             >
                 <label>
                     {move || label.get()}
-                    <select {..select_props.get_value().into_attrs()}>
+                    <select {..select_attrs.get_value()}>
                         <For
                             each=move || options.get()
                             key=|option| option.key.clone()

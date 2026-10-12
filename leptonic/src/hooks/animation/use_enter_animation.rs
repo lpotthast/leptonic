@@ -45,7 +45,7 @@ pub struct UseEnterAnimationInput {
 }
 
 /// Return value of [`use_enter_animation`].
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseEnterAnimationReturn {
     /// `true` while the element is ready and its enter animations run (for `data-entering`).
     pub is_entering: Signal<bool>,

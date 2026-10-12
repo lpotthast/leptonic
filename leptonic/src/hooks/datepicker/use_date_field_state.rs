@@ -9,12 +9,12 @@ use super::{
     format::{FormatOptions, Formatters, SegmentNumbers, resolve_hour_cycle, segments},
     incomplete_date::IncompleteDate,
     types::{
-        DateSegment, DateSegmentType, DateValue, Era, Granularity, HourCycle, MaxGranularity,
+        DateSegment, DateSegmentType, DateValue, Era, Granularity, MaxGranularity,
         ResolvedHourCycle,
     },
 };
 use crate::{
-    ValueBinding,
+    HourCycle, ValueBinding,
     hooks::form::{
         FormValidationState, UseFormValidationStateInput, VALID_VALIDITY_STATE, ValidateFn,
         ValidationBehavior, ValidationResult, ValidityStateSnapshot, use_form_validation_state,

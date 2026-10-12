@@ -55,8 +55,8 @@ pub struct UseProgressBarInput<T: NumberValue> {
     pub has_label: Signal<bool>,
     /// Names the progress bar when there is no visible label.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
 }
 
 impl<T: NumberValue> Default for UseProgressBarInput<T> {
@@ -74,8 +74,8 @@ impl<T: NumberValue> Default for UseProgressBarInput<T> {
             id: None,
             has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
+            aria_labelledby: Signal::default(),
+            aria_describedby: Signal::default(),
         }
     }
 }
@@ -98,7 +98,7 @@ pub struct UseProgressBarReturn {
 #[derive(Debug)]
 pub struct UseProgressBarProps {
     pub field_props: crate::hooks::form::UseLabelFieldProps,
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     pub role: AriaRole,
     pub aria_valuenow: Signal<Option<String>>,
     pub aria_valuemin: Signal<String>,
@@ -108,7 +108,7 @@ pub struct UseProgressBarProps {
 
 pub type UseProgressBarAttrs = (
     UseLabelFieldAttrs,
-    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaValuenow, Signal<Option<String>>>,
     Attr<attr::AriaValuemin, Signal<String>>,

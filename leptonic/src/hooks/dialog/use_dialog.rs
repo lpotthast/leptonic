@@ -51,10 +51,10 @@ pub struct UseDialogInput {
     /// Names the dialog when it has no title element. Replaces the title as its name.
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the dialog, instead of its title element.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// The ids of the elements describing the dialog. Default for alert dialogs: their content
     /// element.
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     /// Whether the dialog is still animating in; it is focused once this is `false`.
     pub is_entering: Signal<bool>,
     /// The ids of the elements naming the dialog when it has neither a title element, nor
@@ -157,7 +157,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     // The title names the dialog, unless `aria_label` does.
     let title_id = title.referenced_id;
     let aria_labelledby = Signal::derive(move || {
-        aria_labelledby.clone().or_else(|| {
+        aria_labelledby.get().or_else(|| {
             aria_label
                 .read()
                 .is_none()
@@ -168,7 +168,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     // An alert dialog is described by its content.
     let content_id = content.referenced_id;
     let aria_describedby = Signal::derive(move || {
-        aria_describedby.clone().or_else(|| {
+        aria_describedby.get().or_else(|| {
             (dialog_role == DialogRole::AlertDialog)
                 .then(|| content_id.get())
                 .flatten()

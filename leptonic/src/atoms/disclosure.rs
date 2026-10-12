@@ -6,7 +6,7 @@ use leptos_classes::Classes;
 
 use super::press::{PressResponder, PressResponderProps};
 use crate::{
-    CapturedElement, IntoAttrs, Out, ValueBinding,
+    CapturedElement, ElementCaptureAttr, IntoAttrs, Out, ValueBinding,
     hooks::{
         collections::Key,
         disclosure::{
@@ -19,7 +19,10 @@ use crate::{
         interactions::{PressEvent, PressResponderTrigger},
     },
     utils::{
-        aria::AriaRole, data_attributes::flag, default_class::with_default_class, id::use_id,
+        aria::{AriaHidden, AriaRole},
+        data_attributes::flag,
+        default_class::with_default_class,
+        id::use_id,
         styles::Styles,
     },
 };
@@ -39,11 +42,21 @@ use crate::{
 //
 // =============================================================================
 
+/// The parts of the hook's [`UseDisclosurePanelProps`] each rendering of the panel shares.
+#[derive(Clone)]
+struct PanelParts {
+    id: String,
+    aria_labelledby: Signal<Option<String>>,
+    aria_hidden: Signal<Option<AriaHidden>>,
+    element_capture: ElementCaptureAttr,
+}
+
 /// Context from a [`Disclosure`] to its [`DisclosurePanel`].
 #[derive(Clone)]
 struct DisclosureContext {
-    /// Cloned for each rendering of the panel.
-    panel_props: StoredValue<UseDisclosurePanelProps>,
+    /// The panel's props but its role and initial collapsed state, which a panel sets each time it
+    /// renders (it may render again, e.g. inside a `Show`).
+    panel: StoredValue<PanelParts>,
     state: DisclosureState,
     trigger: TriggerPress,
 }
@@ -202,7 +215,12 @@ pub fn Disclosure(
     );
     let is_expanded = disclosure_state.is_expanded;
     let context = DisclosureContext {
-        panel_props: StoredValue::new(panel_props.labelled_by(labelled_by)),
+        panel: StoredValue::new(PanelParts {
+            id: panel_props.id,
+            aria_labelledby: labelled_by,
+            aria_hidden: panel_props.aria_hidden,
+            element_capture: panel_props.element_capture,
+        }),
         state: disclosure_state,
         trigger: TriggerPress {
             on_press: button.on_press,
@@ -291,14 +309,23 @@ pub fn DisclosurePanel(
     let classes = with_default_class("leptonic-DisclosurePanel", classes);
     let Some(context) = use_context::<DisclosureContext>() else {
         crate::utils::dev_warn!("A <DisclosurePanel> must be inside a <Disclosure>.");
-        return ().into_any();
+        return None;
     };
+    let PanelParts {
+        id,
+        aria_labelledby,
+        aria_hidden,
+        element_capture,
+    } = context.panel.get_value();
     let attrs = UseDisclosurePanelProps {
+        id,
+        role: Signal::stored(role.as_aria_role()),
+        aria_labelledby,
+        aria_hidden,
         // Collapsed as rendered now (the panel may render again, e.g. inside a `Show`).
         hidden_until_found: !context.state.is_expanded.get_untracked(),
-        ..context.panel_props.get_value()
+        element_capture,
     }
-    .with_role(Signal::stored(role.as_aria_role()))
     .into_attrs();
     let focus_ring = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
@@ -308,7 +335,7 @@ pub fn DisclosurePanel(
         focus_ring.props.on_focusin.into_on(ev::focusin),
         focus_ring.props.on_focusout.into_on(ev::focusout),
     );
-    view! {
+    Some(view! {
         <div
             {..attrs}
             class=classes
@@ -318,8 +345,7 @@ pub fn DisclosurePanel(
         >
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// The role of a [`DisclosurePanel`].

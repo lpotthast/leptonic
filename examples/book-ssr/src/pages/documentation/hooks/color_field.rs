@@ -42,8 +42,8 @@ pub fn PageUseColorField() -> impl IntoView {
                             has_label: true.into(),
                             id: None,
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
                             is_disabled: false.into(),
                             is_read_only: false.into(),
                             is_required: false.into(),
@@ -103,8 +103,8 @@ pub fn PageUseColorField() -> impl IntoView {
                             id: None,
                             has_label: false.into(),
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
                             is_required: false.into(),
                             placeholder: MaybeProp::default(),
                             auto_focus: false,
@@ -242,8 +242,8 @@ pub fn PageUseColorField() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id; generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the input when it has no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the input."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the input."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the input."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the input."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the field is disabled."</ApiRow>
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Whether the field is read-only: focusable, but neither typing nor stepping changes it."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"Whether a color is required."</ApiRow>
@@ -331,7 +331,7 @@ pub fn PageUseColorField() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>">
                             "Names the field. Without any label, the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="id, has_label, aria_labelledby, aria_describedby, is_required, placeholder, auto_focus, is_wheel_disabled, increment_aria_label, decrement_aria_label, on_focus, on_blur, on_focus_change, on_key_down, on_key_up" ty="Option<String>, Signal<bool>, Option<String>, Option<String>, Signal<bool>, MaybeProp<String>, bool, bool, MaybeProp<String>, MaybeProp<String>, Option<Callback<FocusEvent>>, Option<Callback<FocusEvent>>, Option<Callback<bool>>, Option<Callback<KeyboardEventWrapper>>, Option<Callback<KeyboardEventWrapper>>">
+                        <ApiRow name="id, has_label, aria_labelledby, aria_describedby, is_required, placeholder, auto_focus, is_wheel_disabled, increment_aria_label, decrement_aria_label, on_focus, on_blur, on_focus_change, on_key_down, on_key_up" ty="Option<String>, Signal<bool>, Signal<Option<String>>, Signal<Option<String>>, Signal<bool>, MaybeProp<String>, bool, bool, MaybeProp<String>, MaybeProp<String>, Option<Callback<FocusEvent>>, Option<Callback<FocusEvent>>, Option<Callback<bool>>, Option<Callback<KeyboardEventWrapper>>, Option<Callback<KeyboardEventWrapper>>">
                             "The number field\u{2019}s settings, as in "<Code inline=true>"use_number_field"</Code>". Required."
                         </ApiRow>
                     </ApiTable>

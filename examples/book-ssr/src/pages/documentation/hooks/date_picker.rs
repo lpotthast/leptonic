@@ -160,7 +160,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker without a label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">
                             "Disable the button; "<Code inline=true>"is_disabled"</Code>" also sets "
                             <Code inline=true>"aria-disabled"</Code>" on the group."

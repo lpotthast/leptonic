@@ -8,7 +8,7 @@
 //
 // The list box of a `SelectPopover` or `ComboBoxPopover` is styled as the starter's dropdown list
 // box (`DropdownListBox`, `DropdownItem`) instead. Markup of its items: a check mark while the item
-// is selected (`ListBoxItemCtx::is_selected`), then the label:
+// is selected (`ListBoxItemContext::is_selected`), then the label:
 //
 //   <svg class="lucide-check" ..>..</svg>      // while selected
 //   <ListBoxItemLabel>"Apple"</ListBoxItemLabel>

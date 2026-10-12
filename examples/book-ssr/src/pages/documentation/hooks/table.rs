@@ -417,7 +417,7 @@ fn TableStateSections() -> impl IntoView {
                             element: CapturedElement::new(),
                             id: None,
                             aria_label: "People".into(),
-                            aria_labelledby: None,
+                            aria_labelledby: Signal::default(),
                             keyboard_delegate: None,
                             options: CollectionOptions::default(),
                             keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,

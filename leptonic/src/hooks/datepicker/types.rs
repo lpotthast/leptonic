@@ -85,9 +85,6 @@ impl MaxGranularity {
     }
 }
 
-/// Whether times show 12 or 24 hours (react-aria's `hourCycle: 12 | 24`). Default: the locale's.
-pub use crate::utils::date_time_formatter::HourCycle;
-
 /// How hours are numbered (`Intl`'s resolved `hourCycle`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ResolvedHourCycle {

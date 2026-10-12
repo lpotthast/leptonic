@@ -152,7 +152,7 @@ impl IntoAttrs for UseHiddenSelectContainerProps {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHiddenSelectSelectProps {
     pub tabindex: i32,
     pub auto_complete: Option<String>,
@@ -199,7 +199,7 @@ impl IntoAttrs for UseHiddenSelectSelectProps {
 
 /// Props for each hidden input (large collections). With native validation, the first input
 /// is a `type="text"` input hidden with `display: none`, so `required` works.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHiddenSelectInputProps {
     pub r#type: &'static str,
     pub style: Option<&'static str>,

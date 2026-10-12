@@ -162,7 +162,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when the picker is rendered."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
                             "Called when the focus enters or leaves the picker; moving into the popover doesn\u{2019}t leave it."
                         </ApiRow>
@@ -219,7 +219,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the start\u{2019}s first segment when rendered."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the picker."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the picker element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The label, the group, the popover and the other parts. Required."</ApiRow>

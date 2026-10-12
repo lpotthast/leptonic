@@ -187,6 +187,9 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     } = menu;
     let selection = state.selection;
 
+    if !untrack(|| state.collection.with(|c| c.contains_key(&key))) {
+        crate::utils::dev_warn!("use_menu_item: the key {key:?} is not in the menu's collection");
+    }
     let aria_label = use_node_aria_label(state.collection, key.clone());
 
     let label = use_slot("label");
@@ -334,15 +337,16 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     // A trigger's arrow keys open and close its submenu.
     let keyboard = match &submenu_trigger {
         Some(trigger) => {
-            let (item, trigger) = (keyboard, trigger.keyboard.clone());
+            let (trigger_keydown, trigger_keyup) =
+                (trigger.on_keydown.clone(), trigger.on_keyup.clone());
             UseKeyboardProps {
                 on_keydown: EventHandler::new(move |e: KeyboardEvent| {
-                    item.on_keydown.call(e.clone());
-                    trigger.on_keydown.call(e);
+                    keyboard.on_keydown.call(e.clone());
+                    trigger_keydown.call(e);
                 }),
                 on_keyup: EventHandler::new(move |e: KeyboardEvent| {
-                    item.on_keyup.call(e.clone());
-                    trigger.on_keyup.call(e);
+                    keyboard.on_keyup.call(e.clone());
+                    trigger_keyup.call(e);
                 }),
             }
         }

@@ -147,12 +147,7 @@ pub async fn replace_selection_by_press(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     selection.wait_for_inner_text("Cat,Dog,Kangaroo").await?;
-    page.low_level()
-        .driver()
-        .action_chain()
-        .double_click_element(&dog)
-        .perform()
-        .await?;
+    dog.double_click().await?;
     page.element("#lbf-replace-actions")
         .await?
         .wait_for_inner_text("Dog")

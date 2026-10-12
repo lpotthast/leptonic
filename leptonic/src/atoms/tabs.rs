@@ -145,7 +145,7 @@ pub fn Tabs(
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
@@ -160,7 +160,6 @@ pub fn Tabs(
                     style=styles
                     data-orientation=data_orientation
                     data-focused=flag(is_focused)
-                    data-focus-visible=flag(is_focus_visible)
                     data-disabled=flag(is_disabled)
                 >
                     {children()}
@@ -189,7 +188,7 @@ fn tabs_context(part: &str) -> Option<(TabListState, TabsConfig)> {
 #[component]
 pub fn TabList(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -202,7 +201,7 @@ pub fn TabList(
         orientation: config.orientation,
         keyboard_activation: config.keyboard_activation,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         state,
         element: CapturedElement::new(),
     });
@@ -300,7 +299,7 @@ pub fn Tab(
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput::default());
     let hover = use_hover(UseHoverInput {
         is_disabled,
@@ -318,7 +317,6 @@ pub fn Tab(
             style=styles
             data-selected=flag(is_selected)
             data-focused=flag(is_focused)
-            data-focus-visible=flag(is_focus_visible)
             data-hovered=flag(hover.is_hovered)
             data-disabled=flag(is_disabled)
             data-pressed=flag(is_pressed)
@@ -351,8 +349,8 @@ pub fn TabPanel(
     /// Names the panel, next to its tab.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
-    #[prop(into, optional)] aria_details: Option<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
+    #[prop(into, optional)] aria_details: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
@@ -383,8 +381,8 @@ pub fn TabPanel(
             state,
             key: Some(key.clone()),
             aria_label,
-            aria_describedby: aria_describedby.clone(),
-            aria_details: aria_details.clone(),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_details: crate::utils::prop_signal(aria_details),
         });
         let focus_ring = use_focus_ring(UseFocusRingInput::default());
         let UseEnterAnimationReturn {
@@ -429,7 +427,6 @@ pub fn TabPanel(
             props.tabbable_child.into_attrs(),
         );
         let is_focused = focus_ring.is_focused;
-        let is_focus_visible = focus_ring.is_focus_visible;
         let inert = move || (!is_selected.get()).then_some("");
         view! {
             <div
@@ -441,7 +438,6 @@ pub fn TabPanel(
                 inert=inert
                 data-inert=flag(Signal::derive(move || !is_selected.get()))
                 data-focused=flag(is_focused)
-                data-focus-visible=flag(is_focus_visible)
                 data-entering=flag(is_entering)
                 data-exiting=flag(is_exiting)
             >

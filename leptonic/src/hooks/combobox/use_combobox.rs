@@ -98,8 +98,8 @@ pub struct UseComboBoxInput {
     /// Whether a visible label is rendered.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub placeholder: MaybeProp<String>,
     /// What the form submits (`Text` when the state allows custom values).
     pub form_value: ComboBoxFormValue,
@@ -143,7 +143,7 @@ impl std::fmt::Debug for UseComboBoxReturn {
 }
 
 /// Combo box props for the input, in addition to the text field's.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseComboBoxInputProps {
     pub role: AriaRole,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
@@ -429,7 +429,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         label_id: Some(label_id.clone()),
         has_label,
         aria_label,
-        aria_labelledby: aria_labelledby.clone(),
+        aria_labelledby,
         aria_describedby,
         aria_activedescendant,
         aria_autocomplete: Some(AriaAutocomplete::List),
@@ -455,7 +455,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         })),
         shortcuts: Some(shortcuts),
         state: text_field_state,
-        element: TextFieldElement::Input,
+        element: Signal::stored(TextFieldElement::Input),
         input_type: Signal::stored(InputType::Text),
         // The combo box validates its value and text together (react-aria:
         // `privateValidationStateProp`): the input shows the state's validation, and in native
@@ -472,7 +472,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         enter_key_hint: None,
         auto_focus: false,
         exclude_from_tab_order: false,
-        aria_errormessage: None,
+        aria_errormessage: Signal::default(),
         aria_haspopup: None,
         on_focus_change: None,
         on_key_up: None,
@@ -485,7 +485,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         let label_id = label_id.clone();
         Signal::derive(move || {
             aria_labelledby
-                .clone()
+                .get()
                 .or_else(|| has_label.get().then(|| label_id.clone()))
         })
     };

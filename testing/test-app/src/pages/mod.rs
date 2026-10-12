@@ -518,6 +518,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "orphan-parts",
+        title: "Atom parts without a parent",
+        view: || view! { <atoms::orphan_parts::PageAtomOrphanParts /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "select",
         title: "Select",
         view: || view! { <atoms::select::PageAtomSelect /> }.into_any(),

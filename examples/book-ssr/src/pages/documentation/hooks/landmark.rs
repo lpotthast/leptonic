@@ -29,7 +29,7 @@ pub fn PageUseLandmark() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "Names the landmark. A page with several landmarks of one role must name each differently."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id of a visible heading naming the landmark."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id of a visible heading naming the landmark."</ApiRow>
                     <ApiRow name="focus" ty="Option<Callback<LandmarkDirection>>" default="None">
                         "How the landmark takes the focus when navigated to and nothing in it had the focus before, e.g. "
                         "focusing its first or last item depending on the direction. By default, the landmark element "
@@ -65,7 +65,7 @@ pub fn PageUseLandmark() -> impl IntoView {
                             element,
                             role: LandmarkRole::Region,
                             aria_label: "Filters".into(),
-                            aria_labelledby: None,
+                            aria_labelledby: Signal::default(),
                             focus: None,
                         });
 

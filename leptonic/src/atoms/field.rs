@@ -59,8 +59,8 @@ pub type FieldErrorMessage = Arc<dyn Fn(&ValidationResult) -> Option<String> + S
 /// the label is rendered.
 #[derive(Debug, Clone)]
 pub struct LabelContext {
-    /// `label_props` of the field's hook.
-    pub props: UseLabelProps,
+    /// The attributes of the field hook's `label_props`.
+    attrs: <UseLabelProps as IntoAttrs>::Attrs,
     /// The element the label is rendered as (`Span` for fields a `<label>` can't label: groups,
     /// select triggers).
     pub element_type: LabelElementType,
@@ -77,7 +77,7 @@ impl LabelContext {
     /// A `<label>` labelling its field natively.
     pub fn label(props: UseLabelProps) -> Self {
         Self {
-            props,
+            attrs: props.into_attrs(),
             element_type: LabelElementType::Label,
             on_click: EventHandler::empty(),
             element: CapturedElement::new(),
@@ -88,7 +88,7 @@ impl LabelContext {
     /// A `<span>`, for fields a `<label>` can't label.
     pub fn span(props: UseLabelProps) -> Self {
         Self {
-            props,
+            attrs: props.into_attrs(),
             element_type: LabelElementType::Span,
             on_click: EventHandler::empty(),
             element: CapturedElement::new(),
@@ -132,8 +132,9 @@ pub(crate) struct LabelPresence {
 }
 
 impl LabelPresence {
-    pub(crate) fn new(aria_label: MaybeProp<String>, aria_labelledby: Option<&String>) -> Self {
-        let guess = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    pub(crate) fn new(aria_label: MaybeProp<String>, aria_labelledby: MaybeProp<String>) -> Self {
+        let guess = aria_label.with_untracked(Option::is_none)
+            && aria_labelledby.with_untracked(Option::is_none);
         let element = CapturedElement::new();
         let mounted = RwSignal::new(false);
         // Effects run on the client only, after the children (and the label) are rendered.
@@ -180,24 +181,24 @@ pub fn Label(
     };
     match context {
         Some(LabelContext {
-            props,
+            attrs,
             element_type: LabelElementType::Span,
             on_click,
             element,
             ..
         }) => EitherOf3::A(view! {
-            <span {..props.into_attrs()} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
+            <span {..attrs} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
                 {children()}
             </span>
         }),
         Some(LabelContext {
-            props,
+            attrs,
             element_type: LabelElementType::Label,
             on_click,
             element,
             ..
         }) => EitherOf3::B(view! {
-            <label {..props.into_attrs()} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
+            <label {..attrs} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
                 {children()}
             </label>
         }),

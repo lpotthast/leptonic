@@ -194,7 +194,7 @@ pub fn Tooltip(
     }) = use_context::<TooltipTriggerContext>()
     else {
         crate::utils::dev_warn!("A <Tooltip> must be inside a <TooltipTrigger>.");
-        return ().into_any();
+        return None;
     };
     let is_open = state.overlay.is_open;
 
@@ -255,7 +255,7 @@ pub fn Tooltip(
     let skip_animation = state.should_skip_animation;
     let is_exiting = Signal::derive(move || !skip_animation.get() && exit_animation.get());
 
-    view! {
+    Some(view! {
         // No portal container while closed: a modal would make it inert.
         <Show when=move || is_open.get() || is_exiting.get()>
             {
@@ -298,6 +298,5 @@ pub fn Tooltip(
                 }
             }
         </Show>
-    }
-    .into_any()
+    })
 }

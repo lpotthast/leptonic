@@ -192,7 +192,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                             "Called when the popover opens (with what opened it: typing, focus or the button and arrow keys) "
                             "or closes."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
                             "Labels the combobox when it has no "<Code inline=true>"Label"</Code>
                             ". Without them, a "<Code inline=true>"Label"</Code>" is expected."
                         </ApiRow>

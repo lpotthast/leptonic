@@ -64,9 +64,11 @@ visible.
 Implement `Default` only when every field has a meaningful default ("everything off": optional callbacks as
 `Option<Callback<_>>`, flags as `Signal<bool>` defaulting to `false`). Never add placeholder defaults that build an
 invalid configuration (an empty state, a never-attached element).
-`*Props` and `*Return` types should derive `Debug` but **not** `Clone`. Props are designed to bind a hook to exactly
-one DOM element; making them non-Clone enforces single-use at compile time. Only `into_attrs(self)` (consuming) is
-provided for conversion.
+`*Props` and `*Return` types derive `Debug` but **not** `Clone` (enforced since 2026-10-11, the user's decision).
+Props are designed to bind a hook to exactly one DOM element; making them non-Clone enforces single-use at compile
+time. Only `into_attrs(self)` (consuming) is provided for conversion. The one exception: a `*Return` holding nothing
+but signals (`UseFocusVisibleReturn`) may be `Copy`. Structs that pass a hook's handlers to another hook (a submenu
+trigger's keyboard handling) carry `EventHandler`s, not the single-use `*Props`.
 
 (Use `Signal<T>` for reactive values (accepts constants via `.into()`, derived signals, or existing signals for `*Input`
 fields.)
@@ -363,7 +365,9 @@ This enforces that each hook's props are spread onto exactly one DOM element —
 3. **Duplicate ARIA IDs** — Both elements get identical IDs, violating HTML uniqueness requirements.
 
 When you need attrs inside a reactive closure (e.g., `<Show>`), convert to attrs **before** the closure
-and clone the attrs (which are Clone):
+and clone the attrs (which are Clone). Atoms do the same for a part that may render again: their context keeps the
+part's attributes (`InputContext`, `LabelContext`, a toast's content), or the props' reusable fields when a part sets
+others per render (`DisclosurePanel`'s initial collapsed state):
 
 ```rust
 let hover = use_hover(input);
@@ -468,8 +472,8 @@ Attr<attr::Role, Signal<AriaRole> >,
   `AriaSelected`, etc.
 - Tristate: `AriaChecked`, `AriaPressed` (`True`, `False`, `Mixed`)
 - Multi-value enums: `AriaOrientation`, `AriaSort`, `AriaAutocomplete`, `AriaHasPopup`, `AriaInvalid`, etc.
-- Reference IDs: `Option<String>` (`Signal<Option<String>>`) for `aria-labelledby`, `aria-describedby`, etc.; lists
-  joined with `IdRefs` (see "Independent Hooks on One Element").
+- Reference IDs: `Signal<Option<String>>` for `aria-labelledby`, `aria-describedby`, etc. (reactive, C2; atoms take
+  `MaybeProp<String>`); lists joined with `IdRefs` (see "Independent Hooks on One Element").
 
 **Design principle:** No `Undefined` variants — optionality is expressed via `Option<T>`. An `Option<AriaRole>`
 that is `None` produces no `role` attribute in the DOM.

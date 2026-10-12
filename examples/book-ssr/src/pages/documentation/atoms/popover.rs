@@ -159,7 +159,7 @@ pub fn PageAtomPopover() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the popover when it is the dialog itself."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">
                             "The ids of the elements naming the popover when it is the dialog itself. Default: the "
                             <Code inline=true>"DialogTrigger"</Code>"\u{2019}s trigger."
                         </ApiRow>

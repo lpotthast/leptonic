@@ -38,8 +38,8 @@ pub struct UseMeterInput<T: NumberValue> {
     pub has_label: Signal<bool>,
     /// Names the meter when there is no visible label.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
 }
 
 impl<T: NumberValue> Default for UseMeterInput<T> {

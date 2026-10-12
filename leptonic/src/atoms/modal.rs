@@ -304,7 +304,7 @@ pub fn ModalContent(
     let classes = with_default_class("leptonic-ModalContent", classes);
     let Some(ctx) = use_context::<ModalBackdropContext>() else {
         crate::utils::dev_warn!("A <ModalContent> must be inside a <ModalBackdrop>.");
-        return ().into_any();
+        return None;
     };
     ctx.on_modal_exit.set_value(on_exit);
 
@@ -317,7 +317,7 @@ pub fn ModalContent(
     .is_entering;
     let close = ctx.close;
 
-    view! {
+    Some(view! {
         <FocusScope
             // Not while exiting: the page is usable again.
             contain=Signal::derive(move || contain_focus.get() && !ctx.is_exiting.get())
@@ -338,8 +338,7 @@ pub fn ModalContent(
                 {children()}
             </div>
         </FocusScope>
-    }
-    .into_any()
+    })
 }
 
 /// The page's scrollable size (react-aria-components' `ModalOverlay`), without fractional parts

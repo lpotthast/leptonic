@@ -83,8 +83,8 @@ pub fn ColorField(
     /// Labels the field when there is no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -102,7 +102,7 @@ pub fn ColorField(
         name: name.clone(),
         on_change,
     });
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let UseColorFieldReturn {
         label_props,
         input_props,
@@ -118,8 +118,8 @@ pub fn ColorField(
         id,
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         is_disabled,
         is_read_only,
         is_required,
@@ -143,7 +143,7 @@ pub fn ColorField(
             validation_details,
         });
         provide_context(InputContext::new(
-            move || input_props.clone().into_attrs(),
+            input_props.into_attrs(),
             InputState {
                 is_disabled,
                 is_invalid,
@@ -224,8 +224,8 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     /// Labels the field when there is no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -245,14 +245,14 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
         on_change,
         channel,
     });
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let input = UseColorChannelFieldInput {
         state,
         id,
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         is_required,
         placeholder,
         auto_focus: false,
@@ -287,7 +287,7 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
             validation_details,
         });
         provide_context(InputContext::new(
-            move || input_props.clone().into_attrs(),
+            input_props.into_attrs(),
             InputState {
                 is_disabled,
                 is_invalid,

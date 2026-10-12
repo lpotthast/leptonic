@@ -96,13 +96,12 @@ impl TableData {
 
     /// The ids of the row header cells of `row`: the row's label. Tracks the table (the row
     /// header columns can change).
-    pub fn row_labelledby(&self, row: &Key) -> String {
+    pub fn row_labelledby(&self, row: &Key) -> IdRefs {
         self.state.table.with(|t| {
             t.row_header_columns()
                 .iter()
                 .map(|column| self.cell_id(row, column))
-                .collect::<Vec<_>>()
-                .join(" ")
+                .collect()
         })
     }
 }

@@ -131,7 +131,7 @@ pub fn PageAtomColorField() -> impl IntoView {
                         <ApiRow name="is_wheel_disabled" ty="bool" default="false">"Leave the color alone on scroll (it steps while the field has focus)."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the field when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling and describing elements."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Further labelling and describing elements."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the input gains or loses focus."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the field\u{2019}s "<Code inline=true>"<div>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"Required. The label, the input and any other content."</ApiRow>
@@ -186,7 +186,7 @@ pub fn PageAtomColorField() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>". Without either, the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling and describing elements."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Further labelling and describing elements."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the field\u{2019}s "<Code inline=true>"<div>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"Required. The label, the input and any other content."</ApiRow>
                     </ApiTable>

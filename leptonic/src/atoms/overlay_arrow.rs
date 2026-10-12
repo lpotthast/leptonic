@@ -68,11 +68,11 @@ pub fn OverlayArrow(
     let classes = with_default_class("leptonic-OverlayArrow", classes);
     let Some(ctx) = use_context::<OverlayArrowContext>() else {
         crate::utils::dev_warn!("An <OverlayArrow> must be inside a <Popover> or <Tooltip>.");
-        return ().into_any();
+        return None;
     };
     if ctx.mounted.get_value() {
         crate::utils::dev_warn!("Only one <OverlayArrow> per overlay is supported.");
-        return ().into_any();
+        return None;
     }
     // Rendered again each time the overlay opens.
     ctx.mounted.set_value(true);
@@ -97,7 +97,7 @@ pub fn OverlayArrow(
         .build();
     let styles = position.merge(ctx.styles).merge(styles);
 
-    view! {
+    Some(view! {
         <div
             {..attrs}
             class=classes
@@ -106,6 +106,5 @@ pub fn OverlayArrow(
         >
             {children.map(|children| children())}
         </div>
-    }
-    .into_any()
+    })
 }

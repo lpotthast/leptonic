@@ -83,16 +83,16 @@ pub fn ColorWheel<C: ColorValue>(
     /// Names the wheel. Without any label, the hue channel's name does.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     /// Elements describing the wheel.
     #[prop(into, optional)]
-    aria_describedby: Option<String>,
+    aria_describedby: MaybeProp<String>,
     /// Elements with details about the wheel.
     #[prop(into, optional)]
-    aria_details: Option<String>,
+    aria_details: MaybeProp<String>,
     /// The element with the wheel's error message.
     #[prop(into, optional)]
-    aria_errormessage: Option<String>,
+    aria_errormessage: MaybeProp<String>,
     /// The name of the input, for form submission.
     #[prop(into, optional)]
     name: Option<String>,
@@ -118,10 +118,10 @@ pub fn ColorWheel<C: ColorValue>(
         outer_radius,
         inner_radius,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
-        aria_details,
-        aria_errormessage,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_details: crate::utils::prop_signal(aria_details),
+        aria_errormessage: crate::utils::prop_signal(aria_errormessage),
         name,
         form,
     });

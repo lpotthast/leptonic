@@ -125,7 +125,7 @@ pub fn PageAtomTextField() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>"."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the input gains or loses focus."</ApiRow>
@@ -258,16 +258,18 @@ pub fn PageAtomTextField() -> impl IntoView {
                     </p>
                     <DocTable headers=&["Constructor", "For"]>
                         <TableRow>
-                            <TableCell><Code inline=true>"InputContext::text_field(input_props, state)"</Code></TableCell>
+                            <TableCell><Code inline=true>"InputContext::text_field(input_props, element, state)"</Code></TableCell>
                             <TableCell>
                                 "A field built with "<Code inline=true>"use_text_field"</Code>", from its "
                                 <Code inline=true>"input_props"</Code>". It can render an "<Code inline=true>"Input"</Code>" or a "
-                                <Code inline=true>"TextArea"</Code>"."
+                                <Code inline=true>"TextArea"</Code>"; "<Code inline=true>"element"</Code>" (an "
+                                <Code inline=true>"RwSignal<TextFieldElement>"</Code>", also the hook's "<Code inline=true>"element"</Code>
+                                ") tells the hook which of them is rendered."
                             </TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"InputContext::new(move || attrs, state)"</Code></TableCell>
-                            <TableCell>"Any other input attributes, created for each rendered input."</TableCell>
+                            <TableCell><Code inline=true>"InputContext::new(attrs, state)"</Code></TableCell>
+                            <TableCell>"Any other input attributes, cloned for each rendered input."</TableCell>
                         </TableRow>
                     </DocTable>
                     <ApiTable kind=ApiKind::Fields of="InputContext">

@@ -35,9 +35,9 @@ pub struct UseToastInput<T: Clone + Send + Sync + 'static> {
     pub toast: QueuedToast<T>,
     pub aria_label: MaybeProp<String>,
     /// Default: the toast's title.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// Default: the toast's description.
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
 }
 
 /// Return value of [`use_toast`].
@@ -56,11 +56,11 @@ pub struct UseToastReturn {
 }
 
 /// Props of a toast.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToastProps {
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: String,
+    pub aria_labelledby: Signal<String>,
     pub aria_describedby: Signal<Option<String>>,
 }
 
@@ -69,7 +69,7 @@ impl IntoAttrs for UseToastProps {
         Attr<attr::Role, AriaRole>,
         Attr<attr::AriaModal, AriaModal>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, String>,
+        Attr<attr::AriaLabelledby, Signal<String>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::Tabindex, i32>,
     );
@@ -87,7 +87,7 @@ impl IntoAttrs for UseToastProps {
 }
 
 /// Props of a toast's content.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToastContentProps {
     /// Hidden until mounted: NVDA announces the alert only when it becomes visible.
     pub aria_hidden: Signal<Option<AriaHidden>>,
@@ -142,11 +142,15 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> U
         toast_props: UseToastProps {
             role: AriaRole::Alertdialog,
             aria_label,
-            aria_labelledby: aria_labelledby.unwrap_or_else(|| title_id.clone()),
-            aria_describedby: match aria_describedby {
-                Some(ids) => Signal::stored(Some(ids)),
-                None => referenced_description,
+            aria_labelledby: {
+                let title_id = title_id.clone();
+                Signal::derive(move || aria_labelledby.get().unwrap_or_else(|| title_id.clone()))
             },
+            aria_describedby: Signal::derive(move || {
+                aria_describedby
+                    .get()
+                    .or_else(|| referenced_description.get())
+            }),
         },
         content_props: UseToastContentProps {
             aria_hidden: Signal::derive(move || (!is_visible.get()).then_some(AriaHidden::True)),

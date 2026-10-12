@@ -224,7 +224,7 @@ pub fn PageAtomMenu() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">"Called when items are checked."</ApiRow>
                     <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"Items that can\u{2019}t be focused or activated."</ApiRow>
-                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
                         "Names the menu. Inside a "<Code inline=true>"MenuTrigger"</Code>" the button names it by default."
                     </ApiRow>
                     <ApiRow name="auto_focus" ty="Option<AutoFocus>" default="None">

@@ -200,6 +200,11 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         tree_positions,
     } = list;
     let selection = state.selection;
+    if !untrack(|| state.collection.with(|c| c.contains_key(&key))) {
+        crate::utils::dev_warn!(
+            "use_grid_list_item: the key {key:?} is not in the list's collection"
+        );
+    }
     let direction = use_direction();
     let row_id = grid_list_row_id(&list_id, &key);
 

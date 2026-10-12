@@ -123,7 +123,7 @@ pub struct CalendarPickerItem {
 }
 
 /// Return value of [`use_calendar_month_picker`] and [`use_calendar_year_picker`].
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct UseCalendarPickerReturn {
     /// Names the picker: "month" or "year", in the locale's language.
     pub aria_label: Signal<String>,

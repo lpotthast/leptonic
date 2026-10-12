@@ -2,7 +2,7 @@
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
-    IntoAttrs, PropsWithStyles,
+    IdRefs, IntoAttrs, PropsWithStyles,
     utils::{
         aria::AriaRole,
         color::Color,
@@ -32,7 +32,7 @@ pub struct UseColorSwatchInput {
     pub color_name: MaybeProp<String>,
     /// Added to the color's name (e.g. "Background" for "vibrant red, Background").
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// The swatch's id. Generated when `None`.
     pub id: Option<String>,
 }
@@ -45,13 +45,13 @@ pub struct UseColorSwatchReturn {
 }
 
 /// Props of a color swatch.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseColorSwatchProps {
     pub id: String,
     /// "color swatch" (localized).
     pub aria_roledescription: Signal<String>,
     pub aria_label: Signal<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 pub type UseColorSwatchAttrs = (
@@ -59,7 +59,7 @@ pub type UseColorSwatchAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaRoledescription, Signal<String>>,
     Attr<attr::AriaLabel, Signal<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
 );
 
 impl IntoAttrs for UseColorSwatchProps {
@@ -104,7 +104,17 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
             None => name,
         }
     });
-    let aria_labelledby = aria_labelledby.map(|ids| format!("{id} {ids}"));
+    let aria_labelledby = {
+        let id = id.clone();
+        Signal::derive(move || {
+            aria_labelledby.get().map(|ids| {
+                [id.as_str(), ids.as_str()]
+                    .into_iter()
+                    .collect::<IdRefs>()
+                    .to_string()
+            })
+        })
+    };
     let styles = Styles::new()
         // A computed CSS color (any color space): no checked grammar in `leptos-css` yet.
         .add_optional_unchecked("background-color", move || {

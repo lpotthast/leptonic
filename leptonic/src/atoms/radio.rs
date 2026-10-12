@@ -88,8 +88,8 @@ pub fn RadioGroup<V: SelectionValue>(
     #[prop(into, optional)] form: Option<String>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -117,7 +117,7 @@ pub fn RadioGroup<V: SelectionValue>(
         validation_behavior,
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseRadioGroupReturn {
         props,
@@ -133,12 +133,12 @@ pub fn RadioGroup<V: SelectionValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         orientation,
         form,
         state,
-        aria_errormessage: None,
+        aria_errormessage: Signal::default(),
         on_focus: None,
         on_blur: None,
         on_focus_change: None,
@@ -191,8 +191,8 @@ pub fn RadioField(
     #[prop(into, optional)]
     id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
@@ -200,7 +200,13 @@ pub fn RadioField(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-RadioField", classes);
-    let group = expect_context::<RadioGroupContext>();
+    let (Some(group), Some(group_field)) = (
+        use_context::<RadioGroupContext>(),
+        use_context::<FieldContext>(),
+    ) else {
+        crate::utils::dev_warn!("A <RadioField> must be inside a <RadioGroup>.");
+        return None;
+    };
     let state = group.data.state;
     let radio = use_radio_atom(
         &group,
@@ -220,13 +226,13 @@ pub fn RadioField(
     // `FieldErrorContext`).
     let field = FieldContext {
         description: radio.description_props.clone(),
-        ..expect_context::<FieldContext>()
+        ..group_field
     };
     let button = RadioButtonContext {
         radio: StoredValue::new(Some(radio)),
     };
 
-    view! {
+    Some(view! {
         <Provider value=button>
             <Provider value=field>
                 <div
@@ -242,7 +248,7 @@ pub fn RadioField(
                 </div>
             </Provider>
         </Provider>
-    }
+    })
 }
 
 /// The clickable part of a [`RadioField`]: a `<label>` around a visually hidden
@@ -264,13 +270,13 @@ pub fn RadioButton(
         use_context::<RadioButtonContext>(),
     ) else {
         dev_warn!("a <RadioButton> belongs in a <RadioField> in a <RadioGroup>");
-        return ().into_any();
+        return None;
     };
     let Some(radio) = ctx.radio.try_update_value(Option::take).flatten() else {
         dev_warn!("a <RadioField> has one <RadioButton>");
-        return ().into_any();
+        return None;
     };
-    radio_button(group, radio, classes, styles, children).into_any()
+    Some(radio_button(group, radio, classes, styles, children))
 }
 
 /// What a [`RadioField`] hands its [`RadioButton`].
@@ -286,8 +292,8 @@ struct RadioSetup {
     is_disabled: Signal<bool>,
     id: Option<String>,
     aria_label: MaybeProp<String>,
-    aria_labelledby: Option<String>,
-    aria_describedby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
+    aria_describedby: MaybeProp<String>,
     auto_focus: bool,
     on_focus_change: Option<Callback<bool>>,
 }
@@ -308,8 +314,8 @@ fn use_radio_atom(group: &RadioGroupContext, setup: RadioSetup) -> UseRadioRetur
         is_disabled,
         id,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         auto_focus,
         on_focus_change,
         group: group.data,

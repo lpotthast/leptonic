@@ -76,9 +76,9 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             id: None,
                             has_label: Signal::stored(false),
                             aria_label: "Volume".into(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
-                            aria_details: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
+                            aria_details: Signal::default(),
                         });
                         let thumb = use_slider_thumb(UseSliderThumbInput {
                             state,
@@ -92,10 +92,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             form: None,
                             has_label: Signal::stored(false),
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
-                            aria_errormessage: None,
-                            aria_details: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
+                            aria_errormessage: Signal::default(),
+                            aria_details: Signal::default(),
                         });
                         let (track_attrs, track_styles) = slider.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
@@ -289,9 +289,9 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider when there is no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming the slider."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of further elements describing every thumb."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming the slider."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements describing every thumb."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">
                             "Ids of elements with details about every thumb ("<Code inline=true>"aria-details"</Code>")."
                         </ApiRow>
                     </ApiTable>
@@ -322,9 +322,9 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 id: None,
                                 has_label: Signal::stored(true),
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
-                                aria_details: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
+                                aria_details: Signal::default(),
                             });
 
                             view! {
@@ -363,10 +363,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, if not its ancestor."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether the thumb has a visible label of its own (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the thumb next to the slider\u{2019}s name, e.g. \u{201c}Minimum\u{201d}."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming the thumb."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of further elements describing the thumb."</ApiRow>
-                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"The id of the element with the thumb\u{2019}s error message."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming the thumb."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements describing the thumb."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Signal<Option<String>>" default="None">"The id of the element with the thumb\u{2019}s error message."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">
                             "Ids of further elements with details about the thumb (next to the slider\u{2019}s)."
                         </ApiRow>
                     </ApiTable>
@@ -405,10 +405,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 form: None,
                                 has_label: Signal::stored(false),
                                 aria_label: "Maximum".into(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
-                                aria_errormessage: None,
-                                aria_details: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
+                                aria_errormessage: Signal::default(),
+                                aria_details: Signal::default(),
                             });
 
                             let (thumb_attrs, thumb_styles) = maximum.thumb_props.into_parts();

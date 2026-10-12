@@ -20,6 +20,8 @@ use leptos::prelude::*;
 ///   `#test-button-pending-submit-toggle` (submits counted in `#test-button-pending-submits`);
 ///   `#test-button-pending-labelled`, pending and named by `aria-label`; a pending dialog trigger
 ///   (`#test-button-pending-trigger`).
+/// - `#test-button-refs`, whose `aria_labelledby`/`aria_describedby` are signals that
+///   `#test-button-refs-toggle` switches between none and two paragraphs.
 #[component]
 pub fn PageAtomButton() -> impl IntoView {
     let (basic_count, set_basic_count) = signal(0u32);
@@ -29,6 +31,7 @@ pub fn PageAtomButton() -> impl IntoView {
     let submit_pending = RwSignal::new(false);
     let submits = RwSignal::new(0u32);
     let trigger_focused = RwSignal::new(false);
+    let refs_shown = RwSignal::new(false);
 
     view! {
         <div id="test-page-atom-button">
@@ -161,6 +164,25 @@ pub fn PageAtomButton() -> impl IntoView {
                 </div>
             </section>
 
+            <section>
+                <h2>"References that change"</h2>
+                <p id="test-button-refs-label">"Remove"</p>
+                <p id="test-button-refs-description">"Deletes the draft."</p>
+                <Button
+                    id="test-button-refs"
+                    aria_labelledby=Signal::derive(move || {
+                        refs_shown.get().then(|| "test-button-refs-label".to_owned())
+                    })
+                    aria_describedby=Signal::derive(move || {
+                        refs_shown.get().then(|| "test-button-refs-description".to_owned())
+                    })
+                >
+                    "Delete"
+                </Button>
+                <button id="test-button-refs-toggle" on:click=move |_| refs_shown.update(|shown| *shown = !*shown)>
+                    "Toggle references"
+                </button>
+            </section>
         </div>
     }
 }

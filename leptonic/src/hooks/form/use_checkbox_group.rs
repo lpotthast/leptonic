@@ -46,8 +46,8 @@ pub struct UseCheckboxGroupInput {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     /// The id of the form the checkboxes belong to, when not their ancestor.
     pub form: Option<String>,
     pub on_focus: Option<Callback<FocusEvent>>,

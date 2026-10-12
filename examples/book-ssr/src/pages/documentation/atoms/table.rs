@@ -200,7 +200,7 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="expanded_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"The expanded rows (controlled): a value or any signal."</ApiRow>
                         <ApiRow name="set_expanded_keys" ty="Option<Out<HashSet<Key>>>" default="None">"Receives the expanded rows."</ApiRow>
                         <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called when rows are expanded or collapsed."</ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the table."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">"Names the table."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<table>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"A "<Code inline=true>"TableHeader"</Code>" and a "<Code inline=true>"TableBody"</Code>". Required."</ApiRow>
                         <ApiRow name="show_selection_checkboxes" ty="Signal<bool>" default="false">"Show the selection column while selection is enabled."</ApiRow>

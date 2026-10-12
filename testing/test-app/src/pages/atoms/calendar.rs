@@ -193,7 +193,7 @@ fn TestCalendar(
         view! {
             <Calendar
                 aria_label=aria_label
-                nostrip:aria_labelledby=aria_labelledby
+                aria_labelledby=aria_labelledby
                 value=Signal::stored(default_value)
                 on_change=on_change
                 is_read_only=is_read_only
@@ -208,9 +208,9 @@ fn TestCalendar(
             <Calendar
                 nostrip:id=id.map(str::to_owned)
                 aria_label=aria_label
-                nostrip:aria_labelledby=aria_labelledby
-                nostrip:aria_describedby=described.then(|| description_id.clone())
-                nostrip:aria_details=described.then(|| details_id.clone())
+                aria_labelledby=aria_labelledby
+                aria_describedby=described.then(|| description_id.clone())
+                aria_details=described.then(|| details_id.clone())
                 value=value
                 set_value=value
                 min_value=min_value

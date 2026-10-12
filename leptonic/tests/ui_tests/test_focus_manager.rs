@@ -329,6 +329,12 @@ pub async fn radio_group_wrap_next(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .click()
         .await?;
+    // The call focused the checked radio again (a call doing nothing reports "none").
+    FocusManagerActions::new(page)
+        .item("radio-wrap-moved-to")
+        .await?
+        .wait_for_inner_text("test-fm-radio-wrap-b")
+        .await?;
     page.focus_stays(
         &FocusManagerActions::new(page).item("radio-wrap-b").await?,
         std::time::Duration::from_millis(100),
@@ -353,6 +359,12 @@ pub async fn radio_group_wrap_prev(page: &Page<'_>) -> Result<(), Report> {
         .item("radio-wrap-focus-prev")
         .await?
         .click()
+        .await?;
+    // The call focused the checked radio again (a call doing nothing reports "none").
+    FocusManagerActions::new(page)
+        .item("radio-wrap-moved-to")
+        .await?
+        .wait_for_inner_text("test-fm-radio-wrap-b")
         .await?;
     page.focus_stays(
         &FocusManagerActions::new(page).item("radio-wrap-b").await?,

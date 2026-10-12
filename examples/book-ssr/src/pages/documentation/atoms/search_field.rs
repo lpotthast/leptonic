@@ -131,7 +131,7 @@ pub fn PageAtomSearchField() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>"."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the input gains or loses focus."</ApiRow>

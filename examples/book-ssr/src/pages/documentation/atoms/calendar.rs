@@ -171,7 +171,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="MaybeProp<String>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the calendar element."</ApiRow>
@@ -227,7 +227,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <ApiRow name="weeks_in_month" ty="MaybeProp<u8>" default="None">"A fixed number of week rows."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible months."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="MaybeProp<String>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the calendar element."</ApiRow>

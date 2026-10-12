@@ -78,40 +78,21 @@ atoms, book heads-up), then cross-cutting work.
 
 ### Rules the code contradicts (decide: fix the code, or change the rule)
 Found 2026-10-09 while checking the documentation against the code; the documents were left unchanged.
-- [ ] "`*Props`/`*Return` types are not `Clone`" (`hooks-implementation.md`, "Props are Single-Use"): ~31 derive
-  `Clone`, e.g. `UseFocusableProps`, `UseKeyboardProps`, `UseFieldProps`, `UseLabelProps`, `UseTextFieldInputProps`,
-  `UseComboBoxInputProps`, `UseSelectTriggerProps`, `UseCalendarProps`, `UseToastProps`, `UseEnterAnimationReturn`,
-  `UseSubmenuTriggerReturn`, `UseFocusVisibleReturn` (also `Copy`), `UseCalendarPickerReturn`. "`*Input` types derive
-  `Debug` and `Clone`": `UseFormValidationStateInput` derives neither.
-- [ ] "One path per public item, shared types flat from `lib.rs`" (`conventions.md`): `HourCycle`
-  (`utils/date_time_formatter.rs`, used by the root-exported `DateTimeFormatOptions`) is public only as
-  `leptonic::hooks::datepicker::HourCycle`; `Focusability` (`utils/focusability.rs`) only through
-  `hooks/focus/use_focus_manager.rs`.
 - [ ] `design-collections.md` vs the code: §4.11 "no `selectedKeys`/`expandedKeys` controlled props, only `default_*`
   + manager methods", but selection, expanded keys, sort descriptor, select/combo box values and tabs bind app state
   through `ValueBinding` (C4, the later rule): reword §4.11. §4.11 also says the collection deviations are recorded
   globally in `hooks/mod.rs`; only C4 is, the rest per file. §4.3 said `data-collection` goes away; items still
   render it (a `use_id` id telling nested collections apart): confirm and update the design. Decision 1 and §4.10
   promise typed item collections (only values are typed; "Typed collections" under "Collections core").
-- [ ] The rendering contract says item hooks warn about keys missing from the collection; only `use_option` does
-  (`use_menu_item`, `use_grid_list_item`, `use_tag`, `use_grid_row`, `use_tree_item` don't).
 - [ ] Book: "every hook has a page" (`hooks-implementation.md` used to say so): ~166 hook files, 74 hook pages in the
   book (pages cover several hooks; unverified which hooks have none).
 - [ ] Test rules (`testing.md`):
-  - "Every consistency assertion states its observation duration": `test_dnd.rs:1214, 1258, 1288`,
-    `test_calendar.rs:3558, 3609, 3819` fall back to the global 100 ms.
   - "`with_subject_name` only for a runtime value the expression can't show, in helpers": helpers use fixed names
     ("inner text", "focus"), and `test_tabs`, `test_label_slots`, `test_forms`, `test_slider`, `test_virtual_list`
     call it directly.
   - "Fixture-specific actions only for a fixture with an id convention": `ClipboardActions` (CDP clipboard access)
     and `VirtualListActions` (selection, scrolling) aren't.
-  - No sleeps: `test_tree.rs:407` `std::thread::sleep(1100 ms)` in an async test blocks a tokio worker
-    (`tokio::time::sleep`, or wait for what the timer does).
-- [ ] Stale comments in code: `leptonic-theme/scss/atoms/list-box.scss`'s header names `ListBoxItemCtx::is_selected`
-  (now `ListBoxItemContext`); `Out`'s doc comment (`lib.rs`) omits the `StoredValue` variant; the Justfile's `clippy`
-  recipe says `--no-default-features --features atoms,clipboard` is "what consumers like agnite dev-ui build" (dev-ui:
-  defaults + `atoms`, `clipboard`; crudkit: `--no-default-features --features atoms`). `hooks-implementation.md`'s
-  "Element Capture Pattern" describes `CapturedElement` as "StoredValue + Trigger" (crates.io 0.1.0); the local
+- [ ] `hooks-implementation.md`'s "Element Capture Pattern" describes `CapturedElement` as "StoredValue + Trigger" (crates.io 0.1.0); the local
   `leptos-element-capture` checkout is `RwSignal`-based: update the text when leptonic moves to it.
 
 ### Review 2026-10-09: findings by family
@@ -126,23 +107,9 @@ of 2026-10-09 and drift; find code by name. Every bug fix starts with a failing 
   `use_localized_strings` call, also in per-item hooks (`use_calendar_cell`, `use_table_row`, `use_tag`,
   `use_tree_item`, ...). Per-locale caches; have `scripts/port-intl-strings.py` emit pre-parsed messages (or one fn
   per message, as upstream's string compiler: `&'static str` without arguments).
-- [ ] `data-focus-visible` rendered twice: `use_focus_ring`, `use_button` and `use_link` emit it in their props, and
-  atoms spreading them set it again (`calendar.rs` cell button, `color_thumb.rs`, `datepicker.rs`, `grid.rs`,
-  `table.rs`, `tabs.rs`, `toast.rs`, `ComboBoxButton`, `TableExpandButton`): two effects and a duplicate SSR
-  attribute. Decide one owner, the atoms (react-aria hooks emit no `data-*`), then document it.
-- [ ] Id lists: ids still joined by hand instead of `IdRefs`/`labels` in `use_slider.rs` `output_props.html_for`,
-  `use_table.rs` `row_labelledby`, `atoms/table.rs` column resizer (`format!("{} {name_id}", ..)`).
-- [ ] Atom parts panicking through `expect_context` outside their parent (rule: `dev_warn!` and render nothing):
-  parts of `SearchField`, `Radio`, `ComboBox`, `Grid`, `GridList`, `Menu`, `NumberField`, `ListBox` items/sections,
-  `TagGroup` and `Table`.
 - [ ] `ThemeProvider` (`atoms/theme.rs`): replace `signal_ls` with leptos-use's SSR-aware, cross-tab
   `use_local_storage`, then drop `Theme`'s serde bounds/derives (`Display`/`FromStr` on `LeptonicTheme` instead).
   Update the book's themes/installation pages.
-- [ ] `Button`/`ToggleButton` `aria_describedby`/`aria_controls` are `Signal<Option<String>>`, `Option<String>` on
-  every other atom.
-- [ ] wasm size: 55 `().into_any()` early returns for a missing context force atoms into `AnyView` (calendar 13,
-  slider 7, datepicker 6, toast 5, table 3, listbox 3, ...): return `None`/`Some(view)` under an `impl IntoView`
-  signature, as Select does (`atoms-implementation.md`).
 - [ ] Headers and docs: `utils/{aria,data_attributes,default_class,fraction,heading_level,orientation,point,scoped_context,
   styles,syntax_highlight}.rs` have neither header; `cfg_attr(feature = "ssr", allow(dead_code))` in
   `calculate_position.rs`, `visible_overlays.rs`, `atoms/virtualizer.rs`; `data-tree-column=""` (`TableCell`) is
@@ -155,13 +122,12 @@ of 2026-10-09 and drift; find code by name. Every bug fix starts with a failing 
      `S: SelectedValues` replacing `selection_mode` + `disallow_empty_selection`.
   3. `Tabs<V: SelectionValue>` (an enum of pages; exhaustive panel `match`), `DisclosureGroup<V>`, typed
      `on_action` on Breadcrumbs/GridList/Menu (`typed_values.rs` exists).
-  4. Zero-cost views (above).
-  5. Pre-compiled localized strings (above).
-  6. `#[slot]` for fixed two-part structures (`TooltipTrigger`, `DialogTrigger`, `SubmenuTrigger` take the overlay
+  4. Pre-compiled localized strings (above).
+  5. `#[slot]` for fixed two-part structures (`TooltipTrigger`, `DialogTrigger`, `SubmenuTrigger` take the overlay
      as a required slot: a missing/duplicate overlay fails to compile instead of a runtime `dev_warn!`).
-  7. Ids known at render time (a `PressResponderTrigger` fallback id, `Button` `id` defaulting to a generated id):
+  6. Ids known at render time (a `PressResponderTrigger` fallback id, `Button` `id` defaulting to a generated id):
      trigger/panel relations in the SSR HTML instead of `ensure_element_id` effects.
-  8. Typed `*StateContext`s (`DisclosureState`, `DatePickerState<V>`, `SliderState<T>`, tab/toggle render state)
+  7. Typed `*StateContext`s (`DisclosureState`, `DatePickerState<V>`, `SliderState<T>`, tab/toggle render state)
      as the typed replacement for RAC's render props.
 
 #### Focus
@@ -171,8 +137,6 @@ of 2026-10-09 and drift; find code by name. Every bug fix starts with a failing 
   - RAC `ShadowDOMFocus.browser.test` (ComboBox/NumberField/Menu with `prevent_focus_on_press` in a shadow root):
     not ported (needs shadow-root lookups in `tests/pages`).
   - A public focusable-elements `Iterator` (upstream exports `getFocusableTreeWalker`).
-  - `TableFocusVisible`/`GridFocusVisible` contexts are now redundant (`is_focus_visible()` is a cheap global
-    read): owner f-grid may drop them.
 
 #### Overlays
 - [ ] API: `ToastQueue<T: Clone + Send + Sync>` (`use_toast_state.rs`) can't hold non-`Send` content: make it
@@ -247,16 +211,11 @@ of 2026-10-09 and drift; find code by name. Every bug fix starts with a failing 
   (exhaustive `match`); `SubmenuTrigger` rendering its own trigger item (no key-match `dev_warn`); a typed combo box
   entry `enum ComboBoxEntry<V> { Selected(V), Custom(String), Empty }`; `MenuSection<S: SelectedValues>`; generic
   `TagGroup<V>` with `on_remove: Callback<Vec<V>>` in collection order.
-- [ ] `ComboBoxPopover`, `MenuItem`, `MenuItems`, `SubmenuTrigger`, `MenuSection`, `Tag`, `TagItems` still panic
-  through `expect_context` outside their parent (`dev_warn` + render nothing, as `ComboBoxButton`/`ComboBoxValue`/
-  `TagRemoveButton` now do).
 - [ ] Tests: no hooks-level combo box fixture (`use_combobox` + `use_combobox_state` without the atoms).
   `ComboBoxValue` has no `valueProps` id (react-aria's `useValueId` describing the input), see `use_combobox.rs`.
 
 #### Grid, Table, GridList, Tree
 Done 2026-10-09 (f-grid, see history); open:
-- [ ] `use_table_selection_checkbox.rs` reads the row's labels untracked once: needs
-  `ToggleOptions.aria_labelledby: Signal<Option<String>>` (Forms; `use_toggle.rs`).
 - [ ] A column header inside a `TooltipTrigger`: `TableHeader` renders the headers itself; needs custom column header
   content (a `TableColumn` render function) and a tooltip outside the `<tr>`: design first.
 - [ ] Low: `KeyboardNavigationBehavior` lives in `hooks::gridlist` but grid and table use it.
@@ -368,20 +327,14 @@ Done 2026-10-09 (f-grid, see history); open:
     one). Text formatted into CSS attribute selectors (`[aria-label='{name}']` in test_tabs, test_tree,
     test_table(_selection), test_menu_atoms, test_spin_button, test_tag_group_atoms, test_dnd_collection): the
     locator has only `css`/`role`/`.text`/`.has`.
-  - Toasts: react-stately's `timeout: 0` means no timer, `ToastOptions { timeout: Some(Duration::ZERO) }` creates one
-    that never starts: treat zero as none, or document it.
   - Weak cases: `test_button::pending` (doc cites "displays a spinner", unchecked); `test_color_area::disabled` (no
     "no change events" stays check); `test_color_field::defaults` (expects no `role`, upstream `textbox`:
     undocumented); `test_calendar::range_committed_by_an_outside_press` overlaps `commit_select_on_release`;
     `test_move::doesnt_bubble_to_a_movable_parent` (no stays check); `test_menu_trigger::aria_attributes` (no
-    `aria-labelledby`/`aria-controls`, upstream "should return default props");
-    `test_focus_manager::radio_group_wrap_{next,prev}` (pass with a no-op); `test_focus_scope::auto_focus` (check
+    `aria-labelledby`/`aria-controls`, upstream "should return default props"); `test_focus_scope::auto_focus` (check
     hidden in `goto`); `test_focus_ring::atom_text_input` (two behaviors); attributes only, no interaction:
     `test_focusable_atoms::disabled_and_excluded`, `test_disclosure::disabled_group`,
-    `test_date_picker::twelve_hour_clocks`; `test_tag_group_atoms::tabbing_to_remove_buttons` (the fixture never
-    removes tags); `test_virtual_list::rebuilt_views_drop_the_old_handlers` (no assertion);
-    `test_tree::collapsing_the_parent_of_the_focused_row` (loads its page twice); `test_radio_group::arrow_keys`
-    (comment "Down from Dogs wraps around" is wrong: Down goes to Cats).
+    `test_date_picker::twelve_hour_clocks`.
   - Typed helpers: fixture paths and ids as shared consts (today a `const PATH` per test file).
   - For the user's crates: browser-test's summary shows only steps (count WebDriver commands per test; a page-health
     give-up hook). assertr: an eventual assertion whose deadline hits while an observation is in flight fails with
@@ -479,12 +432,11 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   visit and an unstable Leptos feature: try a coarser grouping first).
 
 ### Testing infrastructure
-- [ ] Intermittent session start failures (2026-10-10): now and then one of the first sessions of a run fails with
-  `StartWebDriverSession` ("error sending request for url .../session", chrome-for-testing-manager 0.14), more often
-  under load; a rerun passes. Look into retrying session creation in browser-test.
-- [ ] Double clicks through raw action chains (`page.low_level().driver().action_chain().double_click_element`) in
-  `test_press.rs`, `test_listbox_features.rs`, `test_grid_list_features.rs`, `test_listbox_selection.rs`: use
-  `ElementActions::double_click` (added 2026-10-09).
+- [ ] Session start failures (2026-10-10): the first wave of parallel sessions after chromedriver starts fails with
+  `StartWebDriverSession` ("error sending request for url .../session", chrome-for-testing-manager 0.14): in the
+  evening runs 2 and 4 of the first 8 sessions, every run (the first group's cases fail; they pass with
+  `BROWSER_TEST_PARALLELISM=1`). A transport error, not a timeout: look into chromedriver's handling of concurrent
+  `POST /session` and retrying session creation in browser-test (its checkout has uncommitted work: the user's).
 - [ ] Fixture instances that existed only for sequential cases (audit 2026-10-09; every case now loads its page
   fresh). Merge the REDUNDANT ones, switch the listed cases to the kept instance; each family agent owns its fixtures:
   - `atoms/date_picker.rs`: decide whether `required` vs `form-required` (plain `<form>` vs `Form`) and

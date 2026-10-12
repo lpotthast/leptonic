@@ -71,7 +71,7 @@ pub struct UseCalendarGridReturn {
 }
 
 /// Props of the calendar's grid.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarGridProps {
     /// Part of the grid's `aria-labelledby` when the calendar is labelled by other elements.
     pub id: String,
@@ -259,7 +259,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
             .filter(|label| !label.is_empty())
             .collect::<Vec<_>>()
             .join(", ");
-            labels(&id, Some(label), aria_labelledby.as_deref())
+            labels(&id, Some(label), aria_labelledby.get().as_deref())
         })
     };
 

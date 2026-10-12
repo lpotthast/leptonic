@@ -339,7 +339,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                         <ApiRow name="state" ty="CalendarState">"From "<Code inline=true>"use_calendar_state"</Code>". Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Signal<Option<String>>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                     </ApiTable>
@@ -390,7 +390,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Signal<Option<String>>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                     </ApiTable>

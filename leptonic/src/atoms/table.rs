@@ -6,12 +6,12 @@ use std::{
     sync::Arc,
 };
 
-use leptos::{context::Provider, ev, html, prelude::*};
+use leptos::{context::Provider, either::Either, ev, html, prelude::*};
 use leptos_classes::Classes;
 use leptos_use::use_resize_observer;
 
 use crate::{
-    CapturedElement, IntoAttrs, Out, ValueBinding,
+    CapturedElement, IdRefs, IntoAttrs, Out, ValueBinding,
     hooks::{
         button::{UseButtonInput, use_button},
         collections::{
@@ -239,7 +239,7 @@ pub fn Table(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// Ids of elements labelling it.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -287,7 +287,7 @@ pub fn Table(
 
     let UseTableReturn { props, data } = use_table(UseTableInput {
         aria_label,
-        aria_labelledby: Signal::stored(aria_labelledby),
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         options: CollectionOptions {
             escape_key_behavior,
             ..CollectionOptions::default()
@@ -320,14 +320,11 @@ pub fn Table(
         styles
     };
 
-    // One keyboard-modality signal for the rows and column headers.
-    let focus_visible = TableFocusVisible(Signal::derive(is_focus_visible));
     // Focus on the table element itself (react-aria-components' `Table`).
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
     scoped_view(
         move || {
             provide_context(data);
-            provide_context(focus_visible);
             if let Some(column_resize) = column_resize {
                 provide_context(column_resize);
             }
@@ -340,7 +337,6 @@ pub fn Table(
                     class=classes
                     style=styles
                     data-focused=flag(focus_ring.is_focused)
-                    data-focus-visible=flag(focus_ring.is_focus_visible)
                 >
                     {children()}
                 </table>
@@ -348,11 +344,6 @@ pub fn Table(
         },
     )
 }
-
-/// Whether focus rings should be visible (keyboard modality), for the rows and column headers of
-/// a [`Table`].
-#[derive(Debug, Clone, Copy)]
-struct TableFocusVisible(Signal<bool>);
 
 /// The header of a [`Table`]: its header rows with the column headers (and, for a selection
 /// checkbox column, a "select all" checkbox in multiple selection mode).
@@ -370,13 +361,13 @@ pub fn TableHeader(
     let classes = with_default_class("leptonic-TableHeader", classes);
     let Some(data) = use_context::<TableData>() else {
         crate::utils::dev_warn!("a <TableHeader> belongs in a <Table>");
-        return ().into_any();
+        return None;
     };
     let row_group = use_grid_row_group();
     let rows = data.state.table;
     // react-aria-components' `TableHeader` reports hover.
     let hover = use_hover(UseHoverInput::default());
-    view! {
+    Some(view! {
         <thead
             {..row_group.row_group_props.into_attrs()}
             {..hover.props.into_attrs()}
@@ -419,8 +410,7 @@ pub fn TableHeader(
                 }
             />
         </thead>
-    }
-    .into_any()
+    })
 }
 
 /// A column header of a [`Table`], rendered by [`TableHeader`].
@@ -465,8 +455,7 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let focus_key = key.clone();
     let is_focused =
         Signal::derive(move || selection.is_focused_key(&focus_key) && selection.is_focused());
-    let focus_visible = expect_context::<TableFocusVisible>().0;
-    let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
+    let is_focus_visible = Signal::derive(move || is_focused.get() && is_focus_visible());
     // Sortable headers show hover (react-aria-components' `Column`).
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || !allows_sorting.get()),
@@ -621,7 +610,10 @@ fn ColumnResizer(
     // Labelled "Resizer" plus the column's name (react-aria: plus the column header, which
     // contains the resizer, so browsers name it "Resizer Name Resizer").
     let (mut input_props, input_styles) = input_props.into_inner();
-    input_props.aria_labelledby = format!("{} {name_id}", input_props.id);
+    input_props.aria_labelledby = [input_props.id.as_str(), name_id.as_str()]
+        .into_iter()
+        .collect::<IdRefs>()
+        .to_string();
     let input_attrs = input_props.into_attrs();
     view! {
         <div
@@ -711,10 +703,12 @@ pub fn TableRow(
     let classes = with_default_class("leptonic-TableRow", classes);
     let Some(data) = use_context::<TableData>() else {
         crate::utils::dev_warn!("a <TableRow> belongs in a <Table>");
-        return ().into_any();
+        return None;
     };
     if data.state.tree.is_none() {
-        return table_row(data, key, classes, styles, children);
+        return Some(Either::Left(table_row(
+            data, key, classes, styles, children,
+        )));
     }
     // A tree table: build the row the first time it is shown (react-aria-components renders only
     // the rows of expanded rows), then keep it.
@@ -725,7 +719,7 @@ pub fn TableRow(
             || row_key.with_value(|key| rows.with(|rows| rows.contains_key(key)))
     });
     let parts = std::sync::Mutex::new(Some((data, key, classes, styles, children)));
-    (move || {
+    Some(Either::Right(move || {
         if !mounted.get() {
             return None;
         }
@@ -734,8 +728,7 @@ pub fn TableRow(
         // building the row (its hooks, its children) would run it again, and with the parts
         // taken, the row would disappear.
         Some(untrack(|| table_row(data, key, classes, styles, children)))
-    })
-    .into_any()
+    }))
 }
 
 /// A [`TableRow`] in `data`'s table.
@@ -782,8 +775,7 @@ fn table_row(
     let styles = row_styles
         .add_optional_unchecked("--table-row-level", move || Some(level.get().to_string()))
         .merge(styles);
-    let focus_visible = expect_context::<TableFocusVisible>().0;
-    let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
+    let is_focus_visible = Signal::derive(move || is_focused.get() && is_focus_visible());
     // Interactive rows show hover (react-aria-components' `Row`).
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
@@ -878,7 +870,7 @@ pub fn TableCell(
     let (Some(data), Some(row_context)) = (use_context::<TableData>(), use_context::<RowContext>())
     else {
         crate::utils::dev_warn!("a <TableCell> belongs in a <TableRow>");
-        return ().into_any();
+        return None;
     };
     let row = row_context.key.clone();
     let RowContext {
@@ -909,7 +901,7 @@ pub fn TableCell(
             (key, kind, index)
         })
     });
-    (move || {
+    Some(move || {
         let (key, kind, column_index) = cell.get();
         // Untracked: the cell is rendered again when its key or kind changes, not whenever its
         // hooks or children read a signal while being built.
@@ -942,7 +934,7 @@ pub fn TableCell(
             let UseFocusRingReturn {
                 props: focus_ring,
                 is_focused,
-                is_focus_visible,
+                ..
             } = use_focus_ring(UseFocusRingInput::default());
             let hover = use_hover(UseHoverInput::default());
 
@@ -954,7 +946,6 @@ pub fn TableCell(
                     class=classes.clone()
                     style=styles
                     data-focused=flag(is_focused)
-                    data-focus-visible=flag(is_focus_visible)
                     data-focus-visible-within-row=flag(is_focus_visible_within_row)
                     data-hovered=flag(hover.is_hovered)
                     data-pressed=flag(is_pressed)
@@ -971,7 +962,6 @@ pub fn TableCell(
             }
         })
     })
-    .into_any()
 }
 
 /// The expand button of a tree table's row (react-aria-components' `Button slot="chevron"`):
@@ -991,16 +981,16 @@ pub fn TableExpandButton(
     let classes = with_default_class("leptonic-TableExpandButton", classes);
     let Some(row) = use_context::<RowContext>() else {
         crate::utils::dev_warn!("a <TableExpandButton> belongs in a <TableRow>");
-        return ().into_any();
+        return None;
     };
     let Some(input) = row.expand_button.get_value() else {
         crate::utils::dev_warn!("a <TableExpandButton> belongs in a tree table (`tree_column`)");
-        return ().into_any();
+        return None;
     };
     let button = use_button(input);
     let (attrs, button_styles) = button.props.into_parts();
     let has_child_rows = row.has_child_rows;
-    view! {
+    Some(view! {
         <button
             {..attrs}
             {..crate::utils::focusability::prevent_focus_attr()}
@@ -1010,11 +1000,9 @@ pub fn TableExpandButton(
             data-expanded=flag(row.is_expanded)
             data-pressed=flag(button.is_pressed)
             data-hovered=flag(button.is_hovered)
-            data-focus-visible=flag(button.is_focus_visible)
             data-disabled=flag(button.is_disabled)
         >
             {children.map(|children| children())}
         </button>
-    }
-    .into_any()
+    })
 }

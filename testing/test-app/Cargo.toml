@@ -87,3 +87,7 @@ inherits = "dev"
 # Measured 2026-10-08: server-side rendering 6x faster than in dev (1.8 ms per fixture page instead of 11 ms, the
 # calendar page 87 ms instead of 550 ms), with no slower rebuilds (24 s after a leptonic change, dev: 26 s).
 opt-level = 1
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }

@@ -59,6 +59,9 @@ session, found with `ListAgents`), and announce breaking changes to the APIs the
   names the type), no prelude (imports from the atom and hook family modules and the crate root),
   `UseListCollectionInput`, `FilterQuery`, `Shortcut::new(KeyboardKey::..)`, `VirtualListOptions`,
   `show_selection_checkboxes` on `Table`, `use_move` without `axis`/`is_moving`.
+- Breaking (2026-10-11, not yet told: which agnite session works on dev-ui is unknown): hook inputs' id references
+  are `Signal<Option<String>>` (C2): `src/app/resources/chart.rs` writes `aria_labelledby: None` etc. into
+  `UseSliderInput`/`UseSliderThumbInput` (~lines 429-448): `Signal::default()` instead.
 - Done for it (2026-10-10, told): `VirtualList` scrolls horizontally when rows are wider than the list
   (`ListLayoutOptions::allows_overflow_across`); its lines lost horizontal scrolling when it moved from a plain
   scrolling element to `VirtualList`. It considers a "wrap lines" toggle: wrapping restyles the rows, which observed

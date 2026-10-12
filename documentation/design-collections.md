@@ -244,7 +244,7 @@ let collection = use_collection(move |b| {
 
 With data-driven collections, all of that is computed on the server from the same data (compare RAC's `*.ssr.test.js`).
 
-**Rendering contract.** The user (or an atom) renders from the same data, in collection order. Item hooks take only the `Key` and read everything else from the node. In debug builds, `use_option` warns about a key that is not in the collection, and `ItemElements` about a key rendered twice.
+**Rendering contract.** The user (or an atom) renders from the same data, in collection order. Item hooks take only the `Key` and read everything else from the node. In debug builds, the item hooks (`use_option`, `use_menu_item`, `use_grid_list_item` and so `use_tag`/`use_tree_item`, `use_grid_row` and so table rows) warn about a key that is not in the collection, and `ItemElements` about a key rendered twice.
 
 **Item element registry (the one DOM-derived piece).** `ItemElements` is a `StoredValue` of each key's live registrations (`CapturedElement`s with registration ids, the latest last) plus a `Trigger`.
 - Item hooks register their `CapturedElement` and unregister (only their own registration) in `on_cleanup`.

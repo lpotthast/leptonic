@@ -53,7 +53,7 @@ pub struct UseDisclosureReturn {
 }
 
 /// Props for the panel element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDisclosurePanelProps {
     pub id: String,
     /// `group` by default; `region` for an important section (a landmark).
@@ -90,24 +90,6 @@ pub type UseDisclosurePanelAttrs = (
     CustomAttr<&'static str, Option<&'static str>>,
     ElementCaptureAttr,
 );
-
-impl UseDisclosurePanelProps {
-    /// Names the panel by another element than the hook's trigger (e.g. a trigger that keeps its
-    /// own id).
-    #[must_use]
-    pub fn labelled_by(self, aria_labelledby: Signal<Option<String>>) -> Self {
-        Self {
-            aria_labelledby,
-            ..self
-        }
-    }
-
-    /// Gives the panel another role than `group` (react-aria: `role` in the panel's props).
-    #[must_use]
-    pub fn with_role(self, role: Signal<AriaRole>) -> Self {
-        Self { role, ..self }
-    }
-}
 
 /// A disclosure: a trigger button showing and hiding a panel. A collapsed panel is
 /// `hidden="until-found"`, so the browser's find in page still finds (and expands) its content.

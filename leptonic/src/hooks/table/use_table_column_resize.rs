@@ -20,7 +20,7 @@ use super::{
     use_table_column_resize_state::TableColumnResizeState,
 };
 use crate::{
-    ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         collections::Key,
         focus::{Modality, use_interaction_modality},
@@ -559,7 +559,10 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         ),
         input_props: PropsWithStyles::new(
             UseTableColumnResizeInputProps {
-                aria_labelledby: format!("{id} {}", table.column_header_id(&resizer.column)),
+                aria_labelledby: [id.clone(), table.column_header_id(&resizer.column)]
+                    .into_iter()
+                    .collect::<IdRefs>()
+                    .to_string(),
                 id,
                 aria_label,
                 aria_describedby,

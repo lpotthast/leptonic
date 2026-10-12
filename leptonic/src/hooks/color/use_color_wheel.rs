@@ -12,7 +12,7 @@ use web_sys::{Event, KeyboardEvent, PointerEvent};
 
 use super::use_color_wheel_state::ColorWheelState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         form::{UseFormResetInput, use_form_reset},
         interactions::{
@@ -65,11 +65,11 @@ pub struct UseColorWheelInput<C: ColorValue> {
     pub inner_radius: Signal<f64>,
     /// Names the wheel. Without any label, the hue channel's name does.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     /// The element with the wheel's error message.
-    pub aria_errormessage: Option<String>,
+    pub aria_errormessage: Signal<Option<String>>,
     /// The name of the input, for form submission.
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
@@ -142,9 +142,9 @@ pub struct UseColorWheelInputProps {
     pub form: Option<String>,
     pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
-    pub aria_errormessage: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<String>>,
     pub aria_valuetext: Signal<String>,
     /// Sets the channel from the input's value (e.g. by assistive technology).
     pub on_input: EventHandler<Event>,
@@ -167,9 +167,9 @@ pub type UseColorWheelInputAttrs = (
     (
         Attr<attr::AriaLabel, Signal<Option<String>>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Option<String>>,
-        Attr<attr::AriaDetails, Option<String>>,
-        Attr<attr::AriaErrormessage, Option<String>>,
+        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        Attr<attr::AriaDetails, Signal<Option<String>>>,
+        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
         Attr<attr::AriaValuetext, Signal<String>>,
         OnEvent<ev::input>,
         ElementCaptureAttr,
@@ -413,11 +413,12 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     });
 
     // Without any label, the channel names the wheel (react-aria).
-    let has_labelledby = aria_labelledby.is_some();
     let locale = use_locale();
     let input_label = Signal::derive(move || {
         aria_label.get().or_else(|| {
-            (!has_labelledby).then(|| HSL::channel_name(HslChannel::Hue, &locale.get()))
+            aria_labelledby
+                .with(Option::is_none)
+                .then(|| HSL::channel_name(HslChannel::Hue, &locale.get()))
         })
     });
     let input_id = use_id("color-wheel");
@@ -425,9 +426,12 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     let input_labelledby = {
         let input_id = input_id.clone();
         Signal::derive(move || {
-            let ids = aria_labelledby.clone()?;
+            let ids = aria_labelledby.get()?;
             Some(if input_label.with(Option::is_some) {
-                format!("{input_id} {ids}")
+                [input_id.as_str(), ids.as_str()]
+                    .into_iter()
+                    .collect::<IdRefs>()
+                    .to_string()
             } else {
                 ids
             })

@@ -147,7 +147,8 @@ pub async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_focus(&dogs).await?;
 
     let value = value(page).await?;
-    // Down from Dogs wraps around to the first radio, Up back to the last.
+    // Down and Right move to the next radio, wrapping from Dragons to Dogs; Up and Left back,
+    // wrapping from Dogs to Dragons.
     for (key, radio, expected) in [
         (Key::Down, &cats, "cats"),
         (Key::Right, &dragons, "dragons"),

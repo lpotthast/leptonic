@@ -7,9 +7,9 @@ use leptonic::{
         input::{Input, TextArea},
         text_field::TextField,
     },
-    hooks::form::{ValidateFn, ValidationBehavior, ValidationResult},
+    hooks::form::{InputType, ValidateFn, ValidationBehavior, ValidationResult},
 };
-use leptos::{ev::SubmitEvent, prelude::*};
+use leptos::{either::Either, ev::SubmitEvent, prelude::*};
 
 /// TextField atoms, as react-aria-components' `TextField` and `Form` tests render them. Each
 /// case sits in its own element with an id.
@@ -148,7 +148,55 @@ pub fn PageAtomTextField() -> impl IntoView {
                 </TextField>
             </Form>
 
+            <SwitchingElement />
+            <ChangingReferences />
             <StandaloneInputs />
+        </div>
+    }
+}
+
+/// A text field whose element switches between `Input` and `TextArea` (`#tf-switch-toggle`): an
+/// URL input with a pattern.
+#[component]
+fn SwitchingElement() -> impl IntoView {
+    let multiline = RwSignal::new(false);
+    view! {
+        <div id="tf-switch">
+            <TextField input_type=InputType::Url pattern="[a-z:/.]+" default_value="https://a.b">
+                <Label>"Contact"</Label>
+                {move || {
+                    if multiline.get() {
+                        Either::Left(view! { <TextArea /> })
+                    } else {
+                        Either::Right(view! { <Input /> })
+                    }
+                }}
+            </TextField>
+            <button id="tf-switch-toggle" on:click=move |_| multiline.update(|m| *m = !*m)>
+                "Toggle multiline"
+            </button>
+        </div>
+    }
+}
+
+/// A text field described by its `Description` and by a paragraph whose reference is a signal
+/// (`#tf-refs-toggle` switches it on and off).
+#[component]
+fn ChangingReferences() -> impl IntoView {
+    let shown = RwSignal::new(false);
+    view! {
+        <div id="tf-refs">
+            <p id="tf-refs-hint">"Letters only."</p>
+            <TextField aria_describedby=Signal::derive(move || {
+                shown.get().then(|| "tf-refs-hint".to_owned())
+            })>
+                <Label>"Nickname"</Label>
+                <Input />
+                <Description>"Shown to others."</Description>
+            </TextField>
+            <button id="tf-refs-toggle" on:click=move |_| shown.update(|shown| *shown = !*shown)>
+                "Toggle hint"
+            </button>
         </div>
     }
 }

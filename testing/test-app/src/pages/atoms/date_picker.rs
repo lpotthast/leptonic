@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
-    I18nProvider, Locale,
+    HourCycle, I18nProvider, Locale,
     atoms::{
         button::Button,
         calendar::{
@@ -20,7 +20,7 @@ use leptonic::{
         popover::Popover,
     },
     hooks::{
-        datepicker::{Granularity, HourCycle, RangePart, RangeValue},
+        datepicker::{Granularity, RangePart, RangeValue},
         form::{ValidationBehavior, ValidationResult},
     },
     jiff::{

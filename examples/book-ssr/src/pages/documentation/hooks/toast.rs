@@ -56,7 +56,7 @@ pub fn PageToastHooks() -> impl IntoView {
                                     queue,
                                     element,
                                     aria_label: MaybeProp::default(),
-                                    aria_labelledby: None,
+                                    aria_labelledby: Signal::default(),
                                 });
                             view! {
                                 <div {..region_props.into_attrs()} {..element.attr()}>
@@ -76,8 +76,8 @@ pub fn PageToastHooks() -> impl IntoView {
                                 queue,
                                 toast,
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
                             };
                             let UseToastReturn { toast_props, content_props, title_id, close_button, .. } = use_toast(input);
                             let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
@@ -190,7 +190,7 @@ pub fn PageToastHooks() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the region. Default: \u{201c}1 notification.\u{201d}, \u{201c}2 notifications.\u{201d}, \u{2026}"
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the region."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of elements naming the region."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -218,8 +218,8 @@ pub fn PageToastHooks() -> impl IntoView {
                         <ApiRow name="queue" ty="ToastQueue<T>">"The queue the toast is in; closing removes it from there. Required."</ApiRow>
                         <ApiRow name="toast" ty="QueuedToast<T>">"The toast, from "<Code inline=true>"visible_toasts"</Code>". Required."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the toast instead of its title."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the toast. Default: its title."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing the toast. Default: its description."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of elements naming the toast. Default: its title."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing the toast. Default: its description."</ApiRow>
                     </ApiTable>
                 </Section>
 

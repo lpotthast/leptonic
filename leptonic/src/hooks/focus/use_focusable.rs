@@ -316,7 +316,7 @@ impl std::fmt::Debug for UseFocusableReturn {
 }
 
 /// Props from `use_focusable` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusableProps {
     pub tabindex: Signal<Option<i32>>,
     pub on_focus: EventHandler<FocusEvent>,

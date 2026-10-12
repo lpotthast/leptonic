@@ -34,9 +34,9 @@ pub fn CalendarSingleDemo() -> impl IntoView {
         state,
         id: None,
         aria_label: "Appointment date".into(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_details: Signal::default(),
     });
     let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
     let (next_attrs, next_styles) = use_button(next_button).props.into_parts();

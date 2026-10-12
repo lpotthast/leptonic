@@ -43,7 +43,7 @@ pub fn DismissButton(
     aria_label: MaybeProp<String>,
     /// The ids of the elements naming the button.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     /// The button's id. Default: a generated one.
     #[prop(into, optional)]
     id: Option<String>,
@@ -54,7 +54,7 @@ pub fn DismissButton(
     // elements; without either, "Dismiss" (react-aria's `useLabels` with a default label).
     let labelling = {
         let id = id.clone();
-        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.as_deref()))
+        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
     };
     let label = move || {
         labelling.with(|labelling| {

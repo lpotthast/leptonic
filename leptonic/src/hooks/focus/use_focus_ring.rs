@@ -27,8 +27,10 @@ use crate::{
 // ## ADDITIONS
 // - `is_disabled`, `on_focus`, `on_blur` and `on_focus_change` are forwarded to the underlying
 //   `use_focus`/`use_focus_within`, so callers needn't add a separate `use_focus`.
-// - The props render `data-focus-visible` for CSS-only styling (react-aria returns only
-//   `isFocusVisible`).
+// - The props render `data-focus-visible` (for both targets) for CSS-only styling, so elements
+//   using the hook are styleable without wiring the state themselves (react-aria returns only
+//   `isFocusVisible`; its components render the data attributes). Atoms spreading the props
+//   don't render the attribute again.
 //
 // =============================================================================
 
@@ -90,6 +92,7 @@ pub struct UseFocusRingProps {
     pub on_blur: EventHandler<FocusEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
+    /// `"true"` while the focus ring is visible, absent otherwise.
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
@@ -145,7 +148,8 @@ pub type UseFocusRingAttrs = (
 /// ```
 ///
 /// The `data-focus-visible` attribute is automatically added when the focus ring
-/// should be shown. Style it with CSS:
+/// should be shown (for [`FocusRingTarget::Within`]: while a descendant shows it). Style it with
+/// CSS:
 ///
 /// ```css
 /// [data-focus-visible="true"] {

@@ -22,7 +22,7 @@ fn MailLandmark(
         element,
         aria_label: label.into(),
         role,
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         focus: None,
     });
     let focus_within = use_focus_within(UseFocusWithinInput {

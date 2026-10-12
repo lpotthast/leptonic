@@ -14,11 +14,12 @@ use web_sys::{FocusEvent, InputEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use super::{
     format::{DateFormatter, FormatOptions, Formatters},
-    types::{DateSegment, DateSegmentType, DateValue, Granularity, HourCycle, MaxGranularity},
+    types::{DateSegment, DateSegmentType, DateValue, Granularity, MaxGranularity},
     use_date_field::{DateFieldData, display_name},
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, HourCycle, IntoAttrs, OnEvent,
+    PropsWithStyles,
     hooks::{
         interactions::{UseKeyboardInput, use_keyboard},
         spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},

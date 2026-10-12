@@ -103,8 +103,8 @@ pub fn PageAtomColorArea() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables pointer and keyboard interaction and the inputs."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the area. It has no visible label, so set this or "<Code inline=true>"aria_labelledby"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the area."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the area."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the area."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"The ids of the elements describing the area."</ApiRow>
                         <ApiRow name="x_name, y_name" ty="Option<String>" default="None">
                             "Form field names of the X and Y inputs. Their values are the channel values (e.g. "
                             <Code inline=true>"0.6"</Code>" for 60% saturation)."
@@ -112,7 +112,7 @@ pub fn PageAtomColorArea() -> impl IntoView {
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the inputs belong to."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the area."</ApiRow>
                         <ApiRow name="children" ty="Children">"The "<Code inline=true>"ColorThumb"</Code>", and anything else to draw on the area. Required."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements providing additional details."</ApiRow>
+                        <ApiRow name="aria_details" ty="MaybeProp<String>" default="None">"Ids of elements providing additional details."</ApiRow>
                         <ApiRow name="x_channel_step" ty="Option<f64>" default="None">"Step for the horizontal color channel; uses the channel default when omitted."</ApiRow>
                         <ApiRow name="y_channel_step" ty="Option<f64>" default="None">"Step for the vertical color channel; uses the channel default when omitted."</ApiRow>
                     </ApiTable>

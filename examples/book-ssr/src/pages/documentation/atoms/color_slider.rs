@@ -108,13 +108,13 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the slider when it has no "<Code inline=true>"Label"</Code>". Without either, the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the slider."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the slider."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input; its value is the channel\u{2019}s value."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the input belongs to."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the slider element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The label, output and track. Required."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing this control."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements providing additional details."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"Ids of elements describing this control."</ApiRow>
+                        <ApiRow name="aria_details" ty="MaybeProp<String>" default="None">"Ids of elements providing additional details."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

@@ -22,7 +22,7 @@ fn Swatch(color: RGB8, #[prop(optional, into)] color_name: MaybeProp<String>) ->
         color_name,
         color: Into::<leptonic::ColorProp>::into(Signal::stored(color)).0,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         id: None,
     });
     // The props carry the swatch's background color as a style.

@@ -40,7 +40,7 @@ pub fn PageAtomDismissButton() -> impl IntoView {
                         "The button\u{2019}s name. Without it (and without "<Code inline=true>"aria_labelledby"</Code>
                         "), the button is named \u{201c}Dismiss\u{201d}."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the button."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the button."</ApiRow>
                     <ApiRow name="id" ty="Option<String>" default="None">"The button\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                 </ApiTable>
             </Section>

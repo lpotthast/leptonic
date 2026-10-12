@@ -100,8 +100,8 @@ pub fn SearchField(
     /// Labels the field when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -115,7 +115,7 @@ pub fn SearchField(
         on_change,
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseSearchFieldReturn {
         text_field,
@@ -147,15 +147,15 @@ pub fn SearchField(
             auto_focus,
             has_label,
             aria_label,
-            aria_labelledby,
-            aria_describedby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
             on_focus_change,
             state,
-            element: TextFieldElement::Input,
+            element: Signal::stored(TextFieldElement::Input),
             validation: None,
             exclude_from_tab_order: false,
             label_id: None,
-            aria_errormessage: None,
+            aria_errormessage: Signal::default(),
             aria_activedescendant: Signal::stored(None),
             aria_autocomplete: None,
             aria_haspopup: None,
@@ -174,7 +174,7 @@ pub fn SearchField(
     // component).
     scoped_view(
         move || {
-            provide_text_field_contexts(text_field, label_presence);
+            provide_text_field_contexts(text_field, None, label_presence);
             provide_context(SearchFieldContext {
                 clear_button: StoredValue::new(clear_button),
             });
@@ -212,12 +212,15 @@ pub fn SearchFieldClearButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SearchFieldClearButton", classes);
-    let ctx = expect_context::<SearchFieldContext>();
+    let Some(ctx) = use_context::<SearchFieldContext>() else {
+        crate::utils::dev_warn!("A <SearchFieldClearButton> must be inside a <SearchField>.");
+        return None;
+    };
     let input = ctx.clear_button.get_value();
     let button = use_button(input);
     let (attrs, button_styles) = button.props.into_parts();
 
-    view! {
+    Some(view! {
         <button
             {..attrs}
             class=classes
@@ -229,5 +232,5 @@ pub fn SearchFieldClearButton(
         >
             {children()}
         </button>
-    }
+    })
 }

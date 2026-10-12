@@ -104,17 +104,21 @@ pub async fn within_click_focus(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// With `within`, tabbing to a child makes the container focused with visible focus, and clicking
-/// elsewhere clears both.
+/// With `within`, tabbing to a child makes the container focused with visible focus, shown as
+/// `data-focus-visible` on the container, and clicking elsewhere clears both.
 #[browser_test]
 pub async fn within_tab_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
+    let container = page.element("#test-fr-within-container").await?;
     let is_focused = page.element("#test-fr-within-is-focused").await?;
     let is_focus_visible = page.element("#test-fr-within-is-focus-visible").await?;
 
     tab_after(page, "#test-fr-within-before").await?;
     is_focused.wait_for_inner_text("true").await?;
     is_focus_visible.wait_for_inner_text("true").await?;
+    container
+        .wait_for_attr("data-focus-visible", Some("true"))
+        .await?;
 
     page.element("#test-fr-within-elsewhere")
         .await?
@@ -122,6 +126,7 @@ pub async fn within_tab_focus(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     is_focused.wait_for_inner_text("false").await?;
     is_focus_visible.wait_for_inner_text("false").await?;
+    container.wait_for_attr("data-focus-visible", None).await?;
     Ok(())
 }
 

@@ -27,7 +27,8 @@ use leptos::prelude::*;
 #[derive(Clone, Default)]
 pub struct ToastOptions {
     /// Closes the toast after this time (paused while the toasts are hovered or focused). At
-    /// least 5 seconds are recommended; toasts with actions shouldn't time out.
+    /// least 5 seconds are recommended; toasts with actions shouldn't time out. `None` or zero:
+    /// no timeout.
     pub timeout: Option<Duration>,
     /// Called when the toast closes.
     pub on_close: Option<Callback<()>>,
@@ -191,16 +192,16 @@ impl<T: Clone + Send + Sync + 'static> ToastQueue<T> {
         self.next_key.set_value(number);
         let key = ToastKey(number);
         let queue = *self;
-        let timer = options
-            .timeout
-            .map(|timeout| ToastTimer::new(move || queue.close(key), timeout));
+        // Zero means no timeout, as react-stately's falsy `timeout: 0`.
+        let timeout = options.timeout.filter(|timeout| !timeout.is_zero());
+        let timer = timeout.map(|timeout| ToastTimer::new(move || queue.close(key), timeout));
         self.toasts.update(|toasts| {
             toasts.insert(
                 0,
                 QueuedToast {
                     key,
                     content,
-                    timeout: options.timeout,
+                    timeout,
                     on_close: options.on_close,
                     timer,
                 },
@@ -327,6 +328,25 @@ mod tests {
             assert_that!(toasts[0].content).is_equal_to("Test");
             assert_that!(toasts[0].timeout).is_equal_to(Some(Duration::from_secs(5)));
             assert_that!(toasts[0].timer.is_some()).is_true();
+        });
+    }
+
+    /// A zero timeout sets no timer, as react-stately's falsy `timeout: 0` (a timer of zero would
+    /// close the toast at once).
+    #[test]
+    fn a_zero_timeout_sets_no_timer() {
+        with_owner(|| {
+            let queue = use_toast_state::<&'static str>(UseToastStateInput::default());
+            queue.add(
+                "Test",
+                ToastOptions {
+                    timeout: Some(Duration::ZERO),
+                    ..ToastOptions::default()
+                },
+            );
+            let toasts = queue.visible_toasts.get_untracked();
+            assert_that!(toasts[0].timeout).is_none();
+            assert_that!(toasts[0].timer.is_none()).is_true();
         });
     }
 

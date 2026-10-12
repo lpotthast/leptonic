@@ -162,7 +162,7 @@ pub fn ComboBox<S: SelectedValues>(
     /// Labels the combo box when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] placeholder: MaybeProp<String>,
     /// The form field name.
     #[prop(into, optional)]
@@ -228,7 +228,7 @@ pub fn ComboBox<S: SelectedValues>(
     let popover = CapturedElement::new();
     let button_element = CapturedElement::new();
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseComboBoxReturn {
         input,
@@ -242,7 +242,7 @@ pub fn ComboBox<S: SelectedValues>(
         is_required,
         has_label,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         placeholder,
         form_value,
         form: form.clone(),
@@ -250,7 +250,7 @@ pub fn ComboBox<S: SelectedValues>(
         button_element,
         state,
         id: None,
-        aria_describedby: None,
+        aria_describedby: Signal::default(),
         should_focus_wrap,
         keyboard_delegate: None,
         on_focus: None,
@@ -281,13 +281,11 @@ pub fn ComboBox<S: SelectedValues>(
     };
     // The input: the text field's and the combo box's props, and the popover's anchor.
     let input = InputContext::new(
-        move || {
-            (
-                field_props.clone().into_attrs(),
-                input_props.clone().into_attrs(),
-                anchor.attr(),
-            )
-        },
+        (
+            field_props.into_attrs(),
+            input_props.into_attrs(),
+            anchor.attr(),
+        ),
         InputState {
             is_disabled,
             is_invalid,
@@ -389,7 +387,6 @@ pub fn ComboBoxButton(
             data-pressed=flag(Signal::derive(move || is_open.get() || button.is_pressed.get()))
             data-hovered=flag(button.is_hovered)
             data-focused=flag(button.is_focused)
-            data-focus-visible=flag(button.is_focus_visible)
             data-disabled=flag(is_disabled)
         >
             {children()}
@@ -476,7 +473,10 @@ pub fn ComboBoxPopover(
     children: ChildrenFn,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ComboBoxPopover", classes);
-    let ctx = expect_context::<ComboBoxContext>();
+    let Some(ctx) = use_context::<ComboBoxContext>() else {
+        crate::utils::dev_warn!("A <ComboBoxPopover> must be inside a <ComboBox>.");
+        return None;
+    };
     let UsePopoverReturn {
         props,
         arrow_props,
@@ -503,7 +503,7 @@ pub fn ComboBoxPopover(
         group: None,
         is_submenu: false,
     });
-    render_popover(
+    Some(render_popover(
         ctx.state,
         PopoverParts {
             props,
@@ -534,5 +534,5 @@ pub fn ComboBoxPopover(
         classes,
         styles,
         children,
-    )
+    ))
 }

@@ -36,8 +36,8 @@ fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl In
         queue,
         toast,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
     });
     let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
 
@@ -62,7 +62,7 @@ fn NoticeRegion(queue: ToastQueue<Notice>) -> impl IntoView {
         queue,
         element,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
     });
 
     view! {

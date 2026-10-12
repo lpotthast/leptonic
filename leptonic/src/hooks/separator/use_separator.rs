@@ -49,7 +49,7 @@ pub struct UseSeparatorInput {
     /// Names the separator.
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the separator.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 impl Default for UseSeparatorInput {
@@ -60,7 +60,7 @@ impl Default for UseSeparatorInput {
             element_type: SeparatorElementType::Hr,
             id: None,
             aria_label: MaybeProp::default(),
-            aria_labelledby: None,
+            aria_labelledby: Signal::default(),
         }
     }
 }
@@ -79,7 +79,7 @@ pub struct UseSeparatorProps {
     pub role: Option<AriaRole>,
     pub aria_orientation: Signal<Option<AriaOrientation>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 impl IntoAttrs for UseSeparatorProps {
@@ -102,7 +102,7 @@ pub type UseSeparatorAttrs = (
     Attr<attr::Role, Option<AriaRole>>,
     Attr<attr::AriaOrientation, Signal<Option<AriaOrientation>>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
 );
 
 /// Provides the accessibility of a separator, which divides content visually and semantically.

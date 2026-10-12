@@ -169,7 +169,10 @@ pub struct UseTextFieldInput {
     pub state: TextFieldState,
     /// The input element's id. Generated when `None`.
     pub id: Option<String>,
-    pub element: TextFieldElement,
+    /// The element rendering the field (react-aria's `inputElementType`): `type`, `pattern` and
+    /// the `value` attribute exist only on an `<input>`. Reactive: a field whose element is
+    /// chosen when it mounts (the `TextField` atom's `Input` or `TextArea`) sets it then.
+    pub element: Signal<TextFieldElement>,
     /// `<input>` only. Reactive, e.g. for a "show password" toggle.
     pub input_type: Signal<InputType>,
     pub is_disabled: Signal<bool>,
@@ -205,9 +208,9 @@ pub struct UseTextFieldInput {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_errormessage: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<String>>,
     pub aria_activedescendant: Signal<Option<String>>,
     pub aria_autocomplete: Option<AriaAutocomplete>,
     pub aria_haspopup: Option<AriaHasPopup>,
@@ -238,14 +241,14 @@ pub struct UseTextFieldReturn {
 }
 
 /// Props for the `<input>` or `<textarea>` element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTextFieldInputProps {
     pub id: String,
     pub r#type: Signal<Option<&'static str>>,
-    pub pattern: Option<String>,
+    pub pattern: Signal<Option<String>>,
     /// The `value` attribute when rendered (server-side rendering); `value_property` keeps it in
     /// sync. `None` for a `<textarea>`, which renders its initial value as its content instead.
-    pub value: Option<String>,
+    pub value: Signal<Option<String>>,
     pub value_property: Signal<String>,
     pub disabled: Signal<bool>,
     pub readonly: Signal<bool>,
@@ -266,7 +269,7 @@ pub struct UseTextFieldInputProps {
     pub aria_describedby: Signal<Option<String>>,
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub aria_errormessage: Option<String>,
+    pub aria_errormessage: Signal<Option<String>>,
     pub aria_activedescendant: Signal<Option<String>>,
     pub aria_autocomplete: Option<AriaAutocomplete>,
     pub aria_haspopup: Option<AriaHasPopup>,
@@ -280,8 +283,8 @@ pub type UseTextFieldInputAttrs = (
     (
         Attr<attr::Id, String>,
         Attr<attr::Type, Signal<Option<&'static str>>>,
-        Attr<attr::Pattern, Option<String>>,
-        Attr<attr::Value, Option<String>>,
+        Attr<attr::Pattern, Signal<Option<String>>>,
+        Attr<attr::Value, Signal<Option<String>>>,
         Property<&'static str, Signal<String>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Readonly, Signal<bool>>,
@@ -304,7 +307,7 @@ pub type UseTextFieldInputAttrs = (
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
         Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-        Attr<attr::AriaErrormessage, Option<String>>,
+        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
         Attr<attr::AriaActivedescendant, Signal<Option<String>>>,
         Attr<attr::AriaAutocomplete, Option<AriaAutocomplete>>,
         Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,
@@ -364,7 +367,8 @@ impl IntoAttrs for UseTextFieldInputProps {
 /// ```ignore
 /// let state = use_text_field_state(UseTextFieldStateInput::default());
 /// // Every field named: `state`, `has_label: Signal::stored(true)`, the others their defaults
-/// // (`element: TextFieldElement::Input`, `input_type: Signal::stored(InputType::Text)`, ...).
+/// // (`element: Signal::stored(TextFieldElement::Input)`,
+/// // `input_type: Signal::stored(InputType::Text)`, ...).
 /// let field = use_text_field(input);
 /// view! {
 ///     <label {..field.label_props.into_attrs()}>"Name"</label>
@@ -372,8 +376,8 @@ impl IntoAttrs for UseTextFieldInputProps {
 /// }
 /// ```
 ///
-/// For a `<textarea>` (`element: TextFieldElement::TextArea`), render the state's initial value
-/// as its content: `<textarea {..props}>{initial_value}</textarea>`.
+/// For a `<textarea>` (`element` is `TextFieldElement::TextArea`), render the state's value as its
+/// initial content: `<textarea {..props}>{state.value.get_untracked()}</textarea>`.
 #[allow(clippy::too_many_lines)]
 pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     let UseTextFieldInput {
@@ -509,16 +513,17 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         }
     });
 
-    let is_input = element_type == TextFieldElement::Input;
+    let is_input = move || element_type.get() == TextFieldElement::Input;
+    let pattern = StoredValue::new(pattern);
     let on_off = |on: bool| if on { "on" } else { "off" };
 
     UseTextFieldReturn {
         label_props,
         input_props: UseTextFieldInputProps {
             id: field_props.id,
-            r#type: Signal::derive(move || is_input.then(|| input_type.get().as_str())),
-            pattern: pattern.filter(|_| is_input),
-            value: is_input.then_some(initial_value),
+            r#type: Signal::derive(move || is_input().then(|| input_type.get().as_str())),
+            pattern: Signal::derive(move || pattern.get_value().filter(|_| is_input())),
+            value: Signal::derive(move || is_input().then(|| initial_value.clone())),
             value_property: state.value,
             disabled: is_disabled,
             readonly: is_read_only,

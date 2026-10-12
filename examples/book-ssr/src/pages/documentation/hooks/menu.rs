@@ -639,9 +639,13 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             <Code inline=true>"menu"</Code>" or "<Code inline=true>"dialog"</Code>", after the "<Code inline=true>"kind"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_open" ty="Signal<bool>">"Whether the submenu is open (the item\u{2019}s "<Code inline=true>"aria-expanded"</Code>")."</ApiRow>
-                        <ApiRow name="keyboard" ty="UseKeyboardProps">
+                        <ApiRow name="on_keydown" ty="EventHandler<KeyboardEvent>">
                             <Keys keys="ArrowRight"/>" ("<Keys keys="ArrowLeft"/>" in right-to-left text) opens the submenu and "
-                            "moves focus into it; the other arrow key closes it."
+                            "moves focus into it; the other arrow key closes it. "<Code inline=true>"use_menu_item"</Code>
+                            " chains it after the item\u{2019}s own keyboard handlers."
+                        </ApiRow>
+                        <ApiRow name="on_keyup" ty="EventHandler<KeyboardEvent>">
+                            "The key up half of the same keyboard handling."
                         </ApiRow>
                         <ApiRow name="on_press_start, on_press" ty="Callback<PressEvent>">"Open the submenu on press."</ApiRow>
                         <ApiRow name="on_hover_change" ty="Callback<bool>">"Opens the submenu after hovering for "<Code inline=true>"delay"</Code>"."</ApiRow>
@@ -652,7 +656,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         <ApiRow name="level" ty="usize">"The submenu\u{2019}s level in the menu tree."</ApiRow>
                         <ApiRow name="on_close" ty="Callback<()>">"Closes the whole menu tree, after an item\u{2019}s action."</ApiRow>
                         <ApiRow name="auto_focus" ty="Signal<Option<FocusStrategy>>">"Which item to focus when the submenu opens."</ApiRow>
-                        <ApiRow name="keyboard" ty="Option<UseKeyboardProps>">
+                        <ApiRow name="on_keydown" ty="Option<EventHandler<KeyboardEvent>>">
                             "The arrow key towards the parent menu and "<Keys keys="Escape"/>" close the submenu, returning focus "
                             "to the trigger item. "<Code inline=true>"None"</Code>" for a subdialog."
                         </ApiRow>

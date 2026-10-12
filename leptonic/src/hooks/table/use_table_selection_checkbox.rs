@@ -4,7 +4,7 @@ use leptos::prelude::*;
 
 use super::TableData;
 use crate::{
-    ValueBinding,
+    IdRefs, ValueBinding,
     hooks::{
         collections::{Key, SelectionMode},
         form::{
@@ -36,14 +36,17 @@ pub struct UseTableSelectionCheckboxInput {
 /// A checkbox selecting a row of a table, labelled "Select" plus the row's row header cells.
 pub fn use_table_selection_checkbox(input: UseTableSelectionCheckboxInput) -> UseCheckboxInput {
     let UseTableSelectionCheckboxInput { table, key } = input;
-    let row_labelledby = untrack(|| table.row_labelledby(&key));
-    let checkbox = use_grid_selection_checkbox(UseGridSelectionCheckboxInput {
+    let mut checkbox = use_grid_selection_checkbox(UseGridSelectionCheckboxInput {
         selection: table.state.grid.list.selection,
-        key,
+        key: key.clone(),
     });
-    let mut checkbox = checkbox;
-    let id = checkbox.options.id.clone().unwrap_or_default();
-    checkbox.options.aria_labelledby = Some(format!("{id} {row_labelledby}"));
+    // Its own label, then the row's (following the row header columns and cells).
+    let own_id = checkbox.options.id.clone();
+    checkbox.options.aria_labelledby = Signal::derive(move || {
+        let mut labelledby: IdRefs = own_id.iter().collect();
+        labelledby.extend(table.row_labelledby(&key).ids());
+        labelledby.into_value()
+    });
     checkbox
 }
 

@@ -31,7 +31,7 @@ pub fn Toolbar(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// The ids of the elements naming the toolbar. Ignored when `aria_label` is set.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -41,7 +41,7 @@ pub fn Toolbar(
         element: CapturedElement::new(),
         orientation,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
     });
     view! {
         <div

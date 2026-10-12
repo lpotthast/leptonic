@@ -92,8 +92,8 @@ pub fn ProgressBar<T: NumberValue>(
     /// Names the progress bar when it has no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
@@ -102,7 +102,7 @@ pub fn ProgressBar<T: NumberValue>(
     let id = id.or_else(|| use_context::<ProgressBarIdContext>().map(|ctx| ctx.0));
     let value = value.into_signal();
     let defaults = UseProgressBarInput::<T>::default();
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseProgressBarReturn {
         props,
@@ -118,8 +118,8 @@ pub fn ProgressBar<T: NumberValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
     });
     let is_indeterminate = Signal::derive(move || value.with(Option::is_none));
     view! {

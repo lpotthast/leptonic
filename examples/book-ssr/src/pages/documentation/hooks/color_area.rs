@@ -48,9 +48,9 @@ pub fn PageUseColorArea() -> impl IntoView {
                             state,
                             is_disabled: false.into(),
                             aria_label: "Saturation and brightness".into(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
-                            aria_details: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
+                            aria_details: Signal::default(),
                             x_name: None,
                             y_name: None,
                             form: None,
@@ -186,9 +186,9 @@ pub fn PageUseColorArea() -> impl IntoView {
                             "Names the area; its inputs are named \u{201c}<label>, Color picker\u{201d}. The area has no visible "
                             "label, so set this or "<Code inline=true>"aria_labelledby"</Code>"."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the area."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the inputs."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"The ids of the elements with details about the inputs."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the area."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the inputs."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">"The ids of the elements with details about the inputs."</ApiRow>
                         <ApiRow name="x_name, y_name" ty="Option<String>" default="None">"Form field names of the hidden range inputs."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the inputs belong to."</ApiRow>
                     </ApiTable>

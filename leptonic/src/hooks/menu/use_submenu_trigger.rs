@@ -8,7 +8,7 @@ use web_sys::KeyboardEvent;
 
 use super::{SubmenuTriggerState, UseSafelyMouseToSubmenuInput, use_safely_mouse_to_submenu};
 use crate::{
-    CapturedElement,
+    CapturedElement, EventHandler,
     hooks::{
         collections::FocusStrategy,
         interactions::{
@@ -91,8 +91,9 @@ pub struct SubmenuTriggerItem {
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
     pub is_open: Signal<bool>,
     /// ArrowRight (ArrowLeft in right-to-left text) opens the submenu and moves focus into it;
-    /// the other arrow closes it.
-    pub keyboard: UseKeyboardProps,
+    /// the other arrow closes it (the item chains these after its own keyboard handlers).
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_keyup: EventHandler<KeyboardEvent>,
     pub on_press_start: Callback<PressEvent>,
     pub on_press: Callback<PressEvent>,
     pub on_hover_change: Callback<bool>,
@@ -111,12 +112,12 @@ pub struct SubmenuProps {
     /// Which item to focus when the submenu opens.
     pub auto_focus: Signal<Option<FocusStrategy>>,
     /// The arrow key towards the parent menu and Escape close the submenu, returning focus to
-    /// the trigger. `None` for a subdialog.
-    pub keyboard: Option<UseKeyboardProps>,
+    /// the trigger (the menu runs it before its own). `None` for a subdialog.
+    pub on_keydown: Option<EventHandler<KeyboardEvent>>,
 }
 
 /// Return value of [`use_submenu_trigger`].
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSubmenuTriggerReturn {
     pub trigger: SubmenuTriggerItem,
     pub submenu: SubmenuProps,
@@ -212,6 +213,7 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
             ..UseKeyboardInput::default()
         })
         .props
+        .on_keydown
     });
 
     // On the trigger: the arrow into the submenu opens it (focusing its first item), the other
@@ -258,6 +260,10 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
         ..UseKeyboardInput::default()
     })
     .props;
+    let UseKeyboardProps {
+        on_keydown: trigger_keydown,
+        on_keyup: trigger_keyup,
+    } = trigger_keyboard;
 
     // Keyboard and screen readers open on press start (focusing the first item); mouse and
     // touch on press, after the pointer is released.
@@ -346,7 +352,8 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
             aria_controls: Signal::derive(move || is_open.get().then(|| controls_id.clone())),
             aria_haspopup: Signal::derive(move || (!is_disabled.get()).then_some(kind.into())),
             is_open,
-            keyboard: trigger_keyboard,
+            on_keydown: trigger_keydown,
+            on_keyup: trigger_keyup,
             on_press_start,
             on_press,
             on_hover_change,
@@ -357,7 +364,7 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
             level: state.level,
             on_close: Callback::new(move |()| state.close_all()),
             auto_focus: state.focus_strategy,
-            keyboard: submenu_keyboard,
+            on_keydown: submenu_keyboard,
         },
         should_close_on_interact_outside: InteractOutsideFilter::new(move |target| {
             trigger

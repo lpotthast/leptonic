@@ -138,10 +138,10 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "The accessible name, for a toggle without visible label text."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Signal<Option<String>>" default="None">
                             "Ids of further elements labelling or describing the input, or showing its error."
                         </ApiRow>
-                        <ApiRow name="aria_controls" ty="Option<String>" default="None">"The id of the element the toggle controls."</ApiRow>
+                        <ApiRow name="aria_controls" ty="Signal<Option<String>>" default="None">"The id of the element the toggle controls."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="exclude_from_tab_order" ty="Signal<bool>" default="false">"Removes the input from the tab order."</ApiRow>
                         <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Focus callbacks of the input."</ApiRow>
@@ -269,7 +269,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the group without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the checkboxes belong to, when they aren\u{2019}t inside it."</ApiRow>

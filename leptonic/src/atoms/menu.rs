@@ -391,7 +391,7 @@ pub fn Menu(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// The ids of the elements naming the menu. Default inside a `MenuTrigger`: the trigger.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     /// Focus an item when the menu mounts. Default inside a `MenuTrigger`: as the trigger opened
     /// it (the first or last item by keyboard, else the menu).
     #[prop(optional)]
@@ -458,7 +458,7 @@ pub fn Menu(
     // Inside a trigger: labelled by the trigger.
     let trigger_id = trigger_ctx.as_ref().map(|ctx| ctx.trigger.trigger_id);
     let labelledby = Signal::derive(move || {
-        aria_labelledby.clone().or_else(|| {
+        aria_labelledby.get().or_else(|| {
             aria_label
                 .read()
                 .is_none()
@@ -556,7 +556,10 @@ pub fn MenuItem(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItem", classes);
-    let menu = expect_context::<MenuData>();
+    let Some(menu) = use_context::<MenuData>() else {
+        crate::utils::dev_warn!("A <MenuItem> must be inside a <Menu>.");
+        return None;
+    };
     // The trigger item of a `SubmenuTrigger`.
     let submenu_trigger = use_context::<SubmenuItemContext>()
         .and_then(|ctx| ctx.0)
@@ -618,7 +621,7 @@ pub fn MenuItem(
     let (attrs, item_styles) = props.into_parts();
     let styles = item_styles.merge(styles);
 
-    view! {
+    Some(view! {
         <Provider value=ctx>
             <div
                 {..attrs}
@@ -637,7 +640,7 @@ pub fn MenuItem(
                 {children()}
             </div>
         </Provider>
-    }
+    })
 }
 
 /// Opens a submenu from an item of a [`Menu`]: its children are the trigger [`MenuItem`] (with
@@ -673,9 +676,14 @@ pub fn SubmenuTrigger(
     kind: SubmenuKind,
     children: Children,
 ) -> impl IntoView {
-    let root = expect_context::<RootMenuState>().0;
-    let parent_menu = expect_context::<ParentMenuElement>().0;
-    let menu = expect_context::<MenuData>();
+    let (Some(RootMenuState(root)), Some(ParentMenuElement(parent_menu)), Some(menu)) = (
+        use_context::<RootMenuState>(),
+        use_context::<ParentMenuElement>(),
+        use_context::<MenuData>(),
+    ) else {
+        crate::utils::dev_warn!("A <SubmenuTrigger> must be inside a <Menu>.");
+        return None;
+    };
     let selection = menu.state.selection;
     let is_disabled = {
         let key = key.clone();
@@ -710,7 +718,7 @@ pub fn SubmenuTrigger(
     dialog_trigger
         .trigger_id
         .set(submenu_props.aria_labelledby.clone());
-    scoped_view(
+    Some(scoped_view(
         move || {
             provide_context(SubmenuItemContext(Some((key, item))));
             provide_context(SubmenuMenuContext(Some((submenu_props, submenu))));
@@ -718,7 +726,7 @@ pub fn SubmenuTrigger(
             provide_context(Some(popover));
         },
         children,
-    )
+    ))
 }
 
 /// One [`MenuItem`] per item of the menu's collection, rendered by `children`.
@@ -740,10 +748,13 @@ where
     F: Fn(Node) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
-    let menu = expect_context::<MenuData>();
+    let Some(menu) = use_context::<MenuData>() else {
+        crate::utils::dev_warn!("<MenuItems> must be inside a <Menu>.");
+        return None;
+    };
     let collection = menu.state.collection;
     let children = std::sync::Arc::new(children);
-    view! {
+    Some(view! {
         <For
             each=move || collection.with(|c| c.items().cloned().collect::<Vec<_>>())
             key=|node| node.key.clone()
@@ -759,7 +770,7 @@ where
                 }
             }
         </For>
-    }
+    })
 }
 
 /// The main text of a [`MenuItem`] (labels the item).
@@ -772,8 +783,11 @@ pub fn MenuItemLabel(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItemLabel", classes);
-    let ctx = expect_context::<MenuItemContext>();
-    slot(ctx.label, classes, styles, children)
+    let Some(ctx) = use_context::<MenuItemContext>() else {
+        crate::utils::dev_warn!("A <MenuItemLabel> must be inside a <MenuItem>.");
+        return None;
+    };
+    Some(slot(ctx.label, classes, styles, children))
 }
 
 /// Secondary text of a [`MenuItem`] (describes the item).
@@ -786,8 +800,11 @@ pub fn MenuItemDescription(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItemDescription", classes);
-    let ctx = expect_context::<MenuItemContext>();
-    slot(ctx.description, classes, styles, children)
+    let Some(ctx) = use_context::<MenuItemContext>() else {
+        crate::utils::dev_warn!("A <MenuItemDescription> must be inside a <MenuItem>.");
+        return None;
+    };
+    Some(slot(ctx.description, classes, styles, children))
 }
 
 /// The keyboard shortcut of a [`MenuItem`] (e.g. "Ctrl+C"), announced with the item.
@@ -800,8 +817,11 @@ pub fn MenuItemShortcut(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuItemShortcut", classes);
-    let ctx = expect_context::<MenuItemContext>();
-    slot(ctx.shortcut, classes, styles, children)
+    let Some(ctx) = use_context::<MenuItemContext>() else {
+        crate::utils::dev_warn!("A <MenuItemShortcut> must be inside a <MenuItem>.");
+        return None;
+    };
+    Some(slot(ctx.shortcut, classes, styles, children))
 }
 
 /// Renders a label/description/shortcut slot (one of each per item: its id is the item's
@@ -864,7 +884,10 @@ pub fn MenuSection(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-MenuSection", classes);
     let heading_classes = with_default_class("leptonic-MenuSectionHeading", heading_classes);
-    let menu = expect_context::<MenuData>();
+    let Some(menu) = use_context::<MenuData>() else {
+        crate::utils::dev_warn!("A <MenuSection> must be inside a <Menu>.");
+        return None;
+    };
     let UseMenuSectionReturn {
         heading_props,
         group_props,
@@ -908,7 +931,7 @@ pub fn MenuSection(
         })
     };
 
-    view! {
+    Some(view! {
         <section {..group_props.into_attrs()} class=classes style=styles>
             {heading}
             <Provider value=MenuCloseOnSelect(
@@ -922,5 +945,5 @@ pub fn MenuSection(
                 }}
             </Provider>
         </section>
-    }
+    })
 }

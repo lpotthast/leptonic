@@ -4,6 +4,53 @@ Finished work, moved out of `PLAN.md` (which holds open work only), condensed to
 when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
 recent first within each part.
 
+## Library: tooltip text can be selected (2026-10-10)
+
+- `use_tooltip_trigger`: blurring the trigger no longer closes the tooltip while the pointer is on it (a documented
+  deviation; react-aria closes it right away). Pressing into the tooltip to select its text took the focus from a
+  focused trigger (e.g. one pressed before) and closed it. Browser case `tooltip::stays_open_when_pressed_into`.
+
+## Library: PLAN leftovers (2026-10-10, evening)
+
+- Atom parts outside their parent warn (`dev_warn!`) and render nothing instead of panicking: `SearchFieldClearButton`,
+  the `NumberField` group and stepper buttons, `ListBoxItems`, `ComboBoxPopover`, `RadioField`, and the menu parts
+  (`MenuItem`, `MenuItems`, `MenuSection`, `SubmenuTrigger`, the item label/description/shortcut). Browser cases
+  `orphan_parts::*` on a new fixture (`/atoms/orphan-parts`) mount each family's misplaced parts.
+- The item hooks warn (debug builds) about a key missing from the collection, as `use_option` did: `use_menu_item`,
+  `use_grid_list_item` (so tags and tree items), `use_grid_row` (so table rows).
+- `GridFocusVisible`/`TableFocusVisible` contexts dropped: rows and column headers read `is_focus_visible()`.
+- `HourCycle` and `Focusability` are exported from the crate root (were reachable only through
+  `hooks::datepicker`/`hooks::focus`).
+- Id lists through `IdRefs`: the slider output's `for` (now absent without thumbs), table row labels
+  (`TableData::row_labelledby` returns `IdRefs`), the table selection checkbox, the column resizer.
+- Tests: raw double-click action chains replaced by `ElementActions::double_click`; `test_tree`'s blocking
+  `thread::sleep` became `tokio::time::sleep`; six consistency assertions state their duration.
+- Atoms return `None`/`Some(view)` (`Either` for two branches) instead of `().into_any()` early returns (55); the
+  test-app's wasm grew 0.18% (`build-performance.md`, "Opportunities").
+- Id references are reactive (C2, 2026-10-11): atom props `aria_labelledby`/`aria_describedby`/`aria_details`/
+  `aria_controls`/`aria_errormessage` are `MaybeProp<String>` (83 props; `Button`/`ToggleButton` were the only
+  reactive ones), hook inputs and the props they feed `Signal<Option<String>>` (35 inputs). The table selection
+  checkbox follows its row's labels (was read once). Hand-joined id lists on the way moved to `IdRefs` (color area,
+  wheel and swatch, Button's pending label, number field steppers). Browser cases
+  `button::references_follow_their_signals`, `text_field::described_by_a_changing_reference`.
+- `*Props`/`*Return` types are no longer `Clone` (the user, 2026-10-11: enforce the rule; 30 types; exception:
+  the signals-only `UseFocusVisibleReturn`). Atoms keep attributes in their contexts instead of props; the
+  `TextField` tracks which element renders it (react-aria's `inputElementType`: `UseTextFieldInput::element` is a
+  signal set by `Input`/`TextArea`), so `TextArea` no longer copies the props, and a field switching between both
+  works (browser case `text_field::switching_between_input_and_textarea`); `InputContext::new` takes the attributes;
+  submenu keyboard handling travels as `EventHandler`s; `UseDisclosurePanelProps::{labelled_by, with_role}` removed
+  (unused; its fields are public). `UseFormValidationStateInput` implements `Clone` and `Debug`.
+- `data-focus-visible` has one writer per element (the user, 2026-10-11: the hooks keep rendering it): atoms
+  spreading `use_focus_ring`/`use_button`/`use_link` attributes no longer render it again (21 elements);
+  `atoms-implementation.md` documents the rule. `focus_ring::within_tab_focus` checks the within ring's attribute.
+- Toasts: a zero `timeout` sets no timer (react-stately's falsy `timeout: 0`; it created one that never started).
+- Weak cases strengthened: `focus_manager::radio_group_wrap_{next,prev}` check the element the call focused (the
+  fixture reports it; a no-op passed before), `virtual_list::rebuilt_views_drop_the_old_handlers` waits for the
+  focus each click causes; `tree::collapsing_the_parent_of_the_focused_row` loads its page once; a wrong comment in
+  `radio_group::arrow_keys`. `tag_group_atoms::tabbing_to_remove_buttons` stays as is: upstream's `onRemove` is a
+  mock that removes nothing either.
+- Stale comments: the list box theme header, `Out`'s variants, the Justfile's consumer note.
+
 ## Library: review of commit 07f628b1 against react-aria (2026-10-10)
 
 The commit (1,254 files, another model's work) was reviewed area by area against react-spectrum `740c6c5c4a`.

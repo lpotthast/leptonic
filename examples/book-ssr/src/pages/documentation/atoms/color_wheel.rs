@@ -104,14 +104,14 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the hue channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the wheel."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the wheel."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input; its value is the hue."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the input belongs to."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the wrapper."</ApiRow>
                         <ApiRow name="children" ty="Children">"The "<Code inline=true>"ColorWheelTrack"</Code>" and the "<Code inline=true>"ColorThumb"</Code>". Required."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing this control."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements providing additional details."</ApiRow>
-                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"Id of the element describing a validation error."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"Ids of elements describing this control."</ApiRow>
+                        <ApiRow name="aria_details" ty="MaybeProp<String>" default="None">"Ids of elements providing additional details."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="MaybeProp<String>" default="None">"Id of the element describing a validation error."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

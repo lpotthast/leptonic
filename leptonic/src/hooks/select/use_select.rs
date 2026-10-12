@@ -68,8 +68,8 @@ pub struct UseSelectInput {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     /// Replaces the list keyboard delegate (type-ahead and arrow keys on the trigger).
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Called when focus moves to the select (trigger or popover) from outside.
@@ -101,7 +101,7 @@ pub struct UseSelectReturn {
 }
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectLabelProps {
     pub id: String,
     /// Focuses the trigger.
@@ -119,7 +119,7 @@ impl IntoAttrs for UseSelectLabelProps {
 }
 
 /// Trigger props in addition to the button's.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectTriggerProps {
     /// Type-ahead: a space continues a search instead of opening the popover.
     pub on_keydown_capture: EventHandler<KeyboardEvent>,

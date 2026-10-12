@@ -82,7 +82,7 @@ pub fn Grid(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// Ids of elements labelling it.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -108,7 +108,7 @@ pub fn Grid(
 
     let UseGridReturn { props, data } = use_grid(UseGridInput {
         aria_label,
-        aria_labelledby: Signal::stored(aria_labelledby),
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         options: CollectionOptions {
             should_focus_wrap,
             escape_key_behavior,
@@ -124,22 +124,14 @@ pub fn Grid(
         should_select_on_press_up,
     });
 
-    // One keyboard-modality signal for all rows.
-    let focus_visible = GridFocusVisible(Signal::derive(is_focus_visible));
     view! {
         <Provider value=data>
-            <Provider value=focus_visible>
-                <div {..props.into_attrs()} class=classes style=styles>
-                    {children()}
-                </div>
-            </Provider>
+            <div {..props.into_attrs()} class=classes style=styles>
+                {children()}
+            </div>
         </Provider>
     }
 }
-
-/// Whether focus rings should be visible (keyboard modality), for the [`GridRow`]s of a [`Grid`].
-#[derive(Debug, Clone, Copy)]
-struct GridFocusVisible(Signal<bool>);
 
 /// A group of rows of a [`Grid`] (`role="rowgroup"`).
 ///
@@ -177,7 +169,7 @@ pub fn GridRow(
     let classes = with_default_class("leptonic-GridRow", classes);
     let Some(grid) = use_context::<GridData>() else {
         crate::utils::dev_warn!("a <GridRow> belongs in a <Grid>");
-        return ().into_any();
+        return None;
     };
     let UseGridRowReturn {
         row_props,
@@ -195,15 +187,14 @@ pub fn GridRow(
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
     // Focused by keyboard (react-aria-components: the row's `useFocusRing`).
-    let focus_visible = expect_context::<GridFocusVisible>().0;
-    let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
+    let is_focus_visible = Signal::derive(move || is_focused.get() && is_focus_visible());
     // Interactive rows show hover (react-aria-components' `Row`).
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
         ..UseHoverInput::default()
     });
 
-    view! {
+    Some(view! {
         <div
             {..attrs}
             {..hover.props.into_attrs()}
@@ -218,8 +209,7 @@ pub fn GridRow(
         >
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// A cell of a [`Grid`], for the collection cell `key` (`Key::cell(row, column)`).
@@ -247,7 +237,7 @@ pub fn GridCell(
     let classes = with_default_class("leptonic-GridCell", classes);
     let Some(grid) = use_context::<GridData>() else {
         crate::utils::dev_warn!("a <GridCell> belongs in a <Grid>");
-        return ().into_any();
+        return None;
     };
     let UseGridCellReturn {
         grid_cell_props,
@@ -267,10 +257,10 @@ pub fn GridCell(
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput::default());
 
-    view! {
+    Some(view! {
         <div
             {..attrs}
             {..focus_ring.into_attrs()}
@@ -278,10 +268,8 @@ pub fn GridCell(
             style=styles
             data-pressed=flag(is_pressed)
             data-focused=flag(is_focused)
-            data-focus-visible=flag(is_focus_visible)
         >
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }

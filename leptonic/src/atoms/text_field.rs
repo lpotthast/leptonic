@@ -9,7 +9,7 @@ use super::{
     input::{InputContext, InputState},
 };
 use crate::{
-    Out,
+    IntoAttrs, Out,
     atoms::field::LabelPresence,
     hooks::form::{
         AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement, UseTextFieldInput,
@@ -90,8 +90,8 @@ pub fn TextField(
     /// Labels the field when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -105,8 +105,10 @@ pub fn TextField(
         on_change,
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
+    // Which element renders the field: set by its `Input` or `TextArea`.
+    let element = RwSignal::new(TextFieldElement::Input);
     let field = use_text_field(UseTextFieldInput {
         id,
         input_type,
@@ -131,15 +133,15 @@ pub fn TextField(
         auto_focus,
         has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         on_focus_change,
         state,
-        element: TextFieldElement::Input,
+        element: element.into(),
         validation: None,
         exclude_from_tab_order: false,
         label_id: None,
-        aria_errormessage: None,
+        aria_errormessage: Signal::default(),
         aria_activedescendant: Signal::stored(None),
         aria_autocomplete: None,
         aria_haspopup: None,
@@ -155,7 +157,7 @@ pub fn TextField(
     // Contexts for the children only, with the `<div>` as the root (getting attributes set on the
     // component).
     scoped_view(
-        move || provide_text_field_contexts(field, label_presence),
+        move || provide_text_field_contexts(field, Some(element), label_presence),
         move || {
             view! {
                 <div
@@ -174,9 +176,11 @@ pub fn TextField(
 }
 
 /// Provides the contexts of a text-like field's parts ([`Label`](super::field::Label),
-/// [`Input`](super::input::Input), ...).
+/// [`Input`](super::input::Input), ...). `element` (the hook's `element`) for a field that can
+/// render a [`TextArea`](super::input::TextArea) too.
 pub(crate) fn provide_text_field_contexts(
     field: UseTextFieldReturn,
+    element: Option<RwSignal<TextFieldElement>>,
     label_presence: LabelPresence,
 ) {
     let UseTextFieldReturn {
@@ -192,15 +196,16 @@ pub(crate) fn provide_text_field_contexts(
         ..
     } = field;
     let is_disabled = input_props.disabled;
-    provide_context(InputContext::text_field(
-        input_props,
-        InputState {
-            is_disabled,
-            is_invalid,
-            is_focused,
-            is_focus_visible,
-        },
-    ));
+    let state = InputState {
+        is_disabled,
+        is_invalid,
+        is_focused,
+        is_focus_visible,
+    };
+    provide_context(match element {
+        Some(element) => InputContext::text_field(input_props, element, state),
+        None => InputContext::new(input_props.into_attrs(), state),
+    });
     provide_context(LabelContext::label(label_props).with_presence(label_presence));
     provide_context(FieldContext {
         description: description_props,

@@ -160,7 +160,7 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
                 FocusStrategy::Last => AutoFocus::Last,
             })
         });
-        submenu_keyboard = submenu.keyboard;
+        submenu_keyboard = submenu.on_keydown;
     }
 
     // Checked once mounted: a label may arrive after creation (a menu trigger's id).
@@ -192,8 +192,8 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
     collection.on_keydown = EventHandler::new(move |e: KeyboardEvent| {
         use crate::utils::key::{KeyboardEventKey, KeyboardKey};
         // A submenu handles the arrow key towards its parent and Escape first.
-        if let Some(keyboard) = &submenu_keyboard {
-            keyboard.on_keydown.call(e.clone());
+        if let Some(submenu_keydown) = &submenu_keyboard {
+            submenu_keydown.call(e.clone());
         }
         if e.typed_key() != KeyboardKey::Escape {
             list_keydown.call(e);

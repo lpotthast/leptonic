@@ -17,7 +17,7 @@ fn Landmark(
         element,
         role,
         aria_label: label.into(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         focus: None,
     });
     view! {

@@ -32,6 +32,7 @@ pub mod localized;
 pub mod menu;
 pub mod menu_states;
 pub mod number_field;
+pub mod orphan_parts;
 pub mod overlay_position;
 pub mod overlay_position_options;
 pub mod overlay_state;

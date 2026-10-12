@@ -9,14 +9,14 @@ use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    CapturedElement, IntoAttrs, Out, ValueBinding,
+    CapturedElement, IntoAttrs, Out, PropsWithStyles, ValueBinding,
     hooks::{
         button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::{
             CalendarData, CalendarHeadingFormat, CalendarStates, CalendarYearPickerFormat,
             CommitBehavior, DateAvailabilityQuery, PageBehavior, SelectionAlignment,
-            UseCalendarCellInput, UseCalendarCellReturn, UseCalendarGridInput,
-            UseCalendarGridReturn, UseCalendarHeadingInput, UseCalendarInput,
+            UseCalendarCellButtonProps, UseCalendarCellInput, UseCalendarCellReturn,
+            UseCalendarGridInput, UseCalendarGridReturn, UseCalendarHeadingInput, UseCalendarInput,
             UseCalendarMonthPickerInput, UseCalendarPickerReturn, UseCalendarReturn,
             UseCalendarStateInput, UseCalendarYearPickerInput, UseRangeCalendarInput,
             UseRangeCalendarStateInput, use_calendar, use_calendar_cell, use_calendar_grid,
@@ -183,9 +183,9 @@ pub fn Calendar(
     #[prop(into, optional)]
     id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
-    #[prop(into, optional)] aria_details: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
+    #[prop(into, optional)] aria_details: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -260,9 +260,9 @@ pub fn Calendar(
         state,
         id,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
-        aria_details,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_details: crate::utils::prop_signal(aria_details),
     });
     render_calendar(calendar, is_disabled, classes, styles, children)
 }
@@ -318,9 +318,9 @@ pub fn RangeCalendar(
     #[prop(into, optional)] weeks_in_month: MaybeProp<u8>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
-    #[prop(into, optional)] aria_details: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
+    #[prop(into, optional)] aria_details: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -399,9 +399,9 @@ pub fn RangeCalendar(
         commit_behavior,
         id,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
-        aria_details,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_details: crate::utils::prop_signal(aria_details),
     });
     render_calendar(calendar, is_disabled, classes, styles, children)
 }
@@ -455,15 +455,13 @@ pub fn CalendarHeading(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CalendarHeading", classes);
-    let Some(context) = expect_calendar("CalendarHeading") else {
-        return ().into_any();
-    };
+    let context = expect_calendar("CalendarHeading")?;
     let heading = use_calendar_heading(UseCalendarHeadingInput {
         state: context.data.state,
         offset,
         format,
     });
-    view! { <h2 class=classes style=styles aria-hidden="true">{heading}</h2> }.into_any()
+    Some(view! { <h2 class=classes style=styles aria-hidden="true">{heading}</h2> })
 }
 
 /// A month picker of the calendar around it (react-aria-components' `CalendarMonthPicker`):
@@ -480,14 +478,13 @@ where
     F: FnOnce(UseCalendarPickerReturn) -> V + 'static,
     V: IntoView + 'static,
 {
-    let Some(context) = expect_calendar("CalendarMonthPicker") else {
-        return ().into_any();
-    };
-    children(use_calendar_month_picker(UseCalendarMonthPickerInput {
-        state: context.data.state,
-        format: format.unwrap_or(MonthFormat::Short),
-    }))
-    .into_any()
+    let context = expect_calendar("CalendarMonthPicker")?;
+    Some(children(use_calendar_month_picker(
+        UseCalendarMonthPickerInput {
+            state: context.data.state,
+            format: format.unwrap_or(MonthFormat::Short),
+        },
+    )))
 }
 
 /// A year picker of the calendar around it (react-aria-components' `CalendarYearPicker`):
@@ -505,15 +502,14 @@ where
     F: FnOnce(UseCalendarPickerReturn) -> V + 'static,
     V: IntoView + 'static,
 {
-    let Some(context) = expect_calendar("CalendarYearPicker") else {
-        return ().into_any();
-    };
-    children(use_calendar_year_picker(UseCalendarYearPickerInput {
-        state: context.data.state,
-        visible_years: visible_years.unwrap_or(20),
-        format,
-    }))
-    .into_any()
+    let context = expect_calendar("CalendarYearPicker")?;
+    Some(children(use_calendar_year_picker(
+        UseCalendarYearPickerInput {
+            state: context.data.state,
+            visible_years: visible_years.unwrap_or(20),
+            format,
+        },
+    )))
 }
 
 /// A button of the calendar around it.
@@ -522,10 +518,8 @@ fn calendar_button(
     classes: Classes,
     styles: Styles,
     children: Children,
-) -> AnyView {
-    let Some(input) = input else {
-        return ().into_any();
-    };
+) -> impl IntoView {
+    let input = input?;
     let UseButtonReturn {
         props,
         is_disabled,
@@ -535,7 +529,7 @@ fn calendar_button(
         ..
     } = use_button(input);
     let (attrs, button_styles) = props.into_parts();
-    view! {
+    Some(view! {
         <button
             {..attrs}
             class=classes
@@ -547,8 +541,7 @@ fn calendar_button(
         >
             {children()}
         </button>
-    }
-    .into_any()
+    })
 }
 
 /// The button showing the previous page of the calendar around it ("Previous").
@@ -598,10 +591,8 @@ pub fn CalendarErrorMessage(
     let classes = with_default_class("leptonic-CalendarErrorMessage", classes);
     let props =
         expect_calendar("CalendarErrorMessage").map(|context| context.error_message.get_value());
-    let Some(props) = props else {
-        return ().into_any();
-    };
-    view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> }.into_any()
+    let props = props?;
+    Some(view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> })
 }
 
 /// A grid of the calendar around it: a month of dates (`offset`: a later month of a calendar
@@ -619,9 +610,7 @@ pub fn CalendarGrid(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CalendarGrid", classes);
-    let Some(context) = expect_calendar("CalendarGrid") else {
-        return ().into_any();
-    };
+    let context = expect_calendar("CalendarGrid")?;
     let calendar = context.data.state.calendar();
     let start_date = Signal::derive(move || calendar.visible_range.get().start.add(offset));
     // A month view's grid shows a month (react-aria-components: always).
@@ -649,12 +638,11 @@ pub fn CalendarGrid(
         week_days,
         weeks_in_month,
     };
-    view! {
+    Some(view! {
         <table {..grid_props.into_attrs()} class=classes style=styles>
             <Provider value=grid>{children()}</Provider>
         </table>
-    }
-    .into_any()
+    })
 }
 
 /// The header of the grid around it (a `thead`, hidden from assistive technology: the cells'
@@ -692,10 +680,10 @@ where
     let classes = with_default_class("leptonic-CalendarHeaderRow", classes);
     let Some(grid) = use_context::<GridContext>() else {
         crate::utils::dev_warn!("CalendarHeaderRow: not inside a CalendarGrid");
-        return ().into_any();
+        return None;
     };
     let children = std::sync::Arc::new(children);
-    view! {
+    Some(view! {
         <tr class=classes style=styles>
             <For
                 each=move || grid.week_days.get().into_iter().enumerate()
@@ -703,8 +691,7 @@ where
                 children=move |(_, day)| children(day)
             />
         </tr>
-    }
-    .into_any()
+    })
 }
 
 /// A weekday name of the grid's header (a `th`).
@@ -737,10 +724,10 @@ where
     let classes = with_default_class("leptonic-CalendarGridBody", classes);
     let Some(grid) = use_context::<GridContext>() else {
         crate::utils::dev_warn!("CalendarGridBody: not inside a CalendarGrid");
-        return ().into_any();
+        return None;
     };
     let children = std::sync::Arc::new(children);
-    view! {
+    Some(view! {
         <tbody class=classes style=styles>
             <For
                 each=move || 0..grid.weeks_in_month.get()
@@ -748,8 +735,7 @@ where
                 children=move |week| children(week)
             />
         </tbody>
-    }
-    .into_any()
+    })
 }
 
 /// A week row of the grid around it (a `tr`), rendering `children` per date (e.g. a
@@ -773,14 +759,14 @@ where
         expect_calendar("CalendarWeek"),
         use_context::<GridContext>(),
     ) else {
-        return ().into_any();
+        return None;
     };
     let calendar = context.data.state.calendar();
     let children = std::sync::Arc::new(children);
     let dates = Memo::new(move |_| calendar.dates_in_week(week, Some(grid.start_date.get())));
     // Cells are keyed by their position, so that they (and the focus) stay when the calendar
     // pages; their dates change. Dates before the representable range (year -9999) are left out.
-    view! {
+    Some(view! {
         <tr class=classes style=styles>
             <For
                 each=move || 0..dates.with(Vec::len)
@@ -799,17 +785,32 @@ where
                 }
             />
         </tr>
-    }
-    .into_any()
+    })
 }
 
 /// What a cell's button needs from its cell.
 #[derive(Clone)]
 struct CellContext {
-    cell: StoredValue<Option<UseCalendarCellReturn>>,
+    /// Taken by the cell's one `CalendarCellButton`.
+    button: StoredValue<Option<CellButtonParts>>,
     is_outside_month: Signal<bool>,
     is_selection_start: Signal<bool>,
     is_selection_end: Signal<bool>,
+}
+
+/// What a [`CalendarCellButton`] needs of its cell's [`UseCalendarCellReturn`] (all but the
+/// cell's own props).
+struct CellButtonParts {
+    button_props: PropsWithStyles<UseCalendarCellButtonProps>,
+    is_pressed: Signal<bool>,
+    is_focused: Signal<bool>,
+    is_selected: Signal<bool>,
+    is_disabled: Signal<bool>,
+    is_unavailable: Signal<bool>,
+    is_outside_visible_range: Signal<bool>,
+    is_invalid: Signal<bool>,
+    is_today: Signal<bool>,
+    formatted_date: Signal<String>,
 }
 
 /// A date of the grid around it (a `td` with the grid cell role). Put a `CalendarCellButton`
@@ -829,9 +830,7 @@ pub fn CalendarCell(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CalendarCell", classes);
-    let Some(context) = expect_calendar("CalendarCell") else {
-        return ().into_any();
-    };
+    let context = expect_calendar("CalendarCell")?;
     let state: CalendarStates = context.data.state;
     let calendar = state.calendar();
     let grid = use_context::<GridContext>();
@@ -870,19 +869,41 @@ pub fn CalendarCell(
                 .is_some_and(|highlighted| highlighted.end == date.get())
         })
     });
-    let cell_props = cell.cell_props.clone();
+    let UseCalendarCellReturn {
+        cell_props,
+        button_props,
+        is_pressed,
+        is_focused,
+        is_selected,
+        is_disabled,
+        is_unavailable,
+        is_outside_visible_range,
+        is_invalid,
+        is_today,
+        formatted_date,
+    } = cell;
     let cell_context = CellContext {
-        cell: StoredValue::new(Some(cell)),
+        button: StoredValue::new(Some(CellButtonParts {
+            button_props,
+            is_pressed,
+            is_focused,
+            is_selected,
+            is_disabled,
+            is_unavailable,
+            is_outside_visible_range,
+            is_invalid,
+            is_today,
+            formatted_date,
+        })),
         is_outside_month,
         is_selection_start,
         is_selection_end,
     };
-    view! {
+    Some(view! {
         <td {..cell_props.into_attrs()} class=classes style=styles>
             <Provider value=cell_context>{children()}</Provider>
         </td>
-    }
-    .into_any()
+    })
 }
 
 /// The focusable button of the cell around it, labelled with its date; shows the day number
@@ -903,13 +924,13 @@ pub fn CalendarCellButton(
     let classes = with_default_class("leptonic-CalendarCellButton", classes);
     let Some(context) = use_context::<CellContext>() else {
         crate::utils::dev_warn!("CalendarCellButton: not inside a CalendarCell");
-        return ().into_any();
+        return None;
     };
-    let Some(cell) = context.cell.try_update_value(Option::take).flatten() else {
+    let Some(cell) = context.button.try_update_value(Option::take).flatten() else {
         crate::utils::dev_warn!("CalendarCellButton: used twice in one CalendarCell");
-        return ().into_any();
+        return None;
     };
-    let UseCalendarCellReturn {
+    let CellButtonParts {
         button_props,
         is_pressed,
         is_focused,
@@ -920,20 +941,16 @@ pub fn CalendarCellButton(
         is_invalid,
         is_today,
         formatted_date,
-        ..
     } = cell;
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || is_disabled.get() || is_unavailable.get()),
         ..UseHoverInput::default()
     });
     let UseFocusRingReturn {
-        props: focus_ring,
-        is_focus_visible,
-        ..
+        props: focus_ring, ..
     } = use_focus_ring(UseFocusRingInput::default());
-    let is_focus_visible = Signal::derive(move || is_focus_visible.get() && is_focused.get());
     let (attrs, button_styles) = button_props.into_parts();
-    view! {
+    Some(view! {
         <div
             {..attrs}
             {..focus_ring.into_attrs()}
@@ -941,7 +958,6 @@ pub fn CalendarCellButton(
             class=classes
             style=button_styles.merge(styles)
             data-focused=flag(is_focused)
-            data-focus-visible=flag(is_focus_visible)
             data-hovered=flag(hover.is_hovered)
             data-pressed=flag(is_pressed)
             data-selected=flag(is_selected)
@@ -959,6 +975,5 @@ pub fn CalendarCellButton(
                 None => formatted_date.into_any(),
             }}
         </div>
-    }
-    .into_any()
+    })
 }

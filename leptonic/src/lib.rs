@@ -61,8 +61,8 @@ pub use crate::{
             use_today,
         },
         date_time_formatter::{
-            DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, DateTimeStyle, MonthFormat,
-            NumericFormat, TimeZoneFormat,
+            DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, DateTimeStyle, HourCycle,
+            MonthFormat, NumericFormat, TimeZoneFormat,
         },
         dom_ext::ContainsTarget,
         event_handler::{EventHandler, OnEvent},
@@ -72,8 +72,8 @@ pub use crate::{
         },
         focus::{focus_element, focus_safely},
         focusability::{
-            FOCUSABLE_SELECTOR, TABBABLE_SELECTOR, is_focusable, is_tabbable, is_typing_target,
-            prevent_focus_attr, will_open_keyboard,
+            FOCUSABLE_SELECTOR, Focusability, TABBABLE_SELECTOR, is_focusable, is_tabbable,
+            is_typing_target, prevent_focus_attr, will_open_keyboard,
         },
         fraction::Fraction,
         heading_level::HeadingLevel,
@@ -142,7 +142,8 @@ pub use crate::{
 /// return (propagate) a value upwards using a function-like property.
 /// Out can be anything that can be written to:
 /// - a `WriteSignal`,
-/// - a combined `RwSignal` or
+/// - a combined `RwSignal`,
+/// - a `StoredValue` or
 /// - a `Callback` which only consumes an input and returns `()`.
 ///
 /// This helps you to define props where the user can choose to use a signal directly

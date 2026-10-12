@@ -48,7 +48,8 @@ use crate::{
 /// Context from [`NumberField`] to its group and buttons.
 #[derive(Clone)]
 struct NumberFieldContext {
-    group: StoredValue<UseNumberFieldGroupProps>,
+    /// The group's attributes (from `use_number_field`).
+    group: StoredValue<<UseNumberFieldGroupProps as IntoAttrs>::Attrs>,
     increment: StoredValue<UseButtonInput>,
     decrement: StoredValue<UseButtonInput>,
     is_disabled: Signal<bool>,
@@ -115,8 +116,8 @@ pub fn NumberField<T: NumberValue>(
     /// Labels the field when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -145,7 +146,7 @@ pub fn NumberField<T: NumberValue>(
         name: name.clone(),
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseNumberFieldReturn {
         group_props,
@@ -165,8 +166,8 @@ pub fn NumberField<T: NumberValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         is_required,
         placeholder,
         auto_focus,
@@ -193,7 +194,7 @@ pub fn NumberField<T: NumberValue>(
             validation_details,
         });
         provide_context(InputContext::new(
-            move || input_props.clone().into_attrs(),
+            input_props.into_attrs(),
             InputState {
                 is_disabled,
                 is_invalid,
@@ -202,7 +203,7 @@ pub fn NumberField<T: NumberValue>(
             },
         ));
         provide_context(NumberFieldContext {
-            group: StoredValue::new(group_props),
+            group: StoredValue::new(group_props.into_attrs()),
             increment: StoredValue::new(increment_button),
             decrement: StoredValue::new(decrement_button),
             is_disabled,
@@ -255,7 +256,10 @@ pub fn NumberFieldGroup(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-NumberFieldGroup", classes);
-    let ctx = expect_context::<NumberFieldContext>();
+    let Some(ctx) = use_context::<NumberFieldContext>() else {
+        crate::utils::dev_warn!("A <NumberFieldGroup> must be inside a <NumberField>.");
+        return None;
+    };
     let ring = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
@@ -265,22 +269,21 @@ pub fn NumberFieldGroup(
         ..UseHoverInput::default()
     });
 
-    view! {
+    Some(view! {
         <div
-            {..ctx.group.get_value().into_attrs()}
+            {..ctx.group.get_value()}
             {..ring.props.into_attrs()}
             {..hover.props.into_attrs()}
             class=classes
             style=styles
             data-hovered=flag(hover.is_hovered)
             data-focus-within=flag(ring.is_focused)
-            data-focus-visible=flag(ring.is_focus_visible)
             data-disabled=flag(ctx.is_disabled)
             data-invalid=flag(ctx.is_invalid)
         >
             {children()}
         </div>
-    }
+    })
 }
 
 /// The button incrementing the [`NumberField`] around it ("Increase <label>"; not in the tab
@@ -297,8 +300,16 @@ pub fn NumberFieldIncrementButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-NumberFieldIncrementButton", classes);
-    let ctx = expect_context::<NumberFieldContext>();
-    stepper_button(ctx.increment.get_value(), classes, styles, children)
+    let Some(ctx) = use_context::<NumberFieldContext>() else {
+        crate::utils::dev_warn!("A <NumberFieldIncrementButton> must be inside a <NumberField>.");
+        return None;
+    };
+    Some(stepper_button(
+        ctx.increment.get_value(),
+        classes,
+        styles,
+        children,
+    ))
 }
 
 /// The button decrementing the [`NumberField`] around it ("Decrease <label>").
@@ -314,8 +325,16 @@ pub fn NumberFieldDecrementButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-NumberFieldDecrementButton", classes);
-    let ctx = expect_context::<NumberFieldContext>();
-    stepper_button(ctx.decrement.get_value(), classes, styles, children)
+    let Some(ctx) = use_context::<NumberFieldContext>() else {
+        crate::utils::dev_warn!("A <NumberFieldDecrementButton> must be inside a <NumberField>.");
+        return None;
+    };
+    Some(stepper_button(
+        ctx.decrement.get_value(),
+        classes,
+        styles,
+        children,
+    ))
 }
 
 fn stepper_button(

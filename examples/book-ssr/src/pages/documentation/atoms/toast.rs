@@ -109,7 +109,7 @@ pub fn PageAtomToast() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the region. Default: \u{201c}1 notification.\u{201d}, \u{201c}2 notifications.\u{201d}, \u{2026}"
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the region."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the region."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the region."</ApiRow>
                     </ApiTable>
                 </Section>

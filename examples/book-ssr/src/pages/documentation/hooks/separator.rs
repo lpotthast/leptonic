@@ -36,7 +36,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                         <AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id."</ApiRow>
-                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<String>>" default="None">
                         "Names the separator, e.g. when it separates groups of controls in a toolbar."
                     </ApiRow>
                 </ApiTable>

@@ -30,7 +30,7 @@ pub fn PageUseColorSwatch() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "Added to the color\u{2019}s name: the swatch is announced as \u{201c}vibrant red, Background\u{201d}."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
                     <ApiRow name="id" ty="Option<String>" default="None">"The swatch\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                 </ApiTable>
             </Section>
@@ -60,7 +60,7 @@ pub fn PageUseColorSwatch() -> impl IntoView {
                             color: Signal::stored(Color::from(RGB8 { r: 66, g: 135, b: 245 })),
                             color_name: "Ocean blue".into(),
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
+                            aria_labelledby: Signal::default(),
                             id: None,
                         });
 

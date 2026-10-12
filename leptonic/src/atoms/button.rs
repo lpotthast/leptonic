@@ -97,9 +97,9 @@ pub fn Button(
     /// Labels the button when its content doesn't (icon-only buttons).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Signal<Option<String>>,
-    #[prop(into, optional)] aria_controls: Signal<Option<String>>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
+    #[prop(into, optional)] aria_controls: MaybeProp<String>,
     /// Marks the button as the current item of a set (e.g. the current page of a pagination).
     #[prop(into, optional)]
     aria_current: Signal<Option<AriaCurrent>>,
@@ -119,7 +119,6 @@ pub fn Button(
     let own_id = id.clone();
     let announced_id = id.clone();
     let has_aria_label = Signal::derive(move || aria_label.read().is_some());
-    let labelled_by = aria_labelledby.clone();
     let label_progress = progress_id.clone();
 
     let UseButtonReturn {
@@ -144,17 +143,22 @@ pub fn Button(
         // Pending, the progress bar joins the name: after the labelling elements, or after the
         // button itself when it has an `aria-label` (`aria-labelledby` wins over `aria-label`).
         aria_labelledby: Signal::derive(move || {
+            let labelled_by = aria_labelledby.get();
             if !is_pending.get() {
-                return labelled_by.clone();
+                return labelled_by;
             }
-            match &labelled_by {
-                Some(ids) => Some(format!("{ids} {label_progress}")),
-                None if has_aria_label.get() => Some(format!("{own_id} {label_progress}")),
-                None => None,
-            }
+            let named_by = match &labelled_by {
+                Some(ids) => ids.as_str(),
+                None if has_aria_label.get() => own_id.as_str(),
+                None => return None,
+            };
+            [named_by, label_progress.as_str()]
+                .into_iter()
+                .collect::<IdRefs>()
+                .into_value()
         }),
-        aria_describedby,
-        aria_controls,
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_controls: crate::utils::prop_signal(aria_controls),
         aria_current,
         form,
         on_press,
@@ -182,11 +186,12 @@ pub fn Button(
         let changed = was_pending.is_some_and(|was_pending| was_pending != pending);
         if changed && focused {
             let mut ids = IdRefs::default();
-            match &aria_labelledby {
+            let labelledby = aria_labelledby.get_untracked();
+            match &labelledby {
                 Some(labelledby) => ids.push(labelledby),
                 None => ids.push(&announced_id),
             }
-            if pending && (aria_labelledby.is_some() || has_aria_label.get_untracked()) {
+            if pending && (labelledby.is_some() || has_aria_label.get_untracked()) {
                 ids.push(&progress);
             }
             announce(

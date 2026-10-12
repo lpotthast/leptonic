@@ -29,7 +29,7 @@ pub fn PageAtomToolbar() -> impl IntoView {
                         <Code inline=true>"Vertical"</Code>"."
                     </ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the toolbar."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                    <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">
                         "The ids of the elements naming the toolbar, unless "<Code inline=true>"aria_label"</Code>" is set."
                     </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the toolbar."</ApiRow>

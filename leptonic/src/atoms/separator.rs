@@ -38,7 +38,7 @@ pub fn Separator(
     orientation: Signal<Orientation>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
@@ -60,7 +60,7 @@ pub fn Separator(
             element_type,
             id: id.clone(),
             aria_label,
-            aria_labelledby: aria_labelledby.clone(),
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         })
         .props
         .into_attrs();

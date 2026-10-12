@@ -17,7 +17,7 @@ use crate::{
     IntoAttrs,
     hooks::{
         focus::use_focus_ring::{UseFocusRingInput, use_focus_ring},
-        form::UseTextFieldInputProps,
+        form::{TextFieldElement, UseTextFieldInputProps},
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
@@ -65,33 +65,59 @@ pub struct InputState {
 /// field's hook, and its state.
 #[derive(Clone)]
 pub struct InputContext {
+    /// The input's attributes, for each rendered input (one at a time; an input may mount again,
+    /// e.g. in a `Show`, or a text field may switch between `Input` and `TextArea`).
     attrs: Arc<dyn Fn() -> AnyAttribute + Send + Sync>,
-    /// A text field's props, which a [`TextArea`] can render too.
-    text_field: Option<StoredValue<UseTextFieldInputProps>>,
+    /// A text field's element kind and value, which a [`TextArea`] can render too.
+    text_field: Option<TextFieldParts>,
     pub state: InputState,
 }
 
+/// What an [`Input`] or [`TextArea`] of a text field needs beyond its attributes.
+#[derive(Clone, Copy)]
+struct TextFieldParts {
+    /// Which element the field renders (`use_text_field`'s `element`): set by the element that
+    /// mounts (react-aria-components' `TextField` sets `inputElementType` from its input ref).
+    element: RwSignal<TextFieldElement>,
+    /// The field's value: a textarea's initial content.
+    value: Signal<String>,
+}
+
+impl TextFieldParts {
+    /// Tells the field which element renders it.
+    fn rendered_as(self, element: TextFieldElement) {
+        if self.element.get_untracked() != element {
+            self.element.set(element);
+        }
+    }
+}
+
 impl InputContext {
-    /// The input of a field with any attributes (e.g. a field built from hooks): `attrs` creates
-    /// them for each rendered input.
-    pub fn new<A>(attrs: impl Fn() -> A + Send + Sync + 'static, state: InputState) -> Self
+    /// The input of a field with any attributes (e.g. a field built from hooks), cloned for each
+    /// rendered input.
+    pub fn new<A>(attrs: A, state: InputState) -> Self
     where
-        A: Attribute + Send + 'static,
+        A: Attribute + Clone + Send + Sync + 'static,
     {
         Self {
-            attrs: Arc::new(move || attrs().into_any_attr()),
+            attrs: Arc::new(move || attrs.clone().into_any_attr()),
             text_field: None,
             state,
         }
     }
 
-    /// The input of a [`use_text_field`](fn@crate::hooks::form::use_text_field) field, which can also be
-    /// a [`TextArea`].
-    pub fn text_field(props: UseTextFieldInputProps, state: InputState) -> Self {
-        let attrs_props = props.clone();
+    /// The input of a [`use_text_field`](fn@crate::hooks::form::use_text_field) field, which can
+    /// also be a [`TextArea`]: `element` is the hook's `element`, set by the `Input` or
+    /// `TextArea` that mounts.
+    pub fn text_field(
+        props: UseTextFieldInputProps,
+        element: RwSignal<TextFieldElement>,
+        state: InputState,
+    ) -> Self {
+        let value = props.value_property;
         Self {
-            text_field: Some(StoredValue::new(props)),
-            ..Self::new(move || attrs_props.clone().into_attrs(), state)
+            text_field: Some(TextFieldParts { element, value }),
+            ..Self::new(props.into_attrs(), state)
         }
     }
 }
@@ -131,6 +157,9 @@ pub fn Input(
             />
         });
     };
+    if let Some(text_field) = ctx.text_field {
+        text_field.rendered_as(TextFieldElement::Input);
+    }
     let state = ctx.state;
     let hover = use_hover(UseHoverInput {
         is_disabled: state.is_disabled,
@@ -172,8 +201,8 @@ pub fn TextArea(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TextArea", classes);
-    let Some((state, text_field)) =
-        use_clearable_context::<InputContext>().and_then(|ctx| Some((ctx.state, ctx.text_field?)))
+    let Some((ctx, text_field)) = use_clearable_context::<InputContext>()
+        .and_then(|ctx| ctx.text_field.map(|text_field| (ctx, text_field)))
     else {
         return Either::Right(view! {
             <textarea
@@ -184,12 +213,11 @@ pub fn TextArea(
             />
         });
     };
-    let mut props = text_field.get_value();
-    // `type`, `pattern` and the `value` attribute only exist on inputs (react-aria:
-    // `inputElementType`); a textarea renders its initial value as its content.
-    let initial_value = props.value.take();
-    props.r#type = Signal::stored(None);
-    props.pattern = None;
+    // Before the attributes are built: `type`, `pattern` and the `value` attribute only exist on
+    // inputs (react-aria: `inputElementType`); a textarea renders its value as its content.
+    text_field.rendered_as(TextFieldElement::TextArea);
+    let initial_value = text_field.value.get_untracked();
+    let state = ctx.state;
     let hover = use_hover(UseHoverInput {
         is_disabled: state.is_disabled,
         ..UseHoverInput::default()
@@ -197,7 +225,7 @@ pub fn TextArea(
 
     Either::Left(view! {
         <textarea
-            {..props.into_attrs()}
+            {..(ctx.attrs)()}
             {..hover.props.into_attrs()}
             {..state_attributes(state, hover.is_hovered)}
             node_ref=node_ref

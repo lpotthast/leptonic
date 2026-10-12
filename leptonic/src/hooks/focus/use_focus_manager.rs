@@ -8,14 +8,13 @@ use send_wrapper::SendWrapper;
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
 
-use crate::IntoAttrs;
-pub use crate::utils::focusability::Focusability;
 #[cfg(not(feature = "ssr"))]
 use crate::utils::{
     focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
     shadow_dom,
     shadow_tree_walker::ShadowTreeWalker,
 };
+use crate::{Focusability, IntoAttrs};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

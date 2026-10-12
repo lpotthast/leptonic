@@ -366,8 +366,8 @@ pub fn PageUseCombobox() -> impl IntoView {
                                 is_required: false.into(),
                                 has_label: true.into(),
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
                                 placeholder: MaybeProp::default(),
                                 form_value: ComboBoxFormValue::Key,
                                 form: None,
@@ -428,7 +428,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>" of "
                             <Code inline=true>"use_text_field"</Code>". It then labels the input, the button and the listbox."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby, aria_describedby" ty="MaybeProp<String>, Option<String>, Option<String>" default="None">
+                        <ApiRow name="aria_label, aria_labelledby, aria_describedby" ty="MaybeProp<String>, Signal<Option<String>>, Signal<Option<String>>" default="None">
                             "Labels or describes the input when there is no visible label, or in addition to it. "
                             <Code inline=true>"aria_labelledby"</Code>" also labels the button and the listbox."
                         </ApiRow>

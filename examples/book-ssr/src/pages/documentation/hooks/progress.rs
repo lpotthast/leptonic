@@ -35,8 +35,8 @@ pub fn PageUseProgressBar() -> impl IntoView {
                     <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                     <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names it when there is no visible label."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming it."</ApiRow>
-                    <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing it."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming it."</ApiRow>
+                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing it."</ApiRow>
                 </ApiTable>
             </Section>
 

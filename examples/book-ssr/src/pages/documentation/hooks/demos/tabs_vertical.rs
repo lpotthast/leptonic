@@ -47,7 +47,7 @@ fn DemoTabPanel(state: TabListState, key: &'static str, text: &'static str) -> i
     view! {
         <Show when=is_selected>
             {
-                let panel = use_tab_panel(UseTabPanelInput { state, key: Some(Key::from(key)), aria_label: MaybeProp::default(), aria_describedby: None, aria_details: None });
+                let panel = use_tab_panel(UseTabPanelInput { state, key: Some(Key::from(key)), aria_label: MaybeProp::default(), aria_describedby: Signal::default(), aria_details: Signal::default() });
                 view! {
                     <div {..panel.props.into_attrs()} class="demo-tab-panel">
                         <p>{text}</p>
@@ -81,7 +81,7 @@ pub fn TabsVerticalDemo() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         keyboard_activation: KeyboardActivation::Automatic,
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
     });
 
     view! {

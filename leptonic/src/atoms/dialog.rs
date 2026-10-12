@@ -64,11 +64,11 @@ pub fn Dialog(
     aria_label: MaybeProp<String>,
     /// The ids of the elements naming the dialog, instead of its title.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     /// The ids of the elements describing the dialog. Default for alert dialogs: its
     /// `DialogDescription`.
     #[prop(into, optional)]
-    aria_describedby: Option<String>,
+    aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -84,8 +84,8 @@ pub fn Dialog(
     } = use_dialog(UseDialogInput {
         role,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         fallback_aria_labelledby: trigger
             .and_then(|trigger| trigger.dialog_labelledby)
             .or_else(|| {

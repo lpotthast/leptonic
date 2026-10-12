@@ -1212,6 +1212,8 @@ pub async fn screen_reader_an_added_drop_target(page: &Page<'_>) -> Result<(), R
     page.settle().await?;
     assert_that!(|| target_3.is_within("[inert]"))
         .consistently_ok()
+        // No timer is involved: a few frames show nothing changes.
+        .for_at_least(std::time::Duration::from_millis(100))
         .matches(eq(false))
         .await;
     Ok(())
@@ -1256,6 +1258,8 @@ pub async fn screen_reader_a_removed_drop_target(page: &Page<'_>) -> Result<(), 
     page.settle().await?;
     assert_that!(|| target_1.is_within("[inert]"))
         .consistently_ok()
+        // No timer is involved: a few frames show nothing changes.
+        .for_at_least(std::time::Duration::from_millis(100))
         .matches(eq(false))
         .await;
     source
@@ -1286,6 +1290,8 @@ pub async fn screen_reader_a_hidden_drop_target(page: &Page<'_>) -> Result<(), R
     page.settle().await?;
     assert_that!(|| target_1.is_within("[inert]"))
         .consistently_ok()
+        // No timer is involved: a few frames show nothing changes.
+        .for_at_least(std::time::Duration::from_millis(100))
         .matches(eq(false))
         .await;
     Ok(())

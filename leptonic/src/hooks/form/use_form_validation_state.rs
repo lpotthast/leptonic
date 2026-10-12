@@ -183,6 +183,33 @@ pub struct UseFormValidationStateInput<T: Send + Sync + 'static> {
     pub names: Vec<String>,
 }
 
+// Manual: a derive would require `T: Clone`/`T: Debug`, and `validate` is a closure.
+impl<T: Send + Sync + 'static> Clone for UseFormValidationStateInput<T> {
+    fn clone(&self) -> Self {
+        Self {
+            is_invalid: self.is_invalid,
+            value: self.value,
+            validate: self.validate.clone(),
+            builtin_validation: self.builtin_validation,
+            validation_behavior: self.validation_behavior,
+            names: self.names.clone(),
+        }
+    }
+}
+
+impl<T: Send + Sync + 'static> std::fmt::Debug for UseFormValidationStateInput<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseFormValidationStateInput")
+            .field("is_invalid", &self.is_invalid)
+            .field("value", &self.value)
+            .field("validate", &self.validate.as_ref().map(|_| "Fn"))
+            .field("builtin_validation", &self.builtin_validation)
+            .field("validation_behavior", &self.validation_behavior)
+            .field("names", &self.names)
+            .finish()
+    }
+}
+
 /// The readers of the native validity of the inputs validated with a state (registered by
 /// [`use_form_validation`](super::use_form_validation::use_form_validation)). A commit runs them
 /// first, so it shows the inputs' current validity.

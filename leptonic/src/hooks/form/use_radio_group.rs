@@ -12,11 +12,11 @@ use super::{
     use_radio_group_state::RadioGroupState,
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, SlotProps,
+    CapturedElement, ElementCaptureAttr, EventHandler, Focusability, IntoAttrs, OnEvent, SlotProps,
     hooks::{
         collections::Key,
         focus::{
-            FocusManager, FocusManagerOptions, FocusWithinEvent, Focusability, UseFocusWithinInput,
+            FocusManager, FocusManagerOptions, FocusWithinEvent, UseFocusWithinInput,
             use_focus_within,
         },
         interactions::{UseKeyboardInput, use_keyboard},
@@ -51,9 +51,9 @@ pub struct UseRadioGroupInput {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_errormessage: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<String>>,
     /// The axis of the arrow keys (react-aria's default: vertical).
     pub orientation: Signal<Orientation>,
     /// The id of the form the radios belong to, when not their ancestor.
@@ -95,7 +95,7 @@ pub struct UseRadioGroupReturn {
 pub struct UseRadioGroupProps {
     pub id: String,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub aria_errormessage: Option<String>,
+    pub aria_errormessage: Signal<Option<String>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -113,7 +113,7 @@ pub type UseRadioGroupAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::Id, String>,
     Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-    Attr<attr::AriaErrormessage, Option<String>>,
+    Attr<attr::AriaErrormessage, Signal<Option<String>>>,
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,

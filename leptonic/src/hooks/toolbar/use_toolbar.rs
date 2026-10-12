@@ -38,7 +38,7 @@ pub struct UseToolbarInput {
     pub orientation: Signal<Orientation>,
     pub aria_label: MaybeProp<String>,
     /// Ignored when `aria_label` is set.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 impl Default for UseToolbarInput {
@@ -47,7 +47,7 @@ impl Default for UseToolbarInput {
             element: CapturedElement::new(),
             orientation: Signal::stored(Orientation::Horizontal),
             aria_label: MaybeProp::default(),
-            aria_labelledby: None,
+            aria_labelledby: Signal::default(),
         }
     }
 }
@@ -244,7 +244,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
             // Only without `aria_label` (react-aria), also when the label changes.
             aria_labelledby: Signal::derive(move || {
                 aria_labelledby
-                    .clone()
+                    .get()
                     .filter(|_| aria_label.read().is_none())
             }),
             element_capture: element.attr(),

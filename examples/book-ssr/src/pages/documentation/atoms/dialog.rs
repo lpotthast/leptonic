@@ -158,10 +158,10 @@ pub fn PageAtomDialog() -> impl IntoView {
                             "Names a dialog without a "<Code inline=true>"DialogTitle"</Code>"; a rendered "
                             <Code inline=true>"DialogTitle"</Code>" names it automatically."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">
                             "Ids of the elements naming the dialog, instead of its title."
                         </ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">
                             "Ids of the elements describing the dialog. Default for alert dialogs: its "
                             <Code inline=true>"DialogDescription"</Code>"."
                         </ApiRow>

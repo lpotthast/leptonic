@@ -379,8 +379,8 @@ pub struct DateFieldOptions {
     /// Whether a visible label labels the field.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub auto_focus: bool,
     /// The hidden input's form (when outside it).
     pub form: Option<String>,
@@ -427,7 +427,7 @@ pub struct UseDateFieldReturn<V: DateValue> {
 }
 
 /// Props of the field's label: pressing it focuses the first segment.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldLabelProps {
     pub label: UseLabelProps,
     pub on_click: EventHandler<web_sys::MouseEvent>,
@@ -504,7 +504,7 @@ impl IntoAttrs for UseDateFieldProps {
 
 /// Props of the hidden input carrying the value (ISO 8601) in forms. With native validation a
 /// hidden text input, so that `required` blocks submitting an empty field.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldInputProps {
     pub input_type: &'static str,
     pub hidden: bool,
@@ -593,7 +593,7 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
         has_label,
         label_element_type: LabelElementType::Span,
         aria_label,
-        aria_labelledby: aria_labelledby.clone(),
+        aria_labelledby,
         aria_describedby,
         ..UseFieldInput::default()
     });
@@ -663,7 +663,7 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
         }
         [
             has_label.get().then(|| label_id.clone()),
-            aria_labelledby.clone(),
+            aria_labelledby.get(),
         ]
         .into_iter()
         .flatten()

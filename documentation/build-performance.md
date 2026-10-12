@@ -329,8 +329,12 @@ In leptonic:
 - typed-builder's `PropsBuilder::build` is instantiated per combination of props a call site sets (5.5% of a user
   crate's IR, 2.4% of the wasm code). Atoms with dozens of props cost the most; fewer, grouped props (structs with
   `Default`) reduce it (`PLAN.md`).
-- `().into_any()` early returns for a missing context force atoms' views into `AnyView` (55 of them, `PLAN.md`,
-  "wasm size"): returning `Option<impl IntoView>` keeps them typed. Not measured yet.
+- `().into_any()` early returns for a missing context (55; 2026-10-10 replaced by `None`/`Some(view)`, `Either`
+  for two branches) were expected to shrink the wasm. Measured in the test-app's release wasm (erased components,
+  `opt-level = "z"`, no LTO): 11,365,089 → 11,385,789 bytes (+0.18%). With `erase_components` (every build here)
+  a component's view is erased at its boundary anyway, so `.into_any()` inside it added no erasure, while `Option`
+  and `Either` add monomorphized code per component. Kept as the documented atom pattern (no boxing per render),
+  not for size.
 - Measured and rejected for the release wasm: `opt-level = "s"` (+11%), a newer wasm-opt (−12 KB). Debug-only
   content of the release wasm is small: panic locations are 81 KB of file paths (67 KB of them absolute paths of the
   build machine, `--remap-path-prefix` would shorten them), tracing calls a few KB.

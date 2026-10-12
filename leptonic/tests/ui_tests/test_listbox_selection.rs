@@ -369,12 +369,7 @@ pub async fn links_with_replace_selection(page: &Page<'_>) -> Result<(), Report>
     one.click().await?;
     changes.wait_for_inner_text("one").await?;
     assert_that!(hash(page).await?).is_equal_to(String::new());
-    page.low_level()
-        .driver()
-        .action_chain()
-        .double_click_element(&one)
-        .perform()
-        .await?;
+    one.double_click().await?;
     assert_that!(|| hash(page))
         .eventually_ok()
         .matches(eq("#lbs-one"))

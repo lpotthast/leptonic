@@ -72,7 +72,7 @@ pub fn PageAtomColorSwatch() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Added to the color\u{2019}s name: \u{201c}vibrant red, Background\u{201d}."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the swatch."</ApiRow>
                         <ApiRow name="children" ty="Option<Children>" default="None">"Content rendered inside the swatch."</ApiRow>
                     </ApiTable>

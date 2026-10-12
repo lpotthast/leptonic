@@ -80,13 +80,13 @@ pub fn PageAtomButton() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "Names the button when its content doesn\u{2019}t, as for an icon-only button."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                    <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">
                         "The ids of the elements naming the button."
                     </ApiRow>
-                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">
                         "The ids of the elements describing the button."
                     </ApiRow>
-                    <ApiRow name="aria_controls" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_controls" ty="MaybeProp<String>" default="None">
                         "The ids of the elements the button controls."
                     </ApiRow>
                     <ApiRow name="aria_current" ty="Signal<Option<AriaCurrent>>" default="None">

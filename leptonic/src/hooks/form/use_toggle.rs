@@ -82,11 +82,11 @@ pub struct ToggleOptions {
     /// The value submitted with the form while selected (the browser submits `on` otherwise).
     pub value: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_errormessage: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<String>>,
     /// The element the toggle controls.
-    pub aria_controls: Option<String>,
+    pub aria_controls: Signal<Option<String>>,
     pub auto_focus: bool,
     pub exclude_from_tab_order: Signal<bool>,
     pub on_focus: Option<Callback<FocusEvent>>,
@@ -113,10 +113,10 @@ impl Default for ToggleOptions {
             form: None,
             value: None,
             aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            aria_errormessage: None,
-            aria_controls: None,
+            aria_labelledby: Signal::default(),
+            aria_describedby: Signal::default(),
+            aria_errormessage: Signal::default(),
+            aria_controls: Signal::default(),
             auto_focus: false,
             exclude_from_tab_order: Signal::stored(false),
             on_focus: None,
@@ -229,11 +229,11 @@ pub struct UseToggleInputProps {
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
-    pub aria_errormessage: Option<String>,
-    pub aria_controls: Option<String>,
+    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
     pub on_change: EventHandler<Event>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -269,11 +269,11 @@ pub type UseToggleInputAttrs = (
         Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
         Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
         Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-        Attr<attr::AriaErrormessage, Option<String>>,
-        Attr<attr::AriaControls, Option<String>>,
+        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
+        Attr<attr::AriaControls, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Option<String>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         ElementCaptureAttr,
     ),
     (
@@ -519,7 +519,7 @@ pub(crate) fn use_toggle_with(
 
     let description = use_slot("description");
     let error_message = use_slot("error-message");
-    let user_describedby = Signal::stored(aria_describedby);
+    let user_describedby = aria_describedby;
     let aria_describedby = IdRefs::derive([
         description.referenced_id,
         error_message.referenced_id,

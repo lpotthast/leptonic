@@ -13,7 +13,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::use_color_area_state::ColorAreaState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         focus::{
             FocusWithinEvent, UseFocusInput, UseFocusWithinInput, use_focus, use_focus_within,
@@ -73,9 +73,9 @@ pub struct UseColorAreaInput<C: ColorValue> {
     pub is_disabled: Signal<bool>,
     /// Names the area (its inputs get "{label}, Color picker").
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     /// The name of the x channel's input, for form submission.
     pub x_name: Option<String>,
     /// The name of the y channel's input, for form submission.
@@ -180,9 +180,9 @@ pub struct UseColorAreaInputProps {
     pub form: Option<String>,
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     pub aria_orientation: AriaOrientation,
     pub aria_valuetext: Signal<String>,
     pub aria_hidden: Signal<Option<AriaHidden>>,
@@ -210,9 +210,9 @@ pub type UseColorAreaInputAttrs = (
     (
         Attr<attr::AriaRoledescription, Signal<String>>,
         Attr<attr::AriaLabel, Signal<Option<String>>>,
-        Attr<attr::AriaLabelledby, Option<String>>,
-        Attr<attr::AriaDescribedby, Option<String>>,
-        Attr<attr::AriaDetails, Option<String>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        Attr<attr::AriaDetails, Signal<Option<String>>>,
         Attr<attr::AriaOrientation, AriaOrientation>,
         Attr<attr::AriaValuetext, Signal<String>>,
         Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
@@ -607,9 +607,15 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
 
     let is_mobile = use_platform_check(|| is_ios() || is_android());
     let labelled_by = |own_id: &str| {
-        aria_labelledby
-            .as_ref()
-            .map(|ids| format!("{own_id} {ids}"))
+        let own_id = own_id.to_owned();
+        Signal::derive(move || {
+            aria_labelledby.get().map(|ids| {
+                [own_id.as_str(), ids.as_str()]
+                    .into_iter()
+                    .collect::<IdRefs>()
+                    .to_string()
+            })
+        })
     };
     let input_label = Signal::derive(move || {
         let strings = strings.read();
@@ -623,13 +629,14 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         })
     });
     let area_id = use_id("color-area");
-    let has_labelledby = aria_labelledby.is_some();
     let area_label = Signal::derive(move || {
         let color_picker = strings.read().color_picker();
         match aria_label.get() {
             Some(label) => Some(format!("{label}, {color_picker}")),
             // On touch devices, the area itself is announced (react-aria's default label).
-            None => (is_mobile.get() && !has_labelledby).then_some(color_picker),
+            None => {
+                (is_mobile.get() && aria_labelledby.with(Option::is_none)).then_some(color_picker)
+            }
         }
     });
     let roledescription = Signal::derive(move || strings.read().two_dimensional_slider());
@@ -657,8 +664,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             (!(is_mobile.get() || focused.is_none() || focused == Some(Axis::X))).then_some(-1)
         }),
         aria_label: input_label,
-        aria_describedby: aria_describedby.clone(),
-        aria_details: aria_details.clone(),
+        aria_describedby,
+        aria_details,
         aria_orientation: AriaOrientation::Horizontal,
         aria_valuetext: value_text(x_channel),
         aria_hidden: Signal::derive(move || {
@@ -744,11 +751,13 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     // With other labels next to its `aria-label`, the area names itself too (`use_label`'s rule).
     let area_labelledby = {
         let area_id = area_id.clone();
-        let ids = aria_labelledby.clone();
         Signal::derive(move || {
-            let ids = ids.clone()?;
+            let ids = aria_labelledby.get()?;
             Some(if area_label.with(Option::is_some) {
-                format!("{area_id} {ids}")
+                [area_id.as_str(), ids.as_str()]
+                    .into_iter()
+                    .collect::<IdRefs>()
+                    .to_string()
             } else {
                 ids
             })

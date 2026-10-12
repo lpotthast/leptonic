@@ -97,13 +97,13 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     /// Names the slider when it has no `Label`. Without either, the channel's name does.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     /// Elements describing the slider.
     #[prop(into, optional)]
-    aria_describedby: Option<String>,
+    aria_describedby: MaybeProp<String>,
     /// Elements with details about the slider.
     #[prop(into, optional)]
-    aria_details: Option<String>,
+    aria_details: MaybeProp<String>,
     /// The name of the input, for form submission.
     #[prop(into, optional)]
     name: Option<String>,
@@ -115,7 +115,7 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorSlider", classes);
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<Ch::Color>);
     let state = use_color_slider_state(UseColorSliderStateInput {
@@ -135,12 +135,12 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     } = use_color_slider(UseColorSliderInput {
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         name,
         form,
         state,
-        aria_describedby,
-        aria_details,
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_details: crate::utils::prop_signal(aria_details),
     });
 
     let label = LabelContext::span(UseLabelProps {

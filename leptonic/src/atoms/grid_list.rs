@@ -3,7 +3,7 @@
 // Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{context::Provider, ev, prelude::*};
+use leptos::{context::Provider, either::Either, ev, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
@@ -84,7 +84,7 @@ pub fn GridList(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// Ids of elements labelling it.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     #[prop(optional)] layout: ListLayout,
     /// The primary orientation of the rows, usually the direction the list scrolls. A horizontal
     /// list moves between its columns with ArrowLeft/ArrowRight.
@@ -143,7 +143,7 @@ pub fn GridList(
 
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label,
-        aria_labelledby: Signal::stored(aria_labelledby),
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         layout,
         orientation,
         // As react-aria-components: the arrow keys move between the rows of a grid layout.
@@ -175,7 +175,6 @@ pub fn GridList(
                 style=styles
                 data-empty=flag(is_empty)
                 data-focused=flag(focus_ring.is_focused)
-                data-focus-visible=flag(focus_ring.is_focus_visible)
                 data-layout=data_layout
                 data-orientation=data_orientation
             >
@@ -220,7 +219,7 @@ pub fn GridListItem(
     let classes = with_default_class("leptonic-GridListItem", classes);
     let Some(list) = use_context::<GridListData>() else {
         crate::utils::dev_warn!("a <GridListItem> belongs in a <GridList>");
-        return ().into_any();
+        return None;
     };
     let selection = list.state.selection;
     let UseGridListItemReturn {
@@ -258,7 +257,7 @@ pub fn GridListItem(
         ..UseFocusRingInput::default()
     });
 
-    view! {
+    Some(view! {
         <div
             {..attrs}
             {..hover.props.into_attrs()}
@@ -281,8 +280,7 @@ pub fn GridListItem(
                 <Provider value=item>{children()}</Provider>
             </div>
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// What a [`GridListItem`] provides to its [`GridListItemDescription`].
@@ -304,27 +302,25 @@ pub fn GridListItemDescription(
     let classes = with_default_class("leptonic-GridListItemDescription", classes);
     let Some(ctx) = use_context::<GridListItemContext>() else {
         crate::utils::dev_warn!("a <GridListItemDescription> belongs in a <GridListItem>");
-        return ().into_any();
+        return None;
     };
     if let Some(props) = ctx
         .description_props
         .try_update_value(Option::take)
         .flatten()
     {
-        view! {
+        Some(Either::Left(view! {
             <span {..props.into_attrs()} class=classes style=styles>
                 {children()}
             </span>
-        }
-        .into_any()
+        }))
     } else {
         crate::utils::dev_warn!("GridListItemDescription: only one per GridListItem");
-        view! {
+        Some(Either::Right(view! {
             <span class=classes style=styles>
                 {children()}
             </span>
-        }
-        .into_any()
+        }))
     }
 }
 
@@ -353,7 +349,7 @@ pub fn GridListSection(
     let classes = with_default_class("leptonic-GridListSection", classes);
     let Some(list) = use_context::<GridListData>() else {
         crate::utils::dev_warn!("a <GridListSection> belongs in a <GridList>");
-        return ().into_any();
+        return None;
     };
     let UseGridListSectionReturn {
         row_props,
@@ -366,12 +362,11 @@ pub fn GridListSection(
         heading,
     };
 
-    view! {
+    Some(view! {
         <div {..row_group_props.into_attrs()} class=classes style=styles>
             <Provider value=ctx>{children()}</Provider>
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// The header row of a [`GridListSection`], labelling it: a `role="row"` element with a
@@ -388,7 +383,7 @@ pub fn GridListHeader(
     let classes = with_default_class("leptonic-GridListHeader", classes);
     let Some(ctx) = use_context::<GridListSectionContext>() else {
         crate::utils::dev_warn!("a <GridListHeader> belongs in a <GridListSection>");
-        return ().into_any();
+        return None;
     };
     let heading = ctx.heading;
     let content = match children {
@@ -397,16 +392,17 @@ pub fn GridListHeader(
     };
     if let Some((row_props, row_header_props)) = ctx.header.try_update_value(Option::take).flatten()
     {
-        view! {
+        Some(Either::Left(view! {
             <div {..row_props.into_attrs()} class=classes style=styles>
                 <div {..row_header_props.into_attrs()} style="display: contents">
                     {content}
                 </div>
             </div>
-        }
-        .into_any()
+        }))
     } else {
         crate::utils::dev_warn!("GridListHeader: only one per GridListSection");
-        view! { <div class=classes style=styles>{content}</div> }.into_any()
+        Some(Either::Right(
+            view! { <div class=classes style=styles>{content}</div> },
+        ))
     }
 }

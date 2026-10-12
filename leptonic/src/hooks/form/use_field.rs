@@ -38,9 +38,9 @@ pub struct UseFieldInput {
     /// field's name.
     pub aria_label: MaybeProp<String>,
     /// Further elements labelling the field.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// Further elements describing the field.
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
 }
 
 /// Return value of [`use_field`].
@@ -59,7 +59,7 @@ pub struct UseFieldReturn {
 }
 
 /// Props for the field element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFieldProps {
     pub id: String,
     pub aria_label: MaybeProp<String>,
@@ -139,11 +139,7 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
             aria_labelledby,
             // The error message is a description too: `aria-errormessage` is unsupported by
             // VoiceOver and NVDA.
-            aria_describedby: IdRefs::derive([
-                description_id,
-                error_message_id,
-                Signal::stored(aria_describedby),
-            ]),
+            aria_describedby: IdRefs::derive([description_id, error_message_id, aria_describedby]),
         },
         description_props: description.props,
         error_message_props: error_message.props,
@@ -184,7 +180,7 @@ mod tests {
             let field = use_field(UseFieldInput {
                 id: Some("f".to_owned()),
                 aria_label: "Name".into(),
-                aria_labelledby: Some("other".to_owned()),
+                aria_labelledby: Signal::stored(Some("other".to_owned())),
                 ..UseFieldInput::default()
             });
             // The field first, as react-aria's `useLabels`.

@@ -121,7 +121,7 @@ pub fn PageAtomTimeField() -> impl IntoView {
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when the field is rendered."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the field."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the field element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The label, the "<Code inline=true>"DateInput"</Code>" and the other parts. Required."</ApiRow>

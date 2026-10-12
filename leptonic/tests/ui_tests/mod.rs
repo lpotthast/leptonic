@@ -61,6 +61,7 @@ pub mod test_menu_trigger;
 pub mod test_move;
 pub mod test_number_field;
 pub mod test_number_field_atoms;
+pub mod test_orphan_parts;
 pub mod test_overlay;
 pub mod test_overlay_position;
 pub mod test_overlay_state;
@@ -255,7 +256,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_button::Pending))
                 .with(fixture_test(test_button::PendingFormSubmission))
                 .with(fixture_test(test_button::PendingLabelled))
-                .with(fixture_test(test_button::PendingTrigger)),
+                .with(fixture_test(test_button::PendingTrigger))
+                .with(fixture_test(test_button::ReferencesFollowTheirSignals)),
         )
         .with_test_group(
             TestGroup::new("focus")
@@ -919,6 +921,15 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(
                     test_listbox_selection::AutoFocusKeepsTheSelection,
                 )),
+        )
+        .with_test_group(
+            TestGroup::new("orphan_parts")
+                .with(fixture_test(test_orphan_parts::SearchFieldParts))
+                .with(fixture_test(test_orphan_parts::NumberFieldParts))
+                .with(fixture_test(test_orphan_parts::ListBoxParts))
+                .with(fixture_test(test_orphan_parts::ComboBoxParts))
+                .with(fixture_test(test_orphan_parts::RadioParts))
+                .with(fixture_test(test_orphan_parts::MenuParts)),
         )
         .with_test_group(
             TestGroup::new("select")
@@ -1888,7 +1899,13 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(
                     test_text_field_atoms::StandaloneInputDisabledAndInvalid,
                 ))
-                .with(fixture_test(test_text_field_atoms::StandaloneTextarea)),
+                .with(fixture_test(test_text_field_atoms::StandaloneTextarea))
+                .with(fixture_test(
+                    test_text_field_atoms::SwitchingBetweenInputAndTextarea,
+                ))
+                .with(fixture_test(
+                    test_text_field_atoms::DescribedByAChangingReference,
+                )),
         )
         .with_test_group(
             TestGroup::new("search_field")
@@ -2382,7 +2399,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_tooltip::OpensAtOnceWithoutDelay))
                 .with(fixture_test(test_tooltip::StaysOpenWhileHovered))
                 .with(fixture_test(test_tooltip::ClosesWhenThePointerLeavesIt))
-                .with(fixture_test(test_tooltip::StaysOpenBackOnTheTrigger)),
+                .with(fixture_test(test_tooltip::StaysOpenBackOnTheTrigger))
+                .with(fixture_test(test_tooltip::StaysOpenWhenPressedInto)),
         )
         .with_test_group(
             TestGroup::new("tag_group")

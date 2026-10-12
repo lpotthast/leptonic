@@ -66,9 +66,9 @@ pub fn PageUseColorSlider() -> impl IntoView {
                                 state,
                                 has_label: false.into(),
                                 aria_label: MaybeProp::default(),
-                                aria_labelledby: None,
-                                aria_describedby: None,
-                                aria_details: None,
+                                aria_labelledby: Signal::default(),
+                                aria_describedby: Signal::default(),
+                                aria_details: Signal::default(),
                                 name: None,
                                 form: None,
                             });
@@ -198,9 +198,9 @@ pub fn PageUseColorSlider() -> impl IntoView {
                             "Names the slider. Without it, a label or "<Code inline=true>"aria_labelledby"</Code>
                             ", the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the slider."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the slider."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"The ids of the elements with details about the slider."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the slider."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the slider."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">"The ids of the elements with details about the slider."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to."</ApiRow>
                     </ApiTable>

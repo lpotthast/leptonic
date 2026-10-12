@@ -37,9 +37,9 @@ pub fn SliderBasicDemo() -> impl IntoView {
         state,
         id: None,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_details: Signal::default(),
     });
     let thumb = use_slider_thumb(UseSliderThumbInput {
         state,
@@ -53,10 +53,10 @@ pub fn SliderBasicDemo() -> impl IntoView {
         form: None,
         has_label: Signal::stored(false),
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_errormessage: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_errormessage: Signal::default(),
+        aria_details: Signal::default(),
     });
     // The slider hooks don't track keyboard focus: a focus ring on the thumb sets `data-focus-visible` while its
     // input has keyboard focus.

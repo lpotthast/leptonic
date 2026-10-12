@@ -72,9 +72,11 @@ Every hook and atom follows these (the remaining migrations are items in `PLAN.m
 - **C2 Strings:** ids, `name`, `form`: `Option<String>`. User-visible text (`aria_label`, placeholders, value labels):
   `MaybeProp<String>` (Leptos' optional reactive prop type; text must be able to change with the locale; constants
   stay ergonomic via `into`). Never `&'static str` for dynamic values (it forced `Box::leak` in the radio group).
-  Id lists (`aria_labelledby`, `aria_describedby`) are `Option<String>` in atom props and hook inputs. A hook input
-  takes `Signal<Option<String>>` only where a composing caller supplies ids that change (Button's pending indicator,
-  Menu's trigger id, the collections Select, ComboBox, Table, Tree and TagGroup feed), never `MaybeProp`.
+  Id references (`aria_labelledby`, `aria_describedby`, `aria_details`, `aria_controls`, `aria_errormessage`) are
+  reactive (decided 2026-10-11, the user delegated it: referenced elements come and go, e.g. `use_description`, slots,
+  conditionally rendered parts): `MaybeProp<String>` in atom props (a plain `"id"`, `String`, `Option` or any signal),
+  `Signal<Option<String>>` in hook inputs and props (atoms convert with `utils::prop_signal`). An element's own `id`
+  stays `Option<String>`.
 - **C3 State shape:** `use_x_state(..) -> XState`, a `Copy` struct with read-only `Signal`s and methods
   (`set_value`, `toggle`, ...), not `*StateReturn` structs of `Callback` fields with tuple arguments. Reason: methods
   are discoverable, typed and cheap; callbacks-as-getters are a JS props-bag shape.

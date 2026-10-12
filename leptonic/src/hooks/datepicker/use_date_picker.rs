@@ -58,8 +58,8 @@ pub struct DatePickerOptions {
     /// Whether a visible label labels the picker.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub on_focus_change: Option<Callback<bool>>,
@@ -119,13 +119,13 @@ pub fn use_date_picker<V: DateValue>(input: UseDatePickerInput<V>) -> UseDatePic
         (!date.is_empty()).then(|| strings.read().selected_date_description(&date))
     });
     let has_label = options.has_label;
-    let has_labelledby = options.aria_labelledby.is_some();
+    let aria_labelledby = options.aria_labelledby;
     let mut result = picker_aria(options, state.overlay, description, group);
     let labelledby = result.labelledby;
     // A single field receives the picker's aria-label directly. Only visible or external
     // labels need ID references; the group's self-reference is for the button and dialog.
     result.labelledby = Signal::derive(move || {
-        if has_label.get() || has_labelledby {
+        if has_label.get() || aria_labelledby.with(Option::is_some) {
             labelledby.get()
         } else {
             None

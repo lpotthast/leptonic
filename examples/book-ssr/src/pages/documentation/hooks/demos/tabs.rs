@@ -64,15 +64,15 @@ pub fn TabsDemo() -> impl IntoView {
         element: CapturedElement::new(),
         orientation: Orientation::Horizontal.into(),
         keyboard_activation: KeyboardActivation::Automatic,
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
     });
     // `key: None`: one panel that always shows the selected tab.
     let panel = use_tab_panel(UseTabPanelInput {
         state,
         key: None,
         aria_label: MaybeProp::default(),
-        aria_describedby: None,
-        aria_details: None,
+        aria_describedby: Signal::default(),
+        aria_details: Signal::default(),
     });
 
     let content = move || {

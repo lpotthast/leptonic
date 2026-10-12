@@ -92,6 +92,9 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
     } = grid;
     let selection = state.list.selection;
     let rows = state.list.collection;
+    if !untrack(|| rows.with(|c| c.contains_key(&key))) {
+        crate::utils::dev_warn!("use_grid_row: the key {key:?} is not in the grid's collection");
+    }
 
     let UseSelectableItemReturn {
         props,

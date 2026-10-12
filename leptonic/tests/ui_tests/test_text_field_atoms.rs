@@ -585,3 +585,71 @@ pub async fn standalone_textarea(page: &Page<'_>) -> Result<(), Report> {
     textarea.wait_for_prop("value", "notes").await?;
     Ok(())
 }
+
+/// A text field whose element switches from `Input` to `TextArea` and back: the textarea shows the
+/// typed text and has no `type` or `pattern` (input-only attributes, react-aria's
+/// `inputElementType`), the input gets them back (react-aria-components' `TextField` tracks
+/// which element it renders).
+#[browser_test]
+pub async fn switching_between_input_and_textarea(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let toggle = page.element("#tf-switch-toggle").await?;
+    let input = page.element("#tf-switch input").await?;
+    assert_that!(input)
+        .has_attribute("type")
+        .await
+        .is_equal_to("url");
+    assert_that!(input)
+        .has_attribute("pattern")
+        .await
+        .is_equal_to("[a-z:/.]+");
+    input.type_keys("x").await?;
+    input.wait_for_prop("value", "https://a.bx").await?;
+
+    toggle.click().await?;
+    page.wait_for_count("#tf-switch input", 0).await?;
+    let textarea = page.element("#tf-switch textarea").await?;
+    textarea.wait_for_prop("value", "https://a.bx").await?;
+    assert_that!(textarea).attribute("type").await.is_none();
+    assert_that!(textarea).attribute("pattern").await.is_none();
+    assert_that!(textarea)
+        .accessible_name()
+        .await
+        .is_equal_to("Contact");
+
+    toggle.click().await?;
+    let input = page.element("#tf-switch input").await?;
+    input.wait_for_attr("type", Some("url")).await?;
+    assert_that!(input)
+        .has_attribute("pattern")
+        .await
+        .is_equal_to("[a-z:/.]+");
+    input.wait_for_prop("value", "https://a.bx").await?;
+    Ok(())
+}
+
+/// An `aria_describedby` given as a signal joins the field's own description while set and
+/// leaves it when cleared.
+#[browser_test]
+pub async fn described_by_a_changing_reference(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = page.element("#tf-refs input").await?;
+    let toggle = page.element("#tf-refs-toggle").await?;
+    assert_that!(input)
+        .accessible_description()
+        .await
+        .is_equal_to("Shown to others.");
+
+    toggle.click().await?;
+    assert_that!(|| input.accessible_description())
+        .eventually_ok()
+        .matches(eq("Shown to others. Letters only."))
+        .await;
+
+    toggle.click().await?;
+    assert_that!(|| input.accessible_description())
+        .eventually_ok()
+        .matches(eq("Shown to others."))
+        .await;
+    Ok(())
+}

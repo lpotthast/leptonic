@@ -16,7 +16,7 @@ pub fn LayoutAppBarDemo() -> impl IntoView {
         element: header,
         role: LandmarkRole::Banner,
         aria_label: "My App".into(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
         focus: None,
     });
 

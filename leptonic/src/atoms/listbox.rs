@@ -28,7 +28,7 @@
 
 use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::{context::Provider, either::Either, prelude::*};
 use leptos_classes::Classes;
 
 use super::separator::SeparatorContext;
@@ -134,7 +134,7 @@ pub fn ListBox(
     #[prop(optional)] disabled_behavior: DisabledBehavior,
     #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, default = Orientation::Vertical.into())] orientation: Signal<Orientation>,
     #[prop(optional)] layout: ListLayout,
     /// Arrow keys wrap around at the ends.
@@ -186,7 +186,7 @@ pub fn ListBox(
         };
         UseListBoxInput {
             aria_label,
-            aria_labelledby: Signal::stored(aria_labelledby),
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
             orientation,
             layout,
             options: CollectionOptions {
@@ -268,7 +268,6 @@ pub fn ListBox(
                     style=styles
                     data-empty=flag(is_empty)
                     data-focused=flag(focus_ring.is_focused)
-                    data-focus-visible=flag(focus_ring.is_focus_visible)
                     data-layout=data_layout
                     data-orientation=data_orientation
                 >
@@ -385,7 +384,10 @@ where
     F: Fn(Node) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
-    let list = expect_context::<ListBoxData>();
+    let Some(list) = use_context::<ListBoxData>() else {
+        crate::utils::dev_warn!("<ListBoxItems> must be inside a <ListBox>.");
+        return None;
+    };
     let collection = list.state.collection;
     let children = std::sync::Arc::new(children);
     let render = std::sync::Arc::new(move |key: Key| {
@@ -411,16 +413,16 @@ where
     });
     // Inside a `Virtualizer`: the visible options only.
     if let Some(root) = use_context::<Option<super::virtualizer::VirtualizedRoot>>().flatten() {
-        return super::virtualizer::render_visible_items(root, render).into_any();
+        return Some(super::virtualizer::render_visible_items(root, render).into_any());
     }
-    view! {
+    Some(view! {
         <For
             each=move || collection.with(|c| c.items().map(|node| node.key.clone()).collect::<Vec<_>>())
             key=Clone::clone
             children=move |key| render(key)
         />
     }
-    .into_any()
+    .into_any())
 }
 
 /// The main text of a [`ListBoxItem`] (labels the option).
@@ -567,7 +569,7 @@ pub fn ListBoxSectionHeading(
     let classes = with_default_class("leptonic-ListBoxSectionHeading", classes);
     let Some(ctx) = use_context::<ListBoxSectionContext>() else {
         crate::utils::dev_warn!("<ListBoxSectionHeading> must be inside a <ListBoxSection>");
-        return ().into_any();
+        return None;
     };
     let content = if let Some(children) = children {
         children().into_any()
@@ -576,22 +578,20 @@ pub fn ListBoxSectionHeading(
         (move || heading.get()).into_any()
     };
     if let Some(props) = ctx.heading_props.try_update_value(Option::take).flatten() {
-        view! {
+        Some(Either::Left(view! {
             <header {..props.into_attrs()} class=classes style=styles>
                 {content}
             </header>
-        }
-        .into_any()
+        }))
     } else {
         crate::utils::dev_warn!(
             "ListBoxSectionHeading: one per section, and only for sections with a header in \
                  the collection"
         );
-        view! {
+        Some(Either::Right(view! {
             <header class=classes style=styles>
                 {content}
             </header>
-        }
-        .into_any()
+        }))
     }
 }

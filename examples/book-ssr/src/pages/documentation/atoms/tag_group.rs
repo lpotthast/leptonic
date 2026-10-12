@@ -113,7 +113,7 @@ pub fn PageAtomTagGroup() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Whether the last selected tag can\u{2019}t be deselected."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names a group without a visible "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="on_remove" ty="Option<Callback<HashSet<Key>>>" default="None">

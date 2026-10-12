@@ -22,6 +22,9 @@ use crate::{
 // ## DIFFERENT BEHAVIOR
 // - Focus opens the tooltip unless the modality is the pointer's (react-aria: `isFocusVisible()`,
 //   the same test).
+// - Blurring the trigger leaves the tooltip open while the pointer is on it (react-aria closes it
+//   right away): Pressing into the tooltip, e.g. to select its text, takes the focus from the
+//   trigger. It closes once the pointer leaves it (`use_tooltip`).
 //
 // =============================================================================
 
@@ -109,8 +112,8 @@ pub struct UseTooltipTriggerTooltipProps {
 
 /// Provides the behavior and accessibility for a tooltip trigger: the tooltip opens when the
 /// trigger is hovered (after the state's delay; right away once another tooltip was open) or
-/// focused by keyboard, and closes when it is left, blurred or pressed, or on Escape. While open,
-/// the tooltip describes the trigger.
+/// focused by keyboard, and closes when it is left, blurred (unless the pointer is on the tooltip)
+/// or pressed, or on Escape. While open, the tooltip describes the trigger.
 ///
 /// # Example
 ///
@@ -216,10 +219,22 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         }
     };
 
+    // Whether the pointer is on the open tooltip (whose hovering keeps it open, see `use_tooltip`).
+    let hovered_tooltip_id = tooltip_id.clone();
+    let is_tooltip_hovered = move || {
+        leptos_use::use_document()
+            .as_ref()
+            .and_then(|document| document.get_element_by_id(&hovered_tooltip_id))
+            .is_some_and(|tooltip| tooltip.matches(":hover").unwrap_or(false))
+    };
+
     let handle_blur = move |_e: web_sys::FocusEvent| {
         is_focused.set_value(false);
         is_hovered.set_value(false);
-        handle_hide(true);
+        // Pressing into the tooltip, e.g. to select its text, takes the focus from the trigger.
+        if !is_tooltip_hovered() {
+            handle_hide(true);
+        }
     };
 
     // --- Press start (pointer down or key down on the trigger) ---

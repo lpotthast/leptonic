@@ -276,3 +276,49 @@ pub async fn pending_trigger(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     Ok(())
 }
+
+/// `aria_labelledby` and `aria_describedby` given as signals follow them: the button's name and
+/// description change when the referenced ids come and go.
+#[browser_test]
+pub async fn references_follow_their_signals(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let button = page.element("#test-button-refs").await?;
+    let toggle = page.element("#test-button-refs-toggle").await?;
+    assert_that!(button)
+        .attribute("aria-labelledby")
+        .await
+        .is_none();
+    assert_that!(button)
+        .attribute("aria-describedby")
+        .await
+        .is_none();
+    assert_that!(button)
+        .accessible_name()
+        .await
+        .is_equal_to("Delete");
+
+    toggle.click().await?;
+    button
+        .wait_for_attr("aria-labelledby", Some("test-button-refs-label"))
+        .await?;
+    button
+        .wait_for_attr("aria-describedby", Some("test-button-refs-description"))
+        .await?;
+    assert_that!(button)
+        .accessible_name()
+        .await
+        .is_equal_to("Remove");
+    assert_that!(button)
+        .accessible_description()
+        .await
+        .is_equal_to("Deletes the draft.");
+
+    toggle.click().await?;
+    button.wait_for_attr("aria-labelledby", None).await?;
+    button.wait_for_attr("aria-describedby", None).await?;
+    assert_that!(button)
+        .accessible_name()
+        .await
+        .is_equal_to("Delete");
+    Ok(())
+}

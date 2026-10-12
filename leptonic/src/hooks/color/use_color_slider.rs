@@ -36,9 +36,9 @@ pub struct UseColorSliderInput<C: ColorValue> {
     pub has_label: Signal<bool>,
     /// Names the slider. Without any label, the channel's name does.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     /// The name of the input, for form submission.
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
@@ -76,11 +76,11 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
     let channel = state.channel;
 
     // Without any label, the channel names the slider (react-aria).
-    let has_other_label = aria_labelledby.is_some();
     let locale = use_locale();
     let aria_label = MaybeProp::derive(move || {
         aria_label.get().or_else(|| {
-            (!has_label.get() && !has_other_label).then(|| C::channel_name(channel, &locale.get()))
+            (!has_label.get() && aria_labelledby.with(Option::is_none))
+                .then(|| C::channel_name(channel, &locale.get()))
         })
     });
 
@@ -105,10 +105,10 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         is_invalid: Signal::default(),
         has_label: Signal::stored(false),
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_errormessage: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_errormessage: Signal::default(),
+        aria_details: Signal::default(),
     });
     let display_color = state.display_color();
     let formatted = state.formatted_value();

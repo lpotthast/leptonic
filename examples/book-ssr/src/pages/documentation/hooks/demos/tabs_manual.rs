@@ -59,14 +59,14 @@ pub fn TabsManualDemo() -> impl IntoView {
         state,
         element: CapturedElement::new(),
         orientation: Orientation::Horizontal.into(),
-        aria_labelledby: None,
+        aria_labelledby: Signal::default(),
     });
     let panel = use_tab_panel(UseTabPanelInput {
         state,
         key: None,
         aria_label: MaybeProp::default(),
-        aria_describedby: None,
-        aria_details: None,
+        aria_describedby: Signal::default(),
+        aria_details: Signal::default(),
     });
 
     let selection = state.list.list.selection;

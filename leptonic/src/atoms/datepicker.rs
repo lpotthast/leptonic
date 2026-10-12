@@ -8,7 +8,7 @@
 // Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::{context::Provider, either::Either, prelude::*};
 use leptos_classes::Classes;
 
 use super::{
@@ -19,14 +19,14 @@ use super::{
     popover::PopoverDefaults,
 };
 use crate::{
-    CapturedElement, IntoAttrs, Out, PropsWithStyles, ValueBinding,
+    CapturedElement, HourCycle, IntoAttrs, Out, PropsWithStyles, ValueBinding,
     hooks::{
         button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::DateAvailabilityQuery,
         datepicker::{
             DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions, DatePickerState,
-            DateRangePickerState, DateSegment, DateSegmentType, DateValue, Granularity, HourCycle,
-            RangePart, RangeValue, TimeBound, TimeValue, UseDateFieldInput, UseDateFieldProps,
+            DateRangePickerState, DateSegment, DateSegmentType, DateValue, Granularity, RangePart,
+            RangeValue, TimeBound, TimeValue, UseDateFieldInput, UseDateFieldProps,
             UseDateFieldReturn, UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
             UseDatePickerStateInput, UseDateRangePickerInput, UseDateRangePickerStateInput,
             UseDateSegmentInput, UseDateSegmentReturn, UseHiddenDateInputInput,
@@ -96,16 +96,16 @@ fn group_state(
     ),
     impl Fn() -> Option<&'static str> + Clone + Send + Sync,
     impl Fn() -> Option<&'static str> + Clone + Send + Sync,
-    impl Fn() -> Option<&'static str> + Clone + Send + Sync,
 ) {
     let hover = use_hover(UseHoverInput {
         is_disabled,
         ..UseHoverInput::default()
     });
+    // The focus ring renders `data-focus-visible` itself.
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
@@ -114,7 +114,6 @@ fn group_state(
         (hover.props.into_attrs(), focus_ring.into_attrs()),
         flag(hover.is_hovered),
         flag(is_focused),
-        flag(is_focus_visible),
     )
 }
 
@@ -257,8 +256,8 @@ pub fn DateField<V: DateValue>(
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -296,15 +295,15 @@ pub fn DateField<V: DateValue>(
         name,
         is_disabled: state.is_disabled,
     });
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     render_field(
         &state,
         DateFieldOptions {
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby,
-            aria_describedby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
             auto_focus,
             on_focus_change,
             form,
@@ -365,8 +364,8 @@ pub fn TimeField<T: TimeValue>(
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -393,15 +392,15 @@ pub fn TimeField<T: TimeValue>(
         validation_behavior: use_validation_behavior(validation_behavior),
         name,
     });
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     render_field(
         &state.field,
         DateFieldOptions {
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby,
-            aria_describedby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
             auto_focus,
             on_focus_change,
             form,
@@ -456,11 +455,11 @@ where
         crate::utils::dev_warn!(
             "DateInput: not inside a DateField, TimeField or DatePicker (or a DateRangePicker with a `part`)"
         );
-        return ().into_any();
+        return None;
     };
     let Some(field_props) = context.field_props.try_update_value(Option::take).flatten() else {
         crate::utils::dev_warn!("DateInput: used twice in one field");
-        return ().into_any();
+        return None;
     };
     let (attrs, field_styles) = field_props.into_parts();
     let segments = context.segments;
@@ -470,8 +469,8 @@ where
         context.is_read_only,
         context.is_invalid,
     );
-    let (group_attrs, hovered, focus_within, focus_visible) = group_state(is_disabled);
-    view! {
+    let (group_attrs, hovered, focus_within) = group_state(is_disabled);
+    Some(view! {
         <div
             {..attrs}
             {..group_attrs}
@@ -482,7 +481,6 @@ where
             data-invalid=flag(is_invalid)
             data-hovered=hovered
             data-focus-within=focus_within
-            data-focus-visible=focus_visible
         >
             // Kept by position and kind: a segment's element (and the focus) stays while its
             // text changes. The segments use this field's context.
@@ -518,8 +516,7 @@ where
             />
             </Provider>
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// A segment of the field around it: an editable part (month, day, ...) as a spin button
@@ -538,12 +535,12 @@ pub fn DateSegment(
     let classes = with_default_class("leptonic-DateSegment", classes);
     let Some(context) = use_context::<DateInputContext>() else {
         crate::utils::dev_warn!("DateSegment: not inside a DateInput");
-        return ().into_any();
+        return None;
     };
     let kind = segment.with_untracked(|segment| segment.kind);
     let text = move || segment.with(|segment| segment.text.clone());
     if kind == DateSegmentType::Literal {
-        return view! {
+        return Some(Either::Left(view! {
             <span
                 class=classes
                 style=styles
@@ -555,8 +552,7 @@ pub fn DateSegment(
             >
                 {text}
             </span>
-        }
-        .into_any();
+        }));
     }
     let element = CapturedElement::new();
     let UseDateSegmentReturn { segment_props } = (context.segment)(segment, element);
@@ -567,10 +563,10 @@ pub fn DateSegment(
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput::default());
     let (attrs, segment_styles) = segment_props.into_parts();
-    view! {
+    Some(Either::Right(view! {
         <span
             {..attrs}
             {..focus_ring.into_attrs()}
@@ -583,12 +579,10 @@ pub fn DateSegment(
             data-invalid=flag(context.is_invalid)
             data-hovered=flag(hover.is_hovered)
             data-focused=flag(is_focused)
-            data-focus-visible=flag(is_focus_visible)
         >
             {text}
         </span>
-    }
-    .into_any()
+    }))
 }
 
 /// What a date picker's group and button need from it.
@@ -668,8 +662,8 @@ pub fn DatePicker<V: DateValue>(
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -704,7 +698,7 @@ pub fn DatePicker<V: DateValue>(
         validation_behavior,
         name: name.clone(),
     });
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let group = CapturedElement::new();
     let trigger = DialogTriggerContext::new(state.overlay, group);
     let UseDatePickerReturn {
@@ -724,8 +718,8 @@ pub fn DatePicker<V: DateValue>(
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby,
-            aria_describedby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
             is_disabled,
             is_read_only,
             on_focus_change,
@@ -889,15 +883,15 @@ pub fn DatePickerGroup(
     let classes = with_default_class("leptonic-DatePickerGroup", classes);
     let Some(context) = use_context::<DatePickerContext>() else {
         crate::utils::dev_warn!("DatePickerGroup: not inside a DatePicker");
-        return ().into_any();
+        return None;
     };
     let Some(props) = context.group_props.try_update_value(Option::take).flatten() else {
         crate::utils::dev_warn!("DatePickerGroup: used twice in one DatePicker");
-        return ().into_any();
+        return None;
     };
     let (attrs, group_styles) = props.into_parts();
-    let (group_attrs, hovered, focus_within, focus_visible) = group_state(context.is_disabled);
-    view! {
+    let (group_attrs, hovered, focus_within) = group_state(context.is_disabled);
+    Some(view! {
         <div
             {..attrs}
             {..group_attrs}
@@ -905,21 +899,19 @@ pub fn DatePickerGroup(
             style=group_styles.merge(styles)
             data-hovered=hovered
             data-focus-within=focus_within
-            data-focus-visible=focus_visible
             data-disabled=flag(context.is_disabled)
             data-invalid=flag(context.is_invalid)
             data-open=flag(context.is_open)
         >
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// The button of the [`DatePicker`] opening its popover ("Calendar").
 ///
-/// Data attributes: `data-pressed` (also while the popover is open), `data-hovered`, `data-focused`, `data-focus-visible`,
-/// `data-disabled`.
+/// Data attributes: `data-pressed` (also while the popover is open), `data-hovered`,
+/// `data-focused`, `data-focus-visible`, `data-disabled`.
 ///
 /// Default class: `leptonic-DatePickerButton`.
 #[component]
@@ -931,7 +923,7 @@ pub fn DatePickerButton(
     let classes = with_default_class("leptonic-DatePickerButton", classes);
     let Some(context) = use_context::<DatePickerContext>() else {
         crate::utils::dev_warn!("DatePickerButton: not inside a DatePicker");
-        return ().into_any();
+        return None;
     };
     let UseButtonReturn {
         props,
@@ -939,14 +931,13 @@ pub fn DatePickerButton(
         is_pressed,
         is_hovered,
         is_focused,
-        is_focus_visible,
         ..
     } = use_button(context.button.get_value());
     // Pressed while the popover is open (react-aria-components: `isPressed: state.isOpen`).
     let is_open = context.is_open;
     let is_pressed = Signal::derive(move || is_pressed.get() || is_open.get());
     let (attrs, button_styles) = props.into_parts();
-    view! {
+    Some(view! {
         <button
             {..attrs}
             class=classes
@@ -954,13 +945,11 @@ pub fn DatePickerButton(
             data-pressed=flag(is_pressed)
             data-hovered=flag(is_hovered)
             data-focused=flag(is_focused)
-            data-focus-visible=flag(is_focus_visible)
             data-disabled=flag(is_disabled)
         >
             {children()}
         </button>
-    }
-    .into_any()
+    })
 }
 
 /// The start and end fields of a date range picker, for `DateInput part=..`.
@@ -1021,8 +1010,8 @@ pub fn DateRangePicker<V: DateValue>(
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -1058,7 +1047,7 @@ pub fn DateRangePicker<V: DateValue>(
         start_name: start_name.clone(),
         end_name: end_name.clone(),
     });
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let group = CapturedElement::new();
     let trigger = DialogTriggerContext::new(state.overlay, group);
     let UseDatePickerReturn {
@@ -1079,8 +1068,8 @@ pub fn DateRangePicker<V: DateValue>(
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby,
-            aria_describedby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_describedby: crate::utils::prop_signal(aria_describedby),
             is_disabled,
             is_read_only,
             on_focus_change,

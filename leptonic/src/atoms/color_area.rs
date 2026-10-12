@@ -79,11 +79,11 @@ pub fn ColorArea<C: ColorValue>(
     /// Names the area.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     /// Elements with details about the area.
     #[prop(into, optional)]
-    aria_details: Option<String>,
+    aria_details: MaybeProp<String>,
     /// The name of the x channel's input, for form submission.
     #[prop(into, optional)]
     x_name: Option<String>,
@@ -121,9 +121,9 @@ pub fn ColorArea<C: ColorValue>(
         state,
         is_disabled,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
-        aria_details,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_details: crate::utils::prop_signal(aria_details),
         x_name,
         y_name,
         form,

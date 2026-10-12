@@ -120,7 +120,7 @@ impl CalendarStates {
 pub struct CalendarData {
     pub state: CalendarStates,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// The id of the calendar's error message while it is rendered (cells with invalid dates
     /// refer to it).
     pub error_message_id: Signal<Option<String>>,

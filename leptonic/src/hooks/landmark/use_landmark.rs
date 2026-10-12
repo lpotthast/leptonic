@@ -571,7 +571,7 @@ pub struct UseLandmarkInput {
     pub element: CapturedElement,
     pub role: LandmarkRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// How the landmark takes the focus when navigated to. Default: it focuses itself.
     pub focus: Option<Callback<LandmarkDirection>>,
 }
@@ -583,13 +583,13 @@ pub struct UseLandmarkReturn {
 }
 
 /// Props of a landmark.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLandmarkProps {
     pub role: AriaRole,
     /// While navigated to: focusable, to take the focus.
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 impl IntoAttrs for UseLandmarkProps {
@@ -597,7 +597,7 @@ impl IntoAttrs for UseLandmarkProps {
         Attr<attr::Role, AriaRole>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Option<String>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
@@ -631,8 +631,7 @@ pub fn use_landmark(input: UseLandmarkInput) -> UseLandmarkReturn {
         // The registered landmark: its id and element (react-aria registers the ref, so it follows
         // `ref.current`; here a re-created element registers again).
         let registration = StoredValue::new_local(None::<(u64, web_sys::Element)>);
-        let labelledby = aria_labelledby.clone();
-        let label = move || aria_label.get().or_else(|| labelledby.clone());
+        let label = move || aria_label.get().or_else(|| aria_labelledby.get());
         Effect::new(move |_| {
             let label = label();
             let Some(landmark_element) = element.get() else {

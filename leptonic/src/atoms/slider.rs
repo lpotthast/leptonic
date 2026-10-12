@@ -84,10 +84,10 @@ struct ThumbOptions {
     form: Option<String>,
     has_label: Signal<bool>,
     aria_label: MaybeProp<String>,
-    aria_labelledby: Option<String>,
-    aria_describedby: Option<String>,
-    aria_errormessage: Option<String>,
-    aria_details: Option<String>,
+    aria_labelledby: MaybeProp<String>,
+    aria_describedby: MaybeProp<String>,
+    aria_errormessage: MaybeProp<String>,
+    aria_details: MaybeProp<String>,
 }
 
 fn expect_slider() -> Option<SliderContext> {
@@ -152,13 +152,13 @@ pub fn Slider<T: NumberValue>(
     /// Names the slider when it has no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     /// Further elements describing every thumb (next to a `Description`).
     #[prop(into, optional)]
-    aria_describedby: Option<String>,
+    aria_describedby: MaybeProp<String>,
     /// Elements with details about every thumb.
     #[prop(into, optional)]
-    aria_details: Option<String>,
+    aria_details: MaybeProp<String>,
     /// Called with the values whenever they change, also while dragging.
     #[prop(into, optional)]
     on_change: Option<Callback<Vec<T>>>,
@@ -170,7 +170,7 @@ pub fn Slider<T: NumberValue>(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Slider", classes);
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let (value, on_change) = ValueBinding::from_state_props(values, set_values, on_change);
     let state = use_slider_state(UseSliderStateInput {
@@ -192,9 +192,9 @@ pub fn Slider<T: NumberValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
-        aria_details,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_details: crate::utils::prop_signal(aria_details),
     });
     let UseSliderReturn {
         label_props,
@@ -272,10 +272,10 @@ pub fn Slider<T: NumberValue>(
                 form,
                 has_label,
                 aria_label,
-                aria_labelledby,
-                aria_describedby,
-                aria_errormessage,
-                aria_details,
+                aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+                aria_describedby: crate::utils::prop_signal(aria_describedby),
+                aria_errormessage: crate::utils::prop_signal(aria_errormessage),
+                aria_details: crate::utils::prop_signal(aria_details),
                 is_required: Signal::derive(move || is_required.get() || thumb_required.get()),
                 is_invalid: Signal::derive(move || is_invalid.get() || thumb_invalid.get()),
             });
@@ -372,9 +372,7 @@ pub fn SliderFill(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SliderFill", classes);
-    let Some(slider) = expect_slider() else {
-        return ().into_any();
-    };
+    let slider = expect_slider()?;
     let SliderContext {
         orientation,
         is_disabled,
@@ -419,7 +417,7 @@ pub fn SliderFill(
         .add_optional_unchecked("bottom", move || vertical().then(|| percent(span.get().0)))
         .add_optional_unchecked("height", move || vertical().then(|| percent(span.get().1)))
         .merge(styles);
-    view! {
+    Some(view! {
         <div
             {..hover.props.into_attrs()}
             class=classes
@@ -428,8 +426,7 @@ pub fn SliderFill(
             data-orientation=move || orientation.get().as_str()
             data-disabled=flag(is_disabled)
         />
-    }
-    .into_any()
+    })
 }
 
 /// What a thumb's tooltip needs.
@@ -470,26 +467,24 @@ pub fn SliderThumb(
     /// Names this thumb next to the slider's label (e.g. "Minimum").
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     /// Further elements describing this thumb (next to the slider's description).
     #[prop(into, optional)]
-    aria_describedby: Option<String>,
+    aria_describedby: MaybeProp<String>,
     /// The element with this thumb's error message.
     #[prop(into, optional)]
-    aria_errormessage: Option<String>,
+    aria_errormessage: MaybeProp<String>,
     /// Further elements with details about this thumb.
     #[prop(into, optional)]
-    aria_details: Option<String>,
+    aria_details: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SliderThumb", classes);
-    let Some(slider) = expect_slider() else {
-        return ().into_any();
-    };
+    let slider = expect_slider()?;
     // A `Label` inside the thumb names it (react-aria-components' `LabelContext` of the thumb).
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     // Hovered unless this thumb is disabled (react-aria-components' `useHover(props)`: the
     // slider's `is_disabled` doesn't count).
     let hover = use_hover(UseHoverInput {
@@ -532,7 +527,7 @@ pub fn SliderThumb(
         label,
     };
 
-    view! {
+    Some(view! {
         <div
             {..thumb_attrs}
             {..hover.props.into_attrs()}
@@ -551,8 +546,7 @@ pub fn SliderThumb(
                 <Provider value=thumb_label>{children.map(|children| children())}</Provider>
             </Provider>
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// When a [`SliderThumbTooltip`] shows.
@@ -582,7 +576,7 @@ pub fn SliderThumbTooltip(
     let classes = with_default_class("leptonic-SliderThumbTooltip", classes);
     let Some(thumb) = use_context::<SliderThumbContext>() else {
         crate::utils::dev_warn!("A <SliderThumbTooltip> must be inside a <SliderThumb>.");
-        return ().into_any();
+        return None;
     };
     let visible = Signal::derive(move || match popover {
         SliderPopover::Never => false,
@@ -592,12 +586,11 @@ pub fn SliderThumbTooltip(
         SliderPopover::Always => true,
     });
     // The input announces the value: the tooltip only shows it.
-    view! {
+    Some(view! {
         <div class=classes style=styles data-visible=flag(visible) aria-hidden="true">
             {thumb.label}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// An `<output>` with the formatted values of the [`Slider`] around it ("10", "10 – 20").
@@ -611,11 +604,9 @@ pub fn SliderOutput(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SliderOutput", classes);
-    let Some(slider) = expect_slider() else {
-        return ().into_any();
-    };
+    let slider = expect_slider()?;
     let orientation = slider.orientation;
-    view! {
+    Some(view! {
         <output
             {..slider.output.get_value()}
             class=classes
@@ -625,8 +616,7 @@ pub fn SliderOutput(
         >
             {slider.formatted}
         </output>
-    }
-    .into_any()
+    })
 }
 
 /// The marks of the [`Slider`] around it; render each with a [`SliderMark`].
@@ -644,12 +634,9 @@ where
     V: IntoView + 'static,
 {
     let classes = with_default_class("leptonic-SliderMarks", classes);
-    let Some(slider) = expect_slider() else {
-        return ().into_any();
-    };
+    let slider = expect_slider()?;
     let computed = (slider.marks)(marks);
-    view! { <div class=classes style=styles aria-hidden="true">{children(computed)}</div> }
-        .into_any()
+    Some(view! { <div class=classes style=styles aria-hidden="true">{children(computed)}</div> })
 }
 
 /// A mark placed along the track, as the fill: `inset-inline-start` in percent when horizontal
@@ -666,9 +653,7 @@ pub fn SliderMark(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-SliderMark", classes);
-    let Some(SliderContext { orientation, .. }) = expect_slider() else {
-        return ().into_any();
-    };
+    let SliderContext { orientation, .. } = expect_slider()?;
     let vertical = move || orientation.get() == Orientation::Vertical;
     let in_range = {
         let mark = mark.clone();
@@ -683,7 +668,7 @@ pub fn SliderMark(
         })
         .add_optional_unchecked("bottom", move || vertical().then(|| bottom.clone()))
         .merge(styles);
-    view! {
+    Some(view! {
         <div
             class=classes
             style=styles
@@ -692,6 +677,5 @@ pub fn SliderMark(
         >
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }

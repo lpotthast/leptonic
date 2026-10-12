@@ -30,7 +30,7 @@ pub fn PageAtomSeparator() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="id" ty="Option<String>" default="None">"The element id."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the separator."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the separator."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the separator."</ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the separator element."</ApiRow>
                 </ApiTable>
             </Section>

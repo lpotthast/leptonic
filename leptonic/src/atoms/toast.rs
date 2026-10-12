@@ -60,7 +60,8 @@ impl<T: Clone + Send + Sync + 'static> Clone for ToastRegionContext<T> {
 /// What a toast's parts need from it.
 #[derive(Clone)]
 struct ToastContext {
-    content: UseToastContentProps,
+    /// The content element's attributes (from `use_toast`).
+    content: <UseToastContentProps as IntoAttrs>::Attrs,
     title_id: String,
     description: StoredValue<Option<SlotProps>>,
     close_button: StoredValue<UseButtonInput>,
@@ -80,7 +81,7 @@ pub fn ToastRegion<T, F, V>(
     /// Default: "1 notification." / "2 notifications.".
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
@@ -102,12 +103,12 @@ where
             queue,
             element,
             aria_label,
-            aria_labelledby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         });
         let UseFocusRingReturn {
             props: focus_ring,
             is_focused,
-            is_focus_visible,
+            ..
         } = use_focus_ring(UseFocusRingInput::default());
         view! {
             <Provider value=ToastRegionContext { queue }>
@@ -118,7 +119,6 @@ where
                     class=classes
                     style=styles
                     data-focused=flag(is_focused)
-                    data-focus-visible=flag(is_focus_visible)
                     // Portaled out of the locale's subtree (react-aria-components sets it too).
                     dir=move || match direction.get() {
                         WritingDirection::Ltr => "ltr",
@@ -165,7 +165,7 @@ pub fn Toast<T: Clone + Send + Sync + 'static>(
     let classes = with_default_class("leptonic-Toast", classes);
     let Some(region) = use_context::<ToastRegionContext<T>>() else {
         crate::utils::dev_warn!("Toast: not inside a ToastRegion of its content type");
-        return ().into_any();
+        return None;
     };
     let UseToastReturn {
         toast_props,
@@ -177,33 +177,31 @@ pub fn Toast<T: Clone + Send + Sync + 'static>(
         queue: region.queue,
         aria_label,
         toast,
-        aria_labelledby: None,
-        aria_describedby: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
     });
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput::default());
     let context = ToastContext {
-        content: content_props,
+        content: content_props.into_attrs(),
         title_id,
         description: StoredValue::new(Some(description_props)),
         close_button: StoredValue::new(close_button),
     };
-    view! {
+    Some(view! {
         <div
             {..toast_props.into_attrs()}
             {..focus_ring.into_attrs()}
             class=classes
             style=styles
             data-focused=flag(is_focused)
-            data-focus-visible=flag(is_focus_visible)
         >
             <Provider value=context>{children()}</Provider>
         </div>
-    }
-    .into_any()
+    })
 }
 
 fn expect_toast(part: &str) -> Option<ToastContext> {
@@ -224,15 +222,12 @@ pub fn ToastContent(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ToastContent", classes);
-    let Some(context) = expect_toast("ToastContent") else {
-        return ().into_any();
-    };
-    view! {
-        <div {..context.content.into_attrs()} class=classes style=styles>
+    let context = expect_toast("ToastContent")?;
+    Some(view! {
+        <div {..context.content} class=classes style=styles>
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// The title of the toast around it, naming it.
@@ -245,15 +240,12 @@ pub fn ToastTitle(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ToastTitle", classes);
-    let Some(context) = expect_toast("ToastTitle") else {
-        return ().into_any();
-    };
-    view! {
+    let context = expect_toast("ToastTitle")?;
+    Some(view! {
         <div id=context.title_id class=classes style=styles>
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// The description of the toast around it, describing it.
@@ -266,17 +258,13 @@ pub fn ToastDescription(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ToastDescription", classes);
-    let Some(props) = expect_toast("ToastDescription")
-        .and_then(|context| context.description.try_update_value(Option::take).flatten())
-    else {
-        return ().into_any();
-    };
-    view! {
+    let props = expect_toast("ToastDescription")
+        .and_then(|context| context.description.try_update_value(Option::take).flatten())?;
+    Some(view! {
         <div {..props.into_attrs()} class=classes style=styles>
             {children()}
         </div>
-    }
-    .into_any()
+    })
 }
 
 /// The button closing the toast around it ("Close").
@@ -292,9 +280,7 @@ pub fn ToastCloseButton(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ToastCloseButton", classes);
-    let Some(context) = expect_toast("ToastCloseButton") else {
-        return ().into_any();
-    };
+    let context = expect_toast("ToastCloseButton")?;
     let UseButtonReturn {
         props,
         is_disabled,
@@ -304,7 +290,7 @@ pub fn ToastCloseButton(
         ..
     } = use_button(context.close_button.get_value());
     let (attrs, button_styles) = props.into_parts();
-    view! {
+    Some(view! {
         <button
             {..attrs}
             class=classes
@@ -316,6 +302,5 @@ pub fn ToastCloseButton(
         >
             {children()}
         </button>
-    }
-    .into_any()
+    })
 }

@@ -48,7 +48,7 @@ pub struct UseToastRegionInput<T: Clone + Send + Sync + 'static> {
     pub element: CapturedElement,
     /// Default: "1 notification." / "2 notifications.".
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 /// Return value of [`use_toast_region`].
@@ -58,7 +58,7 @@ pub struct UseToastRegionReturn {
 }
 
 /// Props of a toast region.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToastRegionProps {
     pub landmark: UseLandmarkProps,
     pub on_pointerenter: EventHandler<PointerEvent>,

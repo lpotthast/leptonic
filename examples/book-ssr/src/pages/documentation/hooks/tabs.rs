@@ -162,7 +162,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             <AnchorLink href="#keyboard-activation">"Keyboard Activation"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name for the tab list."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id of a visible label."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id of a visible label."</ApiRow>
                         <ApiRow name="state" ty="TabListState">"Required. The tab list state shared by the list, tabs and panels."</ApiRow>
                     </ApiTable>
                 </Section>
@@ -199,7 +199,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                                 orientation: Orientation::Horizontal.into(),
                                 keyboard_activation: KeyboardActivation::Automatic,
                                 aria_label: "Product".into(),
-                                aria_labelledby: None,
+                                aria_labelledby: Signal::default(),
                             });
 
                             view! {
@@ -309,7 +309,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             "The panel\u{2019}s tab. "<Code inline=true>"None"</Code>": the selected tab; id and label follow the "
                             "selection. Required."
                         </ApiRow>
-                        <ApiRow name="aria_describedby, aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_describedby, aria_details" ty="Signal<Option<String>>" default="None">
                             "The ids of elements describing the panel, or holding details about it."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Accessible label when visible content does not provide one."</ApiRow>
@@ -336,7 +336,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                                 hooks::tabs::{UseTabPanelInput, use_tab_panel},
                             };
 
-                            let panel = use_tab_panel(UseTabPanelInput { state, key: None, aria_label: MaybeProp::default(), aria_describedby: None, aria_details: None });
+                            let panel = use_tab_panel(UseTabPanelInput { state, key: None, aria_label: MaybeProp::default(), aria_describedby: Signal::default(), aria_details: Signal::default() });
                             let text = move || match state.selected_key().map(|key| key.to_string()).as_deref() {
                                 Some("shipping") => "Ships within two days.",
                                 _ => "A foldable reading lamp.",

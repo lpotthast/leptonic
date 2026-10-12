@@ -465,7 +465,6 @@ where
             style=styles
             tabindex=is_focusable.then_some(0)
             data-focused=flag(focus_ring.is_focused)
-            data-focus-visible=flag(focus_ring.is_focus_visible)
         >
             {render_visible_items(root, render)}
         </div>

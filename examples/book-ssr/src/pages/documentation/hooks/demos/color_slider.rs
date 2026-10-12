@@ -41,9 +41,9 @@ pub fn ColorSliderDemo() -> impl IntoView {
         has_label: true.into(),
         state,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_details: Signal::default(),
         name: None,
         form: None,
     });

@@ -243,11 +243,13 @@ pub async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), 
             .await?
             .wait_for_inner_text(&format!("Plain {round}"))
             .await?;
-        page.element("#test-vl-rebuilt-list").await?.click().await?;
-        page.element("#test-vl-rebuilt-plain")
-            .await?
-            .click()
-            .await?;
+        let list = page.element("#test-vl-rebuilt-list").await?;
+        list.click().await?;
+        page.wait_for_focus(&list).await?;
+        let plain = page.element("#test-vl-rebuilt-plain").await?;
+        plain.click().await?;
+        page.wait_for_focus(&plain).await?;
+        // Blurs the plain element: its focus ring's new handlers run.
         page.send_keys(Key::Tab).await?;
     }
     Ok(())

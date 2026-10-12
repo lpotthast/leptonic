@@ -87,7 +87,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
     /// Names the picker. Default: "Color swatches", without `aria_labelledby`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     /// How the swatches are laid out (for the arrow keys). Default: a grid.
     #[prop(optional)]
     layout: Option<ListLayout>,
@@ -139,12 +139,13 @@ pub fn ColorSwatchPicker<C: ColorValue>(
             set_picked.run(color);
         }
     });
-    let has_labelledby = aria_labelledby.is_some();
     let strings = use_localized_strings::<AtomStrings>();
     let aria_label = MaybeProp::derive(move || {
-        aria_label
-            .get()
-            .or_else(|| (!has_labelledby).then(|| strings.read().color_swatch_picker()))
+        aria_label.get().or_else(|| {
+            aria_labelledby
+                .with(Option::is_none)
+                .then(|| strings.read().color_swatch_picker())
+        })
     });
     let disabled = RwSignal::new(HashSet::new());
     let context = PickerContext {
@@ -161,7 +162,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
             disallow_empty_selection=true
             disabled_keys=Signal::derive(move || disabled.get())
             aria_label=aria_label
-            nostrip:aria_labelledby=aria_labelledby
+            aria_labelledby=aria_labelledby
             layout=layout.unwrap_or(ListLayout::Grid)
             classes=classes
             styles=styles

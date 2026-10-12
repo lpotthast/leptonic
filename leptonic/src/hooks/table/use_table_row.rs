@@ -141,7 +141,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let aria_labelledby = {
         let table = table.clone();
         let key = key.clone();
-        Signal::derive(move || table.row_labelledby(&key))
+        Signal::derive(move || table.row_labelledby(&key).to_string())
     };
     let state = table.state;
     let tree = state.tree;

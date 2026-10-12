@@ -173,11 +173,11 @@ pub fn PageAtomSlider() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the slider."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the slider."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">
                             "Ids of further elements describing every thumb (next to a "<Code inline=true>"Description"</Code>")."
                         </ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of elements with details about every thumb."</ApiRow>
+                        <ApiRow name="aria_details" ty="MaybeProp<String>" default="None">"Ids of elements with details about every thumb."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Vec<T>>>" default="None">"Called whenever the values change, also while dragging."</ApiRow>
                         <ApiRow name="on_change_end" ty="Option<Callback<Vec<T>>>" default="None">
                             "Called when the user stops dragging, and after a keyboard change."
@@ -234,12 +234,12 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s name, to submit the thumb\u{2019}s value with a form."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, if not its ancestor."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the thumb next to the slider\u{2019}s name, e.g. \u{201c}Minimum\u{201d}."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming the thumb."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of further elements naming the thumb."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">
                             "Ids of further elements describing this thumb (next to the slider\u{2019}s description)."
                         </ApiRow>
-                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"The id of the element with this thumb\u{2019}s error message."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"Ids of further elements with details about this thumb."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="MaybeProp<String>" default="None">"The id of the element with this thumb\u{2019}s error message."</ApiRow>
+                        <ApiRow name="aria_details" ty="MaybeProp<String>" default="None">"Ids of further elements with details about this thumb."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the thumb."</ApiRow>
                         <ApiRow name="children" ty="Option<Children>" default="None">"Content of the thumb, e.g. a "<Code inline=true>"SliderThumbTooltip"</Code>"."</ApiRow>
                     </ApiTable>

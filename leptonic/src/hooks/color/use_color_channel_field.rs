@@ -32,8 +32,8 @@ pub struct UseColorChannelFieldInput<C: ColorValue> {
     pub has_label: Signal<bool>,
     /// Names the field. Without any label, the channel's name does.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub is_required: Signal<bool>,
     pub placeholder: MaybeProp<String>,
     pub auto_focus: bool,
@@ -75,7 +75,6 @@ pub fn use_color_channel_field<C: ColorValue>(
         on_key_up,
     } = input;
     let channel = state.channel;
-    let has_labelledby = aria_labelledby.is_some();
     let locale = use_locale();
     use_number_field(UseNumberFieldInput {
         state: state.number,
@@ -83,7 +82,7 @@ pub fn use_color_channel_field<C: ColorValue>(
         has_label,
         aria_label: MaybeProp::derive(move || {
             aria_label.get().or_else(|| {
-                (!has_label.get() && !has_labelledby)
+                (!has_label.get() && aria_labelledby.with(Option::is_none))
                     .then(|| C::channel_name(channel, &locale.get()))
             })
         }),

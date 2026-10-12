@@ -81,8 +81,8 @@ pub fn PageAtomProgressBar() -> impl IntoView {
                         <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the value text (e.g. \u{201c}1 of 4\u{201d})."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the bar when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the bar."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing the bar."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the bar."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"Ids of elements describing the bar."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the bar element."</ApiRow>
                         <ApiRow name="children" ty="Option<Children>" default="None">"The label, the parts and your track."</ApiRow>
                     </ApiTable>

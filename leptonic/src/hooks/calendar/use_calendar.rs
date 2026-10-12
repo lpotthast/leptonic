@@ -64,9 +64,9 @@ pub struct UseCalendarInput {
     /// The calendar's id. Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
 }
 
 /// Input of [`use_range_calendar`].
@@ -78,18 +78,18 @@ pub struct UseRangeCalendarInput {
     /// The calendar's id. Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
 }
 
 /// What `use_calendar_base` takes from either input.
 struct CalendarAria {
     id: Option<String>,
     aria_label: MaybeProp<String>,
-    aria_labelledby: Option<String>,
-    aria_describedby: Option<String>,
-    aria_details: Option<String>,
+    aria_labelledby: Signal<Option<String>>,
+    aria_describedby: Signal<Option<String>>,
+    aria_details: Signal<Option<String>>,
 }
 
 /// What a range calendar does with a range being selected when the user presses outside its
@@ -122,14 +122,14 @@ pub struct UseCalendarReturn {
 }
 
 /// Props of the calendar's element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     pub on_focusout: EventHandler<FocusEvent>,
     pub element_capture: crate::ElementCaptureAttr,
 }
@@ -139,8 +139,8 @@ pub type UseCalendarAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaDetails, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaDetails, Signal<Option<String>>>,
     OnEvent<ev::focusout>,
     crate::ElementCaptureAttr,
 );
@@ -212,7 +212,7 @@ fn use_calendar_base(
     let data = CalendarData {
         state,
         aria_label,
-        aria_labelledby: aria_labelledby.clone(),
+        aria_labelledby,
         error_message_id: error.referenced_id,
         selected_date_description: selected_date_description.into(),
         formatters: CalendarFormatters::new(),
@@ -249,7 +249,7 @@ fn use_calendar_base(
                 .filter(|label| !label.is_empty())
                 .collect::<Vec<_>>()
                 .join(", ");
-            labels(&id, Some(label), aria_labelledby.as_deref())
+            labels(&id, Some(label), aria_labelledby.get().as_deref())
         })
     };
 

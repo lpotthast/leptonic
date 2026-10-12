@@ -243,7 +243,7 @@ clippy:
   check cargo clippy --test browser_test --manifest-path ./leptonic/Cargo.toml
   # Release too: some lints depend on type sizes that differ there (`trivially_copy_pass_by_ref`).
   check cargo clippy --tests --release --manifest-path ./leptonic/Cargo.toml --features full
-  # The atoms alone: what consumers like agnite dev-ui build (consumers.md).
+  # Without the default `intl-strings`, as crudkit builds (`--no-default-features --features atoms`, consumers.md).
   check cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --no-default-features --features atoms,clipboard
   check cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml
   check "cd ./testing/test-app && cargo clippy --features ssr"

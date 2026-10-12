@@ -152,7 +152,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                         <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">
                             "Prevent deselecting the last selected option."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
                             "The accessible name. The atom renders no label: give either a label text or the id of a visible label."
                         </ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">

@@ -158,7 +158,7 @@ pub struct UseKeyboardReturn {
 }
 
 /// Props from `use_keyboard` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseKeyboardProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,

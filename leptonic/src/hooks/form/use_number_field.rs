@@ -25,7 +25,7 @@ use super::{
     use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
 };
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, NumberValue, OnEvent, SlotProps,
+    CapturedElement, EventHandler, IdRefs, IntoAttrs, NumberValue, OnEvent, SlotProps,
     hooks::{
         button::UseButtonInput,
         focus::use_focus_within::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
@@ -84,8 +84,8 @@ pub struct UseNumberFieldInput<T: NumberValue> {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub is_required: Signal<bool>,
     pub placeholder: MaybeProp<String>,
     pub auto_focus: bool,
@@ -125,7 +125,7 @@ pub struct UseNumberFieldReturn {
 }
 
 /// Props for the group around the input and its buttons.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseNumberFieldGroupProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
@@ -157,7 +157,7 @@ impl IntoAttrs for UseNumberFieldGroupProps {
 
 /// Props for the number field's `<input>`: the text field's, plus input filtering, paste and
 /// scroll wheel handling.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseNumberFieldInputProps {
     pub text_field: UseTextFieldInputProps,
     pub aria_roledescription: Signal<Option<String>>,
@@ -356,7 +356,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         auto_focus,
         has_label,
         aria_label,
-        aria_labelledby: aria_labelledby.clone(),
+        aria_labelledby,
         aria_describedby,
         on_focus,
         on_blur: Some(commit_and_announce),
@@ -365,7 +365,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         on_key_up,
         shortcuts: Some(shortcuts),
         state: text_state,
-        element: TextFieldElement::Input,
+        element: Signal::stored(TextFieldElement::Input),
         input_type: Signal::stored(InputType::Text),
         is_invalid: Signal::stored(false),
         validate: None,
@@ -378,7 +378,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         enter_key_hint: None,
         exclude_from_tab_order: false,
         label_id: None,
-        aria_errormessage: None,
+        aria_errormessage: Signal::default(),
         aria_activedescendant: Signal::stored(None),
         aria_autocomplete: None,
         aria_haspopup: None,
@@ -490,7 +490,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
                     if has_label.get() {
                         Some(label_id.clone())
                     } else {
-                        aria_labelledby.clone()
+                        aria_labelledby.get()
                     }
                 })
                 .flatten()
@@ -534,9 +534,12 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
                 if custom_label.get().is_some() {
                     return None;
                 }
-                labelled_by
-                    .get()
-                    .map(|labelled_by| format!("{button_id} {labelled_by}"))
+                labelled_by.get().and_then(|labelled_by| {
+                    [button_id.as_str(), labelled_by.as_str()]
+                        .into_iter()
+                        .collect::<IdRefs>()
+                        .into_value()
+                })
             }),
             aria_controls: Signal::stored(Some(input_id.clone())),
             exclude_from_tab_order: Signal::stored(true),

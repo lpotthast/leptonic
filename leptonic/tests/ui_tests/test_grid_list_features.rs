@@ -261,12 +261,7 @@ pub async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
     page.click_with_primary_modifier(&cherry).await?;
     selection.wait_for_inner_text("Banana,Cherry").await?;
     let apple = row(page, "#glf-replace", "Apple").await?;
-    page.low_level()
-        .driver()
-        .action_chain()
-        .double_click_element(&apple)
-        .perform()
-        .await?;
+    apple.double_click().await?;
     page.element("#glf-replace-actions")
         .await?
         .wait_for_inner_text("Apple")

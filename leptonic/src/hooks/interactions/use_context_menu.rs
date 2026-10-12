@@ -58,7 +58,7 @@ pub struct UseContextMenuReturn {
 }
 
 /// Props for the target element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseContextMenuProps {
     pub on_contextmenu: EventHandler<MouseEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,

@@ -111,7 +111,7 @@ pub fn PageAtomColorSwatchPicker() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="\u{201c}Color swatches\u{201d}">
                             "Names the picker. The default applies without "<Code inline=true>"aria_labelledby"</Code>"."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the picker."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the picker."</ApiRow>
                         <ApiRow name="layout" ty="Option<ListLayout>" default="ListLayout::Grid">
                             "How the swatches are laid out, for the arrow keys: "<Code inline=true>"Grid"</Code>" (rows that wrap: "
                             "the up and down keys keep the column) or "<Code inline=true>"Stack"</Code>" (one row)."

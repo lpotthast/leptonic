@@ -167,7 +167,7 @@ pub fn PageUseNumberField() -> impl IntoView {
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when there is no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">

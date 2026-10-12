@@ -26,7 +26,7 @@ pub fn PageUseToolbar() -> impl IntoView {
                         <Code inline=true>"Vertical"</Code>". Also sets "<Code inline=true>"aria-orientation"</Code>"."
                     </ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The toolbar\u{2019}s accessible name."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
                         "The id of an element naming the toolbar. Ignored when "<Code inline=true>"aria_label"</Code>" is set."
                     </ApiRow>
                     <ApiRow name="element" ty="CapturedElement" default="CapturedElement::new()">"Capture of the element receiving the hook props."</ApiRow>

@@ -187,7 +187,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </p>
                 <Section title="Props" id="tab-list-props">
                     <ApiTable kind=ApiKind::Props of="TabList">
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the tab list."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">"Names the tab list."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the tab list."</ApiRow>
                         <ApiRow name="children" ty="Children">"One "<Code inline=true>"Tab"</Code>" per collection item, in collection order."</ApiRow>
                     </ApiTable>
@@ -235,7 +235,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                             "Keep the panel mounted while its tab isn\u{2019}t selected (inert, with "<Code inline=true>"data-inert"</Code>
                             "), so that state inside it survives switching tabs. Hide it with CSS."
                         </ApiRow>
-                        <ApiRow name="aria_describedby, aria_details" ty="Option<String>" default="None">
+                        <ApiRow name="aria_describedby, aria_details" ty="MaybeProp<String>" default="None">
                             "The ids of elements describing the panel, or holding details about it."
                         </ApiRow>
                         <ApiRow name="children" ty="ChildrenFn">

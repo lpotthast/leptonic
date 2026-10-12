@@ -44,8 +44,8 @@ pub fn PageHookTagGroup() -> impl IntoView {
         element: CapturedElement::new(),
         id: None,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
         keyboard_delegate: None,
         on_action: None,
     });

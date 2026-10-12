@@ -102,8 +102,8 @@ pub fn CheckboxField(
     #[prop(into, optional)]
     id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] classes: Classes,
@@ -200,21 +200,20 @@ pub fn CheckboxButton(
     let classes = with_default_class("leptonic-CheckboxButton", classes);
     let Some(ctx) = use_context::<CheckboxButtonContext>() else {
         dev_warn!("a <CheckboxButton> belongs in a <CheckboxField>");
-        return ().into_any();
+        return None;
     };
     let Some(checkbox) = ctx.checkbox.try_update_value(Option::take).flatten() else {
         dev_warn!("a <CheckboxField> has one <CheckboxButton>");
-        return ().into_any();
+        return None;
     };
-    checkbox_button(
+    Some(checkbox_button(
         checkbox,
         ctx.is_indeterminate,
         ctx.is_required,
         classes,
         styles,
         children,
-    )
-    .into_any()
+    ))
 }
 
 /// What a [`CheckboxField`] hands its [`CheckboxButton`].
@@ -245,8 +244,8 @@ struct CheckboxSetup {
     form: Option<String>,
     id: Option<String>,
     aria_label: MaybeProp<String>,
-    aria_labelledby: Option<String>,
-    aria_describedby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
+    aria_describedby: MaybeProp<String>,
     auto_focus: bool,
     on_focus_change: Option<Callback<bool>>,
 }
@@ -295,8 +294,8 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         form,
         value: form_value,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         auto_focus,
         on_focus_change,
         ..ToggleOptions::default()
@@ -406,8 +405,8 @@ pub fn CheckboxGroup<V: SelectionValue>(
     #[prop(into, optional)] form: Option<String>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -435,7 +434,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
         name,
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseCheckboxGroupReturn {
         props,
@@ -451,8 +450,8 @@ pub fn CheckboxGroup<V: SelectionValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         form,
         state,
         on_focus: None,

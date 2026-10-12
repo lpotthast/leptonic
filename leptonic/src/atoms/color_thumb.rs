@@ -156,7 +156,7 @@ pub fn ColorThumb(
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,
-        is_focus_visible,
+        ..
     } = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
@@ -186,7 +186,6 @@ pub fn ColorThumb(
                 style=thumb_styles(area_thumb_styles)
                 data-dragging=flag(is_dragging)
                 data-focused=flag(is_focused)
-                data-focus-visible=flag(is_focus_visible)
                 data-hovered=flag(hover.is_hovered)
                 data-disabled=flag(is_disabled)
             >
@@ -208,7 +207,6 @@ pub fn ColorThumb(
                 style=thumb_styles(slider_thumb_styles)
                 data-dragging=flag(is_dragging)
                 data-focused=flag(is_focused)
-                data-focus-visible=flag(is_focus_visible)
                 data-hovered=flag(hover.is_hovered)
                 data-disabled=flag(is_disabled)
             >
@@ -229,7 +227,6 @@ pub fn ColorThumb(
                 style=thumb_styles(wheel_thumb_styles)
                 data-dragging=flag(is_dragging)
                 data-focused=flag(is_focused)
-                data-focus-visible=flag(is_focus_visible)
                 data-hovered=flag(hover.is_hovered)
                 data-disabled=flag(is_disabled)
             >

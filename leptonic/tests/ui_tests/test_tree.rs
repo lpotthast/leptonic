@@ -330,7 +330,6 @@ pub async fn right_to_left_expansion_keys(page: &Page<'_>) -> Result<(), Report>
 pub async fn collapsing_the_parent_of_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
     const TREE: &str = "Selection tree";
     page.goto_path(CASES).await?;
-    page.goto_path(CASES).await?;
     page.element("#test-tc-before-selection")
         .await?
         .click()
@@ -402,7 +401,7 @@ pub async fn type_ahead_searches_the_visible_rows(page: &Page<'_>) -> Result<(),
     page.focus_stays(&documents, std::time::Duration::from_millis(100))
         .await?;
     // Past the type-ahead's reset delay (1 s).
-    std::thread::sleep(std::time::Duration::from_millis(1100));
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
     page.send_keys("Not").await?;
     page.wait_for_focus(&row(page, "Notes").await?).await
 }

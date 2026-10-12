@@ -33,7 +33,7 @@ pub fn PageUseTextField() -> impl IntoView {
                             has_label: true.into(),
                             // Everything else off:
                             id: None,
-                            element: TextFieldElement::Input,
+                            element: Signal::stored(TextFieldElement::Input),
                             input_type: Signal::stored(InputType::Text),
                             is_disabled: false.into(),
                             is_read_only: false.into(),
@@ -58,9 +58,9 @@ pub fn PageUseTextField() -> impl IntoView {
                             exclude_from_tab_order: false,
                             label_id: None,
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
-                            aria_errormessage: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
+                            aria_errormessage: Signal::default(),
                             aria_activedescendant: Signal::stored(None),
                             aria_autocomplete: None,
                             aria_haspopup: None,
@@ -147,7 +147,7 @@ pub fn PageUseTextField() -> impl IntoView {
                         <ApiRow name="state" ty="TextFieldState">
                             "Required. The value, from "<AnchorLink href="#use-text-field-state"><Code inline=true>"use_text_field_state"</Code></AnchorLink>"."
                         </ApiRow>
-                        <ApiRow name="element" ty="TextFieldElement" default="Input">
+                        <ApiRow name="element" ty="Signal<TextFieldElement>" default="Input">
                             <Code inline=true>"Input"</Code>" or "<Code inline=true>"TextArea"</Code>": the element you render."
                         </ApiRow>
                         <ApiRow name="input_type" ty="Signal<InputType>" default="Text">
@@ -196,8 +196,8 @@ pub fn PageUseTextField() -> impl IntoView {
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="exclude_from_tab_order" ty="bool" default="false">"Sets "<Code inline=true>"tabindex=\"-1\""</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when there is no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Further elements labelling the field."</ApiRow>
-                        <ApiRow name="aria_describedby, aria_errormessage" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Further elements labelling the field."</ApiRow>
+                        <ApiRow name="aria_describedby, aria_errormessage" ty="Signal<Option<String>>" default="None">
                             "Further description or error message ids, merged with the generated ones."
                         </ApiRow>
                         <ApiRow name="aria_activedescendant, aria_controls" ty="Signal<Option<String>>" default="None">

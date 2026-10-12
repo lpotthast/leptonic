@@ -75,13 +75,13 @@ pub struct UseSliderThumbInput<T: NumberValue> {
     pub has_label: Signal<bool>,
     /// Names this thumb (next to the slider's label), e.g. "Minimum".
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// Further elements describing the thumb (next to the slider's description).
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     /// The element with the thumb's error message.
-    pub aria_errormessage: Option<String>,
+    pub aria_errormessage: Signal<Option<String>>,
     /// Further elements with details about the thumb (next to the slider's).
-    pub aria_details: Option<String>,
+    pub aria_details: Signal<Option<String>>,
 }
 
 /// Return value of [`use_slider_thumb`].
@@ -136,8 +136,8 @@ pub struct UseSliderThumbInputProps {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
-    pub aria_errormessage: Option<String>,
-    pub aria_details: Option<String>,
+    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_details: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
     pub on_input: EventHandler<Event>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -169,8 +169,8 @@ pub type UseSliderThumbInputAttrs = (
         Attr<attr::AriaLabel, MaybeProp<String>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaErrormessage, Option<String>>,
-        Attr<attr::AriaDetails, Option<String>>,
+        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
+        Attr<attr::AriaDetails, Signal<Option<String>>>,
         ElementCaptureAttr,
     ),
     (
@@ -277,7 +277,10 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         aria_label,
         // Labelled by the slider in any case (also keeps `use_label` from warning); the labelling
         // itself follows the slider's label below.
-        aria_labelledby: Some(slider.labelled_by.get_untracked()),
+        aria_labelledby: {
+            let slider_labelled_by = slider.labelled_by;
+            Signal::derive(move || Some(slider_labelled_by.get()))
+        },
         ..UseLabelInput::default()
     });
     // As `use_label` with `"{slider labelled by} {aria_labelledby}"`, but following whether the
@@ -295,7 +298,7 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
                 ids.push(&thumb_label_id);
             }
             slider_labelled_by.with(|labelled_by| ids.push(labelled_by));
-            ids.extend(aria_labelledby.as_deref());
+            ids.extend(aria_labelledby.get().as_deref());
             ids.into_value()
         })
     };
@@ -499,16 +502,9 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
             aria_label: field_props.aria_label,
             aria_labelledby: thumb_labelled_by,
-            aria_describedby: IdRefs::derive([
-                slider.aria_describedby,
-                Signal::stored(aria_describedby),
-            ]),
+            aria_describedby: IdRefs::derive([slider.aria_describedby, aria_describedby]),
             aria_errormessage,
-            aria_details: [slider.aria_details, aria_details]
-                .into_iter()
-                .flatten()
-                .collect::<IdRefs>()
-                .into_value(),
+            aria_details: IdRefs::derive([slider.aria_details, aria_details]),
             element_capture: focusable_props.element_capture.chain(input_element.attr()),
             on_input: EventHandler::new(move |e: Event| {
                 if let Some(value) = parse_value::<T>(&event_target_value(&e)) {

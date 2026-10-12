@@ -326,3 +326,26 @@ pub async fn stays_open_back_on_the_trigger(page: &Page<'_>) -> Result<(), Repor
         .await;
     Ok(())
 }
+
+/// Pressing into the hovered tooltip (e.g. to select its text) while its trigger has the focus
+/// leaves the tooltip open past the close delay, although the trigger loses the focus (react-aria
+/// closes it on the blur).
+#[browser_test]
+pub async fn stays_open_when_pressed_into(page: &Page<'_>) -> Result<(), Report> {
+    let (save, tooltip) = hover_save(page).await?;
+    // Focused by the press, which leaves the tooltip open (`should_close_on_press=false`).
+    save.click().await?;
+    page.wait_for_focus(&save).await?;
+    tooltip.click().await?;
+    assert_that!(page.focused_element().await? == save)
+        .with_detail_message("whether the trigger kept the focus")
+        .is_false();
+    page.settle().await?;
+    assert_that!(|| page.count(TOOLTIP))
+        .consistently_ok()
+        // Past the close delay (400 ms).
+        .for_at_least(Duration::from_millis(600))
+        .matches(eq(1))
+        .await;
+    Ok(())
+}

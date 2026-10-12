@@ -106,7 +106,7 @@ pub fn PageAtomGridList() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the grid list."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
                             <Code inline=true>"Stack"</Code>": one row below the other. "<Code inline=true>"Grid"</Code>
                             ": rows wrap like cards, and "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" find the row in the same column."

@@ -116,8 +116,8 @@ pub fn TagGroup(
     #[prop(optional)] disabled_behavior: DisabledBehavior,
     #[prop(into, optional)] disallow_empty_selection: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
     /// Called with the keys to remove; enables removing tags.
     #[prop(into, optional)]
     on_remove: Option<Callback<HashSet<Key>>>,
@@ -146,7 +146,7 @@ pub fn TagGroup(
         },
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let UseTagGroupReturn {
         grid_props,
         label_props,
@@ -159,8 +159,8 @@ pub fn TagGroup(
         id: None,
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby,
-        aria_describedby,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
         keyboard_delegate: None,
         on_remove,
         on_action,
@@ -232,7 +232,6 @@ pub fn TagList(
                 style=styles
                 data-empty=flag(is_empty)
                 data-focused=flag(focus_ring.is_focused)
-                data-focus-visible=flag(focus_ring.is_focus_visible)
             >
                 {children()}
                 {empty}
@@ -385,7 +384,6 @@ pub fn TagRemoveButton(
             data-hovered=flag(button.is_hovered)
             data-pressed=flag(button.is_pressed)
             data-focused=flag(button.is_focused)
-            data-focus-visible=flag(button.is_focus_visible)
             data-disabled=flag(button.is_disabled)
         >
             {children.map(|children| children())}

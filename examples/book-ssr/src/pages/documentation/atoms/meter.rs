@@ -69,8 +69,8 @@ pub fn PageAtomMeter() -> impl IntoView {
                         <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the value text (e.g. \u{201c}3 of 4 GB\u{201d})."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the meter when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the meter."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing the meter."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the meter."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"Ids of elements describing the meter."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the meter element."</ApiRow>
                         <ApiRow name="children" ty="Option<Children>" default="None">"The label, the parts and your track."</ApiRow>
                     </ApiTable>

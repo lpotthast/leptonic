@@ -99,9 +99,9 @@ pub fn ToggleButton(
     prevent_focus_on_press: Signal<bool>,
     #[prop(into, optional)] exclude_from_tab_order: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] aria_describedby: Signal<Option<String>>,
-    #[prop(into, optional)] aria_controls: Signal<Option<String>>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
+    #[prop(into, optional)] aria_describedby: MaybeProp<String>,
+    #[prop(into, optional)] aria_controls: MaybeProp<String>,
     #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] aria_haspopup: Signal<Option<AriaHasPopup>>,
     #[prop(into, optional)] classes: Classes,
@@ -111,9 +111,9 @@ pub fn ToggleButton(
     let classes = with_default_class("leptonic-ToggleButton", classes);
     let button = UseButtonInput {
         aria_label,
-        aria_labelledby: Signal::stored(aria_labelledby),
-        aria_describedby,
-        aria_controls,
+        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_controls: crate::utils::prop_signal(aria_controls),
         aria_expanded,
         aria_haspopup,
         is_disabled,
@@ -214,7 +214,7 @@ pub fn ToggleButtonGroup<V: SelectionValue>(
     #[prop(into, default = Orientation::Horizontal.into())]
     orientation: Signal<Orientation>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
-    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -243,7 +243,7 @@ pub fn ToggleButtonGroup<V: SelectionValue>(
             element: CapturedElement::new(),
             orientation,
             aria_label,
-            aria_labelledby,
+            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
         },
     });
 

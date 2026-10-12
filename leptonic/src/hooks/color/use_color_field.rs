@@ -57,8 +57,8 @@ pub struct UseColorFieldInput<C: ColorValue = RGB8> {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub is_required: Signal<bool>,
@@ -89,7 +89,7 @@ pub struct UseColorFieldReturn {
 }
 
 /// Props of the color field's input.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseColorFieldInputProps {
     pub text_field: UseTextFieldInputProps,
     pub on_beforeinput: EventHandler<InputEvent>,
@@ -222,7 +222,7 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
         on_key_up,
         shortcuts: Some(shortcuts),
         state: text_state,
-        element: TextFieldElement::Input,
+        element: Signal::stored(TextFieldElement::Input),
         input_type: Signal::stored(InputType::Text),
         is_invalid: Signal::stored(false),
         validate: None,
@@ -236,7 +236,7 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
         enter_key_hint: None,
         exclude_from_tab_order: false,
         label_id: None,
-        aria_errormessage: None,
+        aria_errormessage: Signal::default(),
         aria_activedescendant: Signal::stored(None),
         aria_autocomplete: None,
         aria_haspopup: None,

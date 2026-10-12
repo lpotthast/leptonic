@@ -47,9 +47,9 @@ pub fn PageUseRadioHook() -> impl IntoView {
                             orientation: Orientation::Vertical.into(),
                             id: None,
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
-                            aria_errormessage: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
+                            aria_errormessage: Signal::default(),
                             form: None,
                             on_focus: None,
                             on_blur: None,
@@ -61,8 +61,8 @@ pub fn PageUseRadioHook() -> impl IntoView {
                             is_disabled: false.into(),
                             id: None,
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
                             auto_focus: false,
                             on_focus: None,
                             on_blur: None,
@@ -182,7 +182,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the group without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Signal<Option<String>>" default="None">
                             "Further labelling, describing or error elements."
                         </ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
@@ -235,7 +235,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio. It is also disabled while the group is."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without visible label text."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling or describing elements."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Further labelling or describing elements."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the radio when it mounts."</ApiRow>
                         <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Focus callbacks."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the radio gains or loses focus."</ApiRow>

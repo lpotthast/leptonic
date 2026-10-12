@@ -1,12 +1,10 @@
 use leptonic::{
-    IntoAttrs,
+    Focusability, IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
     },
-    hooks::focus::{
-        CreateFocusManagerReturn, FocusManagerOptions, Focusability, create_focus_manager,
-    },
+    hooks::focus::{CreateFocusManagerReturn, FocusManagerOptions, create_focus_manager},
 };
 use leptos::{prelude::*, web_sys};
 use send_wrapper::SendWrapper;

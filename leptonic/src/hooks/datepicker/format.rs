@@ -56,10 +56,10 @@ use super::{
     incomplete_date::IncompleteDate,
     placeholders::placeholder,
     types::{
-        DateSegment, DateSegmentType, DateValue, Granularity, HourCycle, MaxGranularity,
-        ResolvedHourCycle,
+        DateSegment, DateSegmentType, DateValue, Granularity, MaxGranularity, ResolvedHourCycle,
     },
 };
+use crate::HourCycle;
 use crate::utils::{
     i18n::Locale,
     number_formatter::{NumberFormatOptions, NumberFormatter},

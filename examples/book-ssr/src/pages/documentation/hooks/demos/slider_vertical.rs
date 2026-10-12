@@ -32,9 +32,9 @@ pub fn SliderVerticalDemo() -> impl IntoView {
         state,
         id: None,
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_details: Signal::default(),
     });
     let thumb = use_slider_thumb(UseSliderThumbInput {
         state,
@@ -48,10 +48,10 @@ pub fn SliderVerticalDemo() -> impl IntoView {
         form: None,
         has_label: Signal::stored(false),
         aria_label: MaybeProp::default(),
-        aria_labelledby: None,
-        aria_describedby: None,
-        aria_errormessage: None,
-        aria_details: None,
+        aria_labelledby: Signal::default(),
+        aria_describedby: Signal::default(),
+        aria_errormessage: Signal::default(),
+        aria_details: Signal::default(),
     });
     let focus_ring = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,

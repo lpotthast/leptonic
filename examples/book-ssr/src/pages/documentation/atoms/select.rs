@@ -236,7 +236,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                             "Labels the select when it has no "<Code inline=true>"Label"</Code>
                             ". Without it or "<Code inline=true>"aria_labelledby"</Code>", a "<Code inline=true>"Label"</Code>" is expected."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of other elements labelling the select."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The id(s) of other elements labelling the select."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
                             "Marks the select invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
                             <Code inline=true>"false"</Code>" leaves validation to the other sources."

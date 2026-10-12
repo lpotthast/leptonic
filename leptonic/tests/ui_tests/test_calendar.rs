@@ -3566,6 +3566,8 @@ pub async fn range_read_only_pointer(page: &Page<'_>) -> Result<(), Report> {
     page.settle().await?;
     assert_that!(|| selected_days(page, name))
         .consistently_ok()
+        // No timer is involved: a few frames show nothing changes.
+        .for_at_least(Duration::from_millis(100))
         .matches(eq(all))
         .await;
     Ok(())
@@ -3617,6 +3619,8 @@ pub async fn range_press_outside_the_limits(page: &Page<'_>) -> Result<(), Repor
     page.settle().await?;
     assert_that!(|| selected_days(page, name))
         .consistently_ok()
+        // No timer is involved: a few frames show nothing changes.
+        .for_at_least(Duration::from_millis(100))
         .matches(eq(["8", "9", "10", "11", "12", "13", "14", "15"]))
         .await;
     date(
@@ -3836,6 +3840,8 @@ pub async fn range_invalid_end_not_draggable_by_touch(page: &Page<'_>) -> Result
     page.settle().await?;
     assert_that!(|| selected_days(page, name))
         .consistently_ok()
+        // No timer is involved: a few frames show nothing changes.
+        .for_at_least(Duration::from_millis(100))
         .matches(eq(all))
         .await;
     page.element("#test-calendar-range-invalid-drag-changes")

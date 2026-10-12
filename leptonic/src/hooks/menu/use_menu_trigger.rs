@@ -84,7 +84,7 @@ pub struct UseMenuTriggerReturn {
 }
 
 /// Props for the menu opened by this trigger.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuTriggerMenuProps {
     /// The unique ID for the menu element.
     /// This must be set on the menu so that `aria-controls` on the trigger points to it.

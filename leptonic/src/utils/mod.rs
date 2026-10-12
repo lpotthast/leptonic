@@ -77,3 +77,12 @@ macro_rules! dev_warn {
     };
 }
 pub(crate) use dev_warn;
+
+#[cfg(feature = "atoms")]
+/// An atom's optional reactive prop as the `Signal<Option<T>>` hook inputs take (a stored `None`
+/// for an unset prop, no derived signal).
+pub(crate) fn prop_signal<T: Send + Sync + 'static>(
+    prop: leptos::prelude::MaybeProp<T>,
+) -> leptos::prelude::Signal<Option<T>> {
+    Option::<leptos::prelude::Signal<Option<T>>>::from(prop).unwrap_or_default()
+}

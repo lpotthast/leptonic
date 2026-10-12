@@ -82,7 +82,7 @@ pub struct UseCalendarCellReturn {
 }
 
 /// Props of the cell.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarCellProps {
     pub role: AriaRole,
     pub aria_disabled: Signal<Option<AriaDisabled>>,

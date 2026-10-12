@@ -155,7 +155,7 @@ pub fn Popover(
     /// The ids of the elements naming the popover when it is a dialog itself. Default: its
     /// `DialogTrigger`'s trigger.
     #[prop(into, optional)]
-    aria_labelledby: Option<String>,
+    aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
@@ -166,7 +166,7 @@ pub fn Popover(
         super::dialog::overlay_open_state(is_open, set_open, default_open, on_open_change, context);
     let Some(trigger) = trigger.or(context.map(|ctx| ctx.trigger)) else {
         crate::utils::dev_warn!("A <Popover> needs a `trigger` or a surrounding <DialogTrigger>.");
-        return ().into_any();
+        return None;
     };
     // A submenu's popover belongs to the group of its root popover.
     let submenu = use_context::<Option<SubmenuPopoverContext>>().flatten();
@@ -191,8 +191,7 @@ pub fn Popover(
     });
     let should_close_on_interact_outside = should_close_on_interact_outside
         .or_else(|| submenu.map(|submenu| submenu.should_close_on_interact_outside.get_value()));
-    let aria_labelledby =
-        aria_labelledby.or_else(|| submenu.map(|submenu| submenu.aria_labelledby.get_value()));
+    let submenu_labelledby = submenu.map(|submenu| submenu.aria_labelledby);
 
     let UsePopoverReturn {
         props,
@@ -233,7 +232,7 @@ pub fn Popover(
         context.overlay_id.set(Some(id));
     }
 
-    render_popover(
+    Some(render_popover(
         state,
         PopoverParts {
             props,
@@ -259,15 +258,15 @@ pub fn Popover(
             aria_label,
             aria_labelledby: move || {
                 aria_labelledby
-                    .clone()
+                    .get()
+                    .or_else(|| submenu_labelledby.map(|labelledby| labelledby.get_value()))
                     .or_else(|| context.map(|ctx| ctx.trigger_id.get()))
             },
         },
         classes,
         styles,
         children,
-    )
-    .into_any()
+    ))
 }
 
 /// What a `SubmenuTrigger` tells the `Popover` of its submenu (react-aria-components' popover

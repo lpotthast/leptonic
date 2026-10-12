@@ -39,7 +39,7 @@ pub fn PageUseLabel() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the field when there is no visible label. Next to a visible label, it is added to the field\u{2019}s name."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
                             "Ids of further labelling elements, separated by spaces."
                         </ApiRow>
                     </ApiTable>
@@ -127,10 +127,10 @@ pub fn PageUseLabel() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the field when there is no visible label. Next to a visible label, it is added to the field\u{2019}s name."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
                             "Ids of further labelling elements, separated by spaces."
                         </ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">
                             "Ids of further describing elements, separated by spaces. Referenced after the description and the "
                             "error message."
                         </ApiRow>

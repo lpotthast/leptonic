@@ -55,7 +55,7 @@ pub struct UseTabListInput {
     /// Names the tab list. Next to `aria_labelledby`, the list labels itself too.
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the tab list.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 /// Return value of [`use_tab_list`].
@@ -141,7 +141,7 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
     let id = state.id();
     let labelling = {
         let id = id.clone();
-        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.as_deref()))
+        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
     };
 
     UseTabListReturn {

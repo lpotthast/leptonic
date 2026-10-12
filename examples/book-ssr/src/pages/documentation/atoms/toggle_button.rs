@@ -119,11 +119,11 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<button>"</Code>"."</ApiRow>
                         <ApiRow name="children" ty="Children">"The button\u{2019}s content. Required."</ApiRow>
-                        <ApiRow name="aria_controls" ty="Signal<Option<String>>" default="None">"Ids of the elements controlled by this button."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing this control."</ApiRow>
+                        <ApiRow name="aria_controls" ty="MaybeProp<String>" default="None">"Ids of the elements controlled by this button."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"Ids of elements describing this control."</ApiRow>
                         <ApiRow name="aria_expanded" ty="Signal<Option<AriaExpanded>>" default="None">"Whether the controlled content is expanded."</ApiRow>
                         <ApiRow name="aria_haspopup" ty="Signal<Option<AriaHasPopup>>" default="None">"The kind of popup opened by this control."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements labelling this control."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements labelling this control."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focus this element when it mounts."</ApiRow>
                         <ApiRow name="exclude_from_tab_order" ty="Signal<bool>" default="false">"Remove the element from sequential keyboard navigation."</ApiRow>
                         <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when focus leaves the element."</ApiRow>
@@ -181,7 +181,7 @@ pub fn PageAtomToggleButton() -> impl IntoView {
                             <Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The group\u{2019}s accessible name."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the group."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"The ids of the elements naming the group."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the group element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The toggle buttons. Required."</ApiRow>
                     </ApiTable>

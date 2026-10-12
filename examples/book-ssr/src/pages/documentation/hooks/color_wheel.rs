@@ -46,10 +46,10 @@ pub fn PageUseColorWheel() -> impl IntoView {
                             outer_radius: Signal::stored(100.0),
                             inner_radius: Signal::stored(74.0),
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: None,
-                            aria_describedby: None,
-                            aria_details: None,
-                            aria_errormessage: None,
+                            aria_labelledby: Signal::default(),
+                            aria_describedby: Signal::default(),
+                            aria_details: Signal::default(),
+                            aria_errormessage: Signal::default(),
                             name: None,
                             form: None,
                         });
@@ -187,10 +187,10 @@ pub fn PageUseColorWheel() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the wheel."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Option<String>" default="None">"The ids of the elements describing the wheel."</ApiRow>
-                        <ApiRow name="aria_details" ty="Option<String>" default="None">"The ids of the elements with details about the wheel."</ApiRow>
-                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"The id of the element with the wheel\u{2019}s error message."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the wheel."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the wheel."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">"The ids of the elements with details about the wheel."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Signal<Option<String>>" default="None">"The id of the element with the wheel\u{2019}s error message."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to."</ApiRow>
                     </ApiTable>

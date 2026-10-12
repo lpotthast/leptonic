@@ -57,8 +57,8 @@ pub struct UseTagGroupInput {
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     /// Replaces the (horizontal) list keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Called with the keys of tags to remove (Delete/Backspace, or a remove button). Without

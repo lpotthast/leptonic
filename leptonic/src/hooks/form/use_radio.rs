@@ -57,8 +57,8 @@ pub struct UseRadioInput {
     /// The input's id.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub auto_focus: bool,
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
@@ -102,7 +102,7 @@ pub struct UseRadioInputProps {
     pub tabindex: Signal<Option<i32>>,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
     pub on_change: EventHandler<Event>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -135,7 +135,7 @@ pub type UseRadioInputAttrs = (
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Option<String>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         ElementCaptureAttr,
     ),
     (
@@ -357,7 +357,7 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
         }
     });
     let aria_describedby = IdRefs::derive([
-        Signal::stored(aria_describedby),
+        aria_describedby,
         description.referenced_id,
         group_error,
         group.description_id,

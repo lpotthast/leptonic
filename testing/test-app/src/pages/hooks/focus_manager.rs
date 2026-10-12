@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use leptonic::{
-    IntoAttrs,
+    Focusability, IntoAttrs,
     atoms::focus_scope::FocusScope,
     hooks::focus::{
-        FocusManager, FocusManagerOptions, Focusability, create_focus_manager,
-        use_focus_manager_context,
+        FocusManager, FocusManagerOptions, create_focus_manager, use_focus_manager_context,
     },
 };
 use leptos::{prelude::*, web_sys};
@@ -492,26 +491,21 @@ fn FocusManagerRadioNoneControls(focus_manager: StoredValue<FocusManager>) -> im
 
 #[component]
 fn FocusManagerRadioWrapControls(focus_manager: StoredValue<FocusManager>) -> impl IntoView {
-    let tabbable_next = move |_| {
-        focus_manager.with_value(|fm: &FocusManager| {
-            fm.focus_next(FocusManagerOptions {
-                wrap: true,
-                focusability: Focusability::Tabbable,
-                from: None,
-                accept: None,
-            });
-        });
+    // The id of the element the last call focused ("none": it focused nothing).
+    let moved_to = RwSignal::new(String::new());
+    let report = move |focused: Option<web_sys::Element>| {
+        moved_to.set(focused.map_or_else(|| "none".to_owned(), |element| element.id()));
     };
-
+    let options = || FocusManagerOptions {
+        wrap: true,
+        focusability: Focusability::Tabbable,
+        from: None,
+        accept: None,
+    };
+    let tabbable_next =
+        move |_| report(focus_manager.with_value(|fm: &FocusManager| fm.focus_next(options())));
     let tabbable_prev = move |_| {
-        focus_manager.with_value(|fm: &FocusManager| {
-            fm.focus_previous(FocusManagerOptions {
-                wrap: true,
-                focusability: Focusability::Tabbable,
-                from: None,
-                accept: None,
-            });
-        });
+        report(focus_manager.with_value(|fm: &FocusManager| fm.focus_previous(options())));
     };
 
     view! {
@@ -530,6 +524,7 @@ fn FocusManagerRadioWrapControls(focus_manager: StoredValue<FocusManager>) -> im
             >
                 "Radio Wrap Prev"
             </button>
+            <div>"Moved to: " <span id="test-fm-radio-wrap-moved-to">{moved_to}</span></div>
         </div>
     }
 }

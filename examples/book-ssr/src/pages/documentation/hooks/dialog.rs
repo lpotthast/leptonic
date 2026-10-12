@@ -25,10 +25,10 @@ pub fn PageUseDialog() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "Names a dialog without a title element; the title then doesn\u{2019}t name it."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
                         "Ids of the elements naming the dialog, instead of its title element."
                     </ApiRow>
-                    <ApiRow name="aria_describedby" ty="Option<String>" default="None">
+                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">
                         "Ids of the elements describing the dialog. Without them, an alert dialog is described by its "
                         "content element ("<Code inline=true>"content_props"</Code>")."
                     </ApiRow>

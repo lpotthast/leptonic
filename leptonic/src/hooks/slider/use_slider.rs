@@ -6,7 +6,7 @@ use send_wrapper::SendWrapper;
 use web_sys::{MouseEvent, PointerEvent};
 
 use crate::{
-    EventHandler, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
+    EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
     hooks::{
         focus::{Modality, set_modality},
         form::{LabelElementType, UseFieldInput, UseFieldReturn, use_field},
@@ -60,11 +60,11 @@ pub struct UseSliderInput<T: NumberValue> {
     pub has_label: Signal<bool>,
     /// Names the slider when there is no visible label.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// Further elements describing every thumb (next to a rendered description).
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     /// Elements with details about every thumb (`aria-details`).
-    pub aria_details: Option<String>,
+    pub aria_details: Signal<Option<String>>,
 }
 
 /// What the thumbs need from their slider.
@@ -79,7 +79,7 @@ pub struct SliderData {
     /// What describes every thumb: the description while rendered, and `aria_describedby`.
     pub aria_describedby: Signal<Option<String>>,
     /// What details every thumb (`aria_details`).
-    pub aria_details: Option<String>,
+    pub aria_details: Signal<Option<String>>,
 }
 
 impl SliderData {
@@ -177,11 +177,11 @@ impl IntoAttrs for UseSliderTrackProps {
 /// The output's props: `for` all thumbs, not announced while dragging (`aria-live="off"`).
 #[derive(Debug)]
 pub struct UseSliderOutputProps {
-    pub html_for: Signal<String>,
+    pub html_for: Signal<Option<String>>,
 }
 
 pub type UseSliderOutputAttrs = (
-    Attr<attr::For, Signal<String>>,
+    Attr<attr::For, Signal<Option<String>>>,
     Attr<attr::AriaLive, AriaLive>,
 );
 
@@ -405,8 +405,8 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
             html_for: Signal::derive(move || {
                 (0..state.thumb_count())
                     .map(|index| thumb_data.thumb_id(index))
-                    .collect::<Vec<_>>()
-                    .join(" ")
+                    .collect::<IdRefs>()
+                    .into_value()
             }),
         },
         data,

@@ -165,7 +165,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field without a label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when rendered."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the hidden input belongs to, when outside it."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the field."</ApiRow>
