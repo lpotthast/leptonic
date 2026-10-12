@@ -1,3 +1,7 @@
+// No upstream: the values of leptonic's state `data-*` attributes (react-aria-components writes
+// `value || undefined` at each site).
+//! Values of the state `data-*` attributes atoms render (`data-selected`, `data-selection-mode`).
+
 use leptos::prelude::*;
 
 #[cfg(feature = "atoms")]

@@ -1,4 +1,5 @@
 // Upstream: react-aria-components/src/ProgressBar.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ProgressBar.test.js @ 99e6102368
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
@@ -65,7 +66,6 @@ pub(crate) struct ValueContext {
 /// Data attributes: `data-indeterminate`.
 ///
 /// Default class: `leptonic-ProgressBar`.
-#[allow(clippy::too_many_arguments)]
 #[component]
 pub fn ProgressBar<T: NumberValue>(
     /// The progress, clamped to the range: a number, an `Option`, or any signal of them. `None`:

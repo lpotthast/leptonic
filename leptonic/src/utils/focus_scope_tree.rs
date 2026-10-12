@@ -5,7 +5,7 @@
 //!
 //! Each `FocusScope` registers itself in this tree on mount and unregisters on
 //! cleanup. The tree enables nested-scope queries: "is this element inside this
-//! scope or any of its descendant scopes?" — which is critical for letting an
+//! scope or any of its descendant scopes?", which is critical for letting an
 //! inner containing scope (e.g., a dropdown inside a modal) hold focus without
 //! the outer scope yanking it back.
 
@@ -433,7 +433,7 @@ pub fn scope_element(id: ScopeId) -> Option<web_sys::Element> {
 ///
 /// Walks from the active scope up to `scope_id`. If any intermediate scope
 /// has a `node_to_restore`, that scope is "closer" to the active scope and
-/// should handle restoration instead — so this scope should NOT restore.
+/// should handle restoration instead, so this scope should NOT restore.
 ///
 /// This prevents nested scopes from competing: when a menu inside a modal
 /// both have `restore_focus=true`, the innermost scope that has a
@@ -449,7 +449,7 @@ pub fn should_restore_focus(scope_id: ScopeId) -> bool {
         // Walk from active scope up toward scope_id.
         let mut current_id = Some(active_id);
         while let Some(id) = current_id {
-            // Reached the target scope — no intermediate restorer found.
+            // Reached the target scope: no intermediate restorer found.
             if id == scope_id {
                 return true;
             }
@@ -498,7 +498,7 @@ pub fn set_active_scope_if_deepest(scope_id: ScopeId, element: &web_sys::Element
         };
 
         // If the element is within any child scope's DOM, this scope is not
-        // the deepest — let the child scope handle it.
+        // the deepest: let the child scope handle it.
         let in_child = node.children.iter().any(|child_id| {
             tree.nodes
                 .get(child_id)

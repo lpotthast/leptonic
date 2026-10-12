@@ -57,7 +57,6 @@ pub struct RadioGroupContext {
 /// `data-invalid`.
 ///
 /// Default class: `leptonic-RadioGroup`.
-#[allow(clippy::too_many_arguments)]
 #[component]
 pub fn RadioGroup<V: SelectionValue>(
     /// The initially selected value. Ignored with `value`.
@@ -204,7 +203,7 @@ pub fn RadioField(
         use_context::<RadioGroupContext>(),
         use_context::<FieldContext>(),
     ) else {
-        crate::utils::dev_warn!("A <RadioField> must be inside a <RadioGroup>.");
+        dev_warn!("A <RadioField> must be inside a <RadioGroup>.");
         return None;
     };
     let state = group.data.state;

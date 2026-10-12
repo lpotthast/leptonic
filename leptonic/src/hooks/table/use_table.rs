@@ -35,11 +35,12 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Rows, cells and column headers get the table through the returned `TableData` (react-aria:
+// - Rows, cells and column headers get the table through the returned `TableData`, which the
+//   caller hands to them: the dependency is explicit instead of hidden global state (react-aria:
 //   `WeakMap`s keyed by the state).
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-rowcount`).
+// - Virtualization (`aria-rowcount`): not yet, the virtualizer doesn't render tables yet.
 //
 // =============================================================================
 

@@ -1,5 +1,6 @@
-//! Headless color swatch picker atoms: a list of colors to pick one from.
 // Upstream: react-aria-components/src/ColorSwatchPicker.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorSwatchPicker.test.js @ 99e6102368
+//! Headless color swatch picker atoms: a list of colors to pick one from.
 
 use std::collections::HashSet;
 
@@ -121,7 +122,8 @@ pub fn ColorSwatchPicker<C: ColorValue>(
             on_change.run(color);
         }
     });
-    let selection = Signal::derive(move || Selection::keys(Some(color_key(picked.get().into()))));
+    // A memo: it allocates (and notifies the list box only when the picked key changes).
+    let selection = Memo::new(move |_| Selection::keys(Some(color_key(picked.get().into()))));
     let set_selection = Callback::new(move |selection: Selection| {
         // Single selection: the one key ("all" can't occur).
         let Selection::Keys(keys) = selection else {
@@ -149,7 +151,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
     });
     let disabled = RwSignal::new(HashSet::new());
     let context = PickerContext {
-        colors: Signal::derive(move || colors.get().into_iter().map(Into::into).collect()),
+        colors: Memo::new(move |_| colors.get().into_iter().map(Into::into).collect()).into(),
         disabled,
     };
 
@@ -160,7 +162,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
             selection=selection
             set_selection=set_selection
             disallow_empty_selection=true
-            disabled_keys=Signal::derive(move || disabled.get())
+            disabled_keys=disabled
             aria_label=aria_label
             aria_labelledby=aria_labelledby
             layout=layout.unwrap_or(ListLayout::Grid)

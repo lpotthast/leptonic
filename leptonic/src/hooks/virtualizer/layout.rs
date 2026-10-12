@@ -5,6 +5,25 @@ use std::{collections::HashSet, sync::Arc};
 use super::{LayoutInfo, ScrollAnchorInfo};
 use crate::hooks::collections::{Collection, Key, Rect, Size};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - A trait whose methods get the virtualizer's state as a `VirtualizerContext` argument
+//   (react-stately: an abstract class with a `virtualizer` back reference): the virtualizer owns
+//   its layout, so the layout can't also refer to it.
+// - Layouts aren't `LayoutDelegate`s themselves (`getItemRect`, `getVisibleRect`):
+//   `VirtualizerState::layout_delegate` is, as the visible rectangle is the virtualizer's state.
+// - `scroll_anchor_info` is a trait method with a default (react-stately: an optional
+//   `UNSTABLE_getScrollAnchorInfo` the virtualizer probes for).
+//
+// ## OMITTED FEATURES
+// - `getDropTargetLayoutInfo`: not yet, virtualized collections take no drops yet (see
+//   `ListLayout`).
+//
+// =============================================================================
+
 /// What changed since the last layout (react-stately's `InvalidationContext`).
 // Independent change flags, as upstream.
 #[allow(clippy::struct_excessive_bools)]

@@ -20,7 +20,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Return the `UseCheckboxInput` for `use_checkbox`, to render the checkbox with it.
+// - Returns the `UseCheckboxInput` for `use_checkbox`, to render the checkbox with it (input
+//   composition: one checkbox hook per element instead of merged DOM props).
 //
 // =============================================================================
 
@@ -42,11 +43,12 @@ pub fn use_table_selection_checkbox(input: UseTableSelectionCheckboxInput) -> Us
     });
     // Its own label, then the row's (following the row header columns and cells).
     let own_id = checkbox.options.id.clone();
-    checkbox.options.aria_labelledby = Signal::derive(move || {
+    checkbox.options.aria_labelledby = Memo::new(move |_| {
         let mut labelledby: IdRefs = own_id.iter().collect();
         labelledby.extend(table.row_labelledby(&key).ids());
         labelledby.into_value()
-    });
+    })
+    .into();
     checkbox
 }
 
@@ -64,17 +66,17 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
     let selection = table.state.grid.list.selection;
     let rows = table.state.table;
     let strings = use_localized_strings::<TableStrings>();
+    // Compares the selection with every selectable key: once per selection change.
+    let is_select_all = Memo::new(move |_| selection.is_select_all());
     let state = use_toggle_state(UseToggleStateInput {
         value: Some(ValueBinding::new(
-            Signal::derive(move || selection.is_select_all()),
+            is_select_all.into(),
             Callback::new(move |_| selection.toggle_select_all()),
         )),
         ..UseToggleStateInput::default()
     });
     UseCheckboxInput {
-        is_indeterminate: Signal::derive(move || {
-            !selection.is_empty() && !selection.is_select_all()
-        }),
+        is_indeterminate: Signal::derive(move || !selection.is_empty() && !is_select_all.get()),
         options: ToggleOptions {
             is_disabled: Signal::derive(move || {
                 selection.selection_mode() != SelectionMode::Multiple

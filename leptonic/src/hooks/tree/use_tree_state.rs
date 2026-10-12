@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn expanding_shows_children_and_reports_the_change() {
-        crate::testing::with_owner(|| {
+        with_owner(|| {
             let changes = RwSignal::new(Vec::new());
             let state = use_tree_state(UseTreeStateInput {
                 collection: tree(),
@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn a_collapsed_parent_hides_expanded_descendants() {
-        crate::testing::with_owner(|| {
+        with_owner(|| {
             let state = use_tree_state(UseTreeStateInput {
                 collection: tree(),
                 selection: SelectionOptions::default(),
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn bound_expanded_keys_are_shown_and_written() {
-        crate::testing::with_owner(|| {
+        with_owner(|| {
             let expanded = RwSignal::new(keys(&["a"]));
             let state = use_tree_state(UseTreeStateInput {
                 collection: tree(),

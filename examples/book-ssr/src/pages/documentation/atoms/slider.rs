@@ -193,7 +193,10 @@ pub fn PageAtomSlider() -> impl IntoView {
             </Section>
 
             <Section title="SliderTrack">
-                <p>"The track ("<Code inline=true>"position: relative"</Code>"): a press on it moves the closest thumb there and drags it. Holds the fill and the thumbs."</p>
+                <p>
+                    "The track ("<Code inline=true>"position: relative"</Code>"): a press on it moves the closest thumb there and drags it. "
+                    "Holds the fill and the thumbs. Outside a "<Code inline=true>"Slider"</Code>" it renders nothing (and warns in debug builds)."
+                </p>
                 <Section title="Props" id="slider-track-props">
                     <ApiTable kind=ApiKind::Props of="SliderTrack">
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the track."</ApiRow>

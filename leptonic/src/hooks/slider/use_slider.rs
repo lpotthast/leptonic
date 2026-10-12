@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/slider/useSlider.ts @ 99e6102368
 // Upstream: react-aria/src/slider/utils.ts @ 99e6102368
+// Upstream: react-aria/test/slider/useSlider.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Slider.test.js @ 99e6102368
 use leptos::{attr, attr::Attr, ev, prelude::*};
 use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use send_wrapper::SendWrapper;
@@ -217,7 +219,6 @@ fn closest_thumb(value: f64, values: &[f64]) -> Option<usize> {
 /// A slider: a group of thumbs on a track, named by a label. Pressing the track moves the
 /// closest thumb there (and drags it). Render each thumb with
 /// [`use_slider_thumb`](fn@super::use_slider_thumb).
-#[allow(clippy::too_many_lines)]
 pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     let UseSliderInput {
         state,
@@ -250,8 +251,9 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
             let field_id = field_props.id.clone();
             let labelled_by = field_props.aria_labelledby;
             // A thumb must reference the actual labels: accessible-name computation does not
-            // follow an aria-labelledby chain through the slider group.
-            Signal::derive(move || labelled_by.get().unwrap_or_else(|| field_id.clone()))
+            // follow an aria-labelledby chain through the slider group. A memo: every thumb
+            // reads it.
+            Memo::new(move |_| labelled_by.get().unwrap_or_else(|| field_id.clone())).into()
         },
         aria_describedby: field_props.aria_describedby,
         aria_details,

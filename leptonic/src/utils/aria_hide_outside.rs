@@ -129,21 +129,36 @@ pub struct AriaHideOutsideOptions {
 ///
 /// Supports nesting: if called while a previous hide is active, the new call
 /// takes over observation. When cleaned up, the previous observer resumes.
-#[cfg(feature = "ssr")]
+/// Nothing is hidden during server-side rendering.
 pub fn aria_hide_outside(
-    _targets: &[web_sys::Element],
-    _options: AriaHideOutsideOptions,
+    targets: &[web_sys::Element],
+    options: AriaHideOutsideOptions,
 ) -> Box<dyn FnOnce()> {
-    Box::new(|| {})
+    #[cfg(feature = "ssr")]
+    {
+        let _ = (targets, options);
+        Box::new(|| {})
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        hide_outside(targets, options)
+    }
 }
 
 /// Marks an element as visible within the current hiding context.
 ///
 /// Returns a cleanup function to undo, or `None` if there is no active
 /// hiding context or the element is already visible.
-#[cfg(feature = "ssr")]
-pub fn keep_visible(_element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
-    None
+pub fn keep_visible(element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
+    #[cfg(feature = "ssr")]
+    {
+        let _ = element;
+        None
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        keep_visible_in_top_observer(element)
+    }
 }
 
 #[cfg(not(feature = "ssr"))]
@@ -155,7 +170,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
 #[cfg(not(feature = "ssr"))]
-use crate::utils::dom_ext::node_contains;
+use crate::utils::shadow_dom::node_contains;
 
 /// A set of elements by identity: a JavaScript `Set` (as upstream's), so a membership check is
 /// one call into JavaScript instead of one per element compared. Clones share the set.
@@ -197,7 +212,7 @@ impl ElementSet {
     fn any_contains(&self, node: &web_sys::Node) -> bool {
         self.to_vec()
             .iter()
-            .any(|element| node_contains(Some(element.as_ref()), Some(node)).unwrap_or(false))
+            .any(|element| node_contains(element.as_ref(), node))
     }
 }
 
@@ -234,10 +249,7 @@ struct ObserverWrapper {
 #[cfg(not(feature = "ssr"))]
 impl ObserverWrapper {
     fn observe(&self) {
-        let options = web_sys::MutationObserverInit::new();
-        options.set_child_list(true);
-        options.set_subtree(true);
-        let _ = self.observer.observe_with_options(&self.root, &options);
+        observe_subtree(&self.observer, &self.root);
     }
 
     fn disconnect(&self) {
@@ -255,9 +267,7 @@ impl ObserverWrapper {
             .hidden_nodes
             .to_vec()
             .into_iter()
-            .filter(|hidden| {
-                node_contains(Some(hidden.as_ref()), Some(element.as_ref())).unwrap_or(false)
-            })
+            .filter(|hidden| node_contains(hidden.as_ref(), element.as_ref()))
             .collect();
         if containing.is_empty() {
             return;
@@ -296,13 +306,13 @@ fn classify(
     visible_nodes: &ElementSet,
     hidden_nodes: &ElementSet,
 ) -> WalkAction {
-    // Already hidden or already visible — skip subtree.
+    // Already hidden or already visible: skip the subtree.
     if hidden_nodes.has(element) || visible_nodes.has(element) {
         return WalkAction::Reject;
     }
 
-    // Parent already hidden (hiding is recursive) — skip subtree.
-    // Exception: elements with role="row" — VoiceOver on iOS has issues
+    // Parent already hidden (hiding is recursive): skip the subtree.
+    // Exception: elements with role="row": VoiceOver on iOS has issues
     // hiding elements with role="row", so we hide cells individually.
     // https://bugs.webkit.org/show_bug.cgi?id=222623
     if let Some(parent) = element.parent_element()
@@ -312,11 +322,11 @@ fn classify(
         return WalkAction::Reject;
     }
 
-    // Node contains a visible target — don't hide it, but recurse into children.
+    // Node contains a visible target: don't hide it, but recurse into children.
     let contains_visible = visible_nodes
         .to_vec()
         .iter()
-        .any(|v| node_contains(Some(element.as_ref()), Some(v.as_ref())).unwrap_or(false));
+        .any(|v| node_contains(element.as_ref(), v.as_ref()));
 
     if contains_visible {
         WalkAction::Skip
@@ -442,16 +452,20 @@ fn create_mutation_observer(
     );
 
     let observer = web_sys::MutationObserver::new(callback.as_ref().unchecked_ref()).ok()?;
+    observe_subtree(&observer, root);
+    Some((observer, callback))
+}
 
+/// Starts `observer` on the child lists of `root` and its descendants.
+#[cfg(not(feature = "ssr"))]
+fn observe_subtree(observer: &web_sys::MutationObserver, root: &web_sys::Element) {
     let options = web_sys::MutationObserverInit::new();
     options.set_child_list(true);
     options.set_subtree(true);
     let _ = observer.observe_with_options(root, &options);
-
-    Some((observer, callback))
 }
 
-/// Process `MutationObserver` records — hide newly added elements that are
+/// Process `MutationObserver` records: hide newly added elements that are
 /// outside the visible/hidden sets.
 #[cfg(not(feature = "ssr"))]
 fn handle_mutations(
@@ -495,7 +509,7 @@ fn handle_mutations(
 }
 
 #[cfg(not(feature = "ssr"))]
-pub fn aria_hide_outside(
+fn hide_outside(
     targets: &[web_sys::Element],
     options: AriaHideOutsideOptions,
 ) -> Box<dyn FnOnce()> {
@@ -583,7 +597,7 @@ pub fn aria_hide_outside(
 }
 
 #[cfg(not(feature = "ssr"))]
-pub fn keep_visible(element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
+fn keep_visible_in_top_observer(element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
     OBSERVER_STACK.with_borrow(|stack| {
         let wrapper = stack.last()?;
         if wrapper.visible_nodes.has(element) {

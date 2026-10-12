@@ -1,5 +1,6 @@
 // Upstream: react-aria/src/interactions/useKeyboard.ts @ 99e6102368
 // Upstream: react-aria/test/interactions/useKeyboard.test.js @ 99e6102368
+//! Keyboard interactions with propagation control and keyboard shortcuts.
 use leptos::{ev, prelude::*};
 use web_sys::KeyboardEvent;
 

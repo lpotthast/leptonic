@@ -2,6 +2,21 @@
 //! Stopping propagation by default, with `continue_propagation()` to opt out (react-aria's
 //! `createEventHandler`), for press and keyboard events.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The event types whose propagation the user's handler controls (press and keyboard events)
+//   implement the sealed `Propagation` trait over a shared `PropagationControl` (react-aria:
+//   `createEventHandler` wraps a handler and builds an event object with `continuePropagation`).
+//
+// ## OMITTED FEATURES
+// - The event's `stopPropagation()` (react-aria: logs that stopping is the default already):
+//   there is no method to call.
+//
+// =============================================================================
+
 use std::{
     fmt,
     sync::{

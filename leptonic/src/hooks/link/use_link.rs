@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/link/useLink.ts @ 99e6102368
+// Upstream: react-aria/test/link/useLink.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Link.test.js @ 99e6102368
 use leptos::{
     attr,
     attr::{
@@ -20,13 +22,13 @@ use crate::{
             use_focusable,
         },
         interactions::{
-            HoverEndEvent, HoverStartEvent, PressEvent, PressResponderContext, UseHoverInput,
-            UseHoverReturn, UsePressInput, UsePressReturn, use_hover,
+            HoverEndEvent, HoverStartEvent, PressEvent, PressPropagation, PressResponderContext,
+            UseHoverInput, UseHoverReturn, UsePressInput, UsePressReturn, use_hover,
             use_keyboard::KeyboardEventWrapper, use_press,
         },
         link::{LinkRel, LinkTarget, link_rel},
     },
-    utils::aria::{AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
+    utils::aria::{AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole, aria_true},
 };
 
 // =============================================================================
@@ -244,7 +246,7 @@ impl IntoAttrs for UseLinkProps {
 /// ```ignore
 /// let link = use_link(UseLinkInput {
 ///     href: Signal::stored(Some("https://example.com".to_owned())),
-///     target: LinkTarget::Blank,
+///     target: Signal::stored(LinkTarget::Blank),
 ///     ..UseLinkInput::default()
 /// });
 /// let (attrs, styles) = link.props.into_parts();
@@ -314,7 +316,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     } = use_press(UsePressInput {
         is_disabled,
         // Routers handle link clicks in a document-level listener.
-        propagation: crate::hooks::interactions::PressPropagation::Continue,
+        propagation: PressPropagation::Continue,
         on_press,
         on_press_start,
         on_press_end,
@@ -388,7 +390,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         tabindex,
         aria_label,
         aria_current,
-        aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+        aria_disabled: aria_true(is_disabled),
         aria_haspopup: trigger.map_or_else(Signal::default, |t| t.aria_haspopup),
         aria_expanded: trigger.map_or_else(Signal::default, |t| t.aria_expanded),
         aria_controls: trigger.map_or_else(Signal::default, |t| t.aria_controls),
@@ -411,10 +413,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     };
 
     UseLinkReturn {
-        props: PropsWithStyles {
-            props,
-            styles: press_styles,
-        },
+        props: PropsWithStyles::new(props, press_styles),
         is_disabled,
         is_pressed,
         is_hovered,

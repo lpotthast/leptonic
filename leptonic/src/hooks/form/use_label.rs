@@ -17,9 +17,6 @@ use crate::{IdRefs, IntoAttrs, labels, utils::id::use_id};
 //   hook never sees its content.
 // - `label_id` sets the label element's id (react-aria always generates it). Reason: lets a
 //   caller label further elements with an id it already knows.
-// - `aria_labelledby` is read once (a list of ids, plain `Option<String>` like all ids, C2);
-//   `aria_label` and `has_label` are reactive, and so is whether `aria-labelledby` lists the
-//   field itself.
 //
 // =============================================================================
 
@@ -144,9 +141,10 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
             }
         });
     }
-    let labelled_by = {
+    // A memo: it allocates, and fields pass it on to further readers.
+    let labelled_by: Signal<Option<String>> = {
         let (id, label_id) = (id.clone(), label_id.clone());
-        Signal::derive(move || {
+        Memo::new(move |_| {
             let mut labelled_by = IdRefs::default();
             if has_label.get() {
                 labelled_by.push(&label_id);
@@ -156,6 +154,7 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
             // that both make up its name.
             labels(&id, aria_label.get(), labelled_by.into_value().as_deref()).aria_labelledby
         })
+        .into()
     };
 
     UseLabelReturn {

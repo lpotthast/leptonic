@@ -38,13 +38,15 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Rows get the grid list's settings through the returned `GridListData` (react-aria: a
-//   `WeakMap` keyed by the state), which the caller hands to `use_grid_list_item`.
+// - Rows get the grid list's settings through the returned `GridListData`, which the caller
+//   hands to `use_grid_list_item`: the dependency is explicit instead of hidden global state
+//   (react-aria: a `WeakMap` keyed by the state).
 // - `layout` and `orientation` configure the default list keyboard delegate, which
 //   react-aria-components' `GridList` builds itself and passes as `keyboardDelegate`.
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-rowcount`/`aria-colcount`).
+// - Virtualization (`aria-rowcount`/`aria-colcount`): not yet, the virtualizer doesn't render
+//   grid lists yet.
 //
 // =============================================================================
 
@@ -140,7 +142,7 @@ pub fn tree_row_positions(collection: &Collection) -> HashMap<Key, TreeRowPositi
                     set_size,
                 },
             );
-            if row.first_child_key.is_some() {
+            if collection.first_child(&row.key).is_some() {
                 visit(collection, collection.children(&row.key), positions);
             }
         }
@@ -259,7 +261,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
     });
 
     // An empty grid is a tab stop itself, unless it has tabbable content.
-    let is_empty = Signal::derive(move || state.collection.with(|c| c.is_empty()));
+    let is_empty = Memo::new(move |_| state.collection.with(|c| c.is_empty()));
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
         is_disabled: Signal::derive(move || !is_empty.get()),
     });

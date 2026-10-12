@@ -51,7 +51,6 @@ struct SearchFieldContext {
 /// `data-required`.
 ///
 /// Default class: `leptonic-SearchField`.
-#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn SearchField(
     #[prop(into, optional)] default_value: String,

@@ -1,4 +1,7 @@
 // Upstream: react-aria/src/utils/isVirtualEvent.ts @ 99e6102368
+// No deviations from react-aria beyond the project-wide API conventions.
+//! Telling clicks and pointer events of assistive technology from real ones.
+
 use wasm_bindgen::JsCast;
 
 /// Detects screen reader / assistive technology clicks.

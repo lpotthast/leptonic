@@ -1,30 +1,31 @@
+// Upstream: react-stately/src/color/Color.ts @ 99e6102368
 // Upstream: react-stately/test/color/Color.test.tsx @ 99e6102368
 //! Color names (react-aria's `getColorName`/`getHueName`): the lightness, chroma and hue are
 //! picked by message key and localized (`ColorNameStrings`).
 use std::cell::RefCell;
 
-use super::{RGB8, channel_formatter};
+use super::RGB8;
 use crate::utils::{
     i18n::Locale,
     intl_strings::{ColorNameArgs, ColorNameStrings, LocalizedStrings, TransparentColorNameArgs},
-    number_formatter::{NumberFormatOptions, NumberStyle},
+    number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle},
+    recent_cache::RecentCache,
 };
 
 thread_local! {
     /// The color names of the locale named last: built once per locale, not per name (a drag
     /// names colors on every change).
-    static STRINGS: RefCell<Option<(Locale, ColorNameStrings)>> = const { RefCell::new(None) };
+    static STRINGS: RefCell<RecentCache<Locale, ColorNameStrings>> =
+        const { RefCell::new(RecentCache::new(1)) };
 }
 
 /// The color names in `locale`.
 fn strings_for(locale: &Locale) -> ColorNameStrings {
-    STRINGS.with_borrow_mut(|cached| match cached {
-        Some((cached_locale, strings)) if cached_locale == locale => strings.clone(),
-        _ => {
-            let strings = ColorNameStrings::for_locale(locale.clone());
-            *cached = Some((locale.clone(), strings.clone()));
-            strings
-        }
+    STRINGS.with_borrow_mut(|strings| {
+        strings.get_or_insert_with(
+            |cached| cached == locale,
+            || (locale.clone(), ColorNameStrings::for_locale(locale.clone())),
+        )
     })
 }
 
@@ -99,7 +100,7 @@ pub(super) fn color_name(color: RGB8, alpha: f64, locale: &Locale) -> String {
     };
     let (lightness, chroma) = (part(lightness), part(chroma));
     let name = if alpha < 1.0 {
-        let percent = channel_formatter(
+        let percent = NumberFormatter::cached(
             locale,
             &NumberFormatOptions {
                 style: NumberStyle::Percent,

@@ -79,27 +79,21 @@ impl EventTargetExt for web_sys::EventTarget {
     }
 }
 
-/// Whether `node` contains `other_node`, across shadow DOM boundaries (react-aria's
-/// `nodeContains`, see [`shadow_dom::node_contains`](super::shadow_dom::node_contains)). `None`
-/// when either is missing.
-pub(crate) fn node_contains(
-    node: Option<&web_sys::Node>,
-    other_node: Option<&web_sys::Node>,
-) -> Option<bool> {
-    Some(super::shadow_dom::node_contains(node?, other_node?))
-}
-
+/// Whether an event's target is inside its current target.
 pub trait ContainsTarget {
+    /// Whether the event's target is its current target or inside it, across shadow roots.
     fn current_target_contains_target(&self) -> bool;
 }
 
 impl ContainsTarget for web_sys::Event {
     fn current_target_contains_target(&self) -> bool {
-        node_contains(
-            self.expect_current_target().as_node().as_ref(),
-            self.expect_target().as_node().as_ref(),
-        )
-        .unwrap_or(true)
+        let (Some(current), Some(target)) = (
+            self.expect_current_target().as_node(),
+            self.expect_target().as_node(),
+        ) else {
+            return true;
+        };
+        super::shadow_dom::node_contains(&current, &target)
     }
 }
 

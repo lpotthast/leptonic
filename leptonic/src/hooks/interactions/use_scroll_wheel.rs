@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/interactions/useScrollWheel.ts @ 99e6102368
+//! Scroll wheel interactions: wheel deltas in pixels, without scrolling the page.
 use leptos::{ev, prelude::*};
 use web_sys::WheelEvent;
 

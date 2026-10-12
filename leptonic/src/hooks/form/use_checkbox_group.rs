@@ -21,9 +21,9 @@ use crate::{
     EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps, ValueBinding,
     hooks::{
         collections::Key,
-        focus::{UseFocusWithinInput, use_focus_within},
+        focus::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
     },
-    utils::aria::{AriaDisabled, AriaRole},
+    utils::aria::{AriaDisabled, AriaRole, aria_true},
 };
 
 // =============================================================================
@@ -153,12 +153,9 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
         ..UseFieldInput::default()
     });
     let focus_within = use_focus_within(UseFocusWithinInput {
-        on_focus_within: on_focus.map(|cb| {
-            Callback::new(move |e: crate::hooks::focus::FocusWithinEvent| cb.run(e.event))
-        }),
-        on_blur_within: on_blur.map(|cb| {
-            Callback::new(move |e: crate::hooks::focus::FocusWithinEvent| cb.run(e.event))
-        }),
+        on_focus_within: on_focus
+            .map(|cb| Callback::new(move |e: FocusWithinEvent| cb.run(e.event))),
+        on_blur_within: on_blur.map(|cb| Callback::new(move |e: FocusWithinEvent| cb.run(e.event))),
         on_focus_within_change: on_focus_change,
         ..UseFocusWithinInput::default()
     });
@@ -167,7 +164,7 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
     UseCheckboxGroupReturn {
         props: UseCheckboxGroupProps {
             id: field_props.id,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+            aria_disabled: aria_true(is_disabled),
             aria_label: field_props.aria_label,
             aria_labelledby: field_props.aria_labelledby,
             aria_describedby: field_props.aria_describedby,
@@ -216,7 +213,6 @@ impl std::fmt::Debug for UseCheckboxGroupItemInput {
 }
 
 /// Provides the behavior and accessibility of a checkbox in a [`use_checkbox_group`].
-#[allow(clippy::needless_pass_by_value)]
 pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxReturn {
     let UseCheckboxGroupItemInput {
         group,
@@ -296,14 +292,16 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         });
     }
     let group_validation = state.validation;
-    let combined_realtime = Signal::derive(move || {
+    // A memo: the displayed validation and the input's custom validity both read it.
+    let combined_realtime: Signal<ValidationResult> = Memo::new(move |_| {
         let group = group_validation.realtime_validation.get();
         if group.is_invalid {
             group
         } else {
             realtime_validation.get()
         }
-    });
+    })
+    .into();
     let display_validation = if validation_behavior == ValidationBehavior::Native {
         group_validation.display_validation
     } else {

@@ -26,9 +26,9 @@ use leptos_element_capture::CapturedElement;
 pub enum ExitState {
     /// The element is logically open (visible).
     Open,
-    /// Exit animation is in flight — element should remain in the DOM.
+    /// Exit animation is in flight: the element should remain in the DOM.
     Exiting,
-    /// Exit animation completed — element can be removed from the DOM.
+    /// Exit animation completed: the element can be removed from the DOM.
     Closed,
 }
 
@@ -82,12 +82,11 @@ pub struct UseExitAnimationReturn {
 ///
 /// // Keep element mounted while exiting:
 /// // <Show when=move || state.is_open.get() || is_exiting.get()>
-/// //     <div {..attrs} data-exiting=is_exiting />
+/// //     <div {..attrs} data-exiting=flag(is_exiting) />
 /// // </Show>
 /// //
 /// // CSS: .overlay[data-exiting] { animation: fade-out 150ms; }
 /// ```
-#[allow(clippy::needless_pass_by_value)]
 pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationReturn {
     let UseExitAnimationInput {
         element,
@@ -97,10 +96,10 @@ pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationRetur
 
     #[cfg(feature = "ssr")]
     {
-        // During SSR, no animations — state directly follows is_open.
+        // During SSR, no animations: the state directly follows `is_open`.
         let _ = (element, on_exit);
         UseExitAnimationReturn {
-            is_exiting: Signal::derive(|| false),
+            is_exiting: Signal::stored(false),
             exit_state: Signal::derive(move || {
                 if is_open.get() {
                     ExitState::Open
@@ -141,16 +140,16 @@ pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationRetur
         });
 
         // Animation watching driven by exit_state changes.
-        let cleanup: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
+        let cancel: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
             StoredValue::new_local(None);
+        let cancel_watch = move || {
+            if let Some(cancel) = cancel.try_update_value(Option::take).flatten() {
+                cancel();
+            }
+        };
 
         Effect::new(move |_| {
-            // Clean up previous watcher.
-            cleanup.update_value(|opt| {
-                if let Some(f) = opt.take() {
-                    f();
-                }
-            });
+            cancel_watch();
 
             if exit_state.get() != ExitState::Exiting {
                 return;
@@ -160,26 +159,18 @@ pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationRetur
                 set_exit_state.set(ExitState::Closed);
                 return;
             };
-            {
-                let cancel = watch_animations(&el, on_exit, move || {
-                    // Only transition to Closed if still Exiting (not interrupted).
-                    set_exit_state.update(|state| {
-                        if *state == ExitState::Exiting {
-                            *state = ExitState::Closed;
-                        }
-                    });
+            let stop = watch_animations(&el, on_exit, move || {
+                // Only transition to Closed if still Exiting (not interrupted).
+                set_exit_state.update(|state| {
+                    if *state == ExitState::Exiting {
+                        *state = ExitState::Closed;
+                    }
                 });
-                cleanup.set_value(Some(Box::new(cancel)));
-            }
+            });
+            cancel.set_value(Some(Box::new(stop)));
         });
 
-        on_cleanup(move || {
-            cleanup.update_value(|opt| {
-                if let Some(f) = opt.take() {
-                    f();
-                }
-            });
-        });
+        on_cleanup(cancel_watch);
 
         // Exiting from the moment `is_open` turns false (react-aria derives it while rendering):
         // the state machine's effect catches up after, but a consumer keeping the element rendered

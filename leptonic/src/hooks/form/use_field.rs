@@ -16,8 +16,7 @@ use crate::{IdRefs, IntoAttrs, SlotProps, use_slot};
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - As [`use_label`]: `has_label` instead of the `label` content, an optional `label_id`, the
-//   presence of `aria_label` read once.
+// - As [`use_label`]: `has_label` instead of the `label` content, an optional `label_id`.
 // - Descriptions and error messages are detected when rendered (react-aria: `useSlotId`), so
 //   there are no `description`/`errorMessage` inputs. Reason: the hook never sees the rendered
 //   content; the slot registers itself when its element mounts.

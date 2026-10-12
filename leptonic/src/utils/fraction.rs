@@ -1,3 +1,4 @@
+// No upstream: leptonic's typed shares (react-aria passes percentages as plain numbers).
 //! A share of a whole, from 0 to 1 (convention C13: the unit is in the type).
 
 /// A share of a whole: 0 (nothing) to 1 (all), e.g. a progress bar's progress through its range.

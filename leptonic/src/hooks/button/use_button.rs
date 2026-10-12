@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/button/useButton.ts @ 99e6102368
+// Upstream: react-aria/test/button/useButton.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Button.test.js @ 99e6102368
 use leptos::{
     attr,
     attr::{
@@ -21,10 +23,12 @@ use crate::{
             use_focusable::{UseFocusableInput, use_focusable},
         },
         interactions::{
-            HoverEndEvent, HoverStartEvent, LongPress, PressEvent, UseHoverReturn, UsePressReturn,
+            ContextMenuEvent, HoverEndEvent, HoverStartEvent, LongPress, PressEvent,
+            PressPropagation, PressResponderContext, UseContextMenuInput, UseHoverReturn,
+            UsePressReturn, chain_optional_callbacks, use_context_menu,
             use_hover::{UseHoverInput, use_hover},
             use_keyboard::KeyboardEventWrapper,
-            use_press::{UsePressInput, use_press},
+            use_press::{UsePressInput, merge_long_press, use_press},
         },
         link::{LinkRel, LinkTarget, link_rel},
     },
@@ -289,7 +293,7 @@ pub struct UseButtonInput {
 
     /// Called when a context menu is requested on the button (right click, Shift+F10, long press
     /// on iOS, ...; see `use_context_menu`).
-    pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
+    pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
 /// Return value of [`use_button`].
@@ -531,7 +535,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
 
     // An overlay trigger's props from a `PressResponder` (`DialogTrigger`); the button's own win
     // (react-aria-components merges `triggerProps` into the pressable child).
-    let responder = use_context::<crate::hooks::interactions::PressResponderContext>();
+    let responder = use_context::<PressResponderContext>();
     let trigger = responder.as_ref().and_then(|ctx| ctx.trigger);
     // A disabled responder (a disabled `MenuTrigger` or `Disclosure`) disables the button itself:
     // its `disabled` attribute, focus, hover and shortcuts, not only its presses.
@@ -553,18 +557,13 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     };
     // Context menu requests: the responder's (a `MenuTrigger`'s) and the button's own. On iOS a
     // long press requests it.
-    let context_menu = crate::hooks::interactions::use_context_menu(
-        crate::hooks::interactions::UseContextMenuInput {
-            on_context_menu: crate::hooks::interactions::chain_optional_callbacks(
-                responder.as_ref().and_then(|ctx| ctx.on_context_menu),
-                on_context_menu,
-            ),
-        },
-    );
-    let long_press = crate::hooks::interactions::use_press::merge_long_press(
-        context_menu.long_press,
-        long_press,
-    );
+    let context_menu = use_context_menu(UseContextMenuInput {
+        on_context_menu: chain_optional_callbacks(
+            responder.as_ref().and_then(|ctx| ctx.on_context_menu),
+            on_context_menu,
+        ),
+    });
+    let long_press = merge_long_press(context_menu.long_press, long_press);
     // Inside a trigger, the button has an id while rendering: its own, else the trigger's.
     let id = match trigger {
         Some(trigger) => Some(trigger.element_id(id)),
@@ -591,9 +590,9 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         // Client-side routers (like leptos_router) handle link clicks in a document-level
         // listener, so clicks on anchors must bubble.
         propagation: if element_type == ButtonElementType::Anchor {
-            crate::hooks::interactions::PressPropagation::Continue
+            PressPropagation::Continue
         } else {
-            crate::hooks::interactions::PressPropagation::Stop
+            PressPropagation::Stop
         },
         prevent_focus_on_press,
         on_press,

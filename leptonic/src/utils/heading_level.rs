@@ -1,3 +1,4 @@
+// No upstream: typed heading levels (react-aria-components' `Heading` takes a `level` number).
 //! Heading levels (`<h1>` to `<h6>`).
 
 use leptos::{either::EitherOf6, html, prelude::*};

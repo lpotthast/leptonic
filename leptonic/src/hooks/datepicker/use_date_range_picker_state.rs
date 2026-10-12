@@ -36,15 +36,12 @@ use crate::{
 // - Generic over the value type (`V: DateValue`); the calendar's range is a `DateRange` of
 //   `civil::Date`s and the times `civil::Time`s.
 // - Closing commits a selected range through the overlay state's `on_open_change`.
-// - The format options and the placeholder are signals (C11).
 // - `is_date_unavailable` takes the date only (react-aria: also the anchor date, always `null`
 //   for the validation).
 //
 // ## OMITTED FEATURES
 // - Range formatting with shared fields ("June 1 – 15, 2024", `formatRange`): ICU4X has none
 //   yet; start and end are formatted apart.
-// - Server errors under the end's name (react-aria validates under both names); the start's
-//   name (else the end's) applies.
 //
 // =============================================================================
 
@@ -80,7 +77,7 @@ pub struct UseDateRangePickerStateInput<V: DateValue> {
     pub is_invalid: Signal<bool>,
     pub validate: Option<ValidateFn<Option<RangeValue<V>>>>,
     pub validation_behavior: ValidationBehavior,
-    /// The names of the ends in forms (server errors for the start's name apply).
+    /// The names of the ends in forms (server errors under either name apply).
     pub start_name: Option<String>,
     pub end_name: Option<String>,
 }
@@ -303,7 +300,6 @@ fn range_validation<V: DateValue>(
 /// State of a date range picker (react-stately's `useDateRangePickerState`): two date fields
 /// (start and end) with a popover range calendar (and times); the range is committed once
 /// both ends are there, and validated as a whole.
-#[allow(clippy::too_many_lines)]
 pub fn use_date_range_picker_state<V: DateValue>(
     input: UseDateRangePickerStateInput<V>,
 ) -> DateRangePickerState<V> {
@@ -442,7 +438,9 @@ pub fn use_date_range_picker_state<V: DateValue>(
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let strings = use_localized_strings::<DateValidationStrings>();
-    let formatters = Memo::new(move |_| Formatters::new(locale.get(), format_options.get()));
+    let formatters = Memo::new(move |_| {
+        locale.with(|locale| format_options.with(|options| Formatters::cached(locale, options)))
+    });
     let builtin_validation = Memo::new(move |_| {
         let (start, end) = (start.get(), end.get());
         let (min, max) = (min_value.get(), max_value.get());

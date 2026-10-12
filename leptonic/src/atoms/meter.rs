@@ -1,4 +1,5 @@
 // Upstream: react-aria-components/src/Meter.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Meter.test.js @ 99e6102368
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
@@ -48,7 +49,6 @@ use crate::{
 /// ```
 ///
 /// Default class: `leptonic-Meter`.
-#[allow(clippy::too_many_arguments)]
 #[component]
 pub fn Meter<T: NumberValue>(
     /// The value, clamped to the range: a number or any signal of one.

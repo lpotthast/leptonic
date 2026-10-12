@@ -1,4 +1,7 @@
 // Upstream: react-aria/src/color/useColorWheel.ts @ 99e6102368
+// Upstream: react-aria/test/color/useColorWheel.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorWheel.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/color/ColorWheel.test.tsx @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -12,7 +15,7 @@ use web_sys::{Event, KeyboardEvent, PointerEvent};
 
 use super::use_color_wheel_state::ColorWheelState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         form::{UseFormResetInput, use_form_reset},
         interactions::{
@@ -20,8 +23,9 @@ use crate::{
             use_move,
         },
     },
+    labels,
     utils::{
-        color::{ColorValue, HSL, HslChannel, channel_formatter},
+        color::{ColorValue, HSL, HslChannel},
         dom_ext::EventAccessors,
         event_listeners::{Listener, listen_to},
         focus::focus_element,
@@ -29,6 +33,7 @@ use crate::{
         id::use_id,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        number_formatter::NumberFormatter,
         point::Point,
         pointer_type::PointerType,
         styles::{
@@ -229,7 +234,6 @@ struct Press {
 /// Behavior and accessibility of a color wheel: a ring of hues with a thumb, dragged or pressed
 /// on the ring, arrow keys (with Shift: page steps), PageUp/PageDown, a visually hidden range
 /// input for assistive technology and forms.
-#[allow(clippy::too_many_lines)]
 pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorWheelReturn {
     let UseColorWheelInput {
         state,
@@ -357,6 +361,7 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         state.set_dragging(false);
         focus_input();
     };
+    // On the window, not the owner document, as react-aria listens.
     let listen_for_release = move || {
         if let Some(window) = leptos_use::use_window().as_ref() {
             let listener = listen_to(window, ev::pointerup, false, move |e: PointerEvent| {
@@ -414,27 +419,26 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
 
     // Without any label, the channel names the wheel (react-aria).
     let locale = use_locale();
-    let input_label = Signal::derive(move || {
+    // A memo: it allocates, and the labelling reads it too.
+    let input_label: Signal<Option<String>> = Memo::new(move |_| {
         aria_label.get().or_else(|| {
             aria_labelledby
                 .with(Option::is_none)
                 .then(|| HSL::channel_name(HslChannel::Hue, &locale.get()))
         })
-    });
+    })
+    .into();
     let input_id = use_id("color-wheel");
-    // With other labels next to its `aria-label`, the input names itself too (`use_label`).
+    // With other labels next to its `aria-label`, the input names itself too.
     let input_labelledby = {
         let input_id = input_id.clone();
         Signal::derive(move || {
-            let ids = aria_labelledby.get()?;
-            Some(if input_label.with(Option::is_some) {
-                [input_id.as_str(), ids.as_str()]
-                    .into_iter()
-                    .collect::<IdRefs>()
-                    .to_string()
-            } else {
-                ids
-            })
+            labels(
+                &input_id,
+                input_label.get(),
+                aria_labelledby.get().as_deref(),
+            )
+            .aria_labelledby
         })
     };
     let value = state.value;
@@ -516,7 +520,7 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                 aria_errormessage,
                 aria_valuetext: Signal::derive(move || {
                     // The hue formatted as react-aria's (the color's HSL hue), and its name.
-                    let degrees = channel_formatter(
+                    let degrees = NumberFormatter::cached(
                         &locale.get(),
                         &HSL::channel_format_options(HslChannel::Hue),
                     )

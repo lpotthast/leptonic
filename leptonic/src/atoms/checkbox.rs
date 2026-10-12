@@ -7,13 +7,12 @@ use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
 use super::{
-    field::{FieldContext, LabelContext},
+    field::{FieldContext, LabelContext, LabelPresence},
     form::use_validation_behavior,
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
     IntoAttrs, Out, ValueBinding,
-    atoms::field::LabelPresence,
     hooks::{
         collections::{Key, SelectionValue},
         form::{
@@ -60,11 +59,11 @@ pub struct CheckboxGroupContext {
 /// Data attributes: `data-selected`, `data-indeterminate`, `data-disabled`, `data-readonly`,
 /// `data-invalid`, `data-required`.
 ///
-/// Inside a [`CheckboxGroup`], `value` is required and the group holds the selection
-/// (`default_selected`, `is_selected` and `set_selected` don't apply).
+/// Inside a [`CheckboxGroup`], `value` is required (without one, the field warns in debug builds
+/// and renders nothing) and the group holds the selection (`default_selected`, `is_selected` and
+/// `set_selected` don't apply).
 ///
 /// Default class: `leptonic-CheckboxField`.
-#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn CheckboxField(
     /// The checkbox's value in its [`CheckboxGroup`].
@@ -112,6 +111,10 @@ pub fn CheckboxField(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CheckboxField", classes);
     let in_group = use_context::<CheckboxGroupContext>().is_some();
+    if in_group && value.is_none() {
+        dev_warn!("A <CheckboxField> in a <CheckboxGroup> needs a `value`.");
+        return None;
+    }
     let checkbox = use_checkbox_atom(CheckboxSetup {
         value,
         default_selected,
@@ -163,7 +166,7 @@ pub fn CheckboxField(
         is_required,
     };
 
-    view! {
+    Some(view! {
         <Provider value=button>
             <Provider value=field>
                 <div
@@ -180,7 +183,7 @@ pub fn CheckboxField(
                 </div>
             </Provider>
         </Provider>
-    }
+    })
 }
 
 /// The clickable part of a [`CheckboxField`]: a `<label>` around a visually hidden
@@ -250,8 +253,8 @@ struct CheckboxSetup {
     on_focus_change: Option<Callback<bool>>,
 }
 
-/// The checkbox of a [`CheckboxField`]: an item of the surrounding
-/// [`CheckboxGroup`], or a checkbox with its own state.
+/// The checkbox of a [`CheckboxField`]: an item of the surrounding [`CheckboxGroup`] (given a
+/// `value`; the field renders nothing without one), or a checkbox with its own state.
 fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
     let CheckboxSetup {
         value,
@@ -276,7 +279,7 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         auto_focus,
         on_focus_change,
     } = setup;
-    let group = use_context::<CheckboxGroupContext>();
+    let group = use_context::<CheckboxGroupContext>().zip(value);
     let validation_behavior = if group.is_some() {
         validation_behavior
     } else {
@@ -300,8 +303,7 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         on_focus_change,
         ..ToggleOptions::default()
     };
-    if let Some(group) = group {
-        let value = value.expect("a checkbox in a <CheckboxGroup> needs a `value`");
+    if let Some((group, value)) = group {
         use_checkbox_group_item(UseCheckboxGroupItemInput {
             is_indeterminate,
             on_change,
@@ -376,7 +378,7 @@ fn checkbox_button(
 ///
 /// Default class: `leptonic-CheckboxGroup`.
 // All controlled and uncontrolled selection props share the hook's HashSet representation.
-#[allow(clippy::too_many_arguments, clippy::implicit_hasher)]
+#[allow(clippy::implicit_hasher)]
 #[component]
 pub fn CheckboxGroup<V: SelectionValue>(
     /// The initially checked values. Ignored with `value`.
@@ -420,7 +422,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
         on_change,
         validate,
     } = keyed_state_props(Some(default_value), value, set_value, on_change, validate);
-    let (value, on_change) = crate::ValueBinding::from_state_props(value, set_value, on_change);
+    let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
         default_value: default_value.unwrap_or_default(),
         value,

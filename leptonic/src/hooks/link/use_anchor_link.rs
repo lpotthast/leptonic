@@ -11,7 +11,10 @@ use crate::{
         interactions::PressEvent,
         link::{UseLinkInput, UseLinkReturn, use_link},
     },
-    utils::{modifiers::Modifiers, scroll_behavior::ScrollBehavior},
+    utils::{
+        modifiers::{EventModifiers, Modifiers},
+        scroll_behavior::ScrollBehavior,
+    },
 };
 
 /// The target of an anchor link: an element on the current page, addressed by the URL fragment
@@ -144,7 +147,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseLinkReturn {
     // (Ctrl/Cmd/Shift/Alt) keep the browser's default: opening the link in a new tab or window.
     let on_click = std::mem::take(&mut anchor.props.props.on_click);
     anchor.props.props.on_click = EventHandler::new(|e: MouseEvent| {
-        if !(e.ctrl_key() || e.meta_key() || e.shift_key() || e.alt_key()) {
+        if !is_modified(e.modifiers()) {
             e.prevent_default();
         }
     })

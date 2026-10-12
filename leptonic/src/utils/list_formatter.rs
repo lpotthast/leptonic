@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/i18n/useListFormatter.tsx @ 99e6102368
+//! Locale-aware list formatting ("A, B, and C") with ICU4X.
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -11,21 +12,23 @@
 //
 // =============================================================================
 
+use std::{cell::RefCell, sync::Arc};
+
 use icu_list::{ListFormatter as IcuListFormatter, options::ListLength};
 
-use super::i18n::Locale;
+use super::{i18n::Locale, recent_cache::RecentCache};
 
 /// The type of list formatting.
 ///
 /// Controls whether the list uses "and", "or", or neutral joining.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ListFormatType {
-    /// "A, B, and C" — conjunction list.
+    /// A conjunction list: "A, B, and C".
     #[default]
     Conjunction,
-    /// "A, B, or C" — disjunction list.
+    /// A disjunction list: "A, B, or C".
     Disjunction,
-    /// "A, B, C" — unit list (no conjunction word).
+    /// A unit list (no conjunction word): "A, B, C".
     Unit,
 }
 
@@ -34,12 +37,12 @@ pub enum ListFormatType {
 /// Controls the verbosity of the formatted output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ListFormatStyle {
-    /// "A, B, and C" — full formatting.
+    /// Full formatting: "A, B, and C".
     #[default]
     Long,
-    /// "A, B, & C" — shorter formatting.
+    /// Shorter formatting: "A, B, & C".
     Short,
-    /// "A, B, C" — narrowest formatting.
+    /// The narrowest formatting: "A, B, C".
     Narrow,
 }
 
@@ -54,7 +57,7 @@ impl ListFormatStyle {
 }
 
 /// Options for creating a [`ListFormatter`].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ListFormatOptions {
     /// The type of list formatting (`Intl.ListFormat`'s `type`). Defaults to `Conjunction`.
     pub kind: ListFormatType,
@@ -78,8 +81,17 @@ pub struct ListFormatOptions {
 /// let result = formatter.format(&["Alice", "Bob", "Charlie"]);
 /// assert_eq!(result, "Alice, Bob, and Charlie");
 /// ```
+#[derive(Debug, Clone)]
 pub struct ListFormatter {
-    inner: IcuListFormatter,
+    /// Shared: clones (of cached formatters) don't copy the patterns.
+    inner: Arc<IcuListFormatter>,
+}
+
+thread_local! {
+    /// The formatters built last, per locale and options: ICU4X builds them from its data, and a
+    /// select's or combo box's value text is formatted on every selection change.
+    static FORMATTERS: RefCell<RecentCache<(Locale, ListFormatOptions), ListFormatter>> =
+        const { RefCell::new(RecentCache::new(4)) };
 }
 
 impl ListFormatter {
@@ -103,7 +115,27 @@ impl ListFormatter {
         ))
         .or_else(|_| build(icu_list::ListFormatterPreferences::default()))
         .expect("ICU4X's compiled data has list patterns of every type for the root locale");
-        Self { inner }
+        Self {
+            inner: Arc::new(inner),
+        }
+    }
+
+    /// A formatter for `locale` and `options`, built once and kept (per thread) while in use.
+    #[cfg(feature = "atoms")]
+    pub(crate) fn cached(locale: &Locale, options: &ListFormatOptions) -> Self {
+        FORMATTERS.with_borrow_mut(|formatters| {
+            formatters.get_or_insert_with(
+                |(cached_locale, cached_options)| {
+                    cached_locale == locale && cached_options == options
+                },
+                || {
+                    (
+                        (locale.clone(), options.clone()),
+                        Self::new(locale, options),
+                    )
+                },
+            )
+        })
     }
 
     /// Formats a list of strings according to the formatter's locale and options.

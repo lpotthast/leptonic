@@ -115,7 +115,6 @@ pub struct ComboBoxValue<T = Vec<Key>> {
 
 /// Input of [`use_combobox_state`].
 #[derive(Clone)]
-#[allow(clippy::struct_excessive_bools)]
 pub struct UseComboBoxStateInput {
     /// All options.
     pub collection: CollectionMemo,
@@ -186,7 +185,6 @@ impl std::fmt::Debug for ComboBoxState {
 }
 
 // The settings mirror `UseComboBoxStateInput`.
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy)]
 struct Inner {
     original: CollectionMemo,
@@ -527,7 +525,6 @@ impl ComboBoxState {
 }
 
 /// Creates the state of a combo box (see [`ComboBoxState`]).
-#[allow(clippy::too_many_lines)]
 pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
     let UseComboBoxStateInput {
         collection: original,

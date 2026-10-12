@@ -12,22 +12,55 @@
 //! events' propagation themselves (the innermost drag source and drop target handle a drag, as in
 //! react-aria), and a keyboard drag's key and focus events never reach the page.
 
+/// Keyboard and screen reader drag sessions.
 pub(crate) mod drag_manager;
-mod drop_target_keyboard_navigation;
-mod list_drop_target_delegate;
-mod messages;
-mod types;
-mod use_auto_scroll;
-mod use_drag;
-mod use_draggable_collection;
-mod use_draggable_collection_state;
-mod use_draggable_item;
-mod use_drop;
-mod use_drop_indicator;
-mod use_droppable_collection;
-mod use_droppable_collection_state;
-mod use_droppable_item;
-mod use_virtual_drop;
+
+/// The drop target the arrow keys move to during keyboard drags.
+pub(crate) mod drop_target_keyboard_navigation;
+
+/// The drop target at a point of a list or grid (native drags).
+pub(crate) mod list_drop_target_delegate;
+
+/// The texts drag and drop shows and announces.
+pub(crate) mod messages;
+
+/// Drag items, drop items, drop targets, operations and events.
+pub(crate) mod types;
+
+/// Scrolling a drop target while a native drag nears its edges.
+pub(crate) mod use_auto_scroll;
+
+/// A draggable element.
+pub(crate) mod use_drag;
+
+/// A collection whose items can be dragged.
+pub(crate) mod use_draggable_collection;
+
+/// The state of a collection whose items can be dragged.
+pub(crate) mod use_draggable_collection_state;
+
+/// A draggable item of a collection.
+pub(crate) mod use_draggable_item;
+
+/// A drop target element.
+pub(crate) mod use_drop;
+
+/// A drop position between items.
+pub(crate) mod use_drop_indicator;
+
+/// A collection that accepts drops.
+pub(crate) mod use_droppable_collection;
+
+/// The state of a collection that accepts drops.
+pub(crate) mod use_droppable_collection_state;
+
+/// An item of a droppable collection.
+pub(crate) mod use_droppable_item;
+
+/// How to drop on a drop target during keyboard drags.
+pub(crate) mod use_virtual_drop;
+
+/// The global drag and drop state and data transfer helpers.
 pub(crate) mod utils;
 
 pub use drag_manager::{DragSessionInfo, is_virtual_dragging, use_drag_session};

@@ -103,7 +103,8 @@ pub fn PageAtomCheckbox() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="CheckboxField">
                         <ApiRow name="value" ty="Option<Key>" default="None">
                             "The checkbox\u{2019}s value in its "<Code inline=true>"CheckboxGroup"</Code>
-                            " (required there). The group then holds the selection: "<Code inline=true>"default_selected"</Code>
+                            " (required there: without one, the field renders nothing and warns in debug builds). The group then "
+                            "holds the selection: "<Code inline=true>"default_selected"</Code>
                             ", "<Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" don\u{2019}t apply."
                         </ApiRow>
                         <ApiRow name="default_selected" ty="bool" default="false">"Whether the checkbox starts checked."</ApiRow>

@@ -46,6 +46,7 @@ pub struct ItemSizeChange {
 }
 
 /// Input of [`use_item_measurer`].
+#[derive(Debug, Clone)]
 pub struct UseItemMeasurerInput {
     /// Receives the measured size of an item (react-aria: the virtualizer's `updateItemSize`,
     /// e.g. `VirtualizerState::update_item_size`).
@@ -100,6 +101,7 @@ pub fn use_item_measurer(input: UseItemMeasurerInput) -> ItemMeasurer {
 }
 
 /// Input of [`use_virtualizer_item`].
+#[derive(Debug, Clone)]
 pub struct UseVirtualizerItemInput {
     /// The item's wrapper, positioned at its layout info.
     pub element: CapturedElement,
@@ -114,6 +116,7 @@ pub struct UseVirtualizerItemInput {
 }
 
 /// Return value of [`use_virtualizer_item`].
+#[derive(Debug)]
 pub struct UseVirtualizerItemReturn {
     /// The wrapper's styles: absolutely positioned at its layout info.
     pub styles: Signal<Styles>,

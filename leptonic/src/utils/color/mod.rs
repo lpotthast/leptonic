@@ -36,7 +36,7 @@ mod rgb;
 #[cfg(test)]
 mod tests;
 
-use std::{cell::RefCell, fmt, hash::Hash};
+use std::{fmt, hash::Hash};
 
 pub use alpha::{Alpha, AlphaChannel, Color, ColorProp, OpaqueColor};
 pub use hsl::{HSL, HslChannel};
@@ -174,7 +174,7 @@ pub trait ColorValue:
     /// The value of `channel` formatted for `locale` (react-aria's `formatChannelValue`), e.g.
     /// "128", "50%" or "120°".
     fn format_channel_value(&self, channel: Self::Channel, locale: &Locale) -> String {
-        channel_formatter(locale, &Self::channel_format_options(channel))
+        NumberFormatter::cached(locale, &Self::channel_format_options(channel))
             .format(self.channel_value(channel))
     }
 
@@ -277,37 +277,6 @@ impl BlendMode {
     }
 }
 
-thread_local! {
-    /// The channel formatters built so far, per locale and format: ICU4X formatters are costly
-    /// to build, and a drag formats channel values on every change.
-    static CHANNEL_FORMATTERS: RefCell<Vec<(Locale, NumberFormatOptions, NumberFormatter)>> =
-        const { RefCell::new(Vec::new()) };
-}
-
-/// Formatters kept at most (a few channel formats per locale in use).
-const MAX_CHANNEL_FORMATTERS: usize = 16;
-
-/// A formatter for `locale` and `options`, built once (react-aria builds one per value).
-pub(crate) fn channel_formatter(locale: &Locale, options: &NumberFormatOptions) -> NumberFormatter {
-    CHANNEL_FORMATTERS.with_borrow_mut(|formatters| {
-        if let Some((.., formatter)) =
-            formatters
-                .iter()
-                .find(|(cached_locale, cached_options, _)| {
-                    cached_locale == locale && cached_options == options
-                })
-        {
-            return formatter.clone();
-        }
-        let formatter = NumberFormatter::new(locale, options.clone());
-        if formatters.len() == MAX_CHANNEL_FORMATTERS {
-            formatters.remove(0);
-        }
-        formatters.push((locale.clone(), options.clone(), formatter.clone()));
-        formatter
-    })
-}
-
 /// A fraction (0 to 1) as a percentage with up to two decimals (react-aria's
 /// `toFixedNumber(value, 2)` of its 0 to 100 values).
 fn to_fixed_percent(fraction: f64) -> f64 {
@@ -332,6 +301,66 @@ const fn line_end(direction: WritingDirection) -> &'static str {
         WritingDirection::Ltr => "right",
         WritingDirection::Rtl => "left",
     }
+}
+
+/// The RGB color of a hue in degrees (wrapped around), a chroma `c` and the lightness offset `m`
+/// of every channel (the standard HSV/HSL to RGB conversion).
+#[allow(
+    clippy::many_single_char_names,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+fn rgb_of_hue_and_chroma(hue: f64, c: f64, m: f64) -> RGB8 {
+    let h = hue.rem_euclid(360.0);
+    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+    let (r, g, b) = if (0.0..60.0).contains(&h) {
+        (c, x, 0.0)
+    } else if (60.0..120.0).contains(&h) {
+        (x, c, 0.0)
+    } else if (120.0..180.0).contains(&h) {
+        (0.0, c, x)
+    } else if (180.0..240.0).contains(&h) {
+        (0.0, x, c)
+    } else if (240.0..300.0).contains(&h) {
+        (x, 0.0, c)
+    } else if (300.0..360.0).contains(&h) {
+        (c, 0.0, x)
+    } else {
+        // NaN, or 360° (`rem_euclid` rounds tiny negative hues up to it): as 0°.
+        (c, x, 0.0)
+    };
+    let channel = |value: f64| ((value + m) * 255.0).round() as u8;
+    RGB8 {
+        r: channel(r),
+        g: channel(g),
+        b: channel(b),
+    }
+}
+
+/// The hue (in degrees) and the largest and smallest channel (0 to 1) of an RGB color, as the
+/// RGB to HSV/HSL conversions need them.
+#[allow(clippy::many_single_char_names)]
+fn hue_and_channel_extremes(rgb: RGB8) -> (f64, f64, f64) {
+    let RGB8 { r, g, b } = rgb;
+    let (r, g, b) = (
+        f64::from(r) / 255.0,
+        f64::from(g) / 255.0,
+        f64::from(b) / 255.0,
+    );
+    let c_max = f64::max(r, f64::max(g, b));
+    let c_min = f64::min(r, f64::min(g, b));
+    let delta = c_max - c_min;
+    // `c_max` is one of the channels.
+    let hue = if delta == 0.0 {
+        0.0
+    } else if c_max == r {
+        60.0 * ((g - b) / delta).rem_euclid(6.0)
+    } else if c_max == g {
+        60.0 * (((b - r) / delta) + 2.0)
+    } else {
+        60.0 * (((r - g) / delta) + 4.0)
+    };
+    (hue, c_max, c_min)
 }
 
 /// The hues a gradient of hues has its stops at (react-aria: every 60°).

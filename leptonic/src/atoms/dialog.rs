@@ -1,6 +1,7 @@
 // Upstream: react-aria-components/src/Dialog.tsx @ 99e6102368
 // Upstream: react-aria-components/test/Dialog.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Dialog.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Dialog.ssr.test.js @ 99e6102368
 use leptos::{
     context::Provider,
     prelude::*,
@@ -10,7 +11,7 @@ use leptos_classes::Classes;
 
 use super::press::PressResponder;
 use crate::{
-    CapturedElement, IntoAttrs, Out,
+    CapturedElement, IntoAttrs, Out, ValueBinding,
     hooks::{
         dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog},
         interactions::PressResponderTrigger,
@@ -165,7 +166,7 @@ pub fn DialogDescription(
 /// the trigger).
 pub(crate) fn overlay_open_state(
     is_open: Option<Signal<bool>>,
-    set_open: Option<crate::Out<bool>>,
+    set_open: Option<Out<bool>>,
     default_open: Option<bool>,
     on_open_change: Option<Callback<bool>>,
     context: Option<DialogTriggerContext>,
@@ -183,7 +184,7 @@ pub(crate) fn overlay_open_state(
         }
         _ => {
             let (value, on_open_change) =
-                crate::ValueBinding::from_state_props(is_open, set_open, on_open_change);
+                ValueBinding::from_state_props(is_open, set_open, on_open_change);
             use_overlay_trigger_state(UseOverlayTriggerStateInput {
                 default_open: default_open.unwrap_or(false),
                 value,
@@ -262,8 +263,7 @@ pub fn DialogTrigger(
     set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
-    let (value, on_open_change) =
-        crate::ValueBinding::from_state_props(is_open, set_open, on_open_change);
+    let (value, on_open_change) = ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
         default_open,
         value,

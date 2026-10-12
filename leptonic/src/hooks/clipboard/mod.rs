@@ -2,6 +2,6 @@
 //! format of drag and drop ([`DragItem`](crate::hooks::dnd::DragItem),
 //! [`DropItem`](crate::hooks::dnd::DropItem)).
 
-mod use_clipboard;
+pub(crate) mod use_clipboard;
 
 pub use use_clipboard::*;

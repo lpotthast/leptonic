@@ -18,7 +18,7 @@ use crate::{
         collections::{
             AutoFocus, CloseOnSelect, CollectionMemo, CollectionOptions, FocusStrategy, Key,
             ListState, Node, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
-            UseListStateInput, use_list_state,
+            UseListStateInput, use_list_state, use_node,
         },
         interactions::{ContextMenuEvent, PressResponderTrigger},
         menu::{
@@ -35,7 +35,7 @@ use crate::{
         separator::SeparatorElementType,
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::{self, flag},
         default_class::with_default_class,
         point::Point,
         scoped_context::{ClearContexts, scoped_view},
@@ -57,11 +57,9 @@ use crate::{
 // ## DIFFERENT BEHAVIOR
 // - An explicit `aria_label` names the menu instead of the trigger: no `aria-labelledby` then.
 //   react-aria-components renders both, so `aria-labelledby` wins and the label is ignored.
-//
 // - `SubmenuTrigger` names its trigger item's `key` (the `MenuItem` child must have it), and
 //   the submenu's `Menu` has its own collection (react-aria-components: the submenu's items are a
 //   branch of the parent menu's collection). Reason: collections are built flat per menu.
-//
 // - A `MenuSection` with a `selection_mode` of its own keeps the menu's disabled keys
 //   (react-aria-components' group selection drops them).
 //
@@ -349,13 +347,11 @@ pub fn ContextMenuTrigger(
 /// between them renders as `role="separator"`. Inside a `MenuTrigger`, the menu is labelled by
 /// the trigger and focuses its first, last or selected item when it opens.
 ///
-/// Data attributes: `data-empty` on the menu; on items `data-focused`, `data-focus-visible`,
-/// `data-selected`, `data-disabled`, `data-pressed`, `data-hovered`, `data-selection-mode`
-/// (`single`/`multiple`).
+/// Data attributes: `data-empty`.
 ///
 /// Default class: `leptonic-Menu`.
 #[component]
-#[allow(clippy::too_many_lines, clippy::implicit_hasher)]
+#[allow(clippy::implicit_hasher)]
 pub fn Menu(
     /// The items.
     #[prop(into, optional)]
@@ -480,7 +476,7 @@ pub fn Menu(
     };
 
     let collection = state.collection;
-    let is_empty = Signal::derive(move || collection.with(|c| c.is_empty()));
+    let is_empty = Memo::new(move |_| collection.with(|c| c.is_empty()));
     let empty = move || {
         let empty_state = empty_state.clone()?;
         is_empty.get().then(|| {
@@ -523,7 +519,7 @@ pub fn Menu(
                                         {..props.into_attrs()}
                                         class=classes
                                         style=styles
-                                        data-empty=flag(is_empty)
+                                        data-empty=flag(is_empty.into())
                                     >
                                         {children()}
                                         {empty}
@@ -540,6 +536,11 @@ pub fn Menu(
 
 /// An item of a [`Menu`], for the collection item `key`: `menuitem`, or `menuitemcheckbox` /
 /// `menuitemradio` in a menu with selection.
+///
+/// Data attributes: `data-focused`, `data-focus-visible`, `data-selected`, `data-disabled`,
+/// `data-pressed`, `data-hovered`, `data-selection-mode` (`single`/`multiple`, absent without
+/// selection); the trigger item of a [`SubmenuTrigger`] `data-has-submenu` and, while its submenu
+/// is open, `data-open`.
 ///
 /// Default class: `leptonic-MenuItem`.
 #[component]
@@ -613,11 +614,6 @@ pub fn MenuItem(
         is_hovered,
         selection_mode,
     };
-    let data_selection_mode = move || match selection_mode.get() {
-        SelectionMode::None => None,
-        SelectionMode::Single => Some("single"),
-        SelectionMode::Multiple => Some("multiple"),
-    };
     let (attrs, item_styles) = props.into_parts();
     let styles = item_styles.merge(styles);
 
@@ -635,7 +631,7 @@ pub fn MenuItem(
                 data-hovered=flag(is_hovered)
                 data-has-submenu=has_submenu.then_some("true")
                 data-open=flag(is_open)
-                data-selection-mode=data_selection_mode
+                data-selection-mode=data_attributes::selection_mode(move || selection_mode.get())
             >
                 {children()}
             </div>
@@ -756,16 +752,18 @@ where
     let children = std::sync::Arc::new(children);
     Some(view! {
         <For
-            each=move || collection.with(|c| c.items().cloned().collect::<Vec<_>>())
-            key=|node| node.key.clone()
-            let:node
+            each=move || collection.with(|c| c.items().map(|node| node.key.clone()).collect::<Vec<_>>())
+            key=Clone::clone
+            let:key
         >
             {
+                // The item's content renders again when it changes (e.g. its text), not when
+                // other items come or go.
+                let node = use_node(collection, key.clone());
                 let children = children.clone();
-                let key = node.key.clone();
                 view! {
                     <MenuItem key=key classes=classes.clone()>
-                        {children(node)}
+                        {move || node.get().map(|node| children(node))}
                     </MenuItem>
                 }
             }
@@ -849,7 +847,6 @@ fn slot(
 ///
 /// Default classes: `leptonic-MenuSection`, the header `leptonic-MenuSectionHeading`.
 #[component]
-#[allow(clippy::needless_pass_by_value, clippy::implicit_hasher)]
 pub fn MenuSection(
     /// The section's key in the menu's collection.
     #[prop(into)]

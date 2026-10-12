@@ -9,11 +9,11 @@ use crate::{
     hooks::focus::{FocusManager, FocusManagerOptions},
     utils::{
         aria::{AriaOrientation, AriaRole},
-        dom_ext::{EventAccessors, node_contains},
+        dom_ext::EventAccessors,
         i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
         orientation::Orientation,
-        shadow_dom::get_active_element,
+        shadow_dom::{get_active_element, get_event_target, node_contains},
     },
 };
 
@@ -24,8 +24,7 @@ use crate::{
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Restoring the last focused child when focus re-enters the toolbar happens in a microtask:
 //   focusing inside a `focus` handler would dispatch a nested `focus` event, which Leptos'
-//   handler closures can't take (leptos-and-dom.md, "No Nested Dispatch of the Same Event
-//   Type").
+//   handler closures can't take (leptos-and-dom.md, "Nested Event Dispatch").
 //
 // =============================================================================
 
@@ -104,7 +103,6 @@ impl IntoAttrs for UseToolbarProps {
 /// Provides the behavior and accessibility of a toolbar: the arrow keys move focus between its
 /// focusable children, and the toolbar is one tab stop (Tab leaves it, re-entering restores
 /// the child focused last). A toolbar inside another toolbar becomes a `group` of it.
-#[allow(clippy::too_many_lines)]
 pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     let UseToolbarInput {
         element,
@@ -132,12 +130,12 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         if is_in_toolbar.get_untracked() {
             return;
         }
-        let target = e.expect_target();
-        if !node_contains(
-            e.expect_current_target().dyn_ref::<web_sys::Node>(),
-            target.dyn_ref::<web_sys::Node>(),
-        )
-        .unwrap_or(false)
+        let target = get_event_target(&e);
+        let current = e.expect_current_target();
+        if !target
+            .as_ref()
+            .and_then(|target| target.dyn_ref::<web_sys::Node>())
+            .is_some_and(|target| node_contains(current.unchecked_ref(), target))
         {
             return;
         }
@@ -149,18 +147,17 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
             Orientation::Vertical => (KeyboardKey::ArrowDown, KeyboardKey::ArrowUp),
         };
         let key = e.typed_key();
-        let manager = focus_manager;
         if key == next_key {
             if reverse {
-                manager.focus_previous(FocusManagerOptions::default());
+                focus_manager.focus_previous(FocusManagerOptions::default());
             } else {
-                manager.focus_next(FocusManagerOptions::default());
+                focus_manager.focus_next(FocusManagerOptions::default());
             }
         } else if key == previous_key {
             if reverse {
-                manager.focus_next(FocusManagerOptions::default());
+                focus_manager.focus_next(FocusManagerOptions::default());
             } else {
-                manager.focus_previous(FocusManagerOptions::default());
+                focus_manager.focus_previous(FocusManagerOptions::default());
             }
         } else if key == KeyboardKey::Tab {
             // Remember where focus was, then let the browser's Tab leave from the toolbar's
@@ -171,9 +168,9 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
                 .and_then(|el| el.dyn_into::<web_sys::HtmlElement>().ok());
             last_focused.set_value(active.map(SendWrapper::new));
             if e.shift_key() {
-                manager.focus_first(FocusManagerOptions::default());
+                focus_manager.focus_first(FocusManagerOptions::default());
             } else {
-                manager.focus_last(FocusManagerOptions::default());
+                focus_manager.focus_last(FocusManagerOptions::default());
             }
             return;
         } else {
@@ -187,15 +184,15 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         if is_in_toolbar.get_untracked() {
             return;
         }
-        let leaves = !node_contains(
-            e.expect_current_target().dyn_ref::<web_sys::Node>(),
-            e.related_target()
-                .as_ref()
-                .and_then(|t| t.dyn_ref::<web_sys::Node>()),
-        )
-        .unwrap_or(false);
+        let current = e.expect_current_target();
+        let leaves = !e
+            .related_target()
+            .as_ref()
+            .and_then(|t| t.dyn_ref::<web_sys::Node>())
+            .is_some_and(|related| node_contains(current.unchecked_ref(), related));
         if leaves && last_focused.with_value(Option::is_none) {
-            let target = e.expect_target().dyn_into::<web_sys::HtmlElement>().ok();
+            let target = get_event_target(&e)
+                .and_then(|target| target.dyn_into::<web_sys::HtmlElement>().ok());
             last_focused.set_value(target.map(SendWrapper::new));
         }
     });
@@ -204,19 +201,17 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         if is_in_toolbar.get_untracked() {
             return;
         }
-        let from_outside = !node_contains(
-            e.expect_current_target().dyn_ref::<web_sys::Node>(),
-            e.related_target()
-                .as_ref()
-                .and_then(|t| t.dyn_ref::<web_sys::Node>()),
-        )
-        .unwrap_or(false);
+        let current = e.expect_current_target();
+        let from_outside = !e
+            .related_target()
+            .as_ref()
+            .and_then(|t| t.dyn_ref::<web_sys::Node>())
+            .is_some_and(|related| node_contains(current.unchecked_ref(), related));
         let into_toolbar = element.get_untracked().is_some_and(|toolbar| {
-            node_contains(
-                Some(toolbar.unchecked_ref::<web_sys::Node>()),
-                e.expect_target().dyn_ref::<web_sys::Node>(),
-            )
-            .unwrap_or(false)
+            get_event_target(&e)
+                .as_ref()
+                .and_then(|target| target.dyn_ref::<web_sys::Node>())
+                .is_some_and(|target| node_contains(&toolbar, target))
         });
         if from_outside
             && into_toolbar

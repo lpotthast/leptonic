@@ -10,6 +10,21 @@
 //! Based on react-aria's `react-aria/src/utils/shadowdom/DOMFunctions.ts`
 //! and `react-aria/src/utils/domHelpers.ts`.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `propagation_targets` has no `to` parameter: the targets lead up to `from`'s window
+//   (react-aria's `getPropagationTargets` default).
+//
+// ## DIFFERENT BEHAVIOR
+// - The functions always look across shadow boundaries; react-aria's do only behind its
+//   `shadowDOM` feature flag (off by default), else they use `document.activeElement`,
+//   `Node.contains` and `event.target`.
+//
+// =============================================================================
+
 use wasm_bindgen::JsCast;
 
 /// Get the active element, piercing through shadow DOM boundaries.

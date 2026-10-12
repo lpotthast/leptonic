@@ -1,4 +1,5 @@
 // Upstream: react-aria-components/src/Link.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Link.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
@@ -98,7 +99,6 @@ impl<H: ToHref> ToHref for SharedHref<H> {
 ///
 /// Default class: `leptonic-Link`.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn Link<H>(
     /// Where the link goes: a route (resolved relative to the current one) or a URL.
     href: H,
@@ -229,6 +229,8 @@ where
 
 /// A link to an element on the same page: pressing it scrolls the element into view and updates
 /// the URL fragment.
+///
+/// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`.
 ///
 /// Default class: `leptonic-AnchorLink`.
 #[component]

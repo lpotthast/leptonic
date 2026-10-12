@@ -1,4 +1,5 @@
 // Upstream: react-aria-components/src/Button.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Button.test.js @ 99e6102368
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 use web_sys::FocusEvent;
@@ -56,7 +57,6 @@ use crate::{
 ///
 /// Default class: `leptonic-Button`.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn Button(
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_press_start: Option<Callback<PressEvent>>,

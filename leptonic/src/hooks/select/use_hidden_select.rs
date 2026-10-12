@@ -23,7 +23,7 @@ use crate::{
             use_form_validation_state::ValidationBehavior,
         },
     },
-    utils::aria::AriaHidden,
+    utils::{aria::AriaHidden, shadow_dom::get_event_target},
 };
 
 // =============================================================================
@@ -96,10 +96,16 @@ impl HiddenSelectOption {
     /// Whether `state` selects this option (tracked). The options don't hold their selection, so
     /// a changed value doesn't rebuild them.
     pub fn is_selected(&self, state: &SelectState) -> bool {
-        let value = state.value();
-        self.key
-            .as_ref()
-            .map_or_else(|| value.is_empty(), |key| value.contains(key))
+        match &self.key {
+            None => state.value().is_empty(),
+            // Tracks this option's selection only: a select with many options doesn't order every
+            // selected key per option and change.
+            Some(key) if state.list.collection.with(|c| c.get(key).is_some()) => {
+                state.list.selection.is_selected(key)
+            }
+            // A selected key without an item (see the options of `use_hidden_select`).
+            Some(key) => state.value().contains(key),
+        }
     }
 }
 
@@ -286,9 +292,8 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
 
     // Autofill picks options of the native select.
     let on_change = EventHandler::new(move |e: web_sys::Event| {
-        let Some(select) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::HtmlSelectElement>().ok())
+        let Some(select) =
+            get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::HtmlSelectElement>().ok())
         else {
             return;
         };

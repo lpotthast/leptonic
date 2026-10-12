@@ -13,7 +13,7 @@ use super::{
     types::DateValue,
     use_date_field::{
         GroupArrowKeys, UseDateFieldLabelProps, UseDateFieldProps, UseDatePickerGroupInput,
-        segment_focus_manager, use_date_picker_group,
+        UseDatePickerGroupProps, segment_focus_manager, use_date_picker_group,
     },
     use_date_picker_state::DatePickerState,
     use_date_range_picker_state::DateRangePickerState,
@@ -30,7 +30,7 @@ use crate::{
         overlay::OverlayTriggerState,
     },
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
+        aria::{AriaExpanded, AriaHasPopup, AriaRole, aria_true},
         id::use_id,
         intl_strings::{DatePickerStrings, SelectedRangeDescriptionArgs, use_localized_strings},
         slot_id::SlotProps,
@@ -161,7 +161,7 @@ pub fn use_date_range_picker<V: DateValue>(
 }
 
 /// What date and date range pickers share: the group, label, button and dialog.
-pub(crate) fn picker_aria(
+fn picker_aria(
     input: DatePickerOptions,
     overlay: OverlayTriggerState,
     description: Signal<Option<String>>,
@@ -300,10 +300,8 @@ pub(crate) fn picker_aria(
                 aria_label: Signal::derive(move || field_props.aria_label.get()),
                 aria_labelledby: labelledby,
                 aria_describedby: described_by,
-                aria_disabled: Signal::derive(move || {
-                    is_disabled.get().then_some(AriaDisabled::True)
-                }),
-                group: super::use_date_field::UseDatePickerGroupProps {
+                aria_disabled: aria_true(is_disabled),
+                group: UseDatePickerGroupProps {
                     on_keydown,
                     on_keyup,
                     ..group_keys

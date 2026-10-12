@@ -8,7 +8,7 @@ use leptonic::{
     },
     hooks::collections::{
         CollectionMemo, Key, SelectionBehavior, SelectionMode, UseListCollectionInput,
-        use_list_collection,
+        use_collection, use_list_collection,
     },
 };
 use leptos::prelude::*;
@@ -26,6 +26,8 @@ use leptos::prelude::*;
 ///   `#test-tg-replace-log`.
 /// - `#test-tg-ordered`: removable tags `#test-tg-insert` inserts at the start ("Item 1", ...).
 /// - `#test-tg-rtl`: an Arabic (right-to-left) group (One, Two, Three).
+/// - `#test-tg-rename`: Cat and Dog; `#test-tg-rename-cat` renames Cat "Kitten" under the same
+///   key.
 #[component]
 pub fn PageAtomTagGroup() -> impl IntoView {
     let animals = use_list_collection(UseListCollectionInput {
@@ -128,6 +130,12 @@ fn texts(items: &[&str]) -> Signal<Vec<String>> {
 fn MoreGroups() -> impl IntoView {
     let actions = RwSignal::new(Vec::<String>::new());
     let replace_actions = RwSignal::new(Vec::<String>::new());
+    let renamed = RwSignal::new(false);
+    let rename = use_collection(move |b| {
+        b.item("cat", if renamed.get() { "Kitten" } else { "Cat" });
+        b.item("dog", "Dog");
+    });
+
     let ordered = RwSignal::new(Vec::<String>::new());
     let next = RwSignal::new(1);
     let insert = move |_| {
@@ -199,6 +207,14 @@ fn MoreGroups() -> impl IntoView {
                     </TagList>
                 </TagGroup>
             </I18nProvider>
+        </div>
+        <button id="test-tg-rename-cat" on:click=move |_| renamed.set(true)>"Rename"</button>
+        <div id="test-tg-rename">
+            <TagGroup collection=rename aria_label="Rename">
+                <TagList>
+                    <TagItems let:node>{node.text_value.to_string()}</TagItems>
+                </TagList>
+            </TagGroup>
         </div>
     }
 }

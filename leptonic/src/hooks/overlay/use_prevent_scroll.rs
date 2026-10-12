@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/overlays/usePreventScroll.ts @ 740c6c5c4a
+// Upstream: react-aria/test/overlays/usePreventScroll.test.js @ 740c6c5c4a
 //! Locking the page's scroll position while an overlay is open (react-aria's `usePreventScroll`).
 
 // =============================================================================
@@ -132,8 +133,6 @@ fn chain(restores: Vec<Restore>) -> Restore {
     })
 }
 
-// --- Standard browser path ---
-
 /// For most browsers, all we need to do is set `overflow: hidden` on the root element, and
 /// add some padding to prevent the page from shifting when the scrollbar is hidden.
 fn prevent_scroll_standard() -> Option<Restore> {
@@ -165,10 +164,8 @@ fn prevent_scroll_standard() -> Option<Restore> {
     Some(chain(restores))
 }
 
-// --- WebKit on iOS ---
-//
-// Mobile Safari (every browser on iOS runs WebKit) is a whole different beast. Even with
-// `overflow: hidden`, it still scrolls the page in many situations:
+// WebKit on iOS: Mobile Safari (every browser on iOS runs WebKit) is a whole different beast.
+// Even with `overflow: hidden`, it still scrolls the page in many situations:
 //
 // 1. When the bottom toolbar and address bar are collapsed, page scrolling is always allowed.
 // 2. When the keyboard is visible, the viewport does not resize. Instead, the keyboard covers part
@@ -523,8 +520,6 @@ fn scroll_into_view(target: &HtmlElement) {
         next_target = scrollable.parent_element();
     }
 }
-
-// --- Helpers ---
 
 /// Listens to `event` on `target` with explicit `passive`, returning the function removing it
 /// (react-aria's `addEvent`). Touch listeners on the document are passive by default, which would

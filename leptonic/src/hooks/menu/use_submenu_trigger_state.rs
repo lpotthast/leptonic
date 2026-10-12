@@ -93,10 +93,12 @@ pub fn use_submenu_trigger_state(input: UseSubmenuTriggerStateInput) -> SubmenuT
         level,
     } = input;
     let trigger_key = StoredValue::new(trigger_key);
-    let is_open = Signal::derive(move || {
+    // A memo: every trigger of the menu tree reads the stack, which changes with any submenu.
+    let is_open: Signal<bool> = Memo::new(move |_| {
         root.expanded_keys_stack
             .with(|stack| trigger_key.with_value(|key| stack.get(level) == Some(key)))
-    });
+    })
+    .into();
     let (focus_strategy, set_focus_strategy) = signal(None);
     let overlay = use_overlay_trigger_state(UseOverlayTriggerStateInput {
         value: Some(ValueBinding::new(

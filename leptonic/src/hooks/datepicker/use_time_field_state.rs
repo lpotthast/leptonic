@@ -24,8 +24,6 @@ use crate::{
 // - Generic over the value type (`T: TimeValue`: `civil::Time`, `civil::DateTime`, `Zoned`);
 //   the placeholder has that type as well. The date field state it is built on is `field`
 //   (react-aria: one merged state).
-// - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
-// - The format options are signals (C11), as in `use_date_field_state`.
 // - `min_value`/`max_value` are `TimeBound`s (react-aria: any `TimeValue`, told apart at
 //   runtime): a time of day (`TimeOfDay`, react-aria's `Time` bound, on the value's day) or an
 //   absolute bound of the value type (`Absolute`, react-aria's `CalendarDateTime` and
@@ -127,15 +125,15 @@ pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> T
         name,
     } = input;
 
+    // Times are edited on today's date (dates and zoned values on their own).
+    let day: Date = today();
     // The time zone of zoned values: the value's, else the default value's.
     let time_zone = value
         .as_ref()
         .and_then(|value| value.value.get_untracked())
         .or_else(|| default_value.clone())
-        .and_then(|value| value.to_field(today()).time_zone().cloned());
+        .and_then(|value| value.to_field(day).time_zone().cloned());
     let owned_value = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
-    // Times are edited on today's date (dates and zoned values on their own).
-    let day: Date = today();
     let to_field = move |value: Option<T>| value.map(|value| value.to_field(day));
     let field_binding = ValueBinding::new(
         Signal::derive(move || to_field(owned_value.value.get())),

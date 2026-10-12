@@ -12,9 +12,18 @@
 //
 // =============================================================================
 
+use std::{cell::RefCell, rc::Rc};
+
 use icu_plurals::{PluralCategory, PluralOperands, PluralRules};
 
-use super::i18n::Locale;
+use super::{i18n::Locale, recent_cache::RecentCache};
+
+thread_local! {
+    /// The cardinal rules of the locales used last (`None`: no data): ICU4X builds them from its
+    /// data, and plural messages ask on every format.
+    static RULES: RefCell<RecentCache<Locale, Option<Rc<PluralRules>>>> =
+        const { RefCell::new(RecentCache::new(4)) };
+}
 
 /// Returns the plural category for a given number in the specified locale.
 ///
@@ -34,11 +43,19 @@ use super::i18n::Locale;
 /// ```
 #[must_use]
 pub fn plural_category(locale: &Locale, number: u64) -> PluralCategory {
-    let prefs = icu_plurals::PluralRulesPreferences::from(locale.icu_locale());
-    let Ok(rules) = PluralRules::try_new_cardinal(prefs) else {
-        return PluralCategory::Other;
-    };
-    rules.category_for(PluralOperands::from(number))
+    let rules = RULES.with_borrow_mut(|rules| {
+        rules.get_or_insert_with(
+            |cached| cached == locale,
+            || {
+                let prefs = icu_plurals::PluralRulesPreferences::from(locale.icu_locale());
+                let rules = PluralRules::try_new_cardinal(prefs).ok().map(Rc::new);
+                (locale.clone(), rules)
+            },
+        )
+    });
+    rules.map_or(PluralCategory::Other, |rules| {
+        rules.category_for(PluralOperands::from(number))
+    })
 }
 
 #[cfg(test)]

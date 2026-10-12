@@ -124,7 +124,7 @@ mod tests {
 
     use super::*;
 
-    // Upstream: RAC Meter.test.js "renders" and "supports a custom range".
+    // Upstream: "renders" and "supports a custom range".
     #[test]
     fn a_meter_has_the_meter_role_and_a_value() {
         crate::testing::with_owner(|| {

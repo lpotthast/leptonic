@@ -1,6 +1,18 @@
 // Upstream: react-aria/src/utils/useGlobalListeners.ts @ 99e6102368
 //! Listeners added for the duration of an interaction (react-aria's `useGlobalListeners`).
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - A `Listener` guard per listener, removing it when dropped (react-aria: a hook returning
+//   `addGlobalListener`, `removeGlobalListener` and `removeAllGlobalListeners`, which runs on
+//   unmount). Callers keep the guards in the interaction's state, so ending the interaction or
+//   disposing the hook removes them.
+//
+// =============================================================================
+
 use std::borrow::Cow;
 
 use leptos::ev::EventDescriptor;

@@ -24,11 +24,14 @@ use crate::{
 //   (C10).
 //
 // ## DIFFERENT BEHAVIOR
-// - The global warm-up state lives in thread-locals (`tooltip_registry`) instead of module
-//   variables.
 // - A pending warm-up of a disposed tooltip is cancelled (react-aria leaves the timer running,
 //   harmless in JavaScript).
-// - SSR: `open`/`close` change the state immediately, without timers.
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - The global warm-up state lives in thread-locals (`tooltip_registry`) instead of module
+//   variables: Rust has no mutable module state, and the browser runs the page on one thread.
+// - SSR: `open`/`close` change the state immediately, without timers: the server has no timers
+//   and must not touch the page-wide thread-locals. React-aria: no SSR distinction.
 //
 // =============================================================================
 
@@ -46,9 +49,9 @@ pub enum TooltipTiming {
 #[derive(Debug, Clone, Copy)]
 pub struct UseTooltipTriggerStateInput {
     /// How long hovering the trigger takes to open the first tooltip. Once one tooltip was open,
-    /// others open right away until all were closed for a while.
+    /// others open right away until all were closed for a while. Default: 1.5 s.
     pub delay: Duration,
-    /// How long the tooltip stays open after the pointer leaves.
+    /// How long the tooltip stays open after the pointer leaves. Default: 500 ms.
     pub close_delay: Duration,
     /// Whether the tooltip starts open. Ignored when `value` is bound.
     pub default_open: bool,
@@ -111,7 +114,6 @@ impl TooltipTriggerState {
 ///     ..UseTooltipTriggerStateInput::default()
 /// });
 /// ```
-#[allow(clippy::too_many_lines)]
 pub fn use_tooltip_trigger_state(input: UseTooltipTriggerStateInput) -> TooltipTriggerState {
     let UseTooltipTriggerStateInput {
         delay,

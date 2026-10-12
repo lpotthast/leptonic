@@ -11,6 +11,24 @@
 //! (and in client-side rendered apps), ids come from a separate counter with a `c` marker, so they
 //! never collide with server-generated ones.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `use_id(prefix)` always generates an id, `<prefix>-<n>` (react-aria's `useId(defaultId)`
+//   returns a given default id; callers with an id of their own use it instead).
+//
+// ## DIFFERENT BEHAVIOR
+// - Ids come from Leptos' shared-context counter while rendering on the server and hydrating,
+//   else from a client counter (react-aria: React's `useId`).
+//
+// ## OMITTED FEATURES
+// - `mergeIds` and the id updater map (re-rendering the users of an id that changed): leptonic's
+//   ids never change once created.
+//
+// =============================================================================
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use leptos::prelude::Owner;

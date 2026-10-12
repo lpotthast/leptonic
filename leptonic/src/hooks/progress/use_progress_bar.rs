@@ -180,7 +180,8 @@ pub(crate) fn progress<T: NumberValue>(
         ..UseLabelInput::default()
     });
 
-    let clamped = Signal::derive(move || {
+    // Memos: each is read by several of the attributes and the returned signals.
+    let clamped = Memo::new(move |_| {
         let (min, max) = (min_value.get(), max_value.get());
         value.get().map(|value| {
             if value < min {
@@ -193,14 +194,14 @@ pub(crate) fn progress<T: NumberValue>(
         })
     });
     // As a fraction of the range; 0 for an empty range.
-    let fraction = Signal::derive(move || {
+    let fraction = Memo::new(move |_| {
         let (min, max) = (min_value.get().to_f64(), max_value.get().to_f64());
         clamped
             .get()
             .map(|value| percentage_in_range(min, max, value.to_f64()))
     });
     let formatter = use_number_formatter(format_options);
-    let value_text = Signal::derive(move || {
+    let value_text = Memo::new(move |_| {
         let value = clamped.get()?;
         if let Some(label) = value_label.get() {
             return Some(label);
@@ -222,11 +223,11 @@ pub(crate) fn progress<T: NumberValue>(
             aria_valuenow: Signal::derive(move || clamped.get().map(|value| value.to_string())),
             aria_valuemin: Signal::derive(move || min_value.get().to_string()),
             aria_valuemax: Signal::derive(move || max_value.get().to_string()),
-            aria_valuetext: value_text,
+            aria_valuetext: value_text.into(),
         },
         label_props: label.label_props,
         percentage: Signal::derive(move || fraction.get().map(Fraction::new)),
-        value_text,
+        value_text: value_text.into(),
     }
 }
 
@@ -258,7 +259,7 @@ mod tests {
         });
     }
 
-    // Upstream: "with value of 25%" and RAC "supports a custom range".
+    // Upstream: "with value of 25%" and "supports a custom range".
     #[test]
     fn formats_the_percentage() {
         crate::testing::with_owner(|| {
@@ -299,7 +300,7 @@ mod tests {
         });
     }
 
-    // RAC: "renders 0 percent for an empty range (with a non-zero bound)".
+    // Upstream: "renders 0 percent for an empty range with a non-zero bound".
     #[test]
     fn an_empty_range_is_zero_percent() {
         crate::testing::with_owner(|| {

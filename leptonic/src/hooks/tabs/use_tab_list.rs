@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/tabs/useTabList.ts @ 99e6102368
+// Upstream: react-aria-components/test/Tabs.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::{
@@ -141,7 +142,7 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
     let id = state.id();
     let labelling = {
         let id = id.clone();
-        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
+        Memo::new(move |_| labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
     };
 
     UseTabListReturn {

@@ -3,7 +3,7 @@
 // Upstream: react-aria/src/interactions/context.ts @ 99e6102368
 // Upstream: react-aria/test/interactions/usePress.test.js @ 99e6102368
 // Upstream: react-aria/test/interactions/useLongPress.test.js @ 99e6102368
-
+//! Press interactions across mouse, touch, keyboard and screen readers, and long presses.
 use std::time::Duration;
 
 use leptos::{attr, attr::Attr, ev, prelude::*};
@@ -36,14 +36,14 @@ use crate::{
 use crate::{
     ContainsTarget, EventModifiers,
     utils::{
-        dom_ext::{ElementExt, EventAccessors, EventTargetExt, node_contains},
+        dom_ext::{ElementExt, EventAccessors, EventTargetExt},
         event_listeners::{Listener, listen_to},
         focus::focus_element,
         key::KeyboardEventKey,
         open_link::{is_opening_link, open_link},
         platform::device,
         prevent_focus::{FocusPrevention, prevent_focus},
-        shadow_dom,
+        shadow_dom::{self, node_contains},
         use_description::use_description,
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
@@ -68,7 +68,7 @@ use crate::{
 //   react-aria's `useLongPress` only wraps `usePress`. Without the group, no long press machinery
 //   is set up. As upstream, `LongPressEvent` has no `continuePropagation` (no `Propagation`).
 // - Press events carry their kind (`PressEventKind`, react-aria's `type`), the pressed element as
-//   an `Element` and the position as a `Point` relative to it (react-aria: `x`, `y`).
+//   an `Element` and the position as a `Point` relative to it (C13 units; react-aria: `x`, `y`).
 //
 // ## DIFFERENT BEHAVIOR
 // - `touch-action: pan-x pan-y pinch-zoom` is an inline style of the pressable element, rendered
@@ -285,6 +285,7 @@ pub(crate) fn merge_long_press(
     }
 }
 
+/// Input of [`use_press`].
 #[derive(Debug, Clone)]
 pub struct UsePressInput {
     /// Whether the targeted element is currently disabled.
@@ -352,8 +353,8 @@ impl Default for UsePressInput {
 /// Context for parent-to-child press prop forwarding.
 ///
 /// Parent components (e.g., menu triggers, dialog triggers) that need to inject
-/// press behavior into a descendant pressable element provide this context via
-/// [`provide_context`] or the [`PressResponder`](crate::atoms::press::PressResponder) atom.
+/// press behavior into a descendant pressable element provide this context, usually through
+/// the [`PressResponder`](crate::atoms::press::PressResponder) atom.
 ///
 /// When provided, [`use_press`] automatically reads the context and merges the
 /// parent's props with its own. Callbacks are chained (context first, then local).
@@ -493,6 +494,7 @@ pub(crate) fn chain_optional_callbacks<T: Clone + Send + Sync + 'static>(
     }
 }
 
+/// Return value of [`use_press`].
 #[derive(Debug)]
 pub struct UsePressReturn {
     /// Props for programmatic merging. Call `.into_parts()` for view spreading and styles.
@@ -679,7 +681,6 @@ fn merge_force_is_pressed(responder: Option<Signal<bool>>, own: Signal<bool>) ->
 /// Handles press interactions across mouse, touch, keyboard and screen readers (react-aria's
 /// `usePress`), and long presses (react-aria's `useLongPress`, with
 /// [`long_press`](UsePressInput::long_press)).
-#[allow(clippy::too_many_lines)]
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
     #[cfg(feature = "ssr")]
     {
@@ -725,10 +726,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             long_press,
         } = input;
 
-        // --- PressResponderContext merging ---
-        // If a parent component provided a PressResponderContext (via PressResponder or
-        // provide_context), merge its props with our local input. This allows parent components
-        // to inject press behavior into child pressable elements.
+        // A `PressResponderContext` of a parent (e.g. a `PressResponder`) is merged with the
+        // input: parent components inject press behavior into child pressable elements.
         let ctx = use_context::<PressResponderContext>();
         if let Some(ref ctx) = ctx {
             ctx.registered.set_value(true);
@@ -773,7 +772,6 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             on_press_change,
         );
         let long_press = merge_long_press(ctx.as_ref().and_then(|c| c.long_press), long_press);
-        // --- End PressResponderContext merging ---
 
         let (is_pressed, set_is_pressed) = signal(false);
 
@@ -1174,8 +1172,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             // Whether the key up happened on the pressed element (focus may have moved since the
             // key down): only then press up and press. A document listener: nothing to stop
             // (react-aria).
-            let was_pressed = node_contains(Some(press_target.as_ref()), target.as_node().as_ref())
-                .unwrap_or(false);
+            let was_pressed = target
+                .as_node()
+                .is_some_and(|target| node_contains(press_target.as_ref(), &target));
             let stop_up = !was_pressed || e.repeat() || trigger_press_up(&EventRef::Keyboard(&e));
             let stop_end = trigger_press_end(&EventRef::Keyboard(&e), was_pressed);
             // Dropping the state removes the key up listener.
@@ -1390,13 +1389,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
             // DOM containment (like react-aria), not the bounding rect, which is zero-sized for
             // `display: contents` elements.
-            let over_target = node_contains(
-                Some(target.as_ref()),
-                e.target()
-                    .as_ref()
-                    .and_then(|t| t.dyn_ref::<web_sys::Node>()),
-            )
-            .unwrap_or(false);
+            let over_target = shadow_dom::get_event_target(&e)
+                .and_then(|t| t.as_node())
+                .is_some_and(|over| node_contains(target.as_ref(), &over));
             if !over_target {
                 cancel(&EventRef::Pointer(&e));
                 return;
@@ -1472,7 +1467,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 // Release pointer capture to enable pointerleave/pointerenter on touch.
                 // By default, the browser captures pointer events to the original target,
                 // which prevents these events from firing correctly.
-                if let Some(element) = e.expect_target().dyn_ref::<web_sys::Element>()
+                if let Some(element) =
+                    shadow_dom::get_event_target(&e).and_then(|target| target.to_element())
                     && element.has_pointer_capture(e.pointer_id())
                 {
                     let _ = element.release_pointer_capture(e.pointer_id());
@@ -1550,8 +1546,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             // Keep the focus where it is (react-aria's `preventFocus`, which, unlike
             // `preventDefault`, leaves text selection and dragging alone), until the press ends.
             if prevent_focus_on_press.get_untracked()
-                && let Some(prevention) =
-                    prevent_focus(e.target().and_then(|target| target.dyn_into().ok()))
+                && let Some(prevention) = prevent_focus(e.expect_target().dyn_into().ok())
             {
                 focus_preventions.update_value(|preventions| preventions.push(prevention));
             }

@@ -36,8 +36,6 @@ use crate::{
 //   values); the value is built with the type and time zone of the value or placeholder.
 // - Closing commits a selected date through the overlay state's `on_open_change` (react-aria
 //   wraps `setOpen`), so that a popover closing itself commits as well.
-// - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
-// - The format options and the placeholder are signals (C11).
 //
 // ## OMITTED FEATURES
 // - `shouldCloseOnSelect` as a function: a signal.
@@ -202,7 +200,6 @@ impl<V: DateValue> DatePickerState<V> {
 
 /// State of a date picker (react-stately's `useDatePickerState`): a date field's value with a
 /// popover calendar (and time) to pick it; validated as the field.
-#[allow(clippy::too_many_lines)]
 pub fn use_date_picker_state<V: DateValue>(
     input: UseDatePickerStateInput<V>,
 ) -> DatePickerState<V> {
@@ -316,7 +313,9 @@ pub fn use_date_picker_state<V: DateValue>(
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let strings = use_localized_strings::<DateValidationStrings>();
-    let formatters = Memo::new(move |_| Formatters::new(locale.get(), format_options.get()));
+    let formatters = Memo::new(move |_| {
+        locale.with(|locale| format_options.with(|options| Formatters::cached(locale, options)))
+    });
     let builtin_validation = Memo::new(move |_| {
         let value = binding.value.get();
         let (min, max) = (min_value.get(), max_value.get());

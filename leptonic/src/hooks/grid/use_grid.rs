@@ -34,6 +34,7 @@ use crate::{
         filter::{CollatorOptions, use_collator},
         i18n::use_direction,
         id::use_id,
+        shadow_dom::{get_event_target, node_contains},
     },
 };
 
@@ -54,12 +55,14 @@ fn unless_navigation_disabled<E: Clone + 'static>(
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Rows and cells get the grid's settings through the returned `GridData` (react-aria: a
+// - Rows and cells get the grid's settings through the returned `GridData`, which the caller
+//   hands to them: the dependency is explicit instead of hidden global state (react-aria: a
 //   `WeakMap` keyed by the state).
 //
 // ## OMITTED FEATURES
 // - `getRowText` (the text the selection announcement reads for a row is its text value).
-// - Virtualization (`aria-rowcount`/`aria-colcount`).
+// - Virtualization (`aria-rowcount`/`aria-colcount`): not yet, the virtualizer doesn't render
+//   grids yet.
 //
 // =============================================================================
 
@@ -248,11 +251,11 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
             on_focusin.call(e);
             return;
         }
-        let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
+        let target = get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Node>().ok());
         let contains = e
             .expect_current_target()
             .dyn_into::<web_sys::Node>()
-            .is_ok_and(|grid| grid.contains(target.as_ref()));
+            .is_ok_and(|grid| target.is_some_and(|target| node_contains(&grid, &target)));
         if selection.is_focused() {
             // A focus event bubbled through a portal.
             if !contains {
@@ -276,7 +279,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
 
     // An empty grid is a tab stop itself, unless it has tabbable content.
     let rows = state.list.collection;
-    let is_empty = Signal::derive(move || rows.with(|c| c.size() == 0));
+    let is_empty = Memo::new(move |_| rows.with(|c| c.size() == 0));
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
         is_disabled: Signal::derive(move || !is_empty.get()),
     });

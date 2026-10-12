@@ -1,3 +1,6 @@
+//! Accessible hooks for Leptos, ported from react-aria (`hooks`), and unstyled atoms built on
+//! them, ported from react-aria-components (`atoms`, feature `atoms`).
+
 #![recursion_limit = "256"]
 // Workspace-level clippy allows. These are specified in workspace Cargo.toml lints but
 // must also be set here because CLI `-D clippy::pedantic` takes precedence over Cargo.toml lints.
@@ -172,6 +175,7 @@ impl<O: 'static, S> Out<O, S> {
 }
 
 impl<O: 'static> Out<O, LocalStorage> {
+    /// Emits `new_value`: runs the callback, or sets the signal or stored value.
     pub fn set(&self, new_value: O) {
         match self {
             Self::Callback(callback) => Callable::run(callback, new_value),
@@ -183,6 +187,7 @@ impl<O: 'static> Out<O, LocalStorage> {
 }
 
 impl<O: Send + Sync + 'static> Out<O, SyncStorage> {
+    /// Emits `new_value`: runs the callback, or sets the signal or stored value.
     pub fn set(&self, new_value: O) {
         match self {
             Self::Callback(callback) => Callable::run(callback, new_value),

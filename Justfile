@@ -114,6 +114,12 @@ browser-test:
 browser-test-visible:
   BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
+# Run the performance measurements (`documentation/testing.md`, "Performance measurements"): in-page timings of
+# the test-app's `/perf` fixtures, one after the other, built without debug assertions. Reports go to
+# `<target>/tmp/performance/`, each compared with the previous run's. `BROWSER_TEST_FILTER` selects scenarios.
+browser-perf:
+  BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_SUITE=performance cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+
 # Run the book's browser tests (every documentation page: errors, dark theme, links, phone width, Markdown export).
 book-browser-test:
   cd ./examples/book-ssr && BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} cargo test --test browser_test -- --nocapture

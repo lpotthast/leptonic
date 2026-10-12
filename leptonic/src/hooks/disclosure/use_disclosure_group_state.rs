@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/disclosure/useDisclosureGroupState.ts @ 99e6102368
+// Upstream: react-stately/test/disclosure/useDisclosureGroupState.test.ts @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::prelude::*;
@@ -17,10 +18,11 @@ use crate::{ValueBinding, hooks::collections::Key};
 //
 // ## DIFFERENT BEHAVIOR
 // - More than one expanded key in a single-expansion group is reduced to one when the keys are
-//   set (react-aria: an effect after each render): the smallest key (react-aria: the first in insertion order, which a `HashSet` doesn't keep;
-//   the smallest is the same on the server and the client). A bound `value` is reduced on
-//   creation (so the server renders one) and in an effect whenever it changes; both report the
-//   reduction through `on_expanded_change`, as react-aria's effect does.
+//   set (react-aria: an effect after each render): the smallest key (react-aria: the first in
+//   insertion order, which a `HashSet` doesn't keep; the smallest is the same on the server and
+//   the client). A bound `value` is reduced on creation (so the server renders one) and in an
+//   effect whenever it changes; both report the reduction through `on_expanded_change`, as
+//   react-aria's effect does.
 //
 // =============================================================================
 
@@ -59,6 +61,7 @@ pub struct DisclosureGroupState {
 }
 
 impl DisclosureGroupState {
+    /// Sets the expanded disclosures (one at most in a single-expansion group).
     pub fn set_expanded_keys(&self, keys: HashSet<Key>) {
         self.set_expanded_keys.run(keys);
     }

@@ -59,6 +59,7 @@ pub enum ScrollDirection {
 }
 
 /// Input of [`use_scroll_view`].
+#[derive(Debug, Clone)]
 pub struct UseScrollViewInput {
     /// The scroll view element (captured by the caller).
     pub element: CapturedElement,
@@ -78,6 +79,7 @@ pub struct UseScrollViewInput {
 }
 
 /// Return value of [`use_scroll_view`].
+#[derive(Debug)]
 pub struct UseScrollViewReturn {
     /// Styles of the scroll view: no padding (the layout pads), the overflow.
     pub scroll_view_styles: Styles,
@@ -134,7 +136,6 @@ struct ScrollState {
 
 /// A scrollable view of a virtualized collection's content (react-aria's `useScrollView`):
 /// reports the visible rectangle as it scrolls and resizes.
-#[allow(clippy::too_many_lines)]
 pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
     let UseScrollViewInput {
         element,

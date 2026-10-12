@@ -140,7 +140,6 @@ impl FocusManager {
 
     /// Move focus to the next focusable element: after `from` (or the focused element) if it is
     /// in the scope, else to the first one.
-    #[allow(clippy::needless_pass_by_value)]
     pub fn focus_next(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
         #[cfg(feature = "ssr")]
         {
@@ -169,7 +168,6 @@ impl FocusManager {
 
     /// Move focus to the previous focusable element: before `from` (or the focused element) if it
     /// is in the scope, else to the last one.
-    #[allow(clippy::needless_pass_by_value)]
     pub fn focus_previous(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
         #[cfg(feature = "ssr")]
         {
@@ -225,7 +223,6 @@ impl FocusManager {
     /// Use this when the caller needs to apply its own focus strategy
     /// (e.g., `focus_safely` for overlay auto-focus instead of standard
     /// `focus()` which allows scrolling).
-    #[allow(clippy::needless_pass_by_value)]
     pub fn find_first(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
         #[cfg(feature = "ssr")]
         {
@@ -243,7 +240,6 @@ impl FocusManager {
     ///
     /// Use this when the caller needs to apply its own focus strategy
     /// (e.g., `focus_safely` for overlay auto-focus).
-    #[allow(clippy::needless_pass_by_value)]
     pub fn find_last(self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
         #[cfg(feature = "ssr")]
         {
@@ -321,21 +317,13 @@ fn focus_element(element: &web_sys::Element) {
 }
 
 /// The return value of [`create_focus_manager`].
+#[derive(Debug)]
 pub struct CreateFocusManagerReturn {
     /// The focus manager instance.
     pub focus_manager: FocusManager,
 
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: FocusManagerScopeProps,
-}
-
-impl std::fmt::Debug for CreateFocusManagerReturn {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CreateFocusManagerReturn")
-            .field("focus_manager", &self.focus_manager)
-            .field("props", &self.props)
-            .finish()
-    }
 }
 
 /// Props of the scope element of [`create_focus_manager`].

@@ -129,13 +129,12 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
     #[cfg(feature = "ssr")]
     {
         let _ = input;
-        let (is_focus_within, _) = signal(false);
         UseFocusWithinReturn {
             props: UseFocusWithinProps {
-                on_focusin: EventHandler::new(|_: FocusEvent| {}),
-                on_focusout: EventHandler::new(|_: FocusEvent| {}),
+                on_focusin: EventHandler::empty(),
+                on_focusout: EventHandler::empty(),
             },
-            is_focus_within: is_focus_within.into(),
+            is_focus_within: Signal::stored(false),
         }
     }
 

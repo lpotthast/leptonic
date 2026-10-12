@@ -15,7 +15,8 @@
 //   `CapturedElement`.
 //
 // ## OMITTED FEATURES
-// - `useFocusWithin` props.
+// - The `useFocusWithin` props (`onFocusWithin`, ...): callers spread `use_focus_within` onto the
+//   popover themselves (independent hooks on one element).
 //
 // =============================================================================
 
@@ -201,7 +202,7 @@ pub type UsePopoverAttrs = (UseOverlayAttrs, UseOverlayPositionAttrs);
 ///         <Show when=move || state.is_open.get()>
 ///             // A modal popover's underlay covers the page (an outside press lands on it)
 ///             <div style="position: fixed; inset: 0; z-index: 999;" />
-///             // Popover content — positioned automatically
+///             // Popover content, positioned automatically
 ///             <div {..popover_attrs.get_value()} style=popover_styles.clone()>
 ///                 "Popover content"
 ///             </div>
@@ -267,7 +268,11 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
 
     // 4. Hide the rest of the page from assistive technology (modal), or stay visible (non-modal).
     let popover_element = overlay.overlay_element;
-    use_popover_visibility(is_open, group.unwrap_or(popover_element), modality);
+    use_hide_outside(
+        is_open,
+        group.unwrap_or(popover_element),
+        Signal::stored(!modality.is_modal()),
+    );
 
     // 5. Return the props.
     let id = overlay.id;
@@ -291,18 +296,19 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
     }
 }
 
-/// While the popover is open and rendered: a modal popover makes the rest of the page inert (hidden
-/// from assistive technology), a non-modal one stays visible even if another modal overlay hid
-/// the page. Does nothing until the popover element is captured, so the popover itself is never
-/// made inert.
-pub(crate) fn use_popover_visibility(
+/// While the overlay is open and rendered, makes the rest of the page inert (hidden from assistive
+/// technology), or, while `keep_visible_only`, keeps the overlay visible even if another modal
+/// overlay hid the page (a non-modal popover, a modal still entering). Does nothing until the
+/// overlay element is captured, so the overlay itself is never made inert. Shared by
+/// `use_popover` and `use_modal_backdrop` (react-aria: the same layout effect in both).
+pub(crate) fn use_hide_outside(
     is_open: Signal<bool>,
     overlay_element: CapturedElement,
-    modality: PopoverModality,
+    keep_visible_only: Signal<bool>,
 ) {
     #[cfg(feature = "ssr")]
     {
-        let _ = (is_open, overlay_element, modality);
+        let _ = (is_open, overlay_element, keep_visible_only);
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -328,19 +334,20 @@ pub(crate) fn use_popover_visibility(
             if !is_open.get() {
                 return;
             }
-            let Some(popover) = overlay_element.get() else {
+            let Some(overlay) = overlay_element.get() else {
                 return;
             };
-            let popover: web_sys::Element = (*popover).clone();
-            let new_undo = match modality {
-                PopoverModality::Modal => Some(aria_hide_outside(
-                    &[popover],
+            let overlay: web_sys::Element = (*overlay).clone();
+            let new_undo = if keep_visible_only.get() {
+                keep_visible(&overlay)
+            } else {
+                Some(aria_hide_outside(
+                    &[overlay],
                     AriaHideOutsideOptions {
                         mode: HideMode::Inert,
                         ..AriaHideOutsideOptions::default()
                     },
-                )),
-                PopoverModality::NonModal => keep_visible(&popover),
+                ))
             };
             undo.set_value(new_undo);
         });

@@ -1,8 +1,10 @@
+// Upstream: react-stately/src/color/Color.ts @ 99e6102368
 //! The HSL color space.
 
 use super::{
     AreaGradient, ColorChannelRange, ColorSpaceAxes, ColorValue, HSV, HUE_STOPS, RGB8, axes_of,
-    hue_space_area_gradient, hue_stops, round_fraction,
+    hue_and_channel_extremes, hue_space_area_gradient, hue_stops, rgb_of_hue_and_chroma,
+    round_fraction,
 };
 use crate::utils::{
     i18n::{Locale, WritingDirection},
@@ -82,6 +84,8 @@ impl Default for HSL {
 }
 
 impl ColorValue for HSL {
+    type Channel = HslChannel;
+
     fn hue_channel() -> Option<HslChannel> {
         Some(HslChannel::Hue)
     }
@@ -89,8 +93,6 @@ impl ColorValue for HSL {
     fn to_rgb8(&self) -> RGB8 {
         RGB8::from(*self)
     }
-
-    type Channel = HslChannel;
 
     fn channel_value(&self, channel: HslChannel) -> f64 {
         match channel {
@@ -151,8 +153,7 @@ impl ColorValue for HSL {
     }
 
     fn to_css_string(&self) -> String {
-        let rgb = RGB8::from(*self);
-        format!("rgb({}, {}, {})", rgb.r, rgb.g, rgb.b)
+        RGB8::from(*self).to_css_string()
     }
 
     fn channel_format_options(channel: HslChannel) -> NumberFormatOptions {
@@ -213,81 +214,29 @@ impl ColorValue for HSL {
 }
 
 impl From<HSL> for RGB8 {
-    // Standard HSL → RGB conversion.
-    // Expects: 0 ≤ S ≤ 1, 0 ≤ L ≤ 1; hues wrap around (react-aria: `% 12` of twelfths).
-    #[allow(
-        clippy::many_single_char_names,
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
-    )]
+    /// Expects saturation and lightness from 0 to 1; hues wrap around (react-aria: `% 12` of
+    /// twelfths).
     fn from(hsl: HSL) -> Self {
-        let (h, s, l) = (hsl.hue.rem_euclid(360.0), hsl.saturation, hsl.lightness);
-
+        let HSL {
+            hue,
+            saturation: s,
+            lightness: l,
+        } = hsl;
         let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
-        let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-        let m = l - c / 2.0;
-
-        let (r, g, b) = if (0.0..60.0).contains(&h) {
-            (c, x, 0.0)
-        } else if (60.0..120.0).contains(&h) {
-            (x, c, 0.0)
-        } else if (120.0..180.0).contains(&h) {
-            (0.0, c, x)
-        } else if (180.0..240.0).contains(&h) {
-            (0.0, x, c)
-        } else if (240.0..300.0).contains(&h) {
-            (x, 0.0, c)
-        } else if (300.0..360.0).contains(&h) {
-            (c, 0.0, x)
-        } else {
-            (c, x, 0.0)
-        };
-
-        let (r, g, b) = (
-            ((r + m) * 255.0).round() as u8,
-            ((g + m) * 255.0).round() as u8,
-            ((b + m) * 255.0).round() as u8,
-        );
-
-        Self { r, g, b }
+        rgb_of_hue_and_chroma(hue, c, l - c / 2.0)
     }
 }
 
 impl From<RGB8> for HSL {
-    #[allow(clippy::many_single_char_names, clippy::float_cmp)]
     fn from(rgb: RGB8) -> Self {
-        let RGB8 { r, g, b } = rgb;
-
-        let (r, g, b) = (
-            f64::from(r) / 255.0,
-            f64::from(g) / 255.0,
-            f64::from(b) / 255.0,
-        );
-
-        let c_max = f64::max(r, f64::max(g, b));
-        let c_min = f64::min(r, f64::min(g, b));
+        let (hue, c_max, c_min) = hue_and_channel_extremes(rgb);
         let delta = c_max - c_min;
-
-        let hue = if delta == 0.0 {
-            0.0
-        } else if c_max == r {
-            60.0 * ((g - b) / delta).rem_euclid(6.0)
-        } else if c_max == g {
-            60.0 * (((b - r) / delta) + 2.0)
-        } else if c_max == b {
-            60.0 * (((r - g) / delta) + 4.0)
-        } else {
-            unreachable!()
-        };
-
         let lightness = f64::midpoint(c_max, c_min);
-
         let saturation = if delta == 0.0 {
             0.0
         } else {
             delta / (1.0 - (2.0 * lightness - 1.0).abs())
         };
-
         // Rounded as react-aria's `toHSL` (two decimals of degrees and percentages).
         Self {
             hue: to_fixed_number(hue, 2),
@@ -323,7 +272,6 @@ impl From<HSV> for HSL {
             brightness: v,
         } = hsv;
         let l = v * (1.0 - s / 2.0);
-        #[allow(clippy::float_cmp)]
         let sl = if l == 0.0 || l == 1.0 {
             0.0
         } else {

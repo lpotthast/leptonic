@@ -285,16 +285,21 @@ impl DroppableCollectionState {
 
 /// The same position seen from the neighboring item: "before B" is "after A" when A precedes B.
 fn opposite_target(collection: &Collection, target: &ItemDropTarget) -> Option<ItemDropTarget> {
-    let node = collection.get(&target.key)?;
     match target.drop_position {
-        DropPosition::Before => node.prev_key.clone().map(|key| ItemDropTarget {
-            key,
-            drop_position: DropPosition::After,
-        }),
-        DropPosition::After => node.next_key.clone().map(|key| ItemDropTarget {
-            key,
-            drop_position: DropPosition::Before,
-        }),
+        DropPosition::Before => {
+            collection
+                .previous_sibling(&target.key)
+                .map(|node| ItemDropTarget {
+                    key: node.key.clone(),
+                    drop_position: DropPosition::After,
+                })
+        }
+        DropPosition::After => collection
+            .next_sibling(&target.key)
+            .map(|node| ItemDropTarget {
+                key: node.key.clone(),
+                drop_position: DropPosition::Before,
+            }),
         DropPosition::On => None,
     }
 }

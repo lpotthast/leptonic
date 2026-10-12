@@ -4,6 +4,20 @@ use std::sync::Arc;
 
 use crate::hooks::collections::{Key, NodeKind, Rect};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `kind` is the collection node's `NodeKind` (react-stately: a `type` string); `copy()` is
+//   `Clone`.
+//
+// ## OMITTED FEATURES
+// - `content` (content a layout generates instead of taking it from the collection): `ListLayout`
+//   generates none.
+//
+// =============================================================================
+
 /// Where an element of a virtualized collection goes, and how it is shown: produced by a
 /// [`Layout`](super::Layout) for each collection node it lays out.
 #[derive(Debug, Clone, PartialEq)]

@@ -28,7 +28,7 @@ use crate::{
     },
     use_slot,
     utils::{
-        aria::{AriaChecked, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
+        aria::{AriaChecked, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole, aria_true},
         dom_ext::EventAccessors,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
@@ -46,7 +46,6 @@ use crate::{
 //   `isSelected`, `onAction`, `onClose` and `closeOnSelect` are not offered.
 // - Label, description and keyboard shortcut ids are referenced only while those elements are
 //   rendered (react-aria: `useSlotId`), detected through element capture.
-//
 // - A submenu trigger gets its trigger's behavior as `submenu_trigger` (react-aria: through the
 //   props `aria-haspopup`, `aria-expanded`, `onPressStart`, ... from `useSubmenuTrigger`).
 //
@@ -165,7 +164,6 @@ enum Interaction {
 /// An item of a menu: `menuitem` (or `menuitemradio` / `menuitemcheckbox` in menus with
 /// selection), activated by press, Enter or Space. Activating performs the menu's action and
 /// closes the menu (see [`UseMenuItemInput::should_close_on_select`]).
-#[allow(clippy::too_many_lines)]
 pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseMenuItemInput {
@@ -377,8 +375,6 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         interaction.set_value(None);
     });
 
-    let focus_visible = Signal::derive(is_focus_visible);
-
     let (aria_haspopup, aria_expanded, aria_controls) = match &submenu_trigger {
         Some(trigger) => {
             let is_open = trigger.is_open;
@@ -403,9 +399,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                     SelectionMode::Single => AriaRole::Menuitemradio,
                     SelectionMode::Multiple => AriaRole::Menuitemcheckbox,
                 }),
-                aria_disabled: Signal::derive(move || {
-                    is_disabled.get().then_some(AriaDisabled::True)
-                }),
+                aria_disabled: aria_true(is_disabled),
                 aria_checked: Signal::derive(move || {
                     (!is_trigger && selection.selection_mode() != SelectionMode::None)
                         .then(|| AriaChecked::from(is_selected.get()))
@@ -421,11 +415,11 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                 aria_controls,
                 keyboard,
                 on_click,
-                on_mousedown: EventHandler::new(move |e: MouseEvent| {
-                    if is_trigger {
-                        e.prevent_default();
-                    }
-                }),
+                on_mousedown: if is_trigger {
+                    EventHandler::new(|e: MouseEvent| e.prevent_default())
+                } else {
+                    EventHandler::empty()
+                },
             },
             item_styles.merge(press_styles),
         ),
@@ -433,9 +427,10 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         description_props: description.props,
         keyboard_shortcut_props: keyboard_shortcut.props,
         is_focused,
-        is_focus_visible: Signal::derive(move || {
-            is_focused.get() && focus_visible.get() && !is_trigger_expanded.get()
-        }),
+        is_focus_visible: Memo::new(move |_| {
+            is_focused.get() && is_focus_visible() && !is_trigger_expanded.get()
+        })
+        .into(),
         is_selected,
         is_pressed: press.is_pressed,
         is_hovered,

@@ -38,7 +38,7 @@ use crate::{
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, DisabledBehavior, EscapeKeyBehavior, Key,
             ListLayout, Node, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
-            UseListStateInput, use_list_state,
+            UseListStateInput, use_list_state, use_node,
         },
         focus::{UseFocusRingInput, use_focus_ring},
         listbox::{
@@ -49,7 +49,7 @@ use crate::{
         separator::SeparatorElementType,
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::{self, flag},
         default_class::with_default_class,
         scoped_context::{clear_context, scoped_view, use_clearable_context},
         styles::Styles,
@@ -107,11 +107,7 @@ pub struct ListBoxItemContext {
 ///
 /// Default class: `leptonic-ListBox`.
 #[component]
-#[allow(
-    clippy::too_many_lines,
-    clippy::fn_params_excessive_bools,
-    clippy::implicit_hasher
-)]
+#[allow(clippy::implicit_hasher)]
 pub fn ListBox(
     /// The options. Required outside of a `Select` or `ComboBox` (which provide theirs).
     #[prop(into, optional)]
@@ -168,22 +164,20 @@ pub fn ListBox(
             );
             return None;
         };
-        let state = {
-            use_list_state(UseListStateInput {
-                collection,
-                selection: SelectionOptions {
-                    selection_mode,
-                    selection_behavior,
-                    default_selection,
-                    selection,
-                    on_selection_change,
-                    disallow_empty_selection,
-                    disabled_keys: disabled_keys.unwrap_or_default(),
-                    disabled_behavior,
-                    ..SelectionOptions::default()
-                },
-            })
-        };
+        let state = use_list_state(UseListStateInput {
+            collection,
+            selection: SelectionOptions {
+                selection_mode,
+                selection_behavior,
+                default_selection,
+                selection,
+                on_selection_change,
+                disallow_empty_selection,
+                disabled_keys: disabled_keys.unwrap_or_default(),
+                disabled_behavior,
+                ..SelectionOptions::default()
+            },
+        });
         UseListBoxInput {
             aria_label,
             aria_labelledby: crate::utils::prop_signal(aria_labelledby),
@@ -235,7 +229,7 @@ pub fn ListBox(
     let orientation = input.orientation;
     let data_orientation = move || orientation.get().as_str();
     let collection = state.collection;
-    let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
+    let is_empty = Memo::new(move |_| collection.with(|c| c.items().next().is_none()));
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
     let empty = move || {
         let empty_state = empty_state.clone()?;
@@ -266,7 +260,7 @@ pub fn ListBox(
                     {..focus_ring.props.into_attrs()}
                     class=classes
                     style=styles
-                    data-empty=flag(is_empty)
+                    data-empty=flag(is_empty.into())
                     data-focused=flag(focus_ring.is_focused)
                     data-layout=data_layout
                     data-orientation=data_orientation
@@ -284,9 +278,9 @@ pub fn ListBox(
 
 /// An option of a [`ListBox`], for the collection item `key`.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
-/// `data-pressed` and `data-hovered` (options that can be selected or have an action) for
-/// styling.
+/// Data attributes: `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
+/// `data-pressed` and `data-hovered` (options that can be selected or have an action),
+/// `data-selection-mode` (`single`/`multiple`, absent without selection).
 ///
 /// Default class: `leptonic-ListBoxItem`.
 #[component]
@@ -314,6 +308,7 @@ pub fn ListBoxItem(
             "<ListBoxItem key={key:?}>: the listbox's collection has no item with this key"
         );
     }
+    let selection = list.state.selection;
     let UseOptionReturn {
         props,
         label_props,
@@ -357,6 +352,7 @@ pub fn ListBoxItem(
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
                 data-hovered=flag(is_hovered)
+                data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
             >
                 {children()}
             </div>
@@ -391,18 +387,9 @@ where
     let collection = list.state.collection;
     let children = std::sync::Arc::new(children);
     let render = std::sync::Arc::new(move |key: Key| {
-        let node_key = key.clone();
         // The item's content renders again when it changes (e.g. its text), not when other items
         // come or go.
-        let node = Memo::new_with_compare(
-            move |_| collection.with(|c| c.get(&node_key).cloned()),
-            |previous: Option<&Option<Node>>, current: Option<&Option<Node>>| match (
-                previous, current,
-            ) {
-                (Some(Some(previous)), Some(Some(current))) => !previous.same_content(current),
-                (previous, current) => previous != current,
-            },
-        );
+        let node = use_node(collection, key.clone());
         let children = children.clone();
         view! {
             <ListBoxItem key=key classes=classes.clone()>

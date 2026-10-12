@@ -67,7 +67,6 @@ struct NumberFieldContext {
 /// Data attributes: `data-disabled`, `data-readonly`, `data-required`, `data-invalid`.
 ///
 /// Default class: `leptonic-NumberField`.
-#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn NumberField<T: NumberValue>(
     /// The initial value (`None`: empty).
@@ -133,9 +132,9 @@ pub fn NumberField<T: NumberValue>(
         default_value,
         value,
         on_change,
-        min_value: Signal::derive(move || min_value.get()),
-        max_value: Signal::derive(move || max_value.get()),
-        step: Signal::derive(move || step.get()),
+        min_value: crate::utils::prop_signal(min_value),
+        max_value: crate::utils::prop_signal(max_value),
+        step: crate::utils::prop_signal(step),
         format_options,
         commit_behavior,
         is_disabled,

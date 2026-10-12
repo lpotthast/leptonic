@@ -20,7 +20,7 @@ use crate::{
         interactions::use_hover::{UseHoverAttrs, UseHoverInput, UseHoverProps, use_hover},
     },
     use_slot,
-    utils::aria::{AriaDisabled, AriaRole, AriaSelected},
+    utils::aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
 };
 
 // =============================================================================
@@ -219,16 +219,13 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     let is_hovered = hover.is_hovered;
     let hover = hover.props;
 
-    let focus_visible = Signal::derive(is_focus_visible);
     let (item_props, styles) = props.into_inner();
 
     UseOptionReturn {
         props: PropsWithStyles::new(
             UseOptionProps {
                 role: AriaRole::Option,
-                aria_disabled: Signal::derive(move || {
-                    is_disabled.get().then_some(AriaDisabled::True)
-                }),
+                aria_disabled: aria_true(is_disabled),
                 aria_selected: Signal::derive(move || {
                     (selection.selection_mode() != SelectionMode::None)
                         .then(|| AriaSelected::from(is_selected.get()))
@@ -259,7 +256,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         description_props: description.props,
         is_selected,
         is_focused,
-        is_focus_visible: Signal::derive(move || is_focused.get() && focus_visible.get()),
+        is_focus_visible: Memo::new(move |_| is_focused.get() && is_focus_visible()).into(),
         is_disabled,
         is_pressed,
         is_hovered,

@@ -12,7 +12,10 @@ use super::{
 };
 use crate::{
     ValueBinding,
-    utils::date::{DateDuration, DateExt, DateRange, max_date, min_date},
+    utils::{
+        date::{DateDuration, DateExt, DateRange, max_date, min_date},
+        i18n::use_locale,
+    },
 };
 
 // =============================================================================
@@ -22,10 +25,8 @@ use crate::{
 // ## API DIFFERENCES
 // - Dates are `jiff::civil::Date`, the value a `DateRange` (react-aria: `RangeValue<DateValue>`,
 //   keeping a time part).
-// - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
 // - The calendar state is the `calendar` field (react-aria: spread into the range state).
 // - `is_date_unavailable` takes a `DateAvailabilityQuery`: the date and the anchor date.
-// - The layout props are signals (C11), as in `use_calendar_state`.
 //
 // =============================================================================
 
@@ -321,7 +322,7 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
     let dragging = RwSignal::new(false);
 
     // Start-aligned when a centered range wouldn't show the whole value.
-    let locale = crate::utils::i18n::use_locale();
+    let locale = use_locale();
     let alignment = Signal::derive(move || {
         selection_alignment.get().unwrap_or_else(|| {
             let Some(range) = binding.value.get_untracked() else {
@@ -397,10 +398,12 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
         ..UseCalendarStateInput::default()
     });
 
-    let highlighted_range = Signal::derive(move || match anchor.get() {
+    // Read by every cell: notifies them only when the range changes.
+    let highlighted_range: Signal<Option<DateRange>> = Memo::new(move |_| match anchor.get() {
         Some(anchor) => Some(DateRange::between(anchor, calendar.focused_date.get())),
         None => binding.value.get(),
-    });
+    })
+    .into();
     let is_value_invalid = Signal::derive(move || {
         if is_marked_invalid.get() {
             return true;

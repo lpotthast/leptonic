@@ -10,18 +10,13 @@ use super::{Key, KeyboardDelegate, SelectionManager};
 use crate::{
     EventHandler,
     utils::{
-        dom_ext::{EventAccessors, node_contains},
+        dom_ext::EventAccessors,
         key::{KeyboardEventKey, KeyboardKey},
+        shadow_dom::{get_event_target, node_contains},
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
+// No deviations from react-aria beyond the project-wide API conventions.
 
 /// The typed text is forgotten after this long without typing.
 const TYPEAHEAD_DEBOUNCE_WAIT: Duration = Duration::from_secs(1);
@@ -115,13 +110,11 @@ pub fn use_type_select(input: UseTypeSelectInput) -> UseTypeSelectReturn {
         let Some(character) = character_for_key(&key) else {
             return;
         };
-        let inside = node_contains(
-            e.expect_current_target().dyn_ref::<web_sys::Node>(),
-            e.target()
-                .as_ref()
-                .and_then(|t| t.dyn_ref::<web_sys::Node>()),
-        )
-        .unwrap_or(false);
+        let inside = e
+            .expect_current_target()
+            .dyn_ref::<web_sys::Node>()
+            .zip(get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Node>().ok()))
+            .is_some_and(|(container, target)| node_contains(container, &target));
         if e.ctrl_key()
             || e.meta_key()
             || e.alt_key()

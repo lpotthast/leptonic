@@ -16,7 +16,7 @@ use crate::{IntoAttrs, hooks::collections::Key, utils::aria::AriaRole};
 //   without a column group (React Spectrum renders these itself).
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-rowindex`).
+// - Virtualization (`aria-rowindex`): not yet, the virtualizer doesn't render tables yet.
 //
 // =============================================================================
 

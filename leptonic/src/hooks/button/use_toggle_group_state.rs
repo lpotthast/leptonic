@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use crate::hooks::collections::Key;
+use crate::{ValueBinding, hooks::collections::Key};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -41,7 +41,7 @@ pub struct UseToggleGroupStateInput {
     /// The initially selected buttons. Ignored when `selected_keys` is bound.
     pub default_selected_keys: HashSet<Key>,
     /// The selected buttons as app state, replacing `default_selected_keys`.
-    pub selected_keys: Option<crate::ValueBinding<HashSet<Key>>>,
+    pub selected_keys: Option<ValueBinding<HashSet<Key>>>,
     /// Called with the selected buttons when they change.
     pub on_selection_change: Option<Callback<HashSet<Key>>>,
     pub is_disabled: Signal<bool>,
@@ -68,7 +68,7 @@ pub struct ToggleGroupState {
     /// The selected buttons.
     pub selected_keys: Signal<HashSet<Key>>,
     disallow_empty_selection: Signal<bool>,
-    set_keys: crate::ValueBinding<HashSet<Key>>,
+    set_keys: ValueBinding<HashSet<Key>>,
     on_selection_change: Option<Callback<HashSet<Key>>>,
 }
 
@@ -99,7 +99,7 @@ impl ToggleGroupState {
         let disallow_empty_selection = self.disallow_empty_selection.get_untracked();
         let keys = match self.selection_mode {
             ToggleGroupSelectionMode::Multiple => {
-                let mut keys = current.clone();
+                let mut keys = current;
                 if keys.contains(key) && (!disallow_empty_selection || keys.len() > 1) {
                     keys.remove(key);
                 } else {
@@ -136,8 +136,8 @@ pub fn use_toggle_group_state(input: UseToggleGroupStateInput) -> ToggleGroupSta
         on_selection_change,
         is_disabled,
     } = input;
-    let set_keys = selected_keys
-        .unwrap_or_else(|| crate::ValueBinding::from(RwSignal::new(default_selected_keys)));
+    let set_keys =
+        selected_keys.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_selected_keys)));
     ToggleGroupState {
         selection_mode,
         is_disabled,

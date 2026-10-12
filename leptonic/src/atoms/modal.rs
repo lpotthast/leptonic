@@ -42,12 +42,12 @@ use crate::{
 // ## DIFFERENT BEHAVIOR
 // - No `aria-modal` (as react-aria-components, WebKit bug 211934): the inert content outside
 //   (`use_modal_backdrop`) makes the modal modal.
-//
 // - `on_enter`/`on_exit` are `Callback`s of the element (react-aria-components: functions that
 //   may return a promise); Web Animations they start are awaited like CSS ones.
 //
 // ## OMITTED FEATURES
-// - `UNSTABLE_portalContainer`, `UNSTABLE_deferUntilEntered`.
+// - `UNSTABLE_portalContainer`, `UNSTABLE_deferUntilEntered`: leptonic ports no `UNSTABLE_` APIs
+//   (no legacy or unstable surface).
 // - Deferring the reveal until an on-screen keyboard opened by an auto-focused input finished
 //   its transition (`runAfterKeyboard`): leptonic doesn't track the on-screen keyboard yet.
 //
@@ -71,7 +71,7 @@ struct ModalBackdropContext {
 /// Backdrop overlay for a modal. Provides dismiss behavior (Escape key, outside click)
 /// and scroll prevention via `use_modal_backdrop`.
 ///
-/// Must contain a [`ModalContent`] child for focus trapping and `aria-modal`.
+/// Must contain a [`ModalContent`] child, which contains focus.
 ///
 /// # Example
 ///
@@ -90,7 +90,6 @@ struct ModalBackdropContext {
 ///
 /// Default class: `leptonic-ModalBackdrop`.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn ModalBackdrop(
     /// Whether the modal is open (controlled): a value or any signal. Default: the surrounding
     /// `DialogTrigger`'s state.

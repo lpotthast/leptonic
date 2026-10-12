@@ -128,6 +128,10 @@ pub struct CalendarData {
     pub selected_date_description: Signal<String>,
     /// The formatters of the labels, shared by the cells.
     pub(crate) formatters: CalendarFormatters,
+    /// The calendar's messages, shared by the cells.
+    pub(crate) strings: Memo<CalendarStrings>,
+    /// Today, shared by the cells (see [`use_today`](crate::utils::date::use_today)).
+    pub(crate) today: Signal<Option<Date>>,
 }
 
 /// The era format of a date: the short era for dates before Christ (react-aria's
@@ -160,7 +164,7 @@ impl CalendarFormatters {
     pub(crate) fn new() -> Self {
         let locale = use_locale();
         let formatter = move |options: fn() -> DateTimeFormatOptions| {
-            Memo::new(move |_| DateTimeFormatter::new(&locale.get(), options()))
+            Memo::new(move |_| DateTimeFormatter::cached(&locale.get(), &options()))
         };
         Self {
             full_date: formatter(|| full_date_options(None)),
@@ -206,9 +210,9 @@ pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale)
     let (Some(start), Some(end)) = (start, end) else {
         return String::new();
     };
-    let formatter = DateTimeFormatter::new(
+    let formatter = DateTimeFormatter::cached(
         locale,
-        full_date_options(era_format(start).or_else(|| era_format(end))),
+        &full_date_options(era_format(start).or_else(|| era_format(end))),
     );
     let strings = CalendarStrings::for_locale(locale.clone());
     if start == end {
@@ -226,9 +230,9 @@ pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale)
 pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> String {
     let era = era_format(range.start).or_else(|| era_format(range.end));
     let strings = CalendarStrings::for_locale(locale.clone());
-    let months = DateTimeFormatter::new(
+    let months = DateTimeFormatter::cached(
         locale,
-        DateTimeFormatOptions {
+        &DateTimeFormatOptions {
             month: Some(MonthFormat::Long),
             year: Some(NumericFormat::Numeric),
             era,
@@ -246,9 +250,9 @@ pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> St
             });
         }
     }
-    let dates = DateTimeFormatter::new(
+    let dates = DateTimeFormatter::cached(
         locale,
-        DateTimeFormatOptions {
+        &DateTimeFormatOptions {
             month: Some(MonthFormat::Long),
             day: Some(NumericFormat::Numeric),
             year: Some(NumericFormat::Numeric),

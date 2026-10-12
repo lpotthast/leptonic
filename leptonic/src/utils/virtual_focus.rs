@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/focus/virtualFocus.ts @ 99e6102368
+// No deviations from react-aria beyond the project-wide API conventions.
 //! Virtual focus: DOM focus stays on one element (e.g. a combo box input) while another
 //! element (e.g. a listbox option) is "focused" for assistive technology through
 //! `aria-activedescendant`. Synthetic focus/blur events let the virtually focused elements react
@@ -29,14 +30,14 @@ pub fn move_virtual_focus(to: Option<&web_sys::Element>) {
 
 /// Sends `blur` and `focusout` (bubbling) to `from`.
 pub fn dispatch_virtual_blur(from: &web_sys::Element, to: Option<&web_sys::Element>) {
-    let _ = from.dispatch_event(&focus_event("blur", false, to));
-    let _ = from.dispatch_event(&focus_event("focusout", true, to));
+    dispatch_focus_event(from, "blur", false, to);
+    dispatch_focus_event(from, "focusout", true, to);
 }
 
 /// Sends `focus` and `focusin` (bubbling) to `to`.
 pub fn dispatch_virtual_focus(to: &web_sys::Element, from: Option<&web_sys::Element>) {
-    let _ = to.dispatch_event(&focus_event("focus", false, from));
-    let _ = to.dispatch_event(&focus_event("focusin", true, from));
+    dispatch_focus_event(to, "focus", false, from);
+    dispatch_focus_event(to, "focusin", true, from);
 }
 
 /// The element that is focused, virtually or for real: the active element, or the element its
@@ -49,14 +50,18 @@ pub fn get_virtually_focused_element(document: &web_sys::Document) -> Option<web
     }
 }
 
-fn focus_event(
+/// Dispatches a synthetic focus event of type `kind` (`focus`, `blur`, `focusin`, `focusout`) on
+/// `target`. Nothing happens if the browser can't create the event.
+pub(crate) fn dispatch_focus_event(
+    target: &web_sys::Element,
     kind: &str,
     bubbles: bool,
     related_target: Option<&web_sys::Element>,
-) -> web_sys::FocusEvent {
+) {
     let init = web_sys::FocusEventInit::new();
     init.set_bubbles(bubbles);
     init.set_related_target(related_target.map(AsRef::as_ref));
-    web_sys::FocusEvent::new_with_focus_event_init_dict(kind, &init)
-        .expect("FocusEvent creation should not fail")
+    if let Ok(event) = web_sys::FocusEvent::new_with_focus_event_init_dict(kind, &init) {
+        let _ = target.dispatch_event(&event);
+    }
 }

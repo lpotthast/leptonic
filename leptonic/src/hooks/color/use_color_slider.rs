@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/color/useColorSlider.ts @ 99e6102368
+// Upstream: react-aria-components/test/ColorSlider.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/color/ColorSlider.test.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use super::use_color_slider_state::ColorSliderState;

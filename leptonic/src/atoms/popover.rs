@@ -28,7 +28,7 @@ use crate::{
         i18n::{WritingDirection, use_direction},
         point::Point,
         scoped_context::{ClearContexts, scoped_view},
-        shadow_dom::get_active_element,
+        shadow_dom::{get_active_element, node_contains},
         styles::Styles,
     },
 };
@@ -45,7 +45,6 @@ use crate::{
 // - Render props become the `data-placement` attribute plus plain children.
 // - Whether a modal popover is a dialog (no `[role=dialog]` inside) is decided once it is rendered;
 //   its label (an own `aria_labelledby`, else the `DialogTrigger`'s trigger) is set then.
-//
 // - `aria_label`/`aria_labelledby` name the popover only while it is the dialog itself
 //   (react-aria-components passes them on always).
 //
@@ -58,8 +57,9 @@ use crate::{
 //
 // ## OMITTED FEATURES
 // - `isEntering`/`isExiting` props (the entry and exit animations themselves are supported:
-//   `data-entering`/`data-exiting`), `shouldSkipAnimation`, `UNSTABLE_portalContainer`,
-//   `PreviewTrigger`.
+//   `data-entering`/`data-exiting`), `shouldSkipAnimation`, `PreviewTrigger`.
+// - `UNSTABLE_portalContainer`: leptonic ports no `UNSTABLE_` APIs (no legacy or unstable
+//   surface).
 // - Deferring the reveal until an on-screen keyboard the trigger opened finished its transition
 //   (`runAfterKeyboard`): leptonic doesn't track the on-screen keyboard yet.
 //
@@ -79,13 +79,14 @@ use crate::{
 /// Put an [`OverlayArrow`](super::overlay_arrow::OverlayArrow) in it for an arrow pointing at the
 /// trigger.
 ///
-/// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping). CSS
-/// variables: `--trigger-width` (the trigger's width, e.g. for a popover as wide as its trigger)
-/// and `--trigger-anchor-point` (the point closest to the trigger, e.g. as `transform-origin`).
+/// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping),
+/// `data-entering`, `data-exiting`, `data-trigger` (what opened it: `DialogTrigger`,
+/// `MenuTrigger` or `SubmenuTrigger`). CSS variables: `--trigger-width` (the trigger's width, e.g.
+/// for a popover as wide as its trigger) and `--trigger-anchor-point` (the point closest to the
+/// trigger, e.g. as `transform-origin`).
 ///
 /// Default class: `leptonic-Popover`.
 #[component]
-#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn Popover(
     /// Whether the popover is open (controlled): a value or any signal. Default: the surrounding
     /// `DialogTrigger`'s state.
@@ -432,7 +433,7 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
             .owner_document()
             .as_ref()
             .and_then(get_active_element)
-            .is_some_and(|active| el.contains(Some(&active)));
+            .is_some_and(|active| node_contains(&el, &active));
         if !focus_within {
             focus_safely(&el);
         }

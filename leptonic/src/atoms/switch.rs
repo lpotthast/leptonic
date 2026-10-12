@@ -40,7 +40,6 @@ use crate::{
 /// `data-required`.
 ///
 /// Default class: `leptonic-SwitchField`.
-#[allow(clippy::too_many_arguments)]
 #[component]
 pub fn SwitchField(
     #[prop(optional)] default_selected: bool,

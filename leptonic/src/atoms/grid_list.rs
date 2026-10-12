@@ -1,6 +1,7 @@
 // Upstream: react-aria-components/src/GridList.tsx @ 99e6102368
 // Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
 // Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/GridList.ssr.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, either::Either, ev, prelude::*};
@@ -55,11 +56,7 @@ use crate::{
 ///
 /// Default class: `leptonic-GridList`.
 #[component]
-#[allow(
-    clippy::too_many_lines,
-    clippy::fn_params_excessive_bools,
-    clippy::implicit_hasher
-)]
+#[allow(clippy::implicit_hasher)]
 pub fn GridList(
     /// The rows.
     #[prop(into)]
@@ -114,22 +111,20 @@ pub fn GridList(
     let classes = with_default_class("leptonic-GridList", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
-    let state = {
-        use_list_state(UseListStateInput {
-            collection,
-            selection: SelectionOptions {
-                selection_mode,
-                selection_behavior,
-                default_selection,
-                selection,
-                on_selection_change,
-                disallow_empty_selection,
-                disabled_keys: disabled_keys.unwrap_or_default(),
-                disabled_behavior,
-                ..SelectionOptions::default()
-            },
-        })
-    };
+    let state = use_list_state(UseListStateInput {
+        collection,
+        selection: SelectionOptions {
+            selection_mode,
+            selection_behavior,
+            default_selection,
+            selection,
+            on_selection_change,
+            disallow_empty_selection,
+            disabled_keys: disabled_keys.unwrap_or_default(),
+            disabled_behavior,
+            ..SelectionOptions::default()
+        },
+    });
 
     // As react-aria-components: the layout, orientation, emptiness and focus for styling.
     let data_layout = match layout {

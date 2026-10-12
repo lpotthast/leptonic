@@ -1,5 +1,6 @@
-//! Headless color wheel atoms: a ring of hues with a thumb.
 // Upstream: react-aria-components/src/ColorWheel.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorWheel.test.js @ 99e6102368
+//! Headless color wheel atoms: a ring of hues with a thumb.
 
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
@@ -56,7 +57,6 @@ struct ColorWheelTrackContext {
 ///
 /// Default class: `leptonic-ColorWheel`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn ColorWheel<C: ColorValue>(
     /// The wheel's outer radius, in pixels (a value or any signal).
     #[prop(into)]

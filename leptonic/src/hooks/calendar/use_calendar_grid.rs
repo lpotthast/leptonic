@@ -17,7 +17,7 @@ use crate::{
     hooks::interactions::{UseKeyboardInput, use_keyboard},
     labels,
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable, AriaReadonly, AriaRole},
+        aria::{AriaDisabled, AriaMultiselectable, AriaReadonly, AriaRole, aria_true},
         date::{DateDuration, DateExt, DateRange, today},
         date_time_formatter::{DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter},
         dom_ext::EventAccessors,
@@ -201,9 +201,9 @@ fn shortcuts(state: &CalendarStates, direction: Signal<WritingDirection>) -> Key
 }
 
 /// Whether a cell lost the focus because it can't have it any more: paging (or new min/max)
-/// moved it to another month (disabling it) or removed its row. The browser then blurs it (focus fixup) before the
-/// newly focused cell takes the focus, which isn't the user leaving the grid. (react-aria
-/// decides which cell is focused while rendering, before the browser blurs.)
+/// moved it to another month (disabling it) or removed its row. The browser then blurs it
+/// (focus fixup) before the newly focused cell takes the focus, which isn't the user leaving the
+/// grid. (react-aria decides which cell is focused while rendering, before the browser blurs.)
 fn is_focus_fixup(e: &FocusEvent) -> bool {
     if e.related_target().is_some() {
         return false;
@@ -264,9 +264,9 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     };
 
     let week_days = Memo::new(move |_| {
-        let formatter = DateTimeFormatter::new(
+        let formatter = DateTimeFormatter::cached(
             &locale.get(),
-            DateTimeFormatOptions {
+            &DateTimeFormatOptions {
                 weekday: Some(weekday_style),
                 ..DateTimeFormatOptions::default()
             },
@@ -291,12 +291,8 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
             aria_labelledby: Signal::derive(move || {
                 labelling.with(|labels| labels.aria_labelledby.clone())
             }),
-            aria_readonly: Signal::derive(move || {
-                calendar.is_read_only.get().then_some(AriaReadonly::True)
-            }),
-            aria_disabled: Signal::derive(move || {
-                calendar.is_disabled.get().then_some(AriaDisabled::True)
-            }),
+            aria_readonly: aria_true(calendar.is_read_only),
+            aria_disabled: aria_true(calendar.is_disabled),
             aria_multiselectable: state.range().is_some().then_some(AriaMultiselectable::True),
             on_focusin: EventHandler::new(move |_: FocusEvent| calendar.set_focused(true)),
             on_focusout: EventHandler::new(move |e: FocusEvent| {

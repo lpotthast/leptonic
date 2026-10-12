@@ -1,4 +1,6 @@
 // No upstream: typed keyboard keys (react-aria compares `KeyboardEvent.key` strings).
+//! Keyboard keys as values ([`KeyboardKey`], convention C10): parsed from `KeyboardEvent.key`,
+//! with display labels for shortcuts.
 
 use std::{borrow::Cow, convert::Infallible, str::FromStr};
 
@@ -106,6 +108,7 @@ pub enum KeyboardKey {
 }
 
 impl KeyboardKey {
+    /// Every key except [`Other`](Self::Other).
     pub fn known_keys() -> impl Iterator<Item = KeyboardKey> {
         Self::iter().filter(|key| {
             std::mem::discriminant(key)
@@ -361,8 +364,8 @@ impl KeyboardEventKey for web_sys::KeyboardEvent {
 /// e))`). Nothing happens if the browser can't create the event.
 ///
 /// Called from a handler of `e`, this is a nested dispatch of the same event type: safe only when
-/// no listener still running for `e` is on the copy's path (see leptos-and-dom.md, "No
-/// Nested Dispatch of the Same Event Type").
+/// no listener still running for `e` is on the copy's path (see leptos-and-dom.md, "Nested
+/// Event Dispatch").
 pub(crate) fn redispatch_keyboard_event(e: &web_sys::KeyboardEvent, target: &web_sys::EventTarget) {
     let init = web_sys::KeyboardEventInit::new();
     init.set_key(&e.key());

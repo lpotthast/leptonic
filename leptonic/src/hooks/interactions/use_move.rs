@@ -63,7 +63,7 @@ pub struct MoveEndEvent {
 }
 
 /// Input of [`use_move`].
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct UseMoveInput {
     /// Whether movement is disabled.
     pub is_disabled: Signal<bool>,
@@ -87,6 +87,7 @@ impl Default for UseMoveInput {
 }
 
 /// Return value of [`use_move`].
+#[derive(Debug)]
 pub struct UseMoveReturn {
     pub props: UseMoveProps,
 }
@@ -130,11 +131,10 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
 
     #[cfg(not(feature = "ssr"))]
     {
-        use wasm_bindgen::JsCast;
-
         use crate::{
             EventModifiers,
             utils::{
+                dom_ext::{EventAccessors, EventTargetExt},
                 event_listeners::{Listener, listen_to},
                 key::{KeyboardEventKey, KeyboardKey},
                 text_selection::{disable_text_selection, restore_text_selection},
@@ -234,9 +234,8 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             e.prevent_default();
             // The window of the element's document (react-aria's `getOwnerWindow`).
             let Some(window) = e
-                .target()
-                .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
-                .and_then(|node| node.owner_document())
+                .expect_target()
+                .get_owner_document()
                 .and_then(|document| document.default_view())
             else {
                 return;

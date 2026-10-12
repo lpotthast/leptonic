@@ -139,15 +139,14 @@ pub struct UseTooltipTriggerTooltipProps {
 ///     </Show>
 /// }
 /// ```
-#[allow(clippy::too_many_lines)]
 pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerReturn {
-    crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseTooltipTriggerInput {
         state,
         is_disabled,
         trigger: trigger_type,
         should_close_on_press,
     } = input;
+    crate::hooks::focus::use_focus_visible::track_interaction_modality();
 
     let tooltip_id = use_id("tooltip");
 
@@ -169,17 +168,11 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
     };
 
     // handle_hide: close the tooltip if neither hovered nor focused.
-    let handle_hide = move |immediate: bool| {
+    let handle_hide = move |timing: TooltipTiming| {
         if !is_hovered.get_value() && !is_focused.get_value() {
-            if immediate {
-                state.close(TooltipTiming::Immediate);
-            } else {
-                state.close(TooltipTiming::Delayed);
-            }
+            state.close(timing);
         }
     };
-
-    // --- Pointer handlers ---
 
     let handle_pointer_enter = move |e: web_sys::PointerEvent| {
         // Touch never hovers (as `useHover`).
@@ -202,10 +195,8 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         is_hovered.set_value(false);
         // Also reset focus tracking on hover end (matches react-aria).
         is_focused.set_value(false);
-        handle_hide(false);
+        handle_hide(TooltipTiming::Delayed);
     };
-
-    // --- Focus handlers ---
 
     let handle_focus = move |_e: web_sys::FocusEvent| {
         if is_disabled.get_untracked() {
@@ -233,23 +224,22 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         is_hovered.set_value(false);
         // Pressing into the tooltip, e.g. to select its text, takes the focus from the trigger.
         if !is_tooltip_hovered() {
-            handle_hide(true);
+            handle_hide(TooltipTiming::Immediate);
         }
     };
 
-    // --- Press start (pointer down or key down on the trigger) ---
+    // Pressing the trigger (pointer down or key down) closes the tooltip.
     let press_start = move || {
         if !should_close_on_press.get_untracked() {
             return;
         }
         is_focused.set_value(false);
         is_hovered.set_value(false);
-        handle_hide(true);
+        handle_hide(TooltipTiming::Immediate);
     };
     let handle_keydown = move |_e: KeyboardEvent| press_start();
     let handle_pointer_down = move |_e: web_sys::PointerEvent| press_start();
 
-    // --- Global Escape handler ---
     // Register a document-level Escape handler in capture phase when the tooltip
     // is open. This ensures Escape closes the tooltip even when focus is not on
     // the trigger element.
@@ -280,15 +270,10 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         });
     }
 
-    // Compute aria-describedby (only set when tooltip is open)
+    // The tooltip describes the trigger while it is open.
     let tooltip_id_for_aria = tooltip_id.clone();
-    let aria_describedby = Signal::derive(move || {
-        if is_open.get() {
-            Some(tooltip_id_for_aria.clone())
-        } else {
-            None
-        }
-    });
+    let aria_describedby =
+        Signal::derive(move || is_open.get().then(|| tooltip_id_for_aria.clone()));
 
     UseTooltipTriggerReturn {
         trigger_props: UseTooltipTriggerProps {

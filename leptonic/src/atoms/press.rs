@@ -46,7 +46,6 @@ use crate::{
 /// </Pressable>
 /// ```
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn Pressable<V>(
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Keeps the focus where it is when the child is pressed.
@@ -152,7 +151,7 @@ where
 ///
 /// Parent components wrap their children in `<PressResponder>` to inject press behavior
 /// (callbacks, disabled state, etc.) into any descendant that calls [`use_press`].
-/// The descendant does not need to know about the parent — context merging happens
+/// The descendant does not need to know about the parent: context merging happens
 /// automatically inside [`use_press`].
 ///
 /// # Nesting

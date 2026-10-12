@@ -1,5 +1,7 @@
 // Upstream: react-aria-components/src/Table.tsx @ 99e6102368
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Table.ssr.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Treeble.test.js @ 99e6102368
 // Upstream: react-aria/test/table/tableResizingTests.tsx @ 99e6102368
 use std::{
     collections::{HashMap, HashSet},
@@ -170,7 +172,7 @@ pub fn ResizableTableContainer(
 ///
 /// Default class: `leptonic-Table`.
 #[component]
-#[allow(clippy::too_many_lines, clippy::implicit_hasher)]
+#[allow(clippy::implicit_hasher)]
 pub fn Table(
     /// The columns and rows.
     #[prop(into)]
@@ -348,9 +350,10 @@ pub fn Table(
 /// The header of a [`Table`]: its header rows with the column headers (and, for a selection
 /// checkbox column, a "select all" checkbox in multiple selection mode).
 ///
-/// The header exposes `data-hovered`. Column headers expose `data-allows-sorting`,
-/// `data-sort-direction` (`ascending` / `descending`), `data-focused`, `data-focus-visible`,
-/// `data-hovered` (sortable columns) and `data-pressed` for styling.
+/// Data attributes: `data-hovered`. On the column headers (default class
+/// `leptonic-TableColumnHeader`): `data-allows-sorting`, `data-sort-direction` (`ascending` /
+/// `descending`), `data-focused`, `data-focus-visible`, `data-hovered` (sortable columns),
+/// `data-pressed`, `data-resizing` (see [`ResizableTableContainer`]).
 ///
 /// Default class: `leptonic-TableHeader`.
 #[component]
@@ -510,15 +513,13 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
         })
     };
     let resizing_key = key.clone();
-    let is_resizing = move || {
-        resize
-            .is_some_and(|r| {
-                r.state
-                    .resizing_column
-                    .with(|c| c.as_ref() == Some(&resizing_key))
-            })
-            .then_some("true")
-    };
+    let is_resizing = Signal::derive(move || {
+        resize.is_some_and(|r| {
+            r.state
+                .resizing_column
+                .with(|c| c.as_ref() == Some(&resizing_key))
+        })
+    });
     let width_key = key.clone();
     let UseTableColumnHeaderReturn {
         column_header_props,
@@ -551,7 +552,7 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
             data-focus-visible=flag(is_focus_visible)
             data-hovered=flag(hover.is_hovered)
             data-pressed=flag(is_pressed)
-            data-resizing=is_resizing
+            data-resizing=flag(is_resizing)
         >
             {content}
             {resizer}
@@ -622,7 +623,7 @@ fn ColumnResizer(
             class="leptonic-ColumnResizer"
             style=styles
             data-column-resizer="true"
-            data-resizing=move || is_resizing.get().then_some("true")
+            data-resizing=flag(is_resizing)
             data-resizable-direction=resizable_direction
         >
             <input {..input_attrs} style=input_styles />
@@ -644,17 +645,13 @@ pub fn TableBody(
     let classes = with_default_class("leptonic-TableBody", classes);
     let row_group = use_grid_row_group();
     let table = use_context::<TableData>().map(|data| data.state.table);
-    let is_empty = move || {
-        table
-            .is_some_and(|table| table.with(|t| t.size() == 0))
-            .then_some("true")
-    };
+    let is_empty = Signal::derive(move || table.is_some_and(|table| table.with(|t| t.size() == 0)));
     view! {
         <tbody
             {..row_group.row_group_props.into_attrs()}
             class=classes
             style=styles
-            data-empty=is_empty
+            data-empty=flag(is_empty)
         >
             {children.map(|children| children())}
         </tbody>
@@ -732,7 +729,6 @@ pub fn TableRow(
 }
 
 /// A [`TableRow`] in `data`'s table.
-#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 fn table_row(
     data: TableData,
     key: Key,
@@ -787,10 +783,9 @@ fn table_row(
     });
 
     // In a tree table, rows under a collapsed row aren't part of the grid: hidden.
-    let visible_rows = data_rows;
     let row_key = StoredValue::new(key.clone());
     let is_hidden = Signal::derive(move || {
-        !row_key.with_value(|key| visible_rows.with(|rows| rows.contains_key(key)))
+        !row_key.with_value(|key| data_rows.with(|rows| rows.contains_key(key)))
     });
     let context = RowContext {
         key,

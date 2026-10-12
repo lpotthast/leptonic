@@ -21,8 +21,8 @@
 //
 // ## DIFFERENT BEHAVIOR
 // - Messages are ICU MessageFormat strings formatted at runtime (`{arg}`, `plural` with `=N` and
-//   CLDR categories, `#`, `select`, apostrophe quoting). React-aria compiles them to JavaScript
-//   functions at build time; the result is the same, except that a count in a plain `{count}`
+//   CLDR categories, `#`, `select`, apostrophe quoting), parsed once per thread (plain text not at
+//   all). React-aria compiles them to JavaScript functions at build time; the result is the same, except that a count in a plain `{count}`
 //   (not `#`) is formatted for the locale ("1,234") as ICU does, where the compiled template
 //   prints the raw number. No bundle message does this at the moment.
 //
@@ -34,15 +34,17 @@
 
 mod bundles;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, rc::Rc};
 
 pub use bundles::*;
-use icu_plurals::{PluralCategory, PluralOperands, PluralRules, PluralRulesPreferences};
+use icu_plurals::PluralCategory;
 use leptos::prelude::*;
 
 use super::{
     i18n::{Locale, use_locale},
     number_formatter::{NumberFormatOptions, NumberFormatter},
+    plurals::plural_category,
+    recent_cache::RecentCache,
 };
 
 /// The messages of one family in every locale (generated; see the module docs).
@@ -56,9 +58,20 @@ pub struct Bundle {
 }
 
 impl Bundle {
+    /// The messages for `locale` (see [`resolve_messages`](Self::resolve_messages)), resolved
+    /// once per bundle and locale: per-item hooks ask for them per item.
+    fn messages_for(&'static self, locale: &Locale) -> &'static [&'static str] {
+        RESOLVED.with_borrow_mut(|resolved| {
+            resolved.get_or_insert_with(
+                |(bundle, cached_locale)| std::ptr::eq(*bundle, self) && cached_locale == locale,
+                || ((self, locale.clone()), self.resolve_messages(locale)),
+            )
+        })
+    }
+
     /// The messages for `locale`: its own, else those of another locale with its language, else
     /// en-US (react-aria's `LocalizedStringDictionary.getStringsForLocale`).
-    fn messages_for(&self, locale: &Locale) -> &'static [&'static str] {
+    fn resolve_messages(&self, locale: &Locale) -> &'static [&'static str] {
         let tag = locale.locale_str();
         if tag == "en-US" {
             return self.en_us;
@@ -67,10 +80,10 @@ impl Bundle {
             return messages;
         }
         let language = locale.language();
-        let same_language = |other: &str| other.split('-').next() == Some(language.as_str());
         if language == "en" {
             return self.en_us;
         }
+        let same_language = |other: &str| other.split('-').next() == Some(language.as_str());
         self.other
             .iter()
             .find(|(other, _)| same_language(other))
@@ -112,7 +125,11 @@ impl Strings {
     /// Formats message `index` with its arguments.
     pub(crate) fn format(&self, index: usize, args: &[(&str, Arg<'_>)]) -> String {
         let message = self.messages[index];
-        match parse(message) {
+        // Most messages are plain text: nothing to parse.
+        if !message.contains(['{', '\'']) {
+            return message.to_owned();
+        }
+        match parsed(message) {
             Ok(parts) => {
                 let mut out = String::new();
                 Formatter {
@@ -130,6 +147,27 @@ impl Strings {
             }
         }
     }
+}
+
+thread_local! {
+    /// The messages of the bundles and locales used last.
+    static RESOLVED: RefCell<RecentCache<(&'static Bundle, Locale), &'static [&'static str]>> =
+        const { RefCell::new(RecentCache::new(32)) };
+    /// The messages parsed so far, by address (they are `'static`): each is parsed once, not on
+    /// every read. Holds at most the messages of the bundles and locales in use.
+    static PARSED: RefCell<HashMap<(usize, usize), Rc<[Part<'static>]>>> =
+        RefCell::new(HashMap::new());
+}
+
+/// `message`, parsed once per thread.
+fn parsed(message: &'static str) -> Result<Rc<[Part<'static>]>, String> {
+    let key = (message.as_ptr().addr(), message.len());
+    if let Some(parts) = PARSED.with_borrow(|parsed| parsed.get(&key).cloned()) {
+        return Ok(parts);
+    }
+    let parts: Rc<[Part<'static>]> = parse(message)?.into();
+    PARSED.with_borrow_mut(|parsed| parsed.insert(key, parts.clone()));
+    Ok(parts)
 }
 
 /// A family's typed messages ([`TableStrings`], ...).
@@ -362,7 +400,6 @@ impl<'m> Parser<'m> {
     }
 
     /// `selector {parts}`, or `None` at the argument's closing `}`.
-    #[allow(clippy::type_complexity)]
     fn option(&mut self, in_plural: bool) -> Result<Option<(&'m str, Vec<Part<'m>>)>, String> {
         self.skip_whitespace();
         if self.peek() == Some('}') {
@@ -453,20 +490,19 @@ impl Formatter<'_> {
     }
 
     fn number(&self, value: usize) -> String {
-        NumberFormatter::new(self.locale, NumberFormatOptions::default()).format(value)
+        NumberFormatter::cached(self.locale, &NumberFormatOptions::default()).format(value)
     }
 
     /// The CLDR plural category of `value` in the locale.
     fn category(&self, value: usize) -> &'static str {
-        let rules =
-            PluralRules::try_new_cardinal(PluralRulesPreferences::from(self.locale.icu_locale()));
-        match rules.map(|rules| rules.category_for(PluralOperands::from(value))) {
-            Ok(PluralCategory::Zero) => "zero",
-            Ok(PluralCategory::One) => "one",
-            Ok(PluralCategory::Two) => "two",
-            Ok(PluralCategory::Few) => "few",
-            Ok(PluralCategory::Many) => "many",
-            Ok(PluralCategory::Other) | Err(_) => "other",
+        let value = u64::try_from(value).unwrap_or(u64::MAX);
+        match plural_category(self.locale, value) {
+            PluralCategory::Zero => "zero",
+            PluralCategory::One => "one",
+            PluralCategory::Two => "two",
+            PluralCategory::Few => "few",
+            PluralCategory::Many => "many",
+            PluralCategory::Other => "other",
         }
     }
 }

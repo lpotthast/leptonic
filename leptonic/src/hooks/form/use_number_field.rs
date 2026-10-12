@@ -3,7 +3,7 @@
 // Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    ev::{self},
+    ev,
     prelude::*,
 };
 use leptos_use::use_document;
@@ -19,8 +19,8 @@ use super::{
     use_label::UseLabelProps,
     use_number_field_state::{CommitBehavior, NumberFieldState},
     use_text_field::{
-        InputMode, UseTextFieldInput, UseTextFieldInputAttrs, UseTextFieldInputProps,
-        UseTextFieldReturn, use_text_field,
+        InputMode, InputType, TextFieldElement, UseTextFieldInput, UseTextFieldInputAttrs,
+        UseTextFieldInputProps, UseTextFieldReturn, use_text_field,
     },
     use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
 };
@@ -28,17 +28,15 @@ use crate::{
     CapturedElement, EventHandler, IdRefs, IntoAttrs, NumberValue, OnEvent, SlotProps,
     hooks::{
         button::UseButtonInput,
-        focus::use_focus_within::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
-        form::{InputType, TextFieldElement},
+        focus::{UseFocusWithinInput, UseFocusWithinProps, UseFocusWithinReturn, use_focus_within},
         interactions::{
-            use_keyboard::KeyboardEventWrapper,
-            use_press::{PressEvent, chain_optional_callbacks},
-            use_scroll_wheel::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel},
+            KeyboardEventWrapper, PressEvent, ScrollEvent, UseScrollWheelInput,
+            chain_optional_callbacks, use_scroll_wheel,
         },
-        spinbutton::use_spin_button::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
+        spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
-        aria::{AriaDisabled, AriaInvalid, AriaRole},
+        aria::{AriaDisabled, AriaInvalid, AriaRole, aria_true},
         dom_ext::EventAccessors,
         focus::focus_event_target,
         id::use_id,
@@ -49,6 +47,7 @@ use crate::{
         number_formatter::{CurrencySign, NumberFormatOptions, use_number_formatter},
         platform::{device, use_platform_check},
         pointer_type::PointerType,
+        shadow_dom::get_active_element,
     },
 };
 
@@ -103,6 +102,7 @@ pub struct UseNumberFieldInput<T: NumberValue> {
 }
 
 /// Return value of [`use_number_field`].
+#[derive(Debug)]
 pub struct UseNumberFieldReturn {
     /// For the element around the input and the stepper buttons.
     pub group_props: UseNumberFieldGroupProps,
@@ -209,8 +209,8 @@ impl IntoAttrs for UseNumberFieldInputProps {
 ///     id: None,
 ///     has_label: Signal::stored(true),
 ///     aria_label: MaybeProp::default(),
-///     aria_labelledby: None,
-///     aria_describedby: None,
+///     aria_labelledby: Signal::default(),
+///     aria_describedby: Signal::default(),
 ///     is_required: Signal::stored(false),
 ///     placeholder: MaybeProp::default(),
 ///     auto_focus: false,
@@ -235,7 +235,6 @@ impl IntoAttrs for UseNumberFieldInputProps {
 ///
 /// Render a hidden input (`type="hidden"`, `name`, `value` = the state's `number_value`) to
 /// submit the value with a form.
-#[allow(clippy::too_many_lines)]
 pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNumberFieldReturn {
     let UseNumberFieldInput {
         state,
@@ -429,29 +428,12 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     focusable.on_focus = spin.on_focus.chain(focusable.on_focus.clone());
     focusable.on_blur = spin.on_blur.chain(focusable.on_blur.clone());
 
-    // The scroll wheel steps while the field has focus.
-    let UseFocusWithinReturn {
-        props: focus_within,
-        is_focus_within,
-    } = use_focus_within(UseFocusWithinInput {
+    let wheel = use_wheel_stepping(UseWheelSteppingInput {
+        is_wheel_disabled,
         is_disabled,
-        ..UseFocusWithinInput::default()
-    });
-    let wheel = use_scroll_wheel(UseScrollWheelInput {
-        is_disabled: Signal::derive(move || {
-            is_wheel_disabled || is_disabled.get() || is_read_only.get() || !is_focus_within.get()
-        }),
-        on_scroll: Some(Callback::new(move |e: ScrollEvent| {
-            // Mostly horizontal (a trackpad): probably not meant to step.
-            if e.delta_y.abs() <= e.delta_x.abs() {
-                return;
-            }
-            if e.delta_y > 0.0 {
-                state.increment();
-            } else if e.delta_y < 0.0 {
-                state.decrement();
-            }
-        })),
+        is_read_only,
+        on_increment: Callback::new(move |()| state.increment()),
+        on_decrement: Callback::new(move |()| state.decrement()),
     });
 
     let FormattedTextFieldHandlers {
@@ -480,9 +462,10 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
 
     // Stepper buttons: named "Increase <field label>", or "Increase" plus the labelling elements.
     let field_label = aria_label;
+    // A memo: both buttons read it.
     let labelled_by = {
         let label_id = label_props.id.clone();
-        Signal::derive(move || {
+        Memo::new(move |_| {
             field_label
                 .get()
                 .is_none()
@@ -500,9 +483,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     // to the input, touch and screen readers focus the button.
     let on_button_press_start = Callback::new(move |e: PressEvent| {
         let input = element.get_untracked().map(|el| (*el).clone());
-        let active = use_document()
-            .as_ref()
-            .and_then(web_sys::Document::active_element);
+        let active = use_document().as_ref().and_then(get_active_element);
         if input.is_some() && active == input {
             return;
         }
@@ -568,10 +549,10 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
 
     UseNumberFieldReturn {
         group_props: UseNumberFieldGroupProps {
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
-            on_focusin: focus_within.on_focusin,
-            on_focusout: focus_within.on_focusout,
+            aria_disabled: aria_true(is_disabled),
+            aria_invalid: aria_true(is_invalid),
+            on_focusin: wheel.focus_within.on_focusin,
+            on_focusout: wheel.focus_within.on_focusout,
         },
         label_props,
         input_props: UseNumberFieldInputProps {
@@ -584,7 +565,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             on_compositionstart,
             on_compositionend,
             on_paste,
-            on_wheel: wheel.props.on_wheel,
+            on_wheel: wheel.on_wheel,
         },
         increment_button,
         decrement_button,
@@ -596,6 +577,63 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         is_invalid,
         validation_errors,
         validation_details,
+    }
+}
+
+/// Input of [`use_wheel_stepping`].
+pub(crate) struct UseWheelSteppingInput {
+    /// Whether the scroll wheel leaves the value alone.
+    pub(crate) is_wheel_disabled: bool,
+    pub(crate) is_disabled: Signal<bool>,
+    pub(crate) is_read_only: Signal<bool>,
+    pub(crate) on_increment: Callback<()>,
+    pub(crate) on_decrement: Callback<()>,
+}
+
+/// The handlers of [`use_wheel_stepping`].
+pub(crate) struct WheelStepping {
+    /// For the element around the input: the wheel steps while focus is within it.
+    pub(crate) focus_within: UseFocusWithinProps,
+    /// For the input.
+    pub(crate) on_wheel: EventHandler<WheelEvent>,
+}
+
+/// The scroll wheel stepping a field (number and color fields) while it has focus: scrolling
+/// down increments, up decrements.
+pub(crate) fn use_wheel_stepping(input: UseWheelSteppingInput) -> WheelStepping {
+    let UseWheelSteppingInput {
+        is_wheel_disabled,
+        is_disabled,
+        is_read_only,
+        on_increment,
+        on_decrement,
+    } = input;
+    let UseFocusWithinReturn {
+        props: focus_within,
+        is_focus_within,
+    } = use_focus_within(UseFocusWithinInput {
+        is_disabled,
+        ..UseFocusWithinInput::default()
+    });
+    let wheel = use_scroll_wheel(UseScrollWheelInput {
+        is_disabled: Signal::derive(move || {
+            is_wheel_disabled || is_disabled.get() || is_read_only.get() || !is_focus_within.get()
+        }),
+        on_scroll: Some(Callback::new(move |e: ScrollEvent| {
+            // Mostly horizontal (a trackpad): probably not meant to step.
+            if e.delta_y.abs() <= e.delta_x.abs() {
+                return;
+            }
+            if e.delta_y > 0.0 {
+                on_increment.run(());
+            } else if e.delta_y < 0.0 {
+                on_decrement.run(());
+            }
+        })),
+    });
+    WheelStepping {
+        focus_within,
+        on_wheel: wheel.props.on_wheel,
     }
 }
 

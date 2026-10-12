@@ -1,4 +1,17 @@
 // Upstream: react-aria/src/visually-hidden/VisuallyHidden.tsx @ 99e6102368
+//! The styles hiding an element visually while keeping it available to assistive technology
+//! (react-aria's `useVisuallyHidden` styles; the `VisuallyHidden` atom renders them).
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## ADDITIONS
+// - `visually_hidden_fixed_styles` (react-aria-components' `HiddenDateInput`) and
+//   `visually_hidden_full_size_styles` (react-aria's color hooks), which upstream writes inline.
+//
+// =============================================================================
+
 use leptos_styles::Styles;
 
 use crate::utils::styles::{

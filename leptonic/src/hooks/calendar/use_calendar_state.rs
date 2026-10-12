@@ -26,11 +26,7 @@ use crate::{
 // ## API DIFFERENCES
 // - Dates are `jiff::civil::Date` (Gregorian; see `utils::date`); the value has no time part
 //   (react-aria keeps a `CalendarDateTime`'s time).
-// - Hook-owned value and focused date (C4): `default_value`/`default_focused_value` +
-//   `on_change`/`on_focus_change`, or bindings to app state.
-// - A `Copy` struct with signals and methods (C3).
 // - `page_behavior`, `selection_alignment`: enums (react-aria: strings).
-//
 // - The layout props (`visible_duration`, `page_behavior`, `selection_alignment`,
 //   `first_day_of_week`, `weeks_in_month`) are signals (C11); a changed visible duration re-aligns
 //   the visible range around the focused date, as react-aria does.
@@ -544,11 +540,13 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
     } = input;
 
     let locale = use_locale();
-    let first_day_of_week = Signal::derive(move || {
+    // Read by every week row: the locale's week data is looked up once per change.
+    let first_day_of_week: Signal<Weekday> = Memo::new(move |_| {
         first_day_override
             .get()
             .unwrap_or_else(|| first_day_of_week(&locale.get()))
-    });
+    })
+    .into();
 
     let owned_value = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
     let binding = ValueBinding::new(

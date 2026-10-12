@@ -13,7 +13,7 @@ use super::{
 };
 use crate::{
     CapturedElement, ElementCaptureAttr, IntoAttrs,
-    hooks::collections::{Collection, Key, NodeKind},
+    hooks::collections::{Collection, Key, Node, NodeKind},
     utils::{
         aria::AriaHidden,
         id::use_id,
@@ -108,19 +108,17 @@ fn label(strings: &DndStrings, collection: &Collection, target: &DropTarget) -> 
     if target.drop_position == DropPosition::On {
         return strings.drop_on_item(&text(collection, &target.key));
     }
-    let item_key = |key: Option<&Key>| {
-        key.and_then(|k| collection.get(k))
-            .filter(|n| n.kind == NodeKind::Item)
+    let item_key = |node: Option<&Node>| {
+        node.filter(|n| n.kind == NodeKind::Item)
             .map(|n| n.key.clone())
     };
-    let node = collection.get(&target.key);
     let before = if target.drop_position == DropPosition::Before {
-        item_key(node.and_then(|n| n.prev_key.as_ref()))
+        item_key(collection.previous_sibling(&target.key))
     } else {
         Some(target.key.clone())
     };
     let after = if target.drop_position == DropPosition::After {
-        item_key(node.and_then(|n| n.next_key.as_ref()))
+        item_key(collection.next_sibling(&target.key))
     } else {
         Some(target.key.clone())
     };
@@ -165,7 +163,7 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
         activate_button,
     });
     let item_hidden = drop_props.aria_hidden;
-    let aria_hidden = Signal::derive(move || {
+    let aria_hidden = Memo::new(move |_| {
         if session.with(Option::is_none) {
             Some(AriaHidden::True)
         } else {
@@ -177,13 +175,15 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
         drop_indicator_props: UseDropIndicatorProps {
             id,
             aria_roledescription: Signal::derive(move || strings.read().drop_indicator()),
-            aria_label: Signal::derive(move || {
+            // A memo: the collection changes more often than the texts around the position.
+            aria_label: Memo::new(move |_| {
                 let strings = strings.read();
                 items.with(|c| target.with(|t| label(&strings, c, t)))
-            }),
+            })
+            .into(),
             aria_labelledby,
             aria_describedby: drop_props.aria_describedby,
-            aria_hidden,
+            aria_hidden: aria_hidden.into(),
             tabindex: -1,
             element_capture: element.attr(),
         },

@@ -17,7 +17,7 @@ use crate::{
         },
     },
     utils::{
-        aria::{AriaDisabled, AriaReadonly, AriaRequired, AriaRole},
+        aria::{AriaDisabled, AriaReadonly, AriaRequired, AriaRole, aria_true},
         event_listeners::{Listener, listen_to},
         intl_strings::{SpinButtonStrings, use_localized_strings},
         key::KeyboardKey,
@@ -269,6 +269,8 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
         on_decrement,
     };
     on_cleanup(move || spinner.clear());
+    // Neither the keys nor the stepper buttons change a disabled or read-only spin button.
+    let is_inactive = Signal::derive(move || disabled.get() || read_only.get());
 
     // -- Keyboard --
     // A key only counts as handled when the corresponding callback exists. Otherwise the event
@@ -309,7 +311,7 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
     let UseKeyboardReturn {
         props: keyboard_props,
     } = use_keyboard(UseKeyboardInput {
-        is_disabled: Signal::derive(move || disabled.get() || read_only.get()),
+        is_disabled: is_inactive,
         shortcuts: Some(shortcuts),
         allow_repeats: true,
         ..UseKeyboardInput::default()
@@ -408,26 +410,25 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
             })),
             on_focus: Some(on_focus),
             on_blur: Some(on_blur),
-            // A disabled or read-only spin button can't be stepped by its buttons either.
-            is_disabled: Signal::derive(move || disabled.get() || read_only.get()),
+            is_disabled: is_inactive,
             ..UseButtonInput::default()
         }
     };
 
-    let format_bound = |bound: Signal<Option<T>>| {
-        Signal::derive(move || bound.get().filter(is_number).map(|v| v.to_string()))
+    let format_number = |number: Signal<Option<T>>| {
+        Signal::derive(move || number.get().filter(is_number).map(|v| v.to_string()))
     };
 
     UseSpinButtonReturn {
         props: UseSpinButtonProps {
             role: AriaRole::Spinbutton,
-            aria_valuenow: format_bound(value),
+            aria_valuenow: format_number(value),
             aria_valuetext: aria_text_value.into(),
-            aria_valuemin: format_bound(min_value),
-            aria_valuemax: format_bound(max_value),
-            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
-            aria_readonly: Signal::derive(move || read_only.get().then_some(AriaReadonly::True)),
-            aria_required: Signal::derive(move || required.get().then_some(AriaRequired::True)),
+            aria_valuemin: format_number(min_value),
+            aria_valuemax: format_number(max_value),
+            aria_disabled: aria_true(disabled),
+            aria_readonly: aria_true(read_only),
+            aria_required: aria_true(required),
             on_keydown: keyboard_props.on_keydown,
             on_keyup: keyboard_props.on_keyup,
             on_focus: EventHandler::new(move |e: FocusEvent| on_focus.run(e)),

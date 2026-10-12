@@ -17,6 +17,10 @@
 //! - `BROWSER_TEST_VISIBLE=1`: show the browser window.
 //! - `BROWSER_TEST_PAUSE=1`: pause before each test for manual inspection.
 //! - `BROWSER_TEST_DRIVER_OUTPUT=1`: forward chromedriver output.
+//! - `BROWSER_TEST_SUITE=<suite>`: which tests run: `regular` (the default), `known-issues` (tests of
+//!   known upstream bugs, failing until they are fixed) or `performance` (measurements, one after
+//!   the other, of a build without debug assertions; `just browser-perf`, see
+//!   `documentation/testing.md`, "Performance measurements").
 //! - `BROWSER_TEST_GROUP=<name>`: only run these exact logical groups (comma-separated names).
 //!   Names and membership are explicit in `ui_tests/mod.rs`, independent of Rust module placement.
 //! - `BROWSER_TEST_FILTER=<text>`: only run the tests whose name contains `<text>` (several
@@ -38,6 +42,7 @@ mod common;
 mod fixtures;
 mod harness;
 mod pages;
+mod perf;
 mod ui_tests;
 
 use std::{
@@ -52,6 +57,7 @@ use browser_test::{
     Visibility, thirtyfour::ChromiumLikeCapabilities,
 };
 use leptos_browser_test::{BuildProfile, LeptosTestAppConfig, Report};
+use ui_tests::Suite;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn browser_tests() -> Result<(), Report> {
@@ -67,7 +73,8 @@ async fn browser_tests() -> Result<(), Report> {
         .with_consistency_duration(Duration::from_millis(100))
         .set_global();
 
-    let tests = ui_tests::all(parallelism()?)?;
+    let suite = suite()?;
+    let tests = ui_tests::all(suite, parallelism()?)?;
     let app_start = Instant::now();
     // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
     // leptonic's build script generates none.
@@ -83,7 +90,15 @@ async fn browser_tests() -> Result<(), Report> {
     // `just serve-test-app` can run at the same time: cargo-leptos would write the site next to
     // the app's `Cargo.toml` (`site-root`), whatever the target dir, and another build would
     // replace the files under a running suite.
-    let target_dir = app_target_dir(Path::new(app_dir))?;
+    let mut target_dir = app_target_dir(Path::new(app_dir))?;
+    if suite == Suite::Performance {
+        // Measured without debug assertions and overflow checks (Leptos' and leptonic's debug-only
+        // checks would count), in a target dir of its own, so that the regular suite's build stays.
+        target_dir = target_dir.join("performance");
+        app = app
+            .with_env("CARGO_PROFILE_WASM_RELEASE_DEBUG_ASSERTIONS", "false")
+            .with_env("CARGO_PROFILE_WASM_RELEASE_OVERFLOW_CHECKS", "false");
+    }
     app = app
         .with_env("CARGO_TARGET_DIR", &target_dir)
         .with_env("LEPTOS_SITE_ROOT", target_dir.join("browser-test-site"));
@@ -96,7 +111,7 @@ async fn browser_tests() -> Result<(), Report> {
     // Tests run in parallel (`BROWSER_TEST_PARALLELISM=<n>`, default 8; 1: sequential), each in a
     // fresh or reset browser. They don't share app state: each loads its own page. The checks of the whole
     // run follow, sequentially (see `ui_tests::all`).
-    runner()?
+    runner(suite)?
         .run(app.base_url(), tests)
         .await
         .map_err(Report::into_dynamic)?;
@@ -148,8 +163,30 @@ fn parallelism() -> Result<Parallelism, Report> {
     Ok(Parallelism::from_env()?.unwrap_or(Parallelism::parallel(8)))
 }
 
+/// `BROWSER_TEST_SUITE`: `regular` (the default), `known-issues` or `performance`.
+fn suite() -> Result<Suite, Report> {
+    match std::env::var("BROWSER_TEST_SUITE").as_deref() {
+        Err(_) | Ok("" | "regular") => Ok(Suite::Regular),
+        Ok("known-issues") => Ok(Suite::KnownIssues),
+        Ok("performance") => Ok(Suite::Performance),
+        Ok(other) => Err(rootcause::report!(
+            "BROWSER_TEST_SUITE is {other:?}, expected `regular`, `known-issues` or `performance`"
+        )
+        .into_dynamic()),
+    }
+}
+
 /// A runner with the settings of the `BROWSER_TEST_*` variables. An invalid value is an error.
-fn runner() -> Result<BrowserTestRunner, Report> {
+fn runner(suite: Suite) -> Result<BrowserTestRunner, Report> {
+    // A measurement runs its scenario in one script (`Page::run_perf_scenario`).
+    let script_timeout = match suite {
+        Suite::Performance => Some(Duration::from_secs(300)),
+        Suite::Regular | Suite::KnownIssues => None,
+    };
+    let mut timeouts = Timeouts::new().with_implicit_wait(Duration::ZERO);
+    if let Some(script_timeout) = script_timeout {
+        timeouts = timeouts.with_script(script_timeout);
+    }
     // Ctrl-C (or SIGTERM) cancels the run: running tests stop, and chromedriver and its browsers
     // shut down instead of outliving the process.
     Ok(BrowserTestRunner::new(Cancellation::on_shutdown_signals())
@@ -188,5 +225,5 @@ fn runner() -> Result<BrowserTestRunner, Report> {
         // Lookups poll (`pages::lookup`), as long and as often as eventual assertions
         // (`Patience::global()`); an implicit wait would make every lookup of a missing element block, and
         // compound with the polling.
-        .with_timeouts(Timeouts::new().with_implicit_wait(Duration::ZERO)))
+        .with_timeouts(timeouts))
 }

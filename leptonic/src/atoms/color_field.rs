@@ -1,5 +1,6 @@
-//! Headless color field atoms: a color as hex text, or one channel of a color as a number.
 // Upstream: react-aria-components/src/ColorField.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorField.test.js @ 99e6102368
+//! Headless color field atoms: a color as hex text, or one channel of a color as a number.
 
 use leptos::prelude::*;
 use leptos_classes::Classes;
@@ -48,7 +49,6 @@ use crate::{
 ///
 /// Default class: `leptonic-ColorField`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn ColorField(
     /// The initial color (`None`: empty).
     #[prop(optional)]
@@ -191,7 +191,6 @@ pub fn ColorField(
 ///
 /// Default class: `leptonic-ColorChannelField`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     /// The channel the field edits.
     channel: Ch,

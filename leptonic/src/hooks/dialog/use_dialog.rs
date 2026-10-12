@@ -20,7 +20,6 @@ use crate::{
 // ## API DIFFERENCES
 // - The title and content elements are slots (`SlotProps`, spread onto the elements): the dialog
 //   references them only while they are rendered (react-aria: `useSlotId`).
-// - The dialog element is captured from `dialog_props` instead of passing a ref.
 // - `is_entering` is a signal: focusing waits until it is `false`.
 // - `fallback_aria_labelledby` names a dialog without title or label: react-aria-components labels
 //   a `DialogTrigger`'s dialog by the trigger in the component, which our hook can't tell apart

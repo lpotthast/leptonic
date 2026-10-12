@@ -4,6 +4,7 @@
 use leptos::prelude::*;
 
 use crate::{
+    IdRefs,
     hooks::{
         button::use_button::UseButtonInput,
         collections::Key,
@@ -90,9 +91,11 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     let is_disabled = item.is_disabled;
 
     let key = StoredValue::new(key);
-    let is_expanded = Signal::derive(move || {
+    // A memo: the expanded keys change with every item expanded or collapsed.
+    let is_expanded: Signal<bool> = Memo::new(move |_| {
         expansion.is_some_and(|expansion| key.with_value(|k| expansion.is_expanded(k)))
-    });
+    })
+    .into();
     let strings = use_localized_strings::<TreeStrings>();
     let expand_button = UseButtonInput {
         // Labelled by its own label ("Expand"/"Collapse") and the item.
@@ -105,7 +108,12 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
                 strings.expand()
             })
         }),
-        aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
+        aria_labelledby: Signal::stored(
+            [&button_id, &row_id]
+                .into_iter()
+                .collect::<IdRefs>()
+                .into_value(),
+        ),
         exclude_from_tab_order: Signal::stored(true),
         prevent_focus_on_press: true.into(),
         on_press: Some(Callback::new(move |_: PressEvent| {

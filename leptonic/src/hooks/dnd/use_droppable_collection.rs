@@ -84,6 +84,7 @@ pub struct UseDroppableCollectionInput {
 }
 
 /// Return value of [`use_droppable_collection`].
+#[derive(Debug)]
 pub struct UseDroppableCollectionReturn {
     /// Props for the collection element (native drop handling; it isn't described as a drop
     /// target itself).
@@ -133,7 +134,6 @@ fn drop_item_types(item: &DropItem) -> DragTypes {
 
 /// A collection that accepts drops: on it, on its items and between them, from native drags and
 /// keyboard and screen reader drags.
-#[allow(clippy::too_many_lines)]
 pub fn use_droppable_collection(
     input: UseDroppableCollectionInput,
 ) -> UseDroppableCollectionReturn {
@@ -473,7 +473,6 @@ pub fn use_droppable_collection(
 
 /// The drag manager registration of a droppable collection: the initial drop target, navigation
 /// with the collection's keys, and drops.
-#[allow(clippy::too_many_lines)]
 fn keyboard_drop_target(
     element: web_sys::Element,
     state: &DroppableCollectionState,

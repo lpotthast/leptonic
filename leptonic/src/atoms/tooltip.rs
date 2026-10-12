@@ -42,7 +42,9 @@ use crate::{
 //   can have its own `isOpen`/`defaultOpen`).
 //
 // ## OMITTED FEATURES
-// - `isEntering`/`isExiting` props, `UNSTABLE_portalContainer`.
+// - `isEntering`/`isExiting` props.
+// - `UNSTABLE_portalContainer`: leptonic ports no `UNSTABLE_` APIs (no legacy or unstable
+//   surface).
 //
 // =============================================================================
 
@@ -58,7 +60,6 @@ struct TooltipTriggerContext {
 /// or focused: after `delay` for the first tooltip, right away once one was open (react-aria's
 /// warm-up). Escape and pressing the trigger close it.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn TooltipTrigger(
     /// How long hovering takes to open the first tooltip.
     #[prop(default = Duration::from_millis(1500))]
@@ -159,12 +160,12 @@ pub fn TooltipTrigger(
 /// it. Put an [`OverlayArrow`](super::overlay_arrow::OverlayArrow) in it for an arrow pointing at
 /// the trigger.
 ///
-/// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping). CSS
-/// variable: `--trigger-anchor-point` (the point closest to the trigger).
+/// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping),
+/// `data-entering`, `data-exiting`. CSS variable: `--trigger-anchor-point` (the point closest to
+/// the trigger).
 ///
 /// Default class: `leptonic-Tooltip`.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn Tooltip(
     /// Where the tooltip goes relative to the trigger.
     #[prop(into, default = Signal::stored(Placement::Top))]

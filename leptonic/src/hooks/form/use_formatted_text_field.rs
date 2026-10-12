@@ -1,5 +1,6 @@
 // Upstream: react-aria/src/textfield/useFormattedTextField.ts @ 99e6102368
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{CompositionEvent, InputEvent};
 
 use super::use_number_field_state::NumberFieldState;
@@ -76,8 +77,6 @@ pub struct FormattedTextFieldHandlers {
 pub fn use_formatted_text_field<S: FormattedTextState>(
     input: UseFormattedTextFieldInput<S>,
 ) -> FormattedTextFieldHandlers {
-    use wasm_bindgen::JsCast;
-
     let UseFormattedTextFieldInput { element, state } = input;
 
     let input = move || {

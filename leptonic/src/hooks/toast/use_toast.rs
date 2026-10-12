@@ -10,7 +10,7 @@ use crate::{
     IntoAttrs,
     hooks::button::UseButtonInput,
     utils::{
-        aria::{AriaHidden, AriaModal, AriaRole},
+        aria::{AriaAtomic, AriaHidden, AriaModal, AriaRole},
         id::use_id,
         intl_strings::{ToastStrings, use_localized_strings},
         slot_id::{SlotProps, use_slot},
@@ -32,6 +32,7 @@ use crate::{
 pub struct UseToastInput<T: Clone + Send + Sync + 'static> {
     /// The queue the toast is in (closing removes it from there).
     pub queue: ToastQueue<T>,
+    /// The toast (from the queue's `visible_toasts`).
     pub toast: QueuedToast<T>,
     pub aria_label: MaybeProp<String>,
     /// Default: the toast's title.
@@ -96,14 +97,14 @@ pub struct UseToastContentProps {
 impl IntoAttrs for UseToastContentProps {
     type Attrs = (
         Attr<attr::Role, AriaRole>,
-        Attr<attr::AriaAtomic, &'static str>,
+        Attr<attr::AriaAtomic, AriaAtomic>,
         Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, AriaRole::Alert),
-            Attr(attr::AriaAtomic, "true"),
+            Attr(attr::AriaAtomic, AriaAtomic::True),
             Attr(attr::AriaHidden, self.aria_hidden),
         )
     }
@@ -122,13 +123,9 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> U
 
     // The timeout runs while the toast is shown.
     if let (Some(timer), Some(timeout)) = (toast.timer.clone(), toast.timeout) {
+        let paused_timer = timer.clone();
         Effect::new(move |_| timer.reset(timeout));
-        let timer = toast.timer.clone();
-        on_cleanup(move || {
-            if let Some(timer) = timer {
-                timer.pause();
-            }
-        });
+        on_cleanup(move || paused_timer.pause());
     }
 
     let title_id = use_id("toast-title");

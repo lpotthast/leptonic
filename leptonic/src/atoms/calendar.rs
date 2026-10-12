@@ -131,7 +131,6 @@ fn expect_calendar(part: &str) -> Option<CalendarContext> {
 ///
 /// Default class: `leptonic-Calendar`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn Calendar(
     /// The initially selected date.
     #[prop(optional)]
@@ -252,9 +251,9 @@ pub fn Calendar(
         on_focus_change,
         visible_duration,
         page_behavior,
-        first_day_of_week: Signal::derive(move || first_day_of_week.get()),
+        first_day_of_week: crate::utils::prop_signal(first_day_of_week),
         selection_alignment,
-        weeks_in_month: Signal::derive(move || weeks_in_month.get()),
+        weeks_in_month: crate::utils::prop_signal(weeks_in_month),
     });
     let calendar = use_calendar(UseCalendarInput {
         state,
@@ -274,7 +273,6 @@ pub fn Calendar(
 ///
 /// Default class: `leptonic-RangeCalendar`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn RangeCalendar(
     /// The initially selected range.
     #[prop(optional)]
@@ -390,9 +388,9 @@ pub fn RangeCalendar(
         on_focus_change,
         visible_duration,
         page_behavior,
-        first_day_of_week: Signal::derive(move || first_day_of_week.get()),
-        selection_alignment: Signal::derive(move || selection_alignment.get()),
-        weeks_in_month: Signal::derive(move || weeks_in_month.get()),
+        first_day_of_week: crate::utils::prop_signal(first_day_of_week),
+        selection_alignment: crate::utils::prop_signal(selection_alignment),
+        weeks_in_month: crate::utils::prop_signal(weeks_in_month),
     });
     let calendar = use_range_calendar(UseRangeCalendarInput {
         state,
@@ -589,9 +587,9 @@ pub fn CalendarErrorMessage(
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-CalendarErrorMessage", classes);
-    let props =
-        expect_calendar("CalendarErrorMessage").map(|context| context.error_message.get_value());
-    let props = props?;
+    let props = expect_calendar("CalendarErrorMessage")?
+        .error_message
+        .get_value();
     Some(view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> })
 }
 

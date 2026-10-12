@@ -1,13 +1,16 @@
-//! Headless 2D color area atom for selecting two color channels simultaneously.
 // Upstream: react-aria-components/src/ColorArea.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorArea.test.js @ 99e6102368
+//! Headless 2D color area atom for selecting two color channels simultaneously.
 
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
-use super::color_picker::ColorPickerContext;
+use super::{
+    color_picker::ColorPickerContext,
+    color_thumb::{AreaThumbParts, ColorThumbContext, ThumbParts},
+};
 use crate::{
     Out, ValueBinding,
-    atoms::color_thumb::{AreaThumbParts, ColorThumbContext, ThumbParts},
     hooks::color::{
         UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state,
     },
@@ -24,7 +27,6 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The thumb's background is the current color (react-aria-components: a render prop).
 // - The value is split into `value` (a value or any signal) and `set_value` (an `Out`), plus
 //   `default_value` and `on_change` (C4).
 // - Render props become `data-*` attributes.
@@ -34,7 +36,8 @@ use crate::{
 //
 // =============================================================================
 
-/// A 2D color area: drag its [`ColorThumb`](super::color_thumb::ColorThumb) or press the area to change two channels of a color.
+/// A 2D color area: drag its [`ColorThumb`](super::color_thumb::ColorThumb) or press the area to
+/// change two channels of a color.
 ///
 /// ```ignore
 /// <ColorArea default_value=HSV::default() aria_label="Color">
@@ -46,7 +49,6 @@ use crate::{
 ///
 /// Default class: `leptonic-ColorArea`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn ColorArea<C: ColorValue>(
     /// The initial color. Default: white (`#ffffff`, as react-aria-components).
     #[prop(optional)]

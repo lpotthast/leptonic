@@ -35,6 +35,7 @@
 // =============================================================================
 
 use std::{
+    cell::RefCell,
     fmt,
     sync::{Arc, OnceLock},
 };
@@ -59,10 +60,13 @@ use super::{
         DateSegment, DateSegmentType, DateValue, Granularity, MaxGranularity, ResolvedHourCycle,
     },
 };
-use crate::HourCycle;
-use crate::utils::{
-    i18n::Locale,
-    number_formatter::{NumberFormatOptions, NumberFormatter},
+use crate::{
+    HourCycle,
+    utils::{
+        i18n::Locale,
+        number_formatter::{NumberFormatOptions, NumberFormatter},
+        recent_cache::RecentCache,
+    },
 };
 
 /// What a date field formats (react-stately's `FormatterOptions`).
@@ -94,6 +98,13 @@ impl PartialEq for Formatters {
     }
 }
 
+thread_local! {
+    /// The formatters used last, per locale and options: date fields of one format share them,
+    /// and a reopened picker doesn't build them again.
+    static FORMATTERS: RefCell<RecentCache<(Locale, FormatOptions), Formatters>> =
+        const { RefCell::new(RecentCache::new(8)) };
+}
+
 impl Formatters {
     pub fn new(locale: Locale, options: FormatOptions) -> Self {
         Self {
@@ -102,6 +113,21 @@ impl Formatters {
             short: Arc::default(),
             long: Arc::default(),
         }
+    }
+
+    /// The formatters of `locale` and `options`, kept (per thread) while in use.
+    pub fn cached(locale: &Locale, options: &FormatOptions) -> Self {
+        FORMATTERS.with_borrow_mut(|formatters| {
+            formatters.get_or_insert_with(
+                |(cached_locale, cached_options)| {
+                    cached_locale == locale && cached_options == options
+                },
+                || {
+                    let formatters = Self::new(locale.clone(), options.clone());
+                    ((locale.clone(), options.clone()), formatters)
+                },
+            )
+        })
     }
 
     /// Numeric dates ("6/15/2024"): the segments' and validation messages'.
@@ -490,16 +516,16 @@ pub(crate) struct SegmentNumbers {
 impl SegmentNumbers {
     pub fn new(locale: &Locale) -> Self {
         Self {
-            number: NumberFormatter::new(
+            number: NumberFormatter::cached(
                 locale,
-                NumberFormatOptions {
+                &NumberFormatOptions {
                     use_grouping: false,
                     ..NumberFormatOptions::default()
                 },
             ),
-            two_digits: NumberFormatter::new(
+            two_digits: NumberFormatter::cached(
                 locale,
-                NumberFormatOptions {
+                &NumberFormatOptions {
                     use_grouping: false,
                     minimum_integer_digits: Some(2),
                     ..NumberFormatOptions::default()

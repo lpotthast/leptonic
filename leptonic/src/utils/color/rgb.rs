@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/color/Color.ts @ 99e6102368
 //! The RGB color space.
 
 use std::{fmt, str::FromStr};
@@ -113,11 +114,11 @@ impl From<(u8, u8, u8)> for RGB8 {
 }
 
 impl ColorValue for RGB8 {
+    type Channel = RgbChannel;
+
     fn to_rgb8(&self) -> RGB8 {
         *self
     }
-
-    type Channel = RgbChannel;
 
     fn channel_value(&self, channel: RgbChannel) -> f64 {
         match channel {
@@ -206,7 +207,7 @@ impl ColorValue for RGB8 {
 
         // The screen blend mode combines the layers channel by channel (1 - (1 - a) * (1 - b)):
         // one layer per channel, the others 0 (react-aria).
-        let black = Self { r: 0, g: 0, b: 0 };
+        let black = Self::new();
         let z_only = black.with_channel_value(z_channel, z_val);
         let x_max = black.with_channel_value(x_channel, 255.0);
         let y_max = black.with_channel_value(y_channel, 255.0);

@@ -233,7 +233,8 @@ pub fn use_color_wheel_state<C: ColorValue>(
     let wheel_hue = RwSignal::new(None);
     ColorWheelState {
         value,
-        hue: Signal::derive(move || remembered_hue(value.get(), wheel_hue)),
+        // A memo: the input, the thumb's position and the value text read it.
+        hue: Memo::new(move |_| remembered_hue(value.get(), wheel_hue)).into(),
         step: range.step,
         page_step: range.page_size,
         is_disabled,

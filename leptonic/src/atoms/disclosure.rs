@@ -1,4 +1,6 @@
 // Upstream: react-aria-components/src/Disclosure.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Disclosure.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Disclosure.ssr.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, ev, prelude::*};

@@ -1,3 +1,7 @@
+// Upstream: @react-types/shared/src/orientation.d.ts @ 99e6102368
+// No deviations from react-aria beyond the project-wide API conventions.
+//! The orientation of components ([`Orientation`], convention C6).
+
 use super::aria::AriaOrientation;
 
 /// The orientation of a component (slider, separator, toolbar, collection, group, ...).

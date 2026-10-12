@@ -77,13 +77,8 @@ pub struct ComboBoxContext {
     pub button: CapturedElement,
     /// The list box's element: the popover keeps its focused option in place when it moves.
     pub listbox: CapturedElement,
-    parts: StoredValue<Parts>,
-}
-
-/// The `use_combobox` and `use_text_field` outputs for the parts.
-#[derive(Clone)]
-struct Parts {
-    button: UseButtonInput,
+    /// The [`ComboBoxButton`]'s `use_button` input (from `use_combobox`), cloned per rendering.
+    button_input: StoredValue<UseButtonInput>,
 }
 
 /// A headless combo box: a text input with a popover of suggestions to pick from.
@@ -103,11 +98,7 @@ struct Parts {
 ///
 /// Default class: `leptonic-ComboBox`.
 #[component]
-#[allow(
-    clippy::too_many_lines,
-    clippy::fn_params_excessive_bools,
-    clippy::implicit_hasher
-)]
+#[allow(clippy::implicit_hasher)]
 pub fn ComboBox<S: SelectedValues>(
     /// All options; their keys are the values' (`SelectionValue::to_key`).
     #[prop(into)]
@@ -277,7 +268,7 @@ pub fn ComboBox<S: SelectedValues>(
         popover,
         button: button_element,
         listbox: listbox.element,
-        parts: StoredValue::new(Parts { button }),
+        button_input: StoredValue::new(button),
     };
     // The input: the text field's and the combo box's props, and the popover's anchor.
     let input = InputContext::new(
@@ -369,7 +360,7 @@ pub fn ComboBoxButton(
         crate::utils::dev_warn!("A <ComboBoxButton> must be inside a <ComboBox>.");
         return None;
     };
-    let input = ctx.parts.with_value(|p| p.button.clone());
+    let input = ctx.button_input.get_value();
     let is_disabled = input.is_disabled;
     let button = use_button(input);
     let (attrs, button_styles) = button.props.into_parts();
@@ -395,8 +386,9 @@ pub fn ComboBoxButton(
 }
 
 /// The text of the selected options (of a combo box selecting several), or `placeholder`, listed
-/// in the locale's way ("Cat, Dog, and Kangaroo"). Exposes `data-placeholder` while nothing is
-/// selected.
+/// in the locale's way ("Cat, Dog, and Kangaroo").
+///
+/// Data attributes: `data-placeholder` (while nothing is selected).
 ///
 /// Default class: `leptonic-ComboBoxValue`.
 #[component]
@@ -423,7 +415,7 @@ pub fn ComboBoxValue(
                 .filter(|text| !text.is_empty())
                 .collect();
             locale.with(|locale| {
-                ListFormatter::new(locale, &ListFormatOptions::default()).format(&texts)
+                ListFormatter::cached(locale, &ListFormatOptions::default()).format(&texts)
             })
         })
     });
@@ -448,9 +440,11 @@ pub fn ComboBoxValue(
 /// and mounted while open. It is non-modal (react-aria-components): focus stays in the input, and
 /// the page stays usable; scrolling closes it.
 ///
+/// Data attributes: `data-placement`, `data-trigger` (`ComboBox`), `data-entering`,
+/// `data-exiting`.
+///
 /// Default class: `leptonic-ComboBoxPopover`.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn ComboBoxPopover(
     /// Where the popover goes relative to the input.
     #[prop(into, default = Signal::stored(Placement::BottomStart))]

@@ -19,7 +19,8 @@ use leptos::prelude::*;
 //   strings).
 //
 // ## OMITTED FEATURES
-// - `wrapUpdate` (react-aria-components wraps updates in view transitions).
+// - `wrapUpdate`: its only use is animating toasts with view transitions, which no leptonic atom
+//   does. React-aria-components wraps the queue's updates in `document.startViewTransition`.
 //
 // =============================================================================
 
@@ -89,6 +90,7 @@ impl ToastTimer {
         self.resume();
     }
 
+    /// Pauses the timeout, keeping the remaining time.
     pub fn pause(&self) {
         let Ok(mut state) = self.inner.lock() else {
             return;
@@ -100,6 +102,7 @@ impl ToastTimer {
         state.remaining -= now() - state.started;
     }
 
+    /// Continues a paused timeout with the remaining time.
     pub fn resume(&self) {
         let Ok(mut state) = self.inner.lock() else {
             return;
@@ -170,18 +173,12 @@ impl<T: Clone + Send + Sync + 'static> ToastQueue<T> {
     /// A queue showing up to `max_visible_toasts` (`None`: all).
     pub fn new(max_visible_toasts: Option<usize>) -> Self {
         let toasts = RwSignal::new(Vec::<QueuedToast<T>>::new());
-        let max_visible = StoredValue::new(max_visible_toasts.unwrap_or(usize::MAX));
+        let max_visible = max_visible_toasts.unwrap_or(usize::MAX);
         Self {
             toasts,
             next_key: StoredValue::new(0),
             visible_toasts: Memo::new(move |_| {
-                toasts.with(|toasts| {
-                    toasts
-                        .iter()
-                        .take(max_visible.get_value())
-                        .cloned()
-                        .collect()
-                })
+                toasts.with(|toasts| toasts.iter().take(max_visible).cloned().collect())
             }),
         }
     }
@@ -235,6 +232,7 @@ impl<T: Clone + Send + Sync + 'static> ToastQueue<T> {
         }
     }
 
+    /// Resumes the timeouts of the visible toasts.
     pub fn resume_all(&self) {
         for toast in self.visible_toasts.get_untracked() {
             if let Some(timer) = toast.timer {

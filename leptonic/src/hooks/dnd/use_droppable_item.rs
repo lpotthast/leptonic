@@ -20,8 +20,7 @@ use crate::{CapturedElement, IntoAttrs, utils::aria::AriaHidden};
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The item's element is a `CapturedElement` (react-aria: a ref); `target` is a signal (a
-//   changed target re-registers the item with the drag manager).
+// - `target` is a signal: a changed target re-registers the item with the drag manager.
 // - The props hide items that can't take the dragged data with `aria-hidden` themselves
 //   (react-aria computes the same `aria-hidden` per render).
 //
@@ -127,7 +126,7 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
             })
         })
     });
-    let is_drop_target = Signal::derive(move || target.with(|t| state.is_drop_target(Some(t))));
+    let is_drop_target = Memo::new(move |_| target.with(|t| state.is_drop_target(Some(t))));
 
     // During keyboard drags, the drop target has focus.
     Effect::new(move || {
@@ -148,6 +147,6 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
                     .then_some(AriaHidden::True)
             }),
         },
-        is_drop_target,
+        is_drop_target: is_drop_target.into(),
     }
 }

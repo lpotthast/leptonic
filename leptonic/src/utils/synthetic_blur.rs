@@ -24,7 +24,7 @@ use std::{cell::Cell, rc::Rc};
 
 use wasm_bindgen::{JsCast, closure::Closure};
 
-use crate::utils::shadow_dom::get_active_element;
+use crate::utils::{shadow_dom::get_active_element, virtual_focus::dispatch_focus_event};
 
 /// Watches a focused form element for becoming disabled; see the module docs. Dropping it stops
 /// watching.
@@ -124,21 +124,5 @@ fn is_disabled(element: &web_sys::Element) -> Option<bool> {
         element
             .dyn_ref::<web_sys::HtmlSelectElement>()
             .map(web_sys::HtmlSelectElement::disabled)
-    }
-}
-
-fn dispatch_focus_event(
-    target: &web_sys::Element,
-    kind: &str,
-    bubbles: bool,
-    related_target: Option<&web_sys::Element>,
-) {
-    let init = web_sys::FocusEventInit::new();
-    init.set_bubbles(bubbles);
-    if let Some(related_target) = related_target {
-        init.set_related_target(Some(related_target.unchecked_ref()));
-    }
-    if let Ok(event) = web_sys::FocusEvent::new_with_focus_event_init_dict(kind, &init) {
-        let _ = target.dispatch_event(&event);
     }
 }

@@ -1,5 +1,6 @@
-//! Headless color slider atoms: a slider changing one channel of a color.
 // Upstream: react-aria-components/src/ColorSlider.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorSlider.test.js @ 99e6102368
+//! Headless color slider atoms: a slider changing one channel of a color.
 
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
@@ -71,7 +72,6 @@ struct ColorSliderContext {
 ///
 /// Default class: `leptonic-ColorSlider`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     /// The channel the slider changes.
     channel: Ch,
@@ -90,9 +90,9 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     /// Called with the color when the user stops dragging.
     #[prop(into, optional)]
     on_change_end: Option<Callback<Ch::Color>>,
-    #[prop(into, default = Signal::stored(Orientation::Horizontal))] orientation: Signal<
-        Orientation,
-    >,
+    /// Default: horizontal.
+    #[prop(into, default = Signal::stored(Orientation::Horizontal))]
+    orientation: Signal<Orientation>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Names the slider when it has no `Label`. Without either, the channel's name does.
     #[prop(into, optional)]

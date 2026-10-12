@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/color/Color.ts @ 99e6102368
 //! Parsing colors (react-aria's `parseColor`).
 
 use std::{fmt, str::FromStr};
@@ -26,7 +27,7 @@ impl FromStr for Alpha<OpaqueColor> {
     type Err = ParseColorError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        parse_color(text.trim()).ok_or_else(|| ParseColorError(text.to_owned()))
+        parse_color(text.trim()).ok_or_else(|| ParseColorError::new(text))
     }
 }
 
@@ -90,7 +91,6 @@ fn parse_color(text: &str) -> Option<Color> {
     };
     let hue = |text: &str| {
         number(text).map(|hue| {
-            #[allow(clippy::float_cmp)]
             if hue == 360.0 {
                 hue
             } else {

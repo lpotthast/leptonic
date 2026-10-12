@@ -49,6 +49,7 @@ pub struct UseDraggableItemInput {
 }
 
 /// Return value of [`use_draggable_item`].
+#[derive(Debug)]
 pub struct UseDraggableItemReturn {
     pub drag_props: UseDragProps,
     /// For `use_button`, with `has_drag_button`.
@@ -68,9 +69,10 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     } = input;
     let selection = state.list.selection;
     let item_key = StoredValue::new(key.clone());
-    let is_disabled = Signal::derive(move || {
+    let is_disabled: Signal<bool> = Memo::new(move |_| {
         state.is_disabled.get() || item_key.with_value(|k| selection.is_disabled(k))
-    });
+    })
+    .into();
 
     let UseDragReturn {
         mut drag_props,
@@ -145,7 +147,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     }
 
     let collection = state.list.collection;
-    let label = Signal::derive(move || {
+    let label = Memo::new(move |_| {
         if is_selected.get() {
             strings.read().drag_selected_items(drag_count.get())
         } else {
@@ -166,7 +168,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
             is_disabled,
             ..drag_button
         },
-        drag_button_label: label,
+        drag_button_label: label.into(),
         is_dragging: Signal::derive(move || item_key.with_value(|key| state.is_dragging(key))),
     }
 }

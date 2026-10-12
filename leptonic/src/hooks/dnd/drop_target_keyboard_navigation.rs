@@ -96,13 +96,11 @@ fn next_drop_target(
         }
         DropPosition::After => {
             let target_node = collection.get(&target.key);
-            let mut next_in_level = target_node
-                .and_then(|n| n.next_key.as_ref())
-                .and_then(|k| collection.get(k));
+            let mut next_in_level = collection.next_sibling(&target.key);
             while let Some(node) = next_in_level
                 && node.kind != NodeKind::Item
             {
-                next_in_level = node.next_key.as_ref().and_then(|k| collection.get(k));
+                next_in_level = collection.next_sibling(&node.key);
             }
             if let Some(target_node) = target_node
                 && next_in_level.is_none()
@@ -112,7 +110,7 @@ fn next_drop_target(
                     .and_then(|k| collection.get(k))
             {
                 // After the last child: before the parent's next sibling, or after the parent.
-                if let Some(next) = parent.next_key.as_ref().and_then(|k| collection.get(k))
+                if let Some(next) = collection.next_sibling(&parent.key)
                     && next.kind == NodeKind::Item
                 {
                     return Some(item(next.key.clone(), DropPosition::Before));
@@ -173,8 +171,8 @@ fn previous_drop_target(
 
     match target.drop_position {
         DropPosition::Before => {
-            if let Some(prev) = collection.get(&target.key).and_then(|n| n.prev_key.clone())
-                && let Some(last_child) = last_child(collection, &prev)
+            if let Some(prev) = collection.previous_sibling(&target.key)
+                && let Some(last_child) = last_child(collection, &prev.key)
             {
                 return Some(last_child);
             }
@@ -199,15 +197,12 @@ fn last_child(collection: &Collection, key: &Key) -> Option<DropTarget> {
     if next_node.level <= target_node.level {
         return None;
     }
-    let mut last = target_node
-        .last_child_key
-        .as_ref()
-        .and_then(|k| collection.get(k));
+    let mut last = collection.last_child(key);
     while let Some(node) = last
         && node.kind != NodeKind::Item
-        && node.prev_key.is_some()
+        && let Some(previous) = collection.previous_sibling(&node.key)
     {
-        last = node.prev_key.as_ref().and_then(|k| collection.get(k));
+        last = Some(previous);
     }
     last.map(|node| item(node.key.clone(), DropPosition::After))
 }

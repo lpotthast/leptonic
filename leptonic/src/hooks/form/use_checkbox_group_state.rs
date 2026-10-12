@@ -328,6 +328,7 @@ mod tests {
             assert_that!(state.is_required.get_untracked()).is_false();
         });
     }
+
     #[test]
     fn errors_keep_the_order_checkboxes_became_invalid() {
         with_owner(|| {

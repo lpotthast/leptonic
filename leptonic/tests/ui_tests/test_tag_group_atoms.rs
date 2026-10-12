@@ -381,3 +381,13 @@ pub async fn keyboard_selection(page: &Page<'_>) -> Result<(), Report> {
         .is_equal_to("true");
     Ok(())
 }
+
+/// Renaming a tag in the collection under the same key updates the tag `TagItems` renders.
+#[browser_test]
+pub async fn renamed_tags_update(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let cat = tag_in(page, "#test-tg-rename", "Cat").await?;
+    page.element("#test-tg-rename-cat").await?.click().await?;
+    cat.wait_for_inner_text("Kitten").await?;
+    Ok(())
+}

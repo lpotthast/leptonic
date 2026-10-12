@@ -1,3 +1,4 @@
+// No upstream: syntax highlighting for documentation and code views (react-aria has none).
 //! Syntax highlighting of source code (feature `syntax-highlight`, built on `syntect`): pure
 //! Rust, so it works during server-side rendering too.
 use std::sync::LazyLock;

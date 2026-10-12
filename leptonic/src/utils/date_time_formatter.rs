@@ -35,7 +35,10 @@
 //
 // =============================================================================
 
-use std::sync::{Arc, OnceLock};
+use std::{
+    cell::RefCell,
+    sync::{Arc, OnceLock},
+};
 
 use icu_datetime::{
     DateTimeFormatter as IcuFormatter, DateTimeFormatterPreferences,
@@ -48,7 +51,7 @@ use icu_datetime::{
 };
 use icu_locale::Locale as IcuLocale;
 
-use super::i18n::Locale;
+use super::{i18n::Locale, recent_cache::RecentCache};
 
 /// Date/time formatting options.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -291,6 +294,12 @@ pub struct DateTimeFormatter {
     formatters: Arc<[OnceLock<Option<IcuFormatter<CompositeFieldSet>>>; 3]>,
 }
 
+thread_local! {
+    /// The formatters used last, per locale and options (see [`DateTimeFormatter::cached`]).
+    static FORMATTERS: RefCell<RecentCache<(Locale, DateTimeFormatOptions), DateTimeFormatter>> =
+        const { RefCell::new(RecentCache::new(16)) };
+}
+
 impl PartialEq for DateTimeFormatter {
     fn eq(&self, other: &Self) -> bool {
         self.locale == other.locale && self.options == other.options
@@ -306,6 +315,24 @@ impl DateTimeFormatter {
             options,
             formatters: Arc::default(),
         }
+    }
+
+    /// A formatter for `locale` and `options`, kept (per thread) while in use: its ICU4X
+    /// formatters are built once, not per calendar, opened picker or description.
+    pub(crate) fn cached(locale: &Locale, options: &DateTimeFormatOptions) -> Self {
+        FORMATTERS.with_borrow_mut(|formatters| {
+            formatters.get_or_insert_with(
+                |(cached_locale, cached_options)| {
+                    cached_locale == locale && cached_options == options
+                },
+                || {
+                    (
+                        (locale.clone(), options.clone()),
+                        Self::new(locale, options.clone()),
+                    )
+                },
+            )
+        })
     }
 
     /// The formatter's options.

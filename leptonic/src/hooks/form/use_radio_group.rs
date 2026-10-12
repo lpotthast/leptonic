@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use leptos::{attr, attr::Attr, ev, prelude::*};
+use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::{
@@ -22,12 +23,15 @@ use crate::{
         interactions::{UseKeyboardInput, use_keyboard},
     },
     utils::{
-        aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaReadonly, AriaRequired, AriaRole},
-        dom_ext::EventAccessors,
+        aria::{
+            AriaDisabled, AriaInvalid, AriaOrientation, AriaReadonly, AriaRequired, AriaRole,
+            aria_true,
+        },
         i18n::{WritingDirection, use_direction},
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         orientation::Orientation,
+        shadow_dom::get_event_target,
     },
 };
 
@@ -154,7 +158,6 @@ impl IntoAttrs for UseRadioGroupProps {
 /// Provides the behavior and accessibility of a radio group (`role="radiogroup"`): the arrow
 /// keys move the selection between its radios. Render the radios with
 /// [`use_radio`](fn@super::use_radio).
-#[allow(clippy::too_many_lines)]
 pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     let UseRadioGroupInput {
         state,
@@ -210,7 +213,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     // Focus and select the next (or previous) radio, wrapping around.
     let select_next = move |e: &KeyboardEvent, next: bool| -> bool {
         let options = FocusManagerOptions {
-            from: wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target()).ok(),
+            from: get_event_target(e).and_then(|target| target.dyn_into::<web_sys::Element>().ok()),
             wrap: true,
             focusability: Focusability::Focusable,
             accept: Some(Arc::new(|el: &web_sys::Element| {
@@ -270,11 +273,11 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     UseRadioGroupReturn {
         props: UseRadioGroupProps {
             id: field_props.id,
-            aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
+            aria_invalid: aria_true(is_invalid),
             aria_errormessage,
-            aria_readonly: Signal::derive(move || is_read_only.get().then_some(AriaReadonly::True)),
-            aria_required: Signal::derive(move || is_required.get().then_some(AriaRequired::True)),
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+            aria_readonly: aria_true(is_read_only),
+            aria_required: aria_true(is_required),
+            aria_disabled: aria_true(is_disabled),
             aria_orientation: Signal::derive(move || orientation.get().into()),
             aria_label: field_props.aria_label,
             aria_labelledby: field_props.aria_labelledby,

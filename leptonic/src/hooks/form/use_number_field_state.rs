@@ -1,5 +1,6 @@
 // Upstream: react-stately/src/numberfield/useNumberFieldState.ts @ 99e6102368
 // Upstream: react-stately/test/numberfield/useNumberFieldState.test.ts @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/numberfield/NumberField.test.js @ 99e6102368
 use leptos::prelude::*;
 
 use super::use_form_validation_state::{
@@ -30,7 +31,6 @@ use crate::{
 // - `min_value`, `max_value` and `step` are signals. Integer types additionally never step
 //   beyond their own bounds, and `increment_to_max`/`decrement_to_min` (End/Home) use the type's
 //   bounds when no explicit ones are set.
-// - The locale comes from the i18n context (C5).
 //
 // =============================================================================
 
@@ -206,7 +206,6 @@ impl<T: NumberValue> NumberFieldState<T> {
 /// });
 /// state.increment();
 /// ```
-#[allow(clippy::too_many_lines)]
 pub fn use_number_field_state<T: NumberValue>(
     input: UseNumberFieldStateInput<T>,
 ) -> NumberFieldState<T> {
@@ -232,7 +231,7 @@ pub fn use_number_field_state<T: NumberValue>(
     let formatting_key: Memo<(Locale, NumberFormatOptions)> =
         Memo::new(move |_| (locale.get(), format_options.get()));
     let parser = Memo::new_with_compare(
-        move |_| formatting_key.with(|(locale, options)| NumberParser::new(locale, options)),
+        move |_| formatting_key.with(|(locale, options)| NumberParser::cached(locale, options)),
         // Always a change: the key memo already compares by value.
         |_, _| true,
     );
@@ -264,7 +263,8 @@ pub fn use_number_field_state<T: NumberValue>(
     let parse = move |text: &str| parser.with_untracked(|parser| parser.parse::<T>(text));
 
     let explicit_step = step;
-    let step = Signal::derive(move || {
+    // A memo: stepping, the stepper buttons and the native range validation read it.
+    let step: Signal<T> = Memo::new(move |_| {
         explicit_step.get().unwrap_or_else(|| {
             let is_percent = format_options.with(|o| o.style == NumberStyle::Percent);
             let hundredth = || {
@@ -278,7 +278,8 @@ pub fn use_number_field_state<T: NumberValue>(
                 T::ONE
             }
         })
-    });
+    })
+    .into();
     // Stepping snaps to the effective step.
     let snap = move |value: T| {
         value.snap_to_step(

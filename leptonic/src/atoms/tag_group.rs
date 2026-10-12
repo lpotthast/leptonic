@@ -15,7 +15,7 @@ use crate::{
         button::{UseButtonInput, use_button},
         collections::{
             CollectionMemo, DisabledBehavior, Key, Node, Selection, SelectionBehavior,
-            SelectionMode, SelectionOptions, UseListStateInput, use_list_state,
+            SelectionMode, SelectionOptions, UseListStateInput, use_list_state, use_node,
         },
         focus::{UseFocusRingInput, use_focus_ring},
         interactions::{UseHoverInput, use_hover},
@@ -93,7 +93,7 @@ struct TagRemoveContext {
 ///
 /// Default class: `leptonic-TagGroup`.
 #[component]
-#[allow(clippy::too_many_lines, clippy::implicit_hasher)]
+#[allow(clippy::implicit_hasher)]
 pub fn TagGroup(
     /// The tags.
     #[prop(into)]
@@ -214,7 +214,7 @@ pub fn TagList(
     };
     let data = ctx.data.get_value();
     let collection = data.list.state.collection;
-    let is_empty = Signal::derive(move || collection.with(|c| c.is_empty()));
+    let is_empty = Memo::new(move |_| collection.with(|c| c.is_empty()));
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
     let empty = move || {
         is_empty
@@ -230,7 +230,7 @@ pub fn TagList(
                 {..focus_ring.props.into_attrs()}
                 class=classes
                 style=styles
-                data-empty=flag(is_empty)
+                data-empty=flag(is_empty.into())
                 data-focused=flag(focus_ring.is_focused)
             >
                 {children()}
@@ -335,16 +335,18 @@ where
     let children = Arc::new(children);
     Some(view! {
         <For
-            each=move || collection.with(|c| c.items().cloned().collect::<Vec<_>>())
-            key=|node| node.key.clone()
-            let:node
+            each=move || collection.with(|c| c.items().map(|node| node.key.clone()).collect::<Vec<_>>())
+            key=Clone::clone
+            let:key
         >
             {
+                // The tag's content renders again when it changes (e.g. its text), not when
+                // other tags come or go.
+                let node = use_node(collection, key.clone());
                 let children = children.clone();
-                let key = node.key.clone();
                 view! {
                     <Tag key=key classes=classes.clone()>
-                        {children(node)}
+                        {move || node.get().map(|node| children(node))}
                     </Tag>
                 }
             }

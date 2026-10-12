@@ -28,8 +28,9 @@ use crate::{
     CapturedElement, EventHandler, IntoAttrs, OnEvent,
     hooks::button::UseButtonInput,
     utils::{
-        dom_ext::{EventAccessors, node_contains},
+        dom_ext::EventAccessors,
         platform::device::{is_ipad, is_mac},
+        shadow_dom::node_contains,
     },
 };
 
@@ -85,6 +86,7 @@ pub struct UseDropInput {
 }
 
 /// Return value of [`use_drop`].
+#[derive(Debug)]
 pub struct UseDropReturn {
     pub drop_props: UseDropProps,
     /// For `use_button`, with `has_drop_button`.
@@ -218,7 +220,6 @@ fn allowed_operations(e: &DragEvent) -> DropOperations {
 }
 
 /// A drop target for native drags and keyboard or screen reader drags.
-#[allow(clippy::too_many_lines)]
 pub fn use_drop(input: UseDropInput) -> UseDropReturn {
     let UseDropInput {
         element,
@@ -296,7 +297,6 @@ pub fn use_drop(input: UseDropInput) -> UseDropReturn {
         let allowed = allowed_operations(&e);
         let (x, y) = (e.client_x(), e.client_y());
         let (same, previous, previous_allowed) = state.with_value(|s| {
-            #[allow(clippy::float_cmp)]
             let same = s.x == x && s.y == y && s.allowed_operations == allowed;
             (same, s.drop_effect, s.allowed_operations)
         });
@@ -391,9 +391,8 @@ pub fn use_drop(input: UseDropInput) -> UseDropReturn {
                 .retain(|el| Some(&**el) != target.as_ref());
             // Leaving the drop target itself: forget elements dragged over that were removed.
             if on_drop_target_itself {
-                s.drag_over_elements.retain(|el| {
-                    node_contains(Some(&current), Some(el.unchecked_ref())).unwrap_or(false)
-                });
+                s.drag_over_elements
+                    .retain(|el| node_contains(&current, el.unchecked_ref()));
             }
         });
         if state.with_value(|s| !s.drag_over_elements.is_empty()) {

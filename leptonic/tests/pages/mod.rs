@@ -15,6 +15,7 @@ mod keyboard;
 mod locator;
 mod lookup;
 pub(crate) use lookup::terminal_lookup_error;
+mod perf;
 mod platform;
 pub(crate) mod script;
 mod stopwatch;
@@ -33,6 +34,7 @@ pub use event::{
     PointerType, SyntheticEvent, interface,
 };
 pub use locator::{Locator, css, role};
+pub use perf::PerfResults;
 pub use platform::Platform;
 use rootcause::{Report, bail, prelude::ResultExt};
 use serde::{Deserialize, de::DeserializeOwned};
@@ -306,6 +308,12 @@ impl<'d> Page<'d> {
         end: StopwatchEnd<'_>,
     ) -> Result<Stopwatch, Report> {
         stopwatch::start(self.driver(), target, event.into(), end).await
+    }
+
+    /// Runs the performance scenario `name` of the current page (a `/perf` fixture) and returns
+    /// its results, measured on the page's clock.
+    pub async fn run_perf_scenario(&self, name: &str) -> Result<PerfResults, Report> {
+        perf::run(self.driver(), name).await
     }
 
     /// Click with the mouse at the point (`x`, `y`) of the viewport (CSS pixels), on whatever is

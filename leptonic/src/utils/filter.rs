@@ -1,5 +1,6 @@
 // Upstream: react-aria/src/i18n/useFilter.ts @ 99e6102368
 // Upstream: react-aria/src/i18n/useCollator.ts @ 99e6102368
+//! Locale-aware string comparison ([`Collator`]) and matching ([`Filter`]) with ICU4X.
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -105,7 +106,7 @@ impl Collator {
         let prefs = icu_collator::CollatorPreferences::from(locale.icu_locale());
         let inner = CollatorBorrowed::try_new(prefs, icu_options).unwrap_or_else(|_| {
             CollatorBorrowed::try_new(icu_collator::CollatorPreferences::default(), icu_options)
-                .unwrap()
+                .expect("ICU4X's compiled data has the root collation")
         });
 
         Self { inner }

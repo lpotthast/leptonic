@@ -146,7 +146,6 @@ impl ListDropTargetDelegate {
 }
 
 impl DropTargetDelegate for ListDropTargetDelegate {
-    #[allow(clippy::too_many_lines)]
     fn drop_target_from_point(
         &self,
         x: f64,

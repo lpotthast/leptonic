@@ -347,6 +347,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="data-disabled" ty="true">"The option is disabled."</ApiRow>
                     <ApiRow name="data-pressed" ty="true">"The option is being pressed."</ApiRow>
+                    <ApiRow name="data-hovered" ty="true">"A mouse or pen is over the option."</ApiRow>
+                    <ApiRow name="data-selection-mode" ty="single, multiple">"How many options can be selected; absent without selection."</ApiRow>
                 </ApiTable>
                 <p>
                     "On "<Code inline=true>"ListBox"</Code>": "<Code inline=true>"data-empty"</Code>" (no options), "<Code inline=true>"data-focused"</Code>" and "<Code inline=true>"data-focus-visible"</Code>

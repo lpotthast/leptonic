@@ -20,8 +20,11 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The optional state goes into the input (C8). DOM and labelling props aren't passed through:
-//   set them on the element.
-// - `is_disabled` (an addition) stops hovering the tooltip from keeping it open.
+//   set them on the element, next to the spread props (no runtime props merging).
+//
+// ## ADDITIONS
+// - `is_disabled` stops hovering the tooltip from keeping it open, as `use_hover`'s flag, so
+//   that a disabled tooltip doesn't take part in the warm-up. React-aria: always hoverable.
 //
 // =============================================================================
 

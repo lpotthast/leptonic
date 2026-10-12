@@ -3,7 +3,7 @@
 //! This module provides hooks for managing overlay behaviors including:
 //! - Popovers (`use_popover`)
 //! - Overlay dismiss handling (integrated into `use_overlay`)
-//! - Overlay positioning (`use_overlay`, `use_overlay_position`, `use_overlay_trigger`)
+//! - Overlay positioning (`use_overlay_position`) and trigger attributes (`use_overlay_trigger`)
 //!
 //! ## Hook Composition
 //!

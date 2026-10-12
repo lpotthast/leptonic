@@ -1,3 +1,4 @@
+// No upstream: typed ARIA attribute values (react-aria passes strings and booleans).
 //! Rust types for ARIA attributes, as defined by <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference>
 //!
 //! We distinguish between two groups of attributes:
@@ -7,20 +8,21 @@
 //!
 //! Design principles:
 //!
-//! 1. **Enums contain ONLY real ARIA values** — no `Undefined` variants.
+//! 1. **Enums contain ONLY real ARIA values**: no `Undefined` variants.
 //! 2. **Each type implements `AttributeValue`** (via `impl_attribute_value_via_str!`), delegating
 //!    rendering to `&'static str`. This also provides `IntoAttributeValue` via the blanket impl.
-//! 3. **Optionality is always expressed via `Option<AriaType>` at call sites** — the hook decides
+//! 3. **Optionality is always expressed via `Option<AriaType>` at call sites**: the hook decides
 //!    whether to render.
-//! 4. **Typed attrs** — store ARIA enum types in attr tuples (e.g., `Signal<Option<AriaDisabled>>`),
+//! 4. **Typed attrs**: store ARIA enum types in attr tuples (e.g., `Signal<Option<AriaDisabled>>`),
 //!    not pre-converted strings. Tachys has blanket `AttributeValue` impls for `Option<V>` and
 //!    `Signal<T>` (via `ReactiveFunction`), so this works automatically once the inner type
 //!    implements `AttributeValue`.
 
-use std::str::FromStr;
-
 use itertools::Itertools;
-use leptos::{attr::AttributeKey, tachys::html::attribute::AttributeValue};
+use leptos::{
+    prelude::{Get, Signal},
+    tachys::html::attribute::AttributeValue,
+};
 
 /// Implements `AttributeValue` for a `Copy + Send + 'static` type that has an `into_str(self) -> &'static str` method.
 /// This delegates all rendering to the `&'static str` `AttributeValue` impl.
@@ -80,6 +82,16 @@ macro_rules! impl_attribute_value_via_str {
             }
         }
     };
+}
+
+/// An ARIA value that is `True` while `signal` is `true` and absent otherwise (react-aria's
+/// `'aria-disabled': isDisabled || undefined`). For attributes whose `"false"` would mean the same
+/// as no attribute.
+pub(crate) fn aria_true<T: From<bool> + Send + Sync + 'static>(
+    signal: impl Into<Signal<bool>>,
+) -> Signal<Option<T>> {
+    let signal = signal.into();
+    Signal::derive(move || signal.get().then(|| T::from(true)))
 }
 
 /// Generates a boolean ARIA type with `True` and `False` variants.
@@ -203,7 +215,7 @@ impl AttributeValue for AriaKeyshortcuts {
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaRole {
-    // -- Widget roles --
+    // Widget roles.
     Button,
     Checkbox,
     Combobox,
@@ -233,7 +245,7 @@ pub enum AriaRole {
     Treegrid,
     Treeitem,
 
-    // -- Document structure roles --
+    // Document structure roles.
     Application,
     Article,
     Blockquote,
@@ -273,7 +285,7 @@ pub enum AriaRole {
     Toolbar,
     Tooltip,
 
-    // -- Landmark roles --
+    // Landmark roles.
     Banner,
     Complementary,
     Contentinfo,
@@ -283,14 +295,14 @@ pub enum AriaRole {
     Region,
     Search,
 
-    // -- Live region roles --
+    // Live region roles.
     Alert,
     Log,
     Marquee,
     Status,
     Timer,
 
-    // -- Window roles --
+    // Window roles.
     Alertdialog,
     Dialog,
 }
@@ -393,7 +405,7 @@ impl_attribute_value_via_str!(AriaRole);
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaHasPopup {
-    // The element does not have a popup.
+    /// The element does not have a popup.
     #[default]
     False,
 
@@ -430,12 +442,6 @@ impl AriaHasPopup {
     }
 }
 
-impl AsRef<str> for AriaHasPopup {
-    fn as_ref(&self) -> &'static str {
-        leptos::attr::AriaHaspopup::KEY
-    }
-}
-
 impl_attribute_value_via_str!(AriaHasPopup);
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded>
@@ -454,20 +460,6 @@ impl AriaExpanded {
         match self {
             Self::True => "true",
             Self::False => "false",
-        }
-    }
-}
-
-impl FromStr for AriaExpanded {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "false" => Ok(Self::False),
-            "true" => Ok(Self::True),
-            other => Err(format!(
-                "String '{other}' is not a valid AriaExpanded variant."
-            )),
         }
     }
 }
@@ -766,27 +758,7 @@ impl AriaAutocomplete {
 
 impl_attribute_value_via_str!(AriaAutocomplete);
 
-/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-selected>
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AriaSelected {
-    True,
-    #[default]
-    False,
+define_aria_bool! {
+    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-selected>
+    AriaSelected
 }
-
-impl AriaSelected {
-    pub fn into_str(self) -> &'static str {
-        match self {
-            Self::True => "true",
-            Self::False => "false",
-        }
-    }
-}
-
-impl From<bool> for AriaSelected {
-    fn from(value: bool) -> Self {
-        if value { Self::True } else { Self::False }
-    }
-}
-
-impl_attribute_value_via_str!(AriaSelected);

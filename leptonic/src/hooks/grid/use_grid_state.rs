@@ -16,9 +16,11 @@ use crate::hooks::collections::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The grid is a collection of rows (`CollectionBuilder::row`) whose children are cells.
+// - The grid is a collection of rows (`CollectionBuilder::row`) whose children are cells: the
+//   one `Collection` type of every collection hook (react-stately: a `GridCollection`).
 // - In cell focus mode, the selection manager itself focuses a row's first/last cell when the
-//   row is focused (react-aria wraps `setFocusedKey`).
+//   row is focused, so every path that focuses a key does it (react-aria wraps `setFocusedKey`
+//   in the grid state).
 //
 // =============================================================================
 

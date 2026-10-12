@@ -1,33 +1,21 @@
 // Upstream: react-aria/src/color/useColorField.ts @ 99e6102368
-use leptos::{
-    ev::{self},
-    prelude::*,
-};
+// Upstream: react-aria/test/color/useColorField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ColorField.test.js @ 99e6102368
+use leptos::{ev, prelude::*};
 use web_sys::{CompositionEvent, FocusEvent, InputEvent, WheelEvent};
 
 use super::use_color_field_state::ColorFieldState;
 use crate::{
     CapturedElement, EventHandler, IntoAttrs, OnEvent, SlotProps,
     hooks::{
-        focus::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
         form::{
-            InputType, TextFieldElement,
-            use_form_reset::{UseFormResetInput, use_form_reset},
-            use_form_validation_state::ValidityStateSnapshot,
-            use_formatted_text_field::{
-                FormattedTextFieldHandlers, UseFormattedTextFieldInput, use_formatted_text_field,
-            },
-            use_label::UseLabelProps,
-            use_text_field::{
-                UseTextFieldInput, UseTextFieldInputAttrs, UseTextFieldInputProps,
-                UseTextFieldReturn, use_text_field,
-            },
-            use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
+            FormattedTextFieldHandlers, InputType, TextFieldElement, UseFormResetInput,
+            UseFormattedTextFieldInput, UseLabelProps, UseTextFieldInput, UseTextFieldInputAttrs,
+            UseTextFieldInputProps, UseTextFieldReturn, UseTextFieldStateInput,
+            UseWheelSteppingInput, ValidityStateSnapshot, use_form_reset, use_formatted_text_field,
+            use_text_field, use_text_field_state, use_wheel_stepping,
         },
-        interactions::{
-            UseScrollWheelInput, use_keyboard::KeyboardEventWrapper, use_scroll_wheel,
-            use_scroll_wheel::ScrollEvent,
-        },
+        interactions::KeyboardEventWrapper,
         spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
@@ -74,6 +62,7 @@ pub struct UseColorFieldInput<C: ColorValue = RGB8> {
 }
 
 /// Return value of [`use_color_field`].
+#[derive(Debug)]
 pub struct UseColorFieldReturn {
     pub label_props: UseLabelProps,
     pub input_props: UseColorFieldInputProps,
@@ -133,7 +122,6 @@ impl IntoAttrs for UseColorFieldInputProps {
 /// Behavior and accessibility of a field for a color as hex text: typing is limited to hex
 /// digits, the color is committed on blur and Enter, arrow keys, Page Up/Down, Home/End and the
 /// scroll wheel step it (a text field with a spin button's keys).
-#[allow(clippy::too_many_lines)]
 pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorFieldReturn {
     let UseColorFieldInput {
         state,
@@ -279,29 +267,12 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
     focusable.on_focus = spin.on_focus.chain(focusable.on_focus.clone());
     focusable.on_blur = spin.on_blur.chain(focusable.on_blur.clone());
 
-    // The scroll wheel steps while the field has focus.
-    let UseFocusWithinReturn {
-        props: focus_within,
-        is_focus_within,
-    } = use_focus_within(UseFocusWithinInput {
+    let wheel = use_wheel_stepping(UseWheelSteppingInput {
+        is_wheel_disabled,
         is_disabled,
-        ..UseFocusWithinInput::default()
-    });
-    let wheel = use_scroll_wheel(UseScrollWheelInput {
-        is_disabled: Signal::derive(move || {
-            is_wheel_disabled || is_disabled.get() || is_read_only.get() || !is_focus_within.get()
-        }),
-        on_scroll: Some(Callback::new(move |e: ScrollEvent| {
-            // Mostly horizontal (a trackpad): probably not meant to step.
-            if e.delta_y.abs() <= e.delta_x.abs() {
-                return;
-            }
-            if e.delta_y > 0.0 {
-                state.increment();
-            } else if e.delta_y < 0.0 {
-                state.decrement();
-            }
-        })),
+        is_read_only,
+        on_increment: Callback::new(move |()| state.increment()),
+        on_decrement: Callback::new(move |()| state.decrement()),
     });
 
     UseColorFieldReturn {
@@ -311,9 +282,9 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
             on_beforeinput,
             on_compositionstart,
             on_compositionend,
-            on_wheel: wheel.props.on_wheel,
-            on_focusin: focus_within.on_focusin,
-            on_focusout: focus_within.on_focusout,
+            on_wheel: wheel.on_wheel,
+            on_focusin: wheel.focus_within.on_focusin,
+            on_focusout: wheel.focus_within.on_focusout,
         },
         description_props,
         error_message_props,

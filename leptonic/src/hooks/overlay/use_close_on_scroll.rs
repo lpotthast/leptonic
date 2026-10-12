@@ -8,7 +8,6 @@
 // ## API DIFFERENCES
 // - `on_close` is passed explicitly (react-aria falls back to a close handler registered for the
 //   trigger by `useOverlayTrigger`, for backward compatibility).
-// - The trigger is a `CapturedElement` (react-aria: a ref).
 //
 // =============================================================================
 

@@ -24,7 +24,7 @@ use crate::{
     },
     utils::{
         aria::AriaRole,
-        dom_ext::{EventAccessors, node_contains},
+        dom_ext::EventAccessors,
         focus::focus_safely,
         focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
@@ -32,7 +32,7 @@ use crate::{
         key::{KeyboardEventKey, KeyboardKey, redispatch_keyboard_event},
         owner_alive::OwnerAlive,
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
-        shadow_dom::get_active_element,
+        shadow_dom::{get_active_element, get_event_target, node_contains},
     },
 };
 
@@ -41,7 +41,8 @@ use crate::{
 // =============================================================================
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-colindex` from the cell index).
+// - Virtualization (`aria-colindex` from the cell index): not yet, the virtualizer doesn't render
+//   grids yet.
 //
 // =============================================================================
 
@@ -73,6 +74,7 @@ pub struct UseGridCellInput {
 }
 
 /// Return value of [`use_grid_cell`].
+#[derive(Debug)]
 pub struct UseGridCellReturn {
     pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
     pub is_pressed: Signal<bool>,
@@ -123,7 +125,6 @@ impl IntoAttrs for UseGridCellProps {
 
 /// A cell of a grid: focusable itself or through its interactive children, with arrow keys
 /// moving between the children before moving to the neighboring cell.
-#[allow(clippy::too_many_lines)]
 pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseGridCellInput {
@@ -176,9 +177,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         let cell: web_sys::Element = (*cell).clone();
         let document = cell.owner_document();
         let active = document.as_ref().and_then(get_active_element);
-        let focus_within = active
-            .as_ref()
-            .is_some_and(|a| cell.contains(Some(a.unchecked_ref())));
+        let focus_within = active.as_ref().is_some_and(|a| node_contains(&cell, a));
         if focus_mode == CellFocusMode::Child {
             if focus_within && active.as_ref() != Some(&cell) {
                 return;
@@ -194,7 +193,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
                     .get_value()
                     .is_some_and(|k| cell_key.with_value(|c| *c == k))
                 && let Some(child) = last_focused_child.get_value()
-                && cell.contains(Some(child.unchecked_ref()))
+                && node_contains(&cell, &child)
             {
                 focus_safely(&child);
                 return;
@@ -280,8 +279,8 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             return;
         };
         let cell: web_sys::Element = (*cell).clone();
-        let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
-        if !node_contains(Some(cell.unchecked_ref()), target.as_ref()).unwrap_or(false) {
+        let target = get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Node>().ok());
+        if !target.is_some_and(|target| node_contains(&cell, &target)) {
             return;
         }
         let Some(active) = cell.owner_document().as_ref().and_then(get_active_element) else {
@@ -378,9 +377,8 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             return;
         };
         let cell: web_sys::Element = (*cell).clone();
-        let on_cell = e
-            .target()
-            .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &cell);
+        let on_cell =
+            get_event_target(e).is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &cell);
         if !on_cell && e.typed_key() != KeyboardKey::Tab {
             e.stop_propagation();
             return;
@@ -422,13 +420,11 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         let Some(cell) = element.get_untracked() else {
             return;
         };
-        let target = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+        let target = get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Element>().ok());
         if target.as_ref() != Some(&*cell) {
             // A child got focus: remember it, and make the cell the focused key.
             if let Some(target) = &target
-                && cell.contains(Some(target.unchecked_ref()))
+                && node_contains(&cell, target)
             {
                 last_focused_child.set_value(Some(SendWrapper::new(target.clone())));
             }
@@ -441,7 +437,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             let from_child = e
                 .related_target()
                 .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
-                .is_some_and(|related| cell.contains(Some(&related)));
+                .is_some_and(|related| node_contains(&cell, &related));
             if from_child {
                 return;
             }

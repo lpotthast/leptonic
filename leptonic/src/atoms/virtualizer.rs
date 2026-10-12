@@ -1,12 +1,9 @@
-//! Headless virtualization of collection atoms, and of plain lists.
 // Upstream: react-aria-components/src/Virtualizer.tsx @ 99e6102368
 // Upstream: react-aria/src/virtualizer/Virtualizer.tsx @ 99e6102368
 // Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 // Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+//! Headless virtualization of collection atoms, and of plain lists.
+use std::{collections::HashSet, sync::Arc};
 
 use leptos::prelude::*;
 use leptos_classes::Classes;
@@ -17,9 +14,8 @@ use crate::{
         collections::{Collection, Key, LayoutDelegate, Rect, use_collection},
         focus::{UseFocusRingInput, use_focus_ring},
         virtualizer::{
-            EndAnchor, ItemMeasurer, ItemSize, ItemSizeChange, Layout, LayoutInfo, ListLayout,
-            ListLayoutOptions, ScrollDirection, ScrollViewScroller, UseItemMeasurerInput,
-            UseScrollViewInput, UseVirtualizerStateInput, VirtualizerState, use_item_measurer,
+            EndAnchor, ItemSize, Layout, ListLayout, ListLayoutOptions, ScrollDirection,
+            ScrollViewScroller, UseScrollViewInput, UseVirtualizerStateInput, VirtualizerState,
             use_scroll_view, use_virtualizer_state,
         },
     },
@@ -60,21 +56,15 @@ pub(crate) struct VirtualizedRootInput {
 
 /// A virtualized collection: what its element and its iterator need.
 #[derive(Clone, Copy)]
-// The items are rendered on the client only.
-#[cfg_attr(feature = "ssr", allow(dead_code))]
 pub(crate) struct VirtualizedRoot {
     pub(crate) layout_delegate: StoredValue<Arc<dyn LayoutDelegate>>,
     /// The collection element's styles (the scroll view).
     pub(crate) scroll_view_styles: StoredValue<Styles>,
     /// The content box around the items.
     pub(crate) content_styles: StoredValue<Styles>,
-    pub(crate) visible: Signal<Vec<LayoutInfo>>,
-    /// The visible layout infos by key (rows look theirs up on every scroll frame).
-    pub(crate) layout_infos: Memo<HashMap<Key, LayoutInfo>>,
-    /// Measures the rendered items.
-    pub(crate) measurer: ItemMeasurer,
-    /// The wrappers of the rendered items (each with a token identifying the wrapper).
-    pub(crate) rendered: StoredValue<HashMap<Key, (Arc<()>, CapturedElement)>>,
+    /// What renders the visible items (on the client only).
+    #[cfg(not(feature = "ssr"))]
+    items: client::VisibleItems,
 }
 
 /// Provided by a [`Virtualizer`] to the collection atom inside.
@@ -136,27 +126,15 @@ fn create_virtualized<L: Layout>(
         allows_window_scrolling: Signal::stored(true),
     });
     scroller.set_value(Some(scroll_view.scroller));
-    let visible = state.visible();
+    // The server renders no items.
+    #[cfg(feature = "ssr")]
+    let _ = should_observe_item_size;
     let root = VirtualizedRoot {
         layout_delegate: StoredValue::new(state.layout_delegate()),
         scroll_view_styles: StoredValue::new(scroll_view.scroll_view_styles),
         content_styles: StoredValue::new(scroll_view.content_styles),
-        visible,
-        layout_infos: Memo::new(move |_| {
-            visible.with(|infos| {
-                infos
-                    .iter()
-                    .map(|info| (info.key.clone(), info.clone()))
-                    .collect()
-            })
-        }),
-        measurer: use_item_measurer(UseItemMeasurerInput {
-            update_item_size: Callback::new(move |change: ItemSizeChange| {
-                state.update_item_size(&change.key, change.size);
-            }),
-            should_observe_item_size,
-        }),
-        rendered: StoredValue::new(HashMap::new()),
+        #[cfg(not(feature = "ssr"))]
+        items: client::VisibleItems::new(state, should_observe_item_size),
     };
     VirtualizedParts {
         root,
@@ -271,7 +249,6 @@ impl VirtualListOptions {
 /// </VirtualList>
 /// ```
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn VirtualList<T, KF, R, IV>(
     #[prop(into)] items: Signal<Vec<T>>,
     /// The key of an item: unique and stable.
@@ -421,7 +398,7 @@ where
                 let keys: HashSet<Key> = if selection.is_collapsed() {
                     HashSet::new()
                 } else {
-                    root.rendered.with_value(|rendered| {
+                    root.items.rendered.with_value(|rendered| {
                         rendered
                             .iter()
                             .filter(|(_, (_, row))| {
@@ -485,211 +462,267 @@ pub(crate) fn render_visible_items(
     let content = NodeRef::<leptos::html::Div>::new();
     // The server renders an empty content box (nothing is visible before the view is measured).
     #[cfg(not(feature = "ssr"))]
-    mount_visible_items(root, render, content);
+    client::mount_visible_items(root, render, content);
     #[cfg(feature = "ssr")]
     let _ = render;
     view! { <div node_ref=content role="presentation" style=root.content_styles.get_value()></div> }
 }
 
-/// Mounts and unmounts the rows of the visible items into `content` (see
-/// [`render_visible_items`]).
+/// The rendering of the visible items, on the client only (the server renders an empty content
+/// box: nothing is visible before the view is measured).
 #[cfg(not(feature = "ssr"))]
-fn mount_visible_items(
-    root: VirtualizedRoot,
-    render: Arc<dyn Fn(Key) -> AnyView + Send + Sync>,
-    content: NodeRef<leptos::html::Div>,
-) {
-    use leptos::tachys::view::{Mountable, Render, any_view::AnyViewState};
+mod client {
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    };
 
-    use crate::hooks::collections::NodeKind;
+    use leptos::{
+        prelude::*,
+        tachys::view::{Mountable, Render, any_view::AnyViewState},
+    };
 
-    struct Row {
-        owner: Owner,
-        /// Keeps the row's batch owner alive (see `batch`).
-        _batch: Owner,
-        state: AnyViewState,
-        element: CapturedElement,
+    use super::VirtualizedRoot;
+    use crate::{
+        CapturedElement,
+        hooks::{
+            collections::{Key, NodeKind, Rect},
+            virtualizer::{
+                ItemMeasurer, ItemSizeChange, Layout, LayoutInfo, UseItemMeasurerInput,
+                UseVirtualizerItemInput, VirtualizerState, use_item_measurer, use_virtualizer_item,
+            },
+        },
+    };
+
+    /// What renders and measures the visible items of a virtualized collection.
+    #[derive(Clone, Copy)]
+    pub(super) struct VisibleItems {
+        visible: Signal<Vec<LayoutInfo>>,
+        /// The visible layout infos by key (rows look theirs up on every scroll frame).
+        layout_infos: Memo<HashMap<Key, LayoutInfo>>,
+        /// Measures the rendered items.
+        measurer: ItemMeasurer,
+        /// The wrappers of the rendered items (each with a token identifying the wrapper).
+        pub(super) rendered: StoredValue<HashMap<Key, (Arc<()>, CapturedElement)>>,
     }
 
-    /// Rows per batch owner.
-    const ROWS_PER_BATCH: usize = 64;
+    impl VisibleItems {
+        pub(super) fn new<L: Layout>(
+            state: VirtualizerState<L>,
+            should_observe_item_size: bool,
+        ) -> Self {
+            let visible = state.visible();
+            Self {
+                visible,
+                layout_infos: Memo::new(move |_| {
+                    visible.with(|infos| {
+                        infos
+                            .iter()
+                            .map(|info| (info.key.clone(), info.clone()))
+                            .collect()
+                    })
+                }),
+                measurer: use_item_measurer(UseItemMeasurerInput {
+                    update_item_size: Callback::new(move |change: ItemSizeChange| {
+                        state.update_item_size(&change.key, change.size);
+                    }),
+                    should_observe_item_size,
+                }),
+                rendered: StoredValue::new(HashMap::new()),
+            }
+        }
+    }
 
-    let Some(parent_owner) = Owner::current() else {
-        return;
-    };
-    // The rows' owners are children of batch owners (children of the parent), a new one every
-    // `ROWS_PER_BATCH` rows: a dropped owner leaves a dead weak entry in its parent until the
-    // parent is cleaned up, which would be one per row mounted while scrolling. A batch is freed
-    // with its last row, its entries with it; the parent keeps one per batch.
-    let batch = StoredValue::new_local((parent_owner.child(), 0_usize));
-    // The rendered rows, and their keys in DOM order.
-    let rows = StoredValue::new_local(HashMap::<Key, Row>::new());
-    let order = StoredValue::new_local(Vec::<Key>::new());
-    let visible = root.visible;
+    /// Mounts and unmounts the rows of the visible items into `content` (see
+    /// [`render_visible_items`](super::render_visible_items)).
+    pub(super) fn mount_visible_items(
+        root: VirtualizedRoot,
+        render: Arc<dyn Fn(Key) -> AnyView + Send + Sync>,
+        content: NodeRef<leptos::html::Div>,
+    ) {
+        struct Row {
+            owner: Owner,
+            /// Keeps the row's batch owner alive (see `batch`).
+            _batch: Owner,
+            state: AnyViewState,
+            element: CapturedElement,
+        }
 
-    Effect::new(move |_| {
-        let Some(parent) = content.get() else {
+        /// Rows per batch owner.
+        const ROWS_PER_BATCH: usize = 64;
+
+        let Some(parent_owner) = Owner::current() else {
             return;
         };
-        let parent: &web_sys::Element = &parent;
-        // The items in visual order: top to bottom, then left to right.
-        let keys: Vec<Key> = visible.with(|infos| {
-            let mut items = infos
-                .iter()
-                .filter(|info| info.kind == NodeKind::Item)
-                .collect::<Vec<_>>();
-            items.sort_by(|a, b| {
-                a.rect
-                    .y
-                    .total_cmp(&b.rect.y)
-                    .then(a.rect.x.total_cmp(&b.rect.x))
+        // The rows' owners are children of batch owners (children of the parent), a new one every
+        // `ROWS_PER_BATCH` rows: a dropped owner leaves a dead weak entry in its parent until the
+        // parent is cleaned up, which would be one per row mounted while scrolling. A batch is freed
+        // with its last row, its entries with it; the parent keeps one per batch.
+        let batch = StoredValue::new_local((parent_owner.child(), 0_usize));
+        // The rendered rows, and their keys in DOM order.
+        let rows = StoredValue::new_local(HashMap::<Key, Row>::new());
+        let order = StoredValue::new_local(Vec::<Key>::new());
+        let visible = root.items.visible;
+
+        Effect::new(move |_| {
+            let Some(parent) = content.get() else {
+                return;
+            };
+            let parent: &web_sys::Element = &parent;
+            // The items in visual order: top to bottom, then left to right.
+            let keys: Vec<Key> = visible.with(|infos| {
+                let mut items = infos
+                    .iter()
+                    .filter(|info| info.kind == NodeKind::Item)
+                    .collect::<Vec<_>>();
+                items.sort_by(|a, b| {
+                    a.rect
+                        .y
+                        .total_cmp(&b.rect.y)
+                        .then(a.rect.x.total_cmp(&b.rect.x))
+                });
+                items.into_iter().map(|info| info.key.clone()).collect()
             });
-            items.into_iter().map(|info| info.key.clone()).collect()
-        });
-        let wanted: HashSet<&Key> = keys.iter().collect();
-        rows.update_value(|rows| {
-            rows.retain(|key, row| {
-                if wanted.contains(key) {
-                    return true;
-                }
-                row.state.unmount();
-                row.owner.cleanup();
-                false
-            });
-            // Kept rows keep their relative order in a list. Where a layout reorders them,
-            // they are re-appended in order (moving them, as nothing else can).
-            let kept_before: Vec<Key> = order.with_value(|order| {
-                order
+            let wanted: HashSet<&Key> = keys.iter().collect();
+            rows.update_value(|rows| {
+                rows.retain(|key, row| {
+                    if wanted.contains(key) {
+                        return true;
+                    }
+                    row.state.unmount();
+                    row.owner.cleanup();
+                    false
+                });
+                // Kept rows keep their relative order in a list. Where a layout reorders them,
+                // they are re-appended in order (moving them, as nothing else can).
+                let kept_before: Vec<Key> = order.with_value(|order| {
+                    order
+                        .iter()
+                        .filter(|key| rows.contains_key(*key))
+                        .cloned()
+                        .collect()
+                });
+                let kept_now: Vec<Key> = keys
                     .iter()
                     .filter(|key| rows.contains_key(*key))
                     .cloned()
-                    .collect()
-            });
-            let kept_now: Vec<Key> = keys
-                .iter()
-                .filter(|key| rows.contains_key(*key))
-                .cloned()
-                .collect();
-            if kept_before != kept_now {
-                for key in &kept_now {
-                    if let Some(element) = rows[key].element.get_untracked() {
-                        let _ = parent.append_child(&element);
+                    .collect();
+                if kept_before != kept_now {
+                    for key in &kept_now {
+                        if let Some(element) = rows[key].element.get_untracked() {
+                            let _ = parent.append_child(&element);
+                        }
                     }
                 }
-            }
-            // New rows go before their successor (iterating from the end).
-            let mut next: Option<web_sys::Node> = None;
-            for key in keys.iter().rev() {
-                if let Some(row) = rows.get(key) {
-                    next = row
-                        .element
+                // New rows go before their successor (iterating from the end).
+                let mut next: Option<web_sys::Node> = None;
+                for key in keys.iter().rev() {
+                    if let Some(row) = rows.get(key) {
+                        next = row
+                            .element
+                            .get_untracked()
+                            .map(|element| (*element).clone().into());
+                        continue;
+                    }
+                    // Owned by the row (the effect's own owner is disposed on each run).
+                    let batch_owner = batch
+                        .try_update_value(|(owner, count)| {
+                            if *count == ROWS_PER_BATCH {
+                                *owner = parent_owner.child();
+                                *count = 0;
+                            }
+                            *count += 1;
+                            owner.clone()
+                        })
+                        .unwrap_or_else(|| parent_owner.clone());
+                    let owner = batch_owner.child();
+                    let element = owner.with(CapturedElement::new);
+                    let render = Arc::clone(&render);
+                    let item_key = key.clone();
+                    let mut state = owner.with(|| {
+                        view! {
+                            <VirtualizedItem root=root item_key=item_key.clone() element=element>
+                                {render(item_key)}
+                            </VirtualizedItem>
+                        }
+                        .into_any()
+                        .build()
+                    });
+                    state.mount(parent, next.as_ref());
+                    next = element
                         .get_untracked()
                         .map(|element| (*element).clone().into());
-                    continue;
+                    rows.insert(
+                        key.clone(),
+                        Row {
+                            owner,
+                            _batch: batch_owner,
+                            state,
+                            element,
+                        },
+                    );
                 }
-                // Owned by the row (the effect's own owner is disposed on each run).
-                let batch_owner = batch
-                    .try_update_value(|(owner, count)| {
-                        if *count == ROWS_PER_BATCH {
-                            *owner = parent_owner.child();
-                            *count = 0;
-                        }
-                        *count += 1;
-                        owner.clone()
-                    })
-                    .unwrap_or_else(|| parent_owner.clone());
-                let owner = batch_owner.child();
-                let element = owner.with(CapturedElement::new);
-                let render = Arc::clone(&render);
-                let item_key = key.clone();
-                let mut state = owner.with(|| {
-                    view! {
-                        <VirtualizedItem root=root item_key=item_key.clone() element=element>
-                            {render(item_key)}
-                        </VirtualizedItem>
-                    }
-                    .into_any()
-                    .build()
-                });
-                state.mount(parent, next.as_ref());
-                next = element
-                    .get_untracked()
-                    .map(|element| (*element).clone().into());
-                rows.insert(
-                    key.clone(),
-                    Row {
-                        owner,
-                        _batch: batch_owner,
-                        state,
-                        element,
-                    },
-                );
-            }
+            });
+            order.set_value(keys);
         });
-        order.set_value(keys);
-    });
 
-    on_cleanup(move || {
-        rows.try_update_value(|rows| {
-            for (_, mut row) in rows.drain() {
-                row.state.unmount();
-                row.owner.cleanup();
-            }
+        on_cleanup(move || {
+            rows.try_update_value(|rows| {
+                for (_, mut row) in rows.drain() {
+                    row.state.unmount();
+                    row.owner.cleanup();
+                }
+            });
         });
-    });
-}
+    }
 
-/// The wrapper of a visible item: positioned at its layout info, measured if estimated.
-#[cfg(not(feature = "ssr"))]
-#[component]
-fn VirtualizedItem(
-    root: VirtualizedRoot,
-    item_key: Key,
-    /// Captures the wrapper.
-    element: CapturedElement,
-    children: Children,
-) -> impl IntoView {
-    use crate::hooks::{
-        collections::NodeKind,
-        virtualizer::{UseVirtualizerItemInput, use_virtualizer_item},
-    };
-
-    let token = Arc::new(());
-    root.rendered.update_value(|rendered| {
-        rendered.insert(item_key.clone(), (Arc::clone(&token), element));
-    });
-    let registered = item_key.clone();
-    on_cleanup(move || {
-        root.rendered.try_update_value(|rendered| {
-            // A re-rendered item may have registered its new wrapper already.
-            if rendered
-                .get(&registered)
-                .is_some_and(|(registered_token, _)| Arc::ptr_eq(registered_token, &token))
-            {
-                rendered.remove(&registered);
-            }
+    /// The wrapper of a visible item: positioned at its layout info, measured if estimated.
+    #[component]
+    fn VirtualizedItem(
+        root: VirtualizedRoot,
+        item_key: Key,
+        /// Captures the wrapper.
+        element: CapturedElement,
+        children: Children,
+    ) -> impl IntoView {
+        let token = Arc::new(());
+        root.items.rendered.update_value(|rendered| {
+            rendered.insert(item_key.clone(), (Arc::clone(&token), element));
         });
-    });
-    let key = item_key.clone();
-    let layout_info = Memo::new(move |_| {
-        root.layout_infos
-            .with(|infos| infos.get(&key).cloned())
-            .unwrap_or_else(|| LayoutInfo::new(NodeKind::Item, key.clone(), Rect::default()))
-    });
-    let content = CapturedElement::new();
-    let item = use_virtualizer_item(UseVirtualizerItemInput {
-        element,
-        content,
-        layout_info: layout_info.into(),
-        parent: Signal::stored(None),
-        measurer: root.measurer,
-    });
-    let styles = item.styles;
-    view! {
-        <div role="presentation" {..element.attr()} style=move || styles.get()>
-            <div role="presentation" {..content.attr()} style=item.content_styles>
-                {children()}
+        let registered = item_key.clone();
+        on_cleanup(move || {
+            root.items.rendered.try_update_value(|rendered| {
+                // A re-rendered item may have registered its new wrapper already.
+                if rendered
+                    .get(&registered)
+                    .is_some_and(|(registered_token, _)| Arc::ptr_eq(registered_token, &token))
+                {
+                    rendered.remove(&registered);
+                }
+            });
+        });
+        let key = item_key.clone();
+        let layout_info = Memo::new(move |_| {
+            root.items
+                .layout_infos
+                .with(|infos| infos.get(&key).cloned())
+                .unwrap_or_else(|| LayoutInfo::new(NodeKind::Item, key.clone(), Rect::default()))
+        });
+        let content = CapturedElement::new();
+        let item = use_virtualizer_item(UseVirtualizerItemInput {
+            element,
+            content,
+            layout_info: layout_info.into(),
+            parent: Signal::stored(None),
+            measurer: root.items.measurer,
+        });
+        let styles = item.styles;
+        view! {
+            <div role="presentation" {..element.attr()} style=move || styles.get()>
+                <div role="presentation" {..content.attr()} style=item.content_styles>
+                    {children()}
+                </div>
             </div>
-        </div>
+        }
     }
 }

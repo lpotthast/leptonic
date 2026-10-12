@@ -1,3 +1,6 @@
+//! Atoms: unstyled components built on the hooks, each rendering one element (leptonic's port of
+//! react-aria-components). Style them by their default class (`leptonic-<AtomName>`) and data
+//! attributes; `leptonic-theme` has an optional theme for them.
 pub mod breadcrumbs;
 pub mod button;
 pub mod calendar;

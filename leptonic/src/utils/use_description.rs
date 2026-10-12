@@ -6,6 +6,19 @@
 //! mix requests. The server renders no description (as react-aria, which creates the element in a
 //! layout effect), and hydration agrees.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Takes the description as a signal and returns the id for `aria-describedby` as a signal
+//   (react-aria: a string, returning `{'aria-describedby'}` props).
+//
+// ## ADDITIONS
+// - The description elements are marked `data-client-only` (they exist after hydration only).
+//
+// =============================================================================
+
 use leptos::prelude::*;
 
 /// The id of a visually hidden element containing `description`, for `aria-describedby`: `None`

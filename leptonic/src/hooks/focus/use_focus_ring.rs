@@ -13,6 +13,7 @@ use crate::{
         use_focus::{UseFocusInput, use_focus},
         use_focus_within::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
     },
+    utils::data_attributes::flag,
 };
 
 // =============================================================================
@@ -223,14 +224,6 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
         mark_focused,
     );
 
-    let data_focus_visible = Signal::derive(move || {
-        if focus_visible.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
-
     UseFocusRingReturn {
         is_focus_visible: focus_visible,
         is_focused: focused.into(),
@@ -239,7 +232,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
             on_blur: handle_blur,
             on_focusin: handle_focusin,
             on_focusout: handle_focusout,
-            data_focus_visible,
+            data_focus_visible: Signal::derive(flag(focus_visible)),
         },
     }
 }

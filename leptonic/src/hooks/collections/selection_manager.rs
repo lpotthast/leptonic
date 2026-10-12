@@ -378,11 +378,11 @@ impl SelectionManager {
                 Some(self.collection.with_untracked(|c| match c.get(&row) {
                     Some(node) if node.kind == NodeKind::Item => {
                         let cell = if child_focus_strategy == Some(FocusStrategy::Last) {
-                            node.last_child_key.clone()
+                            c.last_child(&row)
                         } else {
-                            node.first_child_key.clone()
+                            c.first_child(&row)
                         };
-                        cell.unwrap_or(row)
+                        cell.map_or(row, |cell| cell.key.clone())
                     }
                     _ => row,
                 }))

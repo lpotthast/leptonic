@@ -1,8 +1,8 @@
 # Leptonic: lessons learned
 
 Pitfalls of Leptos, the browsers and the tooling that cost time once (moved out of `PLAN.md`'s findings log). Rules
-derived from them live in `leptos-and-dom.md` ("Effect Read Order", "Blur After Disposal", "No Nested Dispatch of
-the Same Event Type", "Global State and SSR", ...) and `hooks-implementation.md` ("Props are Single-Use").
+derived from them live in `leptos-and-dom.md` ("Effect Read Order", "Blur After Disposal", "Nested Event
+Dispatch", "Global State and SSR", ...) and `hooks-implementation.md` ("Props are Single-Use").
 
 - Slot references during hydration (2026-10-09): a Description rendered before its date control was captured
   before the control's attributes hydrated. Tachys cached the resulting `Some(id)` but skipped writing it, assuming
@@ -93,8 +93,9 @@ the Same Event Type", "Global State and SSR", ...) and `hooks-implementation.md`
   Rust panic messages. `LocalStorage` stored values in hooks that render during SSR panic on the server (dropped on
   another thread); use thread-safe storage there.
 - Focusing inside a `focusin` handler threw "closure invoked recursively" (Leptos listener closures can't be
-  re-entered) in every collection and in `FocusScope` containment; focus moves now run in a microtask (see
-  leptos-and-dom.md, "No Nested Dispatch of the Same Event Type"). Browser tests fail on uncaught page errors.
+  re-entered) in every collection and in `FocusScope` containment. Hook props now attach re-entrant listeners
+  (`EventHandler::into_on`); see leptos-and-dom.md, "Nested Event Dispatch". Browser tests fail on uncaught page
+  errors.
 - FocusScope restore vs. a deferred auto focus (2026-10-06, also upstream): a native `<button>` activated by Enter
   fires a click with `detail == 0`, which counts as a virtual click, so a scope it mounts auto-focuses with
   `focus_safely` one frame later; an unmounting `restore_focus` scope's frame can run first and win (focus ends on

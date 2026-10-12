@@ -1,6 +1,23 @@
 // Upstream: react-aria/src/utils/animation.ts @ 99e6102368
 //! Internal animation watching utility (react-aria's `useAnimation`).
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `watch_animations` is a function the animation hooks call from their effects, returning a
+//   cancel function: the hooks' effects already track what starts a watch, and the cancel keeps
+//   `on_end` from running after an effect re-ran or the owner was disposed. React-aria: the
+//   `useAnimation` hook, a layout effect.
+// - `on_start` is a `Callback` of the element and returns nothing: Web Animations it starts are
+//   awaited like CSS ones. React-aria: it may return a promise, which is awaited as well.
+//
+// ## OMITTED FEATURES
+// - The fallback for elements without `getAnimations` (JSDOM): every supported browser has it.
+//
+// =============================================================================
+
 use std::{cell::Cell, rc::Rc};
 
 use leptos::prelude::*;
@@ -26,15 +43,15 @@ pub(super) fn watch_animations<T: FnOnce() + 'static>(
         on_start.run(SendWrapper::new(element.clone()));
     }
 
-    // Animations on other timelines (scroll-driven ones) and paused ones never finish by
-    // themselves.
+    // Animations on other timelines (scroll-driven ones) or none, and paused ones, never finish
+    // by themselves.
     let animations = element.get_animations();
     let promises = js_sys::Array::new();
     for i in 0..animations.length() {
         let animation: web_sys::Animation = animations.get(i).unchecked_into();
         let on_document_timeline = animation
             .timeline()
-            .is_none_or(|timeline| timeline.is_instance_of::<web_sys::DocumentTimeline>());
+            .is_some_and(|timeline| timeline.is_instance_of::<web_sys::DocumentTimeline>());
         if on_document_timeline
             && animation.play_state() == web_sys::AnimationPlayState::Running
             && let Ok(finished) = animation.finished()

@@ -1,5 +1,6 @@
 // Upstream: react-stately/src/utils/number.ts @ 99e6102368
 // Upstream: react-stately/test/utils/number.test.ts @ 99e6102368
+//! Number utilities of sliders and number fields: steps, ranges and decimal arithmetic.
 //
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -15,6 +16,7 @@
 //
 // =============================================================================
 
+/// Where `value` lies between `min` and `max`, from 0 to 1 (0 for an empty range).
 pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
     let range = max - min;
     if range == 0.0 {

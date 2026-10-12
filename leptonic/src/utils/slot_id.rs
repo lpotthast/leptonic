@@ -1,5 +1,21 @@
 // Upstream: react-aria/src/utils/useId.ts @ 99e6102368
-// (Ported: `useSlotId`.)
+//! Ids of optional elements, referenced only while rendered (react-aria's `useSlotId`).
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `use_slot` returns a `Slot`: the slot element's props (its id and element capture) and the
+//   id to reference it by (react-aria's `useSlotId` returns the id or `undefined`).
+//
+// ## DIFFERENT BEHAVIOR
+// - Whether the element is rendered is detected by capturing it (react-aria: looking its id up
+//   with `document.getElementById` after renders); the reference is published in an Effect, so
+//   that hydration sees none, as the server rendered.
+//
+// =============================================================================
+
 use leptos::{
     attr::{self, Attr},
     prelude::*,

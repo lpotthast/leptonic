@@ -1,5 +1,6 @@
 // No upstream: the modifier keys of an event as one value (react-aria reads the four `*Key`
 // fields of the event).
+//! The modifier keys held during an event ([`Modifiers`]).
 
 /// Keyboard modifiers held during an event.
 #[allow(clippy::struct_excessive_bools)]
@@ -14,43 +15,32 @@ pub struct Modifiers {
     /// Whether the meta keyboard modifier was held during the event.
     pub meta_key: bool,
 
-    /// Whether the alt keyboard modifier was held during the  event.
+    /// Whether the alt keyboard modifier was held during the event.
     pub alt_key: bool,
 }
 
+/// The modifiers held during an event.
 pub trait EventModifiers {
     fn modifiers(&self) -> Modifiers;
 }
 
-impl EventModifiers for web_sys::MouseEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
+macro_rules! impl_event_modifiers {
+    ($($event:ty),*) => {$(
+        impl EventModifiers for $event {
+            fn modifiers(&self) -> Modifiers {
+                Modifiers {
+                    shift_key: self.shift_key(),
+                    ctrl_key: self.ctrl_key(),
+                    meta_key: self.meta_key(),
+                    alt_key: self.alt_key(),
+                }
+            }
         }
-    }
+    )*};
 }
 
-impl EventModifiers for web_sys::KeyboardEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-impl EventModifiers for web_sys::PointerEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
+impl_event_modifiers!(
+    web_sys::MouseEvent,
+    web_sys::KeyboardEvent,
+    web_sys::PointerEvent
+);

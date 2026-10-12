@@ -1,3 +1,5 @@
+// No upstream: scoping and clearing Leptos contexts (React scopes contexts through its tree;
+// react-aria-components' `clearContexts`).
 //! Contexts scoped to a component's view.
 
 #[cfg(any(feature = "atoms", test))]

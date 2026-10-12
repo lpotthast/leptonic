@@ -57,6 +57,7 @@ pub struct UseTableColumnHeaderInput {
 }
 
 /// Return value of [`use_table_column_header`].
+#[derive(Debug)]
 pub struct UseTableColumnHeaderReturn {
     pub column_header_props: PropsWithStyles<UseTableColumnHeaderProps>,
     pub is_pressed: Signal<bool>,
@@ -136,7 +137,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     cell.role = Signal::stored(AriaRole::Columnheader);
 
     // Without rows, the headers aren't focusable (and lose focus).
-    let is_empty = Signal::derive(move || state.table.with(|t| t.size() == 0));
+    let is_empty = Memo::new(move |_| state.table.with(|t| t.size() == 0));
     let cell_tabindex = cell.item.tabindex;
     cell.item.tabindex = Signal::derive(move || {
         if is_empty.get() {
@@ -165,7 +166,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     let (press_props, press_styles) = press.props.into_inner();
 
     let sorted_key = key;
-    let aria_sort = Signal::derive(move || {
+    let aria_sort = Memo::new(move |_| {
         allows_sorting.get().then(|| {
             state
                 .sort_descriptor
@@ -212,7 +213,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
             UseTableColumnHeaderProps {
                 cell,
                 press: press_props,
-                aria_sort,
+                aria_sort: aria_sort.into(),
                 focusable,
             },
             cell_styles.merge(press_styles),

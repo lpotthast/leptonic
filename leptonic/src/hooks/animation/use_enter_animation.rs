@@ -16,11 +16,13 @@ use crate::utils::styles::Styles;
 // - `on_enter` is a `Callback` of the element: it can start Web Animations, which are awaited
 //   like CSS ones (react-aria: a function that may return a promise to await as well).
 //
-// ## ADDITIONS
-// - Returns `styles` hiding the element until it is ready for the first time (react-aria hides
-//   nothing; a popover would flash before its placement is known). They are returned for the
-//   element's `style` instead of written to the element: an element's `style` attribute has one
-//   writer, its `Styles`, which rewrites the whole attribute whenever a reactive part changes.
+// ## DIFFERENT BEHAVIOR
+// - The element is hidden only until it is ready for the first time, so that a closing popover
+//   (no longer ready) stays visible while its exit animation runs. The hiding styles are returned
+//   for the element's `style` instead of written to the element: an element's `style` attribute
+//   has one writer, its `Styles`, which rewrites the whole attribute whenever a reactive part
+//   changes. React-aria: sets the hiding styles on the element (`setStyle`) whenever it isn't
+//   ready.
 //
 // =============================================================================
 

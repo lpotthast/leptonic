@@ -17,13 +17,7 @@ use crate::{
     utils::event_listeners::{Listener, listen},
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
+// No deviations from react-aria beyond the project-wide API conventions.
 
 /// Whether data is cut or copied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,15 +27,17 @@ pub enum ClipboardAction {
 }
 
 /// Input of [`use_clipboard`].
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct UseClipboardInput {
     /// The data to cut or copy. Without it, cut and copy keep their default.
     pub get_items: Option<Callback<ClipboardAction, Vec<DragItem>>>,
+    /// Called after the data was copied.
     pub on_copy: Option<Callback<()>>,
     /// Remove the cut data. Without it, cut keeps its default.
     pub on_cut: Option<Callback<()>>,
     /// Pasted data. Without it, paste keeps its default.
     pub on_paste: Option<Callback<Vec<DropItem>>>,
+    /// Whether the clipboard events are ignored. Default: `false`.
     pub is_disabled: Signal<bool>,
 }
 

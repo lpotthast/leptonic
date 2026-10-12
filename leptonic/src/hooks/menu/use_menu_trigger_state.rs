@@ -170,8 +170,8 @@ pub fn use_menu_trigger_state(input: UseMenuTriggerStateInput) -> MenuTriggerSta
     });
     let (focus_strategy, set_focus_strategy) = signal(None);
     let (expanded_keys_stack, set_expanded_keys_stack) = signal(Vec::<Key>::new());
-    // However the menu closes (its `close`, the overlay state, e.g. dismissed by its popover, or bound app state),
-    // its submenus close with it.
+    // However the menu closes (its `close`, the overlay state, e.g. dismissed by its popover, or
+    // bound app state), its submenus close with it.
     let is_open = overlay.is_open;
     Effect::new(move |_| {
         if !is_open.get() && !expanded_keys_stack.with_untracked(Vec::is_empty) {

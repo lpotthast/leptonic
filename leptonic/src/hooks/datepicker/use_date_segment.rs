@@ -26,10 +26,10 @@ use crate::{
     },
     labels,
     utils::{
-        aria::{AriaDisabled, AriaInvalid, AriaReadonly, AriaRequired, AriaRole},
+        aria::{AriaDisabled, AriaInvalid, AriaReadonly, AriaRequired, AriaRole, aria_true},
         date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, MonthFormat},
         filter::{CollatorOptions, FilterQuery, use_filter},
-        i18n::{WritingDirection, use_direction, use_locale},
+        i18n::{Locale, WritingDirection, use_direction, use_locale},
         id::use_id,
         intl_strings::{DatePickerStrings, use_localized_strings},
         key::KeyboardKey,
@@ -187,13 +187,8 @@ impl IntoAttrs for UseDateSegmentProps {
     }
 }
 
-/// A `true` ARIA value while `signal` is (none otherwise).
-fn flag<T: From<bool> + Send + Sync + 'static>(signal: Signal<bool>) -> Signal<Option<T>> {
-    Signal::derive(move || signal.get().then(|| T::from(true)))
-}
-
 /// The day period names (AM, PM) of a locale: as typed by the first letter.
-fn day_periods(locale: &crate::utils::i18n::Locale) -> [String; 2] {
+fn day_periods(locale: &Locale) -> [String; 2] {
     let formatter = DateFormatter::new(
         locale,
         &FormatOptions {
@@ -225,7 +220,7 @@ fn day_periods(locale: &crate::utils::i18n::Locale) -> [String; 2] {
 }
 
 /// The era names (BC, AD), without a common prefix, as typed by the first letter.
-fn eras(locale: &crate::utils::i18n::Locale) -> [String; 2] {
+fn eras(locale: &Locale) -> [String; 2] {
     let formatter = DateFormatter::new(
         locale,
         &FormatOptions {
@@ -263,7 +258,6 @@ fn eras(locale: &crate::utils::i18n::Locale) -> [String; 2] {
 /// spin button (arrows, Page Up/Down, Home/End) editable as text. Typing digits fills it (moving
 /// on once no further digit fits), letters choose the day period and era, Backspace deletes a
 /// digit; the selection stays collapsed (Android Chrome's composition would break the DOM).
-#[allow(clippy::too_many_lines)]
 pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateSegmentReturn {
     let UseDateSegmentInput {
         segment,
@@ -278,18 +272,18 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
 
     // "6 – June" for numeric months, "1 PM" for hours; formatters kept per locale (and options).
     let month_names = Memo::new(move |_| {
-        DateTimeFormatter::new(
+        DateTimeFormatter::cached(
             &locale.get(),
-            DateTimeFormatOptions {
+            &DateTimeFormatOptions {
                 month: Some(MonthFormat::Long),
                 ..DateTimeFormatOptions::default()
             },
         )
     });
     let hours = Memo::new(move |_| {
-        Formatters::new(
-            locale.get(),
-            FormatOptions {
+        Formatters::cached(
+            &locale.get(),
+            &FormatOptions {
                 granularity: Granularity::Hour,
                 max_granularity: MaxGranularity::Hour,
                 time_zone: None,
@@ -322,13 +316,13 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
 
     let reset_keys = move || entered_keys.set_value(String::new());
     let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
-        value: Signal::derive(move || segment.get().value),
+        value: Signal::derive(move || segment.with(|segment| segment.value)),
         text_value: Signal::derive(move || Some(text_value.get())),
-        min_value: Signal::derive(move || segment.get().min_value),
-        max_value: Signal::derive(move || segment.get().max_value),
+        min_value: Signal::derive(move || segment.with(|segment| segment.min_value)),
+        max_value: Signal::derive(move || segment.with(|segment| segment.max_value)),
         is_disabled: state.is_disabled,
         is_read_only: Signal::derive(move || {
-            state.is_read_only.get() || !segment.get().is_editable
+            state.is_read_only.get() || !segment.with(|segment| segment.is_editable)
         }),
         is_required: state.is_required,
         on_increment: Some(Callback::new(move |()| {
@@ -359,7 +353,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
 
     let parser = Memo::new_with_compare(
         move |_| {
-            NumberParser::new(
+            NumberParser::cached(
                 &locale.get(),
                 &NumberFormatOptions {
                     maximum_fraction_digits: Some(0),
@@ -695,7 +689,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     let field_labelledby = data.aria_labelledby;
     let label_id = id.clone();
     let strings = use_localized_strings::<DatePickerStrings>();
-    let label = Signal::derive(move || {
+    let label = Memo::new(move |_| {
         let labelledby = field_labelledby.get();
         let name = display_name(&strings.read(), kind);
         let label = format!(
@@ -708,8 +702,10 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
         );
         labels(&label_id, Some(label), labelledby.as_deref())
     });
-    let is_editable = Signal::derive(move || {
-        !state.is_disabled.get() && !state.is_read_only.get() && segment.get().is_editable
+    let is_editable = Memo::new(move |_| {
+        !state.is_disabled.get()
+            && !state.is_read_only.get()
+            && segment.with(|segment| segment.is_editable)
     });
     let editable_flag =
         move |value: &'static str| Signal::derive(move || is_editable.get().then_some(value));
@@ -750,15 +746,17 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
                     label.with(|label| label.aria_labelledby.clone())
                 }),
                 aria_describedby,
-                aria_invalid: flag(state.is_invalid),
+                aria_invalid: aria_true(state.is_invalid),
                 aria_readonly: Signal::derive(move || {
-                    (state.is_read_only.get() || !segment.get().is_editable)
+                    (state.is_read_only.get() || !segment.with(|segment| segment.is_editable))
                         .then_some(AriaReadonly::True)
                 }),
-                aria_required: flag(state.is_required),
-                aria_disabled: flag(state.is_disabled),
+                aria_required: aria_true(state.is_required),
+                aria_disabled: aria_true(state.is_disabled),
                 data_placeholder: Signal::derive(move || {
-                    segment.get().is_placeholder.then_some("true")
+                    segment
+                        .with(|segment| segment.is_placeholder)
+                        .then_some("true")
                 }),
                 contenteditable: editable_flag("true"),
                 spellcheck: editable_flag("false"),
@@ -791,7 +789,6 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::utils::i18n::Locale;
 
     fn locale(tag: &str) -> Locale {
         tag.parse().expect("a locale")

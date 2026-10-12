@@ -53,6 +53,7 @@ mod client {
         utils::{
             event_listeners::{Listener, listen_to},
             pointer_type::PointerType,
+            shadow_dom::node_contains,
         },
     };
 
@@ -256,7 +257,7 @@ mod client {
                                     #[allow(clippy::cast_possible_truncation)]
                                     let target = document.element_from_point(x as f32, y as f32);
                                     if let Some(target) = target
-                                        && menu_el.contains(Some(&target))
+                                        && node_contains(&menu_el, &target)
                                     {
                                         let init = web_sys::PointerEventInit::new();
                                         init.set_bubbles(true);

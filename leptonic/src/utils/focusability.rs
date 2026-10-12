@@ -240,23 +240,7 @@ fn is_attribute_visible(
 /// An element is focusable if it matches the focusable selector,
 /// is visible, and is not inside an `inert` subtree.
 pub fn is_focusable(element: &web_sys::Element) -> bool {
-    if let Ok(matches) = element.matches(FOCUSABLE_SELECTOR) {
-        if !matches {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    if is_inert(element) {
-        return false;
-    }
-
-    if !is_element_visible(element) {
-        return false;
-    }
-
-    true
+    is_reachable(element, FOCUSABLE_SELECTOR)
 }
 
 /// Check if an element is focusable regardless of its visibility (react-aria's
@@ -281,23 +265,12 @@ pub(crate) fn is_in_top_layer(element: &web_sys::Element) -> bool {
 /// An element is tabbable if it matches the tabbable selector, is visible and is not inside an
 /// `inert` subtree.
 pub fn is_tabbable(element: &web_sys::Element) -> bool {
-    if let Ok(matches) = element.matches(TABBABLE_SELECTOR) {
-        if !matches {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    is_reachable(element, TABBABLE_SELECTOR)
+}
 
-    if is_inert(element) {
-        return false;
-    }
-
-    if !is_element_visible(element) {
-        return false;
-    }
-
-    true
+/// Whether `element` matches `selector`, isn't inside an `inert` subtree and is visible.
+fn is_reachable(element: &web_sys::Element, selector: &str) -> bool {
+    element.matches(selector).unwrap_or(false) && !is_inert(element) && is_element_visible(element)
 }
 
 /// Get all radio buttons in the same group as `element`.

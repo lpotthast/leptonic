@@ -24,6 +24,7 @@ use crate::{
 // - The layout gets the virtualizer's state as a `VirtualizerContext` argument (react-stately:
 //   a `virtualizer` back reference).
 //
+// ## DIFFERENT BEHAVIOR
 // - The views stay in layout order while scrolling (react-stately keeps their order and puts new
 //   ones last until the scrolling ends, sparing DOM moves): the renderer mounts each new row
 //   before its successor and leaves mounted rows in place, so a scroll needs no reordering pass.

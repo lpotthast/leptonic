@@ -1,3 +1,4 @@
+// No upstream: leptonic's spreading of hook props (react-aria spreads props objects with `mergeProps`).
 //! Spreading hook props onto elements.
 
 use std::fmt::Debug;

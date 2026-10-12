@@ -14,6 +14,8 @@ use crate::pages::atoms::listbox::describe_selection;
 /// - "Alignment": single selection that can't become empty (Left selected), shown in
 ///   `#test-menu-atoms-alignment`.
 /// - "Tools menu": a section without a heading, labelled "Tools" (Pen, Brush).
+/// - "Rename": Cat and Dog rendered by `MenuItems`; `#test-menu-atoms-rename` renames Cat
+///   "Kitten" under the same key.
 #[component]
 pub fn PageAtomMenuStates() -> impl IntoView {
     let items = use_collection(|b| {
@@ -35,6 +37,11 @@ pub fn PageAtomMenuStates() -> impl IntoView {
         .aria_label("Tools");
     });
     let alignment = RwSignal::new(Selection::keys([Key::from("Left")]));
+    let renamed = RwSignal::new(false);
+    let rename = use_collection(move |b| {
+        b.item("cat", if renamed.get() { "Kitten" } else { "Cat" });
+        b.item("dog", "Dog");
+    });
     view! {
         <div id="test-page-atom-menu-states">
             <h1>"Menu states"</h1>
@@ -70,6 +77,10 @@ pub fn PageAtomMenuStates() -> impl IntoView {
                     <MenuItem key="Pen">"Pen"</MenuItem>
                     <MenuItem key="Brush">"Brush"</MenuItem>
                 </MenuSection>
+            </Menu>
+            <button id="test-menu-atoms-rename" on:click=move |_| renamed.set(true)>"Rename"</button>
+            <Menu aria_label="Rename" collection=rename>
+                <MenuItems let:node>{node.text_value.to_string()}</MenuItems>
             </Menu>
         </div>
     }

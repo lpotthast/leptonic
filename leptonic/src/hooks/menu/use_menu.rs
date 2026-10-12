@@ -29,7 +29,6 @@ use crate::{
 // - The menu's items come from a list state (react-aria: a tree state, for submenus).
 // - Items get the menu's settings through the returned `MenuData` (react-aria: a `WeakMap`
 //   keyed by the state), which the caller hands to `use_menu_item`.
-//
 // - A submenu gets its id, label, closing and keyboard handling as `submenu` (from
 //   `use_submenu_trigger`); its items come from its own list state.
 // - `should_focus_wrap` is part of `options` (`CollectionOptions`, default `false`); react-aria's

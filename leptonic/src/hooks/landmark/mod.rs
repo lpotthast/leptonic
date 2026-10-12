@@ -1,3 +1,3 @@
-mod use_landmark;
+pub(crate) mod use_landmark;
 
 pub use use_landmark::*;

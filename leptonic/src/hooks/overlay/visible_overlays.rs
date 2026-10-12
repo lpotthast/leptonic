@@ -1,11 +1,10 @@
 // Upstream: react-aria/src/overlays/useOverlay.ts @ 99e6102368
-#![cfg_attr(feature = "ssr", allow(dead_code))]
-
 //! Thread-local stack of visible overlays.
 //!
 //! This mirrors react-aria's module-level `visibleOverlays: RefObject<Element | null>[]`
 //! in `useOverlay.ts`. The stack tracks which overlays are currently open in order,
-//! so that dismiss actions (Escape, outside click) only close the topmost overlay.
+//! so that dismiss actions (Escape, outside click) only close the topmost overlay. Touched only
+//! from client-only code (effects, event handlers), never while rendering on the server.
 
 use std::cell::RefCell;
 

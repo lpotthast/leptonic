@@ -1,8 +1,9 @@
 // Upstream: react-aria/src/color/useColorSwatch.ts @ 99e6102368
+// Upstream: react-aria-components/test/ColorSwatch.test.js @ 99e6102368
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
-    IdRefs, IntoAttrs, PropsWithStyles,
+    IntoAttrs, PropsWithStyles, labels,
     utils::{
         aria::AriaRole,
         color::Color,
@@ -18,8 +19,9 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The color is any color value or signal of one (`ColorProp`, react-aria: a `Color` or a
-//   string); a swatch always has one (react-aria: optional, transparent by default).
+// - The color is a `Signal<Color>` (atoms take any color value or signal of one, `ColorProp`;
+//   react-aria: a `Color` or a string); a swatch always has one (react-aria: optional,
+//   transparent by default).
 //
 // =============================================================================
 
@@ -89,7 +91,8 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
     let id = id.unwrap_or_else(|| use_id("color-swatch"));
     let locale = use_locale();
     let strings = use_localized_strings::<ColorStrings>();
-    let aria_label = Signal::derive(move || {
+    // A memo: it allocates, and the labelling reads it too.
+    let aria_label: Signal<String> = Memo::new(move |_| {
         // A fully transparent color is "transparent" (react-aria).
         let name = color_name.get().unwrap_or_else(|| {
             let color = color.get();
@@ -103,16 +106,18 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
             Some(label) => format!("{name}, {label}"),
             None => name,
         }
-    });
+    })
+    .into();
+    // Next to other labels, the swatch is named by its color name too (react-aria prepends its id).
     let aria_labelledby = {
         let id = id.clone();
         Signal::derive(move || {
-            aria_labelledby.get().map(|ids| {
-                [id.as_str(), ids.as_str()]
-                    .into_iter()
-                    .collect::<IdRefs>()
-                    .to_string()
-            })
+            labels(
+                &id,
+                Some(aria_label.get()),
+                aria_labelledby.get().as_deref(),
+            )
+            .aria_labelledby
         })
     };
     let styles = Styles::new()

@@ -43,7 +43,6 @@ use crate::{
 /// Data attributes: `data-disabled`, `data-invalid`, `data-readonly`, `data-required`.
 ///
 /// Default class: `leptonic-TextField`.
-#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn TextField(
     #[prop(into, optional)] default_value: String,

@@ -325,24 +325,24 @@ impl FormValidationState {
 /// Manages form validation state with multiple validation sources.
 ///
 /// This is the state (stately) layer of form validation. It does not interact
-/// with the DOM — pair with
+/// with the DOM: pair it with
 /// [`use_form_validation`](super::use_form_validation::use_form_validation)
 /// to connect validation to native input elements.
 ///
 /// # Validation Sources (in priority order)
 ///
-/// 1. **Explicit** — `is_invalid` while `true`
-/// 2. **Server** — errors from [`FormValidationContext`] under the field's `names`
-/// 3. **Client** — custom `validate` function
-/// 4. **Committed** — native validity read via
+/// 1. **Explicit**: `is_invalid` while `true`
+/// 2. **Server**: errors from [`FormValidationContext`] under the field's `names`
+/// 3. **Client**: custom `validate` function
+/// 4. **Built-in**: the field's own `builtin_validation`
+/// 5. **Committed**: native validity read via
 ///    [`update_validation`](FormValidationState::update_validation)
 ///
 /// # Validation Behavior
 ///
-/// - [`ValidationBehavior::Aria`] — all errors displayed in realtime
-/// - [`ValidationBehavior::Native`] — client/native errors deferred until
+/// - [`ValidationBehavior::Aria`]: all errors displayed in realtime
+/// - [`ValidationBehavior::Native`]: client/native errors deferred until
 ///   [`commit_validation`](FormValidationState::commit_validation)
-#[allow(clippy::too_many_lines)]
 pub fn use_form_validation_state<T>(input: UseFormValidationStateInput<T>) -> FormValidationState
 where
     T: Clone + PartialEq + Send + Sync + 'static,

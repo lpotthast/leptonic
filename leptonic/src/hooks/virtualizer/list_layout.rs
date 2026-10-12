@@ -46,7 +46,12 @@ use crate::{
 //   call); react-stately checks every laid out root node, all of them once the requested area
 //   covers the whole list (after Home/End, or a log that was at both ends).
 // - When only the end of the requested area moves (scrolling down, laying out everything for a
-//   far key), the build continues from its last laid out node instead of starting over.
+//   far key), the build continues from its last laid out node instead of starting over. After
+//   measured sizes (and nothing else) changed, it continues from the first root node holding a
+//   resized node; after the collection changed, from the first top-level node that differs from
+//   the previous collection's (found without lookups, deleted nodes searched only after it): the
+//   nodes before it don't move. React-stately lays out from the start each time, visiting every
+//   laid out node (a long log appending lines or measuring its newest rows).
 // - The top-level node count and loaders are counted once per collection (react-stately: an
 //   array of all nodes and a filter per build); deleted nodes are only searched if the build
 //   didn't visit every cached node.
@@ -173,6 +178,16 @@ enum BuiltTo {
     Unknown,
 }
 
+/// The nodes resized since the last update ([`Layout::update_item_size`]).
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Resized {
+    None,
+    /// The index of the first root node holding one: the build continues from it.
+    From(usize),
+    /// One outside the laid out root nodes: the build starts over.
+    Unknown,
+}
+
 /// Where a partial build continues: at its last laid out root node, which is laid out again (it
 /// may straddle the end of the requested area, e.g. a section laid out only partially).
 #[derive(Debug, Clone)]
@@ -195,35 +210,13 @@ struct TopLevel {
     loaders: Vec<(usize, Key)>,
 }
 
-/// Whether two versions of a node show the same thing: they differ at most in their position in
-/// the collection (index, document position, siblings). react-stately compares node identity;
-/// our collections build new nodes on every change, and a log dropping its first lines changes
-/// every node's position.
-fn same_content(a: &Node, b: &Node) -> bool {
-    a.key == b.key
-        && a.kind == b.kind
-        && a.level == b.level
-        && a.has_child_nodes == b.has_child_nodes
-        && a.is_disabled == b.is_disabled
-        && a.parent_key == b.parent_key
-        && a.first_child_key == b.first_child_key
-        && a.last_child_key == b.last_child_key
-        && a.col_index == b.col_index
-        && a.col_span == b.col_span
-        && a.disabled_behavior == b.disabled_behavior
-        && a.text_value == b.text_value
-        && a.aria_label == b.aria_label
-        && a.link == b.link
-}
-
 /// The top-level nodes from `key` on.
 fn siblings_from<'a>(
     collection: &'a Collection,
     key: Option<&Key>,
 ) -> impl Iterator<Item = &'a Node> {
-    std::iter::successors(key.and_then(|key| collection.get(key)), |node| {
-        node.next_key.as_ref().and_then(|next| collection.get(next))
-    })
+    key.into_iter()
+        .flat_map(|key| collection.siblings_from(key))
 }
 
 /// Arranges items in a stack along its orientation, with fixed or variable (estimated, then
@@ -247,6 +240,11 @@ pub struct ListLayout {
     collection_changed: bool,
     /// The nodes the current build laid out (or reused).
     visited: usize,
+    /// Since the last update: where nodes were resized (see [`Resized`]).
+    resized: Resized,
+    /// Whether the last build met sections (they may be laid out partially: builds then start
+    /// over instead of continuing).
+    sectioned: bool,
     /// The rectangle containing currently valid layout infos.
     valid_rect: Rect,
     /// The rectangle of requested layout infos so far.
@@ -283,6 +281,8 @@ impl ListLayout {
             invalidate_everything: false,
             collection_changed: false,
             visited: 0,
+            resized: Resized::None,
+            sectioned: false,
             valid_rect: Rect::default(),
             requested_rect: Rect::default(),
             overflows: HashMap::new(),
@@ -499,7 +499,7 @@ impl ListLayout {
                 && cached
                     .node
                     .as_ref()
-                    .is_some_and(|cached| same_content(cached, node))
+                    .is_some_and(|cached| cached.same_content(node))
         })
     }
 
@@ -508,7 +508,32 @@ impl ListLayout {
         self.root_nodes.clear();
         self.always_visible.clear();
         self.visited = 0;
+        self.sectioned = false;
+        // Lays out every resized node (and root indices may shift).
+        self.resized = Resized::None;
         self.build_from(ctx, ctx.collection.first_key(), 0, self.options.padding);
+    }
+
+    /// Lays out the root nodes from the `root_index`th laid out one (which stays where it is) to
+    /// the end of the requested area; `false` if it's no top-level node of the collection.
+    fn build_collection_from(&mut self, ctx: &VirtualizerContext<'_>, root_index: usize) -> bool {
+        let Some(root) = self.root_nodes.get(root_index) else {
+            return false;
+        };
+        let key = root.layout_info.key.clone();
+        let offset = self.offset_of(&root.layout_info.rect);
+        let Some(index) = ctx
+            .collection
+            .get(&key)
+            .filter(|node| node.parent_key.is_none())
+            .map(|node| node.index)
+        else {
+            return false;
+        };
+        self.root_nodes.truncate(root_index);
+        self.always_visible.retain(|index| *index < root_index);
+        self.build_from(ctx, Some(&key), index, offset);
+        true
     }
 
     /// Lays out the root nodes from `start` (the `index`th top-level node, at `offset`) to the end
@@ -592,6 +617,7 @@ impl ListLayout {
         }
         if has_sections {
             self.built_to = BuiltTo::Unknown;
+            self.sectioned = true;
         }
         offset = (offset - gap).max(0.0);
         if !is_empty {
@@ -759,7 +785,7 @@ impl ListLayout {
             let changed = !previous
                 .node
                 .as_ref()
-                .is_some_and(|previous| same_content(previous, node));
+                .is_some_and(|previous| previous.same_content(node));
             (
                 self.length_of(&previous.layout_info.rect),
                 breadth != self.breadth_of(&previous.layout_info.rect)
@@ -784,7 +810,8 @@ impl ListLayout {
             ItemSize::Fixed(size) => (size, false),
             ItemSize::Estimated(estimate) => self.variable_length(node, breadth, estimate),
         };
-        // As wide as the rows (react-stately subtracts the position twice: UPSTREAM BUG FIXED).
+        // As wide as the rows (react-stately subtracts the position twice, see "DIFFERENT
+        // BEHAVIOR").
         let rect = if self.is_horizontal() {
             Rect::new(x, y, length, breadth)
         } else {
@@ -829,6 +856,105 @@ impl ListLayout {
         } else {
             ctx.size.width
         }
+    }
+
+    /// After a collection change: lays out from the first top-level node that differs from the
+    /// previous collection's (the previous ones are laid out where they were), and forgets the
+    /// deleted nodes, which can only come after it. `false` if nothing laid out stays.
+    fn build_after_unchanged_prefix(&mut self, ctx: &VirtualizerContext<'_>) -> bool {
+        let Some(previous) = self.last_collection.clone() else {
+            return false;
+        };
+        // Up to the last laid out root node: later changes don't move the laid out ones. Nodes
+        // with children are laid out again whenever the collection changes.
+        let compared = self
+            .root_nodes
+            .last()
+            .and_then(|root| root.node.as_ref())
+            .filter(|node| node.parent_key.is_none())
+            .map_or(0, |node| node.index + 1);
+        let unchanged = previous
+            .iter()
+            .zip(ctx.collection.iter())
+            .take(compared)
+            .take_while(|(old, new)| {
+                !old.has_child_nodes && !new.has_child_nodes && old.same_content(new)
+            })
+            .count();
+        // The last laid out root node before the first changed one (laid out again, unchanged).
+        let kept = self.root_nodes.partition_point(|root| {
+            root.node
+                .as_ref()
+                .is_some_and(|node| node.parent_key.is_none() && node.index < unchanged)
+        });
+        let Some(root_index) = kept.checked_sub(1) else {
+            return false;
+        };
+        let first_changed = previous.iter().nth(unchanged).map(|node| node.key.clone());
+        if !self.build_collection_from(ctx, root_index) {
+            return false;
+        }
+        // Deleted nodes come after the unchanged ones: look for them in the cache or among the
+        // previous collection's remaining nodes, whichever has fewer.
+        if let Some(first_changed) = first_changed {
+            let remaining = previous.nodes_from(&first_changed);
+            let count = self.layout_nodes.len();
+            if count <= remaining.len() {
+                self.layout_nodes
+                    .retain(|key, _| ctx.collection.contains_key(key));
+            } else {
+                for node in remaining {
+                    if !ctx.collection.contains_key(&node.key) {
+                        self.layout_nodes.remove(&node.key);
+                    }
+                }
+            }
+            if self.layout_nodes.len() != count {
+                self.forget_removed_overflows(ctx);
+            }
+        }
+        true
+    }
+
+    /// Forgets the overflows of nodes no longer laid out, and measures the content's breadth
+    /// without them.
+    fn forget_removed_overflows(&mut self, ctx: &VirtualizerContext<'_>) {
+        if self.overflows.is_empty() {
+            return;
+        }
+        let layout_nodes = &self.layout_nodes;
+        self.overflows
+            .retain(|key, _| layout_nodes.contains_key(key));
+        self.widest_overflow = self.farthest_overflow();
+        // The build measured the content's breadth with the removed ones.
+        let breadth = self.content_breadth(ctx);
+        if self.is_horizontal() {
+            self.content_size.height = breadth;
+        } else {
+            self.content_size.width = breadth;
+        }
+    }
+
+    /// Records that `key` (laid out as `info`) was resized, for the next build to continue from
+    /// its root node.
+    fn record_resized(&mut self, key: &Key, info: &LayoutInfo) {
+        if self.resized == Resized::Unknown {
+            return;
+        }
+        let mut root = key.clone();
+        let mut parent = info.parent_key.clone();
+        while let Some(parent_key) = parent {
+            parent = self
+                .layout_nodes
+                .get(&parent_key)
+                .and_then(|node| node.layout_info.parent_key.clone());
+            root = parent_key;
+        }
+        self.resized = match (self.resized, self.root_index_of(&root)) {
+            (Resized::From(first), Some(index)) => Resized::From(first.min(index)),
+            (_, Some(index)) => Resized::From(index),
+            (_, None) => Resized::Unknown,
+        };
     }
 
     fn update_layout_node(&mut self, key: &Key, old: &LayoutInfo, new: &LayoutInfo) {
@@ -971,35 +1097,39 @@ impl Layout for ListLayout {
             self.layout_nodes.clear();
             self.clear_overflows();
         }
+        let mut options_changed = false;
         if let Some(options) = &invalidation.layout_options
             && *options != self.options
         {
             warn_about_ignored(options);
             self.options = options.clone();
+            options_changed = true;
         }
         self.collection_changed = self
             .last_collection
             .as_ref()
             .is_some_and(|last| !Arc::ptr_eq(last, ctx.collection));
-        self.build_collection(ctx);
-
-        // Remove deleted nodes: only needed if the build didn't visit every cached node
-        // (react-stately looks up every key of the previous collection).
-        if self.collection_changed && self.visited != self.layout_nodes.len() {
-            self.layout_nodes
-                .retain(|key, _| ctx.collection.contains_key(key));
-            if !self.overflows.is_empty() {
-                let layout_nodes = &self.layout_nodes;
-                self.overflows
-                    .retain(|key, _| layout_nodes.contains_key(key));
-                self.widest_overflow = self.farthest_overflow();
-                // The build measured the content's breadth with the removed ones.
-                let breadth = self.content_breadth(ctx);
-                if self.is_horizontal() {
-                    self.content_size.height = breadth;
-                } else {
-                    self.content_size.width = breadth;
-                }
+        let resized = std::mem::replace(&mut self.resized, Resized::None);
+        let can_continue = !self.invalidate_everything && !options_changed && !self.sectioned;
+        let continued = match resized {
+            // Only sizes changed: the nodes before the first resized one stay.
+            Resized::From(root_index) if can_continue && !self.collection_changed => {
+                self.build_collection_from(ctx, root_index)
+            }
+            // Only the collection changed: the nodes before the first changed one stay.
+            Resized::None if can_continue && self.collection_changed => {
+                self.build_after_unchanged_prefix(ctx)
+            }
+            _ => false,
+        };
+        if !continued {
+            self.build_collection(ctx);
+            // Remove deleted nodes: only needed if the build didn't visit every cached node
+            // (react-stately looks up every key of the previous collection).
+            if self.collection_changed && self.visited != self.layout_nodes.len() {
+                self.layout_nodes
+                    .retain(|key, _| ctx.collection.contains_key(key));
+                self.forget_removed_overflows(ctx);
             }
         }
         self.last_collection = Some(Arc::clone(ctx.collection));
@@ -1036,8 +1166,9 @@ impl Layout for ListLayout {
         if let Some(layout_node) = self.layout_nodes.get_mut(key) {
             Arc::make_mut(layout_node).layout_info = new_layout_info.clone();
         }
-        // The nodes after it move: the next build starts over.
+        // The nodes after it move: the next build continues from its root node.
         self.built_to = BuiltTo::Unknown;
+        self.record_resized(key, &layout_info);
 
         // The items after it move: only the ones above stay valid.
         let valid_length = self
@@ -1188,6 +1319,30 @@ mod tests {
             self.measure_size(key, Size::new(self.size.width, height))
         }
 
+        /// Reports the measured heights of `items` (as wide as the view), then lays out again
+        /// once, as the virtualizer does with the items measured together.
+        fn measure_all(&mut self, items: Vec<(Key, f64)>) {
+            let collection = Arc::clone(&self.collection);
+            let persisted_keys = self.persisted_keys.clone();
+            let ctx = VirtualizerContext {
+                collection: &collection,
+                persisted_keys: &persisted_keys,
+                ..self.ctx()
+            };
+            let mut changed = false;
+            for (key, height) in items {
+                changed |=
+                    self.layout
+                        .update_item_size(&ctx, &key, Size::new(self.size.width, height));
+            }
+            if changed {
+                self.update(InvalidationContext {
+                    item_size_changed: true,
+                    ..InvalidationContext::default()
+                });
+            }
+        }
+
         /// Reports the measured size of `key` and lays out again, as the virtualizer does.
         fn measure_size(&mut self, key: impl Into<Key>, size: Size) -> bool {
             let collection = Arc::clone(&self.collection);
@@ -1278,6 +1433,116 @@ mod tests {
         assert_that!(visible[1].rect.y).is_equal_to(50.0);
         assert_that!(visible[9].rect.y).is_equal_to(50.0 + 8.0 * 20.0);
         assert_that!(harness.layout.content_size().height).is_equal_to(230.0);
+    }
+
+    /// Rows measured in the middle of a long list are laid out as by a build from the start: the
+    /// build continues from the first resized row (the rows before it don't move).
+    #[test]
+    fn measuring_in_the_middle_continues_from_the_first_resized_row() {
+        let options = ListLayoutOptions {
+            row_size: ItemSize::Estimated(20.0),
+            ..ListLayoutOptions::default()
+        };
+        let size = Size::new(200.0, 100.0);
+        let measured = |harness: &mut Harness, from_the_start: bool| {
+            harness.scroll_y = 10_000.0;
+            let visible = harness.visible();
+            // Taller and shorter rows, measured together (as the item measurer reports them).
+            let collection = Arc::clone(&harness.collection);
+            let persisted_keys = harness.persisted_keys.clone();
+            let ctx = VirtualizerContext {
+                collection: &collection,
+                persisted_keys: &persisted_keys,
+                ..harness.ctx()
+            };
+            for (i, info) in visible.iter().enumerate() {
+                let height = if i % 2 == 0 { 35.0 } else { 12.0 };
+                harness
+                    .layout
+                    .update_item_size(&ctx, &info.key, Size::new(size.width, height));
+            }
+            if from_the_start {
+                harness.layout.resized = Resized::Unknown;
+            }
+            harness.update(InvalidationContext {
+                item_size_changed: true,
+                ..InvalidationContext::default()
+            });
+            visible[0].key.clone()
+        };
+        let mut continued = Harness::new(options.clone(), numbered(0..1000), size);
+        let first = measured(&mut continued, false);
+        let mut rebuilt = Harness::new(options, numbered(0..1000), size);
+        measured(&mut rebuilt, true);
+
+        assert_that!(continued.layout.resized).is_equal_to(Resized::None);
+        assert_that!(continued.visible()).is_equal_to(rebuilt.visible());
+        assert_that!(continued.info(first.clone())).is_equal_to(rebuilt.info(first));
+        assert_that!(continued.info(Key::from(999))).is_equal_to(rebuilt.info(Key::from(999)));
+        assert_that!(continued.layout.content_size()).is_equal_to(rebuilt.layout.content_size());
+    }
+
+    /// After a collection change, the layout continues from the first top-level node that
+    /// differs from the previous collection's, with the same result as a build from the start:
+    /// rows appended (a log following its end), deleted and renamed rows, viewed at the end and at
+    /// the start.
+    #[test]
+    fn collection_changes_continue_after_the_unchanged_rows() {
+        let options = ListLayoutOptions {
+            row_size: ItemSize::Estimated(20.0),
+            ..ListLayoutOptions::default()
+        };
+        let size = Size::new(200.0, 100.0);
+        let texts = |rows: std::ops::Range<i64>, skip: Option<i64>, renamed: Option<i64>| {
+            Arc::new(Collection::build(|b| {
+                for i in rows.filter(|i| Some(*i) != skip) {
+                    let text = if Some(i) == renamed {
+                        format!("renamed {i}")
+                    } else {
+                        format!("row {i}")
+                    };
+                    b.item(Key::from(i), text);
+                }
+            }))
+        };
+        let changes = [
+            ("appended", texts(0..1010, None, None)),
+            ("deleted", texts(0..1000, Some(500), None)),
+            ("renamed", texts(0..1000, None, Some(500))),
+        ];
+        for at_the_end in [true, false] {
+            for (change, changed) in &changes {
+                let layout = |continued: bool| {
+                    let mut harness =
+                        Harness::new(options.clone(), texts(0..1000, None, None), size);
+                    // Everything laid out (the view went to the end), or only the start.
+                    if at_the_end {
+                        harness.scroll_y = harness.layout.content_size().height - size.height;
+                        let _ = harness.info(Key::from(999));
+                    }
+                    let _ = harness.visible();
+                    if !continued {
+                        harness.layout.sectioned = true;
+                    }
+                    harness.collection = Arc::clone(changed);
+                    harness.update(InvalidationContext::default());
+                    harness
+                };
+                let (mut continued, mut rebuilt) = (layout(true), layout(false));
+                assert_that!((change, at_the_end, continued.visible())).is_equal_to((
+                    change,
+                    at_the_end,
+                    rebuilt.visible(),
+                ));
+                assert_that!(continued.layout.content_size())
+                    .is_equal_to(rebuilt.layout.content_size());
+                let last = changed.last_key().expect("rows").clone();
+                assert_that!(continued.info(last.clone())).is_equal_to(rebuilt.info(last));
+                // The deleted row is forgotten.
+                assert_that!(continued.layout.layout_nodes.contains_key(&Key::from(500)))
+                    .is_equal_to(changed.contains_key(&Key::from(500)));
+            }
+        }
     }
 
     /// Measured sizes survive changes of the anchoring options (a `VirtualList` turns
@@ -1614,13 +1879,16 @@ mod tests {
             ..ListLayoutOptions::default()
         };
         let size = Size::new(800.0, 600.0);
-        // Rows are measured a pixel taller than estimated.
+        // Rows are measured a pixel taller than estimated, together (as the item measurer
+        // reports them, before the virtualizer lays out again).
         let measure_visible = |harness: &mut Harness| {
-            for info in harness.visible() {
-                if info.estimated_size {
-                    harness.measure(info.key, 21.0);
-                }
-            }
+            let estimated = harness
+                .visible()
+                .into_iter()
+                .filter(|info| info.estimated_size)
+                .map(|info| (info.key, 21.0))
+                .collect();
+            harness.measure_all(estimated);
         };
         let time = |f: &mut dyn FnMut()| {
             let start = std::time::Instant::now();

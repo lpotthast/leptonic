@@ -1,3 +1,4 @@
+// No upstream: leptonic's typed inline styles (react-aria passes `CSSProperties` objects).
 //! Typed inline styles: the `leptos-styles` crate (`Styles`, typed declarations in `property`,
 //! CSS values in `css`), with leptonic's additions in `css` (conversions of leptonic's color types
 //! and non-panicking helpers for values computed at runtime).

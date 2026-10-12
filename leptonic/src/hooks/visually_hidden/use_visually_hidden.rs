@@ -1,7 +1,8 @@
 // Upstream: react-aria/src/visually-hidden/VisuallyHidden.tsx @ 99e6102368
+// Upstream: react-aria/test/visually-hidden/VisuallyHidden.test.tsx @ 99e6102368
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
-    ev::{self},
+    ev,
     prelude::*,
 };
 use web_sys::FocusEvent;

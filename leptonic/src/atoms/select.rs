@@ -101,11 +101,7 @@ impl SelectContext {
 ///
 /// Default class: `leptonic-Select`.
 #[component]
-#[allow(
-    clippy::too_many_lines,
-    clippy::fn_params_excessive_bools,
-    clippy::implicit_hasher
-)]
+#[allow(clippy::implicit_hasher)]
 pub fn Select<S: SelectedValues>(
     /// The options; their keys are the values' (`SelectionValue::to_key`).
     #[prop(into)]
@@ -283,9 +279,10 @@ pub fn Select<S: SelectedValues>(
     }
 }
 
-/// The button opening the select's popover. Exposes `data-open`, `data-invalid`,
-/// `data-disabled`, `data-pressed`, `data-hovered` and (from `use_button`)
-/// `data-focus-visible` for styling.
+/// The button opening the select's popover.
+///
+/// Data attributes: `data-open`, `data-invalid`, `data-disabled`, `data-pressed`, `data-hovered`,
+/// `data-focus-visible`.
 ///
 /// Outside a [`Select`], renders nothing and warns in debug builds.
 ///
@@ -326,8 +323,9 @@ pub fn SelectTrigger(
 }
 
 /// The text of the selected option(s), or `placeholder`. Several selected options are listed in
-/// the locale's way ("Cat, Dog, and Kangaroo"). Exposes `data-placeholder` while nothing is
-/// selected.
+/// the locale's way ("Cat, Dog, and Kangaroo").
+///
+/// Data attributes: `data-placeholder` (while nothing is selected).
 ///
 /// Outside a [`Select`], renders nothing and warns in debug builds.
 ///
@@ -348,7 +346,7 @@ pub fn SelectValue(
     let state = ctx.state;
     let id = ctx.parts.with_value(|p| p.value_id.clone());
     let selected_items = Memo::new(move |_| state.selected_items());
-    let is_empty = move || selected_items.with(Vec::is_empty);
+    let is_empty = Signal::derive(move || selected_items.with(Vec::is_empty));
     let locale = crate::utils::i18n::use_locale();
     let strings = use_localized_strings::<AtomStrings>();
     let text = move || {
@@ -360,7 +358,7 @@ pub fn SelectValue(
         } else {
             let texts: Vec<&str> = items.iter().map(|n| &*n.text_value).collect();
             locale.with(|locale| {
-                crate::utils::list_formatter::ListFormatter::new(
+                crate::utils::list_formatter::ListFormatter::cached(
                     locale,
                     &crate::utils::list_formatter::ListFormatOptions::default(),
                 )
@@ -374,7 +372,7 @@ pub fn SelectValue(
             id=id
             class=classes
             style=styles
-            data-placeholder=move || is_empty().then_some("true")
+            data-placeholder=flag(is_empty)
         >
             {text}
         </span>
@@ -390,7 +388,6 @@ pub fn SelectValue(
 ///
 /// Default class: `leptonic-SelectPopover`.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn SelectPopover(
     /// Where the popover goes relative to the trigger.
     #[prop(into, default = Signal::stored(Placement::BottomStart))]

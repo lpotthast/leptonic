@@ -269,7 +269,7 @@ impl DragTypes {
                 continue;
             };
             let kind = item.type_();
-            if kind == crate::hooks::dnd::utils::CUSTOM_DRAG_TYPE {
+            if kind == super::utils::CUSTOM_DRAG_TYPE {
                 continue;
             }
             if item.kind() == "file" {
@@ -401,7 +401,7 @@ impl DirectoryDropItem {
 
     /// The files and directories in the directory.
     pub async fn get_entries(&self) -> Result<Vec<DropItem>, wasm_bindgen::JsValue> {
-        crate::hooks::dnd::utils::read_directory(&self.entry).await
+        super::utils::read_directory(&self.entry).await
     }
 }
 

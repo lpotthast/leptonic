@@ -64,10 +64,12 @@ atoms, book heads-up), then cross-cutting work.
 - [ ] Virtualizer, rest: virtualized `GridList`, `Table`, `ComboBox`/`Select` popovers and menus (RAC's virtualized
   `GridList`/`Table`/`ComboBox`/`VirtualizedMenu` tests; no consumer asks yet), sections/headers in virtualized
   lists, `GridLayout`/`TableLayout`/`WaterfallLayout`, drop targets. `VirtualList` under dev-ui's load (20,000
-  lines, 10–100 appended per second): an append rebuilds the collection and lays out again, 11.6 ms native at
-  20,000 rows (wasm likely 2–3×); at 100 appends per second that saturates the main thread. dev-ui should batch
-  appends (one per animation frame); measure in the browser first. Where the time goes and the route to O(k log n)
-  appends: "Virtualizer" below.
+  lines, 10–100 appended per second): an append rebuilds the collection and lays out again. In the browser
+  (`just browser-perf`, `perf/virtual-list`, 2026-10-12; headless Chrome, the user's Mac, wasm `opt-level = "z"`
+  without debug assertions): 50 lines appended to ~21,000 cost ~3.0 ms until settled following the end and
+  3.4–3.9 ms at the start, plus 0.1–0.3 ms of the next frame's work (native: build ~2 ms, layout 0.2–0.6 ms; why
+  the start costs more in the browser is open); 100 appends per second would take ~30–40% of the main thread. dev-ui should batch appends (one per animation frame). Where the time goes and the
+  route to O(k log n) appends: "Virtualizer" below.
 
 ### Bugs and review leftovers
 - [ ] Flaky: `overlay_position` cases fail under load in the full suite (no `[data-placement=bottom]`/`top]` within
@@ -75,6 +77,52 @@ atoms, book heads-up), then cross-cutting work.
   (`aria-expanded`, presence, placement) so the next failure shows which. The hide-until-placed styles no longer get
   wiped by `--trigger-width` (fixed 2026-10-09). Not reproduced in the 1,538-case integration run or the subsequent
   1,543-case Just run; investigate if it returns under load.
+
+### Quality pass 2026-10-12: open findings
+A rule and consistency pass over all of `leptonic/src` (what it fixed: `history.md`). Every bug fix starts with a
+failing test.
+- [ ] Bugs:
+  - Two more writers of `style`: `use_safely_mouse_to_submenu` sets `pointer-events` on the menu element, and
+    `UseVisuallyHiddenProps` writes the whole `style` attribute as a custom attribute (a caller's `style=` clashes;
+    return `PropsWithStyles` with `Styles`). Both public API.
+- [ ] Microtask workarounds that may be obsolete: `use_selectable_collection`'s `on_focusin` and `use_toolbar`'s
+  `on_focus_capture` defer focus to a microtask because "Leptos handlers can't be re-entered", but both attach through
+  `EventHandler::into_on` (re-entrant; `leptos-and-dom.md`, "Nested Event Dispatch", even names `on_focusin` as its
+  reference). Try focusing synchronously in a browser run; drop the comments and the toolbar's deviation entry.
+- [ ] Public API inconsistencies:
+  - Missing props other field atoms or RAC have: `ComboBox` `id`/`aria_describedby`; `ColorChannelField`
+    `auto_focus`/`is_wheel_disabled`/`on_focus_change` (hard-coded); `ColorSwatch` `id`; `DatePicker`/
+    `DateRangePicker` roots lack `data-focus-within`/`data-focus-visible` (only `DatePickerGroup` has them).
+  - Default classes undecided for hidden helpers: `DismissButton` (own `<button>`, no `classes`/`styles`),
+    `HiddenSelect` (own `<div>`); table column headers and resizers have a hard-coded class and no `classes`.
+  - `MenuSection` renders its own `<header>` (`heading_classes`), ListBox has a `ListBoxSectionHeading` part: a
+    `MenuSectionHeading` part (single-element rule).
+  - Parts used twice: a second `CalendarCellButton` renders nothing, a second `GridListItemDescription`/
+    `GridListHeader` renders without its props, a second `ToastDescription` renders nothing silently: one rule
+    (warn). `dev_warn!` wording varies ("must be inside", "belongs in", "X: not inside a Y"): normalize.
+  - C9: `UseClipboardReturn::clipboard_props` (the hook's own element: `props`). C11: plain `bool`s
+    `UseTextFieldInput::exclude_from_tab_order`, `is_wheel_disabled` (number, color, color channel field inputs).
+  - `Debug`/`Clone` missing on `*Input`s (`hooks-implementation.md`): text, number, search, color and color channel
+    field inputs, `NumberFieldState`; `UseToastInput`/`UseToastRegionInput` need `Debug` on `ToastQueue`;
+    `ListFormatter` has none. `CheckboxGroupContext` (and its `data` field) is `pub`, looks internal.
+  - `live_announcer`: `Assertiveness::default()` is `Polite`, react-aria's `announce` defaults to assertive
+    (recorded as a deviation): keep or change?
+  - `radio.rs`/`switch.rs`/`checkbox.rs`: one-caller `use_*_atom(XSetup { .. })` helpers: inline all three.
+- [ ] Deviation blocks: entries without a reason (couldn't be inferred): `use_grid` `getRowText`, `list_layout` AI
+  layout bottom alignment, `use_table_row`/`use_table_state` synthetic link props, `expandedKeys: 'all'`,
+  `UNSTABLE_useFilteredTableState`, `use_droppable_collection` "drop handlers run synchronously", several in
+  `dnd/types.rs`, `use_breadcrumb_item` `autoFocus` (portable: `UseLinkInput` has `auto_focus`); atoms
+  `separator`, `toolbar` (render props), `slider` (values a `Vec`), `menu` (`MenuSection` keeping disabled keys),
+  `popover` (`isEntering`/`isExiting`, `shouldSkipAnimation`, `PreviewTrigger`), `table`. State hooks repeating C3/C4
+  (`porting.md`: record once): trimmed in calendar/datepicker; most others carry hook-specific detail next to it
+  (selection manager, select/combo box/menu trigger/tab list/tree states, toggle, text field, radio/checkbox group,
+  number field, color states): decide a uniform trim.
+- [ ] Upstream tracking: the intl bundles' header (`// Generated by ... from react-aria/intl/<x>/*.json @ <sha>`)
+  isn't read by `upstream-drift.sh`; have `scripts/port-intl-strings.py` emit `// Upstream: react-aria/intl/<family>
+  @ <sha>` too (regenerating at react-spectrum's current HEAD changes translations: review).
+- [ ] Module docs: 141 of the 390 source files have a `//!` doc. Decide whether every module gets one.
+- [ ] `use_press.rs`: the middle (about lines 700-1700) was only scanned in this pass (raw targets, unwraps, derives),
+  not read in full.
 
 ### Rules the code contradicts (decide: fix the code, or change the rule)
 Found 2026-10-09 while checking the documentation against the code; the documents were left unchanged.
@@ -100,20 +148,21 @@ A read-only review of every hook, atom and browser test against upstream 99e6102
 of 2026-10-09 and drift; find code by name. Every bug fix starts with a failing test.
 
 #### Cross-cutting (patterns several reviewers found)
-- [ ] `Signal::derive` where a `Memo` is needed (rule: `leptos-and-dom.md`, "Derived Values"):
-  collection keyboard delegates and per-item flag chains.
-- [ ] `utils/intl_strings/mod.rs`: every message read re-parses the ICU message and builds a `NumberFormatter` per
-  number and `PluralRules` per plural; `messages_for` allocates `locale_str()`; one Memo + `Locale` clone per
-  `use_localized_strings` call, also in per-item hooks (`use_calendar_cell`, `use_table_row`, `use_tag`,
-  `use_tree_item`, ...). Per-locale caches; have `scripts/port-intl-strings.py` emit pre-parsed messages (or one fn
-  per message, as upstream's string compiler: `&'static str` without arguments).
+- [ ] `Signal::derive` where a `Memo` is needed (rule: `leptos-and-dom.md`, "Derived Values"), the cases left after
+  the 2026-10-12 pass, each blocked by "Effect Read Order" (convert together with reading the collection or value
+  first in the readers, plus a browser case like `value_and_items_derived_from_one_signal`): the bound selection of
+  `use_select_state` and `use_combobox_state` (the hidden select's options memo and the combo box reconciliation
+  read it before the collection); the calendar states' `is_value_invalid` (every cell's `is_invalid` memo reads it
+  before the value) and `visible_range` (`weeks_in_month`). `use_grid_list_item`'s `on_action` stays a derive
+  (`Callback` has no `PartialEq`).
+- [ ] `utils/intl_strings`: messages are parsed once per thread and number formatters, plural rules and the
+  locale's messages are cached (2026-10-12); left: one `Memo` per `use_localized_strings` call in per-item hooks
+  (`use_table_row`, `use_tag`, `use_tree_item`, DnD items, date segments; the calendar cells share theirs through
+  `CalendarData`), and `scripts/port-intl-strings.py` could emit pre-parsed messages (or one fn per message, as
+  upstream's string compiler) so nothing is parsed at runtime.
 - [ ] `ThemeProvider` (`atoms/theme.rs`): replace `signal_ls` with leptos-use's SSR-aware, cross-tab
   `use_local_storage`, then drop `Theme`'s serde bounds/derives (`Display`/`FromStr` on `LeptonicTheme` instead).
   Update the book's themes/installation pages.
-- [ ] Headers and docs: `utils/{aria,data_attributes,default_class,fraction,heading_level,orientation,point,scoped_context,
-  styles,syntax_highlight}.rs` have neither header; `cfg_attr(feature = "ssr", allow(dead_code))` in
-  `calculate_position.rs`, `visible_overlays.rs`, `atoms/virtualizer.rs`; `data-tree-column=""` (`TableCell`) is
-  the last presence-flag attribute (→ `flag`).
 - [ ] Better than react-aria, ranked by value/effort:
   1. `Validator<T>` with `From<F>` for closures returning `Result<(), E: Into<ValidationErrors>>` (today
      `validate=Arc::new(|v: &String| ..)`, `ValidateFn<T>`); pairs with the `Validation` enum (Forms).
@@ -185,9 +234,6 @@ of 2026-10-09 and drift; find code by name. Every bug fix starts with a failing 
 
 #### Collections core, ListBox, Select
 - [ ] `Select`: add the `auto_focus` prop.
-- [ ] Performance: `Collection { nodes: HashMap<Key, Node> }` with cloned `Key` links (design §4.2's arena not
-  built): `Vec<Arc<Node>>` in document order + `HashMap<Key, u32>` + u32 links, unchanged `Arc<Node>`s reused across
-  rebuilds.
 - [ ] API:
   - `use_select_state`: generic over `S: SelectedKeys` (`Option<Key>` | `Vec<Key>`), drop `selection_mode`.
   - `ListBox` requires no `collection` (warns without one outside Select/ComboBox): a required `collection`; Select
@@ -240,13 +286,12 @@ Done 2026-10-09 (f-grid, see history); open:
   that session resets undo. DnD auto-scroll (WebKit-only) stays untested (`test_dnd_collection.rs` header).
 
 #### Virtualizer
-- [ ] Measure browser append timing before and after the current virtualizer changes; native timings below
-  do not establish browser throughput.
 - [ ] Long term (not done, bigger redesigns): a flat-list layout for `VirtualList` (no `Collection`: `Vec<Key>` +
   key → index + a Fenwick tree of row lengths; append k rows O(k log n), visible range O(log n + v)), with an
   append-aware source (`VirtualListItems<T>` with `push`/`extend`/`drain_front` and a change generation) instead of
-  `items: Signal<Vec<T>>`. Appends still cost O(n) per layout (5.6 ms layout at 20,000 rows, end-anchored) plus
-  `Collection::build` (~9 ms).
+  `items: Signal<Vec<T>>`. Appends cost an O(n) comparison of the top-level nodes (no lookups; the layout continues
+  after the unchanged ones; ~0.6 ms at 20,000 rows, end-anchored) plus `Collection::build` (~2 ms); trimming the
+  start moves every row (~5 ms).
 - [ ] `layout_info.rs:24` `transform: Option<Arc<str>>` stringly CSS.
 - [ ] Sectioned lists: continuation of partial builds is disabled for them (sections may be laid out partially
   anywhere); virtualized sections/headers aren't rendered by the atoms anyway.
@@ -402,18 +447,18 @@ Done 2026-10-09 (f-grid, see history); open:
   `I18nProvider` `locale` prop (today initial only); the autocomplete's `collectionLabel` once `use_autocomplete`
   exists (add its bundle to `scripts/port-intl-strings.py`); a non-English browser check for calendar, DnD, color and
   toast.
-- [ ] Atom hygiene: a context for render state (selected/pressed) in Tab/GridRow/TableRow/GridListItem; `FocusScope`
-  has no default class; one rule for `Children` vs `ChildrenFn`; atoms dropping `attr:` attributes; a `node_ref` prop
-  on every atom rendering an element (react-aria-components forwards `ref` everywhere; only `Input`/`TextArea`, and
-  `use_toolbar` creates its own `CapturedElement`).
+- [ ] Atom hygiene: a context for render state (selected/pressed) in Tab/GridRow/TableRow/GridListItem; one rule for
+  `Children` vs `ChildrenFn`; atoms dropping `attr:` attributes; a `node_ref` prop on every atom rendering an element
+  (react-aria-components forwards `ref` everywhere; only `Input`/`TextArea`, and `use_toolbar` creates its own
+  `CapturedElement`).
 - [ ] Port hooks onto `use_keyboard` shortcuts (upstream uses them in ~20 hooks; here only `use_submenu_trigger`).
 - [ ] Hygiene: split the largest functions (`use_press`, 933 lines; `use_move`, `use_selectable_collection`,
   `FocusScope`); document public items (DnD states' pub fields, `SelectionOptions.disabled_behavior`,
   `UseListBoxInput`/`Return`, `CollectionOptions`, `SelectState`, `Column`, `TableColumnResizeState.table_state`,
   `TabListState.list`, `TreeState.expansion`, `UseGridCellReturn`; most atom props).
-- [ ] Deviation blocks: `virtualizer/list_layout.rs` records fixed upstream bugs under a category of its own
-  (`UPSTREAM BUGS FIXED`) that `porting.md`'s list lacks (`DismissButton`'s fix is planned as an
-  ADDITION): decide one category for fixed upstream bugs and document it.
+- [ ] Deviation blocks: decide one category for fixed upstream bugs and document it in `porting.md`.
+  `virtualizer/list_layout.rs` records its fix under `DIFFERENT BEHAVIOR` (since 2026-10-12);
+  `DismissButton`'s fix is planned as an ADDITION.
 
 ### Build performance
 Numbers, methods and findings: `documentation/build-performance.md` (measure with `scripts/build-bench.sh`).
@@ -432,6 +477,12 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   visit and an unstable Leptos feature: try a coarser grouping first).
 
 ### Testing infrastructure
+- [ ] Performance suite (`just browser-perf`, `documentation/testing.md`, "Performance measurements"): only
+  `perf/virtual-list` so far. Candidates, by expected value: a `Table` of 1,000 rows (mount, sorting, selecting
+  all), `ComboBox` filtering a long list per keystroke, `Select` with 320 options (opening), `ListBox` of 5,000 options
+  (mount, range selection), `Calendar` mount and month changes, `DatePicker` opening, a `NumberField`/`DateField`
+  keystroke, a `Tree` expanding 1,000 rows, page hydration of a large fixture; a `VirtualList` with single-line
+  appends at 100 per second (the main thread's share).
 - [ ] Session start failures (2026-10-10): the first wave of parallel sessions after chromedriver starts fails with
   `StartWebDriverSession` ("error sending request for url .../session", chrome-for-testing-manager 0.14): in the
   evening runs 2 and 4 of the first 8 sessions, every run (the first group's cases fail; they pass with

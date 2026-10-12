@@ -8,7 +8,7 @@ fn en() -> Locale {
     "en-US".parse().expect("a valid locale")
 }
 
-// --- Existing hex formatting tests ---
+// Hex formatting.
 
 #[test]
 fn rgb8_to_lower_hex() {
@@ -40,7 +40,7 @@ fn rgb8_display() {
     assert_that!(&rgb.to_string()).is_equal_to("#BA17F1");
 }
 
-// --- Hex parsing tests ---
+// Hex parsing.
 
 #[test]
 fn rgb8_from_hex_with_hash() {
@@ -91,7 +91,7 @@ fn rgb8_hex_int_roundtrip() {
     assert_that!(RGB8::from_hex_int(int)).is_equal_to(rgb);
 }
 
-// --- HSV ColorValue trait tests ---
+// `ColorValue` of HSV.
 
 #[test]
 fn hsv_channel_value() {
@@ -183,7 +183,7 @@ fn hsv_channel_name() {
     assert_that!(HSV::channel_name(HsvChannel::Brightness, &en())).is_equal_to("Brightness");
 }
 
-// --- RGB8 ColorValue trait tests ---
+// `ColorValue` of RGB8.
 
 #[test]
 fn rgb8_channel_value() {
@@ -238,7 +238,7 @@ fn rgb8_channel_name() {
     assert_that!(RGB8::channel_name(RgbChannel::Blue, &en())).is_equal_to("Blue");
 }
 
-// --- HSL ColorValue trait tests ---
+// `ColorValue` of HSL.
 
 #[test]
 fn hsl_channel_value() {
@@ -313,7 +313,7 @@ fn hsl_display_color_hue() {
     assert_that!(display.lightness).is_close_to(0.5, 0.001);
 }
 
-// --- HSL conversion tests ---
+// HSL conversions.
 
 #[test]
 fn hsl_to_rgb8_red() {

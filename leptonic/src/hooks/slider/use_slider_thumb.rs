@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/slider/useSliderThumb.ts @ 99e6102368
+// Upstream: react-aria/test/slider/useSliderThumb.test.js @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -22,7 +23,7 @@ use crate::{
         slider::{SliderData, SliderState},
     },
     utils::{
-        aria::{AriaInvalid, AriaOrientation, AriaRequired},
+        aria::{AriaInvalid, AriaOrientation, AriaRequired, aria_true},
         dom_ext::{EventAccessors, EventTargetExt},
         event_listeners::{Listener, listen_to},
         focus::focus_safely,
@@ -236,7 +237,6 @@ fn parse_value<T: NumberValue>(text: &str) -> Option<T> {
 
 /// A thumb of a slider: drag it, or focus its range input and use the arrow keys (Shift: by a
 /// page), PageUp/PageDown, Home and End.
-#[allow(clippy::too_many_lines)]
 pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSliderThumbReturn {
     let UseSliderThumbInput {
         state,
@@ -289,7 +289,7 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
     let thumb_labelled_by = {
         let (thumb_label_id, thumb_id) = (label_props.id.clone(), field_props.id.clone());
         let slider_labelled_by = slider.labelled_by;
-        Signal::derive(move || {
+        Memo::new(move |_| {
             let mut ids = IdRefs::default();
             if aria_label.with(Option::is_some) {
                 ids.push(&thumb_id);
@@ -492,16 +492,17 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             min: Signal::derive(move || to_string(state.thumb_min_value(index))),
             max: Signal::derive(move || to_string(state.thumb_max_value(index))),
             step: Signal::derive(move || to_string(state.step.get())),
-            value: Signal::derive(move || to_string(state.thumb_value(index))),
+            // A memo: the attribute and the property read it.
+            value: Memo::new(move |_| to_string(state.thumb_value(index))).into(),
             name,
             form,
             disabled: is_disabled,
             aria_orientation: Signal::derive(move || orientation.get().into()),
             aria_valuetext: Signal::derive(move || state.thumb_value_label(index)),
-            aria_required: Signal::derive(move || is_required.get().then_some(AriaRequired::True)),
-            aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
+            aria_required: aria_true(is_required),
+            aria_invalid: aria_true(is_invalid),
             aria_label: field_props.aria_label,
-            aria_labelledby: thumb_labelled_by,
+            aria_labelledby: thumb_labelled_by.into(),
             aria_describedby: IdRefs::derive([slider.aria_describedby, aria_describedby]),
             aria_errormessage,
             aria_details: IdRefs::derive([slider.aria_details, aria_details]),

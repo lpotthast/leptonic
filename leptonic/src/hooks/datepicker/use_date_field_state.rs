@@ -33,8 +33,8 @@ use crate::{
 // - Generic over the value type (`V: DateValue`: `civil::Date`, `civil::DateTime`, `Zoned`), so
 //   that the field returns the type it was given (react-aria: `MappedDateValue<T>`); min, max and
 //   the placeholder have that type as well.
-// - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
-// - A `Copy` struct with signals and methods (C3); `set_segment` takes the era as its index.
+// - `set_segment` takes the era as its index, a number as every other segment's value
+//   (react-aria: the era's string).
 // - `hour_cycle`, `granularity`, `max_granularity`: enums (react-aria: numbers and strings).
 // - The format options (`placeholder_value`, `granularity`, `max_granularity`, `hour_cycle`,
 //   `hide_time_zone`, `should_force_leading_zeros`) are signals (C11).
@@ -467,7 +467,6 @@ fn display_segments(
 
 /// State of a date field: the value, its segments in the locale's order and their editing
 /// (typing, stepping, clearing), with validation against min, max and unavailable dates.
-#[allow(clippy::too_many_lines)]
 pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> DateFieldState<V> {
     let UseDateFieldStateInput {
         default_value,
@@ -573,7 +572,9 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
         show_era: display.with(|display| display.era == Some(Era::Bc)),
         should_force_leading_zeros: should_force_leading_zeros.get(),
     });
-    let formatters = Memo::new(move |_| Formatters::new(locale.get(), format_options.get()));
+    let formatters = Memo::new(move |_| {
+        locale.with(|locale| format_options.with(|options| Formatters::cached(locale, options)))
+    });
     let numbers = Memo::new(move |_| SegmentNumbers::new(&locale.get()));
 
     let date_value = Memo::new(move |_| {

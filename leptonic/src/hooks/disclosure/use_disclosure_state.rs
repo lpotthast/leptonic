@@ -1,4 +1,5 @@
 // Upstream: react-stately/src/disclosure/useDisclosureState.ts @ 99e6102368
+// Upstream: react-stately/test/disclosure/useDisclosureState.test.ts @ 99e6102368
 use leptos::prelude::*;
 
 use crate::ValueBinding;
@@ -33,18 +34,22 @@ pub struct DisclosureState {
 }
 
 impl DisclosureState {
+    /// Expands or collapses the panel.
     pub fn set_expanded(&self, is_expanded: bool) {
         self.set_expanded.run(is_expanded);
     }
 
+    /// Expands the panel.
     pub fn expand(&self) {
         self.set_expanded(true);
     }
 
+    /// Collapses the panel.
     pub fn collapse(&self) {
         self.set_expanded(false);
     }
 
+    /// Expands a collapsed panel, collapses an expanded one.
     pub fn toggle(&self) {
         self.set_expanded(!self.is_expanded.get_untracked());
     }

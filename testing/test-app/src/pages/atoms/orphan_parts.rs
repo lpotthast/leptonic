@@ -1,17 +1,22 @@
 //! Atom parts outside their parent: each warns (debug builds) and renders nothing, instead of
 //! panicking. A family's parts mount when its button is pressed, so the page loads without
-//! warnings.
+//! warnings. `#orphans-checkbox` mounts a `CheckboxField` without the `value` its
+//! `CheckboxGroup` needs.
 
-use leptonic::atoms::{
-    combobox::ComboBoxPopover,
-    listbox::ListBoxItems,
-    menu::{
-        MenuItem, MenuItemDescription, MenuItemLabel, MenuItemShortcut, MenuItems, MenuSection,
-        SubmenuTrigger,
+use leptonic::{
+    atoms::{
+        checkbox::{CheckboxButton, CheckboxField, CheckboxGroup},
+        combobox::ComboBoxPopover,
+        listbox::ListBoxItems,
+        menu::{
+            MenuItem, MenuItemDescription, MenuItemLabel, MenuItemShortcut, MenuItems, MenuSection,
+            SubmenuTrigger,
+        },
+        number_field::{NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton},
+        radio::RadioField,
+        search_field::SearchFieldClearButton,
     },
-    number_field::{NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton},
-    radio::RadioField,
-    search_field::SearchFieldClearButton,
+    hooks::collections::Key,
 };
 use leptos::prelude::*;
 
@@ -58,6 +63,13 @@ pub fn PageAtomOrphanParts() -> impl IntoView {
             <MenuItemLabel>"Label"</MenuItemLabel>
             <MenuItemDescription>"Description"</MenuItemDescription>
             <MenuItemShortcut>"Ctrl+C"</MenuItemShortcut>
+        </Orphans>
+        <Orphans name="checkbox">
+            <CheckboxGroup<Key> aria_label="Pets">
+                <CheckboxField>
+                    <CheckboxButton>"Dogs"</CheckboxButton>
+                </CheckboxField>
+            </CheckboxGroup<Key>>
         </Orphans>
     }
 }

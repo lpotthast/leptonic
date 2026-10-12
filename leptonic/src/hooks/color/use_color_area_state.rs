@@ -19,7 +19,10 @@ use crate::{
 //   color space is the type (react-aria: a `colorSpace` prop converting the value).
 // - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
 // - A `Copy` struct with signals and methods (C3); points of the area are `Point`s (C13).
-// - `x_channel_step`/`y_channel_step` override the channels' steps (leptonic addition).
+//
+// ## ADDITIONS
+// - `x_channel_step`/`y_channel_step` override the channels' steps, for areas that move in other
+//   steps than the color space's. React-aria: always the channels' steps.
 //
 // =============================================================================
 
@@ -248,8 +251,10 @@ pub fn use_color_area_state<C: ColorValue>(input: UseColorAreaStateInput<C>) -> 
     let value = binding.value;
     ColorAreaState {
         value,
-        x_value: Signal::derive(move || value.get().channel_value(x_channel)),
-        y_value: Signal::derive(move || value.get().channel_value(y_channel)),
+        // Memos: the inputs, the thumb's position and the value texts read them, and a change
+        // of one channel doesn't notify the other's readers.
+        x_value: Memo::new(move |_| value.get().channel_value(x_channel)).into(),
+        y_value: Memo::new(move |_| value.get().channel_value(y_channel)).into(),
         x_channel,
         y_channel,
         z_channel,

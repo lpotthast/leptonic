@@ -3,13 +3,7 @@ use leptos::attr::{self, Attr};
 
 use crate::{IntoAttrs, utils::aria::AriaRole};
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
+// No deviations from react-aria beyond the project-wide API conventions.
 
 /// Return value of [`use_grid_row_group`].
 #[derive(Debug)]

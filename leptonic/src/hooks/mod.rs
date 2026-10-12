@@ -1,3 +1,10 @@
+//! The hooks: interaction and accessibility logic without rendering, ported from react-aria
+//! (and react-stately's state hooks). Each family module (`button`, `interactions`, ...) is the
+//! public path of its hooks.
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
 // The following deviations apply to all hooks in this module:
 //
@@ -54,8 +61,12 @@
 //   Rationale: Uses `Callback<T>` from Leptos instead of React event handlers.
 //   React-aria: Uses React's (event: E) => void function signatures.
 //
-// - Element ids come from `use_id` (hydration-stable), never from random ids.
+// - Element ids come from `use_id`, never from random ids.
+//   Rationale: `use_id` draws from Leptos' hydration counter, so the server and the hydrating
+//   client produce the same ids.
+//   React-aria: `useId`.
 //
+// =============================================================================
 
 pub mod animation;
 pub mod breadcrumbs;

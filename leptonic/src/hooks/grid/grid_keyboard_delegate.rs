@@ -12,14 +12,8 @@ use crate::{
     utils::{filter::Collator, i18n::WritingDirection},
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// No intentional deviations from the react-aria implementation (the deprecated `layout`
-// option is not offered).
-//
-// =============================================================================
+// No deviations from react-aria beyond the project-wide API conventions (the deprecated `layout`
+// option is not offered: no legacy API).
 
 /// What arrow keys focus in a grid.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -147,7 +141,7 @@ impl GridKeyboardDelegate {
         self.collection.with_untracked(|c| f(c))
     }
 
-    pub(crate) fn is_disabled(&self, key: &Key) -> bool {
+    fn is_disabled(&self, key: &Key) -> bool {
         untrack(|| self.selection.is_disabled(key))
     }
 
@@ -211,16 +205,12 @@ impl GridKeyboardDelegate {
         self.find_next_key(from, Self::is_row, false)
     }
 
-    fn cells(c: &Collection, row: &Key) -> Vec<Key> {
-        c.cells(row).map(|n| n.key.clone()).collect()
-    }
-
     fn first_cell(&self, row: &Key) -> Option<Key> {
-        self.with(|c| Self::cells(c, row).into_iter().next())
+        self.with(|c| c.cells(row).next().map(|n| n.key.clone()))
     }
 
     fn last_cell(&self, row: &Key) -> Option<Key> {
-        self.with(|c| Self::cells(c, row).pop())
+        self.with(|c| c.cells(row).last().map(|n| n.key.clone()))
     }
 
     /// The cell of `row` covering column `index` (respecting column spans).
@@ -279,13 +269,12 @@ impl GridKeyboardDelegate {
         if Self::is_cell(&node) {
             let parent = node.parent_key.clone()?;
             let neighbor = self.with(|c| {
-                let cells = Self::cells(c, &parent);
                 let index = if forward {
                     node.index.checked_add(1)
                 } else {
                     node.index.checked_sub(1)
                 }?;
-                cells.get(index).cloned()
+                c.cells(&parent).nth(index).map(|n| n.key.clone())
             });
             if neighbor.is_some() {
                 return neighbor;

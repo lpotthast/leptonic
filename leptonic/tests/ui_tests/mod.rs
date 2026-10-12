@@ -65,6 +65,7 @@ pub mod test_orphan_parts;
 pub mod test_overlay;
 pub mod test_overlay_position;
 pub mod test_overlay_state;
+pub mod test_perf_virtual_list;
 pub mod test_popover;
 pub mod test_press;
 pub mod test_pressable;
@@ -107,24 +108,47 @@ use browser_test::{BrowserTests, InvalidEnvVar, Parallelism, TestFilter, TestGro
 
 use crate::harness::fixture_test;
 
+/// Which tests run (`BROWSER_TEST_SUITE`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Suite {
+    /// Every regular test (`regular`, the default).
+    Regular,
+    /// The known issues' tests (`known-issues`), which document upstream bugs and fail until they
+    /// are fixed.
+    KnownIssues,
+    /// The performance measurements (`performance`), one after the other.
+    Performance,
+}
+
 /// All registrations and logical groups live here, independently of implementation modules.
-/// Group members share the suite's parallelism limit. Known issues are a separate opt-in suite.
-pub fn all(parallelism: Parallelism) -> Result<BrowserTests<str>, InvalidEnvVar> {
-    let known_issues = std::env::var("BROWSER_TEST_KNOWN_ISSUES").is_ok_and(|value| value == "1");
-    let tests = if known_issues {
-        known_issues_tests(parallelism)
-    } else {
-        regular_tests(parallelism)
+/// Group members share the suite's parallelism limit. Known issues and performance measurements
+/// are separate opt-in suites.
+pub fn all(suite: Suite, parallelism: Parallelism) -> Result<BrowserTests<str>, InvalidEnvVar> {
+    let tests = match suite {
+        Suite::Regular => regular_tests(parallelism),
+        Suite::KnownIssues => known_issues_tests(parallelism),
+        Suite::Performance => performance_tests(),
     };
     let after = BrowserTests::sequential().named("after all").run_always();
-    let after = if known_issues {
-        after
-    } else {
-        after.with(fixture_test(test_server_panics::ServerPanicTests))
+    let after = match suite {
+        Suite::KnownIssues => after,
+        Suite::Regular | Suite::Performance => {
+            after.with(fixture_test(test_server_panics::ServerPanicTests))
+        }
     };
     Ok(BrowserTests::sequential()
         .with_nested(tests.filter(&TestFilter::from_env()?))
         .with_nested(after))
+}
+
+/// The measurements run one after the other: parallel sessions would compete for the machine.
+fn performance_tests() -> BrowserTests<str> {
+    BrowserTests::sequential().with_test_group(
+        TestGroup::new("performance")
+            .with(fixture_test(test_perf_virtual_list::Mount))
+            .with(fixture_test(test_perf_virtual_list::AppendFollowingEnd))
+            .with(fixture_test(test_perf_virtual_list::AppendAtStart)),
+    )
 }
 
 fn known_issues_tests(parallelism: Parallelism) -> BrowserTests<str> {
@@ -929,7 +953,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_orphan_parts::ListBoxParts))
                 .with(fixture_test(test_orphan_parts::ComboBoxParts))
                 .with(fixture_test(test_orphan_parts::RadioParts))
-                .with(fixture_test(test_orphan_parts::MenuParts)),
+                .with(fixture_test(test_orphan_parts::MenuParts))
+                .with(fixture_test(test_orphan_parts::CheckboxFieldWithoutValue)),
         )
         .with_test_group(
             TestGroup::new("select")
@@ -1044,7 +1069,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(
                     test_menu_atoms::PressDragReleaseActivatesAnItem,
                 ))
-                .with(fixture_test(test_menu_atoms::TabKeepsFocusInTheOpenMenu)),
+                .with(fixture_test(test_menu_atoms::TabKeepsFocusInTheOpenMenu))
+                .with(fixture_test(test_menu_atoms::RenamedItemsUpdate)),
         )
         .with_test_group(
             TestGroup::new("grid")
@@ -1154,6 +1180,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_tabs::Dynamic))
                 .with(fixture_test(test_tabs::Nested))
                 .with(fixture_test(test_tabs::TabPanels))
+                .with(fixture_test(test_tabs::TabPanelsRestyledWhileAnimating))
                 .with(fixture_test(test_tabs::DisabledTabs))
                 .with(fixture_test(test_tabs::DefaultSelectedKey))
                 .with(fixture_test(test_tabs::HomeAndEndSkipDisabledTabs))
@@ -2428,6 +2455,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_tag_group_atoms::OrderWhenAdding))
                 .with(fixture_test(test_tag_group_atoms::RightToLeft))
                 .with(fixture_test(test_tag_group_atoms::KeyboardSelection))
+                .with(fixture_test(test_tag_group_atoms::RenamedTagsUpdate))
                 .with(fixture_test(test_tag_group::AriaStructure))
                 .with(fixture_test(test_tag_group::KeyboardNavigation))
                 .with(fixture_test(

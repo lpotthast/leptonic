@@ -2,12 +2,13 @@
 // Upstream: react-stately/src/searchfield/useSearchFieldState.ts @ 99e6102368
 // Upstream: react-aria/test/searchfield/useSearchField.test.js @ 99e6102368
 // Upstream: react-stately/test/searchfield/useSearchFieldState.test.js @ 99e6102368
+// Upstream: react-aria-components/test/SearchField.test.js @ 99e6102368
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
 use super::use_text_field::{UseTextFieldInput, UseTextFieldReturn, use_text_field};
 use crate::{
-    hooks::button::use_button::UseButtonInput,
+    hooks::button::UseButtonInput,
     utils::{
         dom_ext::EventAccessors,
         intl_strings::{SearchFieldStrings, use_localized_strings},
@@ -46,6 +47,7 @@ pub struct UseSearchFieldInput {
 }
 
 /// Return value of [`use_search_field`].
+#[derive(Debug)]
 pub struct UseSearchFieldReturn {
     /// The text field: label, input, description and error message props and validation.
     pub text_field: UseTextFieldReturn,

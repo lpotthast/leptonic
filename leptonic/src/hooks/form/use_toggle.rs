@@ -30,7 +30,7 @@ use crate::{
     },
     use_slot,
     utils::{
-        aria::{AriaInvalid, AriaReadonly, AriaRequired, AriaRole},
+        aria::{AriaInvalid, AriaReadonly, AriaRequired, AriaRole, aria_true},
         dom_ext::EventAccessors,
         pointer_type::PointerType,
         propagation_control::Propagation,
@@ -53,8 +53,8 @@ use crate::{
 // - A virtual click on the label (`label.click()`, assistive technology) toggles, as with a
 //   native `<label>`. React-aria leaves virtual label presses to the input, but prevents the
 //   label's click, so nothing toggles.
-// - `is_read_only` also blocks changes here (react-aria: only in `useToggleState`), so a state
-//   from elsewhere (`ToggleState::new`, a bound signal) stays read-only too.
+// - `is_read_only` also blocks changes here (react-aria: only in `useToggleState`), so a toggle
+//   is read-only also with a state created without `is_read_only`.
 //
 // ## ADDITIONS
 // - Focus ring state (`is_focused`, `is_focus_visible`), which react-aria-components adds with
@@ -350,7 +350,6 @@ pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
 
 /// [`use_toggle`] with an input `role` and, for checkbox group items, the validation to use
 /// instead of the toggle's own (react-aria's `privateValidationStateProp`).
-#[allow(clippy::too_many_lines)]
 pub(crate) fn use_toggle_with(
     input: UseToggleInput,
     role: Option<AriaRole>,
@@ -564,12 +563,8 @@ pub(crate) fn use_toggle_with(
                 aria_required: Signal::derive(move || {
                     (!native_required && is_required.get()).then_some(AriaRequired::True)
                 }),
-                aria_invalid: Signal::derive(move || {
-                    is_validation_invalid.get().then_some(AriaInvalid::True)
-                }),
-                aria_readonly: Signal::derive(move || {
-                    is_read_only.get().then_some(AriaReadonly::True)
-                }),
+                aria_invalid: aria_true(is_validation_invalid),
+                aria_readonly: aria_true(is_read_only),
                 aria_errormessage,
                 aria_controls,
                 aria_describedby,
@@ -589,7 +584,7 @@ pub(crate) fn use_toggle_with(
                 on_mousedown: press_props.on_mousedown,
                 on_dragstart: press_props.on_dragstart,
                 on_dblclick: press_props.on_dblclick,
-                context_attrs: focusable_props.context_attrs.clone(),
+                context_attrs: focusable_props.context_attrs,
             },
             press_styles,
         ),

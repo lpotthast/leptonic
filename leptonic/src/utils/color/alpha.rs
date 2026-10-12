@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/color/Color.ts @ 99e6102368
 //! [`Alpha`]: any color with an alpha channel, and [`Color`], the color of any space.
 
 use std::fmt;

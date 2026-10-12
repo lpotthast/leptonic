@@ -1,5 +1,7 @@
 // Upstream: react-aria-components/src/ToggleButton.tsx @ 99e6102368
 // Upstream: react-aria-components/src/ToggleButtonGroup.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ToggleButton.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ToggleButtonGroup.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
@@ -61,7 +63,6 @@ pub struct ToggleButtonGroupContext {
 /// `value` it is a standalone toggle there too (and warns in debug builds).
 ///
 /// Default class: `leptonic-ToggleButton`.
-#[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
 #[component]
 pub fn ToggleButton(
     /// The button's key in its [`ToggleButtonGroup`].
@@ -190,9 +191,10 @@ pub fn ToggleButton(
 ///
 /// The value is the set of the selected buttons' values (typed, `V: SelectionValue`; the buttons
 /// take theirs as their `value`, a `Key`).
-// A component prop can't be generic over hashers.
+///
 /// Default class: `leptonic-ToggleButtonGroup`.
-#[allow(clippy::too_many_arguments, clippy::implicit_hasher)]
+// `implicit_hasher`: a component prop can't be generic over hashers.
+#[allow(clippy::implicit_hasher)]
 #[component]
 pub fn ToggleButtonGroup<V: SelectionValue>(
     #[prop(optional)] selection_mode: ToggleGroupSelectionMode,

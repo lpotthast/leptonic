@@ -79,8 +79,9 @@ pub fn PageAtomFocusScope() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The scope renders a wrapper "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"display: contents"</Code>
-                    ", so it does not affect the layout of its children. Style the children, or a container you put inside the scope."
+                    "The scope renders a wrapper "<Code inline=true>"<div>"</Code>" (default class "<Code inline=true>"leptonic-FocusScope"</Code>
+                    ") with "<Code inline=true>"display: contents"</Code>", so it does not affect the layout of its children. Style the "
+                    "children, or a container you put inside the scope."
                 </p>
             </Section>
 

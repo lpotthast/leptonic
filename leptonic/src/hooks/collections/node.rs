@@ -88,9 +88,10 @@ impl ItemLink {
 
 /// One entry of a [`Collection`](super::Collection): an item, a section, a header, ...
 ///
-/// Nodes are created by [`CollectionBuilder`](super::CollectionBuilder) and are immutable.
-/// Besides their own data, they link to their neighbors, parent and children, so that
-/// collections can be traversed in document order without allocations.
+/// Nodes are created by [`CollectionBuilder`](super::CollectionBuilder) and are immutable. A node
+/// holds its own data and its parent's key; its neighbors and children are the collection's
+/// ([`Collection::next_sibling`](super::Collection::next_sibling),
+/// [`children`](super::Collection::children), ...).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Node {
@@ -106,10 +107,6 @@ pub struct Node {
     /// The position among the parent's children (or among the top-level nodes).
     pub index: usize,
     pub parent_key: Option<Key>,
-    pub prev_key: Option<Key>,
-    pub next_key: Option<Key>,
-    pub first_child_key: Option<Key>,
-    pub last_child_key: Option<Key>,
     /// Whether this node has children (sections: their contents, items: tree children).
     pub has_child_nodes: bool,
     /// Whether the item itself is disabled (in addition to any `disabled_keys` of the state).
@@ -124,9 +121,6 @@ pub struct Node {
     pub col_index: Option<usize>,
     /// Cells (and table column groups): how many columns the cell spans.
     pub col_span: Option<usize>,
-    /// The position in document order among all nodes of the collection (items' children
-    /// included), for O(1) order comparisons.
-    pub(crate) position: usize,
 }
 
 impl Node {
@@ -137,7 +131,8 @@ impl Node {
     /// Whether `other` describes the same node with the same content, wherever it is: its
     /// position (index, neighbors, document order) doesn't count. Renderers of a node's content
     /// compare with this, so that adding, removing or filtering other nodes doesn't render it
-    /// again.
+    /// again. (Its children are nodes of their own: a section whose contents change compares
+    /// equal.)
     pub fn same_content(&self, other: &Node) -> bool {
         let Self {
             key,
@@ -147,17 +142,12 @@ impl Node {
             level,
             index: _,
             parent_key,
-            prev_key: _,
-            next_key: _,
-            first_child_key,
-            last_child_key,
             has_child_nodes,
             is_disabled,
             disabled_behavior,
             link,
             col_index,
             col_span,
-            position: _,
         } = self;
         *key == other.key
             && *kind == other.kind
@@ -165,8 +155,6 @@ impl Node {
             && *aria_label == other.aria_label
             && *level == other.level
             && *parent_key == other.parent_key
-            && *first_child_key == other.first_child_key
-            && *last_child_key == other.last_child_key
             && *has_child_nodes == other.has_child_nodes
             && *is_disabled == other.is_disabled
             && *disabled_behavior == other.disabled_behavior

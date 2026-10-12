@@ -7,8 +7,11 @@ react-spectrum @ `99e6102368`.
 Implemented differently from the proposal below:
 - No `TypedKey`: values name their key through `From<T> for Key` or `SelectionValue` (`collections/key.rs`).
   Integer keys hold any integer type's value (`i128`); `Key::id_fragment` gives unambiguous element ids.
-- §4.2's node storage was not built as an arena: `Collection` is a `HashMap<Key, Node>` with key links between
-  nodes (an arena with structural sharing is an open item in `PLAN.md`).
+- §4.2's node storage is an arena (2026-10-12): the nodes in a `Vec` in document order, their links (parent,
+  siblings, first and last child) by position in a parallel `Vec`, and a `HashMap<Key, u32>` of positions (std's
+  seeded hasher: keys are often user-controlled and collections are built on the server). Traversal doesn't hash.
+  No structural sharing between rebuilds: nodes are compared by content (`Node::same_content`) where it matters
+  (item renderers, the list layout's cache), which a shared `Arc<Node>` would only make cheaper per comparison.
 - Per-key notification (built 2026-10-09, in place of the design's `is_*_signal(key)` helpers over a leptos
   `Selector`, which updates in an effect): `SelectionManager::is_selected(key)` and `is_focused_key(key)` subscribe
   their reader to that key only (`KeySubscribers`); `set_focused_key` notifies the old and new key, selection
@@ -16,7 +19,7 @@ Implemented differently from the proposal below:
   effect).
 - State inputs follow C4 (`documentation/conventions.md`): besides `default_*`, a `ValueBinding` to app state
   (`SelectionOptions::selection`, `expanded_keys`, `sort_descriptor`, select/combo box `value`), see §4.11.
-- Nodes carry their document position (crate-private `position`): `Collection::compare_order` is O(1), and
+- A node's document position is its index in the arena: `Collection::compare_order` is O(1), and
   `sorted_keys` puts keys in collection order (`first/last_selected_key`, range selection, the values of
   `use_select_state`/`use_combobox_state`).
 - `Key::cell(row, column)` takes the column as a `usize`.
@@ -143,8 +146,8 @@ Why not generic `K`:
 
 ### 4.2 `Node` and `Collection`
 
-As implemented (`node.rs`, `collection.rs`; the design's arena storage and `Row`/`RowHeader`/`Body` kinds were not
-built, see the notes at the top):
+As implemented (`node.rs`, `collection.rs`; the design's `Row`/`RowHeader`/`Body` kinds were not built, see the
+notes at the top):
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -157,17 +160,15 @@ pub struct Node {
     pub text_value: Arc<str>, pub aria_label: Option<Arc<str>>,
     pub level: usize,                              // tree depth; sections don't add a level
     pub index: usize,                              // position among the parent's children
-    pub parent_key: Option<Key>, pub prev_key: Option<Key>, pub next_key: Option<Key>,
-    pub first_child_key: Option<Key>, pub last_child_key: Option<Key>,
+    pub parent_key: Option<Key>,                   // neighbors and children: the collection's
     pub has_child_nodes: bool,
     pub is_disabled: bool, pub disabled_behavior: Option<DisabledBehavior>, // per-item override
     pub link: Option<ItemLink>,                    // links-as-items
     pub col_index: Option<usize>, pub col_span: Option<usize>,
-    pub(crate) position: usize,                    // document order, for O(1) compare_order
 }
 pub struct ItemLink { pub href: Arc<str>, pub target: Option<Arc<str>>, pub rel: Option<Arc<str>> }
 
-/// Immutable; `HashMap<Key, Node>` with key links between nodes.
+/// Immutable; an arena: nodes in document order, links by position, a key -> position map.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Collection { /* private */ }
 impl Collection {
@@ -176,6 +177,9 @@ impl Collection {
     pub fn get(&self, key: &Key) -> Option<&Node>;  pub fn contains_key(&self, key: &Key) -> bool;
     pub fn first_key(&self) -> Option<&Key>;  pub fn last_key(&self) -> Option<&Key>;
     pub fn key_after(&self, key: &Key) -> Option<&Key>;  pub fn key_before(&self, key: &Key) -> Option<&Key>; // BaseCollection semantics
+    pub fn next_sibling(&self, key: &Key) -> Option<&Node>;  pub fn previous_sibling(&self, key: &Key) -> Option<&Node>;
+    pub fn first_child(&self, key: &Key) -> Option<&Node>;  pub fn last_child(&self, key: &Key) -> Option<&Node>;
+    pub fn siblings_from(&self, key: &Key) -> impl Iterator<Item = &Node>;
     pub fn iter(&self) -> impl Iterator<Item = &Node>;             // top-level nodes
     pub fn children(&self, parent: &Key) -> impl Iterator<Item = &Node>;
     pub fn cells(&self, row: &Key) -> impl Iterator<Item = &Node>;

@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/color/useColorArea.ts @ 99e6102368
 // Upstream: react-aria/src/color/useColorAreaGradient.ts @ 99e6102368
+// Upstream: react-aria-components/test/ColorArea.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/color/ColorArea.test.tsx @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -13,7 +15,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::use_color_area_state::ColorAreaState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         focus::{
             FocusWithinEvent, UseFocusInput, UseFocusWithinInput, use_focus, use_focus_within,
@@ -24,6 +26,7 @@ use crate::{
             use_move,
         },
     },
+    labels,
     utils::{
         aria::{AriaHidden, AriaOrientation, AriaRole},
         color::{BlendMode, ColorValue},
@@ -283,7 +286,6 @@ struct Press {
 /// Behavior and accessibility of a 2D color area: dragging the thumb or pressing the area,
 /// arrow keys (with Shift: page steps), PageUp/PageDown and Home/End, two visually hidden range
 /// inputs for assistive technology and forms.
-#[allow(clippy::too_many_lines)]
 pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAreaReturn {
     let UseColorAreaInput {
         state,
@@ -490,6 +492,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         state.set_dragging(false);
         focus_input(Axis::X);
     };
+    // On the window, not the owner document, as react-aria listens.
     let listen_for_release = move || {
         if let Some(window) = leptos_use::use_window().as_ref() {
             let listener = listen_to(window, ev::pointerup, false, move |e: PointerEvent| {
@@ -606,18 +609,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     };
 
     let is_mobile = use_platform_check(|| is_ios() || is_android());
-    let labelled_by = |own_id: &str| {
-        let own_id = own_id.to_owned();
-        Signal::derive(move || {
-            aria_labelledby.get().map(|ids| {
-                [own_id.as_str(), ids.as_str()]
-                    .into_iter()
-                    .collect::<IdRefs>()
-                    .to_string()
-            })
-        })
-    };
-    let input_label = Signal::derive(move || {
+    // Memos (the labels and the role description): they allocate and have several readers.
+    let input_label: Signal<Option<String>> = Memo::new(move |_| {
         let strings = strings.read();
         let color_picker = strings.color_picker();
         Some(match aria_label.get() {
@@ -627,9 +620,17 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             }),
             None => color_picker,
         })
-    });
+    })
+    .into();
+    // The inputs are named by their label too, next to other labels (`labels`).
+    let labelled_by = |own_id: &str| {
+        let own_id = own_id.to_owned();
+        Signal::derive(move || {
+            labels(&own_id, input_label.get(), aria_labelledby.get().as_deref()).aria_labelledby
+        })
+    };
     let area_id = use_id("color-area");
-    let area_label = Signal::derive(move || {
+    let area_label: Signal<Option<String>> = Memo::new(move |_| {
         let color_picker = strings.read().color_picker();
         match aria_label.get() {
             Some(label) => Some(format!("{label}, {color_picker}")),
@@ -638,10 +639,11 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 (is_mobile.get() && aria_labelledby.with(Option::is_none)).then_some(color_picker)
             }
         }
-    });
-    let roledescription = Signal::derive(move || strings.read().two_dimensional_slider());
+    })
+    .into();
+    let roledescription: Signal<String> =
+        Memo::new(move |_| strings.read().two_dimensional_slider()).into();
 
-    let input_styles = || visually_hidden_full_size_styles();
     let x_range = C::channel_range(x_channel);
     let y_range = C::channel_range(y_channel);
     let x_id = use_id("color-area-x");
@@ -748,19 +750,11 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         .add(TouchActionProperty.declare(TouchAction::None))
         .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
 
-    // With other labels next to its `aria-label`, the area names itself too (`use_label`'s rule).
+    // With other labels next to its `aria-label`, the area names itself too.
     let area_labelledby = {
         let area_id = area_id.clone();
         Signal::derive(move || {
-            let ids = aria_labelledby.get()?;
-            Some(if area_label.with(Option::is_some) {
-                [area_id.as_str(), ids.as_str()]
-                    .into_iter()
-                    .collect::<IdRefs>()
-                    .to_string()
-            } else {
-                ids
-            })
+            labels(&area_id, area_label.get(), aria_labelledby.get().as_deref()).aria_labelledby
         })
     };
     UseColorAreaReturn {
@@ -784,7 +778,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             },
             thumb_styles,
         ),
-        x_input_props: PropsWithStyles::new(x_input_props, input_styles()),
-        y_input_props: PropsWithStyles::new(y_input_props, input_styles()),
+        x_input_props: PropsWithStyles::new(x_input_props, visually_hidden_full_size_styles()),
+        y_input_props: PropsWithStyles::new(y_input_props, visually_hidden_full_size_styles()),
     }
 }

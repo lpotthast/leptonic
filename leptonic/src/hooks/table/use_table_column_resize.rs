@@ -290,7 +290,6 @@ impl Resizer {
 /// arrow keys.
 ///
 /// Render the resizer element inside the column header, and the input inside the resizer.
-#[allow(clippy::too_many_lines)]
 pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColumnResizeReturn {
     let UseTableColumnResizeInput {
         state,
@@ -318,7 +317,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
     };
     let is_resizing = {
         let column = column.clone();
-        Signal::derive(move || state.resizing_column.with(|r| r.as_ref() == Some(&column)))
+        Memo::new(move |_| state.resizing_column.with(|r| r.as_ref() == Some(&column)))
     };
     let (is_mouse_resizing, set_mouse_resizing) = signal(false);
     let direction = use_direction();
@@ -529,9 +528,10 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
     });
     let aria_describedby = use_description(description);
 
+    // Memos: the widths change with every pointer move of any column's resizing.
     let width_of = move |f: fn(&TableColumnResizeState, &Key) -> f64| {
         let column = column.clone();
-        Signal::derive(move || f(&state, &column).floor())
+        Signal::<f64>::from(Memo::new(move |_| f(&state, &column).floor()))
     };
     let value = width_of(TableColumnResizeState::column_width);
     let min = width_of(TableColumnResizeState::column_min_width);
@@ -579,7 +579,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
             },
             visually_hidden_styles(),
         ),
-        is_resizing,
+        is_resizing: is_resizing.into(),
         is_mouse_resizing: is_mouse_resizing.into(),
     }
 }

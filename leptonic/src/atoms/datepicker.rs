@@ -1,4 +1,3 @@
-//! Headless date and time field and picker atoms.
 // Upstream: react-aria-components/src/DateField.tsx @ 99e6102368
 // Upstream: react-aria-components/src/DatePicker.tsx @ 99e6102368
 // Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
@@ -6,6 +5,8 @@
 // Upstream: react-aria-components/test/DatePicker.test.js @ 99e6102368
 // Upstream: react-aria-components/test/DateRangePicker.test.js @ 99e6102368
 // Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
+//! Headless date and time field and picker atoms.
+
 use std::sync::Arc;
 
 use leptos::{context::Provider, either::Either, prelude::*};
@@ -24,19 +25,20 @@ use crate::{
         button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::DateAvailabilityQuery,
         datepicker::{
-            DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions, DatePickerState,
-            DateRangePickerState, DateSegment, DateSegmentType, DateValue, Granularity, RangePart,
-            RangeValue, TimeBound, TimeValue, UseDateFieldInput, UseDateFieldProps,
-            UseDateFieldReturn, UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
-            UseDatePickerStateInput, UseDateRangePickerInput, UseDateRangePickerStateInput,
-            UseDateSegmentInput, UseDateSegmentReturn, UseHiddenDateInputInput,
-            UseHiddenDateInputReturn, UseTimeFieldInput, UseTimeFieldStateInput, use_date_field,
-            use_date_field_state, use_date_picker, use_date_picker_state, use_date_range_picker,
+            DateFieldData, DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions,
+            DatePickerState, DateRangePickerState, DateSegment, DateSegmentType, DateValue,
+            Granularity, RangePart, RangeValue, TimeBound, TimeValue, UseDateFieldInput,
+            UseDateFieldLabelProps, UseDateFieldProps, UseDateFieldReturn, UseDateFieldStateInput,
+            UseDatePickerInput, UseDatePickerReturn, UseDatePickerStateInput,
+            UseDateRangePickerInput, UseDateRangePickerStateInput, UseDateSegmentInput,
+            UseDateSegmentReturn, UseHiddenDateInputInput, UseHiddenDateInputReturn,
+            UseTimeFieldInput, UseTimeFieldStateInput, use_date_field, use_date_field_state,
+            use_date_picker, use_date_picker_state, use_date_range_picker,
             use_date_range_picker_state, use_date_segment, use_hidden_date_input, use_time_field,
             use_time_field_state,
         },
         focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
-        form::{ValidateFn, ValidationBehavior},
+        form::{FormValidationState, ValidateFn, ValidationBehavior},
         interactions::{UseHoverInput, use_hover},
         overlay::Placement,
     },
@@ -45,6 +47,7 @@ use crate::{
         default_class::with_default_class,
         intl_strings::{DatePickerStrings, use_localized_strings},
         scoped_context::{ClearContexts, clear_context, scoped_view},
+        slot_id::SlotProps,
         styles::Styles,
     },
 };
@@ -68,11 +71,6 @@ use crate::{
 //
 // =============================================================================
 
-/// An optional prop as a signal.
-fn maybe<T: Clone + Send + Sync + 'static>(prop: MaybeProp<T>) -> Signal<Option<T>> {
-    Signal::derive(move || prop.get())
-}
-
 /// What a field's `DateInput` and segments need, independent of its value type.
 #[derive(Clone)]
 struct DateInputContext {
@@ -83,6 +81,72 @@ struct DateInputContext {
     is_disabled: Signal<bool>,
     is_read_only: Signal<bool>,
     is_invalid: Signal<bool>,
+}
+
+impl DateInputContext {
+    /// The context of a date field's `DateInput`: the field's segments and group props, and its
+    /// segments' hook. `is_invalid`: the field's, or its picker's.
+    fn new<V: DateValue>(
+        field: &DateFieldState<V>,
+        field_props: PropsWithStyles<UseDateFieldProps>,
+        data: &DateFieldData<V>,
+        is_invalid: Signal<bool>,
+    ) -> Self {
+        let data = *data;
+        Self {
+            segments: field.segments,
+            field_props: StoredValue::new(Some(field_props)),
+            segment: Arc::new(move |segment, element| {
+                use_date_segment(UseDateSegmentInput {
+                    segment,
+                    data,
+                    element,
+                })
+            }),
+            is_disabled: field.is_disabled,
+            is_read_only: field.is_read_only,
+            is_invalid,
+        }
+    }
+}
+
+/// Provides the label's and the field parts' contexts of a field or picker.
+fn provide_field_contexts(
+    label_props: UseDateFieldLabelProps,
+    label_presence: LabelPresence,
+    description: SlotProps,
+    error_message: SlotProps,
+    is_invalid: Signal<bool>,
+    validation: FormValidationState,
+) {
+    provide_context(
+        LabelContext::span(label_props.label)
+            .with_presence(label_presence)
+            .with_on_click(label_props.on_click),
+    );
+    provide_context(FieldContext {
+        description,
+        error_message,
+        is_invalid,
+        validation_errors: validation.validation_errors,
+        validation_details: Signal::derive(move || {
+            validation.display_validation.get().validation_details
+        }),
+    });
+}
+
+/// The popover defaults of a picker: its `Popover` opens below the group, starting at its start
+/// edge, and its content isn't part of the picker's field.
+fn picker_popover_defaults() -> PopoverDefaults {
+    PopoverDefaults {
+        placement: Placement::BottomStart,
+        offset: 8.0,
+        scroll: None,
+        clear_contexts: ClearContexts(&[
+            clear_context::<LabelContext>,
+            clear_context::<FieldContext>,
+        ]),
+    }
 }
 
 /// The hover and focus state of a group (react-aria-components' `Group`): `data-hovered`,
@@ -146,34 +210,20 @@ fn render_field<V: DateValue>(
     let is_invalid = state.is_invalid;
     let validation = state.validation;
     let provide = move || {
-        provide_context(
-            LabelContext::span(label_props.label)
-                .with_presence(label_presence)
-                .with_on_click(label_props.on_click),
+        provide_field_contexts(
+            label_props,
+            label_presence,
+            description_props,
+            error_message_props,
+            is_invalid,
+            validation,
         );
-        provide_context(FieldContext {
-            description: description_props,
-            error_message: error_message_props,
+        provide_context(DateInputContext::new(
+            &state,
+            field_props,
+            &data,
             is_invalid,
-            validation_errors: validation.validation_errors,
-            validation_details: Signal::derive(move || {
-                validation.display_validation.get().validation_details
-            }),
-        });
-        provide_context(DateInputContext {
-            segments: state.segments,
-            field_props: StoredValue::new(Some(field_props)),
-            segment: Arc::new(move |segment, element| {
-                use_date_segment(UseDateSegmentInput {
-                    segment,
-                    data,
-                    element,
-                })
-            }),
-            is_disabled: state.is_disabled,
-            is_read_only: state.is_read_only,
-            is_invalid,
-        });
+        ));
     };
     scoped_view(provide, move || {
         view! {
@@ -217,7 +267,6 @@ fn hidden_date_input(autofill: UseHiddenDateInputReturn) -> impl IntoView {
 ///
 /// Default class: `leptonic-DateField`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn DateField<V: DateValue>(
     #[prop(optional)] default_value: Option<V>,
     /// The value (controlled): a value or any signal.
@@ -269,12 +318,12 @@ pub fn DateField<V: DateValue>(
         default_value,
         value,
         on_change,
-        placeholder_value: maybe(placeholder_value),
+        placeholder_value: crate::utils::prop_signal(placeholder_value),
         min_value,
         max_value,
         is_date_unavailable,
-        granularity: maybe(granularity),
-        hour_cycle: maybe(hour_cycle),
+        granularity: crate::utils::prop_signal(granularity),
+        hour_cycle: crate::utils::prop_signal(hour_cycle),
         hide_time_zone,
         should_force_leading_zeros,
         is_disabled,
@@ -332,7 +381,6 @@ pub fn DateField<V: DateValue>(
 ///
 /// Default class: `leptonic-TimeField`.
 #[component]
-#[allow(clippy::too_many_arguments)]
 pub fn TimeField<T: TimeValue>(
     #[prop(optional)] default_value: Option<T>,
     #[prop(into, optional)] value: Option<Signal<Option<T>>>,
@@ -377,11 +425,11 @@ pub fn TimeField<T: TimeValue>(
         default_value,
         value,
         on_change,
-        placeholder_value: maybe(placeholder_value),
+        placeholder_value: crate::utils::prop_signal(placeholder_value),
         min_value,
         max_value,
-        granularity: maybe(granularity),
-        hour_cycle: maybe(hour_cycle),
+        granularity: crate::utils::prop_signal(granularity),
+        hour_cycle: crate::utils::prop_signal(hour_cycle),
         hide_time_zone,
         should_force_leading_zeros,
         is_disabled,
@@ -426,7 +474,7 @@ pub fn TimeField<T: TimeValue>(
 /// `DateSegment`).
 ///
 /// Data attributes: `data-hovered`, `data-focus-within`, `data-focus-visible`, `data-disabled`,
-/// `data-invalid`.
+/// `data-readonly`, `data-invalid`.
 ///
 /// Default class: `leptonic-DateInput`.
 #[component]
@@ -618,11 +666,6 @@ pub fn use_date_range_picker_state_context<V: DateValue>() -> Option<DateRangePi
 ///
 /// Default class: `leptonic-DatePicker`.
 #[component]
-#[allow(
-    clippy::too_many_arguments,
-    clippy::too_many_lines,
-    clippy::fn_params_excessive_bools
-)]
 pub fn DatePicker<V: DateValue>(
     #[prop(optional)] default_value: Option<V>,
     #[prop(into, optional)] value: Option<Signal<Option<V>>>,
@@ -675,8 +718,9 @@ pub fn DatePicker<V: DateValue>(
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let placeholder_date = placeholder_value.get_untracked().map(|value| value.date());
-    let placeholder_value = maybe(placeholder_value);
-    let (granularity, hour_cycle) = (maybe(granularity), maybe(hour_cycle));
+    let placeholder_value = crate::utils::prop_signal(placeholder_value);
+    let granularity = crate::utils::prop_signal(granularity);
+    let hour_cycle = crate::utils::prop_signal(hour_cycle);
     let state = use_date_picker_state(UseDatePickerStateInput {
         default_value,
         value,
@@ -789,34 +833,20 @@ pub fn DatePicker<V: DateValue>(
         Callback::new(move |date: jiff::civil::Date| unavailable.run(state.date_to_value(date)))
     });
     let provide = move || {
-        provide_context(
-            LabelContext::span(label_props.label)
-                .with_presence(label_presence)
-                .with_on_click(label_props.on_click),
+        provide_field_contexts(
+            label_props,
+            label_presence,
+            description_props,
+            error_message_props,
+            is_invalid,
+            validation,
         );
-        provide_context(FieldContext {
-            description: description_props,
-            error_message: error_message_props,
+        provide_context(DateInputContext::new(
+            &field_state,
+            field_props,
+            &data,
             is_invalid,
-            validation_errors: validation.validation_errors,
-            validation_details: Signal::derive(move || {
-                validation.display_validation.get().validation_details
-            }),
-        });
-        provide_context(DateInputContext {
-            segments: field_state.segments,
-            field_props: StoredValue::new(Some(field_props)),
-            segment: Arc::new(move |segment, element| {
-                use_date_segment(UseDateSegmentInput {
-                    segment,
-                    data,
-                    element,
-                })
-            }),
-            is_disabled: field_state.is_disabled,
-            is_read_only: field_state.is_read_only,
-            is_invalid,
-        });
+        ));
         provide_context(DatePickerContext {
             group_props: StoredValue::new(Some(group_props)),
             button: StoredValue::new(button),
@@ -828,15 +858,7 @@ pub fn DatePicker<V: DateValue>(
         // The generic `Popover` and `Dialog` open from the group (react-aria-components'
         // `PopoverContext`), starting at its start edge.
         provide_context(trigger.with_dialog_labelledby(dialog_labelledby));
-        provide_context(Some(PopoverDefaults {
-            placement: Placement::BottomStart,
-            offset: 8.0,
-            scroll: None,
-            clear_contexts: ClearContexts(&[
-                clear_context::<LabelContext>,
-                clear_context::<FieldContext>,
-            ]),
-        }));
+        provide_context(Some(picker_popover_defaults()));
         provide_context(CalendarPickerContext {
             value: state.date_value,
             select: Callback::new(move |date| state.select_date(date)),
@@ -970,11 +992,6 @@ struct DateRangeInputContexts {
 ///
 /// Default class: `leptonic-DateRangePicker`.
 #[component]
-#[allow(
-    clippy::too_many_arguments,
-    clippy::too_many_lines,
-    clippy::fn_params_excessive_bools
-)]
 pub fn DateRangePicker<V: DateValue>(
     #[prop(optional)] default_value: Option<RangeValue<V>>,
     #[prop(into, optional)] value: Option<Signal<Option<RangeValue<V>>>>,
@@ -1023,8 +1040,9 @@ pub fn DateRangePicker<V: DateValue>(
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let placeholder_date = placeholder_value.get_untracked().map(|value| value.date());
-    let placeholder_value = maybe(placeholder_value);
-    let (granularity, hour_cycle) = (maybe(granularity), maybe(hour_cycle));
+    let placeholder_value = crate::utils::prop_signal(placeholder_value);
+    let granularity = crate::utils::prop_signal(granularity);
+    let hour_cycle = crate::utils::prop_signal(hour_cycle);
     let state = use_date_range_picker_state(UseDateRangePickerStateInput {
         default_value,
         value,
@@ -1138,20 +1156,7 @@ pub fn DateRangePicker<V: DateValue>(
             },
         });
         (
-            DateInputContext {
-                segments: field_state.segments,
-                field_props: StoredValue::new(Some(field_props)),
-                segment: Arc::new(move |segment, element| {
-                    use_date_segment(UseDateSegmentInput {
-                        segment,
-                        data,
-                        element,
-                    })
-                }),
-                is_disabled: field_state.is_disabled,
-                is_read_only: field_state.is_read_only,
-                is_invalid: state.is_invalid,
-            },
+            DateInputContext::new(&field_state, field_props, &data, state.is_invalid),
             input_props,
         )
     };
@@ -1169,20 +1174,14 @@ pub fn DateRangePicker<V: DateValue>(
         })
     });
     let provide = move || {
-        provide_context(
-            LabelContext::span(label_props.label)
-                .with_presence(label_presence)
-                .with_on_click(label_props.on_click),
-        );
-        provide_context(FieldContext {
-            description: description_props,
-            error_message: error_message_props,
+        provide_field_contexts(
+            label_props,
+            label_presence,
+            description_props,
+            error_message_props,
             is_invalid,
-            validation_errors: validation.validation_errors,
-            validation_details: Signal::derive(move || {
-                validation.display_validation.get().validation_details
-            }),
-        });
+            validation,
+        );
         provide_context(DateRangeInputContexts {
             start: start_context,
             end: end_context,
@@ -1196,15 +1195,7 @@ pub fn DateRangePicker<V: DateValue>(
         });
         provide_context(state);
         provide_context(trigger.with_dialog_labelledby(dialog_labelledby));
-        provide_context(Some(PopoverDefaults {
-            placement: Placement::BottomStart,
-            offset: 8.0,
-            scroll: None,
-            clear_contexts: ClearContexts(&[
-                clear_context::<LabelContext>,
-                clear_context::<FieldContext>,
-            ]),
-        }));
+        provide_context(Some(picker_popover_defaults()));
         provide_context(RangeCalendarPickerContext {
             value: state.date_range,
             select: Callback::new(move |range| state.select_range(range)),

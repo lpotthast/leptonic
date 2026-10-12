@@ -24,11 +24,12 @@ use super::{
     use_range_calendar_state::RangeCalendarState,
 };
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
     hooks::button::UseButtonInput,
     labels,
     utils::{
         aria::AriaRole,
+        date::use_today,
         dom_ext::EventAccessors,
         i18n::use_locale,
         id::use_id,
@@ -131,7 +132,7 @@ pub struct UseCalendarProps {
     pub aria_describedby: Signal<Option<String>>,
     pub aria_details: Signal<Option<String>>,
     pub on_focusout: EventHandler<FocusEvent>,
-    pub element_capture: crate::ElementCaptureAttr,
+    pub element_capture: ElementCaptureAttr,
 }
 
 pub type UseCalendarAttrs = (
@@ -142,7 +143,7 @@ pub type UseCalendarAttrs = (
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::AriaDetails, Signal<Option<String>>>,
     OnEvent<ev::focusout>,
-    crate::ElementCaptureAttr,
+    ElementCaptureAttr,
 );
 
 impl IntoAttrs for UseCalendarProps {
@@ -216,6 +217,8 @@ fn use_calendar_base(
         error_message_id: error.referenced_id,
         selected_date_description: selected_date_description.into(),
         formatters: CalendarFormatters::new(),
+        strings,
+        today: use_today(),
     };
 
     // Buttons disabled while focused hand the focus to the calendar's grid.
@@ -364,7 +367,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
             use_window,
         };
 
-        use crate::utils::shadow_dom::{get_active_element, node_contains};
+        use crate::utils::shadow_dom::{get_active_element, get_event_target, node_contains};
 
         let is_focus_within = |element: &web_sys::Element| {
             element
@@ -401,7 +404,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
                 let Some(calendar_element) = element.get_untracked() else {
                     return;
                 };
-                let target = crate::utils::shadow_dom::get_event_target(&e)
+                let target = get_event_target(&e)
                     .and_then(|target| target.dyn_into::<web_sys::Element>().ok());
                 let outside = target.as_ref().is_none_or(|target| {
                     !node_contains(calendar_element.as_ref(), target.as_ref())
@@ -447,7 +450,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
         };
         let related = e
             .related_target()
-            .and_then(|target| wasm_bindgen::JsCast::dyn_into::<web_sys::Node>(target).ok());
+            .and_then(|target| target.dyn_into::<web_sys::Node>().ok());
         // Chrome blurs a navigation button synchronously when paging disables it. Focus is
         // being handed to the grid, so this is not a departure that commits the range.
         if related.is_none()

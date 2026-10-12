@@ -42,7 +42,7 @@ use crate::{
 ///
 /// Default class: `leptonic-Grid`.
 #[component]
-#[allow(clippy::too_many_lines, clippy::implicit_hasher)]
+#[allow(clippy::implicit_hasher)]
 pub fn Grid(
     /// The rows and their cells.
     #[prop(into)]
@@ -153,8 +153,8 @@ pub fn GridRowGroup(
 
 /// A row of a [`Grid`], for the collection row `key`.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
-/// `data-pressed` and `data-hovered` (rows that can be selected or have an action) for styling.
+/// Data attributes: `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
+/// `data-pressed`, `data-hovered` (rows that can be selected or have an action).
 ///
 /// Default class: `leptonic-GridRow`.
 #[component]
@@ -214,7 +214,7 @@ pub fn GridRow(
 
 /// A cell of a [`Grid`], for the collection cell `key` (`Key::cell(row, column)`).
 ///
-/// Exposes `data-pressed`, `data-focused` and `data-focus-visible` for styling.
+/// Data attributes: `data-pressed`, `data-focused`, `data-focus-visible`.
 ///
 /// Default class: `leptonic-GridCell`.
 #[component]

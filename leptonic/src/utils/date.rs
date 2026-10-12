@@ -5,8 +5,6 @@
 //! Calendar dates: the parts of react-aria's `@internationalized/date` the calendar and date
 //! hooks need, for the Gregorian calendar on `jiff::civil::Date`.
 
-use std::cmp::Ordering;
-
 use jiff::{
     Span,
     civil::{Date, Weekday},
@@ -247,19 +245,13 @@ impl DateExt for Date {
 /// The earlier of two dates.
 #[must_use]
 pub fn min_date(a: Date, b: Date) -> Date {
-    match a.cmp(&b) {
-        Ordering::Greater => b,
-        _ => a,
-    }
+    a.min(b)
 }
 
 /// The later of two dates.
 #[must_use]
 pub fn max_date(a: Date, b: Date) -> Date {
-    match a.cmp(&b) {
-        Ordering::Less => b,
-        _ => a,
-    }
+    a.max(b)
 }
 
 /// The first day of the week in `locale` (from CLDR's week data, honoring a `-u-fw-` override),

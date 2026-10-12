@@ -19,6 +19,7 @@ pub struct OverlayFocusContain {
 }
 
 impl OverlayFocusContain {
+    /// Not containing focus until content asks for it.
     pub fn new() -> Self {
         Self {
             contain: RwSignal::new(false),

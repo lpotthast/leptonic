@@ -30,9 +30,14 @@ use crate::{
         },
     },
     utils::{
-        dom_ext::EventAccessors, focus::focus_safely, focusability::is_tabbable, id::use_id,
-        key::KeyboardKey, modifiers::EventModifiers, open_link::is_opening_link,
-        pointer_type::PointerType, shadow_dom::get_active_element,
+        focus::focus_safely,
+        focusability::is_tabbable,
+        id::use_id,
+        key::KeyboardKey,
+        modifiers::EventModifiers,
+        open_link::is_opening_link,
+        pointer_type::PointerType,
+        shadow_dom::{get_active_element, get_event_target},
         virtual_focus::move_virtual_focus,
     },
 };
@@ -185,7 +190,6 @@ impl IntoAttrs for UseSelectableItemProps {
 /// Selection, focus and actions for one item of a collection: pressing selects (respecting
 /// selection mode/behavior and modifier keys), the focused item gets DOM focus and is the tab
 /// stop, and items with an action or link perform it on press, Enter or double-click.
-#[allow(clippy::too_many_lines)]
 pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemReturn {
     let UseSelectableItemInput {
         selection,
@@ -216,9 +220,9 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     // readers of what actually changed for this item.
     let is_disabled =
         Memo::new(move |_| is_disabled.get() || key.with_value(|k| selection.is_disabled(k)));
-    let is_selected = Signal::derive(move || key.with_value(|k| selection.is_selected(k)));
+    let is_selected = Memo::new(move |_| key.with_value(|k| selection.is_selected(k)));
     // Only the focused item tracks whether the collection has focus.
-    let is_focused = Signal::derive(move || {
+    let is_focused = Memo::new(move |_| {
         key.with_value(|k| selection.is_focused_key(k)) && selection.is_focused()
     });
     let is_link = Memo::new(move |_| key.with_value(|k| selection.is_link(k)));
@@ -258,8 +262,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
 
     // -- DOM focus follows the focused key --
     Effect::new(move |_| {
-        let focused = key.with_value(|k| selection.is_focused_key(k)) && selection.is_focused();
-        if !focused {
+        if !is_focused.get() {
             return;
         }
         // Focusing the item again moves focus to its other end (a grid row's first or last cell).
@@ -539,9 +542,8 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     let is_child_interaction_for_mouse = is_child_interaction.clone();
     let base_pointerdown = press_props.on_pointerdown;
     let on_pointerdown = EventHandler::new(move |e: PointerEvent| {
-        if let Some(target) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+        if let Some(target) =
+            get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Element>().ok())
             && element.get_untracked().is_none_or(|el| *el != target)
             && is_child_interaction(&target)
         {
@@ -552,9 +554,8 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     });
     let base_mousedown = press_props.on_mousedown;
     let on_mousedown = EventHandler::new(move |e: MouseEvent| {
-        if let Some(target) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+        if let Some(target) =
+            get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Element>().ok())
             && element.get_untracked().is_none_or(|el| *el != target)
             && is_child_interaction_for_mouse(&target)
         {
@@ -572,9 +573,11 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         if is_disabled.get_untracked() || should_use_virtual_focus {
             return;
         }
-        let on_item = element
-            .get_untracked()
-            .is_some_and(|el| e.expect_target().dyn_ref::<web_sys::Element>() == Some(&*el));
+        let on_item = element.get_untracked().is_some_and(|el| {
+            get_event_target(&e)
+                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                .is_some_and(|target| target == *el)
+        });
         if on_item {
             selection.set_focused_key(Some(key.get_value()), None);
         }
@@ -617,8 +620,8 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             press_styles,
         ),
         is_pressed: press.is_pressed,
-        is_selected,
-        is_focused,
+        is_selected: is_selected.into(),
+        is_focused: is_focused.into(),
         is_disabled: is_disabled.into(),
         allows_selection: allows_selection.into(),
         has_action: has_action.into(),

@@ -16,6 +16,27 @@
 //! one `polite` log region is added to `<body>` on first use. Each message is a child of a log
 //! region and is removed after a timeout. The functions do nothing during server-side rendering.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The message is an `Announcement` (react-aria: a string or `{'aria-labelledby': string}`);
+//   `LabelledBy` takes the ids as a list.
+// - The assertiveness is always given (react-aria: optional, `'assertive'` by default; the
+//   `Default` of `Assertiveness` is `Polite`). `clear_announcer` takes `None` for both regions
+//   (react-aria: a falsy assertiveness).
+//
+// ## ADDITIONS
+// - `announce_polite`, `announce_assertive` and `announce_with_timeout` (react-aria: the optional
+//   parameters of `announce`).
+//
+// ## OMITTED FEATURES
+// - Announcing without the first message's delay in test environments (React's
+//   `IS_REACT_ACT_ENVIRONMENT`): leptonic's browser tests run in real browsers.
+//
+// =============================================================================
+
 use std::{cell::RefCell, time::Duration};
 
 use leptos::prelude::set_timeout;

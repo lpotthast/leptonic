@@ -34,7 +34,7 @@ use crate::{
         overlay::OverlayTriggerState,
     },
     utils::{
-        aria::{AriaDisabled, AriaRole},
+        aria::{AriaDisabled, AriaRole, aria_true},
         dom_ext::EventAccessors,
         i18n::{WritingDirection, use_direction},
         intl_strings::{DatePickerStrings, use_localized_strings},
@@ -736,7 +736,7 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
             aria_label: Signal::derive(move || label_aria.get()),
             aria_labelledby: field_labelledby,
             aria_describedby: described_by,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+            aria_disabled: aria_true(is_disabled),
             group: UseDatePickerGroupProps {
                 on_keydown,
                 on_keyup,

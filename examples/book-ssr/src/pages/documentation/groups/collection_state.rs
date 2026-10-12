@@ -133,8 +133,9 @@ pub fn PageCollectionState() -> impl IntoView {
                     "rendering too. Render your items from the same data, in the same order. Look nodes up with "
                     <Code inline=true>"collection.with(|c| c.get(&key))"</Code>"; each "<Code inline=true>"Node"</Code>
                     " knows its "<Code inline=true>"kind"</Code>", "<Code inline=true>"text_value"</Code>", level, "
-                    "position and neighbors. "<Code inline=true>"c.items()"</Code>" iterates the items in order, "
-                    "descending into sections."
+                    "index and parent, and the collection its neighbors ("<Code inline=true>"c.next_sibling(&key)"</Code>
+                    ", "<Code inline=true>"c.children(&key)"</Code>", ...). "<Code inline=true>"c.items()"</Code>
+                    " iterates the items in order, descending into sections."
                 </p>
 
                 <Section title="CollectionBuilder">

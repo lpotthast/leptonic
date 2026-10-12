@@ -29,23 +29,6 @@ pub enum CloseOnSelect {
     Never,
 }
 
-impl CloseOnSelect {
-    /// The setting: `auto()` decides for [`Self::Auto`].
-    pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
-        match self {
-            Self::Auto => auto(),
-            Self::Always => true,
-            Self::Never => false,
-        }
-    }
-}
-
-impl From<bool> for CloseOnSelect {
-    fn from(value: bool) -> Self {
-        if value { Self::Always } else { Self::Never }
-    }
-}
-
 /// Whether moving focus to an item selects it. `Auto`: when the selection behavior is
 /// `Replace`.
 /// `Auto` is react-aria's default for the context (react-aria: an optional boolean, `undefined`
@@ -57,23 +40,6 @@ pub enum SelectOnFocus {
     Auto,
     Always,
     Never,
-}
-
-impl SelectOnFocus {
-    /// The setting: `auto()` decides for [`Self::Auto`].
-    pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
-        match self {
-            Self::Auto => auto(),
-            Self::Always => true,
-            Self::Never => false,
-        }
-    }
-}
-
-impl From<bool> for SelectOnFocus {
-    fn from(value: bool) -> Self {
-        if value { Self::Always } else { Self::Never }
-    }
 }
 
 /// Whether an item is selected on press up instead of press down. `Auto`: for links (tabs).
@@ -88,22 +54,30 @@ pub enum SelectOnPressUp {
     Never,
 }
 
-impl SelectOnPressUp {
-    /// The setting: `auto()` decides for [`Self::Auto`].
-    pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
-        match self {
-            Self::Auto => auto(),
-            Self::Always => true,
-            Self::Never => false,
+// `resolve` and `From<bool>` (`Always`/`Never`) of the settings whose `Auto` is react-aria's
+// default for the context.
+macro_rules! auto_setting {
+    ($($setting:ty),+) => {$(
+        impl $setting {
+            /// The setting: `auto()` decides for [`Self::Auto`].
+            pub fn resolve(self, auto: impl FnOnce() -> bool) -> bool {
+                match self {
+                    Self::Auto => auto(),
+                    Self::Always => true,
+                    Self::Never => false,
+                }
+            }
         }
-    }
+
+        impl From<bool> for $setting {
+            fn from(value: bool) -> Self {
+                if value { Self::Always } else { Self::Never }
+            }
+        }
+    )+};
 }
 
-impl From<bool> for SelectOnPressUp {
-    fn from(value: bool) -> Self {
-        if value { Self::Always } else { Self::Never }
-    }
-}
+auto_setting!(CloseOnSelect, SelectOnFocus, SelectOnPressUp);
 
 /// The selection behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

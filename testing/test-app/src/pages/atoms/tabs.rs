@@ -10,6 +10,7 @@ use leptonic::{
         collections::{Collection, Key},
         tabs::KeyboardActivation,
     },
+    leptos_styles::Styles,
 };
 use leptos::prelude::*;
 
@@ -205,9 +206,14 @@ fn NestedTabs() -> impl IntoView {
 }
 
 /// "Short" and "Tall" tabs whose panels are in `TabPanels` (`.test-tab-panels`), animating its
-/// height for a second.
+/// height for a second. `#test-tab-panels-restyle` changes a reactive part of the panels' styles
+/// (their outline color).
 #[component]
 fn AnimatedTabs() -> impl IntoView {
+    let restyled = RwSignal::new(false);
+    let styles = Styles::new().add_optional_unchecked("outline-color", move || {
+        restyled.get().then(|| "red".to_owned())
+    });
     let collection = Memo::new(|_| {
         Arc::new(Collection::build(|b| {
             b.item("short", "Short");
@@ -223,13 +229,14 @@ fn AnimatedTabs() -> impl IntoView {
                 <Tab key="short">"Short"</Tab>
                 <Tab key="tall">"Tall"</Tab>
             </TabList>
-            <TabPanels classes="test-tab-panels">
+            <TabPanels classes="test-tab-panels" styles=styles>
                 <TabPanel key="short">"Short panel"</TabPanel>
                 <TabPanel key="tall">
                     <div style="height: 300px">"Tall panel"</div>
                 </TabPanel>
             </TabPanels>
         </Tabs>
+        <button id="test-tab-panels-restyle" on:click=move |_| restyled.set(true)>"Restyle"</button>
     }
 }
 

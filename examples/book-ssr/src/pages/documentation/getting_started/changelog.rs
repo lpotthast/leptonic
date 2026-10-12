@@ -290,19 +290,26 @@ const RELEASES: &[Release] = &[
                  other atom; `UseMenuInput.aria_labelledby` is a `Signal<Option<String>>`.",
                     "`is_tabbable` treats only `tabindex=\"-1\"` as taking an element out of the tab order; other negative \
                  values count as tabbable.",
+                    "`Node` no longer has `prev_key`, `next_key`, `first_child_key` and `last_child_key`: ask the \
+                 collection (`next_sibling(&key)`, `previous_sibling`, `first_child`, `last_child`, `siblings_from`, \
+                 `children`). `Collection::keys` is in document order.",
                     "New: `GridList` and `use_grid_list` take an `orientation` (`data-orientation`) for horizontal lists and \
                  grids of cards, which the arrow keys follow. `VirtualList` scrolls horizontally when rows are wider than \
                  the list (`ListLayoutOptions::allows_overflow_across`). `Input` and `TextArea` work outside a field, as \
                  plain inputs with hover and focus data attributes and `is_disabled` and `is_invalid` props. Every table \
                  row has its level (`data-level`, `--table-row-level`), also in flat tables, and tables, rows, cells and \
                  grid list items have further data attributes (`data-focus-visible-within`, `data-selection-mode`, \
-                 `data-column-index`, `data-empty`, \u{2026}).",
+                 `data-column-index`, `data-empty`, \u{2026}); list box options have `data-selection-mode` too. \
+                 `FocusScope` has a default class (`leptonic-FocusScope`).",
                     "Fixed: a disabled pressable element lets its pointer, key and click events propagate; a combo box \
                  doesn\u{2019}t overwrite bound input text when the selected option\u{2019}s text changes; an empty \
                  `aria_label` counts as no label; `use_enter_animation` hides an element only until it is first ready, \
                  so a closing popover stays visible during its exit animation; an overlay whose size changes is \
                  repositioned in the next animation frame, which avoids \u{201c}ResizeObserver loop\u{201d} errors; `Tag` \
-                 and `TagItems` outside a `TagList` render nothing (with a warning in debug builds) instead of panicking.",
+                 and `TagItems` outside a `TagList` render nothing (with a warning in debug builds) instead of panicking, \
+                 and so does a `CheckboxField` without the `value` its `CheckboxGroup` needs; `MenuItems` and `TagItems` \
+                 render an item again when its content changes under the same key (as `ListBoxItems` did); `TabPanels` \
+                 keeps `--tab-panel-width`/`--tab-panel-height` when a reactive part of its `styles` changes.",
                 ],
             ),
         ],

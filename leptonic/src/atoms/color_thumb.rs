@@ -1,5 +1,5 @@
-//! The thumb of the color atoms (`ColorArea`, `ColorSlider`'s track, `ColorWheel`).
 // Upstream: react-aria-components/src/ColorThumb.tsx @ 99e6102368
+//! The thumb of the color atoms (`ColorArea`, `ColorSlider`'s track, `ColorWheel`).
 
 use leptos::prelude::*;
 use leptos_classes::Classes;
@@ -21,6 +21,16 @@ use crate::{
     },
     utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Render props become `data-*` attributes plus plain children; there is no `color` render
+//   prop: the thumb's background is the current color, as upstream's default style.
+//
+// =============================================================================
 
 /// The props a [`ColorThumb`] takes from the color atom around it (the hooks' props).
 pub(crate) enum ThumbParts {

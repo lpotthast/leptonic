@@ -2,9 +2,10 @@
 // Upstream: react-aria/src/collections/CollectionBuilder.tsx @ 99e6102368
 // Upstream: react-stately/src/list/ListCollection.ts @ 99e6102368
 // Upstream: react-aria/test/collections/CollectionBuilder.test.js @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map},
     sync::Arc,
 };
 
@@ -21,18 +22,53 @@ use super::{ItemLink, Key, Node, NodeKind};
 /// [`key_before`](Self::key_before) walk all nodes in document order, descending into sections
 /// (but not into items' children, which belong to trees). Keyboard delegates skip non-item
 /// nodes.
-#[derive(Debug, Clone, PartialEq, Default)]
+///
+/// The nodes are stored in document order with links by position, so traversals don't hash;
+/// looking a node up by its key does.
+#[derive(Debug, Clone, Default)]
 pub struct Collection {
-    /// Std's randomly seeded hasher on purpose: keys are often user-controlled (record ids and
-    /// names, file names), and collections are built on the server too, so a fixed-seed hasher
-    /// would let crafted keys collide.
-    nodes: HashMap<Key, Node>,
-    first_key: Option<Key>,
-    last_key: Option<Key>,
+    /// Every node, in document order: a node before its children, they before its next sibling.
+    nodes: Vec<Node>,
+    /// The links of `nodes` (same positions).
+    links: Vec<Links>,
+    /// The position of every key. Std's randomly seeded hasher on purpose: keys are often
+    /// user-controlled (record ids and names, file names), and collections are built on the
+    /// server too, so a fixed-seed hasher would let crafted keys collide.
+    positions: HashMap<Key, u32>,
+    /// The first and last top-level node.
+    first: Option<u32>,
+    last: Option<u32>,
     item_count: usize,
     /// A tree's visible items (see [`Collection::with_expanded`]): navigation also visits items'
     /// children.
     is_tree_view: bool,
+}
+
+/// A node's neighbors, by position.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct Links {
+    parent: Option<u32>,
+    prev: Option<u32>,
+    next: Option<u32>,
+    first_child: Option<u32>,
+    last_child: Option<u32>,
+}
+
+/// Equal when they hold the same nodes in the same structure (the key index follows from them).
+impl PartialEq for Collection {
+    fn eq(&self, other: &Self) -> bool {
+        self.first == other.first
+            && self.last == other.last
+            && self.item_count == other.item_count
+            && self.is_tree_view == other.is_tree_view
+            && self.links == other.links
+            && self.nodes == other.nodes
+    }
+}
+
+/// A position as a vector index.
+fn at(position: u32) -> usize {
+    position as usize
 }
 
 impl Collection {
@@ -55,7 +91,7 @@ impl Collection {
     pub fn build(f: impl FnOnce(&mut CollectionBuilder)) -> Self {
         let mut builder = CollectionBuilder::default();
         f(&mut builder);
-        builder.finish()
+        builder.build()
     }
 
     /// The number of items (sections, headers and separators don't count).
@@ -68,79 +104,90 @@ impl Collection {
     }
 
     pub fn get(&self, key: &Key) -> Option<&Node> {
-        self.nodes.get(key)
+        self.position(key).map(|position| &self.nodes[at(position)])
     }
 
     pub fn contains_key(&self, key: &Key) -> bool {
-        self.nodes.contains_key(key)
+        self.positions.contains_key(key)
     }
 
-    /// The keys of all nodes (sections, headers, items, cells, ...), in no particular order.
+    /// The keys of all nodes (sections, headers, items, cells, ...), in document order (items'
+    /// children included).
     pub fn keys(&self) -> impl Iterator<Item = &Key> {
-        self.nodes.keys()
+        self.nodes.iter().map(|node| &node.key)
     }
 
     /// The first top-level node.
     pub fn first_key(&self) -> Option<&Key> {
-        self.first_key.as_ref()
+        self.key_at(self.first)
     }
 
     /// The last node in document order: as [`key_before`](Self::key_before), this descends into
     /// sections (and other non-item nodes), but not into items' children (a grid row's cells,
     /// child rows), except in a tree view.
     pub fn last_key(&self) -> Option<&Key> {
-        let mut node = self.get(self.last_key.as_ref()?)?;
-        while (node.kind != NodeKind::Item || self.is_tree_view)
-            && let Some(last_child) = &node.last_child_key
-        {
-            node = self.get(last_child)?;
-        }
-        Some(&node.key)
+        self.key_at(Some(self.deepest_last(self.last?)))
     }
 
     /// The next node in document order. Descends into sections (and other non-item nodes), but
     /// not into items' children, except in a tree view ([`Collection::with_expanded`]).
     pub fn key_after(&self, key: &Key) -> Option<&Key> {
-        let mut node = self.get(key)?;
-        if (node.kind != NodeKind::Item || self.is_tree_view)
-            && let Some(first_child) = &node.first_child_key
-        {
-            return Some(first_child);
-        }
-        loop {
-            if let Some(next) = &node.next_key {
-                return Some(next);
-            }
-            node = self.get(node.parent_key.as_ref()?)?;
-        }
+        self.key_at(self.after(self.position(key)?))
     }
 
     /// The previous node in document order. From the first node of a section, this is the
     /// section itself.
     pub fn key_before(&self, key: &Key) -> Option<&Key> {
-        let node = self.get(key)?;
-        match &node.prev_key {
-            Some(prev) => {
-                let mut node = self.get(prev)?;
-                while (node.kind != NodeKind::Item || self.is_tree_view)
-                    && let Some(last_child) = &node.last_child_key
-                {
-                    node = self.get(last_child)?;
-                }
-                Some(&node.key)
-            }
-            None => node.parent_key.as_ref(),
+        let links = self.links(self.position(key)?);
+        match links.prev {
+            Some(prev) => self.key_at(Some(self.deepest_last(prev))),
+            None => self.key_at(links.parent),
         }
+    }
+
+    /// The node after `key` among its siblings.
+    pub fn next_sibling(&self, key: &Key) -> Option<&Node> {
+        self.node_at(self.links(self.position(key)?).next)
+    }
+
+    /// The node before `key` among its siblings.
+    pub fn previous_sibling(&self, key: &Key) -> Option<&Node> {
+        self.node_at(self.links(self.position(key)?).prev)
+    }
+
+    /// The first child of `key` (a section's first node, a tree item's first child or a row's
+    /// first cell).
+    pub fn first_child(&self, key: &Key) -> Option<&Node> {
+        self.node_at(self.links(self.position(key)?).first_child)
+    }
+
+    /// The last child of `key`.
+    pub fn last_child(&self, key: &Key) -> Option<&Node> {
+        self.node_at(self.links(self.position(key)?).last_child)
     }
 
     /// The top-level nodes.
     pub fn iter(&self) -> impl Iterator<Item = &Node> {
-        self.siblings_from(self.first_key.as_ref())
+        self.siblings(self.first)
     }
 
     /// The children of `parent`: a section's contents or a tree item's child items.
     pub fn children(&self, parent: &Key) -> impl Iterator<Item = &Node> {
-        self.siblings_from(self.get(parent).and_then(|p| p.first_child_key.as_ref()))
+        self.siblings(
+            self.position(parent)
+                .and_then(|parent| self.links(parent).first_child),
+        )
+    }
+
+    /// `key`'s node and the siblings after it.
+    pub fn siblings_from(&self, key: &Key) -> impl Iterator<Item = &Node> {
+        self.siblings(self.position(key))
+    }
+
+    /// `key`'s node and every node after it in document order (all levels, to the end).
+    pub(crate) fn nodes_from(&self, key: &Key) -> &[Node] {
+        self.position(key)
+            .map_or(&[], |position| &self.nodes[at(position)..])
     }
 
     /// The cells of a grid row (a tree table's row also has child rows: not these).
@@ -151,11 +198,11 @@ impl Collection {
 
     /// All nodes in document order, as visited by [`key_after`](Self::key_after).
     pub fn nodes_in_order(&self) -> impl Iterator<Item = &Node> {
-        let mut next = self.first_key.as_ref();
+        let mut next = self.first;
         std::iter::from_fn(move || {
-            let node = self.get(next?)?;
-            next = self.key_after(&node.key);
-            Some(node)
+            let position = next?;
+            next = self.after(position);
+            Some(&self.nodes[at(position)])
         })
     }
 
@@ -167,48 +214,45 @@ impl Collection {
     /// Compares the document order of two nodes (including nested tree items). `None` if either
     /// key is not part of the collection.
     pub fn compare_order(&self, a: &Key, b: &Key) -> Option<Ordering> {
-        Some(
-            self.nodes
-                .get(a)?
-                .position
-                .cmp(&self.nodes.get(b)?.position),
-        )
+        Some(self.position(a)?.cmp(&self.position(b)?))
     }
 
     /// `keys` in collection order; keys missing from the collection come last (sorted by key).
     pub fn sorted_keys(&self, keys: impl IntoIterator<Item = Key>) -> Vec<Key> {
-        let mut keys: Vec<Key> = keys.into_iter().collect();
-        let position = |key: &Key| self.nodes.get(key).map(|node| node.position);
-        keys.sort_by(|a, b| match (position(a), position(b)) {
-            (Some(a), Some(b)) => a.cmp(&b),
-            (Some(_), None) => Ordering::Less,
-            (None, Some(_)) => Ordering::Greater,
-            (None, None) => a.cmp(b),
-        });
-        keys
+        let mut keys: Vec<(Option<u32>, Key)> = keys
+            .into_iter()
+            .map(|key| (self.position(&key), key))
+            .collect();
+        keys.sort_by(
+            |(a_position, a), (b_position, b)| match (a_position, b_position) {
+                (Some(a), Some(b)) => a.cmp(b),
+                (Some(_), None) => Ordering::Less,
+                (None, Some(_)) => Ordering::Greater,
+                (None, None) => a.cmp(b),
+            },
+        );
+        keys.into_iter().map(|(_, key)| key).collect()
     }
 
     /// The keys of all items between `from` and `to` (inclusive, in document order, either
     /// direction), e.g. for range selection: the items reachable by
     /// [`key_after`](Self::key_after) (in a tree view, the shown child items too).
     pub fn item_keys_between(&self, from: &Key, to: &Key) -> Vec<Key> {
-        let Some(ordering) = self.compare_order(from, to) else {
+        let (Some(from), Some(to)) = (self.position(from), self.position(to)) else {
             return Vec::new();
         };
-        let (start, end) = match ordering {
-            Ordering::Greater => (to, from),
-            _ => (from, to),
-        };
+        let (start, end) = if from > to { (to, from) } else { (from, to) };
         let mut keys = Vec::new();
         let mut current = Some(start);
-        while let Some(key) = current {
-            if self.get(key).is_some_and(Node::is_item) {
-                keys.push(key.clone());
+        while let Some(position) = current {
+            let node = &self.nodes[at(position)];
+            if node.is_item() {
+                keys.push(node.key.clone());
             }
-            if key == end {
+            if position == end {
                 break;
             }
-            current = self.key_after(key);
+            current = self.after(position);
         }
         keys
     }
@@ -217,30 +261,27 @@ impl Collection {
     /// (sections always show their contents). Navigation (`key_after`, `key_before`) walks the
     /// visible items in order, children included. Collapsed items keep `has_child_nodes`.
     #[must_use]
-    pub fn with_expanded(&self, expanded: &std::collections::HashSet<Key>) -> Self {
+    pub fn with_expanded(&self, expanded: &HashSet<Key>) -> Self {
         let mut collection = CollectionBuilder {
-            entries: self.expanded_entries(self.first_key.as_ref(), expanded),
+            entries: self.expanded_entries(self.first, expanded),
             leading_empty_cells: 0,
         }
-        .finish();
+        .build();
         collection.is_tree_view = true;
         collection
     }
 
-    fn expanded_entries(
-        &self,
-        first: Option<&Key>,
-        expanded: &std::collections::HashSet<Key>,
-    ) -> Vec<Entry> {
-        self.siblings_from(first)
-            .map(|node| {
+    fn expanded_entries(&self, first: Option<u32>, expanded: &HashSet<Key>) -> Vec<Entry> {
+        self.positioned_siblings(first)
+            .map(|(position, node)| {
                 let mut entry = Entry::from_node(node);
+                let first_child = self.links(position).first_child;
                 if node.kind != NodeKind::Item || expanded.contains(&node.key) {
-                    entry.children = self.expanded_entries(node.first_child_key.as_ref(), expanded);
+                    entry.children = self.expanded_entries(first_child, expanded);
                 } else {
                     // A collapsed item hides its child items, not its cells (a tree table's row).
                     entry.children = self
-                        .siblings_from(node.first_child_key.as_ref())
+                        .siblings(first_child)
                         .filter(|child| child.kind == NodeKind::Cell)
                         .map(Entry::from_node)
                         .collect();
@@ -257,30 +298,30 @@ impl Collection {
     #[must_use]
     pub fn filter(&self, keep: impl Fn(&str, &Node) -> bool) -> Self {
         CollectionBuilder {
-            entries: self.filtered_entries(self.first_key.as_ref(), &keep),
+            entries: self.filtered_entries(self.first, &keep),
             leading_empty_cells: 0,
         }
-        .finish()
+        .build()
     }
 
     fn filtered_entries(
         &self,
-        first: Option<&Key>,
+        first: Option<u32>,
         keep: &impl Fn(&str, &Node) -> bool,
     ) -> Vec<Entry> {
         let mut entries = Vec::new();
         // The kind of the previous sibling if it was kept.
         let mut kept_previous: Option<NodeKind> = None;
-        for node in self.siblings_from(first) {
+        for (position, node) in self.positioned_siblings(first) {
             let kept_before = entries.len();
             match node.kind {
                 NodeKind::Item => {
                     if keep(&node.text_value, node) {
-                        entries.push(self.to_entry(node));
+                        entries.push(self.to_entry(position));
                     }
                 }
                 NodeKind::Section => {
-                    let children = self.filtered_entries(node.first_child_key.as_ref(), keep);
+                    let children = self.filtered_entries(self.links(position).first_child, keep);
                     // A section with nothing left but its header disappears.
                     if children
                         .last()
@@ -292,7 +333,7 @@ impl Collection {
                     }
                 }
                 // Table header rows stay as they are.
-                NodeKind::HeaderRow => entries.push(self.to_entry(node)),
+                NodeKind::HeaderRow => entries.push(self.to_entry(position)),
                 // A separator stays only after a kept sibling that isn't a separator, so no
                 // separator leads or doubles (react-aria-components' `SeparatorNode.filter`).
                 NodeKind::Separator => {
@@ -319,19 +360,75 @@ impl Collection {
         entries
     }
 
-    /// The node and its whole subtree as builder entries.
-    fn to_entry(&self, node: &Node) -> Entry {
-        let mut entry = Entry::from_node(node);
-        entry.children = self.children(&node.key).map(|c| self.to_entry(c)).collect();
+    /// The node at `position` and its whole subtree as builder entries.
+    fn to_entry(&self, position: u32) -> Entry {
+        let mut entry = Entry::from_node(&self.nodes[at(position)]);
+        entry.children = self
+            .positioned_siblings(self.links(position).first_child)
+            .map(|(child, _)| self.to_entry(child))
+            .collect();
         entry
     }
 
-    fn siblings_from<'a>(&'a self, first: Option<&'a Key>) -> impl Iterator<Item = &'a Node> {
+    fn position(&self, key: &Key) -> Option<u32> {
+        self.positions.get(key).copied()
+    }
+
+    fn links(&self, position: u32) -> Links {
+        self.links[at(position)]
+    }
+
+    fn node_at(&self, position: Option<u32>) -> Option<&Node> {
+        position.map(|position| &self.nodes[at(position)])
+    }
+
+    fn key_at(&self, position: Option<u32>) -> Option<&Key> {
+        self.node_at(position).map(|node| &node.key)
+    }
+
+    /// Whether traversal descends into the node at `position`: sections and other non-items do,
+    /// items only in a tree view.
+    fn descends(&self, position: u32) -> bool {
+        self.nodes[at(position)].kind != NodeKind::Item || self.is_tree_view
+    }
+
+    /// The position after `position` in document order (see [`key_after`](Self::key_after)).
+    fn after(&self, mut position: u32) -> Option<u32> {
+        if self.descends(position)
+            && let Some(first_child) = self.links(position).first_child
+        {
+            return Some(first_child);
+        }
+        loop {
+            let links = self.links(position);
+            if let Some(next) = links.next {
+                return Some(next);
+            }
+            position = links.parent?;
+        }
+    }
+
+    /// The last node in document order within the subtree at `position` (descending as
+    /// traversal does).
+    fn deepest_last(&self, mut position: u32) -> u32 {
+        while self.descends(position)
+            && let Some(last_child) = self.links(position).last_child
+        {
+            position = last_child;
+        }
+        position
+    }
+
+    fn siblings(&self, first: Option<u32>) -> impl Iterator<Item = &Node> {
+        self.positioned_siblings(first).map(|(_, node)| node)
+    }
+
+    fn positioned_siblings(&self, first: Option<u32>) -> impl Iterator<Item = (u32, &Node)> {
         let mut next = first;
         std::iter::from_fn(move || {
-            let node = self.get(next?)?;
-            next = node.next_key.as_ref();
-            Some(node)
+            let position = next?;
+            next = self.links(position).next;
+            Some((position, &self.nodes[at(position)]))
         })
     }
 }
@@ -487,9 +584,7 @@ impl CollectionBuilder {
     ) -> Self {
         fn entry(collection: &Collection, node: &Node, leading_empty_cells: usize) -> Entry {
             let mut entry = Entry::from_node(node);
-            let children: Vec<&Node> = collection
-                .siblings_from(node.first_child_key.as_ref())
-                .collect();
+            let children: Vec<&Node> = collection.children(&node.key).collect();
             if children.iter().any(|child| child.kind == NodeKind::Cell) {
                 for i in 0..leading_empty_cells {
                     entry.children.push(Entry::new(
@@ -520,7 +615,7 @@ impl CollectionBuilder {
         }
         Self {
             entries: collection
-                .siblings_from(collection.first_key.as_ref())
+                .iter()
                 .filter(|node| node.kind != NodeKind::HeaderRow)
                 .map(|node| entry(collection, node, leading_empty_cells))
                 .collect(),
@@ -534,74 +629,36 @@ impl CollectionBuilder {
     }
 
     pub(crate) fn build(self) -> Collection {
-        self.finish()
-    }
-
-    fn finish(self) -> Collection {
-        let mut collection = Collection::default();
-        let mut seen = HashSet::new();
-        let entries = without_duplicate_keys(self.entries, &mut seen);
-        collection.nodes.reserve(seen.len());
-        let (first, last) = link(&mut collection, entries, None, 0);
-        collection.first_key = first;
-        collection.last_key = last;
+        fn count(entries: &[Entry]) -> usize {
+            entries.len()
+                + entries
+                    .iter()
+                    .map(|entry| count(&entry.children))
+                    .sum::<usize>()
+        }
+        let capacity = count(&self.entries);
+        let mut collection = Collection {
+            nodes: Vec::with_capacity(capacity),
+            links: Vec::with_capacity(capacity),
+            positions: HashMap::with_capacity(capacity),
+            ..Collection::default()
+        };
+        let (first, last) = link(&mut collection, self.entries, None, 0);
+        collection.first = first;
+        collection.last = last;
         collection
     }
 }
 
-/// `entries` without the entries (and their subtrees) whose key occurred before in document
-/// order, at any level (`seen`: the keys so far).
-fn without_duplicate_keys(entries: Vec<Entry>, seen: &mut HashSet<Key>) -> Vec<Entry> {
-    let mut kept = Vec::with_capacity(entries.len());
-    for mut entry in entries {
-        if !seen.insert(entry.key.clone()) {
-            crate::utils::dev_warn!(
-                "Duplicate key {:?} in collection; ignoring all but its first occurrence.",
-                entry.key
-            );
-            continue;
-        }
-        entry.children = without_duplicate_keys(std::mem::take(&mut entry.children), seen);
-        kept.push(entry);
-    }
-    kept
-}
-
-/// Insert `entries` (unique keys, see [`without_duplicate_keys`]) as siblings below `parent`,
-/// linking them. Returns the first and last key.
+/// Appends `entries` as siblings below the node at `parent`, in document order (a node, then its
+/// subtree, then its next sibling), linking them. An entry whose key occurred before (at any
+/// level) is left out with its subtree. Returns the first and last sibling's position.
 fn link(
     collection: &mut Collection,
     entries: Vec<Entry>,
-    parent: Option<&Key>,
+    parent: Option<u32>,
     level: usize,
-) -> (Option<Key>, Option<Key>) {
-    let mut keys: Vec<Key> = Vec::with_capacity(entries.len());
-    let mut nodes: Vec<(Node, Vec<Entry>)> = Vec::with_capacity(entries.len());
-    for entry in entries {
-        keys.push(entry.key.clone());
-        let node = Node {
-            key: entry.key,
-            kind: entry.kind,
-            text_value: entry.text_value,
-            aria_label: entry.aria_label,
-            level,
-            index: nodes.len(),
-            parent_key: parent.cloned(),
-            prev_key: None,
-            next_key: None,
-            first_child_key: None,
-            last_child_key: None,
-            has_child_nodes: entry.has_child_nodes || !entry.children.is_empty(),
-            is_disabled: entry.is_disabled,
-            disabled_behavior: entry.disabled_behavior,
-            link: entry.link,
-            col_index: None,
-            col_span: entry.col_span,
-            position: 0,
-        };
-        nodes.push((node, entry.children));
-    }
-
+) -> (Option<u32>, Option<u32>) {
     // In rows with cells spanning columns, and in table header rows, cells know their column
     // (react-aria's `colIndex`).
     let positioned = |kind: NodeKind| {
@@ -610,42 +667,83 @@ fn link(
             NodeKind::Cell | NodeKind::Column | NodeKind::Placeholder
         )
     };
-    if nodes.iter().any(|(node, _)| {
-        positioned(node.kind) && (node.col_span.is_some() || node.kind != NodeKind::Cell)
-    }) {
-        let mut column = 0;
-        for (node, _) in &mut nodes {
-            if positioned(node.kind) {
-                node.col_index = Some(column);
-                column += node.col_span.unwrap_or(1);
+    let has_columns = entries.iter().any(|entry| {
+        positioned(entry.kind) && (entry.col_span.is_some() || entry.kind != NodeKind::Cell)
+    });
+    let mut column = 0;
+    let parent_key = parent.map(|parent| collection.nodes[at(parent)].key.clone());
+    let (mut first, mut last) = (None, None);
+    let mut index = 0;
+
+    for entry in entries {
+        let position =
+            u32::try_from(collection.nodes.len()).expect("a collection has fewer than 2^32 nodes");
+        match collection.positions.entry(entry.key) {
+            hash_map::Entry::Occupied(occupied) => {
+                crate::utils::dev_warn!(
+                    "Duplicate key {:?} in collection; ignoring all but its first occurrence.",
+                    occupied.key()
+                );
+                continue;
+            }
+            hash_map::Entry::Vacant(vacant) => {
+                let key = vacant.key().clone();
+                vacant.insert(position);
+                let col_index = (has_columns && positioned(entry.kind)).then(|| {
+                    let col_index = column;
+                    column += entry.col_span.unwrap_or(1);
+                    col_index
+                });
+                if entry.kind == NodeKind::Item {
+                    collection.item_count += 1;
+                }
+                collection.nodes.push(Node {
+                    key,
+                    kind: entry.kind,
+                    text_value: entry.text_value,
+                    aria_label: entry.aria_label,
+                    level,
+                    index,
+                    parent_key: parent_key.clone(),
+                    has_child_nodes: entry.has_child_nodes,
+                    is_disabled: entry.is_disabled,
+                    disabled_behavior: entry.disabled_behavior,
+                    link: entry.link,
+                    col_index,
+                    col_span: entry.col_span,
+                });
+                collection.links.push(Links {
+                    parent,
+                    prev: last,
+                    ..Links::default()
+                });
+            }
+        }
+        if let Some(last) = last {
+            collection.links[at(last)].next = Some(position);
+        }
+        first.get_or_insert(position);
+        last = Some(position);
+        index += 1;
+
+        if !entry.children.is_empty() {
+            // Items' children are a tree level deeper; a section's contents are not.
+            let child_level = if entry.kind == NodeKind::Item {
+                level + 1
+            } else {
+                level
+            };
+            let (first_child, last_child) =
+                link(collection, entry.children, Some(position), child_level);
+            let links = &mut collection.links[at(position)];
+            links.first_child = first_child;
+            links.last_child = last_child;
+            if first_child.is_some() {
+                collection.nodes[at(position)].has_child_nodes = true;
             }
         }
     }
-
-    for (i, (mut node, children)) in nodes.into_iter().enumerate() {
-        node.prev_key = i.checked_sub(1).map(|p| keys[p].clone());
-        node.next_key = keys.get(i + 1).cloned();
-        if node.kind == NodeKind::Item {
-            collection.item_count += 1;
-        }
-        // Items' children are a tree level deeper; a section's contents are not.
-        let child_level = if node.kind == NodeKind::Item {
-            level + 1
-        } else {
-            level
-        };
-        // Nodes are inserted in document order (a node before its children, they before its next
-        // sibling): the count so far is the node's position.
-        node.position = collection.nodes.len();
-        let key = node.key.clone();
-        collection.nodes.insert(key.clone(), node);
-        let (first_child, last_child) = link(collection, children, Some(&key), child_level);
-        let node = collection.nodes.get_mut(&key).expect("just inserted");
-        node.first_child_key = first_child;
-        node.last_child_key = last_child;
-    }
-
-    (keys.first().cloned(), keys.last().cloned())
+    (first, last)
 }
 
 /// A cell of a table header row, see `CollectionBuilder::header_row`.
@@ -909,8 +1007,10 @@ mod tests {
             b.item("a", "A");
             b.item("b", "B");
         });
+        // `b` moves: another index, other neighbors.
         let after = Collection::build(|b| {
             b.item("x", "X");
+            b.item("y", "Y");
             b.item("b", "B");
         });
         let renamed = Collection::build(|b| {
@@ -1106,7 +1206,7 @@ mod tests {
             });
         });
 
-        let view = tree.with_expanded(&std::collections::HashSet::from([Key::from("docs")]));
+        let view = tree.with_expanded(&HashSet::from([Key::from("docs")]));
         let mut order = Vec::new();
         let mut key = view.first_key().cloned();
         while let Some(k) = key {

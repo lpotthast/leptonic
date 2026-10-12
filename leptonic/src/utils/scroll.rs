@@ -59,8 +59,8 @@ pub struct ScrollIntoViewportOpts {
     pub containing_element: Option<Element>,
 }
 
-/// Parse a CSS pixel value like `"10px"` into `10.0`. Returns `0.0` for
-/// non-numeric or empty values (matching `parseInt(value, 10) || 0` in JS).
+/// Parse a CSS pixel value like `"10.5px"` into `10.5`. Returns `0.0` for
+/// non-numeric or empty values (as `parseFloat(value) || 0` in JS).
 fn parse_css_px(value: &str) -> f64 {
     let trimmed = value.trim();
     let numeric = trimmed.strip_suffix("px").unwrap_or(trimmed);
@@ -121,7 +121,7 @@ pub fn is_scrollable(node: &Element, check_for_overflow: bool) -> bool {
 ///
 /// Falls back to the document's root scrolling element.
 pub fn get_scroll_parent(node: &Element, check_for_overflow: bool) -> Element {
-    // Skip the node itself if it's scrollable — we want an *ancestor*.
+    // Skip the node itself if it's scrollable: we want an *ancestor*.
     let mut current = if is_scrollable(node, check_for_overflow) {
         node.parent_element()
     } else {
@@ -180,7 +180,6 @@ pub fn scroll_into_view(
 
 /// Scrolls `scroll_view` so that `target` (a rectangle of `element`, in client coordinates) is
 /// visible within it (react-aria's `scrollRectIntoView`). `element`'s scroll margins apply.
-#[allow(clippy::too_many_lines)]
 fn scroll_rect_into_view(
     scroll_view: &HtmlElement,
     element: &HtmlElement,
@@ -227,71 +226,27 @@ fn scroll_rect_into_view(
         view.right()
     };
 
+    let px = |style: &web_sys::CssStyleDeclaration, property: &str| {
+        parse_css_px(&style.get_property_value(property).unwrap_or_default())
+    };
+
     // Scroll margins on the target element.
-    let scroll_margin_top = parse_css_px(
-        &item_style
-            .get_property_value("scroll-margin-top")
-            .unwrap_or_default(),
-    );
-    let scroll_margin_bottom = parse_css_px(
-        &item_style
-            .get_property_value("scroll-margin-bottom")
-            .unwrap_or_default(),
-    );
-    let scroll_margin_left = parse_css_px(
-        &item_style
-            .get_property_value("scroll-margin-left")
-            .unwrap_or_default(),
-    );
-    let scroll_margin_right = parse_css_px(
-        &item_style
-            .get_property_value("scroll-margin-right")
-            .unwrap_or_default(),
-    );
+    let scroll_margin_top = px(&item_style, "scroll-margin-top");
+    let scroll_margin_bottom = px(&item_style, "scroll-margin-bottom");
+    let scroll_margin_left = px(&item_style, "scroll-margin-left");
+    let scroll_margin_right = px(&item_style, "scroll-margin-right");
 
     // Scroll padding on the scroll container.
-    let scroll_padding_top = parse_css_px(
-        &view_style
-            .get_property_value("scroll-padding-top")
-            .unwrap_or_default(),
-    );
-    let scroll_padding_bottom = parse_css_px(
-        &view_style
-            .get_property_value("scroll-padding-bottom")
-            .unwrap_or_default(),
-    );
-    let scroll_padding_left = parse_css_px(
-        &view_style
-            .get_property_value("scroll-padding-left")
-            .unwrap_or_default(),
-    );
-    let scroll_padding_right = parse_css_px(
-        &view_style
-            .get_property_value("scroll-padding-right")
-            .unwrap_or_default(),
-    );
+    let scroll_padding_top = px(&view_style, "scroll-padding-top");
+    let scroll_padding_bottom = px(&view_style, "scroll-padding-bottom");
+    let scroll_padding_left = px(&view_style, "scroll-padding-left");
+    let scroll_padding_right = px(&view_style, "scroll-padding-right");
 
     // Border widths on the scroll container.
-    let border_top_width = parse_css_px(
-        &view_style
-            .get_property_value("border-top-width")
-            .unwrap_or_default(),
-    );
-    let border_bottom_width = parse_css_px(
-        &view_style
-            .get_property_value("border-bottom-width")
-            .unwrap_or_default(),
-    );
-    let border_left_width = parse_css_px(
-        &view_style
-            .get_property_value("border-left-width")
-            .unwrap_or_default(),
-    );
-    let border_right_width = parse_css_px(
-        &view_style
-            .get_property_value("border-right-width")
-            .unwrap_or_default(),
-    );
+    let border_top_width = px(&view_style, "border-top-width");
+    let border_bottom_width = px(&view_style, "border-bottom-width");
+    let border_left_width = px(&view_style, "border-left-width");
+    let border_right_width = px(&view_style, "border-right-width");
 
     // Scroll area includes the target element plus its scroll margins.
     let scroll_area_top = target.top() - scroll_margin_top;

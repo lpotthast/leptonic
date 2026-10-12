@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/button/useToggleButtonGroup.ts @ 99e6102368
+// Upstream: react-aria-components/test/ToggleButtonGroup.test.js @ 99e6102368
 use leptos::{attr, attr::Attr, prelude::*};
 
 use super::{
@@ -13,7 +14,7 @@ use crate::{
         form::{UseToggleStateInput, use_toggle_state},
         toolbar::{UseToolbarAttrs, UseToolbarInput, UseToolbarProps, use_toolbar},
     },
-    utils::aria::{AriaChecked, AriaDisabled, AriaRole},
+    utils::aria::{AriaChecked, AriaDisabled, AriaRole, aria_true},
 };
 
 // =============================================================================
@@ -77,7 +78,7 @@ pub fn use_toggle_button_group(input: UseToggleButtonGroupInput) -> UseToggleBut
     UseToggleButtonGroupReturn {
         props: UseToggleButtonGroupProps {
             toolbar,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+            aria_disabled: aria_true(is_disabled),
         },
     }
 }
@@ -102,7 +103,9 @@ pub fn use_toggle_button_group_item(input: UseToggleButtonGroupItemInput) -> Use
         mut button,
     } = input;
     let selected_key = key.clone();
-    let is_selected = Signal::derive(move || group.is_selected(&selected_key));
+    // Read by the toggle state and the ARIA attributes; notifies only when this key's selection
+    // changes.
+    let is_selected = Signal::from(Memo::new(move |_| group.is_selected(&selected_key)));
     let state = use_toggle_state(UseToggleStateInput {
         value: Some(ValueBinding::new(
             is_selected,

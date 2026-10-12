@@ -128,7 +128,6 @@ pub struct UseSubmenuTriggerReturn {
 /// The behavior of a menu item opening a submenu (or a dialog): opening by press, hover (after
 /// `delay`) and the arrow key pointing into the submenu, closing by the other arrow key, Escape
 /// or focusing another item of the menu, and letting the pointer travel to the submenu.
-#[allow(clippy::too_many_lines)]
 pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerReturn {
     let UseSubmenuTriggerInput {
         state,

@@ -586,6 +586,36 @@ pub async fn tab_panels(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
+/// A change of the panels' reactive styles while they animate keeps their pixel height (the
+/// panels' `Styles` hold the size variables, so rewriting `style` doesn't drop them).
+#[browser_test]
+pub async fn tab_panels_restyled_while_animating(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tabs(page, "Animated").await?[1].click().await?;
+    assert_that!(|| panel_height(page))
+        .eventually_ok()
+        .satisfies(|height| {
+            height.ends_with("px");
+        })
+        .await;
+    page.element("#test-tab-panels-restyle")
+        .await?
+        .click()
+        .await?;
+    let panels = page.element(".test-tab-panels").await?;
+    assert_that!(|| panels.css_value("outline-color"))
+        .eventually_ok()
+        .matches(eq("rgba(255, 0, 0, 1)"))
+        .await;
+    // Still animating (a 1 s transition): the height is still the pixel one.
+    assert_that!(panel_height(page).await?).ends_with("px");
+    assert_that!(|| panel_height(page))
+        .eventually_ok()
+        .matches(eq("auto"))
+        .await;
+    Ok(())
+}
+
 /// The `--tab-panel-height` of the animated `TabPanels`.
 async fn panel_height(page: &Page<'_>) -> Result<String, Report> {
     let panels = page.element(".test-tab-panels").await?;

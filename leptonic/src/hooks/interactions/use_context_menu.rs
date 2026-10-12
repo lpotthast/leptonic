@@ -1,11 +1,9 @@
 // Upstream: react-aria/src/interactions/useContextMenu.ts @ 99e6102368
 // Upstream: react-aria/test/interactions/useContextMenu.test.tsx @ 99e6102368
+//! Context menu requests across mouse, keyboard, touch and screen readers.
 use std::time::Duration;
 
-use leptos::{
-    ev::{self},
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent};
@@ -29,7 +27,7 @@ use crate::{
 //   as a `LongPress` group for the element's own `use_press` (as `use_button` does with
 //   `on_context_menu`), instead of `useLongPress` props: long presses are part of `use_press`,
 //   and an element has one press handler.
-// - `ContextMenuEvent` has the position as a `Point` (react-aria: `x`, `y`).
+// - `ContextMenuEvent` has the position as a `Point` (C13 units; react-aria: `x`, `y`).
 //
 // =============================================================================
 

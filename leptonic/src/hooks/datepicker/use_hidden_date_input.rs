@@ -2,7 +2,10 @@
 // Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
 // Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
 use leptos::{
-    attr::{self, Attr},
+    attr::{
+        self, Attr,
+        custom::{CustomAttr, custom_attribute},
+    },
     ev::{self},
     prelude::*,
 };
@@ -72,17 +75,14 @@ impl IntoAttrs for UseHiddenDateContainerProps {
     type Attrs = (
         Attr<attr::AriaHidden, AriaHidden>,
         PreventFocusAttr,
-        leptos::tachys::html::attribute::custom::CustomAttr<&'static str, &'static str>,
+        CustomAttr<&'static str, &'static str>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::AriaHidden, self.aria_hidden),
             self.prevent_focus,
-            leptos::tachys::html::attribute::custom::custom_attribute(
-                "data-a11y-ignore",
-                "aria-hidden-focus",
-            ),
+            custom_attribute("data-a11y-ignore", "aria-hidden-focus"),
         )
     }
 }

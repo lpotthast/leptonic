@@ -125,7 +125,7 @@ pub fn use_form_validation(input: UseFormValidationInput) {
 
     Effect::new(move |_| {
         let Some(el) = element.get() else { return };
-        let form = Validatable::of(&el).and_then(|field| field.form());
+        let form = get_parent_form(&el);
 
         let on_invalid = {
             let el = el.clone();
@@ -136,8 +136,7 @@ pub fn use_form_validation(input: UseFormValidationInput) {
                     state.commit_validation();
                 }
                 // Focus the form's first invalid field, unless the event's default was prevented.
-                let is_first_invalid = Validatable::of(&el)
-                    .and_then(|field| field.form())
+                let is_first_invalid = get_parent_form(&el)
                     .and_then(|form| first_invalid_element(&form))
                     .is_some_and(|first| first == *el);
                 if !e.default_prevented() && is_first_invalid {

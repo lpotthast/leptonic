@@ -28,8 +28,6 @@ pub fn use_viewport_size() -> Signal<ViewportSize> {
 
     #[cfg(not(feature = "ssr"))]
     {
-        use crate::utils::event_listeners::listen_to;
-
         let update = move || {
             let Some(window) = leptos_use::use_window().as_ref().cloned() else {
                 return;
@@ -50,18 +48,7 @@ pub fn use_viewport_size() -> Signal<ViewportSize> {
                 Some(vv) => vv.into(),
                 None => window.into(),
             };
-            let listener = listen_to(
-                &target,
-                leptos::ev::resize,
-                false,
-                move |_: web_sys::UiEvent| {
-                    update();
-                },
-            );
-            let listener = StoredValue::new_local(Some(listener));
-            on_cleanup(move || {
-                let _ = listener.try_update_value(Option::take);
-            });
+            let _ = leptos_use::use_event_listener(target, leptos::ev::resize, move |_| update());
         }
     }
 

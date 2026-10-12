@@ -91,21 +91,25 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
     let element = CapturedElement::new();
 
-    // Store cleanup for MutationObserver.
+    // Disconnects the current MutationObserver.
     #[cfg(not(feature = "ssr"))]
     let observer_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
         StoredValue::new_local(None);
+    #[cfg(not(feature = "ssr"))]
+    let disconnect = move || {
+        observer_cleanup.update_value(|cleanup| {
+            if let Some(cleanup_fn) = cleanup.take() {
+                cleanup_fn();
+            }
+        });
+    };
 
     // Check for tabbable children when element is captured or disabled changes.
     // Also sets up a MutationObserver for dynamic child changes.
     Effect::new(move |_| {
         // Clean up previous observer.
         #[cfg(not(feature = "ssr"))]
-        observer_cleanup.update_value(|cleanup| {
-            if let Some(cleanup_fn) = cleanup.take() {
-                cleanup_fn();
-            }
-        });
+        disconnect();
 
         if disabled.get() {
             set_has_tabbable_child.set(false);
@@ -160,13 +164,7 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
     // Cleanup observer on unmount.
     #[cfg(not(feature = "ssr"))]
-    on_cleanup(move || {
-        observer_cleanup.update_value(|cleanup| {
-            if let Some(cleanup_fn) = cleanup.take() {
-                cleanup_fn();
-            }
-        });
-    });
+    on_cleanup(disconnect);
 
     UseHasTabbableChildReturn {
         has_tabbable_child: has_tabbable_child.into(),

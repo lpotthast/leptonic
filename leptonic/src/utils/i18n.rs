@@ -1,5 +1,8 @@
 // Upstream: react-aria/src/i18n/I18nProvider.tsx @ 99e6102368
 // Upstream: react-aria/src/i18n/utils.ts @ 99e6102368
+//! The locale and writing direction the hooks follow: [`Locale`], [`I18nProvider`] and the
+//! accessors of its context ([`use_locale`], [`use_direction`]).
+
 use icu_locale::LocaleDirectionality;
 use leptos::prelude::*;
 

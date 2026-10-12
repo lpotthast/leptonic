@@ -1,8 +1,10 @@
+// Upstream: react-stately/src/color/Color.ts @ 99e6102368
 //! The HSV (HSB) color space.
 
 use super::{
     AreaGradient, ColorChannelRange, ColorSpaceAxes, ColorValue, HUE_STOPS, RGB8, axes_of,
-    hue_space_area_gradient, hue_stops, round_fraction,
+    hue_and_channel_extremes, hue_space_area_gradient, hue_stops, rgb_of_hue_and_chroma,
+    round_fraction,
 };
 use crate::utils::{
     i18n::{Locale, WritingDirection},
@@ -82,6 +84,8 @@ impl Default for HSV {
 }
 
 impl ColorValue for HSV {
+    type Channel = HsvChannel;
+
     fn hue_channel() -> Option<HsvChannel> {
         Some(HsvChannel::Hue)
     }
@@ -89,8 +93,6 @@ impl ColorValue for HSV {
     fn to_rgb8(&self) -> RGB8 {
         RGB8::from(*self)
     }
-
-    type Channel = HsvChannel;
 
     fn channel_value(&self, channel: HsvChannel) -> f64 {
         match channel {
@@ -149,8 +151,7 @@ impl ColorValue for HSV {
     }
 
     fn to_css_string(&self) -> String {
-        let rgb = RGB8::from(*self);
-        format!("rgb({}, {}, {})", rgb.r, rgb.g, rgb.b)
+        RGB8::from(*self).to_css_string()
     }
 
     fn channel_format_options(channel: HsvChannel) -> NumberFormatOptions {
@@ -211,75 +212,22 @@ impl ColorValue for HSV {
 }
 
 impl From<HSV> for RGB8 {
-    // Expectations: 0 ≤ S ≤ 1 and 0 ≤ V ≤ 1; hues wrap around (react-aria: `% 6` of sixths).
-    #[allow(
-        clippy::many_single_char_names,
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
-    )]
+    /// Expects saturation and brightness from 0 to 1; hues wrap around (react-aria: `% 6` of
+    /// sixths).
     fn from(hsv: HSV) -> Self {
-        let (h, s, v) = (hsv.hue.rem_euclid(360.0), hsv.saturation, hsv.brightness);
-
-        let c = v * s;
-        let x = c * (1.0 - f64::abs(((h / 60.0) % 2.0) - 1.0));
-        let m = v - c;
-
-        let (r, g, b) = if (0.0..60.0).contains(&h) {
-            (c, x, 0.0)
-        } else if (60.0..120.0).contains(&h) {
-            (x, c, 0.0)
-        } else if (120.0..180.0).contains(&h) {
-            (0.0, c, x)
-        } else if (180.0..240.0).contains(&h) {
-            (0.0, x, c)
-        } else if (240.0..300.0).contains(&h) {
-            (x, 0.0, c)
-        } else if (300.0..360.0).contains(&h) {
-            (c, 0.0, x)
-        } else {
-            // NaN, or 360° (`rem_euclid` rounds tiny negative hues up to it): as 0°.
-            (c, x, 0.0)
-        };
-
-        let (r, g, b) = (
-            ((r + m) * 255.0).round() as u8,
-            ((g + m) * 255.0).round() as u8,
-            ((b + m) * 255.0).round() as u8,
-        );
-
-        Self { r, g, b }
+        let c = hsv.brightness * hsv.saturation;
+        rgb_of_hue_and_chroma(hsv.hue, c, hsv.brightness - c)
     }
 }
 
 impl From<RGB8> for HSV {
-    #[allow(clippy::many_single_char_names, clippy::float_cmp)]
     fn from(rgb: RGB8) -> Self {
-        let RGB8 { r, g, b } = rgb;
-
-        let (r, g, b) = (
-            f64::from(r) / 255.0,
-            f64::from(g) / 255.0,
-            f64::from(b) / 255.0,
-        );
-
-        let c_max = f64::max(r, f64::max(g, b));
-        let c_min = f64::min(r, f64::min(g, b));
-        let delta = c_max - c_min;
-
-        let hue = if delta == 0.0 {
+        let (hue, c_max, c_min) = hue_and_channel_extremes(rgb);
+        let saturation = if c_max == 0.0 {
             0.0
-        } else if c_max == r {
-            60.0 * ((g - b) / delta).rem_euclid(6.0)
-        } else if c_max == g {
-            60.0 * (((b - r) / delta) + 2.0)
-        } else if c_max == b {
-            60.0 * (((r - g) / delta) + 4.0)
         } else {
-            unreachable!()
+            (c_max - c_min) / c_max
         };
-
-        let saturation = if c_max == 0.0 { 0.0 } else { delta / c_max };
-
         // Rounded as react-aria's `toHSB` (two decimals of degrees and percentages).
         Self {
             hue: to_fixed_number(hue, 2),

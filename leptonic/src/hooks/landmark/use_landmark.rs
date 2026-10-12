@@ -13,10 +13,14 @@ use crate::{CapturedElement, IntoAttrs, utils::aria::AriaRole};
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - One landmark manager per wasm module (react-aria: a versioned singleton attached to the
-//   document, shared by copies of react-aria on a page).
-// - `LandmarkController` disposes itself when dropped (react-aria: `dispose()`).
+// - `LandmarkController` disposes itself when dropped, as Rust handles do (react-aria:
+//   `dispose()`).
 // - The landmark's element goes into the input (C8; react-aria: `ref`).
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - One landmark manager per wasm module, in a thread-local: Rust state can't be shared with
+//   other copies of the library on a page through the document (react-aria: a versioned
+//   singleton attached to the document, shared by copies of react-aria on a page).
 //
 // =============================================================================
 
@@ -34,6 +38,7 @@ pub enum LandmarkRole {
 }
 
 impl LandmarkRole {
+    /// The ARIA role of landmarks of this kind.
     pub fn aria_role(self) -> AriaRole {
         match self {
             Self::Main => AriaRole::Main,
@@ -62,7 +67,10 @@ mod manager {
     use wasm_bindgen::{JsCast, closure::Closure};
 
     use super::{LandmarkDirection, LandmarkRole};
-    use crate::utils::shadow_dom::get_event_target;
+    use crate::utils::{
+        key::{KeyboardEventKey, KeyboardKey},
+        shadow_dom::get_event_target,
+    };
 
     pub(super) struct Landmark {
         pub id: u64,
@@ -407,7 +415,7 @@ mod manager {
     }
 
     fn on_keydown(e: &web_sys::KeyboardEvent) {
-        if e.key() != "F6" {
+        if e.typed_key() != KeyboardKey::F6 {
             return;
         }
         let handled = if e.alt_key() {
@@ -510,6 +518,7 @@ pub struct LandmarkController {
 }
 
 impl LandmarkController {
+    /// A controller; landmark navigation listens on the document while it exists.
     pub fn new() -> Self {
         #[cfg(not(feature = "ssr"))]
         manager::add_controller();
@@ -530,10 +539,12 @@ impl LandmarkController {
         }
     }
 
+    /// To the next landmark from `from` (default: the focused element).
     pub fn focus_next(&self, from: Option<web_sys::Element>) -> bool {
         self.navigate(LandmarkDirection::Forward, from)
     }
 
+    /// To the previous landmark from `from` (default: the focused element).
     pub fn focus_previous(&self, from: Option<web_sys::Element>) -> bool {
         self.navigate(LandmarkDirection::Backward, from)
     }
@@ -565,7 +576,7 @@ impl Drop for LandmarkController {
 }
 
 /// Input of [`use_landmark`].
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseLandmarkInput {
     /// The landmark's element (captured by the caller).
     pub element: CapturedElement,

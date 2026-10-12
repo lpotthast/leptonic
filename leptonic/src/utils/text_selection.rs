@@ -7,13 +7,7 @@
 //! state, since several elements may be pressed in turn). Elsewhere, `user-select: none` goes on
 //! the pressed element only (setting it on the page is slow, adobe/react-spectrum#1609).
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No deviations from react-aria beyond the project-wide API conventions.
-//
-// =============================================================================
 
 use std::{
     cell::{Cell, RefCell},

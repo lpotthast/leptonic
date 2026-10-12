@@ -46,6 +46,7 @@ pub enum OverlayTriggerType {
     Grid,
 }
 
+/// Input of [`use_overlay_trigger`].
 #[derive(Debug, Clone)]
 pub struct UseOverlayTriggerInput {
     /// Whether the overlay is open.
@@ -59,6 +60,7 @@ pub struct UseOverlayTriggerInput {
     pub overlay_type: OverlayTriggerType,
 }
 
+/// Return value of [`use_overlay_trigger`].
 #[derive(Debug)]
 pub struct UseOverlayTriggerReturn {
     /// Props for the trigger. Call `.into_attrs()` for view spreading.

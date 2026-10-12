@@ -80,11 +80,13 @@ Headless Shell, 8 tests in parallel by default, `thirtyfour` re-exported as `bro
 - **Whole-run checks**: `test_hydration_ids.rs` compares server-rendered ids (and their elements' tag and role) with
   the hydrated DOM and checks the health of every fixture the test-app's index lists, incl. its query variants
   (`QUERY_VARIANTS` in `testing/test-app/src/app.rs`: add one when a case loads a new one), in 4 shards.
-  `test_server_panics.rs` runs last (also in filtered runs, not with `BROWSER_TEST_KNOWN_ISSUES=1`) and fails the
-  run if the server panicked, naming each panic's request, location and message.
+  `test_server_panics.rs` runs last (also in filtered runs, not with `BROWSER_TEST_SUITE=known-issues`) and fails
+  the run if the server panicked, naming each panic's request, location and message.
 - **Known issues**: cases of behavior known to be broken are registered only in the known-issues list
-  (`known_issues_tests` in `ui_tests/mod.rs`, run with `BROWSER_TEST_KNOWN_ISSUES=1`); move them to the regular
+  (`known_issues_tests` in `ui_tests/mod.rs`, run with `BROWSER_TEST_SUITE=known-issues`); move them to the regular
   groups once fixed.
+- **Performance**: measurements are a suite of their own (`BROWSER_TEST_SUITE=performance`, `just browser-perf`),
+  see "Performance measurements".
 - **Running**: `just browser-test` (`cargo test -p leptonic --test browser_test`; a plain `cargo test` or `just test`
   skips the suite, `[[test]] test = false`). Variables (documented in `tests/browser_test.rs`):
   `BROWSER_TEST_VISIBLE=1` shows the browser (`just browser-test-visible`), `BROWSER_TEST_PAUSE=1` pauses before each
@@ -493,9 +495,39 @@ BROWSER_TEST_GROUP=button,focus BROWSER_TEST_FILTER=keyboard cargo test -p lepto
 `BROWSER_TEST_GROUP` matches exact logical group names; `BROWSER_TEST_FILTER` matches substrings of test names.
 Each accepts comma-separated alternatives, trims whitespace, and ignores empty entries. Both restrictions apply
 when both are set. Unset or empty lists impose no restriction; unmatched selections run no UI cases. The server
-panic check still runs afterwards. `BROWSER_TEST_KNOWN_ISSUES=1` selects the separate known-issues registrations
-(without the server panic check); name and group filters apply to those as well. Registration and grouping live only
+panic check still runs afterwards. `BROWSER_TEST_SUITE=known-issues` selects the separate known-issues registrations
+(without the server panic check), `BROWSER_TEST_SUITE=performance` the measurements; name and group filters apply
+to those as well. Registration and grouping live only
 in `ui_tests/mod.rs`, never in per-file macros or module-derived registration functions.
+
+## Performance measurements
+
+The performance suite times leptonic in the browser, on the page's clock, so that WebDriver round trips don't
+count: `just browser-perf` (`BROWSER_TEST_SUITE=performance`; `BROWSER_TEST_FILTER` selects scenarios). It is kept
+out of the regular suite: its cases run one after the other (parallel browsers would compete for the machine), and
+the test-app is built without debug assertions and overflow checks (Leptos' and leptonic's debug-only checks would
+count; `CARGO_PROFILE_WASM_RELEASE_*` overrides of the `wasm-release` profile, in `<target>/performance`, a second
+build next to the regular suite's).
+
+- **Fixtures** (`testing/test-app/src/pages/perf/`, at `/perf/{name}`): a fixture renders a `PerfScenarios` with
+  its scenarios, named workloads returning `Measurements`; `window.leptonicPerf.run(name)` runs one (the page also
+  renders a button per scenario, for runs by hand with `just serve-test-app`). `Measurements::measure(metric,
+  action)` times an action, e.g. a signal update, twice: `<metric>.settled`, until every effect it caused has run
+  (the next task, after all microtasks), and `<metric>.render`, the next frame's own work (from its animation
+  frame callbacks to the first task after it: style, layout, resize observers, paint), without waiting for the
+  frame. Record what the run did (`with_parameter`: rows, batch size, rounds, ...); warm up before measuring.
+- **Cases** (`leptonic/tests/ui_tests/test_perf_*.rs`, registered in `performance_tests`): load the fixture,
+  `page.run_perf_scenario(name)`, `crate::perf::report(&results)`, then check that the scenario did its work (every
+  round measured, the expected rows rendered), taking the expected values from its parameters.
+- **Reports**: each scenario's statistics (count, median, p90, max, mean, in milliseconds) are logged and written
+  to `<target>/tmp/performance/<scenario>.json` with the samples. A run compares each median with the previous
+  run's file of the same scenario and parameters: measure, change, measure again. Timings depend on the machine and
+  its load, so cases assert no budgets; compare runs of one machine, on a quiet machine (other sessions' builds and
+  suites moved medians of ~3 ms by up to 30% between runs: run before and after twice). The clock's resolution is
+  0.1 ms (`performance.now()` without cross-origin isolation): sub-millisecond metrics change in steps of 0.1 ms, so
+  the report gives their change in milliseconds only, and percentages from 1 ms up.
+- **Today**: `/perf/virtual-list` (`test_perf_virtual_list.rs`): a 20,000-line log as agnite dev-ui's, mounted,
+  and appended to while following its end or showing its start.
 
 ## Speed and memory
 

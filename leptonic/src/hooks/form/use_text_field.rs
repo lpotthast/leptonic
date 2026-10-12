@@ -25,15 +25,13 @@ use crate::{
     CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, SlotProps,
     hooks::{
         focus::{
-            use_focus_ring::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
-            use_focusable::{
-                UseFocusableAttrs, UseFocusableInput, UseFocusableProps, use_focusable,
-            },
+            FocusRingTarget, UseFocusRingInput, UseFocusableAttrs, UseFocusableInput,
+            UseFocusableProps, use_focus_ring, use_focusable,
         },
-        interactions::use_keyboard::KeyboardEventWrapper,
+        interactions::KeyboardEventWrapper,
     },
     utils::{
-        aria::{AriaAutocomplete, AriaHasPopup, AriaInvalid, AriaRequired},
+        aria::{AriaAutocomplete, AriaHasPopup, AriaInvalid, AriaRequired, aria_true},
         dom_ext::EventAccessors,
         keyboard_shortcut::KeyboardShortcuts,
     },
@@ -164,7 +162,6 @@ impl AutoCapitalize {
 
 /// Input of [`use_text_field`].
 #[derive(Clone)]
-#[allow(clippy::struct_excessive_bools)]
 pub struct UseTextFieldInput {
     pub state: TextFieldState,
     /// The input element's id. Generated when `None`.
@@ -225,6 +222,7 @@ pub struct UseTextFieldInput {
 }
 
 /// Return value of [`use_text_field`].
+#[derive(Debug)]
 pub struct UseTextFieldReturn {
     pub label_props: UseLabelProps,
     pub input_props: UseTextFieldInputProps,
@@ -378,7 +376,6 @@ impl IntoAttrs for UseTextFieldInputProps {
 ///
 /// For a `<textarea>` (`element` is `TextFieldElement::TextArea`), render the state's value as its
 /// initial content: `<textarea {..props}>{state.value.get_untracked()}</textarea>`.
-#[allow(clippy::too_many_lines)]
 pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     let UseTextFieldInput {
         state,
@@ -552,9 +549,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
                 (is_required.get() && validation_behavior == ValidationBehavior::Aria)
                     .then_some(AriaRequired::True)
             }),
-            aria_invalid: Signal::derive(move || {
-                validation.is_invalid.get().then_some(AriaInvalid::True)
-            }),
+            aria_invalid: aria_true(validation.is_invalid),
             aria_errormessage,
             aria_activedescendant,
             aria_autocomplete,

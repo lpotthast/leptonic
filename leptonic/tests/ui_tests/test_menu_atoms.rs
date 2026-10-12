@@ -538,6 +538,19 @@ pub async fn section_without_heading_is_labelled(page: &Page<'_>) -> Result<(), 
     Ok(())
 }
 
+/// Renaming an item in the collection under the same key updates the item `MenuItems` renders.
+#[browser_test]
+pub async fn renamed_items_update(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(STATES_PATH).await?;
+    let cat = state_item(page, "Rename", "Cat").await?;
+    page.element("#test-menu-atoms-rename")
+        .await?
+        .click()
+        .await?;
+    cat.wait_for_inner_text("Kitten").await?;
+    Ok(())
+}
+
 /// Pressing the trigger, dragging onto an item and releasing there performs the item's action and
 /// closes the menu, as native menus do ("should support press events on menu items when dragging
 /// and releasing").

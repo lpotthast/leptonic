@@ -1,5 +1,6 @@
-//! Headless color picker atom: one color shared by color atoms.
 // Upstream: react-aria-components/src/ColorPicker.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorPicker.test.js @ 99e6102368
+//! Headless color picker atom: one color shared by color atoms.
 
 use leptos::{context::Provider, prelude::*};
 

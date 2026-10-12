@@ -1,6 +1,16 @@
 // Upstream: react-stately/src/virtualizer/OverscanManager.ts @ 99e6102368
 use crate::{hooks::collections::Rect, utils::point::Point};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `set_visible_rect` takes the time (`now`) instead of reading `performance.now()`: the clock
+//   exists only in the browser, and tests pass their own.
+//
+// =============================================================================
+
 /// Extends the visible rectangle by a third in each direction, towards where the user scrolls,
 /// so rows are rendered before they come into view.
 #[derive(Debug, Clone, Default)]

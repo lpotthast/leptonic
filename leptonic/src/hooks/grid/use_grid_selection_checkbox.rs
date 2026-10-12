@@ -20,7 +20,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Returns the `UseCheckboxInput` for `use_checkbox`, to render the checkbox with it.
+// - Returns the `UseCheckboxInput` for `use_checkbox`, to render the checkbox with it (input
+//   composition: one checkbox hook per element instead of merged DOM props).
 //
 // =============================================================================
 
@@ -40,7 +41,7 @@ pub fn use_grid_selection_checkbox(input: UseGridSelectionCheckboxInput) -> UseC
     // The selection lives in the collection: the checkbox reads it and toggles it.
     let state = use_toggle_state(UseToggleStateInput {
         value: Some(ValueBinding::new(
-            Signal::derive(move || key.with_value(|k| selection.is_selected(k))),
+            Memo::new(move |_| key.with_value(|k| selection.is_selected(k))).into(),
             Callback::new(move |_| key.with_value(|k| selection.toggle_selection(k))),
         )),
         ..UseToggleStateInput::default()
@@ -48,7 +49,8 @@ pub fn use_grid_selection_checkbox(input: UseGridSelectionCheckboxInput) -> UseC
     UseCheckboxInput {
         options: ToggleOptions {
             id: Some(use_id("checkbox")),
-            is_disabled: Signal::derive(move || !key.with_value(|k| selection.can_select_item(k))),
+            is_disabled: Memo::new(move |_| !key.with_value(|k| selection.can_select_item(k)))
+                .into(),
             aria_label: Signal::derive(move || Some(strings.read().select())).into(),
             ..ToggleOptions::default()
         },

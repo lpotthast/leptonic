@@ -1,4 +1,6 @@
 // Upstream: react-aria/src/selection/ListKeyboardDelegate.ts @ 99e6102368
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
+// Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
 use std::sync::Arc;
 
 use leptos::prelude::{Memo, Signal, WithUntracked};
@@ -427,7 +429,7 @@ impl KeyboardDelegate for ListKeyboardDelegate {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     use assertr::prelude::*;
 
@@ -521,8 +523,7 @@ mod tests {
                 }
             }))
         });
-        let disabled: std::collections::HashSet<Key> =
-            disabled.iter().map(|k| Key::from(*k)).collect();
+        let disabled: HashSet<Key> = disabled.iter().map(|k| Key::from(*k)).collect();
         let selection = SelectionManager::new(
             collection,
             SelectionOptions {

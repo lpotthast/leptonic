@@ -23,7 +23,6 @@ use crate::{
     use_slot,
     utils::{
         aria::{AriaDisabled, AriaExpanded, AriaRole, AriaSelected},
-        dom_ext::{EventAccessors, node_contains},
         focus::focus_safely,
         focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
@@ -31,7 +30,7 @@ use crate::{
         key::{KeyboardEventKey, KeyboardKey},
         owner_alive::OwnerAlive,
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
-        shadow_dom::get_active_element,
+        shadow_dom::{get_active_element, get_event_target, node_contains},
     },
 };
 
@@ -44,7 +43,8 @@ use crate::{
 //   state and link from the collection node.
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-rowindex`) and synthetic link attributes.
+// - Virtualization (`aria-rowindex`): not yet, the virtualizer doesn't render grid lists yet.
+// - Synthetic link attributes.
 //
 // =============================================================================
 
@@ -75,6 +75,7 @@ pub struct UseGridListItemInput {
 }
 
 /// Return value of [`use_grid_list_item`].
+#[derive(Debug)]
 pub struct UseGridListItemReturn {
     pub row_props: PropsWithStyles<UseGridListItemRowProps>,
     pub grid_cell_props: UseGridListItemCellProps,
@@ -178,7 +179,6 @@ impl IntoAttrs for UseGridListItemCellProps {
 /// A row of a grid list: selection and actions on press (via `use_selectable_item`), and
 /// keyboard navigation into the row's interactive children (ArrowLeft/ArrowRight, or Tab with
 /// `KeyboardNavigationBehavior::Tab`).
-#[allow(clippy::too_many_lines)]
 pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn {
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseGridListItemInput {
@@ -250,7 +250,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             toggle_action.filter(|_| toggles)
         })
     });
-    let position = Signal::derive(move || {
+    let position = Memo::new(move |_| {
         tree_positions?.with(|positions| tree_key.with_value(|key| positions.get(key).copied()))
     });
 
@@ -265,9 +265,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         };
         let row: web_sys::Element = (*row).clone();
         let active = row.owner_document().as_ref().and_then(get_active_element);
-        let focus_within = active
-            .as_ref()
-            .is_some_and(|a| row.contains(Some(a.unchecked_ref())));
+        let focus_within = active.as_ref().is_some_and(|a| node_contains(&row, a));
         if focus_mode == FocusMode::Child {
             if focus_within && active.as_ref() != Some(&row) {
                 return;
@@ -407,8 +405,8 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             return;
         };
         let row: web_sys::Element = (*row).clone();
-        let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
-        if !node_contains(Some(row.unchecked_ref()), target.as_ref()).unwrap_or(false) {
+        let target = get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Node>().ok());
+        if !target.is_some_and(|target| node_contains(&row, &target)) {
             return;
         }
         let Some(active) = row.owner_document().as_ref().and_then(get_active_element) else {
@@ -482,9 +480,8 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             return;
         };
         let row: web_sys::Element = (*row).clone();
-        let on_row = e
-            .target()
-            .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &row);
+        let on_row =
+            get_event_target(e).is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &row);
         if !on_row && e.typed_key() != KeyboardKey::Tab {
             // Keys typed into a child (e.g. a text field) stay there.
             e.stop_propagation();
@@ -534,9 +531,8 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         let Some(row) = element.get_untracked() else {
             return;
         };
-        let on_row = e
-            .target()
-            .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row);
+        let on_row =
+            get_event_target(&e).is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row);
         row_has_focus.set(on_row);
         if !on_row {
             // A child got focus (e.g. by clicking it): the row becomes the focused key.
@@ -549,7 +545,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
             let from_child = e
                 .related_target()
                 .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
-                .is_some_and(|related| row.contains(Some(&related)));
+                .is_some_and(|related| node_contains(&row, &related));
             if from_child {
                 return;
             }
@@ -574,8 +570,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
 
     let on_focusout = move |e: FocusEvent| {
         let on_row = element.get_untracked().is_some_and(|row| {
-            e.target()
-                .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row)
+            get_event_target(&e).is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*row)
         });
         if on_row {
             row_has_focus.set(false);

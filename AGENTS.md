@@ -33,9 +33,10 @@ atoms.
   rather than panicking. Access the inner value via `.as_ref()` which returns `Option<&web_sys::Window>` /
   `Option<&web_sys::Document>`.
 - **Event accessor invariants**: In DOM event handler closures, `e.target()` and `e.current_target()` are always
-  `Some`. Use the `EventAccessors` extension trait (`expect_target()`, `expect_current_target()`) from `utils/mod.rs`
-  instead of `.unwrap()`, `.expect()`, or `.and_then()`. **Exception:** `current_target` becomes `null` after the
-  handler returns (per DOM spec), so stored/deferred events must use `if let Some(...)` for `.current_target()`.
+  `Some`. Use the `EventAccessors` extension trait (`expect_target()`, `expect_current_target()`) from
+  `utils/dom_ext.rs` instead of `.unwrap()`, `.expect()`, or `.and_then()`. **Exception:** `current_target` becomes
+  `null` after the handler returns (per DOM spec), so stored/deferred events must use `if let Some(...)` for
+  `.current_target()`.
 - **Event propagation** (the user's decision, 2026-10-07): exactly the event types whose react-aria counterpart has
   `continuePropagation()` implement the sealed `Propagation` trait (`utils/propagation_control.rs`): press events
   (`PressEvent`) and keyboard events (`KeyboardEventWrapper`; react-aria's `BaseEvent<KeyboardEvent>`). They stop
@@ -290,7 +291,8 @@ tests, speed, failure reports). The essentials:
   that loads its own page, registered in `tests/ui_tests/mod.rs`. Derive cases from react-aria's own tests and
   name the mirrored upstream file in an `// Upstream:` header. Find elements as users do (role, text, label); wait,
   never sleep; check "nothing changed" with `*_stays`.
-- Run them with `just browser-test` (a plain `cargo test` skips the suite). Agents set
+- Run them with `just browser-test` (a plain `cargo test` skips the suite). Timings in the browser:
+  `just browser-perf`, the performance suite (`documentation/testing.md`, "Performance measurements"). Agents set
   `CARGO_TARGET_DIR=<repo>/target/agents` and `TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`; never run
   two suites with the same target dir at once. `BROWSER_TEST_FILTER=<text>` runs the tests whose name contains it
   (`grid::`, `checkbox::hover`).

@@ -6,7 +6,7 @@ use leptos::{
         self, Attr,
         custom::{CustomAttr, custom_attribute},
     },
-    ev::{self},
+    ev,
     prelude::*,
 };
 use web_sys::KeyboardEvent;
@@ -44,7 +44,8 @@ use crate::{
 //   browsers name it "Collapse Collapse Games".
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-rowindex`), synthetic link props, `expandedKeys: 'all'`.
+// - Virtualization (`aria-rowindex`): not yet, the virtualizer doesn't render tables yet.
+// - Synthetic link props, `expandedKeys: 'all'`.
 //
 // =============================================================================
 
@@ -61,6 +62,7 @@ pub struct UseTableRowInput {
 }
 
 /// Return value of [`use_table_row`].
+#[derive(Debug)]
 pub struct UseTableRowReturn {
     pub row_props: PropsWithStyles<UseTableRowProps>,
     pub is_selected: Signal<bool>,
@@ -131,7 +133,6 @@ impl IntoAttrs for UseTableRowProps {
 /// A body row of a table, labelled by its row header cells. In a tree table also a tree item:
 /// `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, the expansion keys and the
 /// expand button.
-#[allow(clippy::too_many_lines)]
 pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let UseTableRowInput {
         table,
@@ -141,7 +142,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let aria_labelledby = {
         let table = table.clone();
         let key = key.clone();
-        Signal::derive(move || table.row_labelledby(&key).to_string())
+        Memo::new(move |_| table.row_labelledby(&key).to_string())
     };
     let state = table.state;
     let tree = state.tree;
@@ -175,7 +176,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
                 .with_value(|key| full.with(|t| t.collection().children(key).any(Node::is_item)))
     });
     // A row without child rows is never expanded, even when its key is among the expanded ones.
-    let is_expanded = Signal::derive(move || {
+    let is_expanded = Memo::new(move |_| {
         has_child_rows.get()
             && tree.is_some_and(|tree| row_key.with_value(|key| tree.expansion.is_expanded(key)))
     });
@@ -255,7 +256,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         row_props: PropsWithStyles::new(
             UseTableRowProps {
                 row,
-                aria_labelledby,
+                aria_labelledby: aria_labelledby.into(),
                 aria_expanded: Signal::derive(move || {
                     has_child_rows
                         .get()
@@ -276,7 +277,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         has_action,
         expand_button,
         expand_button_attrs: prevent_focus_attr(),
-        is_expanded,
+        is_expanded: is_expanded.into(),
         has_child_rows: has_child_rows.into(),
         level: Signal::derive(move || position.get().map_or(1, |p| p.level)),
     }

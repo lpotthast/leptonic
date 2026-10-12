@@ -11,7 +11,8 @@ use crate::{Out, ValueBinding, utils::default_class::with_default_class};
 #[derive(Clone, Copy)]
 struct RootThemeApplied;
 
-/// Leptonic's default themes. You may want to create your own theme-defining-type if you have additional or differently named themes.
+/// Leptonic's default themes. Define a [`Theme`] type of your own for other or differently named
+/// themes.
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum LeptonicTheme {
     #[default]
@@ -28,6 +29,7 @@ impl Theme for LeptonicTheme {
     }
 }
 
+/// A theme type: its values name the themes an app's styles define (see [`LeptonicTheme`]).
 pub trait Theme:
     Default + PartialEq + Clone + Copy + Send + Sync + serde::Serialize + serde::de::DeserializeOwned
 {

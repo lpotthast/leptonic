@@ -1,5 +1,6 @@
-//! Headless color swatch atom.
 // Upstream: react-aria-components/src/ColorSwatch.tsx @ 99e6102368
+// Upstream: react-aria-components/test/ColorSwatch.test.js @ 99e6102368
+//! Headless color swatch atom.
 
 use leptos::prelude::*;
 use leptos_classes::Classes;
@@ -13,6 +14,16 @@ use crate::{
         styles::Styles,
     },
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Render props become `data-*` attributes plus plain children; there is no `color` render
+//   prop: the swatch's background is the current color, as upstream's default style.
+//
+// =============================================================================
 
 /// A swatch showing a color: an image named after the color, with the color as its background.
 /// Size it with styles or classes.

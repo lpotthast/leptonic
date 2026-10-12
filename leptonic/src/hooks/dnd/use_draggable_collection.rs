@@ -9,8 +9,9 @@ use crate::CapturedElement;
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// ## API DIFFERENCES
-// - Takes the collection element as a `CapturedElement` in its input (react-aria: a ref).
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - Records the collection as the one drags come from in an Effect, once its element is captured
+//   (react-aria: while rendering, from the ref).
 //
 // =============================================================================
 

@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/tabs/useTab.ts @ 99e6102368
+// Upstream: react-aria-components/test/Tabs.test.js @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -16,7 +17,7 @@ use crate::{
         focus::{UseFocusableInput, UseFocusableItemAttrs, UseFocusableItemProps, use_focusable},
     },
     utils::{
-        aria::{AriaDisabled, AriaRole, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
         dev_warn,
     },
 };
@@ -116,11 +117,12 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
     let selection = state.list.list.selection;
     let collection = state.list.list.collection;
     let tab_key = StoredValue::new(key.clone());
-    let is_disabled = Signal::derive(move || {
+    let is_disabled: Signal<bool> = Memo::new(move |_| {
         is_disabled.get()
             || state.is_disabled.get()
             || tab_key.with_value(|k| selection.is_disabled(k))
-    });
+    })
+    .into();
     let is_link = untrack(|| collection.with(|c| c.get(&key).is_some_and(|n| n.link.is_some())));
 
     let UseSelectableItemReturn {
@@ -148,15 +150,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         should_use_virtual_focus: false,
         on_context_menu: None,
     });
-    let (mut item, styles) = props.into_inner();
-    let item_tabindex = item.tabindex;
-    item.tabindex = Signal::derive(move || {
-        if is_disabled.get() {
-            None
-        } else {
-            item_tabindex.get()
-        }
-    });
+    let (item, styles) = props.into_inner();
     let panel_id = state.tab_panel_id(&key);
     let focusable: UseFocusableItemProps = use_focusable(UseFocusableInput {
         is_disabled,
@@ -173,9 +167,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
             UseTabProps {
                 role: AriaRole::Tab,
                 aria_selected: Signal::derive(move || AriaSelected::from(is_selected.get())),
-                aria_disabled: Signal::derive(move || {
-                    is_disabled.get().then_some(AriaDisabled::True)
-                }),
+                aria_disabled: aria_true(is_disabled),
                 aria_controls: Signal::derive(move || is_selected.get().then(|| panel_id.clone())),
                 item,
                 focusable,

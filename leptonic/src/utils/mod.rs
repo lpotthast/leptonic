@@ -44,6 +44,7 @@ pub mod point;
 pub mod pointer_type;
 pub(crate) mod prevent_focus;
 pub mod propagation_control;
+pub(crate) mod recent_cache;
 #[cfg(not(feature = "ssr"))]
 pub(crate) mod run_after_transition;
 pub(crate) mod scoped_context;
@@ -53,6 +54,8 @@ pub(crate) mod shadow_dom;
 pub(crate) mod shadow_tree_walker;
 pub mod slot_id;
 pub mod styles;
+#[cfg(feature = "syntax-highlight")]
+pub mod syntax_highlight;
 #[cfg(not(feature = "ssr"))]
 pub(crate) mod synthetic_blur;
 #[cfg(not(feature = "ssr"))]
@@ -63,9 +66,6 @@ pub mod value_binding;
 pub(crate) mod virtual_click;
 pub mod virtual_focus;
 pub mod visually_hidden;
-
-#[cfg(feature = "syntax-highlight")]
-pub mod syntax_highlight;
 
 /// A warning about API misuse for developers, as react-aria's `NODE_ENV !== 'production'`
 /// warnings: logged in debug builds only.

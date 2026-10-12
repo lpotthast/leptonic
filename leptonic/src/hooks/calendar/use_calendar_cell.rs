@@ -20,10 +20,8 @@ use crate::{
     CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::interactions::{PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press},
     utils::{
-        aria::{AriaDisabled, AriaInvalid, AriaRole, AriaSelected},
-        date::use_today,
+        aria::{AriaDisabled, AriaInvalid, AriaRole, AriaSelected, aria_true},
         dom_ext::EventAccessors,
-        intl_strings::{CalendarStrings, use_localized_strings},
         pointer_type::PointerType,
         use_description::use_description,
     },
@@ -171,11 +169,6 @@ impl IntoAttrs for UseCalendarCellButtonProps {
     }
 }
 
-/// A `true` ARIA value while `signal` is (none otherwise).
-fn flag<T: From<bool> + Send + Sync + 'static>(signal: Signal<bool>) -> Signal<Option<T>> {
-    Signal::derive(move || signal.get().then(|| T::from(true)))
-}
-
 /// A memoized signal.
 fn memo<T: PartialEq + Clone + Send + Sync + 'static>(
     f: impl Fn() -> T + Send + Sync + 'static,
@@ -213,7 +206,6 @@ fn focus_cell(button: &web_sys::Element) {
 /// Behavior and accessibility of a date in a calendar's grid: selecting it by press (a range by
 /// two presses or by dragging), its label ("Today, Monday, May 20, 2024 selected"), and moving
 /// the browser's focus to it when it becomes the focused date.
-#[allow(clippy::too_many_lines)]
 pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     let UseCalendarCellInput {
         data,
@@ -254,10 +246,10 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
             || (is_invalid.get() && !is_disabled.get())
     });
 
-    let today = use_today();
+    let today = data.today;
     let is_today = memo(move || today.get() == Some(date.get()));
     let selected_date_description = data.selected_date_description;
-    let strings = use_localized_strings::<CalendarStrings>();
+    let strings = data.strings;
     let label = memo(move || {
         let strings = strings.read();
         let mut label = String::new();
@@ -477,9 +469,9 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     UseCalendarCellReturn {
         cell_props: UseCalendarCellProps {
             role: AriaRole::Gridcell,
-            aria_disabled: flag(not_selectable),
-            aria_selected: flag(is_selected),
-            aria_invalid: flag(is_invalid),
+            aria_disabled: aria_true(not_selectable),
+            aria_selected: aria_true(is_selected),
+            aria_invalid: aria_true(is_invalid),
         },
         button_props: PropsWithStyles::new(
             UseCalendarCellButtonProps {
@@ -487,8 +479,8 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
                 role: AriaRole::Button,
                 tabindex,
                 aria_label: label,
-                aria_disabled: flag(not_selectable),
-                aria_invalid: flag(is_invalid),
+                aria_disabled: aria_true(not_selectable),
+                aria_invalid: aria_true(is_invalid),
                 aria_describedby,
                 on_focus: EventHandler::new(move |_: FocusEvent| {
                     if !is_disabled.get_untracked() {

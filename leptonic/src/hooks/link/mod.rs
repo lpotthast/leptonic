@@ -1,5 +1,7 @@
-mod use_anchor_link;
-mod use_link;
+// No upstream: the link family and its shared types (typed `target` and `rel` values, used by
+// `use_link`, `use_anchor_link` and `use_button`).
+pub(crate) mod use_anchor_link;
+pub(crate) mod use_link;
 
 use std::fmt;
 

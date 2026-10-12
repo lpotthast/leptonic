@@ -200,7 +200,6 @@ impl IntoAttrs for UseRadioInputProps {
 /// Provides the behavior and accessibility of a radio: an `<input type="radio">` inside a
 /// `<label>`, in a [`use_radio_group`](fn@super::use_radio_group). Only the selected radio (or,
 /// while none is, the one focused last or each) is a tab stop.
-#[allow(clippy::too_many_lines)]
 pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
     let UseRadioInput {
         group,
@@ -309,9 +308,8 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
             let selected = state.selected_value.get_untracked();
             group.radios.with_value(|radios| {
                 for (key, element) in radios {
-                    if let Some(input) = element
-                        .get_untracked()
-                        .and_then(|el| (*el).clone().dyn_into::<web_sys::HtmlInputElement>().ok())
+                    if let Some(el) = element.get_untracked()
+                        && let Some(input) = el.dyn_ref::<web_sys::HtmlInputElement>()
                     {
                         input.set_checked(selected.as_ref() == Some(key));
                     }
@@ -412,7 +410,7 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
                 on_mousedown: press_props.on_mousedown,
                 on_dragstart: press_props.on_dragstart,
                 on_dblclick: press_props.on_dblclick,
-                context_attrs: focusable_props.context_attrs.clone(),
+                context_attrs: focusable_props.context_attrs,
             },
             press_styles,
         ),

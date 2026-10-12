@@ -154,7 +154,6 @@ impl IntoAttrs for UseSelectValueProps {
 /// A select: a button showing the selected option that opens a listbox popover. The trigger
 /// supports type-ahead and (in single selection mode) changing the value with ArrowLeft and
 /// ArrowRight without opening the popover.
-#[allow(clippy::too_many_lines)]
 pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     let UseSelectInput {
         state,

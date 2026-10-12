@@ -1,7 +1,8 @@
 //! Test fixtures driven by the browser tests in `leptonic/tests/`.
 //!
-//! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms` or `hooks`. To add one, create a module with a page component and register it in
-//! [`FIXTURES`].
+//! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms`, `hooks` or `perf`
+//! (performance measurements, see [`perf`]). To add one, create a module with a page component
+//! and register it in [`FIXTURES`].
 //!
 //! A fixture with several independent parts wraps each in a [`Section`]: loaded with
 //! `?only=<name>,...`, the page renders only the sections named, so a test of one part renders
@@ -9,6 +10,7 @@
 
 pub mod atoms;
 pub mod hooks;
+pub mod perf;
 
 use leptos::{prelude::*, web_sys};
 use leptos_router::hooks::use_query_map;
@@ -679,6 +681,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "menu",
         title: "Menu",
         view: || view! { <hooks::menu::PageHookMenu /> }.into_any(),
+    },
+    Fixture {
+        group: "perf",
+        name: "virtual-list",
+        title: "VirtualList performance",
+        view: || view! { <perf::virtual_list::PagePerfVirtualList /> }.into_any(),
     },
 ];
 

@@ -52,9 +52,10 @@ pub fn DismissButton(
     let strings = use_localized_strings::<OverlayStrings>();
     // With both a label and labelling ids, labelled by itself (first) and the referenced
     // elements; without either, "Dismiss" (react-aria's `useLabels` with a default label).
+    // A memo: both attributes read it, and it allocates.
     let labelling = {
         let id = id.clone();
-        Signal::derive(move || labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
+        Memo::new(move |_| labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
     };
     let label = move || {
         labelling.with(|labelling| {
@@ -75,7 +76,7 @@ pub fn DismissButton(
                 id=id
                 aria-label=label
                 aria-labelledby=labelledby
-                tabindex="-1"
+                tabindex=-1
                 on:click=move |_| on_dismiss.run(())
                 style="width: 1px; height: 1px;"
             />

@@ -1,6 +1,6 @@
 // Upstream: react-stately/src/list/useListState.ts @ 99e6102368
 // Upstream: react-stately/src/list/useSingleSelectListState.ts @ 99e6102368
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use leptos::prelude::*;
 
@@ -17,8 +17,6 @@ use crate::ValueBinding;
 // ## API DIFFERENCES
 // - The collection is passed in (built from application data with `use_collection`) instead of
 //   being derived from rendered children.
-// - `use_single_select_list_state`: hook-owned state (`default_selected_key` plus
-//   `set_selected_key`), no controlled `selectedKey`.
 // - The state also carries the item element registry (`ItemElements`), which replaces DOM
 //   queries for item elements.
 //
@@ -165,7 +163,7 @@ pub struct UseSingleSelectListStateInput {
     pub selected_key: Option<ValueBinding<Option<Key>>>,
     /// Called whenever the user selects an item, even if it was selected already.
     pub on_selection_change: Option<Callback<Option<Key>>>,
-    pub disabled_keys: Signal<std::collections::HashSet<Key>>,
+    pub disabled_keys: Signal<HashSet<Key>>,
 }
 
 /// Creates the state of a single-selection list. Selecting an item again keeps it selected (but
@@ -178,10 +176,11 @@ pub fn use_single_select_list_state(input: UseSingleSelectListStateInput) -> Sin
         on_selection_change,
         disabled_keys,
     } = input;
-    // The bound key as the list's selection.
+    // The bound key as the list's selection: a memo, as the selection manager reads it often
+    // (every item's selection, the change notification) and building it allocates.
     let selection_binding = selected_key.map(|key| {
         ValueBinding::new(
-            Signal::derive(move || Selection::keys(key.value.get())),
+            Memo::new(move |_| Selection::keys(key.value.get())).into(),
             Callback::new(move |selection: Selection| {
                 if let Selection::Keys(keys) = selection {
                     key.set(keys.into_iter().next());
@@ -263,7 +262,7 @@ mod tests {
                 on_selection_change: Some(Callback::new(move |key| {
                     changes.update(|c| c.push(key));
                 })),
-                disabled_keys: Signal::stored(std::collections::HashSet::new()),
+                disabled_keys: Signal::stored(HashSet::new()),
             });
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("a")));
             state.list.selection.select(&Key::from("a"), None);

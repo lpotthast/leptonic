@@ -17,13 +17,7 @@ use crate::{
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
+// No deviations from react-aria beyond the project-wide API conventions.
 
 /// Input of [`use_selectable_list`].
 #[derive(Clone)]

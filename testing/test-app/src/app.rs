@@ -74,6 +74,10 @@ pub fn App() -> impl IntoView {
                         path=path!("/hooks/:name")
                         view=|| view! { <PageFixture group="hooks" /> }
                     />
+                    <Route
+                        path=path!("/perf/:name")
+                        view=|| view! { <PageFixture group="perf" /> }
+                    />
                 </Routes>
             </Router>
         </ThemeProvider>

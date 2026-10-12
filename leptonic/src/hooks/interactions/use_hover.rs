@@ -1,5 +1,6 @@
 // Upstream: react-aria/src/interactions/useHover.ts @ 99e6102368
 // Upstream: react-aria/test/interactions/useHover.test.js @ 99e6102368
+//! Hover interactions of mouse and pen pointers.
 use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
@@ -180,18 +181,16 @@ struct HoverState {
 /// a mouse or pen pointer enters the element (touch never hovers, and the mouse events iOS emulates
 /// after a touch are ignored) and ends when it leaves, the element is removed or `is_disabled`
 /// becomes true.
-#[allow(clippy::too_many_lines)]
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     #[cfg(feature = "ssr")]
     {
         let _ = input;
-        let (is_hovered, _) = signal(false);
         UseHoverReturn {
             props: UseHoverProps {
                 on_pointerenter: EventHandler::empty(),
                 on_pointerleave: EventHandler::empty(),
             },
-            is_hovered: is_hovered.into(),
+            is_hovered: Signal::stored(false),
         }
     }
 
@@ -200,8 +199,9 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         use crate::{
             ContainsTarget,
             utils::{
-                dom_ext::{EventAccessors, EventTargetExt, node_contains},
+                dom_ext::{EventAccessors, EventTargetExt},
                 event_listeners::listen_to,
+                shadow_dom::{get_event_target, node_contains},
             },
         };
 
@@ -261,8 +261,9 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
                 // Ensure that the event target is contained within current_target.
                 // This guards against events that bubble from outside the element.
-                if node_contains(Some(current_target.as_ref()), target.as_node().as_ref())
-                    == Some(false)
+                if target
+                    .as_node()
+                    .is_some_and(|target| !node_contains(current_target.as_ref(), &target))
                 {
                     return;
                 }
@@ -283,17 +284,18 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 // When an element that is hovered over is removed from the DOM, no pointerleave event
                 // is fired by the browser. However, a pointerover event will be fired on the new target
                 // the mouse is over. We detect this case by checking if the new pointerover target is
-                // still contained within our hovered element — if not, the element was removed and we
-                // trigger a hover end.
+                // still contained within our hovered element. If not, the element was removed and
+                // we trigger a hover end.
                 let pointerover = current_target.owner_document().map(|document| {
-                    let ct_for_closure = current_target.clone();
+                    let hovered = current_target.clone();
                     listen_to(&document, ev::pointerover, true, move |e: PointerEvent| {
                         if is_hovered.get_untracked() {
-                            let event_target = e.expect_target();
-                            if node_contains(
-                                Some(ct_for_closure.as_ref()),
-                                event_target.as_node().as_ref(),
-                            ) == Some(false)
+                            // A document listener: the target is retargeted out of shadow roots.
+                            let event_target =
+                                get_event_target(&e).unwrap_or_else(|| e.expect_target());
+                            if event_target
+                                .as_node()
+                                .is_some_and(|target| !node_contains(hovered.as_ref(), &target))
                             {
                                 trigger_hover_end();
                             }
@@ -319,7 +321,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }
 
             if let Some(current_target) = e.expect_current_target().to_element() {
-                trigger_hover_start(pointer_type, current_target, e.expect_target());
+                let target = get_event_target(&e).unwrap_or_else(|| e.expect_target());
+                trigger_hover_start(pointer_type, current_target, target);
             }
         };
 

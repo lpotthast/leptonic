@@ -3,17 +3,7 @@ use leptos::prelude::*;
 
 use crate::{Point, ValueBinding};
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// ## API DIFFERENCES
-// - Hook-owned state (C4): `default_open` + `on_open_change`, or `value` bound to app state
-//   (`ValueBinding::from(rw_signal)`), instead of a controlled `isOpen`.
-// - A `Copy` struct of signals and methods (C3).
-// - `point` is a typed [`Point`] (C13).
-//
-// =============================================================================
+// No deviations from react-aria beyond the project-wide API conventions.
 
 /// Input of [`use_overlay_trigger_state`].
 #[derive(Debug, Clone, Copy, Default)]

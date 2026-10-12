@@ -92,7 +92,7 @@ pub fn use_calendar_heading(input: UseCalendarHeadingInput) -> Signal<String> {
             ..DateTimeFormatOptions::default()
         }
     });
-    let formatter = Memo::new(move |_| DateTimeFormatter::new(&locale.get(), options.get()));
+    let formatter = Memo::new(move |_| DateTimeFormatter::cached(&locale.get(), &options.get()));
     let strings = use_localized_strings::<CalendarStrings>();
     Memo::new(move |_| {
         let range = calendar.visible_range.get();
@@ -149,9 +149,9 @@ pub fn use_calendar_month_picker(input: UseCalendarMonthPickerInput) -> UseCalen
     let calendar = state.calendar();
     let locale = use_locale();
     let formatter = Memo::new(move |_| {
-        DateTimeFormatter::new(
+        DateTimeFormatter::cached(
             &locale.get(),
-            DateTimeFormatOptions {
+            &DateTimeFormatOptions {
                 month: Some(format),
                 ..DateTimeFormatOptions::default()
             },
@@ -231,9 +231,9 @@ pub fn use_calendar_year_picker(input: UseCalendarYearPickerInput) -> UseCalenda
             .or_else(|| era_format(calendar.focused_date.get()))
     });
     let formatter = Memo::new(move |_| {
-        DateTimeFormatter::new(
+        DateTimeFormatter::cached(
             &locale.get(),
-            DateTimeFormatOptions {
+            &DateTimeFormatOptions {
                 year: Some(format.year),
                 era: era.get(),
                 ..DateTimeFormatOptions::default()
@@ -242,7 +242,6 @@ pub fn use_calendar_year_picker(input: UseCalendarYearPickerInput) -> UseCalenda
     });
     let items = Memo::new(move |_| {
         let focused = calendar.focused_date.get();
-        let formatter = formatter.get();
         let mut min = focused.subtract(DateDuration::years(visible_years / 2));
         let mut max = focused.add(DateDuration::years((visible_years + 1) / 2 - 1));
         if let Some(max_value) = calendar.max_value.get()
@@ -262,22 +261,24 @@ pub fn use_calendar_year_picker(input: UseCalendarYearPickerInput) -> UseCalenda
                 max = max_value;
             }
         }
-        let mut items = Vec::new();
-        let mut date = min;
-        while date <= max || date.is_same_year(max) {
-            let item_date = if date > max { max } else { date };
-            items.push(CalendarPickerItem {
-                id: item_date.year(),
-                date: item_date,
-                formatted: formatter.format_date(item_date),
-            });
-            let next = date.add(DateDuration::years(1));
-            if next == date {
-                break;
+        formatter.with(|formatter| {
+            let mut items = Vec::new();
+            let mut date = min;
+            while date <= max || date.is_same_year(max) {
+                let item_date = if date > max { max } else { date };
+                items.push(CalendarPickerItem {
+                    id: item_date.year(),
+                    date: item_date,
+                    formatted: formatter.format_date(item_date),
+                });
+                let next = date.add(DateDuration::years(1));
+                if next == date {
+                    break;
+                }
+                date = next;
             }
-            date = next;
-        }
-        items
+            items
+        })
     });
     let strings = use_localized_strings::<DatePickerStrings>();
     UseCalendarPickerReturn {

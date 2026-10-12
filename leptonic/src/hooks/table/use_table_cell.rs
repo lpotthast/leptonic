@@ -40,6 +40,7 @@ pub struct UseTableCellInput {
 }
 
 /// Return value of [`use_table_cell`].
+#[derive(Debug)]
 pub struct UseTableCellReturn {
     pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
     pub is_pressed: Signal<bool>,

@@ -95,6 +95,7 @@ pub struct UseDragInput {
 }
 
 /// Return value of [`use_drag`].
+#[derive(Debug)]
 pub struct UseDragReturn {
     pub drag_props: UseDragProps,
     /// For `use_button`, with `has_drag_button`.
@@ -186,7 +187,6 @@ enum PointerModality {
 
 /// A draggable element: drags start natively with the mouse or touch, and with the keyboard
 /// (Enter) or a screen reader through the drag manager.
-#[allow(clippy::too_many_lines)]
 pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let UseDragInput {
         items,
@@ -343,7 +343,6 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let on_drag = move |e: DragEvent| {
         e.stop_propagation();
         let current = (e.client_x(), e.client_y());
-        #[allow(clippy::float_cmp)]
         if position
             .try_get_value()
             .is_none_or(|previous| previous == current)

@@ -25,7 +25,7 @@ use crate::{EventHandler, IntoAttrs, OnEvent};
 /// Input of [`use_focus`].
 #[derive(Debug, Clone, Copy, Default)]
 pub struct UseFocusInput {
-    /// Disables the handling focus events when true.
+    /// Disables the handling of focus events when true.
     pub is_disabled: Signal<bool>,
     /// Called when the element receives focus.
     pub on_focus: Option<Callback<FocusEvent>>,
@@ -35,6 +35,7 @@ pub struct UseFocusInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
+/// The return value of [`use_focus`].
 #[derive(Debug)]
 pub struct UseFocusReturn {
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
@@ -72,8 +73,8 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         let _ = input;
         UseFocusReturn {
             props: UseFocusProps {
-                on_focus: EventHandler::new(|_: FocusEvent| {}),
-                on_blur: EventHandler::new(|_: FocusEvent| {}),
+                on_focus: EventHandler::empty(),
+                on_blur: EventHandler::empty(),
             },
         }
     }
@@ -135,16 +136,13 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         };
 
         let handle_blur = move |e: FocusEvent| {
-            // In certain situations, we saw this blur handler being called after the disabled signal
-            // was disposed. Mostly when interaction with this use_focus enabled element
-            // lead to removal from said element from the DOM.
+            // Removing a focused element blurs it after its owner was disposed ("Blur After
+            // Disposal"): the signal and the callbacks may be gone then (`try_*`).
             let is_disabled = disabled.try_get_untracked().unwrap_or(true);
 
             // No longer needed once blurred.
             blur_observer.try_update_value(Option::take);
 
-            // Removing a focused element blurs it after its owner was disposed: the callbacks
-            // may be gone then (`try_run`).
             let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
             if target == e.expect_current_target()
                 && !is_disabled

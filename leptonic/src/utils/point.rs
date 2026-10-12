@@ -1,3 +1,4 @@
+// No upstream: leptonic's typed coordinates (react-aria passes `x` and `y` numbers).
 //! A point in a 2D coordinate space.
 
 /// A point, e.g. client coordinates in CSS pixels.

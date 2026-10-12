@@ -12,7 +12,7 @@ use crate::{
         Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput, UseSelectableItemProps,
         UseSelectableItemReturn, use_selectable_item,
     },
-    utils::aria::{AriaDisabled, AriaRole, AriaSelected},
+    utils::aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
 };
 
 // =============================================================================
@@ -20,7 +20,7 @@ use crate::{
 // =============================================================================
 //
 // ## OMITTED FEATURES
-// - Virtualization (`aria-rowindex`).
+// - Virtualization (`aria-rowindex`): not yet, the virtualizer doesn't render grids yet.
 //
 // =============================================================================
 
@@ -37,6 +37,7 @@ pub struct UseGridRowInput {
 }
 
 /// Return value of [`use_grid_row`].
+#[derive(Debug)]
 pub struct UseGridRowReturn {
     pub row_props: PropsWithStyles<UseGridRowProps>,
     pub is_selected: Signal<bool>,
@@ -133,9 +134,7 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
                     (selection.selection_mode() != SelectionMode::None)
                         .then(|| AriaSelected::from(is_selected.get()))
                 }),
-                aria_disabled: Signal::derive(move || {
-                    is_disabled.get().then_some(AriaDisabled::True)
-                }),
+                aria_disabled: aria_true(is_disabled),
                 item,
             },
             styles,

@@ -45,7 +45,7 @@ use crate::{
         labels::labels,
         orientation::Orientation,
         pointer_type::PointerType,
-        shadow_dom::{get_active_element, get_event_target},
+        shadow_dom::{get_active_element, get_event_target, node_contains},
         virtual_focus::dispatch_virtual_focus,
     },
 };
@@ -176,7 +176,6 @@ impl IntoAttrs for UseComboBoxInputProps {
 /// A combo box: a text input with a popover listbox of suggestions. Typing filters the options
 /// (with the state's filter), arrow keys move a virtual focus through them while DOM focus stays
 /// in the input, Enter selects, Escape reverts.
-#[allow(clippy::too_many_lines)]
 pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     let UseComboBoxInput {
         state,
@@ -329,7 +328,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             .related_target()
             .and_then(|t| t.dyn_into::<web_sys::Node>().ok());
         let within = |element: Option<web_sys::Element>| {
-            element.is_some_and(|el| related.as_ref().is_some_and(|r| el.contains(Some(r))))
+            element.is_some_and(|el| related.as_ref().is_some_and(|r| node_contains(&el, r)))
         };
         if within(button_element.get_untracked().map(|el| (*el).clone()))
             || within(popover.get_untracked().map(|el| (*el).clone()))
@@ -396,7 +395,8 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         has_focused_item
     });
 
-    announce_changes(&state);
+    let strings = use_localized_strings::<ComboBoxStrings>();
+    announce_changes(&state, strings);
 
     let text_field_state = use_text_field_state(UseTextFieldStateInput {
         default_value: String::new(),
@@ -489,7 +489,6 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
                 .or_else(|| has_label.get().then(|| label_id.clone()))
         })
     };
-    let strings = use_localized_strings::<ComboBoxStrings>();
     // Named by their own label and the field's (react-aria: `useLabels`).
     let button_labels = Memo::new(move |_| {
         labels(
@@ -660,14 +659,13 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 /// popover opens without a focused option or the number changes; on Apple devices, whose
 /// VoiceOver doesn't announce `aria-activedescendant` changes reliably, also the focused option
 /// (with the section it enters) and the selection.
-fn announce_changes(state: &ComboBoxState) {
+fn announce_changes(state: &ComboBoxState, strings: Memo<ComboBoxStrings>) {
     use crate::{
         hooks::collections::NodeKind,
         utils::{live_announcer::announce_assertive, platform::device::is_apple_device},
     };
 
     let state = *state;
-    let strings = use_localized_strings::<ComboBoxStrings>();
 
     let option_text = |node: &crate::hooks::collections::Node| {
         node.aria_label

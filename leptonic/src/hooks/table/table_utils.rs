@@ -178,7 +178,6 @@ pub fn calculate_column_sizes(
 
         has_non_frozen_items = false;
         for item in &mut items {
-            #[allow(clippy::float_cmp)]
             let same_sign = js_sign(total_violation) == js_sign(item.violation);
             if total_violation == 0.0 || same_sign {
                 item.frozen = true;
@@ -416,7 +415,6 @@ mod tests {
                 |_| Some(ColumnBound::Px(50.0)),
             );
             assert_that!(widths.clone()).is_equal_to(vec![500.0, expected]);
-            #[allow(clippy::float_cmp)]
             let flush = widths.iter().sum::<f64>() == table_width;
             assert_that!(flush).is_true();
         }

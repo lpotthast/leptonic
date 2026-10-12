@@ -1,7 +1,7 @@
 // No upstream: react-aria-components throws for a part without its parent's context; leptonic's
 // atoms warn and render nothing (documentation/atoms-implementation.md, "Context Pattern").
 //! Atom parts outside their parent: each warns once (debug builds) and renders nothing, instead of
-//! panicking.
+//! panicking. So does a `CheckboxField` without the `value` its `CheckboxGroup` needs.
 use assertr::prelude::*;
 use browser_test::browser_test;
 use rootcause::Report;
@@ -106,4 +106,27 @@ pub async fn menu_parts(page: &Page<'_>) -> Result<(), Report> {
         ],
     )
     .await
+}
+
+/// A `CheckboxField` in a `CheckboxGroup` without a `value` warns and renders nothing, while the
+/// group renders.
+#[browser_test]
+pub async fn checkbox_field_without_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#orphans-checkbox-mount")
+        .await?
+        .click()
+        .await?;
+    let orphans = page.element("#orphans-checkbox").await?;
+    orphans.wait_for_attr("data-mounted", Some("true")).await?;
+    crate::fixtures::take_warnings(
+        page,
+        "A <CheckboxField> in a <CheckboxGroup> needs a `value`.",
+        1,
+    )
+    .await?;
+    assert_that!(orphans.count(".leptonic-CheckboxGroup").await?).is_equal_to(1);
+    assert_that!(orphans.count(".leptonic-CheckboxField").await?).is_equal_to(0);
+    assert_that!(orphans.count("input").await?).is_equal_to(0);
+    Ok(())
 }

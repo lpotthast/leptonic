@@ -1,7 +1,9 @@
 // Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 99e6102368
 // Upstream: @internationalized/number/src/NumberFormatter.ts @ 99e6102368
+//! Locale-aware number formatting with ICU4X (react-aria's `useNumberFormatter`, a cached
+//! `Intl.NumberFormat`).
 
-use std::{fmt, sync::Arc};
+use std::{cell::RefCell, fmt, sync::Arc};
 
 use fixed_decimal::{Decimal, Sign, SignedRoundingMode, UnsignedRoundingMode};
 use icu_decimal::{DecimalFormatter, options::DecimalFormatterOptions};
@@ -12,7 +14,7 @@ use icu_locale::{
 use leptos::prelude::*;
 use writeable::{Part, PartsWrite, Writeable};
 
-use super::{i18n::Locale, number_value::NumberValue};
+use super::{i18n::Locale, number_value::NumberValue, recent_cache::RecentCache};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -402,10 +404,19 @@ impl PartialEq for NumberFormatter {
 }
 
 /// The number formatter of the current locale (see [`use_locale`](super::i18n::use_locale)) and
-/// `options`, rebuilt when either changes (react-aria's `useNumberFormatter`).
+/// `options`, following changes of either (react-aria's `useNumberFormatter`).
 pub fn use_number_formatter(options: Signal<NumberFormatOptions>) -> Memo<NumberFormatter> {
     let locale = super::i18n::use_locale();
-    Memo::new(move |_| NumberFormatter::new(&locale.get(), options.get()))
+    Memo::new(move |_| {
+        locale.with(|locale| options.with(|options| NumberFormatter::cached(locale, options)))
+    })
+}
+
+thread_local! {
+    /// The formatters built last, per locale and options: ICU4X formatters are costly to build,
+    /// and labels, channel values and messages format numbers on every change.
+    static FORMATTERS: RefCell<RecentCache<(Locale, NumberFormatOptions), NumberFormatter>> =
+        const { RefCell::new(RecentCache::new(16)) };
 }
 
 impl NumberFormatter {
@@ -431,6 +442,22 @@ impl NumberFormatter {
             options,
             decimal,
         }
+    }
+
+    /// A formatter for `locale` and `options`, built once and kept (per thread) while in use
+    /// (react-aria builds one per use, or caches them in an unbounded map).
+    pub(crate) fn cached(locale: &Locale, options: &NumberFormatOptions) -> Self {
+        FORMATTERS.with_borrow_mut(|formatters| {
+            formatters.get_or_insert_with(
+                |(cached_locale, cached_options)| {
+                    cached_locale == locale && cached_options == options
+                },
+                || {
+                    let formatter = Self::new(locale, options.clone());
+                    ((locale.clone(), options.clone()), formatter)
+                },
+            )
+        })
     }
 
     /// The options this formatter formats with.

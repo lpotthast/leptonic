@@ -1,3 +1,7 @@
+// No upstream: atoms' default classes (react-aria-components' `defaultClassName` in
+// `useRenderProps`, which a `className` replaces).
+//! The default class of an atom, which its caller's classes add to.
+
 use leptos_classes::{Classes, MergeStrategy};
 
 /// An atom's classes: its default class (`leptonic-<AtomName>`, what the atom theme styles)

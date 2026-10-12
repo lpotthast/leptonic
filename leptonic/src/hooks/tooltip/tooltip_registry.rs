@@ -15,15 +15,15 @@ use std::cell::{Cell, RefCell};
 #[cfg(not(feature = "ssr"))]
 use leptos::prelude::TimeoutHandle;
 
-/// Default delay before showing the first tooltip (in ms).
+/// Default delay before showing the first tooltip.
 pub const TOOLTIP_DELAY: std::time::Duration = std::time::Duration::from_millis(1500);
 
-/// Default cooldown period after all tooltips close before resetting warmup state (in ms).
+/// Default cooldown period after all tooltips close before resetting warmup state.
 pub const TOOLTIP_COOLDOWN: std::time::Duration = std::time::Duration::from_millis(500);
 
 #[cfg(not(feature = "ssr"))]
 thread_local! {
-    /// Map of tooltip ID → force-close callback. When a new tooltip opens,
+    /// The registered tooltips' ids and force-close callbacks. When a new tooltip opens,
     /// it calls all other registered tooltips' close callbacks.
     static TOOLTIPS: RefCell<Vec<(u64, Box<dyn Fn()>)>> = const { RefCell::new(Vec::new()) };
 

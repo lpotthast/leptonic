@@ -11,7 +11,7 @@ use leptos::{
 
 use super::TagGroupData;
 use crate::{
-    EventHandler, IntoAttrs, PropsWithStyles,
+    EventHandler, IdRefs, IntoAttrs, PropsWithStyles,
     hooks::{
         button::use_button::UseButtonInput,
         collections::Key,
@@ -127,7 +127,8 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     let key = StoredValue::new(key);
     // A disabled tag can't be removed or focused by Tab, also with `DisabledBehavior::Selection`
     // (react-aria: `disabledKeys` or the item's `isDisabled`).
-    let is_disabled = Signal::derive(move || key.with_value(|k| selection.is_item_disabled(k)));
+    let is_disabled: Signal<bool> =
+        Memo::new(move |_| key.with_value(|k| selection.is_item_disabled(k))).into();
     // The keys to remove: all selected tags if this one is selected, else just this one.
     let keys_to_remove = move || {
         let key = key.get_value();
@@ -192,7 +193,12 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     let remove_button = on_remove.map(|on_remove| UseButtonInput {
         id: Some(button_id.clone()),
         aria_label: Signal::derive(move || Some(strings.read().remove_button_label())).into(),
-        aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
+        aria_labelledby: Signal::stored(
+            [&button_id, &row_id]
+                .into_iter()
+                .collect::<IdRefs>()
+                .into_value(),
+        ),
         is_disabled,
         on_press: Some(Callback::new(move |_: PressEvent| {
             on_remove.run(HashSet::from([key.get_value()]));

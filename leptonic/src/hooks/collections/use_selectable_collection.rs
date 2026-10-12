@@ -19,7 +19,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 use super::{
     FocusStrategy, Key, KeyboardDelegate, LinkBehavior, NavigationOptions, SelectionBehavior,
     SelectionManager, SelectionMode,
-    modifiers::{is_ctrl_key_pressed, is_non_contiguous_selection_modifier_keyboard},
+    modifiers::{is_ctrl_key_pressed, is_non_contiguous_selection_modifier},
     selection::SelectOnFocus,
     use_type_select::{UseTypeSelectInput, UseTypeSelectProps, use_type_select},
 };
@@ -30,7 +30,7 @@ use crate::{
         interactions::use_keyboard::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
     },
     utils::{
-        dom_ext::{EventAccessors, node_contains},
+        dom_ext::EventAccessors,
         focus::{focus_element, focus_safely},
         focusability::{Focusability, is_tabbable},
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
@@ -42,7 +42,7 @@ use crate::{
         scroll::{
             ScrollIntoViewOpts, ScrollIntoViewportOpts, scroll_into_view, scroll_into_viewport,
         },
-        shadow_dom::get_active_element,
+        shadow_dom::{get_active_element, get_event_target, node_contains},
     },
 };
 
@@ -210,7 +210,6 @@ fn with_selection_modifiers(key: KeyboardKey) -> [Shortcut; 4] {
 /// Keyboard navigation, selection and focus management for a collection element: arrow keys,
 /// Home/End, PageUp/PageDown, type-ahead, Ctrl/Cmd+A, Escape, and moving focus into and out of
 /// the collection as a single tab stop.
-#[allow(clippy::too_many_lines)]
 pub fn use_selectable_collection(
     input: UseSelectableCollectionInput,
 ) -> UseSelectableCollectionReturn {
@@ -257,7 +256,7 @@ pub fn use_selectable_collection(
             if is_link
                 && link_behavior.get_untracked() == LinkBehavior::Selection
                 && select_on_focus()
-                && !is_non_contiguous_selection_modifier_keyboard(e)
+                && !is_non_contiguous_selection_modifier(e.modifiers())
             {
                 selection.set_focused_key(Some(key.clone()), child);
                 let link = untrack(|| {
@@ -276,7 +275,7 @@ pub fn use_selectable_collection(
             }
             if e.shift_key() && untrack(|| selection.selection_mode()) == SelectionMode::Multiple {
                 selection.extend_selection(&key);
-            } else if select_on_focus() && !is_non_contiguous_selection_modifier_keyboard(e) {
+            } else if select_on_focus() && !is_non_contiguous_selection_modifier(e.modifiers()) {
                 selection.replace_selection(&key);
             }
             true
@@ -467,13 +466,10 @@ pub fn use_selectable_collection(
 
     let on_focusin = move |e: FocusEvent| {
         let current_target = e.expect_current_target();
-        let inside = node_contains(
-            current_target.dyn_ref::<web_sys::Node>(),
-            e.target()
-                .as_ref()
-                .and_then(|t| t.dyn_ref::<web_sys::Node>()),
-        )
-        .unwrap_or(false);
+        let inside = current_target
+            .dyn_ref::<web_sys::Node>()
+            .zip(get_event_target(&e).and_then(|t| t.dyn_into::<web_sys::Node>().ok()))
+            .is_some_and(|(container, target)| node_contains(container, &target));
         if untrack(|| selection.is_focused()) {
             if !inside {
                 selection.set_focused(false);
@@ -527,7 +523,7 @@ pub fn use_selectable_collection(
                 item.owner_document()
                     .as_ref()
                     .and_then(get_active_element)
-                    .is_some_and(|a| item.contains(Some(a.unchecked_ref())))
+                    .is_some_and(|a| node_contains(item, &a))
             };
             if !focus_within(&item) && !should_use_virtual_focus {
                 // After this `focusin` dispatch: focusing the item synchronously would dispatch a
@@ -558,7 +554,7 @@ pub fn use_selectable_collection(
             .related_target()
             .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
             .zip(e.expect_current_target().dyn_into::<web_sys::Node>().ok())
-            .is_some_and(|(related, container)| container.contains(Some(&related)));
+            .is_some_and(|(related, container)| node_contains(&container, &related));
         if stays_within {
             return;
         }
@@ -577,8 +573,7 @@ pub fn use_selectable_collection(
     // Clicking the scrollbar must not move focus away from the focused item.
     let on_mousedown = move |e: MouseEvent| {
         let on_container = element.get_untracked().is_some_and(|el| {
-            e.target()
-                .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*el)
+            get_event_target(&e).is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &*el)
         });
         if on_container {
             e.prevent_default();
@@ -776,9 +771,7 @@ fn focus_last_tabbable(container: &web_sys::Element) {
         return;
     };
     let active = last.owner_document().as_ref().and_then(get_active_element);
-    let focus_within_last = active
-        .as_ref()
-        .is_some_and(|a| last.contains(Some(a.unchecked_ref())));
+    let focus_within_last = active.as_ref().is_some_and(|a| node_contains(&last, a));
     if !focus_within_last || active.as_ref().is_some_and(|a| !is_tabbable(a)) {
         focus_element(&last, true);
     }

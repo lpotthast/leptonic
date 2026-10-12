@@ -11,12 +11,33 @@
 //! descendants, and the browser keeps `first_child`/`last_child` inside the current node's
 //! subtree.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The filter is a Rust closure of the node and the node the walker is at (react-aria: a
+//   `NodeFilter` reading `walker.currentNode`), deciding with a `NodeFilterResult`.
+// - The walker's document is `root`'s owner (react-aria: a `doc` parameter).
+//
+// ## DIFFERENT BEHAVIOR
+// - `create_shadow_tree_walker` always creates a `ShadowTreeWalker`; react-aria creates one only
+//   behind its `shadowDOM` feature flag (off by default), else a native `TreeWalker`.
+//
+// ## OMITTED FEATURES
+// - `nextSibling`, `previousSibling` and `parentNode`: react-aria's return `null`, and no caller
+//   uses them.
+//
+// =============================================================================
+
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
 };
 
 use wasm_bindgen::{JsCast, closure::Closure};
+
+use super::shadow_dom::node_contains;
 
 const FILTER_ACCEPT: u32 = 1;
 const FILTER_REJECT: u32 = 2;
@@ -134,7 +155,7 @@ impl ShadowTreeWalker {
     /// stack for the shadow trees `node` is in.
     pub fn set_current_node(&self, node: &web_sys::Node) {
         let inner = &self.inner;
-        if !inner.root.contains(Some(node)) && !shadow_contains(&inner.root, node) {
+        if !node_contains(&inner.root, node) {
             crate::utils::dev_warn!("ShadowTreeWalker: the node is not inside the root");
             return;
         }
@@ -174,7 +195,7 @@ impl ShadowTreeWalker {
         let current = self.current_node();
         let next = self.next_node();
         match next {
-            Some(next) if current.contains(Some(&next)) || shadow_contains(&current, &next) => {
+            Some(next) if node_contains(&current, &next) => {
                 self.set_current_node(&next);
                 Some(next)
             }
@@ -266,21 +287,6 @@ impl ShadowTreeWalker {
         }
         None
     }
-}
-
-/// Whether `node` is inside `ancestor`, also across shadow boundaries.
-fn shadow_contains(ancestor: &web_sys::Node, node: &web_sys::Node) -> bool {
-    let mut current = Some(node.clone());
-    while let Some(n) = current {
-        if n == *ancestor {
-            return true;
-        }
-        current = match n.dyn_ref::<web_sys::ShadowRoot>() {
-            Some(shadow_root) => Some(shadow_root.host().into()),
-            None => n.parent_node(),
-        };
-    }
-    false
 }
 
 /// Create a `ShadowTreeWalker` rooted at the given node.

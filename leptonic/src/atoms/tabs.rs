@@ -1,4 +1,7 @@
 // Upstream: react-aria-components/src/Tabs.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Tabs.test.js @ 99e6102368
+// Upstream: react-aria-components/test/Tabs.browser.test.tsx @ 99e6102368
+// Upstream: react-aria-components/test/Tabs.ssr.test.js @ 99e6102368
 use std::collections::HashSet;
 
 use leptos::{
@@ -471,6 +474,10 @@ pub fn TabPanels(
         return None;
     };
     let element = CapturedElement::new();
+    // The size variables' values. `update` writes them to the element at once (it measures in
+    // between) and here, so that the panels' `Styles` hold them too: rewriting `style` for a change
+    // of another reactive part keeps them ("One writer of an element's style", lessons.md).
+    let variables = RwSignal::new(None::<(String, String)>);
     // The size after the last selection change (or mount), to animate from.
     let size = StoredValue::new(None::<(f64, f64)>);
     let has_transition = StoredValue::new(None::<bool>);
@@ -478,7 +485,7 @@ pub fn TabPanels(
     // the size differs from the stored one, animates from the stored size to the new one.
     let update = move |el: web_sys::HtmlElement, animate: bool| {
         // Unmounted before the frame.
-        if size.is_disposed() || has_transition.is_disposed() {
+        if size.is_disposed() || has_transition.is_disposed() || variables.is_disposed() {
             return;
         }
         let window = leptos_use::use_window();
@@ -502,6 +509,7 @@ pub fn TabPanels(
         let set_size = move |width: &str, height: &str| {
             let _ = style.set_property("--tab-panel-width", width);
             let _ = style.set_property("--tab-panel-height", height);
+            variables.set(Some((width.to_owned(), height.to_owned())));
         };
         set_size("auto", "auto");
         let rect = el.get_bounding_client_rect();
@@ -523,15 +531,13 @@ pub fn TabPanels(
                 .filter_map(|animation| animation.dyn_into::<web_sys::Animation>().ok())
                 .filter_map(|animation| animation.finished().ok())
                 .collect();
-            let el = el.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 if wasm_bindgen_futures::JsFuture::from(js_sys::Promise::all(&promises))
                     .await
                     .is_ok()
                 {
-                    let style = el.style();
-                    let _ = style.set_property("--tab-panel-width", "auto");
-                    let _ = style.set_property("--tab-panel-height", "auto");
+                    // Unmounted meanwhile: nothing to reset.
+                    variables.try_set(Some(("auto".to_owned(), "auto".to_owned())));
                 }
             });
         }
@@ -558,6 +564,14 @@ pub fn TabPanels(
         selected
     });
 
+    let styles = Styles::new()
+        .add_optional_unchecked("--tab-panel-width", move || {
+            variables.with(|v| v.as_ref().map(|(width, _)| width.clone()))
+        })
+        .add_optional_unchecked("--tab-panel-height", move || {
+            variables.with(|v| v.as_ref().map(|(_, height)| height.clone()))
+        })
+        .merge(styles);
     Some(view! {
         <div {..element.attr()} class=classes style=styles>
             {children()}

@@ -25,11 +25,11 @@ use crate::{
     CapturedElement,
     utils::{
         aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside},
-        dom_ext::node_contains,
         event_listeners::{Listener, listen},
         intl_strings::DndStrings,
         key::{KeyboardEventKey, KeyboardKey},
         live_announcer::{Assertiveness, announce},
+        shadow_dom::{get_active_element, node_contains},
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
@@ -265,7 +265,9 @@ fn is_hidden(element: &web_sys::Element) -> bool {
 }
 
 fn contains(container: Option<&web_sys::Element>, node: Option<&web_sys::Node>) -> bool {
-    node_contains(container.map(JsCast::unchecked_ref::<web_sys::Node>), node).unwrap_or(false)
+    container
+        .zip(node)
+        .is_some_and(|(container, node)| node_contains(container, node))
 }
 
 fn center(element: &web_sys::Element) -> (f64, f64) {
@@ -283,9 +285,7 @@ fn focus(element: &web_sys::Element) {
 }
 
 fn active_element() -> Option<web_sys::Element> {
-    use_document()
-        .as_ref()
-        .and_then(web_sys::Document::active_element)
+    use_document().as_ref().and_then(get_active_element)
 }
 
 #[derive(Default)]

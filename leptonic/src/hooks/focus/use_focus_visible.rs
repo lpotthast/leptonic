@@ -90,7 +90,7 @@ pub struct UseFocusVisibleReturn {
 /// Tracks whether focus (of the currently focused element) should be made visible.
 ///
 /// This hook follows the current interaction modality:
-/// - When the user interacts with the keyboard or virtually (though assistive technology), focus
+/// - When the user interacts with the keyboard or virtually (through assistive technology), focus
 ///   is made visible.
 /// - When they use a pointer (mouse, touch, ...), focus is hidden.
 ///
@@ -226,7 +226,6 @@ pub(crate) struct FocusVisibleSince {
 
 #[cfg(not(feature = "ssr"))]
 impl FocusVisibleSince {
-    #[cfg(not(feature = "ssr"))]
     pub(crate) fn now(state: &FocusState, kind: ListenerKind, is_focus_visible: bool) -> Self {
         Self {
             kind,
@@ -356,16 +355,13 @@ impl FocusState {
                     key.is_focus_key || !(kind == ListenerKind::TextInput || key.is_text_input)
                 })
         };
-        let reached: Vec<ListenerKind> = [ListenerKind::Other, ListenerKind::TextInput]
-            .into_iter()
-            .filter(|kind| reaches(*kind))
-            .collect();
-        if reached.is_empty() {
+        let kinds = [ListenerKind::Other, ListenerKind::TextInput];
+        if !kinds.into_iter().any(reaches) {
             return;
         }
         let is_focus_visible = modality != Modality::Pointer;
         self.changes.update(|changes| {
-            for kind in reached {
+            for kind in kinds.into_iter().filter(|kind| reaches(*kind)) {
                 let notifications = changes.of_mut(kind);
                 notifications.count = notifications.count.wrapping_add(1);
                 notifications.is_focus_visible = is_focus_visible;
@@ -432,7 +428,7 @@ fn is_valid_key(e: &KeyboardEvent, is_mac: bool) -> bool {
         ))
 }
 
-/// Whether the window of `document` is tracked.
+/// Whether `window` is tracked.
 #[cfg(not(feature = "ssr"))]
 fn is_tracked(window: &wasm_bindgen::JsValue) -> bool {
     TRACKED_WINDOWS.with_borrow(|tracked| tracked.iter().any(|t| t.window == *window))

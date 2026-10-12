@@ -5,6 +5,18 @@ use std::sync::Arc;
 use super::LayoutInfo;
 use crate::hooks::collections::{Key, Rect, RectCorner, Size};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The axis and edge are enums (`ScrollAnchorAxis`, `ScrollAnchorEdge`; react-stately: `'x' |
+//   'y'` and `'start' | 'end'`), `is_anchorable` is optional (react-stately: a default accepting
+//   every layout info), and `resolve_after_layout` gets the visible layout infos as a slice
+//   (react-stately: a `Map`), as they are only searched.
+//
+// =============================================================================
+
 /// The edge of the content the viewport stays anchored to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScrollAnchorEdge {

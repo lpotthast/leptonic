@@ -48,9 +48,6 @@ use crate::{
 //   the same pass and reports as an uncaught "ResizeObserver loop completed with undelivered
 //   notifications" error. Opening and changed inputs still position at once.
 //
-// ## OMITTED FEATURES
-// - Repositioning on scroll events of shadow roots (react-aria: `getPropagationTargets`).
-//
 // =============================================================================
 
 /// How an overlay is positioned at its target: shared by [`use_overlay_position`],
@@ -214,7 +211,6 @@ fn px(value: f64) -> Option<LengthPercentageAuto> {
 /// let (attrs, styles) = position.props.into_parts();
 /// view! { <div {..attrs} style=styles>"Content"</div> }
 /// ```
-#[allow(clippy::too_many_lines)]
 pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositionReturn {
     let UseOverlayPositionInput {
         target,
@@ -331,7 +327,7 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
                 .and_then(crate::utils::shadow_dom::get_active_element);
             let anchor = active
                 .as_ref()
-                .filter(|active| scroll_el.contains(Some(active)))
+                .filter(|active| crate::utils::shadow_dom::node_contains(&scroll_el, active))
                 .map(|active| {
                     let anchor_rect = active.get_bounding_client_rect();
                     let scroll_rect = scroll_el.get_bounding_client_rect();

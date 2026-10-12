@@ -2,10 +2,11 @@
 // Upstream: react-aria/test/toast/useToast.test.js @ 99e6102368
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
-    ev::{self},
+    ev,
     prelude::*,
 };
 use send_wrapper::SendWrapper;
+use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, PointerEvent};
 
 use super::use_toast_state::{ToastKey, ToastQueue};
@@ -16,7 +17,10 @@ use crate::{
         interactions::{UseHoverInput, use_hover},
         landmark::{LandmarkRole, UseLandmarkInput, UseLandmarkProps, use_landmark},
     },
-    utils::intl_strings::{ToastStrings, use_localized_strings},
+    utils::{
+        intl_strings::{ToastStrings, use_localized_strings},
+        shadow_dom::get_event_target,
+    },
 };
 
 // =============================================================================
@@ -24,7 +28,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The region is marked `data-leptonic-top-layer` (react-aria: `data-react-aria-top-layer`).
+// - The region is marked `data-leptonic-top-layer`, leptonic's name of the marker that overlays
+//   check (react-aria: `data-react-aria-top-layer`).
 // - The queue and the region's element go into the input (C8; react-aria: `state` and `ref`).
 //
 // ## DIFFERENT BEHAVIOR
@@ -100,7 +105,6 @@ fn restore_focus(element: &web_sys::Element) {
 /// landmark (F6 reaches it) whose timeouts pause while it is hovered or focused; a closing
 /// focused toast hands the focus to the next one, and the focus returns to where it came from
 /// when the last one closes.
-#[allow(clippy::too_many_lines)]
 pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
     input: UseToastRegionInput<T>,
 ) -> UseToastRegionReturn {
@@ -111,7 +115,8 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         aria_labelledby,
     } = input;
     let strings = use_localized_strings::<ToastStrings>();
-    let label = Signal::derive(move || {
+    // A memo: the landmark reads it for its attribute and its registration.
+    let label = Memo::new(move |_| {
         aria_label.get().or_else(|| {
             let count = queue.visible_toasts.with(Vec::len);
             Some(strings.read().notifications(count))
@@ -119,7 +124,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
     });
     let landmark = use_landmark(UseLandmarkInput {
         element,
-        aria_label: label.into(),
+        aria_label: Signal::<Option<String>>::from(label).into(),
         aria_labelledby,
         role: LandmarkRole::Region,
         focus: None,
@@ -158,40 +163,40 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         last_focused.set_value(None);
         update_timers();
     };
-    let focus_within =
-        use_focus_within(UseFocusWithinInput {
-            on_focus_within: Some(Callback::new(move |e: FocusWithinEvent| {
-                let came_from = e.event.related_target().and_then(|target| {
-                    wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(target).ok()
-                });
-                // Coming from nowhere after a focused toast was removed: still from where it came
-                // before.
-                if !(came_from.is_none() && is_focused.get_value()) {
-                    last_focused.set_value(came_from.map(SendWrapper::new));
-                }
-                is_focused.set_value(true);
-                update_timers();
-            })),
-            on_blur_within: Some(Callback::new(move |e: FocusWithinEvent| {
-                if e.event.related_target().is_some() {
+    let focus_within = use_focus_within(UseFocusWithinInput {
+        on_focus_within: Some(Callback::new(move |e: FocusWithinEvent| {
+            let came_from = e
+                .event
+                .related_target()
+                .and_then(|target| target.dyn_into::<web_sys::Element>().ok());
+            // Coming from nowhere after a focused toast was removed: still from where it came
+            // before.
+            if !(came_from.is_none() && is_focused.get_value()) {
+                last_focused.set_value(came_from.map(SendWrapper::new));
+            }
+            is_focused.set_value(true);
+            update_timers();
+        })),
+        on_blur_within: Some(Callback::new(move |e: FocusWithinEvent| {
+            if e.event.related_target().is_some() {
+                leave();
+                return;
+            }
+            let Some(target) = get_event_target(&e.event)
+                .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
+            else {
+                leave();
+                return;
+            };
+            // A removed toast's blur (see above) keeps the state.
+            queue_microtask(move || {
+                if target.is_connected() {
                     leave();
-                    return;
                 }
-                let Some(target) = e.event.target().and_then(|target| {
-                    wasm_bindgen::JsCast::dyn_into::<web_sys::Node>(target).ok()
-                }) else {
-                    leave();
-                    return;
-                };
-                // A removed toast's blur (see above) keeps the state.
-                queue_microtask(move || {
-                    if target.is_connected() {
-                        leave();
-                    }
-                });
-            })),
-            ..UseFocusWithinInput::default()
-        });
+            });
+        })),
+        ..UseFocusWithinInput::default()
+    });
 
     // The keys of the toasts as rendered last (newest first), and the key of the focused toast
     // (`None`: none has the focus).
@@ -206,12 +211,12 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         };
         (0..toasts.length())
             .filter_map(|index| toasts.item(index))
-            .filter_map(|node| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(node).ok())
+            .filter_map(|node| node.dyn_into::<web_sys::Element>().ok())
             .collect()
     };
     let on_focusin = EventHandler::new(move |e: FocusEvent| {
-        let toast = crate::utils::shadow_dom::get_event_target(&e)
-            .and_then(|target| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(target).ok())
+        let toast = get_event_target(&e)
+            .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
             .and_then(|target| target.closest("[role=alertdialog]").ok().flatten());
         // The rendered toasts are in the order of the visible toasts as processed last.
         let key = toast
@@ -221,11 +226,10 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
     });
     let on_focusout = EventHandler::new(move |e: FocusEvent| {
         let removed = e.related_target().is_none().then(|| {
-            e.target()
-                .and_then(|target| wasm_bindgen::JsCast::dyn_into::<web_sys::Node>(target).ok())
+            get_event_target(&e).and_then(|target| target.dyn_into::<web_sys::Node>().ok())
         });
         match removed.flatten() {
-            // Maybe a removed toast's blur (see above): it keeps the index.
+            // Maybe a removed toast's blur (see above): it keeps the focused toast.
             Some(target) => queue_microtask(move || {
                 if target.is_connected() {
                     let _ = focused_toast.try_set_value(None);

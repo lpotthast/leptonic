@@ -4,6 +4,110 @@ Finished work, moved out of `PLAN.md` (which holds open work only), condensed to
 when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
 recent first within each part.
 
+## Testing: performance suite (2026-10-12)
+
+- `just browser-perf` (`BROWSER_TEST_SUITE=performance`, which also replaces `BROWSER_TEST_KNOWN_ISSUES=1`:
+  `known-issues`): in-page timings of the test-app's `/perf` fixtures (`testing/test-app/src/pages/perf/`:
+  `PerfScenarios`, `Measurements::measure` with `.settled` and `.render`), one case after the other, built without
+  debug assertions and overflow checks in `<target>/performance`. Reports are logged and written to
+  `<target>/tmp/performance/<scenario>.json`, each compared with the previous run's (`leptonic/tests/perf`).
+  `documentation/testing.md`, "Performance measurements".
+- First scenarios, `perf/virtual-list` (20,000 lines, 50 per append, 20 warm-up appends, 30 measured; headless
+  Chrome on the user's Mac): mount ~7 ms (cold p90 ~18 ms); an append ~3.0 ms until settled following the end and
+  3.4–3.9 ms at the start (with 5 warm-up appends, runs varied by up to 40%: wasm tiers up late); each frame's work
+  0.1–0.3 ms.
+
+## Library: collection arena (2026-10-12)
+
+- `Collection` stores its nodes in a `Vec` in document order, their links (parent, siblings, first and last child)
+  by position in a parallel `Vec`, and a `HashMap<Key, u32>` of positions (std's seeded hasher stays). Traversals
+  (`iter`, `children`, `items`, `key_after`/`key_before`, ...) no longer hash; the build hashes each key once (the
+  position map's entry API is the duplicate check). Equality compares the vectors.
+- API: `Node` keeps its content, `parent_key`, `level` and `index`; `prev_key`, `next_key`, `first_child_key`,
+  `last_child_key` (and the crate-private `position`) are gone: `Collection::next_sibling`, `previous_sibling`,
+  `first_child`, `last_child` and `siblings_from` replace them (a cloned node no longer carries another collection's
+  neighbors). `Collection::keys` is in document order. `Node::same_content` no longer compares the child keys.
+  No structural sharing between rebuilds (the plan's `Vec<Arc<Node>>`): content comparisons are cheap enough, and
+  contiguous nodes traverse faster.
+- `ListLayout`: after a collection change it continues from the first top-level node that differs from the
+  previous collection's (compared up to the last laid out root, without lookups) and looks for deleted nodes only
+  after it (in the cache or the previous collection's remaining nodes, whichever has fewer).
+- 20,000 rows (native, release): collection build 4.9 → ~2 ms, an append following the end 4.75 → ~0.6 ms of
+  layout, an append with the view at the start 2.3 → 0.21 ms. Equivalence tests against a build from the start:
+  `collection_changes_continue_after_the_unchanged_rows`,
+  `measuring_in_the_middle_continues_from_the_first_resized_row`.
+
+## Library: performance (2026-10-12)
+
+Native release timings (`cargo test --release`); wasm is slower in absolute terms. No `unsafe`.
+- One bounded cache type, `utils::recent_cache::RecentCache` (in `thread_local!`s), for values costly to build:
+  `NumberFormatter::cached`, `ListFormatter::cached` (`ListFormatter` is `Clone`/`Debug` now, its ICU4X formatter
+  shared), `DateTimeFormatter::cached`, `NumberParser::cached`, the date field `Formatters::cached`, plural rules
+  (`plural_category`), the intl bundles' messages per locale; the color module's two private caches moved onto it.
+  Number fields and date segments share parsers (a parser formats numbers four ways to learn the symbols), date
+  fields of one format and reopened pickers their formatters, the calendar's descriptions no longer build ICU4X
+  formatters per change.
+- Localized messages: plain-text messages aren't parsed, the others once per thread. A plural message with a
+  count went from ~6.4 µs (parse 2.9, formatter 2.4, rules 1.1) to 0.9 µs.
+- Calendar cells share today (`use_today`: one signal and effect per calendar instead of ~42) and the strings memo
+  through `CalendarData`.
+- `HiddenSelectOption::is_selected` reads the option's own selection (the selection manager's per-key
+  `is_selected`) instead of sorting the whole value per option.
+- Virtualizer: after measured sizes (only) changed, `ListLayout` continues from the first root node holding a
+  resized node instead of walking every laid out node (DIFFERENT BEHAVIOR entry). 20,000 rows: an append
+  following the end 8.5 → 4.75 ms of layout, scrolling down one view 300 → 24 µs. The benchmark
+  (`timing_a_long_list`) now measures rows together, as the item measurer reports them (it laid out after each row:
+  74 ms per append).
+- `Collection::build`: one hash map operation less per node (positions numbered by a counter, a node inserted
+  after its children), duplicates removed in place, no staging copy of the nodes: 7.3 → 4.8 ms at 20,000 rows.
+  Std's seeded hasher stays (user-controlled keys, server builds); a faster hasher saved only ~25% of a layout pass.
+
+## Library: three bugs from the quality pass (2026-10-12)
+
+- `MenuItems` and `TagItems` render an item again when its content changes under the same key: the `For` is keyed
+  by key and each row reads its node through `use_node` (a per-key memo comparing `Node::same_content`), which
+  `ListBoxItems` used inline before. `virtualizer/list_layout.rs`'s private copy of `same_content` is gone. Browser
+  cases `menu_atoms::renamed_items_update`, `tag_group_atoms::renamed_tags_update`.
+- `TabPanels` holds `--tab-panel-width`/`--tab-panel-height` in its `Styles` too (it still writes them directly
+  around its measurement): a change of a reactive part of the caller's `styles` no longer drops them mid-animation.
+  Browser case `tabs::tab_panels_restyled_while_animating`.
+- A `CheckboxField` in a `CheckboxGroup` without `value` warns and renders nothing (it panicked). Browser case
+  `orphan_parts::checkbox_field_without_value`.
+- Book: `FocusScope`'s default class, `ListBoxItem`'s `data-hovered`/`data-selection-mode`, `SliderTrack` and
+  `CheckboxField` rendering nothing when misplaced, and the changelog's "Unreleased" notes.
+
+## Library: code quality and consistency pass (2026-10-12)
+
+A pass over all of `leptonic/src` against the written rules (open findings: `PLAN.md`, "Quality pass 2026-10-12").
+No public API changed except the removals and additions below.
+- Headers: every ported file lists its upstream sources and test files (paths checked at their sha) and has a
+  deviation block in the documented format or the one-line note; leptonic-only files (`utils/{aria,data_attributes,
+  default_class,fraction,heading_level,point,styles,syntax_highlight,scoped_context}.rs`, `attrs.rs`, `link/mod.rs`)
+  start with `// No upstream:`. Stale entries removed or corrected (e.g. `use_toggle`'s `ToggleState::new`, the date
+  range picker's server errors, `use_enter_animation`'s hiding), pure C3/C4/C11 repeats trimmed where nothing else
+  was said, missing reasons added. `virtualizer/list_layout.rs`'s fixed upstream bug is under `DIFFERENT BEHAVIOR`.
+- `cfg_attr(feature = "ssr", allow(dead_code))` gone: `calculate_position.rs` splits into a computing and a DOM
+  module, `atoms/virtualizer.rs` keeps its client-only state in a `cfg(not(ssr))` module, `use_overlay` runs its body
+  on the server too (empty thread-safe stores).
+- One helper per job: `utils::aria::aria_true` (a typed ARIA value present only while true) replaces two private
+  copies and 25 hand-written derives; `dom_ext::node_contains` (the `Option` wrapper) is gone, every caller uses
+  `shadow_dom::node_contains`; merged duplicates: wheel stepping (number and color field), the popover/modal
+  hide-outside effect, the date picker contexts, the color space conversions, `synthetic_blur`'s focus event,
+  `EventModifiers` impls, `CollectionBuilder::finish`/`build`, three selection setting types, the top-layer check.
+- Shadow DOM: raw `e.target()`/`Node::contains`/`document.active_element()` replaced by `get_event_target`/
+  `node_contains`/`get_active_element` where upstream uses its shadow-aware helpers (collections, grid, grid list,
+  combo box, submenus, hover, press, toolbar, radio group, number field, toast region, drag manager, popover).
+- `Signal::derive` → `Memo` where "Derived Values" applies (per-item and per-cell flags, labels,
+  `first_day_of_week`, `highlighted_range`, the drag modality's `matchMedia`, slider values, ...).
+- Atoms: `FocusScope` has the default class `leptonic-FocusScope`; `ListBoxItem` renders `data-selection-mode`;
+  `SliderTrack` outside a `Slider` warns and renders nothing; `flag` for the remaining signal-backed boolean data
+  attributes; "Data attributes:" docs match what is rendered; `DismissButton`'s `tabindex` is `i32`.
+- Removed: `AsRef<str>` for `AriaHasPopup` (returned the attribute name for every value) and the lone
+  `FromStr for AriaExpanded`. Added `Debug` to ~16 `*Return` types. `#[allow(clippy::too_many_lines)]` and
+  `float_cmp` (allowed workspace-wide) and other allows no lint needed removed; `use_viewport_size` uses leptos-use's
+  `use_event_listener`; `KeyboardKey::F6` in the landmark manager; an animation port fix (animations without a
+  timeline are excluded, as upstream).
+
 ## Library: tooltip text can be selected (2026-10-10)
 
 - `use_tooltip_trigger`: blurring the trigger no longer closes the tooltip while the pointer is on it (a documented

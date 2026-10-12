@@ -1,5 +1,7 @@
 // Upstream: react-aria/src/interactions/useInteractOutside.ts @ 99e6102368
 // Upstream: react-aria/test/interactions/useInteractOutside.test.js @ 99e6102368
+// Upstream: react-aria/test/interactions/useInteractOutside.shadow.test.js @ 99e6102368
+//! Interactions outside an element (e.g. to close an overlay).
 use leptos::prelude::*;
 
 use crate::{CapturedElement, ElementCaptureAttr, IntoAttrs};
@@ -73,6 +75,7 @@ pub struct UseInteractOutsideInput {
     pub element: Option<CapturedElement>,
 }
 
+/// Return value of [`use_interact_outside`].
 #[derive(Debug)]
 pub struct UseInteractOutsideReturn {
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
@@ -128,44 +131,35 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 ///     </div>
 /// }
 /// ```
-#[allow(clippy::needless_pass_by_value)]
 pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsideReturn {
+    let UseInteractOutsideInput {
+        is_disabled,
+        on_interact_outside_start,
+        on_interact_outside,
+        element: external,
+    } = input;
+
+    let element = external.unwrap_or_else(CapturedElement::new);
+    // An external element is captured elsewhere; the props must not capture another one.
+    let capture = if external.is_some() {
+        CapturedElement::new()
+    } else {
+        element
+    };
+
     #[cfg(feature = "ssr")]
-    {
-        let _ = input;
-        let element = CapturedElement::new();
-        UseInteractOutsideReturn {
-            props: UseInteractOutsideProps {
-                element_capture: element.attr(),
-            },
-        }
-    }
+    let _ = (is_disabled, on_interact_outside_start, on_interact_outside);
 
     #[cfg(not(feature = "ssr"))]
     {
         use leptos_use::{UseEventListenerOptions, use_event_listener_with_options};
         use web_sys::PointerEvent;
 
-        let UseInteractOutsideInput {
-            is_disabled: disabled,
-            on_interact_outside_start,
-            on_interact_outside,
-            element: external,
-        } = input;
-
-        let element = external.unwrap_or_else(CapturedElement::new);
-        // An external element is captured elsewhere; the props must not capture another one.
-        let capture = if external.is_some() {
-            CapturedElement::new()
-        } else {
-            element
-        };
-
-        let is_pointer_down: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
+        let is_pointer_down = StoredValue::new(false);
 
         // Set up pointer down listener to track interaction start.
         // Uses `element.get()` (reactive) so the Effect re-runs when the element
-        // is captured — critical for client-side navigation where the element may
+        // is captured: critical for client-side navigation, where the element may
         // not exist yet when the Effect first runs.
         Effect::new(move |_| {
             // Reset pointer-down tracking when listeners are re-created.
@@ -174,7 +168,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
             // click handler is cleaned up before it can reset is_pointer_down).
             is_pointer_down.set_value(false);
 
-            if disabled.get() {
+            if is_disabled.get() {
                 return;
             }
 
@@ -190,7 +184,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                 document.clone(),
                 leptos::ev::pointerdown,
                 move |e: PointerEvent| {
-                    if disabled.get_untracked() {
+                    if is_disabled.get_untracked() {
                         return;
                     }
 
@@ -210,7 +204,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                 document,
                 leptos::ev::click,
                 move |e: web_sys::MouseEvent| {
-                    if !disabled.get_untracked()
+                    if !is_disabled.get_untracked()
                         && is_pointer_down.get_value()
                         && is_valid_event(&e, element.get_untracked().as_ref())
                         && let Some(on_interact_outside) = on_interact_outside
@@ -222,12 +216,12 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                 UseEventListenerOptions::default().capture(true),
             );
         });
+    }
 
-        UseInteractOutsideReturn {
-            props: UseInteractOutsideProps {
-                element_capture: capture.attr(),
-            },
-        }
+    UseInteractOutsideReturn {
+        props: UseInteractOutsideProps {
+            element_capture: capture.attr(),
+        },
     }
 }
 
@@ -241,7 +235,10 @@ fn is_valid_event(
 ) -> bool {
     use wasm_bindgen::JsCast;
 
-    use crate::utils::shadow_dom::{get_event_target, node_contains};
+    use crate::utils::{
+        focusability::is_in_top_layer,
+        shadow_dom::{get_event_target, node_contains},
+    };
 
     if event.button() > 0 {
         return false;
@@ -260,12 +257,7 @@ fn is_valid_event(
             return false;
         }
         // A target in a top layer element (e.g. toasts).
-        if target
-            .closest("[data-leptonic-top-layer]")
-            .ok()
-            .flatten()
-            .is_some()
-        {
+        if is_in_top_layer(&target) {
             return false;
         }
     }

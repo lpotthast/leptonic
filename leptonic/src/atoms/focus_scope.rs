@@ -8,7 +8,7 @@ use leptos_classes::Classes;
 
 use crate::{
     hooks::focus::FocusManager,
-    utils::{scoped_context::scoped_view, styles::Styles},
+    utils::{default_class::with_default_class, scoped_context::scoped_view, styles::Styles},
 };
 
 // =============================================================================
@@ -45,7 +45,7 @@ use crate::{
 //   focus into an inner one would have the inner scope move it on again.
 // - Focus escaping a containing scope is recaptured in a microtask after the `focusin` dispatch
 //   (react-aria: synchronously): refocusing inside the listener would dispatch a nested `focusin`
-//   into it ("No Nested Dispatch of the Same Event Type").
+//   into it (leptos-and-dom.md, "Nested Event Dispatch").
 //
 // =============================================================================
 
@@ -100,6 +100,8 @@ impl EventDescriptor for RestoreFocusEvent {
 /// </FocusScope>
 /// ```
 ///
+/// Default class: `leptonic-FocusScope`.
+///
 /// [`use_focus_manager_context`]: crate::hooks::focus::use_focus_manager_context
 #[component]
 pub fn FocusScope(
@@ -124,6 +126,7 @@ pub fn FocusScope(
     /// The content of the focus scope.
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-FocusScope", classes);
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let scope_ref = NodeRef::<html::Div>::new();
     // The manager can outlive the scope (e.g. in pending focus callbacks): a disposed scope has
@@ -200,7 +203,6 @@ mod client {
     }
 
     /// Registers the scope and sets up containment, restoration and auto focus.
-    #[allow(clippy::too_many_lines)]
     pub(super) fn set_up(
         scope_ref: NodeRef<html::Div>,
         contain: Signal<bool>,
@@ -638,7 +640,7 @@ mod client {
 
     /// The first tabbable element of a scope, else its first focusable one (react-aria's
     /// `getFirstInScope`).
-    pub(super) fn first_in_scope(scope: &web_sys::Element) -> Option<web_sys::Element> {
+    fn first_in_scope(scope: &web_sys::Element) -> Option<web_sys::Element> {
         [Focusability::Tabbable, Focusability::Focusable]
             .into_iter()
             .find_map(|focusability| {

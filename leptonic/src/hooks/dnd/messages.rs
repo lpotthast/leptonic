@@ -5,6 +5,8 @@
 //! The texts drag and drop shows and announces, by drag modality (react-aria picks the message
 //! keys the same way).
 
+// No deviations from react-aria beyond the project-wide API conventions.
+
 use super::utils::DragModality;
 use crate::utils::intl_strings::DndStrings;
 

@@ -28,8 +28,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `FocusableContext` is provided with `provide_context` or the `Focusable` atom; there is no
-//   `FocusableProvider` component.
+// - `FocusableContext` is provided as a plain context (`<Provider>`, as `TooltipTrigger` does);
+//   there is no `FocusableProvider` component.
 //
 // ## DIFFERENT BEHAVIOR
 // - The handlers are always attached and check `is_disabled` when they run (react-aria attaches
@@ -94,7 +94,7 @@ impl Default for UseFocusableInput {
 ///
 /// Parent components (e.g., `TooltipTrigger`) that need to inject additional
 /// event handlers or capture a focusable child's element **must** provide this
-/// context via [`provide_context`].
+/// context around the child (`<Provider value=..>`).
 ///
 /// When provided, [`use_focusable`] automatically reads the context and chains
 /// the parent's handlers after its own. When not provided, `use_focusable`
@@ -104,13 +104,14 @@ impl Default for UseFocusableInput {
 ///
 /// ```ignore
 /// // Parent component provides context:
-/// provide_context(FocusableContext {
+/// let focusable = FocusableContext {
 ///     on_focus: Some(EventHandler::new(|_| { /* parent focus handler */ })),
 ///     element: Some(parent_element_capture),
 ///     ..Default::default()
-/// });
+/// };
 ///
-/// // Child's use_focusable automatically reads and chains the context handlers.
+/// // The children's `use_focusable` automatically reads and chains the context handlers.
+/// view! { <Provider value=focusable>{children()}</Provider> }
 /// ```
 #[derive(Clone, Default)]
 pub struct FocusableContext {
@@ -126,7 +127,7 @@ pub struct FocusableContext {
     pub aria_describedby: Option<Signal<Option<String>>>,
     /// Further attributes for the focusable element (e.g. pointer handlers), spread as given.
     pub attrs: Option<FocusableContextAttrs>,
-    /// Parent's element capture — the focusable element will be captured here too.
+    /// Parent's element capture: the focusable element will be captured here too.
     pub element: Option<CapturedElement>,
 }
 
@@ -298,21 +299,13 @@ impl std::fmt::Debug for FocusHandle {
 }
 
 /// The return value of the `use_focusable` hook.
+#[derive(Debug)]
 pub struct UseFocusableReturn {
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseFocusableProps,
 
     /// Handle for programmatically focusing the element.
     pub focus_handle: FocusHandle,
-}
-
-impl std::fmt::Debug for UseFocusableReturn {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("UseFocusableReturn")
-            .field("props", &self.props)
-            .field("focus_handle", &self.focus_handle)
-            .finish()
-    }
 }
 
 /// Props from `use_focusable` that can be extracted and merged programmatically.
@@ -429,7 +422,7 @@ impl IntoAttrs for UseFocusableItemProps {
 ///
 /// # Context
 ///
-/// If a [`FocusableContext`] is provided by an ancestor (via [`provide_context`]),
+/// If a [`FocusableContext`] is provided by an ancestor (with `<Provider>`),
 /// this hook automatically chains the context's handlers after its own and
 /// captures the element for the parent. This is how parent components inject
 /// interaction behavior into focusable children without the child needing to
@@ -553,7 +546,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
 
     // Handle auto-focus.
     // Uses `get_element()` (reactive) so the Effect re-runs when the element
-    // is captured — critical for client-side navigation.
+    // is captured (critical for client-side navigation).
     if auto_focus {
         let auto_focus_done: StoredValue<bool> = StoredValue::new(false);
 

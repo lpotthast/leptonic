@@ -2,7 +2,10 @@
 // Upstream: @internationalized/number/test/NumberParser.test.js @ 99e6102368
 //! Locale-aware parsing of formatted numbers and validation of partial input.
 
-use std::sync::{Arc, OnceLock};
+use std::{
+    cell::RefCell,
+    sync::{Arc, OnceLock},
+};
 
 use fixed_decimal::{Decimal, Sign};
 use icu_locale::extensions::unicode::key;
@@ -15,7 +18,15 @@ use super::{
         NumberStyle, NumberingSystem, SignDisplay,
     },
     number_value::NumberValue,
+    recent_cache::RecentCache,
 };
+
+thread_local! {
+    /// The parsers built last, per locale and options: a parser formats numbers in several
+    /// ways to learn the locale's symbols, and every number field and date segment needs one.
+    static PARSERS: RefCell<RecentCache<(Locale, NumberFormatOptions), NumberParser>> =
+        const { RefCell::new(RecentCache::new(8)) };
+}
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -105,6 +116,23 @@ impl NumberParser {
             options: options.clone(),
             fixed_numbering_system,
         }
+    }
+
+    /// A parser for `locale` and `options`, built once and kept (per thread) while in use.
+    pub(crate) fn cached(locale: &Locale, options: &NumberFormatOptions) -> Self {
+        PARSERS.with_borrow_mut(|parsers| {
+            parsers.get_or_insert_with(
+                |(cached_locale, cached_options)| {
+                    cached_locale == locale && cached_options == options
+                },
+                || {
+                    (
+                        (locale.clone(), options.clone()),
+                        Self::new(locale, options),
+                    )
+                },
+            )
+        })
     }
 
     /// The parser for `value`: the locale's numbering system, else the first other one in which
@@ -206,7 +234,7 @@ struct Symbols {
 
 impl ParserImpl {
     fn new(locale: &Locale, options: &NumberFormatOptions) -> Self {
-        let formatter = NumberFormatter::new(locale, options.clone());
+        let formatter = NumberFormatter::cached(locale, options);
         let symbols = symbols(locale, options);
         Self {
             options: options.clone(),
@@ -592,7 +620,7 @@ mod tests {
         parser.is_valid_partial_number::<f64>(value, None, None)
     }
 
-    // ---- parse ----
+    // `parse`.
 
     #[test]
     fn parses_basic_numbers() {
@@ -970,7 +998,7 @@ mod tests {
         }
     }
 
-    // ---- is_valid_partial_number ----
+    // `is_valid_partial_number`.
 
     #[test]
     fn partial_basic_numbers() {
@@ -1224,7 +1252,7 @@ mod tests {
         assert_that!(valid(&arabic, "١a")).is_false();
     }
 
-    // ---- numbering_system ----
+    // `numbering_system`.
 
     #[test]
     fn numbering_system_defaults_to_the_locale() {
