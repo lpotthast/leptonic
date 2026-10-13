@@ -6,7 +6,7 @@ pub mod test_sidebar;
 use std::{borrow::Cow, panic::AssertUnwindSafe};
 
 use browser_test::{
-    BrowserTest, BrowserTests, Parallelism, SessionSettings, async_trait, thirtyfour::WebDriver,
+    BrowserTest, BrowserTests, Parallelism, TestSettings, async_trait, thirtyfour::WebDriver,
 };
 use futures::FutureExt as _;
 use leptos_browser_test::{Report, ResultExt};
@@ -122,8 +122,8 @@ impl<T: BrowserTest<str>> BrowserTest<str> for CheckPageErrors<T> {
         self.0.description()
     }
 
-    fn session_settings(&self) -> SessionSettings {
-        self.0.session_settings()
+    fn settings(&self) -> TestSettings {
+        self.0.settings()
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {

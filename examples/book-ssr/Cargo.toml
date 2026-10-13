@@ -86,7 +86,6 @@ leptos_meta = { version = "0.8.7", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
 markup5ever_rcdom = { version = "0.38", default-features = false, optional = true }
 reqwest = { version = "0.13.5", default-features = false }
-# TLS through ring (`main.rs` installs it): builds much faster than rustls' default provider, aws-lc-rs.
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"], optional = true }
 scraper = { version = "0.27.0", default-features = false, optional = true }
 send_wrapper = { version = "0.6.0", default-features = false }
@@ -108,12 +107,8 @@ web-sys = { version = "0.3.106", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-# The user's checkout, as in leptonic: eventual assertions (unreleased 0.8).
 assertr = { version = "0.8.0", default-features = false, features = ["std"] }
-# The user's checkout, as in leptonic: 0.6.0 is unreleased (session reuse, Chrome Headless Shell, failure reports).
-# `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
-# without compiling `aws-lc-rs`.
-browser-test = { path = "../../../browser-test/browser-test", default-features = false, features = ["rustls-no-provider"] }
+browser-test = { version = "0.7.0", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std"] }
 leptos-browser-test = { version = "0.4.0", default-features = false }
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"] }

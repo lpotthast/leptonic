@@ -4,6 +4,13 @@ Finished work, moved out of `PLAN.md` (which holds open work only), condensed to
 when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
 recent first within each part.
 
+## Testing: published browser-test and assertr (2026-10-13)
+
+- Both browser test suites (leptonic's, the book's) use the published crates instead of path dependencies on the
+  user's checkouts: assertr 0.8.0, then browser-test 0.7.0 (`SessionSettings` became `TestSettings`,
+  `BrowserTest::session_settings` became `settings`; tests time out after 10 minutes by default). The lesson that
+  `cargo fmt --all` reformatted the `../browser-test` checkout no longer applies and was removed.
+
 ## Library: virtualizer froze on a scrollbar loop (2026-10-12)
 
 - A page froze completely (no input, ~100% CPU, gigabytes of memory) when a `VirtualList` of a few dozen wrapping

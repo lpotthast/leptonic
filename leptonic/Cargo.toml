@@ -142,9 +142,7 @@ icu_list = { version = "2.3", default-features = false, features = ["compiled_da
 icu_locale = { version = "2.3", default-features = false, features = ["compiled_data"] }
 icu_normalizer = { version = "2.3", default-features = false, features = ["compiled_data"] }
 icu_plurals = { version = "2.3", default-features = false, features = ["compiled_data"] }
-# The Unicode general category (format characters, which the number parser ignores).
 icu_properties = { version = "2.3", default-features = false, features = ["compiled_data"] }
-# `Send + Sync` formatters (Arc instead of Rc in data payloads), so they can be cached in signals.
 icu_provider = { version = "2.3", default-features = false, features = ["sync"] }
 icu_time = { version = "2.3", default-features = false, features = ["compiled_data"] }
 itertools = { version = "0.15.0", default-features = false, features = ["use_alloc"] }
@@ -158,18 +156,11 @@ cargo_toml = { version = "1.0.1", default-features = false }
 leptonic-theme = { version = "0.5", path = "../leptonic-theme", default-features = false }
 
 [dev-dependencies]
-# `testing::with_owner`: a thread-local executor for Effects. `tracing`: an Effect spawned before any
-# executor is installed is dropped instead of panicking (tests without the helper).
 any_spawner = { version = "0.3.0", default-features = false, features = ["tracing"] }
-# The user's checkout: eventual assertions (`eventually`, `consistently`, `Patience`; unreleased 0.8).
 assertr = { version = "0.8.0", default-features = false, features = ["std", "num", "thirtyfour-cdp"] }
-# `rustls-no-provider` + `rustls` with `ring` (installed in `tests/browser_test.rs`): Chrome for Testing downloads
-# without compiling `aws-lc-rs`.
-browser-test = { path = "../../browser-test/browser-test", default-features = false, features = ["rustls-no-provider"] }
+browser-test = { version = "0.7.0", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
-# `http::Method` for WebDriver commands thirtyfour has no method for (`computedlabel`).
 leptos-browser-test = { version = "0.4.0", default-features = false }
-# `effects`: Effects run in native unit tests (`testing::with_owner`); Leptos enables it only for csr/hydrate.
 reactive_graph = { version = "0.2.15", default-features = false, features = ["effects"] }
 rootcause = { version = "0.13.0", default-features = false }
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"] }

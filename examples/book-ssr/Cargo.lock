@@ -413,6 +413,8 @@ dependencies = [
 [[package]]
 name = "browser-test"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eebe497cae175f16610eee6b2823319080a8f7df073b1b1d66d57ad34f78bb1a"
 dependencies = [
  "async-trait",
  "backtrace",
@@ -434,6 +436,8 @@ dependencies = [
 [[package]]
 name = "browser-test-macros"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a33e810d91860e52246a3bbdf91b7833ac42d3588974e6759fc55dda23312454"
 dependencies = [
  "heck",
  "manyhow",

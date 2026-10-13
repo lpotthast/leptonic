@@ -44,10 +44,6 @@ Dispatch", "Global State and SSR", ...) and `hooks-implementation.md` ("Props ar
   session in a user context of its own; its item-by-item reset (`SessionReset::Manual`, leptonic's suites since)
   navigates the tab to an empty page in a new renderer process. Count with
   `ps -eo args | grep -c 'chrome-linux64/chrome --type=renderer'` while tests run.
-- `cargo fmt --all` formats path dependencies (2026-10-08): with leptonic's or the book's manifest, it also reformats
-  the `../browser-test` checkout (a path dependency of both browser test suites), and `just fmt`'s nightly pass applies
-  leptonic's import grouping to it. Format our own files only (`rustfmt --edition 2024 <files>`), or check
-  `git -C ../browser-test status` afterwards, until browser-test is a crates.io dependency again.
 - Leptos `erase_components` and spread attributes (2026-10-06): in erased builds (our `.cargo/config.toml`, and
   cargo-leptos' dev builds), attributes spread onto a component (`attr:id`, ...) are applied once, to the elements
   the component first renders (`AnyViewWithAttrs`); when the component's root element is replaced (a reactive
