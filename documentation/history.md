@@ -4,6 +4,38 @@ Finished work, moved out of `PLAN.md` (which holds open work only), condensed to
 when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
 recent first within each part.
 
+## Library: virtualizer froze on a scrollbar loop (2026-10-12)
+
+- A page froze completely (no input, ~100% CPU, gigabytes of memory) when a `VirtualList` of a few dozen wrapping
+  log lines opened. At the estimated 20px per row the lines fit the view; measured, they overflowed it. A loop
+  followed: the scrollbar appeared and narrowed the view, the new width made `ListLayout` drop every measured size,
+  the estimates fit again, the scrollbar disappeared, the width changed back, and so on. Every step ran in a
+  microtask (effects, item measuring in `queue_microtask`, `use_scroll_view` measuring the content again), so the
+  browser never rendered or handled input again.
+- `ListLayout`: when only the breadth changes, the update lays out the requested area again and uses the nodes'
+  measured lengths as their estimates (`previous_lengths`, kept only during that update). The rows covering the view
+  keep their lengths, so content that overflowed still does. Nodes outside the requested area fall back to the row
+  size's estimate, as they are counted: the virtualizer relies on laying out more never changing the content's
+  length. Changed options still drop every measured length (`options_invalidate_everything`).
+- `use_scroll_view`: a size change starts a size update of at most two passes, like react-aria's `isUpdatingSize`.
+  The second pass runs in the next frame, once the content laid out for the first one rendered; content size
+  changes during the update come from its own passes and don't measure the view again. Rows whose height follows
+  their width (`aspect-ratio`) overflow without a scrollbar and fit with one, so no layout can end that loop: the
+  bound does, and the list settles at the second pass's size, as in react-aria.
+- Tests: `a_new_width_keeps_measured_lengths_as_estimates`,
+  `rows_outside_the_area_laid_out_for_a_new_width_are_estimated_again`,
+  `changed_options_and_a_new_width_drop_measured_lengths`; browser tests
+  `test_virtual_list::a_scrollbar_appearing_for_measured_rows_settles` (`#test-vl-scrollbar`: wrapping lines, a
+  classic scrollbar forced with `::-webkit-scrollbar`; needs both changes) and `rows_growing_with_the_width_settle`
+  (`#test-vl-aspect`: needs the bound). Both check that the list stays unchanged for 500 ms, with a time limit of
+  15 s.
+- browser-test (sibling crate): time limits (`BrowserTest::time_limit`, `#[browser_test(time_limit = ...)]`, a
+  runner default of 10 minutes). A test exceeding its limit fails; browser-test closes its frozen pages through
+  Chrome's DevTools endpoint and names them in the report.
+- Performance: `resize-grown` (`/perf/virtual-list`) changes the width of a log grown to 2,000 lines, all of them
+  laid out. Keeping their lengths as estimates costs little: the frame's median went from 0.6 to 0.5 ms, the mean
+  from 1.6 to 2.0 ms (within the runs' variance).
+
 ## Testing: performance suite (2026-10-12)
 
 - `just browser-perf` (`BROWSER_TEST_SUITE=performance`, which also replaces `BROWSER_TEST_KNOWN_ISSUES=1`:
@@ -219,18 +251,16 @@ and hydrate), all 1,575 library browser cases, all 240 book browser cases and 47
 
 ## Library: `VirtualList` horizontal overflow, assertr 0.8 (2026-10-10)
 
-- `VirtualList` scrolls horizontally when rows are wider than the list (agnite dev-ui: its log lines, which don't
-  wrap, were cut off since it moved from a plain scrolling element to `VirtualList`). `ListLayout` gained
-  `ListLayoutOptions::allows_overflow_across` (an addition, off by default): measured items overflowing their layout
-  info widen the content to the widest one, items keep the view's breadth and stay visible wherever it scrolls
-  across. Upstream (react-stately's `ListLayout`, still on `main`) keeps the content as wide as the view, its
-  `ScrollView` then sets `overflow-x: hidden` (against scrollbar flicker while resizing), and the items'
-  `contain: size layout style` keeps their overflow out of the scrollable area; both stay. The widest overflow is
-  cached (recomputed only when the widest one narrows or goes), removed items are dropped with the cached layout
-  nodes they belong to, and a new view width forgets them (the items are measured again), so appends cost no extra
-  pass. Three native cases and two browser cases (`wide_lines_scroll_horizontally`,
-  `wrapping_lines_ends_horizontal_scrolling`: a wrap toggle restyles the rows, observed rows are measured again);
-  both browser cases failed with the option off.
+- `VirtualList` scrolls horizontally when rows are wider than the list (log lines that don't wrap were cut off).
+  `ListLayout` gained `ListLayoutOptions::allows_overflow_across` (an addition, off by default): measured items
+  overflowing their layout info widen the content to the widest one, items keep the view's breadth and stay visible
+  wherever it scrolls across. Upstream (react-stately's `ListLayout`, still on `main`) keeps the content as wide as the
+  view, its `ScrollView` then sets `overflow-x: hidden` (against scrollbar flicker while resizing), and the items'
+  `contain: size layout style` keeps their overflow out of the scrollable area; both stay. The widest overflow is cached
+  (recomputed only when the widest one narrows or goes), removed items are dropped with the cached layout nodes they
+  belong to, and a new view width forgets them (the items are measured again), so appends cost no extra pass. Three
+  native cases and two browser cases (`wide_lines_scroll_horizontally`, `wrapping_lines_ends_horizontal_scrolling`: a
+  wrap toggle restyles the rows, observed rows are measured again); both browser cases failed with the option off.
 - Tests adapted to assertr's latest API: extractors without the `get_` prefix (`ok`, `some`, ...), `Patience`'s
   `with_timeout`/`with_interval`/`with_consistency_duration`.
 - Verification: 668 native tests passed (one ignored benchmark), strict clippy passed for `--tests`, `--tests
@@ -723,7 +753,7 @@ From 139 tests sharing state to ~875 independent cases; the result is described 
 
 ### Features and fixes (2026-10-07 – 10-08)
 
-- Tree tables (agnite dev-ui's request; react-aria-components' `Treeble`): child rows via `ItemBuilder::children`,
+- Tree tables (react-aria-components' `Treeble`): child rows via `ItemBuilder::children`,
   `TableTreeInput` (tree column + an expansion state shared with trees), `role="treegrid"` with levels and positions,
   ArrowRight/ArrowLeft expand, collapse and go to the parent (mirrored in RTL), `Table`'s `tree_column` and
   expanded-keys props, `TableExpandButton`; collapsed rows stay rendered but `hidden`. Type-ahead walks the shown
@@ -745,7 +775,7 @@ From 139 tests sharing state to ~875 independent cases; the result is described 
   11.6 ms); the keyboard delegates use the per-locale collator instead of building one per key press; the
   virtualizer's and the toast's clocks are WebAssembly-only (they panicked natively); `just clippy` also checks
   release builds; rustdoc is warning-free.
-- Not reproduced or not library bugs: RTL menus, nested-modal focus restore, crudkit's Enter on a cell's `Button`
+- Not reproduced or not library bugs: RTL menus, nested-modal focus restore, Enter on a table cell's `Button`
   (`table_navigation_tests` guards it), the safe triangle (the test moved too coarsely), RTL date picker arrows (the
   fixture had no `dir="rtl"`), two flakes caused by test timing (`lessons.md`).
 - 42 native `*_state` tests (color channel field, picker and slider, form validation, text field, virtualizer).
@@ -786,8 +816,8 @@ files on an old upstream commit; the roadmap worked through them:
 - R1 bugs and crash risks: a typed, infallible `Href`; timers and deferred callbacks outliving their owner
   (`OwnerAlive`); transient global listeners as drop guards (`utils::event_listeners`); hydration-stable ids
   (`use_id` instead of random `Uuid`s); SSR global state (`use_description` client-only, `use_prevent_scroll`
-  releasing only its own count); the Effect Read Order rule (from dev-ui's ComboBox report); `I18nProvider` scoped to
-  its children; a modal's hide-outside revealing overlays opened from inside it (`keep_visible`).
+  releasing only its own count); the Effect Read Order rule (a ComboBox missed a value change); `I18nProvider` scoped
+  to its children; a modal's hide-outside revealing overlays opened from inside it (`keep_visible`).
 - R2 conventions C1–C16 applied library-wide (`conventions.md`): no `new()` on inputs (66 removed), C4 state props
   on every atom (`ValueBinding::from_state_props`), typed keys (`KeyboardKey`), `use_locale()`/`use_direction()`,
   one `Orientation`, `SelectionMode` defaulting to `None`, `dev_warn!`, no direct `web_sys::window()`.
@@ -801,10 +831,10 @@ files on an old upstream commit; the roadmap worked through them:
   `NumberValue`), separator, tabs; color (area, slider, wheel, fields, swatches, picker; `Color` keeps its color
   space, `Alpha<C>`, color names); calendar, date/time fields and pickers on jiff (`IncompleteDate`, segments from
   ICU4X parts; the `time` crate is gone); toast and landmarks; virtualization (react-stately's virtualizer and
-  layouts; `Virtualizer` and `VirtualList` atoms, for dev-ui); keyboard shortcuts (`use_global_shortcuts`, `Keys`,
+  layouts; `Virtualizer` and `VirtualList` atoms); keyboard shortcuts (`use_global_shortcuts`, `Keys`,
   `ShortcutKeys`); TagGroup atoms; clipboard (`write_text_deferred`); collections (`design-collections.md`;
   `hooks::selection` and react-aria's legacy API removed).
-- R4/R5: interaction modality tracked from hook creation (crudkit's grid focus jump); `utils::scroll` public;
+- R4/R5: interaction modality tracked from hook creation (focus jumped in grids); `utils::scroll` public;
   assertr in unit tests; parallel browser tests; the harness writes the atom theme before starting the app.
 
 ### Components layer removed (2026-10-07, the user's decision)
@@ -826,9 +856,9 @@ each component:
 Dependencies (2026-10-07, the user's priority): all upgraded, unused ones removed, every one declared with
 `default-features = false`; the feature flags gate their modules; `syntect` without theme dumps and loaders.
 
-### Found by the book and consumers (2026-10-04 – 10-07)
+### Found by the book and apps (2026-10-04 – 10-07)
 
-Most gaps of these weeks were reported by the book, crudkit and agnite dev-ui (`consumers.md`). Notable: closing a
+Most gaps of these weeks were found by the book and apps built on leptonic. Notable: closing a
 focused dialog panicked (handlers running during unmount use `try_*` accessors: "Blur After Disposal"); random
 element ids broke hydration (`use_id`, `test_hydration_ids`); the listbox lacked `aria-disabled`, listened to
 non-bubbling `focus`/`blur` and always wrapped; `use_press` stopped every click (now upstream's propagation); macOS

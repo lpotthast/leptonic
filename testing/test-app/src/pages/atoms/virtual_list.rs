@@ -24,6 +24,13 @@ use leptos::prelude::*;
 /// - `#test-vl-wide`: 50 lines that don't wrap (`.wide-line`, as wide as their text, at least as
 ///   the row), 200px wide and high, observed; "Wide 3" is far wider than the list.
 ///   `#test-vl-wide-wrap` toggles wrapping them.
+/// - `#test-vl-scrollbar`: 10 lines (`.scrollbar-line`) wrapping over several rows, 300px wide and
+///   high, observed, with a classic 15px scrollbar: estimated (20px each) they fit, measured they
+///   overflow, so the scrollbar appears and narrows the list.
+/// - `#test-vl-aspect`: 10 rows (`.aspect-row`) whose height follows their width
+///   (`aspect-ratio: 9.75`), 300px wide and high, observed, with a classic 15px scrollbar: 300px
+///   wide they overflow (10 × 30.8px), 285px wide (with the scrollbar) they fit (10 × 29.2px), so
+///   the scrollbar would appear and disappear for good.
 #[component]
 pub fn PageAtomVirtualList() -> impl IntoView {
     let lines = RwSignal::new((0..2000).collect::<Vec<usize>>());
@@ -73,11 +80,16 @@ pub fn PageAtomVirtualList() -> impl IntoView {
             attr:tabindex="0"
             let:i
         >
-            <div class="line" style="font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere">
+            <div
+                class="line"
+                style="font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere"
+            >
                 {line_text(i)}
             </div>
         </VirtualList>
-        <button id="test-vl-text-bigger" on:click=move |_| bigger.set(true)>"Bigger text"</button>
+        <button id="test-vl-text-bigger" on:click=move |_| bigger.set(true)>
+            "Bigger text"
+        </button>
         <div style:font-size=move || if bigger.get() { "40px" } else { "14px" }>
             <VirtualList
                 items=Signal::stored((0..50).collect::<Vec<usize>>())
@@ -87,7 +99,9 @@ pub fn PageAtomVirtualList() -> impl IntoView {
                     ..VirtualListOptions::default()
                 }
                 should_observe_item_size=true
-                styles=Styles::new().add_unchecked("width", "200px").add_unchecked("height", "200px")
+                styles=Styles::new()
+                    .add_unchecked("width", "200px")
+                    .add_unchecked("height", "200px")
                 attr:id="test-vl-text"
                 let:i
             >
@@ -123,7 +137,51 @@ pub fn PageAtomVirtualList() -> impl IntoView {
                 }}
             </div>
         </VirtualList>
-        <button id="test-vl-source" on:click=move |_| source.update(|s| *s += 1)>"Switch source"</button>
+        // A classic scrollbar, also where scrollbars overlay the content by default.
+        <style>
+            "#test-vl-scrollbar::-webkit-scrollbar, #test-vl-aspect::-webkit-scrollbar { width: 15px }
+            #test-vl-scrollbar::-webkit-scrollbar-thumb, #test-vl-aspect::-webkit-scrollbar-thumb {
+                background: #888
+            }"
+        </style>
+        <VirtualList
+            items=Signal::stored((0..10).collect::<Vec<usize>>())
+            key=|i: &usize| Key::from(format!("scrollbar-{i}"))
+            layout_options=VirtualListOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..VirtualListOptions::default()
+            }
+            should_observe_item_size=true
+            styles=Styles::new().add_unchecked("width", "300px").add_unchecked("height", "300px")
+            attr:id="test-vl-scrollbar"
+            let:i
+        >
+            <div
+                class="scrollbar-line"
+                style="font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere"
+            >
+                {format!("Row {i} {}", "text that wraps ".repeat(8))}
+            </div>
+        </VirtualList>
+        <VirtualList
+            items=Signal::stored((0..10).collect::<Vec<usize>>())
+            key=|i: &usize| Key::from(format!("aspect-{i}"))
+            layout_options=VirtualListOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..VirtualListOptions::default()
+            }
+            should_observe_item_size=true
+            styles=Styles::new().add_unchecked("width", "300px").add_unchecked("height", "300px")
+            attr:id="test-vl-aspect"
+            let:i
+        >
+            <div class="aspect-row" style="aspect-ratio: 9.75">
+                {format!("Aspect {i}")}
+            </div>
+        </VirtualList>
+        <button id="test-vl-source" on:click=move |_| source.update(|s| *s += 1)>
+            "Switch source"
+        </button>
         <div id="test-vl-rebuilt">
             {move || {
                 let source = source.get();
@@ -158,7 +216,11 @@ fn RebuiltLogs(source: usize) -> impl IntoView {
         >
             <div class="line">{line}</div>
         </VirtualList>
-        <PlainWrapper attr:id="test-vl-rebuilt-wrapper" attr:tabindex="0" {..wrapper_ring.props.into_attrs()} />
+        <PlainWrapper
+            attr:id="test-vl-rebuilt-wrapper"
+            attr:tabindex="0"
+            {..wrapper_ring.props.into_attrs()}
+        />
         <div id="test-vl-rebuilt-plain" tabindex="0" {..plain_ring.props.into_attrs()}>
             {format!("Plain {source}")}
         </div>

@@ -44,8 +44,8 @@ derived signal of the same upstream memo: there, read the inputs through hook-lo
 a direct subscriber of an app memo (the skip only spares direct subscribers).
 
 **Reference**: `use_combobox_state`'s reconciliation effect; the browser test case
-`value_and_items_derived_from_one_signal` in `leptonic/tests/ui_tests/test_combobox.rs` (agnite dev-ui's log source
-picker: value and items derived from one memo, with a filter).
+`value_and_items_derived_from_one_signal` in `leptonic/tests/ui_tests/test_combobox.rs` (value and items derived
+from one memo, with a filter).
 
 ## Derived Values
 

@@ -16,7 +16,6 @@ single-element components on the hooks, ported from react-aria-components) + an 
 - `atom-theme.md`: how is the optional atom theme ported and maintained?
 - `lessons.md`: what did a Leptos/browser/tooling pitfall cost us once?
 - `build-performance.md`: compile times and binary sizes: measurements, advice
-- `consumers.md`: who uses leptonic, and what do they depend on?
 - `documentation-strategy.md`: how is the book (`examples/book-ssr`) structured and written? (Its look:
   `examples/book-ssr/STYLE_GUIDE.md`.)
 - `history.md`: what was done when?

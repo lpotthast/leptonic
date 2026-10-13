@@ -38,6 +38,45 @@ pub struct WideView {
     pub rendered: usize,
 }
 
+/// A list with a classic scrollbar, whose rows overflow it only once measured.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollbarList {
+    /// `#test-vl-scrollbar`: lines of text wrapping over several rows (`.scrollbar-line`).
+    WrappingLines,
+    /// `#test-vl-aspect`: rows whose height follows their width (`.aspect-row`).
+    AspectRows,
+}
+
+impl ScrollbarList {
+    fn selector(self) -> &'static str {
+        match self {
+            Self::WrappingLines => "#test-vl-scrollbar",
+            Self::AspectRows => "#test-vl-aspect",
+        }
+    }
+
+    fn row_selector(self) -> &'static str {
+        match self {
+            Self::WrappingLines => ".scrollbar-line",
+            Self::AspectRows => ".aspect-row",
+        }
+    }
+}
+
+/// A list with a classic scrollbar ([`ScrollbarList`]), read at once.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct ScrollbarView {
+    /// `offsetWidth` (with the scrollbar), `clientWidth` (without), `clientHeight` and
+    /// `scrollHeight`.
+    pub offset_width: f64,
+    pub client_width: f64,
+    pub client_height: f64,
+    pub scroll_height: f64,
+    /// The laid out `width` and `height` of each rendered row (its wrapper's), in DOM order.
+    pub row_widths: Vec<f64>,
+    pub row_heights: Vec<f64>,
+}
+
 /// The rendered rows (in DOM order) and the log's scroll position, read at once.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct LogView {
@@ -119,6 +158,31 @@ impl<'a, 'd> VirtualListActions<'a, 'd> {
                          tallest: Math.max(0, ...lines.map(line =>
                              parseFloat(wrapper(line).style.height))),
                          rendered: lines.length,
+                     }};"
+                ),
+                vec![list.to_json()?],
+            )
+            .await
+    }
+
+    /// A list with a classic scrollbar: its size and its rows' laid out sizes.
+    pub async fn scrollbar_view(&self, list: ScrollbarList) -> Result<ScrollbarView, Report> {
+        let rows = list.row_selector();
+        let list = self.page.element(list.selector()).await?;
+        self.page
+            .low_level()
+            .eval(
+                &format!(
+                    "{WRAPPER}
+                     const list = arguments[0];
+                     const lines = Array.from(list.querySelectorAll('{rows}'));
+                     return {{
+                         offset_width: list.offsetWidth,
+                         client_width: list.clientWidth,
+                         client_height: list.clientHeight,
+                         scroll_height: list.scrollHeight,
+                         row_widths: lines.map(line => parseFloat(wrapper(line).style.width)),
+                         row_heights: lines.map(line => parseFloat(wrapper(line).style.height)),
                      }};"
                 ),
                 vec![list.to_json()?],

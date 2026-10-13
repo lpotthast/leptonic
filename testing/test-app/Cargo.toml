@@ -101,3 +101,7 @@ opt-level = 1
 [lints.clippy]
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
+# Components return views, which are no `#[must_use]` candidates (as in the workspace and the book)
+must_use_candidate = "allow"
+# Fixture pages are long view functions (as in the workspace and the book)
+too_many_lines = "allow"

@@ -21,7 +21,7 @@ pub fn PageLiveAnnouncer() -> impl IntoView {
                         "Short-lived",
                         Assertiveness::Polite,
                         std::time::Duration::from_millis(300),
-                    )
+                    );
                 }
             >
                 "Announce briefly"

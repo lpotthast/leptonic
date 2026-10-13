@@ -53,7 +53,7 @@ Several agent sessions work in this repository at the same time, each owning one
 - **Library** (`leptonic/`, `leptonic-theme/`, `testing/`): open work in `PLAN.md`; everything else in
   `documentation/`, indexed by `documentation/README.md`: decisions and API conventions (`conventions.md`), hook and
   atom patterns (`hooks-implementation.md`, `atoms-implementation.md`), Leptos/DOM rules (`leptos-and-dom.md`),
-  porting from react-aria (`porting.md`), tests (`testing.md`), pitfalls (`lessons.md`), consumers, the atom theme,
+  porting from react-aria (`porting.md`), tests (`testing.md`), pitfalls (`lessons.md`), the atom theme,
   build performance, and finished work (`history.md`).
 - **Book** (`examples/book-ssr/`): todos in `PLAN.md` (section "Book"); page structure, kit and writing rules in
   `documentation/documentation-strategy.md`; look, design tokens and which leptonic piece to use in

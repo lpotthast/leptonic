@@ -54,7 +54,6 @@ fn Items() -> impl IntoView {
 ///   the header "Pets" (Cat, Dog). `#lbf-rename-cat` renames Cat "Kitten" and the header
 ///   "Animals", keeping the keys.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomListBoxFeatures() -> impl IntoView {
     let sections = use_collection(|b| {
         b.section("veggies", |s| {

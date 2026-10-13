@@ -243,7 +243,7 @@ checksum = "51bd8d7b925146b37a30598dfd8d1162c24f45a27fba4a61174e238c48cd5560"
 
 [[package]]
 name = "browser-test"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "async-trait",
  "backtrace",
@@ -251,18 +251,20 @@ dependencies = [
  "chrome-for-testing-manager",
  "futures-util",
  "nix",
+ "reqwest",
  "rootcause",
  "serde_json",
  "thirtyfour",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-tungstenite",
  "tracing",
  "url",
 ]
 
 [[package]]
 name = "browser-test-macros"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "heck",
  "manyhow",

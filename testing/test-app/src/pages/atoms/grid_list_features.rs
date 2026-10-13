@@ -34,7 +34,6 @@ const FRUITS: [&str; 3] = ["Apple", "Banana", "Cherry"];
 /// - `#glf-sections`: sections "Fruit" (Apple, Banana with a description) and "Vegetables"
 ///   (Carrot).
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomGridListFeatures() -> impl IntoView {
     let fruits = || {
         use_list_collection(UseListCollectionInput {

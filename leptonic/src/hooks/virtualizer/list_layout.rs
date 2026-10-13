@@ -24,13 +24,23 @@ use crate::{
 //   `rowSize` and an `estimatedRowSize`, where a fixed size silently wins over an estimate).
 // - The anchoring of react-spectrum's AI `ListLayout` (`anchorTo: 'end'` + `scrollEndThreshold`,
 //   vertical only) is part of this layout, as `anchor_to_end: Some(EndAnchor { threshold })`;
-//   like that one, only a change of the cross-axis size (the width of a vertical list) throws
-//   away measured sizes. Unlike that one, a change of `anchor_to_end` doesn't either: there it
-//   is a fixed option, here `VirtualList` switches it whenever the user scrolls to or away from
-//   the end, and dropping every measured size then made the content jump.
+//   like that one, a change of the view's length alone (the height of a vertical list) keeps
+//   measured sizes (of its breadth: see "DIFFERENT BEHAVIOR"). Unlike that one, a change of
+//   `anchor_to_end` keeps them too: there it is a fixed option, here `VirtualList` switches it
+//   whenever the user scrolls to or away from the end, and dropping every measured size then
+//   made the content jump.
 // - Loaders are always shown as loading (collections have no `isLoading` per loader node).
 //
 // ## DIFFERENT BEHAVIOR
+// - A change of the breadth across alone (the width of a vertical list) lays out the requested
+//   area again with the nodes' measured lengths as estimates (react-stately clears every layout
+//   node, so they fall back to the estimated size until measured again). Rows of wrapping text
+//   measured taller than estimated made the content overflow; the scrollbar appearing narrowed
+//   the view, the estimates made the content fit again, the scrollbar disappeared, and so on
+//   (2026-10-12: a frozen page, see `use_scroll_view`). The rows laid out again cover the view,
+//   so content that overflowed it still does. Nodes outside the requested area are estimated
+//   again, as upstream: they are counted at the row size, and laying them out later must not
+//   change the content's length (the virtualizer only takes it over when it lays out again).
 // - Rows before the requested area are skipped only if they were never laid out. Upstream
 //   checks whether their cached position is valid (and checks the section for section rows):
 //   invalid positions must be rebuilt while keeping measured sizes, not replaced by estimates.
@@ -226,6 +236,11 @@ fn siblings_from<'a>(
 pub struct ListLayout {
     options: ListLayoutOptions,
     layout_nodes: HashMap<Key, Arc<LayoutNode>>,
+    /// While an update lays out again for a new breadth across (the width of a vertical list):
+    /// the lengths the nodes had, their estimates at the new breadth. Empty otherwise: nodes not
+    /// laid out in that update are estimated at the row size again, as they were counted, so laying
+    /// them out later doesn't change the content's length (see `update`).
+    previous_lengths: HashMap<Key, f64>,
     content_size: Size,
     last_collection: Option<Arc<Collection>>,
     /// The laid out top-level nodes, in order (their offsets ascend).
@@ -272,6 +287,7 @@ impl ListLayout {
         Self {
             options,
             layout_nodes: HashMap::new(),
+            previous_lengths: HashMap::new(),
             content_size: Size::default(),
             last_collection: None,
             root_nodes: Vec::new(),
@@ -558,10 +574,12 @@ impl ListLayout {
         // lays out from the start again.
         let mut has_sections = false;
         for (index, node) in (index..).zip(siblings_from(collection, start)) {
-            // Rows before the requested area are skipped unless cached.
+            // Rows before the requested area are skipped unless laid out before (also when laid
+            // out again for a new breadth: they keep their lengths).
             if node.kind == NodeKind::Item
                 && offset + row_size < self.offset_of(&self.requested_rect)
                 && !self.layout_nodes.contains_key(&node.key)
+                && !self.previous_lengths.contains_key(&node.key)
             {
                 offset += row_size;
                 continue;
@@ -779,7 +797,8 @@ impl ListLayout {
     }
 
     /// The length of a node of variable size: its previous one (estimated again if the breadth
-    /// or the node's content changed), else the estimate.
+    /// or the node's content changed; while laying out again for a new breadth, the one it had),
+    /// else the estimate.
     fn variable_length(&self, node: &Node, breadth: f64, estimate: f64) -> (f64, bool) {
         if let Some(previous) = self.layout_nodes.get(&node.key) {
             let changed = !previous
@@ -793,7 +812,13 @@ impl ListLayout {
                     || previous.layout_info.estimated_size,
             )
         } else {
-            (estimate, true)
+            (
+                self.previous_lengths
+                    .get(&node.key)
+                    .copied()
+                    .unwrap_or(estimate),
+                true,
+            )
         }
     }
 
@@ -984,8 +1009,28 @@ impl ListLayout {
         } else {
             invalidation.width_changed
         };
-        cross_axis_changed
-            || self.options.row_size.fixed() != options.row_size.fixed()
+        cross_axis_changed || self.options_invalidate_everything(options)
+    }
+
+    /// Whether changing from the current options to `options` invalidates every laid out node,
+    /// including its measured length (`update` then forgets all of them instead of keeping the
+    /// lengths as estimates, as it does when only the view's breadth changed).
+    ///
+    /// The options react-stately's `shouldInvalidateEverything` checks, plus our additions:
+    /// - `row_size`/`heading_size` switching between fixed and estimated: a fixed size replaces
+    ///   every measured one. A different estimate alone keeps the laid out lengths (measured ones
+    ///   stay correct); only nodes not laid out yet take the new estimate.
+    /// - `orientation`: lengths are measured along the other axis.
+    /// - `allows_overflow_across`: the content's breadth is measured differently (overflowing
+    ///   rows widen it or not).
+    /// - `padding`, `gap` and `loader_size`: the nodes move (`padding` also changes their
+    ///   breadth). Their measured lengths would still serve as estimates, but as upstream they are
+    ///   dropped: these options practically never change while a list is shown.
+    ///
+    /// `anchor_to_end` is not among them: `VirtualList` switches it as the user scrolls to or away
+    /// from the end, and it doesn't change how nodes are laid out.
+    fn options_invalidate_everything(&self, options: &ListLayoutOptions) -> bool {
+        self.options.row_size.fixed() != options.row_size.fixed()
             || self.options.orientation != options.orientation
             || self.options.heading_size.fixed() != options.heading_size.fixed()
             || self.options.loader_size != options.loader_size
@@ -1094,7 +1139,25 @@ impl Layout for ListLayout {
         self.invalidate_everything = self.should_invalidate_everything(invalidation);
         if self.invalidate_everything {
             self.requested_rect = ctx.visible_rect;
-            self.layout_nodes.clear();
+            let options_changed = invalidation
+                .layout_options
+                .as_ref()
+                .is_some_and(|options| self.options_invalidate_everything(options));
+            if options_changed {
+                self.layout_nodes.clear();
+            } else {
+                // Only the breadth changed: the nodes laid out again keep their lengths, as
+                // estimates.
+                let horizontal = self.is_horizontal();
+                self.previous_lengths = self
+                    .layout_nodes
+                    .drain()
+                    .map(|(key, node)| {
+                        let rect = &node.layout_info.rect;
+                        (key, if horizontal { rect.width } else { rect.height })
+                    })
+                    .collect();
+            }
             self.clear_overflows();
         }
         let mut options_changed = false;
@@ -1132,6 +1195,8 @@ impl Layout for ListLayout {
                 self.forget_removed_overflows(ctx);
             }
         }
+        // The nodes not laid out again are estimated at the row size, as counted.
+        self.previous_lengths.clear();
         self.last_collection = Some(Arc::clone(ctx.collection));
         self.invalidate_everything = false;
         self.collection_changed = false;
@@ -1546,8 +1611,8 @@ mod tests {
     }
 
     /// Measured sizes survive changes of the anchoring options (a `VirtualList` turns
-    /// `anchor_to_end` on and off as the user scrolls to and away from the end), but not a change of
-    /// the width (rows wrap differently).
+    /// `anchor_to_end` on and off as the user scrolls to and away from the end); a change of the
+    /// width keeps them as estimates (rows wrap differently).
     #[test]
     fn anchoring_changes_keep_measured_sizes() {
         let options = ListLayoutOptions {
@@ -1582,7 +1647,7 @@ mod tests {
             assert_that!(visible[2].rect.y).is_equal_to(120.0);
         }
 
-        // A new width: every row is estimated again.
+        // A new width: every row is estimated again, at its measured height.
         harness.size = Size::new(150.0, 1000.0);
         harness.update(InvalidationContext {
             size_changed: true,
@@ -1590,7 +1655,7 @@ mod tests {
             ..InvalidationContext::default()
         });
         let visible = harness.visible();
-        assert_that!(visible[0].rect.height).is_equal_to(20.0);
+        assert_that!(visible[0].rect.height).is_equal_to(50.0);
         assert_that!(visible[0].estimated_size).is_true();
         assert_that!(visible[0].rect.width).is_equal_to(150.0);
 
@@ -1711,6 +1776,125 @@ mod tests {
         });
         assert_that!(harness.layout.content_size().height).is_equal_to(400.0);
         assert_that!(harness.visible()[1].rect.y).is_equal_to(40.0);
+    }
+
+    /// A new width (e.g. a scrollbar appearing) keeps the content's length: every row keeps its
+    /// measured height as an estimate, also the rows laid out before the visible area. Falling
+    /// back to the row size's estimate let a list of wrapping rows overflow at one width and fit at
+    /// the other, so its scrollbar appeared and disappeared endlessly (2026-10-12).
+    #[test]
+    fn a_new_width_keeps_measured_lengths_as_estimates() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(100),
+            Size::new(200.0, 300.0),
+        );
+        harness.visible();
+        harness.measure_all(
+            (0..6)
+                .map(|i| (Key::from(format!("row-{i}")), 50.0))
+                .collect(),
+        );
+        let length = 6.0 * 50.0 + 94.0 * 20.0;
+        assert_that!(harness.layout.content_size().height).is_equal_to(length);
+        // Scrolled past the measured rows.
+        harness.scroll_y = 1000.0;
+        harness.visible();
+
+        harness.size = Size::new(185.0, 300.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            width_changed: true,
+            ..InvalidationContext::default()
+        });
+
+        let visible = harness.visible();
+        assert_that!(visible[0].rect.width).is_equal_to(185.0);
+        assert_that!(harness.layout.content_size().height).is_equal_to(length);
+        let first = harness.info("row-0");
+        assert_that!(first.rect.height).is_equal_to(50.0);
+        assert_that!(first.rect.width).is_equal_to(185.0);
+        assert_that!(first.estimated_size).is_true();
+        assert_that!(harness.info("row-6").rect.y).is_equal_to(300.0);
+
+        // Measured again at the new width.
+        harness.scroll_y = 0.0;
+        harness.visible();
+        harness.measure("row-0", 70.0);
+        assert_that!(harness.layout.content_size().height).is_equal_to(length + 20.0);
+        assert_that!(harness.info("row-0").estimated_size).is_false();
+    }
+
+    /// Options that lay out the rows differently drop their measured heights, also with a new
+    /// width.
+    #[test]
+    fn changed_options_and_a_new_width_drop_measured_lengths() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        harness.visible();
+        harness.measure("row-0", 50.0);
+        harness.size = Size::new(150.0, 1000.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            width_changed: true,
+            layout_options_changed: true,
+            layout_options: Some(ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                orientation: Orientation::Vertical,
+                gap: 4.0,
+                ..ListLayoutOptions::default()
+            }),
+            ..InvalidationContext::default()
+        });
+        let visible = harness.visible();
+        assert_that!(visible[0].rect.height).is_equal_to(20.0);
+        assert_that!(visible[1].rect.y).is_equal_to(24.0);
+    }
+
+    /// Rows not laid out again for a new width are estimated again, as they are counted: laying
+    /// them out later doesn't change the content's length (the virtualizer only takes it over
+    /// when it lays out again).
+    #[test]
+    fn rows_outside_the_area_laid_out_for_a_new_width_are_estimated_again() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(100),
+            Size::new(200.0, 300.0),
+        );
+        harness.visible();
+        // Rows measured far down, then back at the top: the new width lays out only the top.
+        harness.scroll_y = 1000.0;
+        harness.visible();
+        harness.measure("row-55", 50.0);
+        harness.scroll_y = 0.0;
+        harness.visible();
+        harness.size = Size::new(185.0, 300.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            width_changed: true,
+            ..InvalidationContext::default()
+        });
+        harness.visible();
+        assert_that!(harness.layout.content_size().height).is_equal_to(2000.0);
+
+        harness.scroll_y = 1000.0;
+        harness.visible();
+        assert_that!(harness.layout.content_size().height).is_equal_to(2000.0);
+        let far = harness.info("row-55");
+        assert_that!(far.rect.height).is_equal_to(20.0);
+        assert_that!(far.estimated_size).is_true();
     }
 
     #[test]

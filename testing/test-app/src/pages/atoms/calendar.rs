@@ -227,7 +227,7 @@ fn TestCalendar(
                 nostrip:default_focused_value=default_focused_value
                 nostrip:focused_value=focused_value.map(Signal::stored)
                 on_focused_value_change=Callback::new(move |date: Date| {
-                    focus_change.set(Some(date))
+                    focus_change.set(Some(date));
                 })
                 weeks_in_month=weeks_in_month
             >
@@ -448,6 +448,8 @@ fn FocusCalendar() -> impl IntoView {
 }
 
 /// A `<select>` of a month or year picker, labelled by it.
+// Takes the picker by value: the pickers' `children`.
+#[allow(clippy::needless_pass_by_value)]
 fn picker_select(picker: UseCalendarPickerReturn) -> impl IntoView {
     view! {
         <select

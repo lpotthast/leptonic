@@ -412,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "browser-test"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "async-trait",
  "backtrace",
@@ -420,18 +420,20 @@ dependencies = [
  "chrome-for-testing-manager",
  "futures-util",
  "nix",
+ "reqwest",
  "rootcause",
  "serde_json",
  "thirtyfour",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-tungstenite 0.30.0",
  "tracing",
  "url",
 ]
 
 [[package]]
 name = "browser-test-macros"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "heck",
  "manyhow",

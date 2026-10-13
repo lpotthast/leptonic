@@ -33,9 +33,19 @@ use crate::{
 //   (react-aria: in layout effects before it), and anchoring skips while the user scrolls. Its
 //   event is one of the next two frames at the position it scrolled to, or at the end if
 //   re-measured rows made the browser clamp it there.
-// - Scrollbars appearing or disappearing after a size change (the content laid out for the new
-//   size) are picked up by measuring again in the next frame (react-aria measures again
-//   synchronously after `flushSync`); at most once per change, as react-aria.
+// - A size change starts a size update (react-aria's `isUpdatingSize`) of at most two passes,
+//   as react-aria's: the first applies the measured size, the second measures again once the
+//   content laid out for it rendered (scrollbars may have appeared or disappeared) and applies
+//   that size. React-aria runs both synchronously (`flushSync`) and ignores the content size
+//   changes they cause. Here the layout passes a size causes run later (effects and item
+//   measuring in microtasks, item resize observers in the next frame), so the second pass runs
+//   in the next frame, and the update, during which content size changes are ignored, lasts
+//   until a zero-delay timeout after it: past the microtasks and resize observer callbacks of
+//   that frame. Content that shows a scrollbar at one size and hides it at the other (rows whose
+//   height follows their width) then settles at the second pass's size, as in react-aria;
+//   without the bound, the passes followed each other in microtasks that never let the browser
+//   render or handle input (a frozen page). The view's own size changes (resize observer, window
+//   resize) always apply, starting another update.
 //
 // ## ADDITIONS
 // - `is_user_scrolling`: the user scrolls the view itself (not an ancestor or the window, not
@@ -209,6 +219,9 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
 
         let scroll_timeout = Arc::new(Mutex::new(None::<TimeoutHandle>));
         let scroll_end_time = StoredValue::new(0.0_f64);
+        // How many size updates run (see the deviations above): while one does, content size
+        // changes are its own layout passes, and don't measure the view again.
+        let size_updates = StoredValue::new(0_usize);
 
         // Measures the view; whether its size changed.
         let measure = move || -> bool {
@@ -254,14 +267,23 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
             }
             true
         };
+        // Measures the view; if its size changed, that was the first pass of a size update.
         let update_size = move || {
-            // The new layout may show or hide scrollbars, which changes the client size again:
-            // measure once more after it rendered.
-            if measure() {
-                request_animation_frame(move || {
-                    measure();
-                });
+            if !measure() {
+                return;
             }
+            size_updates.update_value(|updates| *updates += 1);
+            // The second pass, once the content laid out for the new size rendered.
+            request_animation_frame(move || {
+                measure();
+                // The update ends after the layout passes the second one causes.
+                set_timeout(
+                    move || {
+                        size_updates.try_update_value(|updates| *updates -= 1);
+                    },
+                    Duration::ZERO,
+                );
+            });
         };
         // Switching window scrolling changes the visible rectangle.
         Effect::new(move |previous: Option<bool>| {
@@ -394,10 +416,13 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
                 .box_(web_sys::ResizeObserverBoxOptions::BorderBox),
         );
 
-        // When the content size changes, scrollbars may appear or disappear.
+        // When the content size changes, scrollbars may appear or disappear. Not during a size
+        // update: its layout passes change the content size, and its second pass measures again.
         Effect::new(move |previous: Option<Size>| {
             let size = content_size.get();
-            if previous.is_some_and(|previous| previous != size) {
+            if previous.is_some_and(|previous| previous != size)
+                && size_updates.try_get_value() == Some(0)
+            {
                 queue_microtask(update_size);
             }
             size

@@ -749,7 +749,7 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         // the effect as observer: a memo recomputed while checking a downstream memo doesn't mark
         // the effect dirty, and is clean (unchanged) when checked itself. A value and collection
         // derived from one app memo, read after `filtered` (unchanged by the update), never
-        // re-ran this effect (agnite dev-ui, `combobox_tests`).
+        // re-ran this effect.
         let input = input_value.get();
         let value = ordered(original, selection.selected_keys());
         let selected_text = original.with(|c| {

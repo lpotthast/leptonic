@@ -124,7 +124,6 @@ fn Animals(
 /// selecting on press up (`press-up-*`) and a text input in a row with arrow navigation
 /// (`input-arrow`). Every grid list follows a "Before" button (`#test-glc-{id}-before`).
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomGridListCases() -> impl IntoView {
     let empty = use_list_collection(UseListCollectionInput {
         items: Signal::stored(Vec::<&'static str>::new()),

@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use leptonic::atoms::theme::{LeptonicTheme, ThemeProvider, use_theme};
 use leptos::{prelude::*, tachys::reactive_graph::OwnedView};
 
@@ -54,7 +56,7 @@ pub fn PageAtomTheme() -> impl IntoView {
 
             <ThemeProvider<LeptonicTheme>
                 theme=LeptonicTheme::Dark
-                on_theme_change=move |theme: LeptonicTheme| requests.update(|r| r.push_str(&format!("{theme:?};")))
+                on_theme_change=move |theme: LeptonicTheme| requests.update(|r| write!(r, "{theme:?};").expect("writing to a String"))
                 classes="test-theme-controlled"
             >
                 <ThemeName id="test-theme-controlled-inside" />

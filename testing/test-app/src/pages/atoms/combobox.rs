@@ -158,7 +158,7 @@ fn ControlledComboBox() -> impl IntoView {
     }
 }
 
-/// As agnite dev-ui's log source picker: value and items derive from one app signal (memos),
+/// As the dev tool UI's log source picker: value and items derive from one app signal (memos),
 /// changed from outside (`#test-cb-derived-<n>` selects process n). The items are "Orchestration"
 /// and the selected process, so selecting another process removes the previous one.
 #[component]

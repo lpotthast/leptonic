@@ -30,7 +30,7 @@ pub fn PageAtomToast() -> impl IntoView {
             ToastOptions {
                 timeout,
                 on_close: Some(Callback::new(move |()| {
-                    closed.update(|closed| *closed += 1)
+                    closed.update(|closed| *closed += 1);
                 })),
             },
         );

@@ -92,7 +92,7 @@ async fn cache_hashed_files(
 #[tokio::main]
 async fn main() {
     use axum::Router;
-    use leptonic_test_app::app::*;
+    use leptonic_test_app::app::{App, shell};
     use leptos::prelude::*;
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use tracing_subscriber::{

@@ -469,6 +469,11 @@ pub async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
   wasm and JS, so no cookies, storage, permissions or held keys of other tests) and never relies on what another case did: it sets up the state it
   needs itself, or expects the fixture's initial state. `BROWSER_TEST_FILTER=checkbox::hover` runs a single case. A
   flow whose steps belong together is one case.
+- **Time limits.** A case that runs longer than its time limit fails as timed out. A page whose main thread never
+  yields blocks every further WebDriver command of its session, even quitting it, so browser-test closes the case's
+  frozen pages and names them in the report. Cases guarding against a freeze set a limit of their own, above the 5 s
+  a failed wait takes: `#[browser_test(time_limit = Duration::from_secs(15))]`
+  (`test_virtual_list::rows_growing_with_the_width_settle`). All others get the runner's default of 10 minutes.
 - Every case has `#[browser_test]` on `pub async fn case(page: &Page<'_>) -> Result<(), Report>`, ends with `Ok(())`, and has a doc comment:
   one or two human-readable sentences saying what the case tests, as the expected behavior ("Pressing the label
   toggles the checkbox."), plus the upstream test it mirrors (`"should ..."`) where there is one (the user's rule,
@@ -526,8 +531,9 @@ build next to the regular suite's).
   suites moved medians of ~3 ms by up to 30% between runs: run before and after twice). The clock's resolution is
   0.1 ms (`performance.now()` without cross-origin isolation): sub-millisecond metrics change in steps of 0.1 ms, so
   the report gives their change in milliseconds only, and percentages from 1 ms up.
-- **Today**: `/perf/virtual-list` (`test_perf_virtual_list.rs`): a 20,000-line log as agnite dev-ui's, mounted,
-  and appended to while following its end or showing its start.
+- **Today**: `/perf/virtual-list` (`test_perf_virtual_list.rs`): a 20,000-line log, mounted and appended to while
+  following its end or showing its start; and a log that grew to 2,000 lines while following its end (every line
+  laid out), whose width changes (`resize-grown`).
 
 ## Speed and memory
 

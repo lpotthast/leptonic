@@ -80,7 +80,6 @@ fn action_log(id: &'static str) -> (Callback<Key>, impl IntoView) {
 ///   behavior: focusing selects), `autofocus-selected-default` (default Dog, replace behavior):
 ///   listboxes focused when they mount.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomListBoxSelection() -> impl IntoView {
     let (single_change, single_log) = change_log("single-changes");
     let (single_controlled_change, single_controlled_log) = change_log("single-controlled-changes");

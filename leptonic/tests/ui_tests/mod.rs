@@ -147,7 +147,8 @@ fn performance_tests() -> BrowserTests<str> {
         TestGroup::new("performance")
             .with(fixture_test(test_perf_virtual_list::Mount))
             .with(fixture_test(test_perf_virtual_list::AppendFollowingEnd))
-            .with(fixture_test(test_perf_virtual_list::AppendAtStart)),
+            .with(fixture_test(test_perf_virtual_list::AppendAtStart))
+            .with(fixture_test(test_perf_virtual_list::ResizeGrown)),
     )
 }
 
@@ -2492,6 +2493,12 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 ))
                 .with(fixture_test(
                     test_virtual_list::TextRowsAreMeasuredAgainWhenTheyResize,
+                ))
+                .with(fixture_test(
+                    test_virtual_list::AScrollbarAppearingForMeasuredRowsSettles,
+                ))
+                .with(fixture_test(
+                    test_virtual_list::RowsGrowingWithTheWidthSettle,
                 )),
         )
         .with_test_group(

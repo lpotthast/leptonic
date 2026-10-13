@@ -253,7 +253,7 @@ pub fn PageHookDndCollection() -> impl IntoView {
     });
 
     let context = ListContext { list: data, drop };
-    let last = move || items.with(|items| items.last().map(|item| item.id.clone()));
+    let last_id = move || items.with(|items| items.last().map(|item| item.id.clone()));
     view! {
         <div id="test-page-hook-dnd-collection">
             <h1>"Droppable collection"</h1>
@@ -274,7 +274,7 @@ pub fn PageHookDndCollection() -> impl IntoView {
                         children=move |item: Item| view! { <Row item /> }
                     />
                     {move || {
-                        last()
+                        last_id()
                             .map(|id| {
                                 view! {
                                     <DropIndicator target=DropTarget::item(

@@ -1117,6 +1117,8 @@ fn ValidationPickers() -> impl IntoView {
 }
 
 /// Fails the year before 2022 ("Invalid value").
+// Takes `&Option<Date>`: a `ValidateFn<Option<Date>>`.
+#[allow(clippy::ref_option, clippy::trivially_copy_pass_by_ref)]
 fn before_2022(value: &Option<Date>) -> Result<(), Vec<String>> {
     match value {
         Some(value) if value.year() < 2022 => Err(vec!["Invalid value".to_owned()]),

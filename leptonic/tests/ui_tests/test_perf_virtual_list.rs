@@ -1,7 +1,7 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! `VirtualList` performance (`/perf/virtual-list`, a long log as agnite dev-ui's): mounting it,
-//! and appending lines while it follows its end or shows its start. Each case reports its timings
-//! (`crate::perf::report`) and checks that the scenario did its work.
+//! `VirtualList` performance (`/perf/virtual-list`, a long log): mounting it, appending lines
+//! while it follows its end or shows its start, and changing its width once it grew. Each case
+//! reports its timings (`crate::perf::report`) and checks that the scenario did its work.
 use assertr::prelude::*;
 use browser_test::browser_test;
 use rootcause::Report;
@@ -53,5 +53,14 @@ pub async fn append_following_end(page: &Page<'_>) -> Result<(), Report> {
 pub async fn append_at_start(page: &Page<'_>) -> Result<(), Report> {
     run(page, "append-at-start", "rounds").await?;
     page.element(css(line(0))).await?;
+    Ok(())
+}
+
+/// Changing the width of a log that grew while following its end: the last line stays in view.
+#[browser_test]
+pub async fn resize_grown(page: &Page<'_>) -> Result<(), Report> {
+    let results = run(page, "resize-grown", "rounds").await?;
+    page.element(css(line(results.parameter("rows")? - 1)))
+        .await?;
     Ok(())
 }

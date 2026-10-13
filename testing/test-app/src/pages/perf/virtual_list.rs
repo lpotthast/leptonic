@@ -1,4 +1,4 @@
-//! A long virtualized log (`VirtualList`, `#perf-vl-log`), as agnite dev-ui's: [`ROWS`] lines
+//! A long virtualized log (`VirtualList`, `#perf-vl-log`), as the dev tool UI's: [`ROWS`] lines
 //! (`data-line` holds a line's number), every seventh wrapping over several rows (estimated 20px
 //! each, measured), in a 200px high view.
 //!
@@ -7,6 +7,10 @@
 //! - `append-following-end`: appending [`BATCH`] lines [`ROUNDS`] times while the list follows its
 //!   end (after [`WARMUP`] unmeasured appends).
 //! - `append-at-start`: the same with the view at the start (not following).
+//! - `resize-grown`: changing the list's width ([`ROUNDS`] times, between 300px and 285px, as a
+//!   scrollbar appearing does, after [`WARMUP`] unmeasured changes) after it grew to
+//!   [`GROWN_ROWS`] lines while following its end, [`GROWN_BATCH`] per frame: every line was laid
+//!   out (as in a log that grew while shown), and a new width lays them out again.
 
 use leptonic::{
     atoms::virtualizer::{VirtualList, VirtualListOptions},
@@ -28,6 +32,10 @@ pub const ROUNDS: usize = 30;
 pub const WARMUP: usize = 20;
 /// Measured mounts.
 pub const MOUNTS: usize = 5;
+/// The lines of the log grown for `resize-grown`.
+pub const GROWN_ROWS: usize = 2_000;
+/// Lines appended per frame while growing it: fewer than the view shows, so that each is laid out.
+pub const GROWN_BATCH: usize = 8;
 
 fn line_text(i: usize) -> String {
     if i.is_multiple_of(7) {
@@ -42,6 +50,8 @@ pub fn PagePerfVirtualList() -> impl IntoView {
     let lines = RwSignal::new(Vec::<usize>::new());
     let mounted = RwSignal::new(false);
     let follow = RwSignal::new(true);
+    // The list's width, in px.
+    let width = RwSignal::new(300);
 
     // Mounts the list with `ROWS` lines (following its end if `following`), laid out and measured.
     let mount = move |following: bool| async move {
@@ -95,39 +105,71 @@ pub fn PagePerfVirtualList() -> impl IntoView {
             appends("append-following-end", true)
         }),
         Scenario::new("append-at-start", move || appends("append-at-start", false)),
+        Scenario::new("resize-grown", move || async move {
+            mounted.set(false);
+            settled().await;
+            width.set(300);
+            follow.set(true);
+            lines.set(Vec::new());
+            mounted.set(true);
+            next_frame().await;
+            while lines.with_untracked(Vec::len) < GROWN_ROWS {
+                lines.update(|lines| {
+                    let start = lines.len();
+                    lines.extend(start..start + GROWN_BATCH);
+                });
+                next_frame().await;
+            }
+            let toggle =
+                move || width.update(|width| *width = if *width == 300 { 285 } else { 300 });
+            for _ in 0..WARMUP {
+                toggle();
+                next_frame().await;
+            }
+            let mut measurements = Measurements::new("resize-grown")
+                .with_parameter("rows", GROWN_ROWS)
+                .with_parameter("rounds", ROUNDS)
+                .with_parameter("warmup", WARMUP);
+            for _ in 0..ROUNDS {
+                measurements.measure("resize", toggle).await;
+            }
+            measurements
+        }),
     ];
 
     view! {
         <h1>"VirtualList performance"</h1>
         <PerfScenarios scenarios=scenarios />
         <Show when=move || mounted.get()>
-            <VirtualList
-                items=lines
-                key=|i: &usize| Key::from(*i)
-                layout_options=VirtualListOptions {
-                    row_size: ItemSize::Estimated(20.0),
-                    end_threshold: 10.0,
-                    ..VirtualListOptions::default()
-                }
-                should_observe_item_size=true
-                is_anchored_to_end=follow
-                set_anchored_to_end=follow
-                styles=Styles::new()
-                    .add_unchecked("width", "300px")
-                    .add_unchecked("height", "200px")
-                attr:id="perf-vl-log"
-                attr:role="log"
-                attr:aria-label="Log"
-                let:i
-            >
-                <div
-                    class="line"
-                    data-line=i
-                    style="font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere"
+            <div style:width=move || format!("{}px", width.get())>
+                <VirtualList
+                    items=lines
+                    key=|i: &usize| Key::from(*i)
+                    layout_options=VirtualListOptions {
+                        row_size: ItemSize::Estimated(20.0),
+                        end_threshold: 10.0,
+                        ..VirtualListOptions::default()
+                    }
+                    should_observe_item_size=true
+                    is_anchored_to_end=follow
+                    set_anchored_to_end=follow
+                    styles=Styles::new()
+                        .add_unchecked("width", "100%")
+                        .add_unchecked("height", "200px")
+                    attr:id="perf-vl-log"
+                    attr:role="log"
+                    attr:aria-label="Log"
+                    let:i
                 >
-                    {line_text(i)}
-                </div>
-            </VirtualList>
+                    <div
+                        class="line"
+                        data-line=i
+                        style="font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere"
+                    >
+                        {line_text(i)}
+                    </div>
+                </VirtualList>
+            </div>
         </Show>
     }
 }

@@ -6,7 +6,6 @@ long-term rules and knowledge elsewhere:
 - guiding decisions and API conventions (C1–C16): `documentation/conventions.md`;
 - implementation patterns: `documentation/{hooks,atoms}-implementation.md`;
 - Leptos/browser/tooling pitfalls: `documentation/lessons.md`;
-- consumers (crudkit, agnite dev-ui) and what they depend on: `documentation/consumers.md`.
 
 ## Waiting on the user
 
@@ -60,16 +59,17 @@ atoms, book heads-up), then cross-cutting work.
   - Not ported (no atoms yet): `CommandPalette`, `DropZone`, `NavigationTree`, `SegmentedControl`, `Sheet`,
     `TokenField`, `Tree`.
 
-### Consumer requests
+### Virtualization
 - [ ] Virtualizer, rest: virtualized `GridList`, `Table`, `ComboBox`/`Select` popovers and menus (RAC's virtualized
-  `GridList`/`Table`/`ComboBox`/`VirtualizedMenu` tests; no consumer asks yet), sections/headers in virtualized
-  lists, `GridLayout`/`TableLayout`/`WaterfallLayout`, drop targets. `VirtualList` under dev-ui's load (20,000
+  `GridList`/`Table`/`ComboBox`/`VirtualizedMenu` tests), sections/headers in virtualized lists,
+  `GridLayout`/`TableLayout`/`WaterfallLayout`, drop targets. `VirtualList` showing a growing log (20,000
   lines, 10–100 appended per second): an append rebuilds the collection and lays out again. In the browser
   (`just browser-perf`, `perf/virtual-list`, 2026-10-12; headless Chrome, the user's Mac, wasm `opt-level = "z"`
   without debug assertions): 50 lines appended to ~21,000 cost ~3.0 ms until settled following the end and
   3.4–3.9 ms at the start, plus 0.1–0.3 ms of the next frame's work (native: build ~2 ms, layout 0.2–0.6 ms; why
-  the start costs more in the browser is open); 100 appends per second would take ~30–40% of the main thread. dev-ui should batch appends (one per animation frame). Where the time goes and the
-  route to O(k log n) appends: "Virtualizer" below.
+  the start costs more in the browser is open); 100 appends per second would take ~30–40% of the main thread, so
+  apps appending that often should batch appends (one per animation frame). Where the time goes and the route to
+  O(k log n) appends: "Virtualizer" below.
 
 ### Bugs and review leftovers
 - [ ] Flaky: `overlay_position` cases fail under load in the full suite (no `[data-placement=bottom]`/`top]` within
@@ -404,9 +404,7 @@ Done 2026-10-09 (f-grid, see history); open:
   `icu_experimental` (the user decides). Then mirror the rest of `NumberParser.test.js` (localized unit names and
   plurals, SAR `ر.س.‏`, de "50 %") and the ar-AE number field browser tests.
 - [ ] **Forms:** C10 `UseFormValidationInput.focus: Option<Callback<()>>` has no clear Rust-native shape yet (the date
-  field focuses its first segment): decide. Tell crudkit that the single `Checkbox`/`Radio`/`Switch` atoms are gone
-  (2026-10-07; it still uses them: `crudkit-leptos/src/components/inputs.rs` `Checkbox`,
-  `examples/full-stack/src/marauder/inputs.rs` `Switch`; `consumers.md`).
+  field focuses its first segment): decide.
 - [ ] **Button, link, tabs:** link tabs (`href` on `Tab`, omitted in `atoms/tabs.rs`); Tabs `keyboard_activation` as a
   signal (blocked: `CollectionOptions::select_on_focus` is fixed); building the tab collection from the children
   (RAC; documented as a difference).

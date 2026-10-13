@@ -4,6 +4,22 @@ Pitfalls of Leptos, the browsers and the tooling that cost time once (moved out 
 derived from them live in `leptos-and-dom.md` ("Effect Read Order", "Blur After Disposal", "Nested Event
 Dispatch", "Global State and SSR", ...) and `hooks-implementation.md` ("Props are Single-Use").
 
+- Synchronous guards don't port to effects (2026-10-12): react-aria's `ScrollView` sets a flag (`isUpdatingSize`)
+  during a size update and ignores the content size changes the update causes; that works because `flushSync` lays
+  out again while the flag holds. In Leptos those layout passes run later, in microtasks (effects,
+  `queue_microtask`) and in the next frame's resize observer callbacks, when such a flag is already cleared. A
+  feedback loop between them (a scrollbar appearing and disappearing) then never yields to the browser: nothing
+  renders, no input arrives, not even the context menu opens, and `requestAnimationFrame` callbacks pile up. Bound
+  such an update by its number of passes instead (`use_scroll_view`: the second pass runs in the next frame, the
+  update ends in a zero-delay timeout after it).
+- A frozen page blocks its whole WebDriver session (2026-10-12): ChromeDriver runs a session's commands one after the
+  other, so once one command waits for the frozen page, all later ones wait too, including CDP commands sent through
+  ChromeDriver and quitting the session. The browser process itself stays responsive: `Runtime.evaluate` over the
+  page's own DevTools WebSocket (found through the session's `goog:chromeOptions.debuggerAddress`) detects the
+  freeze, and `/json/close/<id>` on the DevTools HTTP endpoint closes the page and ends the waiting commands at once
+  (`Page.crash` took 60 s and broke the session). browser-test does this when a test exceeds its time limit
+  (`testing.md`, "Time limits"). The frozen page's stack can't be read: `Debugger.enable` waits for the main thread
+  too, and enabling it before every test would slow the wasm down.
 - Slot references during hydration (2026-10-09): a Description rendered before its date control was captured
   before the control's attributes hydrated. Tachys cached the resulting `Some(id)` but skipped writing it, assuming
   the server had rendered the same value; the server had rendered no reference. A later selected-date description
@@ -52,8 +68,8 @@ Dispatch", "Global State and SSR", ...) and `hooks-implementation.md` ("Props ar
   `useDescription` (layout effect): the server renders none, the client adds it.
 - Focus restore and automated browsers (2026-10-05): `FocusScope` restores focus in a `requestAnimationFrame`
   callback (as react-aria's `useRestoreFocus`). Chrome runs no rAF callbacks in windows it considers occluded or in
-  the background, even with `visibilityState == "visible"`, so focus restore "fails" there (crudkit's select report;
-  the Claude-in-Chrome window). Check with `await new Promise(r => { requestAnimationFrame(() => r(true));
+  the background, even with `visibilityState == "visible"`, so focus restore "fails" there (seen in the
+  Claude-in-Chrome window). Check with `await new Promise(r => { requestAnimationFrame(() => r(true));
   setTimeout(() => r(false), 1000) })` before debugging focus restore.
 - Book (2026-10-05): dark-theme check findings explained: `Root` keeps the theme in local storage (`signal_ls`), so
   the server always renders the light theme and hydration switches to dark; every element with a color transition

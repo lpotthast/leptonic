@@ -146,10 +146,10 @@ fn OtherWindow() -> impl IntoView {
                     on:load=on_load
                 ></iframe>
             </Show>
-            {control("test-fv-frame-focus", "Focus the frame's button", |c| c.focus_button())}
-            {control("test-fv-frame-track", "Track the frame", |c| c.track())}
-            {control("test-fv-frame-stop", "Stop tracking", |c| c.stop())}
-            {control("test-fv-frame-unload", "beforeunload in the frame", |c| c.before_unload())}
+            {control("test-fv-frame-focus", "Focus the frame's button", OtherWindowControls::focus_button)}
+            {control("test-fv-frame-track", "Track the frame", OtherWindowControls::track)}
+            {control("test-fv-frame-stop", "Stop tracking", OtherWindowControls::stop)}
+            {control("test-fv-frame-unload", "beforeunload in the frame", OtherWindowControls::before_unload)}
             "Frame: " <span id="test-fv-frame-ready">{move || if ready.get() { "ready" } else { "loading" }}</span>
             ", focus visible: " <span id="test-fv-frame-visible">{move || visible.get().to_string()}</span>
         </div>

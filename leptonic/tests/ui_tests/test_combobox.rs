@@ -323,9 +323,9 @@ pub async fn value_and_items_derived_from_one_signal(page: &Page<'_>) -> Result<
     Ok(())
 }
 
-/// A value changed by a timer, outside any event, over a fixed collection (agnite dev-ui's
-/// minimal case) shows in the input, and the next button press opens the popover. Escape closes
-/// it and keeps the text, and a later value written while an effect runs shows as well.
+/// A value changed by a timer, outside any event, over a fixed collection shows in the input,
+/// and the next button press opens the popover. Escape closes it and keeps the text, and a later
+/// value written while an effect runs shows as well.
 #[browser_test]
 pub async fn value_changed_by_a_timer(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;

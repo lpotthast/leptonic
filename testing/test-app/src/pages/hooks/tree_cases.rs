@@ -29,7 +29,7 @@ use crate::pages::{Section, atoms::listbox::describe_selection};
 /// with `actions`, the activated items in `#test-tc-{id}-actions`. `with_input` puts a text input
 /// ("Photos input", "Projects input") into the rows Photos and Projects.
 #[component]
-#[allow(clippy::too_many_lines, clippy::fn_params_excessive_bools)]
+#[allow(clippy::fn_params_excessive_bools)]
 fn TestTree(
     label: &'static str,
     id: &'static str,

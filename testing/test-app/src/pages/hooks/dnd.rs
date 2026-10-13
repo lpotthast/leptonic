@@ -94,10 +94,10 @@ fn Droppable(
         ..
     } = use_drop(UseDropInput {
         on_drop_enter: Some(Callback::new(move |_: DropEnterEvent| {
-            log(format!("dropenter {index}"))
+            log(format!("dropenter {index}"));
         })),
         on_drop_exit: Some(Callback::new(move |_: DropExitEvent| {
-            log(format!("dropexit {index}"))
+            log(format!("dropexit {index}"));
         })),
         on_drop: Some(Callback::new(move |e: DropEvent| {
             let text = e

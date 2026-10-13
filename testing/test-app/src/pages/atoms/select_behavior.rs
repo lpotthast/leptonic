@@ -62,6 +62,8 @@ fn log<T: Send + Sync + 'static>(
     (on_change, view)
 }
 
+// Takes `&Option<Key>`: `log` describes values by reference.
+#[allow(clippy::ref_option)]
 fn describe_key(key: &Option<Key>) -> String {
     key.as_ref().map(ToString::to_string).unwrap_or_default()
 }
@@ -99,7 +101,6 @@ fn describe_keys(keys: &HashSet<Key>) -> String {
 ///   high.
 /// - `typeahead`: options "Foo Bar", "Foo Baz", "Bar", "Zoo".
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomSelectBehavior() -> impl IntoView {
     let (stay_open_change, stay_open_log) = log("stay-open-log", describe_key);
     let (close_multiple_change, close_multiple_log) = log("close-multiple-log", describe_keys);

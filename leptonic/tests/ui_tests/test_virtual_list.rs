@@ -6,8 +6,8 @@
 //! list scroll horizontally.
 //!
 //! A view rebuilt in place (the same type, a new owner: tachys reuses the DOM) whose elements carry
-//! a hook's props: the old owner's handlers must be gone (agnite dev-ui, 2026-10-07: a click
-//! panicked on disposed signals).
+//! a hook's props: the old owner's handlers must be gone (2026-10-07: a click panicked on
+//! disposed signals).
 //!
 //! Attributes spread onto a component (`<Comp {..props.into_attrs()} />`, with
 //! `--cfg=erase_components`: a `Vec<AnyAttribute>`) whose view is rebuilt in place: Leptos'
@@ -19,6 +19,11 @@
 //! that (the layout options change, but only `anchor_to_end`), else the content jumps and every row is
 //! measured again. A behavior guard: the original bug didn't reproduce here (its timing); the
 //! regression test is the unit test `anchoring_changes_keep_measured_sizes`.
+//!
+//! Rows that fit at their estimated size but overflow once measured make a classic scrollbar
+//! appear, which narrows the list: the list must settle (2026-10-12: the rows fell back to their
+//! estimates for the new width, the scrollbar disappeared, and so on, in microtasks: the page
+//! froze).
 use std::time::Duration;
 
 use assertr::{
@@ -29,7 +34,7 @@ use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::{
-    fixtures::virtual_list::{LogView, VirtualListActions, WideView},
+    fixtures::virtual_list::{LogView, ScrollbarList, VirtualListActions, WideView},
     pages::{ElementActions, Page},
 };
 
@@ -406,6 +411,74 @@ pub async fn wrapping_lines_ends_horizontal_scrolling(page: &Page<'_>) -> Result
             view.derive_owned(is_wide).is_true();
             view.derive(|view| &view.tallest).is_less_than(30.0);
         })
+        .await;
+    Ok(())
+}
+
+/// Rows that fit at their estimated size but overflow once measured: the scrollbar appearing
+/// narrows the list, and the list settles with it, its rows measured and as wide as its client
+/// area. The bug froze the page: the time limit then fails the test, naming the frozen page (it
+/// takes under 1s, a failed wait about 6s).
+#[browser_test(time_limit = Duration::from_secs(15))]
+pub async fn a_scrollbar_appearing_for_measured_rows_settles(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
+    assert_that!(|| list.scrollbar_view(ScrollbarList::WrappingLines))
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive_owned(|view| view.offset_width - view.client_width)
+                .is_equal_to(15.0);
+            view.derive_owned(|view| view.scroll_height > view.client_height)
+                .is_true();
+            view.derive_owned(|view| view.row_widths.len())
+                .is_greater_than(3);
+            view.derive_owned(|view| {
+                view.row_widths
+                    .iter()
+                    .all(|width| *width == view.client_width)
+            })
+            .is_true();
+            view.derive_owned(|view| view.row_heights.iter().all(|height| *height > 40.0))
+                .is_true();
+        })
+        .await;
+    expect_scrollbar_view_stays(page, ScrollbarList::WrappingLines).await
+}
+
+/// Rows whose height follows their width overflow the list without the scrollbar and fit with
+/// it: the scrollbar would appear and disappear for good, whatever the layout keeps. As in
+/// react-aria, a size change takes at most two passes (`use_scroll_view`), and the list settles,
+/// its rows measured. Without the bound, the page froze: the time limit then fails the test (it
+/// takes under 1s, a failed wait about 6s).
+#[browser_test(time_limit = Duration::from_secs(15))]
+pub async fn rows_growing_with_the_width_settle(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let list = VirtualListActions::new(page);
+    assert_that!(|| list.scrollbar_view(ScrollbarList::AspectRows))
+        .eventually_ok()
+        .satisfies(|view| {
+            view.derive_owned(|view| view.row_heights.len())
+                .is_equal_to(10);
+            // Measured: none at its estimate (20px).
+            view.derive_owned(|view| view.row_heights.iter().all(|height| *height > 25.0))
+                .is_true();
+        })
+        .await;
+    expect_scrollbar_view_stays(page, ScrollbarList::AspectRows).await
+}
+
+/// The list's size and its rows' sizes stay as they are (read after the page settled): a list
+/// whose scrollbar appears and disappears changes them every frame or two.
+async fn expect_scrollbar_view_stays(page: &Page<'_>, which: ScrollbarList) -> Result<(), Report> {
+    let list = VirtualListActions::new(page);
+    page.settle().await?;
+    let settled = list.scrollbar_view(which).await?;
+    assert_that!(|| list.scrollbar_view(which))
+        .consistently_ok()
+        .for_at_least(Duration::from_millis(500))
+        .matches(eq(settled))
         .await;
     Ok(())
 }

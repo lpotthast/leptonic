@@ -201,7 +201,7 @@ fn ShadowFocusTargets(
                     "change true"
                 } else {
                     "change false"
-                })
+                });
             });
         })),
     });

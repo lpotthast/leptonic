@@ -71,7 +71,6 @@ fn Parts(#[prop(optional)] with_empty_state: bool) -> impl IntoView {
 ///   `#sf-open-state`).
 /// - `#sf-unloaded`: no options (not loaded yet), the default value "cat", name "unloaded".
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomSelectForms() -> impl IntoView {
     let multiple_changes = RwSignal::new(Vec::<String>::new());
     let submitted = RwSignal::new(None::<Key>);

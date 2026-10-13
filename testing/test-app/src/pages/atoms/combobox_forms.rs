@@ -64,7 +64,6 @@ fn Options() -> impl IntoView {
 /// - `#cbf-sections`: sections (Animals: Cat, Dog; Birds: Owl, Parrot), Dog disabled.
 /// - `#cbf-submit`: Enter in the input; submissions counted in `#cbf-submits`.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageAtomComboBoxForms() -> impl IntoView {
     let custom_changes = RwSignal::new(Vec::<String>::new());
     let multiple_changes = RwSignal::new(Vec::<String>::new());

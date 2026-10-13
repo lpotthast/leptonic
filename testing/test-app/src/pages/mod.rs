@@ -712,6 +712,8 @@ pub fn Section(name: &'static str, children: Children) -> impl IntoView {
 }
 
 /// Prevent mousedown from stealing focus (used on control buttons in focus-manager tests).
+// Takes the event by value: an `on:mousedown` handler.
+#[allow(clippy::needless_pass_by_value)]
 pub fn prevent_focus_steal(e: web_sys::MouseEvent) {
     e.prevent_default();
 }
