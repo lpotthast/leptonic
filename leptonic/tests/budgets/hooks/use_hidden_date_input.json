@@ -1,0 +1,237 @@
+{
+  "autofill": {
+    "autofill": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 60,
+        "reallocations": 6,
+        "memo_runs": 6,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 1,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "follow_the_value": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 7,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "set": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 9,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "granularity": {
+    "show days": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 6,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "show minutes": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 6,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 396,
+        "reallocations": 26,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field_state",
+        "hooks/use_form_validation_state",
+        "hooks/use_hidden_date_input"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

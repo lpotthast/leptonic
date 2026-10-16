@@ -46,6 +46,7 @@ pub fn ColorSwatch(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorSwatch", classes);
     let color = color
         .map(|ColorProp(color)| color)

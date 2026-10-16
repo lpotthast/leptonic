@@ -126,6 +126,7 @@ pub fn FocusScope(
     /// The content of the focus scope.
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-FocusScope", classes);
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let scope_ref = NodeRef::<html::Div>::new();

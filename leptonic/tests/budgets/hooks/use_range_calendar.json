@@ -1,0 +1,436 @@
+{
+  "commit_on_a_pointer_outside": {
+    "click outside": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4289,
+        "reallocations": 142,
+        "memo_runs": 131,
+        "memo_runs_unchanged": 125,
+        "effect_runs": 3,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    }
+  },
+  "commit_on_leaving": {
+    "leave": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4302,
+        "reallocations": 142,
+        "memo_runs": 131,
+        "memo_runs_unchanged": 125,
+        "effect_runs": 3,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 6,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2062,
+        "reallocations": 0,
+        "memo_runs": 104,
+        "memo_runs_unchanged": 14,
+        "effect_runs": 37,
+        "render_effect_runs": 95,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 95,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2343,
+        "reallocations": 0,
+        "memo_runs": 102,
+        "memo_runs_unchanged": 12,
+        "effect_runs": 37,
+        "render_effect_runs": 95,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 95,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "label": {
+    "label back": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 55,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "relabel": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 55,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 24087,
+        "reallocations": 1098,
+        "memo_runs": 550,
+        "memo_runs_unchanged": 42,
+        "effect_runs": 143,
+        "render_effect_runs": 555,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 48,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "page_with_the_buttons": {
+    "next": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 19009,
+        "reallocations": 853,
+        "memo_runs": 451,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 114,
+        "render_effect_runs": 465,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 87,
+        "dom_attributes": 34,
+        "dom_text": 1,
+        "dom_added_nodes": 36,
+        "dom_removed_nodes": 36,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    },
+    "previous": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 22577,
+        "reallocations": 1011,
+        "memo_runs": 530,
+        "memo_runs_unchanged": 3,
+        "effect_runs": 135,
+        "render_effect_runs": 551,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 89,
+        "dom_attributes": 35,
+        "dom_text": 1,
+        "dom_added_nodes": 37,
+        "dom_removed_nodes": 35,
+        "layouts": 1,
+        "style_recalcs": 5
+      }
+    }
+  },
+  "select_with_clicks": {
+    "click end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 7315,
+        "reallocations": 178,
+        "memo_runs": 229,
+        "memo_runs_unchanged": 209,
+        "effect_runs": 7,
+        "render_effect_runs": 47,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 14,
+        "dom_attributes": 21,
+        "dom_text": 0,
+        "dom_added_nodes": 3,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    },
+    "click start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_button",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_context_menu",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4081,
+        "reallocations": 137,
+        "memo_runs": 147,
+        "memo_runs_unchanged": 141,
+        "effect_runs": 3,
+        "render_effect_runs": 34,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 12,
+        "dom_attributes": 8,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 4
+      }
+    }
+  }
+}

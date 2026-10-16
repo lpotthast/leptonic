@@ -120,6 +120,7 @@ pub fn Tabs(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Tabs", classes);
     let (selected_key, on_selection_change) =
         ValueBinding::from_state_props(selected_key, set_selected_key, on_selected_key_change);
@@ -196,6 +197,7 @@ pub fn TabList(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TabList", classes);
     let (state, config) = tabs_context("TabList")?;
     let orientation = config.orientation;
@@ -254,6 +256,7 @@ pub fn Tab(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Tab", classes);
     let (state, config) = tabs_context("Tab")?;
     // Disabled tabs join the tab list's disabled keys, so that the keyboard skips them.
@@ -358,6 +361,7 @@ pub fn TabPanel(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TabPanel", classes);
     let Some(state) = use_context::<TabListState>() else {
         dev_warn!("A <TabPanel> must be inside <Tabs>.");
@@ -468,6 +472,7 @@ pub fn TabPanels(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TabPanels", classes);
     let Some(state) = use_context::<TabListState>() else {
         dev_warn!("A <TabPanels> must be inside <Tabs>.");

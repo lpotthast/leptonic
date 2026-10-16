@@ -106,6 +106,7 @@ pub fn SearchField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SearchField", classes);
     let (value, on_change) = crate::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_text_field_state(UseTextFieldStateInput {
@@ -210,6 +211,7 @@ pub fn SearchFieldClearButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SearchFieldClearButton", classes);
     let Some(ctx) = use_context::<SearchFieldContext>() else {
         crate::utils::dev_warn!("A <SearchFieldClearButton> must be inside a <SearchField>.");

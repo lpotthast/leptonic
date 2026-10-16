@@ -39,6 +39,7 @@ pub struct UseTextFieldStateInput {
 
 /// Creates the state of a text field.
 pub fn use_text_field_state(input: UseTextFieldStateInput) -> TextFieldState {
+    crate::metrics::subject!();
     let UseTextFieldStateInput {
         default_value,
         value,

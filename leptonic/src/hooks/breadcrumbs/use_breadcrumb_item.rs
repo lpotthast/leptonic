@@ -46,6 +46,7 @@ impl Default for UseBreadcrumbItemInput {
 /// An item of breadcrumbs: a link to an ancestor page, or the current page, which is announced
 /// as current (`aria-current`) and can't be followed. The item is disabled while current.
 pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseLinkReturn {
+    crate::metrics::subject!();
     let UseBreadcrumbItemInput {
         link,
         is_current,

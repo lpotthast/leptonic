@@ -78,6 +78,7 @@ impl std::fmt::Debug for ItemMeasurer {
 /// [`use_virtualizer_item`]s: items of estimated size are measured together once rendered, and
 /// with `should_observe_item_size` one `ResizeObserver` re-measures items whose content resizes.
 pub fn use_item_measurer(input: UseItemMeasurerInput) -> ItemMeasurer {
+    crate::metrics::subject!();
     let UseItemMeasurerInput {
         should_observe_item_size,
         ..
@@ -128,6 +129,7 @@ pub struct UseVirtualizerItemReturn {
 /// Positions an item of a virtualized collection and measures items of estimated size
 /// (react-aria's `useVirtualizerItem` + `VirtualizerItem`).
 pub fn use_virtualizer_item(input: UseVirtualizerItemInput) -> UseVirtualizerItemReturn {
+    crate::metrics::subject!();
     let UseVirtualizerItemInput {
         element,
         content,

@@ -1,0 +1,166 @@
+{
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_picker_group",
+        "hooks/use_keyboard",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 232,
+        "reallocations": 11,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 3,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_picker_group",
+        "hooks/use_keyboard",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 3,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "move_between_parts": {
+    "left": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_picker_group",
+        "hooks/use_keyboard",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 13,
+        "reallocations": 4,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "right": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_picker_group",
+        "hooks/use_keyboard",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 51,
+        "reallocations": 3,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "open_with_the_keyboard": {
+    "alt+down": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_picker_group",
+        "hooks/use_keyboard",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 59,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "press_beside_the_parts": {
+    "press": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_picker_group",
+        "hooks/use_keyboard",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 71,
+        "reallocations": 9,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    }
+  }
+}

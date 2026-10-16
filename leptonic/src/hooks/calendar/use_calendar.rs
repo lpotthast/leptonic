@@ -308,6 +308,7 @@ fn use_calendar_base(
 /// Behavior and accessibility of a calendar: its grouping element, the previous and next
 /// buttons, the title, announcements of the visible range and the selection.
 pub fn use_calendar(input: UseCalendarInput) -> UseCalendarReturn {
+    crate::metrics::subject!();
     let UseCalendarInput {
         state,
         id,
@@ -333,6 +334,7 @@ pub fn use_calendar(input: UseCalendarInput) -> UseCalendarReturn {
 /// `commit_behavior`) a range being selected when a pointer is released outside its dates or
 /// the focus leaves the calendar.
 pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
+    crate::metrics::subject!();
     let UseRangeCalendarInput {
         state,
         commit_behavior,

@@ -173,6 +173,7 @@ pub fn ComboBox<S: SelectedValues>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ComboBox", classes);
     let (input_value, on_input_change) =
         ValueBinding::from_state_props(input_value, set_input_value, on_input_value_change);
@@ -355,6 +356,7 @@ pub fn ComboBoxButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ComboBoxButton", classes);
     let Some(ctx) = use_context::<ComboBoxContext>() else {
         crate::utils::dev_warn!("A <ComboBoxButton> must be inside a <ComboBox>.");
@@ -399,6 +401,7 @@ pub fn ComboBoxValue(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ComboBoxValue", classes);
     let Some(ctx) = use_context::<ComboBoxContext>() else {
         crate::utils::dev_warn!("A <ComboBoxValue> must be inside a <ComboBox>.");
@@ -466,6 +469,7 @@ pub fn ComboBoxPopover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ComboBoxPopover", classes);
     let Some(ctx) = use_context::<ComboBoxContext>() else {
         crate::utils::dev_warn!("A <ComboBoxPopover> must be inside a <ComboBox>.");

@@ -161,6 +161,7 @@ pub fn Popover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Popover", classes);
     let context = use_context::<DialogTriggerContext>();
     let state =

@@ -1,0 +1,406 @@
+{
+  "disable_a_tab": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 13,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 10,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 261,
+        "reallocations": 10,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 5,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount_many": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4249,
+        "reallocations": 18,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 5,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "remove_the_selected_tab": {
+    "add": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 41,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "remove": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 85,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 4,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "remove_the_selected_tab_many": {
+    "add": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4029,
+        "reallocations": 8,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "remove": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4073,
+        "reallocations": 8,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 4,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select": {
+    "select the first": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 44,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "select the second": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 44,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_many": {
+    "select the first": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 44,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "select the last": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 44,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "select the second": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_state",
+        "hooks/use_single_select_list_state",
+        "hooks/use_tab_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 44,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

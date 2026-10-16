@@ -90,6 +90,7 @@ where
     F: Fn(QueuedToast<T>) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastRegion", classes);
     // Mounted while there are toasts (see the deviations): the focus returns when the last one
     // closes.
@@ -162,6 +163,7 @@ pub fn Toast<T: Clone + Send + Sync + 'static>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Toast", classes);
     let Some(region) = use_context::<ToastRegionContext<T>>() else {
         crate::utils::dev_warn!("Toast: not inside a ToastRegion of its content type");
@@ -221,6 +223,7 @@ pub fn ToastContent(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastContent", classes);
     let context = expect_toast("ToastContent")?;
     Some(view! {
@@ -239,6 +242,7 @@ pub fn ToastTitle(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastTitle", classes);
     let context = expect_toast("ToastTitle")?;
     Some(view! {
@@ -257,6 +261,7 @@ pub fn ToastDescription(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastDescription", classes);
     let props = expect_toast("ToastDescription")
         .and_then(|context| context.description.try_update_value(Option::take).flatten())?;
@@ -279,6 +284,7 @@ pub fn ToastCloseButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastCloseButton", classes);
     let context = expect_toast("ToastCloseButton")?;
     let UseButtonReturn {

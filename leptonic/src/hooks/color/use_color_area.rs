@@ -287,6 +287,7 @@ struct Press {
 /// arrow keys (with Shift: page steps), PageUp/PageDown and Home/End, two visually hidden range
 /// inputs for assistive technology and forms.
 pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAreaReturn {
+    crate::metrics::subject!();
     let UseColorAreaInput {
         state,
         is_disabled,

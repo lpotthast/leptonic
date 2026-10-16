@@ -221,6 +221,7 @@ fn allowed_operations(e: &DragEvent) -> DropOperations {
 
 /// A drop target for native drags and keyboard or screen reader drags.
 pub fn use_drop(input: UseDropInput) -> UseDropReturn {
+    crate::metrics::subject!();
     let UseDropInput {
         element,
         get_drop_operation,

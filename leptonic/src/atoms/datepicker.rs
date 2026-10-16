@@ -312,6 +312,7 @@ pub fn DateField<V: DateValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DateField", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_date_field_state(UseDateFieldStateInput {
@@ -419,6 +420,7 @@ pub fn TimeField<T: TimeValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TimeField", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_time_field_state(UseTimeFieldStateInput {
@@ -491,6 +493,7 @@ where
     F: Fn(Signal<DateSegment>) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DateInput", classes);
     let context = match part {
         Some(part) => use_context::<DateRangeInputContexts>().map(|contexts| match part {
@@ -580,6 +583,7 @@ pub fn DateSegment(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DateSegment", classes);
     let Some(context) = use_context::<DateInputContext>() else {
         crate::utils::dev_warn!("DateSegment: not inside a DateInput");
@@ -712,6 +716,7 @@ pub fn DatePicker<V: DateValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DatePicker", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (is_open, on_open_change) =
@@ -902,6 +907,7 @@ pub fn DatePickerGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DatePickerGroup", classes);
     let Some(context) = use_context::<DatePickerContext>() else {
         crate::utils::dev_warn!("DatePickerGroup: not inside a DatePicker");
@@ -942,6 +948,7 @@ pub fn DatePickerButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DatePickerButton", classes);
     let Some(context) = use_context::<DatePickerContext>() else {
         crate::utils::dev_warn!("DatePickerButton: not inside a DatePicker");
@@ -1034,6 +1041,7 @@ pub fn DateRangePicker<V: DateValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DateRangePicker", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (is_open, on_open_change) =

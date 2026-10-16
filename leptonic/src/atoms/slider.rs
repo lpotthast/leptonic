@@ -169,6 +169,7 @@ pub fn Slider<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Slider", classes);
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
@@ -334,6 +335,7 @@ pub fn SliderTrack(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderTrack", classes);
     let slider = expect_slider()?;
     // Hovered also while disabled (react-aria-components).
@@ -371,6 +373,7 @@ pub fn SliderFill(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderFill", classes);
     let slider = expect_slider()?;
     let SliderContext {
@@ -481,6 +484,7 @@ pub fn SliderThumb(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderThumb", classes);
     let slider = expect_slider()?;
     // A `Label` inside the thumb names it (react-aria-components' `LabelContext` of the thumb).
@@ -575,6 +579,7 @@ pub fn SliderThumbTooltip(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderThumbTooltip", classes);
     let Some(thumb) = use_context::<SliderThumbContext>() else {
         crate::utils::dev_warn!("A <SliderThumbTooltip> must be inside a <SliderThumb>.");
@@ -605,6 +610,7 @@ pub fn SliderOutput(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderOutput", classes);
     let slider = expect_slider()?;
     let orientation = slider.orientation;
@@ -635,6 +641,7 @@ where
     C: Fn(Signal<Vec<ComputedSliderMark>>) -> V,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderMarks", classes);
     let slider = expect_slider()?;
     let computed = (slider.marks)(marks);
@@ -654,6 +661,7 @@ pub fn SliderMark(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SliderMark", classes);
     let SliderContext { orientation, .. } = expect_slider()?;
     let vertical = move || orientation.get() == Orientation::Vertical;

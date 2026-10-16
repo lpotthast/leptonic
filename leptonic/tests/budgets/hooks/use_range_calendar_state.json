@@ -1,0 +1,552 @@
+{
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "dragging": {
+    "start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "stop": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "drop_the_anchor": {
+    "drop": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 28,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "focus_the_nearest_available_date": {
+    "focus": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 37,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "ignored_while_read_only": {
+    "ignored select": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 0,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "make editable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "make read-only": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "limits": {
+    "clear limits": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 15,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "set max": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 13,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "set min": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 13,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 381,
+        "reallocations": 16,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 6,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 6,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 6,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "page_while_selecting": {
+    "next page": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 40,
+        "reallocations": 5,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 3,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_a_range": {
+    "highlight": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 39,
+        "reallocations": 3,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "select end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 37,
+        "reallocations": 4,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 3,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "select start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 32,
+        "reallocations": 3,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_the_focused_date_and_commit": {
+    "commit": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 30,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "select focused": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 32,
+        "reallocations": 3,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "set_and_clear": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 35,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "set": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar_state",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 20,
+        "reallocations": 4,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

@@ -48,6 +48,7 @@ impl ColorPickerState {
 /// Creates the state of a color picker: one color its parts (area, sliders, fields, swatches)
 /// show and change.
 pub fn use_color_picker_state(input: UseColorPickerStateInput) -> ColorPickerState {
+    crate::metrics::subject!();
     let UseColorPickerStateInput {
         default_value,
         value,

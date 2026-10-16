@@ -65,7 +65,6 @@ pub mod test_orphan_parts;
 pub mod test_overlay;
 pub mod test_overlay_position;
 pub mod test_overlay_state;
-pub mod test_perf_virtual_list;
 pub mod test_popover;
 pub mod test_press;
 pub mod test_pressable;
@@ -104,9 +103,11 @@ pub mod test_virtual_list;
 pub mod test_virtualizer;
 pub mod test_visually_hidden;
 
+use std::sync::OnceLock;
+
 use browser_test::{BrowserTests, InvalidEnvVar, Parallelism, TestFilter, TestGroup};
 
-use crate::harness::fixture_test;
+use crate::{harness::fixture_test, perf::budgets::PerformanceCoverage};
 
 /// Which tests run (`BROWSER_TEST_SUITE`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,14 +117,24 @@ pub enum Suite {
     /// The known issues' tests (`known-issues`), which document upstream bugs and fail until they
     /// are fixed.
     KnownIssues,
-    /// The performance measurements (`performance`), one after the other.
+    /// The performance suite (`performance`): the timings of the performance scenarios, one after
+    /// the other, in a build without debug assertions.
     Performance,
+}
+
+/// The suite of this run.
+static SUITE: OnceLock<Suite> = OnceLock::new();
+
+/// The suite of this run ([`all`] sets it).
+pub fn suite() -> Suite {
+    SUITE.get().copied().unwrap_or(Suite::Regular)
 }
 
 /// All registrations and logical groups live here, independently of implementation modules.
 /// Group members share the suite's parallelism limit. Known issues and performance measurements
 /// are separate opt-in suites.
 pub fn all(suite: Suite, parallelism: Parallelism) -> Result<BrowserTests<str>, InvalidEnvVar> {
+    let _ = SUITE.set(suite);
     let tests = match suite {
         Suite::Regular => regular_tests(parallelism),
         Suite::KnownIssues => known_issues_tests(parallelism),
@@ -132,24 +143,20 @@ pub fn all(suite: Suite, parallelism: Parallelism) -> Result<BrowserTests<str>, 
     let after = BrowserTests::sequential().named("after all").run_always();
     let after = match suite {
         Suite::KnownIssues => after,
-        Suite::Regular | Suite::Performance => {
-            after.with(fixture_test(test_server_panics::ServerPanicTests))
-        }
+        Suite::Regular => after
+            .with(fixture_test(test_server_panics::ServerPanicTests))
+            .with(fixture_test(PerformanceCoverage)),
+        Suite::Performance => after.with(fixture_test(test_server_panics::ServerPanicTests)),
     };
     Ok(BrowserTests::sequential()
         .with_nested(tests.filter(&TestFilter::from_env()?))
         .with_nested(after))
 }
 
-/// The measurements run one after the other: parallel sessions would compete for the machine.
+/// The performance scenarios, timed one after the other: parallel sessions would compete for the
+/// machine. The regular suite counts the same cases.
 fn performance_tests() -> BrowserTests<str> {
-    BrowserTests::sequential().with_test_group(
-        TestGroup::new("performance")
-            .with(fixture_test(test_perf_virtual_list::Mount))
-            .with(fixture_test(test_perf_virtual_list::AppendFollowingEnd))
-            .with(fixture_test(test_perf_virtual_list::AppendAtStart))
-            .with(fixture_test(test_perf_virtual_list::ResizeGrown)),
-    )
+    BrowserTests::sequential().with_test_group(crate::perf_tests::timed_tests())
 }
 
 fn known_issues_tests(parallelism: Parallelism) -> BrowserTests<str> {
@@ -160,6 +167,8 @@ fn known_issues_tests(parallelism: Parallelism) -> BrowserTests<str> {
 
 fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
     let tests = BrowserTests::parallel(parallelism)
+        .with_test_group(crate::perf_tests::atom_tests())
+        .with_test_group(crate::perf_tests::hook_tests())
         .with_test_group(
             TestGroup::new("helpers")
                 .with(fixture_test(test_helpers::LookupContract))

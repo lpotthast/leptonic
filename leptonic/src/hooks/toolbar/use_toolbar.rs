@@ -104,6 +104,7 @@ impl IntoAttrs for UseToolbarProps {
 /// focusable children, and the toolbar is one tab stop (Tab leaves it, re-entering restores
 /// the child focused last). A toolbar inside another toolbar becomes a `group` of it.
 pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
+    crate::metrics::subject!();
     let UseToolbarInput {
         element,
         orientation,

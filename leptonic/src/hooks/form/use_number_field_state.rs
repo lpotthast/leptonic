@@ -209,6 +209,7 @@ impl<T: NumberValue> NumberFieldState<T> {
 pub fn use_number_field_state<T: NumberValue>(
     input: UseNumberFieldStateInput<T>,
 ) -> NumberFieldState<T> {
+    crate::metrics::subject!();
     let UseNumberFieldStateInput {
         default_value,
         value: binding,

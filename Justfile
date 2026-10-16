@@ -114,9 +114,10 @@ browser-test:
 browser-test-visible:
   BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
-# Run the performance measurements (`documentation/testing.md`, "Performance measurements"): in-page timings of
-# the test-app's `/perf` fixtures, one after the other, built without debug assertions. Reports go to
-# `<target>/tmp/performance/`, each compared with the previous run's. `BROWSER_TEST_FILTER` selects scenarios.
+# Time the performance scenarios (`documentation/testing.md`, "Performance measurements"): in-page timings of the
+# test-app's `/perf` fixtures, one after the other, built without debug assertions (the regular suite counts them and
+# checks the budgets). Reports go to `<target>/tmp/performance/`, each compared with the previous run's.
+# `BROWSER_TEST_FILTER` selects scenarios.
 browser-perf:
   BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_SUITE=performance cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
@@ -158,6 +159,7 @@ sort:
   cargo sort ./leptonic -w -g
   cargo sort ./leptonic-theme -w -g
   cargo sort ./testing/test-app -w -g
+  cargo sort ./testing/perf-metrics -w -g
   cargo sort ./examples/book-ssr -w -g
   cargo sort ./examples/leptonic-template-csr -w -g
   cargo sort ./examples/leptonic-template-ssr -w -g
@@ -171,6 +173,8 @@ fmt:
   cargo +nightly fmt --all --manifest-path ./leptonic-theme/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./testing/test-app/Cargo.toml
   cargo +nightly fmt --all --manifest-path ./testing/test-app/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
+  cargo fmt --all --manifest-path ./testing/perf-metrics/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./testing/perf-metrics/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./examples/book-ssr/Cargo.toml
   cargo +nightly fmt --all --manifest-path ./examples/book-ssr/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./examples/leptonic-template-csr/Cargo.toml
@@ -191,6 +195,7 @@ update:
   cargo update --manifest-path ./leptonic/Cargo.toml
   cargo update --manifest-path ./leptonic-theme/Cargo.toml
   cargo update --manifest-path ./testing/test-app/Cargo.toml
+  cargo update --manifest-path ./testing/perf-metrics/Cargo.toml
   cargo update --manifest-path ./examples/book-ssr/Cargo.toml
   cargo update --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo update --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -200,6 +205,7 @@ update:
 test:
   cargo test --manifest-path ./leptonic/Cargo.toml
   cargo test --manifest-path ./leptonic-theme/Cargo.toml
+  cargo test --manifest-path ./testing/perf-metrics/Cargo.toml
   # From the book's directory, so that its `.cargo/config.toml` (`LEPTOS_OUTPUT_NAME`) applies.
   cd ./examples/book-ssr && cargo test
   cargo test --manifest-path ./examples/leptonic-template-csr/Cargo.toml
@@ -211,6 +217,7 @@ upgrades: # "-" prefixes allow for non-zero status codes!
   -cargo upgrades --manifest-path ./leptonic/Cargo.toml
   -cargo upgrades --manifest-path ./leptonic-theme/Cargo.toml
   -cargo upgrades --manifest-path ./testing/test-app/Cargo.toml
+  -cargo upgrades --manifest-path ./testing/perf-metrics/Cargo.toml
   -cargo upgrades --manifest-path ./examples/book-ssr/Cargo.toml
   -cargo upgrades --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo upgrades --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -221,6 +228,7 @@ upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./leptonic/Cargo.toml
   -cargo upgrade --manifest-path ./leptonic-theme/Cargo.toml
   -cargo upgrade --manifest-path ./testing/test-app/Cargo.toml
+  -cargo upgrade --manifest-path ./testing/perf-metrics/Cargo.toml
   -cargo upgrade --manifest-path ./examples/book-ssr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -247,6 +255,7 @@ clippy:
   check cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --features full
   # The browser suite is no default test target (leptonic/Cargo.toml): `--tests` skips it.
   check cargo clippy --test browser_test --manifest-path ./leptonic/Cargo.toml
+  check cargo clippy --tests --manifest-path ./testing/perf-metrics/Cargo.toml
   # Release too: some lints depend on type sizes that differ there (`trivially_copy_pass_by_ref`).
   check cargo clippy --tests --release --manifest-path ./leptonic/Cargo.toml --features full
   # Without the default `intl-strings`.

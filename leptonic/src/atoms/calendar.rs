@@ -189,6 +189,7 @@ pub fn Calendar(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Calendar", classes);
     let (mut value, mut on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (focused_value, on_focus_change) =
@@ -323,6 +324,7 @@ pub fn RangeCalendar(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-RangeCalendar", classes);
     let (mut value, mut on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let (focused_value, on_focus_change) =
@@ -452,6 +454,7 @@ pub fn CalendarHeading(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarHeading", classes);
     let context = expect_calendar("CalendarHeading")?;
     let heading = use_calendar_heading(UseCalendarHeadingInput {
@@ -476,6 +479,7 @@ where
     F: FnOnce(UseCalendarPickerReturn) -> V + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let context = expect_calendar("CalendarMonthPicker")?;
     Some(children(use_calendar_month_picker(
         UseCalendarMonthPickerInput {
@@ -500,6 +504,7 @@ where
     F: FnOnce(UseCalendarPickerReturn) -> V + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let context = expect_calendar("CalendarYearPicker")?;
     Some(children(use_calendar_year_picker(
         UseCalendarYearPickerInput {
@@ -554,6 +559,7 @@ pub fn CalendarPreviousButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarPreviousButton", classes);
     let input =
         expect_calendar("CalendarPreviousButton").map(|context| context.previous.get_value());
@@ -572,6 +578,7 @@ pub fn CalendarNextButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarNextButton", classes);
     let input = expect_calendar("CalendarNextButton").map(|context| context.next.get_value());
     calendar_button(input, classes, styles, children)
@@ -586,6 +593,7 @@ pub fn CalendarErrorMessage(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarErrorMessage", classes);
     let props = expect_calendar("CalendarErrorMessage")?
         .error_message
@@ -607,6 +615,7 @@ pub fn CalendarGrid(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarGrid", classes);
     let context = expect_calendar("CalendarGrid")?;
     let calendar = context.data.state.calendar();
@@ -653,6 +662,7 @@ pub fn CalendarGridHeader(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarGridHeader", classes);
     view! {
         <thead class=classes style=styles aria-hidden="true">
@@ -675,6 +685,7 @@ where
     F: Fn(String) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarHeaderRow", classes);
     let Some(grid) = use_context::<GridContext>() else {
         crate::utils::dev_warn!("CalendarHeaderRow: not inside a CalendarGrid");
@@ -701,6 +712,7 @@ pub fn CalendarHeaderCell(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarHeaderCell", classes);
     view! { <th class=classes style=styles>{children()}</th> }
 }
@@ -719,6 +731,7 @@ where
     F: Fn(u8) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarGridBody", classes);
     let Some(grid) = use_context::<GridContext>() else {
         crate::utils::dev_warn!("CalendarGridBody: not inside a CalendarGrid");
@@ -752,6 +765,7 @@ where
     F: Fn(Signal<Date>) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarWeek", classes);
     let (Some(context), Some(grid)) = (
         expect_calendar("CalendarWeek"),
@@ -827,6 +841,7 @@ pub fn CalendarCell(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarCell", classes);
     let context = expect_calendar("CalendarCell")?;
     let state: CalendarStates = context.data.state;
@@ -919,6 +934,7 @@ pub fn CalendarCellButton(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarCellButton", classes);
     let Some(context) = use_context::<CellContext>() else {
         crate::utils::dev_warn!("CalendarCellButton: not inside a CalendarCell");

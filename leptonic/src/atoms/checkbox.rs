@@ -109,6 +109,7 @@ pub fn CheckboxField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CheckboxField", classes);
     let in_group = use_context::<CheckboxGroupContext>().is_some();
     if in_group && value.is_none() {
@@ -200,6 +201,7 @@ pub fn CheckboxButton(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CheckboxButton", classes);
     let Some(ctx) = use_context::<CheckboxButtonContext>() else {
         dev_warn!("a <CheckboxButton> belongs in a <CheckboxField>");
@@ -413,6 +415,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-CheckboxGroup", classes);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let KeyedStateProps {

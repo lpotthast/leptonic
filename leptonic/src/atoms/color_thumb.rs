@@ -148,6 +148,7 @@ pub fn ColorThumb(
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorThumb", classes);
     let Some(ColorThumbContext {
         color,

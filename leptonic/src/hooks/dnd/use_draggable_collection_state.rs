@@ -142,6 +142,7 @@ impl DraggableCollectionState {
 pub fn use_draggable_collection_state(
     input: UseDraggableCollectionStateInput,
 ) -> DraggableCollectionState {
+    crate::metrics::subject!();
     let UseDraggableCollectionStateInput {
         list,
         get_items,

@@ -125,6 +125,7 @@ impl IntoAttrs for UseMenuProps {
 ///
 /// Escape is left to the surrounding overlay, which closes the menu.
 pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
+    crate::metrics::subject!();
     let UseMenuInput {
         state,
         element,

@@ -79,6 +79,7 @@ impl TreeState {
 
 /// Creates the state of a tree (see [`TreeState`]).
 pub fn use_tree_state(input: UseTreeStateInput) -> TreeState {
+    crate::metrics::subject!();
     let UseTreeStateInput {
         collection,
         selection,

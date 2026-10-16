@@ -99,6 +99,7 @@ fn percent(min: f64, max: f64, value: f64) -> f64 {
 /// The marks of a slider, placed on its track. They are recomputed when the range, the step or
 /// a name changes; [`ComputedSliderMark::is_in_range`] follows the thumbs.
 pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSliderMark>> {
+    crate::metrics::subject!();
     let UseSliderMarksInput {
         min_value,
         max_value,

@@ -36,6 +36,7 @@ pub struct UseGridSelectionAnnouncementInput {
 /// "Apple selected.", "Apple not selected.", "3 items selected.", "All items selected." Many
 /// screen readers don't announce them themselves.
 pub fn use_grid_selection_announcement(input: UseGridSelectionAnnouncementInput) {
+    crate::metrics::subject!();
     let UseGridSelectionAnnouncementInput {
         selection,
         collection,

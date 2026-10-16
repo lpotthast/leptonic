@@ -259,6 +259,7 @@ fn eras(locale: &Locale) -> [String; 2] {
 /// on once no further digit fits), letters choose the day period and era, Backspace deletes a
 /// digit; the selection stays collapsed (Android Chrome's composition would break the DOM).
 pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateSegmentReturn {
+    crate::metrics::subject!();
     let UseDateSegmentInput {
         segment,
         data,

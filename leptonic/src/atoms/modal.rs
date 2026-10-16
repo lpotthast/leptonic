@@ -135,6 +135,7 @@ pub fn ModalBackdrop(
 
     children: ChildrenFn,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ModalBackdrop", classes);
     let state = super::dialog::overlay_open_state(
         is_open,
@@ -300,6 +301,7 @@ pub fn ModalContent(
 
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ModalContent", classes);
     let Some(ctx) = use_context::<ModalBackdropContext>() else {
         crate::utils::dev_warn!("A <ModalContent> must be inside a <ModalBackdrop>.");

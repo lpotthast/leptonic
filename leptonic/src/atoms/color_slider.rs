@@ -114,6 +114,7 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorSlider", classes);
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
@@ -210,6 +211,7 @@ pub fn ColorSliderTrack(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorSliderTrack", classes);
     let ColorSliderContext {
         orientation,
@@ -248,6 +250,7 @@ pub fn ColorSliderOutput(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorSliderOutput", classes);
     let ColorSliderContext {
         orientation,

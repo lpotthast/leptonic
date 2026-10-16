@@ -79,6 +79,7 @@ impl OverlayState for OverlayTriggerState {
 
 /// Manages whether an overlay is open.
 pub fn use_overlay_trigger_state(input: UseOverlayTriggerStateInput) -> OverlayTriggerState {
+    crate::metrics::subject!();
     let UseOverlayTriggerStateInput {
         default_open,
         value,

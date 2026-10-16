@@ -457,6 +457,7 @@ impl IntoAttrs for UseFocusableItemProps {
 /// }
 /// ```
 pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
+    crate::metrics::subject!();
     let UseFocusableInput {
         is_disabled: disabled,
         auto_focus,

@@ -26,6 +26,7 @@ pub struct UseGlobalShortcutsInput {
 /// shortcuts over the app's); its handler can pass the key press on to the earlier ones with
 /// `continue_propagation`.
 pub fn use_global_shortcuts(input: UseGlobalShortcutsInput) {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     let _ = input;
 

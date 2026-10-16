@@ -345,6 +345,7 @@ impl IntoAttrs for UseToggleInputProps {
 /// Provides the behavior and accessibility of a toggle on an `<input type="checkbox">` (the
 /// base of [`use_checkbox`](fn@super::use_checkbox) and [`use_switch`](fn@super::use_switch)).
 pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
+    crate::metrics::subject!();
     use_toggle_with(input, None, None)
 }
 

@@ -1,0 +1,3 @@
+# The hooks and atoms without a performance test (`perf_tests/<kind>/<subject>.rs`
+# with budgets) yet, written by `BROWSER_TEST_PERF_BUDGETS=update` runs. Add
+# them: this list only shrinks.

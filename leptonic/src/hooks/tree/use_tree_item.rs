@@ -65,6 +65,7 @@ pub struct UseTreeItemReturn {
 /// An item of a tree: a grid list row with `aria-expanded`, `aria-level`, `aria-posinset` and
 /// `aria-setsize`, plus an expand button.
 pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
+    crate::metrics::subject!();
     let UseTreeItemInput {
         tree,
         key,

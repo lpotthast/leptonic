@@ -103,6 +103,7 @@ impl IntoAttrs for UseMenuSectionGroupProps {
 
 /// A section of a menu: a group of items with an optional heading.
 pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
+    crate::metrics::subject!();
     let UseMenuSectionInput { menu, key } = input;
     let heading_id = use_id("menu-section-heading");
 

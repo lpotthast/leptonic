@@ -220,6 +220,7 @@ pub struct UseHiddenSelectInputProps {
 /// Mirrors a select's value in a hidden native form element, so the select takes part in form
 /// submission, reset, validation and browser autofill.
 pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
+    crate::metrics::subject!();
     let UseHiddenSelectInput {
         state,
         form,

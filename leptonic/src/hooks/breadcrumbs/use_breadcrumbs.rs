@@ -46,6 +46,7 @@ pub type UseBreadcrumbsAttrs = Attr<attr::AriaLabel, Signal<String>>;
 /// "Breadcrumbs" by default) around a list of items. Render each item with
 /// [`use_breadcrumb_item`](fn@super::use_breadcrumb_item).
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
+    crate::metrics::subject!();
     let UseBreadcrumbsInput { aria_label } = input;
     let strings = use_localized_strings::<BreadcrumbsStrings>();
     UseBreadcrumbsReturn {

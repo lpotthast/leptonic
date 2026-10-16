@@ -101,6 +101,7 @@ pub fn DisclosureGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DisclosureGroup", classes);
     let (value, on_expanded_change) =
         ValueBinding::from_state_props(expanded_keys, set_expanded_keys, on_expanded_change);
@@ -157,6 +158,7 @@ pub fn Disclosure(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Disclosure", classes);
     let group = use_context::<DisclosureGroupState>();
     let key = key.unwrap_or_else(|| Key::from(use_id("disclosure")));
@@ -260,6 +262,7 @@ pub fn Disclosure(
 /// toggling, `aria-expanded` and `aria-controls`. Renders no element of its own.
 #[component]
 pub fn DisclosureTrigger(children: Children) -> impl IntoView {
+    crate::metrics::subject!();
     let Some(TriggerPress {
         on_press,
         on_press_start,
@@ -308,6 +311,7 @@ pub fn DisclosurePanel(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DisclosurePanel", classes);
     let Some(context) = use_context::<DisclosureContext>() else {
         crate::utils::dev_warn!("A <DisclosurePanel> must be inside a <Disclosure>.");

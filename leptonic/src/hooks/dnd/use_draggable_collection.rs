@@ -26,6 +26,7 @@ pub struct UseDraggableCollectionInput {
 /// A collection whose items can be dragged: while its items are dragged, it is the collection
 /// drags come from (drops into it are internal: reorders and moves).
 pub fn use_draggable_collection(input: UseDraggableCollectionInput) {
+    crate::metrics::subject!();
     let UseDraggableCollectionInput { state, element } = input;
     Effect::new(move || {
         if state.dragging_keys.with(|keys| !keys.is_empty())

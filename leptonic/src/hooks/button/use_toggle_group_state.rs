@@ -128,6 +128,7 @@ impl ToggleGroupState {
 
 /// Creates the state of a toggle button group.
 pub fn use_toggle_group_state(input: UseToggleGroupStateInput) -> ToggleGroupState {
+    crate::metrics::subject!();
     let UseToggleGroupStateInput {
         selection_mode,
         disallow_empty_selection,

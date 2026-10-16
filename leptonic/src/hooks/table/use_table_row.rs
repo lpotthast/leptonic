@@ -134,6 +134,7 @@ impl IntoAttrs for UseTableRowProps {
 /// `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, the expansion keys and the
 /// expand button.
 pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
+    crate::metrics::subject!();
     let UseTableRowInput {
         table,
         key,

@@ -108,6 +108,7 @@ pub struct UseFocusVisibleReturn {
 /// }
 /// ```
 pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
+    crate::metrics::subject!();
     let UseFocusVisibleInput {
         auto_focus,
         is_text_input,
@@ -828,6 +829,7 @@ pub fn add_window_focus_tracking(element: &web_sys::Element) -> WindowFocusTrack
 /// first interaction and during server-side rendering. It changes with every change
 /// notification (key presses, pointer presses, focus without a preceding event, [`set_modality`]).
 pub fn use_interaction_modality() -> Signal<Option<Modality>> {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         Signal::stored(None)

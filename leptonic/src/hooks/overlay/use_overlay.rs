@@ -168,6 +168,7 @@ pub type UseOverlayAttrs = (
 /// }
 /// ```
 pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
+    crate::metrics::subject!();
     let UseOverlayInput {
         is_open,
         on_close,

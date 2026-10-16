@@ -347,6 +347,7 @@ pub fn use_form_validation_state<T>(input: UseFormValidationStateInput<T>) -> Fo
 where
     T: Clone + PartialEq + Send + Sync + 'static,
 {
+    crate::metrics::subject!();
     let UseFormValidationStateInput {
         is_invalid,
         value,

@@ -1,8 +1,9 @@
 //! Test fixtures driven by the browser tests in `leptonic/tests/`.
 //!
-//! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms`, `hooks` or `perf`
-//! (performance measurements, see [`perf`]). To add one, create a module with a page component
-//! and register it in [`FIXTURES`].
+//! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms`, `hooks`,
+//! `perf/atoms` or `perf/hooks` (the performance tests', see [`perf`]). To add one, create a
+//! module with a page component and register it in [`FIXTURES`] (the performance tests' fixtures:
+//! in `perf::atoms::FIXTURES`, `perf::hooks::FIXTURES`).
 //!
 //! A fixture with several independent parts wraps each in a [`Section`]: loaded with
 //! `?only=<name>,...`, the page renders only the sections named, so a test of one part renders
@@ -682,18 +683,19 @@ pub const FIXTURES: &[Fixture] = &[
         title: "Menu",
         view: || view! { <hooks::menu::PageHookMenu /> }.into_any(),
     },
-    Fixture {
-        group: "perf",
-        name: "virtual-list",
-        title: "VirtualList performance",
-        view: || view! { <perf::virtual_list::PagePerfVirtualList /> }.into_any(),
-    },
 ];
 
-pub fn find_fixture(group: &str, name: &str) -> Option<&'static Fixture> {
+/// Every fixture: [`FIXTURES`] and the performance tests' ([`perf::atoms::FIXTURES`],
+/// [`perf::hooks::FIXTURES`]).
+pub fn all_fixtures() -> impl Iterator<Item = &'static Fixture> {
     FIXTURES
         .iter()
-        .find(|fixture| fixture.group == group && fixture.name == name)
+        .chain(perf::atoms::FIXTURES)
+        .chain(perf::hooks::FIXTURES)
+}
+
+pub fn find_fixture(group: &str, name: &str) -> Option<&'static Fixture> {
+    all_fixtures().find(|fixture| fixture.group == group && fixture.name == name)
 }
 
 /// One part of a fixture page with several, named `name`. Rendered unless the page was loaded

@@ -385,5 +385,6 @@ pub fn create_focus_manager() -> CreateFocusManagerReturn {
 /// The focus manager of the enclosing `FocusScope` (or `FocusManagerProvider`), react-aria's
 /// `useFocusManager`. `None` outside of one.
 pub fn use_focus_manager_context() -> Option<FocusManager> {
+    crate::metrics::subject!();
     use_context::<FocusManager>()
 }

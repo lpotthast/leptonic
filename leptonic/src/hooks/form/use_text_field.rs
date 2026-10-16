@@ -377,6 +377,7 @@ impl IntoAttrs for UseTextFieldInputProps {
 /// For a `<textarea>` (`element` is `TextFieldElement::TextArea`), render the state's value as its
 /// initial content: `<textarea {..props}>{state.value.get_untracked()}</textarea>`.
 pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
+    crate::metrics::subject!();
     let UseTextFieldInput {
         state,
         id,

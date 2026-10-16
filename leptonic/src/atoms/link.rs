@@ -140,6 +140,7 @@ pub fn Link<H>(
 where
     H: ToHref + Send + Sync + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Link", classes);
     let context = use_context::<LinkContext>();
     let is_disabled = match context {
@@ -250,6 +251,7 @@ pub fn AnchorLink(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-AnchorLink", classes);
     let link = use_anchor_link(UseAnchorLinkInput {
         scroll_behavior,

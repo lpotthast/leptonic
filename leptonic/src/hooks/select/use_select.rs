@@ -155,6 +155,7 @@ impl IntoAttrs for UseSelectValueProps {
 /// supports type-ahead and (in single selection mode) changing the value with ArrowLeft and
 /// ArrowRight without opening the popover.
 pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
+    crate::metrics::subject!();
     let UseSelectInput {
         state,
         id,

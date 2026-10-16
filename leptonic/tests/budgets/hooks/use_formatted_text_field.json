@@ -1,0 +1,133 @@
+{
+  "invalid_composition": {
+    "invalid composition": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_formatted_text_field",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 435,
+        "reallocations": 105,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_formatted_text_field",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 358,
+        "reallocations": 12,
+        "memo_runs": 6,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_formatted_text_field",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "typing": {
+    "accepted digit": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_formatted_text_field",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 32,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "rejected letter": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_formatted_text_field",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 427,
+        "reallocations": 105,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

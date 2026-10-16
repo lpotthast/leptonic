@@ -96,6 +96,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorSwatchPicker", classes);
     let locale = use_locale();
     let collection = use_list_collection(UseListCollectionInput {
@@ -192,6 +193,7 @@ pub fn ColorSwatchPickerItem(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorSwatchPickerItem", classes);
     let key = color_key(color);
     if let Some(PickerContext { disabled, .. }) = use_context::<PickerContext>() {
@@ -236,6 +238,7 @@ pub fn ColorSwatchPickerItems(
     #[prop(optional)]
     children: Option<ChildrenFn>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let Some(PickerContext { colors, .. }) = use_context::<PickerContext>() else {
         crate::utils::dev_warn!("<ColorSwatchPickerItems> must be inside a <ColorSwatchPicker>.");
         return None;

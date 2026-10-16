@@ -29,6 +29,7 @@ pub struct UseHighlightSelectionDescriptionInput {
 pub fn use_highlight_selection_description(
     input: UseHighlightSelectionDescriptionInput,
 ) -> Signal<Option<String>> {
+    crate::metrics::subject!();
     let UseHighlightSelectionDescriptionInput {
         selection,
         has_item_actions,

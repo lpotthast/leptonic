@@ -48,6 +48,7 @@ pub fn DismissButton(
     #[prop(into, optional)]
     id: Option<String>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let id = id.unwrap_or_else(|| use_id("dismiss-button"));
     let strings = use_localized_strings::<OverlayStrings>();
     // With both a label and labelling ids, labelled by itself (first) and the referenced

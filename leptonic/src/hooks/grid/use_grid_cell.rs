@@ -126,6 +126,7 @@ impl IntoAttrs for UseGridCellProps {
 /// A cell of a grid: focusable itself or through its interactive children, with arrow keys
 /// moving between the children before moving to the neighboring cell.
 pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
+    crate::metrics::subject!();
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseGridCellInput {
         grid,

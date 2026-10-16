@@ -98,6 +98,7 @@ impl IntoAttrs for UseTableColumnHeaderProps {
 /// A column header of a table: focusable like a cell (its children get focus first), and
 /// sorting the table when pressed if the column allows sorting.
 pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColumnHeaderReturn {
+    crate::metrics::subject!();
     let UseTableColumnHeaderInput {
         table,
         key,

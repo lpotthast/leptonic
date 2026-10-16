@@ -37,6 +37,7 @@ pub fn Toolbar(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Toolbar", classes);
     let toolbar = use_toolbar(UseToolbarInput {
         element: CapturedElement::new(),

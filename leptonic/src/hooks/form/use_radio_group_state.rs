@@ -130,6 +130,7 @@ impl RadioGroupState {
 
 /// Creates the state of a radio group.
 pub fn use_radio_group_state(input: UseRadioGroupStateInput) -> RadioGroupState {
+    crate::metrics::subject!();
     let UseRadioGroupStateInput {
         default_value,
         value,

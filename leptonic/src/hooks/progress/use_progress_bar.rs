@@ -150,6 +150,7 @@ impl IntoAttrs for UseProgressBarProps {
 /// }
 /// ```
 pub fn use_progress_bar<T: NumberValue>(input: UseProgressBarInput<T>) -> UseProgressBarReturn {
+    crate::metrics::subject!();
     progress(input, AriaRole::Progressbar)
 }
 

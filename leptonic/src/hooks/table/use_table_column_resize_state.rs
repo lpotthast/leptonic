@@ -115,6 +115,7 @@ impl TableColumnResizeState {
 pub fn use_table_column_resize_state(
     input: UseTableColumnResizeStateInput,
 ) -> TableColumnResizeState {
+    crate::metrics::subject!();
     let UseTableColumnResizeStateInput {
         table_state,
         table_width,

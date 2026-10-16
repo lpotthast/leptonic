@@ -60,6 +60,7 @@ impl Default for UseToggleStateInput {
 
 /// Creates the state of a toggle.
 pub fn use_toggle_state(input: UseToggleStateInput) -> ToggleState {
+    crate::metrics::subject!();
     let UseToggleStateInput {
         default_selected,
         value,

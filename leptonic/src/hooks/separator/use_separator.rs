@@ -118,6 +118,7 @@ pub type UseSeparatorAttrs = (
 /// view! { <hr {..separator.props.into_attrs()} /> }
 /// ```
 pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
+    crate::metrics::subject!();
     let UseSeparatorInput {
         orientation,
         element_type,

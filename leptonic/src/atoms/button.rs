@@ -110,6 +110,7 @@ pub fn Button(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Button", classes);
     let progress_id = use_id("button-progress");
     let generated_id = use_id("button");

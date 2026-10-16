@@ -213,6 +213,7 @@ fn with_selection_modifiers(key: KeyboardKey) -> [Shortcut; 4] {
 pub fn use_selectable_collection(
     input: UseSelectableCollectionInput,
 ) -> UseSelectableCollectionReturn {
+    crate::metrics::subject!();
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseSelectableCollectionInput {
         selection,

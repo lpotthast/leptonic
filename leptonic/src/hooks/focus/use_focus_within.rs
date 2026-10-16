@@ -126,6 +126,7 @@ pub type UseFocusWithinAttrs = (OnEvent<ev::focusin>, OnEvent<ev::focusout>);
 /// }
 /// ```
 pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         let _ = input;

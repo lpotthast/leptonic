@@ -98,6 +98,7 @@ pub fn ProgressBar<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ProgressBar", classes);
     let id = id.or_else(|| use_context::<ProgressBarIdContext>().map(|ctx| ctx.0));
     let value = value.into_signal();
@@ -150,6 +151,7 @@ pub fn ProgressBarFill(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ProgressBarFill", classes);
     fill("ProgressBarFill", classes, styles)
 }
@@ -162,6 +164,7 @@ pub fn ProgressBarValueText(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ProgressBarValueText", classes);
     value_text("ProgressBarValueText", classes, styles)
 }

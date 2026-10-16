@@ -8,6 +8,26 @@ Leptonic is a library for the Leptos web framework (Rust-based reactive web fram
 react-aria and unstyled atoms built on them (ported from react-aria-components), plus an optional CSS theme for the
 atoms.
 
+## Test Runs: Never in Parallel, One Agent Runs Them for All
+
+Tests never run in parallel. One agent controls test execution for all others: the session that spawned them, or
+the one the user names.
+
+- **Why:** every test run (`cargo test`, `just browser-test`, `just browser-perf`, the book's suites) builds the whole
+  shared tree. The test-app's wasm and server alone take minutes, every other agent's changes force a rebuild, and
+  runs started side by side compete for the same target dirs, cargo locks and CPU: each takes longer, and
+  timing-sensitive tests fail.
+- **Request runs, don't start them:** the other agents never start test runs themselves. They request one (filters;
+  check or budget update) from the controlling agent, which collects the waiting requests, runs them together in one
+  build and one run (`BROWSER_TEST_PERF_BUDGETS_UPDATE=<filters>` records the budgets of the update requests' tests
+  and checks the others') and hands each requester the results of its own tests. Requests that
+  arrive while a run is in progress are combined into the next scheduled run, and every requester gets its results
+  from it (tests that several requested run once). Waiting for a run is normal: keep working meanwhile.
+- **The tree compiles before you request:** one agent's unfinished file breaks the build, and with it the run, for
+  everyone.
+- **Fix and format tools only on your own files**, never on the whole tree (`cargo fix`, `cargo clippy --fix`,
+  `cargo fmt`, `just fmt`, `leptosfmt` on directories): they rewrite other agents' files mid-change.
+
 ## Code Quality Principles
 
 - **Rust-native APIs**: Port react-aria's behavior faithfully, but never copy API shapes that are alien to Rust
@@ -69,6 +89,7 @@ Rules for every agent:
   and leave page texts to the book session (and tell it what changed).
 - **The tree always compiles.** The user runs `just serve` on the shared working tree. Write files completely, wire
   them in only once they compile, and fix errors immediately.
+- **Tests: never in parallel, one agent runs them for all** (the section "Test Runs" at the top).
 - **Hands off the git index.** Don't run `git add`, `git mv`, `git rm`, `git reset` or `git restore --staged` unless
   the user asks for a commit; rename and delete files with plain `mv`/`rm`. The index is shared state.
 - **Build against the live sources, in the shared agent target dirs.** Never build against a frozen copy of the
@@ -77,7 +98,11 @@ Rules for every agent:
   `<repo>/testing/test-app/target/agents` (absolute paths; inside the app, so leptonic's build script finds it). Builds
   of a whole dependency tree cost gigabytes per directory. Prefer `cargo check` where you don't need a build. All
   builds use the same rustflags (repository `.cargo/config.toml`), so artifacts are shared; don't set `RUSTFLAGS`.
-  Their incremental caches grow by tens of GB a day: when the disk runs low, `just clean-agent-incremental`.
+  Their incremental caches grow by tens of GB a day: when the disk runs low, `just clean-agent-incremental`. Test runs
+  use them too: the agent that runs tests for all (section "Test Runs" at the top) sets
+  `CARGO_TARGET_DIR=<repo>/target/agents` and `TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents` (the
+  browser suite builds the test-app there; without it, into `CARGO_TARGET_DIR`, else the user's
+  `testing/test-app/target`).
 
 ## Build Commands
 
@@ -235,6 +260,8 @@ Every dependency is declared with `default-features = false` and only the featur
 - `ssr` / `hydrate` - Server-side rendering support
 - `nightly` - Enables `leptos/nightly`
 - `full` - atoms, clipboard, syntax-highlight, intl-strings (not ssr/hydrate/nightly)
+- `metrics` - Hooks and atoms report that they ran (`metrics::ran`), for the performance tests (the test-app
+  enables it); every public hook and atom starts with `crate::metrics::subject!();`
 
 ## Key Types
 
@@ -274,6 +301,7 @@ theme is silently not copied.
 - `leptonic-theme/` - The atom theme (SCSS)
 - `examples/book-ssr/` - Documentation app and primary manual testing target
 - `examples/leptonic-template-*` - Starter templates (git submodules; atoms + the atom theme)
+- `testing/perf-metrics/` - The metrics of the browser tests' measurements, defined once (test-app and tests share it)
 - `testing/test-app/` - Leptos app that browser tests drive (`just serve-test-app` serves it at
   `http://127.0.0.1:4200` for manual inspection)
 
@@ -291,10 +319,19 @@ tests, speed, failure reports). The essentials:
   that loads its own page, registered in `tests/ui_tests/mod.rs`. Derive cases from react-aria's own tests and
   name the mirrored upstream file in an `// Upstream:` header. Find elements as users do (role, text, label); wait,
   never sleep; check "nothing changed" with `*_stays`.
-- Run them with `just browser-test` (a plain `cargo test` skips the suite). Timings in the browser:
-  `just browser-perf`, the performance suite (`documentation/testing.md`, "Performance measurements"). Agents set
-  `CARGO_TARGET_DIR=<repo>/target/agents` and `TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`; never run
-  two suites with the same target dir at once. `BROWSER_TEST_FILTER=<text>` runs the tests whose name contains it
+- **Every hook and atom has a performance test** (`documentation/testing.md`, "Performance measurements"):
+  `perf_tests/<kind>/<subject>.rs` (`perf_tests/atoms/button.rs`, `perf_tests/hooks/use_press.rs`) on a fixture
+  (`/perf/<kind>/<subject>`) rendering the subject
+  alone, with a test per thing it offers, each wrapping its actions in `page.measure("press", action)`. A
+  measurement counts what the action makes leptonic do (allocations, reactive work, DOM mutations, layouts; the
+  metrics: `testing/perf-metrics/src/lib.rs`) and which hooks and atoms ran (leptonic reports them:
+  `metrics::subject!()`), and the regular suite checks it against the budgets in `leptonic/tests/budgets/`.
+  Behavior tests don't measure. A change that alters a count fails its tests until the budget is recorded again
+  (`BROWSER_TEST_PERF_BUDGETS=update`); hooks and atoms without a performance test yet are listed in
+  `leptonic/tests/budgets/unmeasured.txt`, which only shrinks: new ones come with theirs. Timings: `just browser-perf`. The test-app patches `reactive_graph` with the user's Leptos fork at
+  `~/dev/leptos` (branch `leptonic-metrics`, for its `metrics`): it builds only while that checkout is on the branch.
+- Run them with `just browser-test` (a plain `cargo test` skips the suite), through the agent that runs tests for all
+  (section "Test Runs" at the top). `BROWSER_TEST_FILTER=<text>` runs the tests whose name contains it
   (`grid::`, `checkbox::hover`).
 - **Always execute browser tests** when adding or modifying them. Compilation alone is not sufficient: browser tests
   must run and pass before the work counts as complete.

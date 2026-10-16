@@ -103,6 +103,7 @@ impl TabListState {
 /// default, or the first enabled tab; if the selected tab disappears, the first enabled tab. A
 /// disabled tab can be selected (by default or bound key) and stays selected.
 pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
+    crate::metrics::subject!();
     let UseTabListStateInput {
         collection,
         default_selected_key,

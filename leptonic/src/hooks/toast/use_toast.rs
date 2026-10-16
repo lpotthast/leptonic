@@ -113,6 +113,7 @@ impl IntoAttrs for UseToastContentProps {
 /// Behavior and accessibility of a toast (react-aria's `useToast`): a non-modal alert dialog
 /// labelled by its title, whose content is announced; its timeout runs while it is shown.
 pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> UseToastReturn {
+    crate::metrics::subject!();
     let UseToastInput {
         queue,
         toast,

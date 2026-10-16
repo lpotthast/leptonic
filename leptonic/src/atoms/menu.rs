@@ -158,6 +158,7 @@ pub fn MenuTrigger(
     set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let (is_open, on_open_change) =
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let menu_state = use_menu_trigger_state(UseMenuTriggerStateInput {
@@ -276,6 +277,7 @@ pub fn ContextMenuTrigger(
     on_open_change: Option<Callback<bool>>,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let menu_state = use_menu_trigger_state(UseMenuTriggerStateInput {
         on_open_change,
         ..UseMenuTriggerStateInput::default()
@@ -407,6 +409,7 @@ pub fn Menu(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Menu", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
@@ -556,6 +559,7 @@ pub fn MenuItem(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MenuItem", classes);
     let Some(menu) = use_context::<MenuData>() else {
         crate::utils::dev_warn!("A <MenuItem> must be inside a <Menu>.");
@@ -672,6 +676,7 @@ pub fn SubmenuTrigger(
     kind: SubmenuKind,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let (Some(RootMenuState(root)), Some(ParentMenuElement(parent_menu)), Some(menu)) = (
         use_context::<RootMenuState>(),
         use_context::<ParentMenuElement>(),
@@ -744,6 +749,7 @@ where
     F: Fn(Node) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let Some(menu) = use_context::<MenuData>() else {
         crate::utils::dev_warn!("<MenuItems> must be inside a <Menu>.");
         return None;
@@ -780,6 +786,7 @@ pub fn MenuItemLabel(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MenuItemLabel", classes);
     let Some(ctx) = use_context::<MenuItemContext>() else {
         crate::utils::dev_warn!("A <MenuItemLabel> must be inside a <MenuItem>.");
@@ -797,6 +804,7 @@ pub fn MenuItemDescription(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MenuItemDescription", classes);
     let Some(ctx) = use_context::<MenuItemContext>() else {
         crate::utils::dev_warn!("A <MenuItemDescription> must be inside a <MenuItem>.");
@@ -814,6 +822,7 @@ pub fn MenuItemShortcut(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MenuItemShortcut", classes);
     let Some(ctx) = use_context::<MenuItemContext>() else {
         crate::utils::dev_warn!("A <MenuItemShortcut> must be inside a <MenuItem>.");
@@ -879,6 +888,7 @@ pub fn MenuSection(
     #[prop(into, optional)] heading_classes: Classes,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MenuSection", classes);
     let heading_classes = with_default_class("leptonic-MenuSectionHeading", heading_classes);
     let Some(menu) = use_context::<MenuData>() else {

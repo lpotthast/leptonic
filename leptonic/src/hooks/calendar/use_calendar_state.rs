@@ -518,6 +518,7 @@ impl CalendarState {
 /// Creates the state of a calendar: the selected date, the focused date and the visible range
 /// following it.
 pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
+    crate::metrics::subject!();
     let UseCalendarStateInput {
         default_value,
         value,

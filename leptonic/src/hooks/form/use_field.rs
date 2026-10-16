@@ -98,6 +98,7 @@ impl IntoAttrs for UseFieldProps {
 /// }
 /// ```
 pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
+    crate::metrics::subject!();
     let UseFieldInput {
         id,
         label_id,

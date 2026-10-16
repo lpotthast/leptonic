@@ -179,6 +179,7 @@ pub struct UseGridKeyboardDelegateInput {
 pub fn use_grid_keyboard_delegate(
     input: UseGridKeyboardDelegateInput,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
+    crate::metrics::subject!();
     let UseGridKeyboardDelegateInput { state, element } = input;
     // One collator per locale, not per read of the delegate.
     let collator = use_collator(CollatorOptions::default());
@@ -202,6 +203,7 @@ pub fn use_grid_keyboard_delegate(
 /// A grid: rows of cells, navigated in two dimensions with the arrow keys; rows (or cells) can
 /// be selected and activated. Render rows with `use_grid_row` and cells with `use_grid_cell`.
 pub fn use_grid(input: UseGridInput) -> UseGridReturn {
+    crate::metrics::subject!();
     let UseGridInput {
         state,
         element,

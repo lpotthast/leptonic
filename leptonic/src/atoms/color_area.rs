@@ -100,6 +100,7 @@ pub fn ColorArea<C: ColorValue>(
     /// The `ColorThumb`, and anything else to draw on the area.
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorArea", classes);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<C>);

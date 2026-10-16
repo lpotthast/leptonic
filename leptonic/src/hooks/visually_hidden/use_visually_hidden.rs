@@ -66,6 +66,7 @@ impl IntoAttrs for UseVisuallyHiddenProps {
 /// Hides an element visually while keeping it available to assistive technology; a focusable
 /// element shows while focus is within it.
 pub fn use_visually_hidden(input: UseVisuallyHiddenInput) -> UseVisuallyHiddenReturn {
+    crate::metrics::subject!();
     let UseVisuallyHiddenInput { is_focusable } = input;
     let focus_within = use_focus_within(UseFocusWithinInput {
         is_disabled: Signal::derive(move || !is_focusable.get()),

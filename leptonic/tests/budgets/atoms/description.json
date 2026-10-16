@@ -1,0 +1,80 @@
+{
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/description",
+        "atoms/input",
+        "atoms/label",
+        "atoms/text_field",
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_text_field",
+        "hooks/use_text_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 84,
+        "reallocations": 2,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/description",
+        "atoms/input",
+        "atoms/label",
+        "atoms/text_field",
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_text_field",
+        "hooks/use_text_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 53,
+        "reallocations": 0,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

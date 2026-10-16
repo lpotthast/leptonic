@@ -13,6 +13,9 @@ pub fn hydrate() {
             .build(),
     );
 
+    // The app's counters for the browser tests' measurements.
+    crate::pages::perf::counters::register();
+
     leptos::mount::hydrate_body(App);
 
     // Browser tests wait for this marker before interacting with a page. Deferring it by one frame

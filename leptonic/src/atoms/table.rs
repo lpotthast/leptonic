@@ -125,6 +125,7 @@ pub fn ResizableTableContainer(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ResizableTableContainer", classes);
     let container = NodeRef::<html::Div>::new();
     let (width, set_width) = signal(0.0);
@@ -246,6 +247,7 @@ pub fn Table(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Table", classes);
     let tree = tree_column.map(|column| {
         let (expanded_keys, on_expanded_change) =
@@ -361,6 +363,7 @@ pub fn TableHeader(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableHeader", classes);
     let Some(data) = use_context::<TableData>() else {
         crate::utils::dev_warn!("a <TableHeader> belongs in a <Table>");
@@ -642,6 +645,7 @@ pub fn TableBody(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableBody", classes);
     let row_group = use_grid_row_group();
     let table = use_context::<TableData>().map(|data| data.state.table);
@@ -697,6 +701,7 @@ pub fn TableRow(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableRow", classes);
     let Some(data) = use_context::<TableData>() else {
         crate::utils::dev_warn!("a <TableRow> belongs in a <Table>");
@@ -861,6 +866,7 @@ pub fn TableCell(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableCell", classes);
     let (Some(data), Some(row_context)) = (use_context::<TableData>(), use_context::<RowContext>())
     else {
@@ -973,6 +979,7 @@ pub fn TableExpandButton(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableExpandButton", classes);
     let Some(row) = use_context::<RowContext>() else {
         crate::utils::dev_warn!("a <TableExpandButton> belongs in a <TableRow>");

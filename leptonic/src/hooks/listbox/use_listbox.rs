@@ -209,6 +209,7 @@ impl IntoAttrs for UseListBoxProps {
 /// }
 /// ```
 pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
+    crate::metrics::subject!();
     let UseListBoxInput {
         state,
         element,

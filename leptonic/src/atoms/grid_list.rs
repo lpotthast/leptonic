@@ -108,6 +108,7 @@ pub fn GridList(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridList", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
@@ -211,6 +212,7 @@ pub fn GridListItem(
     allows_arrow_navigation: bool,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridListItem", classes);
     let Some(list) = use_context::<GridListData>() else {
         crate::utils::dev_warn!("a <GridListItem> belongs in a <GridList>");
@@ -294,6 +296,7 @@ pub fn GridListItemDescription(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridListItemDescription", classes);
     let Some(ctx) = use_context::<GridListItemContext>() else {
         crate::utils::dev_warn!("a <GridListItemDescription> belongs in a <GridListItem>");
@@ -341,6 +344,7 @@ pub fn GridListSection(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridListSection", classes);
     let Some(list) = use_context::<GridListData>() else {
         crate::utils::dev_warn!("a <GridListSection> belongs in a <GridList>");
@@ -375,6 +379,7 @@ pub fn GridListHeader(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridListHeader", classes);
     let Some(ctx) = use_context::<GridListSectionContext>() else {
         crate::utils::dev_warn!("a <GridListHeader> belongs in a <GridListSection>");

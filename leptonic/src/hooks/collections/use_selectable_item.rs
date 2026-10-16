@@ -191,6 +191,7 @@ impl IntoAttrs for UseSelectableItemProps {
 /// selection mode/behavior and modifier keys), the focused item gets DOM focus and is the tab
 /// stop, and items with an action or link perform it on press, Enter or double-click.
 pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemReturn {
+    crate::metrics::subject!();
     let UseSelectableItemInput {
         selection,
         item_elements,

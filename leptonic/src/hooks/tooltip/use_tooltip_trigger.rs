@@ -140,6 +140,7 @@ pub struct UseTooltipTriggerTooltipProps {
 /// }
 /// ```
 pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerReturn {
+    crate::metrics::subject!();
     let UseTooltipTriggerInput {
         state,
         is_disabled,

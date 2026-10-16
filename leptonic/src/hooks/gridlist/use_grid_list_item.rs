@@ -180,6 +180,7 @@ impl IntoAttrs for UseGridListItemCellProps {
 /// keyboard navigation into the row's interactive children (ArrowLeft/ArrowRight, or Tab with
 /// `KeyboardNavigationBehavior::Tab`).
 pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn {
+    crate::metrics::subject!();
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseGridListItemInput {
         list,

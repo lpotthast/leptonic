@@ -117,6 +117,7 @@ impl IntoAttrs for UseModalBackdropModalProps {
 pub fn use_modal_backdrop<S: OverlayState>(
     input: UseModalBackdropInput<S>,
 ) -> UseModalBackdropReturn {
+    crate::metrics::subject!();
     let UseModalBackdropInput {
         state,
         is_dismissable,

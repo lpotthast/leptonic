@@ -215,6 +215,7 @@ impl IntoAttrs for UseGridListProps {
 /// The rows come from the state's collection; render one `use_grid_list_item` per item, in
 /// collection order.
 pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
+    crate::metrics::subject!();
     let UseGridListInput {
         state,
         element,

@@ -1,0 +1,547 @@
+{
+  "focus": {
+    "focus": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "focused_item_removed": {
+    "remove": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 65,
+        "reallocations": 8,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "focused_item_removed_large": {
+    "remove": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2052,
+        "reallocations": 33,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 763,
+        "reallocations": 35,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 4,
+        "render_effect_runs": 22,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount_large": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 59194,
+        "reallocations": 2039,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 4,
+        "render_effect_runs": 2002,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "replace_and_extend": {
+    "extend": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 121,
+        "reallocations": 3,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 8,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 9,
+        "dom_attributes": 8,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "replace": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 25,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "replace_and_extend_large": {
+    "extend": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12008,
+        "reallocations": 16,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 998,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 999,
+        "dom_attributes": 998,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "replace": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 25,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_all": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 110,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "select all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 127,
+        "reallocations": 3,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "toggle all off": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 109,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "toggle all on": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 126,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_all_large": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 10010,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 1000,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "select all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12014,
+        "reallocations": 10,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 1000,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "toggle all off": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 10009,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 1000,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "toggle all on": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12006,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 1000,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "toggle": {
+    "deselect": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 23,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "select": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_list_collection",
+        "hooks/use_list_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 25,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

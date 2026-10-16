@@ -122,6 +122,7 @@ pub fn NumberField<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-NumberField", classes);
     let (value, on_change) = ValueBinding::from_state_props(
         value.map(OptionalNumberSignal::into_signal),
@@ -254,6 +255,7 @@ pub fn NumberFieldGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-NumberFieldGroup", classes);
     let Some(ctx) = use_context::<NumberFieldContext>() else {
         crate::utils::dev_warn!("A <NumberFieldGroup> must be inside a <NumberField>.");
@@ -298,6 +300,7 @@ pub fn NumberFieldIncrementButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-NumberFieldIncrementButton", classes);
     let Some(ctx) = use_context::<NumberFieldContext>() else {
         crate::utils::dev_warn!("A <NumberFieldIncrementButton> must be inside a <NumberField>.");
@@ -323,6 +326,7 @@ pub fn NumberFieldDecrementButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-NumberFieldDecrementButton", classes);
     let Some(ctx) = use_context::<NumberFieldContext>() else {
         crate::utils::dev_warn!("A <NumberFieldDecrementButton> must be inside a <NumberField>.");

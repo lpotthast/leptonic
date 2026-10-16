@@ -371,6 +371,7 @@ fn restrict_values<T: NumberValue>(values: &[T], min: T, max: T, step: T) -> Vec
 
 /// Manages the values of a slider with one or more thumbs.
 pub fn use_slider_state<T: NumberValue>(input: UseSliderStateInput<T>) -> SliderState<T> {
+    crate::metrics::subject!();
     let UseSliderStateInput {
         default_values,
         value,

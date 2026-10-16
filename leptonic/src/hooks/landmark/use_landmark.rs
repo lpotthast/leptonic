@@ -624,6 +624,7 @@ impl IntoAttrs for UseLandmarkProps {
 /// A landmark (react-aria's `useLandmark`): a region of the page that F6 and Shift+F6 move
 /// between (Alt+F6 to the main one), returning to what had the focus there last.
 pub fn use_landmark(input: UseLandmarkInput) -> UseLandmarkReturn {
+    crate::metrics::subject!();
     let UseLandmarkInput {
         element,
         role,

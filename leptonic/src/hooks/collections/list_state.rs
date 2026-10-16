@@ -43,6 +43,7 @@ pub struct UseListStateInput {
 /// When the focused item disappears from the collection (deleted, filtered out), focus moves to
 /// the next item that still exists, or else to the previous one.
 pub fn use_list_state(input: UseListStateInput) -> ListState {
+    crate::metrics::subject!();
     let UseListStateInput {
         collection,
         selection,
@@ -69,6 +70,7 @@ pub struct UseListStateViewInput {
 /// filtered items). Selection and focus are shared with `state`; when the focused item leaves
 /// the view, focus moves to a neighbor.
 pub fn use_list_state_view(input: UseListStateViewInput) -> ListState {
+    crate::metrics::subject!();
     let UseListStateViewInput { state, collection } = input;
     let selection = state.selection.with_collection(collection);
     use_focused_key_reset(collection, &selection);
@@ -169,6 +171,7 @@ pub struct UseSingleSelectListStateInput {
 /// Creates the state of a single-selection list. Selecting an item again keeps it selected (but
 /// still reports the selection, e.g. so a select closes its popover).
 pub fn use_single_select_list_state(input: UseSingleSelectListStateInput) -> SingleSelectListState {
+    crate::metrics::subject!();
     let UseSingleSelectListStateInput {
         collection,
         default_selected_key,

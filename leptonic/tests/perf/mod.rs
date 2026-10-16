@@ -1,9 +1,14 @@
-//! Reports of the performance suite (`BROWSER_TEST_SUITE=performance`): each scenario's statistics
-//! are logged, written to `<target>/tmp/performance/<scenario>.json` (samples included) and compared
-//! with the previous run's file, so that a change can be measured before and after.
-//!
-//! Timings depend on the machine and its load: compare runs of one machine, not with fixed
-//! budgets.
+//! Performance of leptonic in the browser tests (`documentation/testing.md`, "Performance
+//! measurements"):
+//! - [`budgets`]: what the measurements (`Page::measure`) of every regular test counted, checked
+//!   against the budgets in `tests/budgets/`, and the coverage of hooks and atoms ([`inventory`]).
+//! - Timings ([`report`], the performance suite): each scenario's statistics are logged, written
+//!   to `<target>/tmp/performance/<fixture>/<scenario>.json` (samples included) and compared with
+//!   the previous run's file, so that a change can be measured before and after. Timings depend
+//!   on the machine and its load: compare runs of one machine, not with fixed budgets.
+
+pub mod budgets;
+pub mod inventory;
 
 use std::{fmt::Write as _, path::PathBuf};
 
@@ -71,15 +76,17 @@ struct Recorded {
     metrics: Vec<RecordedMetric>,
 }
 
-/// Where the reports go.
-fn reports_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("performance")
+/// Where the reports of `fixture` go.
+fn reports_dir(fixture: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("performance")
+        .join(fixture)
 }
 
-/// Logs `results` (with the change of each median since the previous run of the scenario) and
-/// records them, replacing the previous report.
-pub fn report(results: &PerfResults) -> Result<(), Report> {
-    let path = reports_dir().join(format!("{}.json", results.scenario));
+/// Logs `results` of the scenario of `fixture` (`/perf/<fixture>`) with the change of each median
+/// since the previous run of the scenario, and records them, replacing the previous report.
+pub fn report(fixture: &str, results: &PerfResults) -> Result<(), Report> {
+    let path = reports_dir(fixture).join(format!("{}.json", results.scenario));
     let previous: Option<Recorded> = std::fs::read_to_string(&path)
         .ok()
         .and_then(|json| serde_json::from_str(&json).ok())
@@ -152,7 +159,7 @@ pub fn report(results: &PerfResults) -> Result<(), Report> {
         parameters: results.parameters.clone(),
         metrics,
     };
-    std::fs::create_dir_all(reports_dir())
+    std::fs::create_dir_all(reports_dir(fixture))
         .context("failed to create the performance reports dir")?;
     std::fs::write(&path, serde_json::to_string_pretty(&recorded)?)
         .context_with(|| format!("failed to write {}", path.display()))?;

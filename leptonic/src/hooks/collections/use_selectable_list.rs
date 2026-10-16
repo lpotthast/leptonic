@@ -49,6 +49,7 @@ impl std::fmt::Debug for UseSelectableListInput {
 /// [`use_selectable_collection`] for lists: keyboard navigation through the items in collection
 /// order (or in a grid layout), with type-ahead using the current locale's collation.
 pub fn use_selectable_list(input: UseSelectableListInput) -> UseSelectableCollectionReturn {
+    crate::metrics::subject!();
     let UseSelectableListInput {
         state,
         element,
@@ -106,6 +107,7 @@ impl std::fmt::Debug for UseListKeyboardDelegateInput {
 pub fn use_list_keyboard_delegate(
     input: UseListKeyboardDelegateInput,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
+    crate::metrics::subject!();
     let UseListKeyboardDelegateInput {
         state,
         element,

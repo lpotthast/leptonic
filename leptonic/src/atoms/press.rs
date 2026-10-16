@@ -79,6 +79,7 @@ where
     V: IntoView + 'static,
 {
     use leptos::{ev, tachys::html::style::style};
+    crate::metrics::subject!();
 
     let press = use_press(UsePressInput {
         is_disabled,
@@ -198,6 +199,7 @@ pub fn PressResponder(
     on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     // Nesting: read parent context and merge (parent callbacks chain before ours).
     let parent_ctx = use_context::<PressResponderContext>();
 
@@ -287,6 +289,7 @@ pub fn PressResponder(
 /// ```
 #[component]
 pub fn ClearPressResponder(children: Children) -> impl IntoView {
+    crate::metrics::subject!();
     scoped_view(|| provide_context(PressResponderContext::empty()), children)
 }
 

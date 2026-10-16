@@ -159,6 +159,7 @@ impl IntoAttrs for UseRadioGroupProps {
 /// keys move the selection between its radios. Render the radios with
 /// [`use_radio`](fn@super::use_radio).
 pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
+    crate::metrics::subject!();
     let UseRadioGroupInput {
         state,
         id,

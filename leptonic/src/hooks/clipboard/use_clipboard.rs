@@ -118,6 +118,7 @@ fn remove_global_event_listener(event: &'static str, id: u64) {
 /// Cut, copy and paste for an element (e.g. a collection) while it has focus, using the same
 /// data format as drag and drop.
 pub fn use_clipboard(input: UseClipboardInput) -> UseClipboardReturn {
+    crate::metrics::subject!();
     let UseClipboardInput {
         get_items,
         on_copy,

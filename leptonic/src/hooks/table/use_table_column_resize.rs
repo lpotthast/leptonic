@@ -291,6 +291,7 @@ impl Resizer {
 ///
 /// Render the resizer element inside the column header, and the input inside the resizer.
 pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColumnResizeReturn {
+    crate::metrics::subject!();
     let UseTableColumnResizeInput {
         state,
         table,

@@ -202,6 +202,7 @@ impl<C: ColorValue> ColorFieldState<C> {
 pub fn use_color_field_state<C: ColorValue>(
     input: UseColorFieldStateInput<C>,
 ) -> ColorFieldState<C> {
+    crate::metrics::subject!();
     let UseColorFieldStateInput {
         default_value,
         value,

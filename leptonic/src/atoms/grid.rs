@@ -87,6 +87,7 @@ pub fn Grid(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Grid", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
@@ -142,6 +143,7 @@ pub fn GridRowGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridRowGroup", classes);
     let row_group = use_grid_row_group();
     view! {
@@ -166,6 +168,7 @@ pub fn GridRow(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridRow", classes);
     let Some(grid) = use_context::<GridData>() else {
         crate::utils::dev_warn!("a <GridRow> belongs in a <Grid>");
@@ -234,6 +237,7 @@ pub fn GridCell(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-GridCell", classes);
     let Some(grid) = use_context::<GridData>() else {
         crate::utils::dev_warn!("a <GridCell> belongs in a <Grid>");

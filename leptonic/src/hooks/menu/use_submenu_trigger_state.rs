@@ -87,6 +87,7 @@ impl SubmenuTriggerState {
 /// Creates the state of a submenu trigger: the item `trigger_key` of a menu on `level` in the tree
 /// of the root trigger `root`.
 pub fn use_submenu_trigger_state(input: UseSubmenuTriggerStateInput) -> SubmenuTriggerState {
+    crate::metrics::subject!();
     let UseSubmenuTriggerStateInput {
         trigger_key,
         root,

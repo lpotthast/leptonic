@@ -1,0 +1,596 @@
+{
+  "click_large": {
+    "deselect": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 84,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 6,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "select": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 99,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 8,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    }
+  },
+  "click_small": {
+    "deselect": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 84,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 6,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "select": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 99,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 8,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    }
+  },
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 267,
+        "reallocations": 0,
+        "memo_runs": 10,
+        "memo_runs_unchanged": 9,
+        "effect_runs": 3,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 269,
+        "reallocations": 0,
+        "memo_runs": 10,
+        "memo_runs_unchanged": 9,
+        "effect_runs": 3,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "ignored click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 11,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 7415,
+        "reallocations": 250,
+        "memo_runs": 111,
+        "memo_runs_unchanged": 10,
+        "effect_runs": 80,
+        "render_effect_runs": 132,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 31,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount_large": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 737053,
+        "reallocations": 24029,
+        "memo_runs": 11001,
+        "memo_runs_unchanged": 1000,
+        "effect_runs": 8000,
+        "render_effect_runs": 13002,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3001,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "selection_change_large": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 21009,
+        "reallocations": 0,
+        "memo_runs": 1001,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "select all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 23007,
+        "reallocations": 2,
+        "memo_runs": 1000,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "selection_change_small": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 219,
+        "reallocations": 0,
+        "memo_runs": 11,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "select all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 237,
+        "reallocations": 2,
+        "memo_runs": 10,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "space": {
+    "deselect": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 95,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "select": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_grid_selection_checkbox",
+        "hooks/use_grid_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 97,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

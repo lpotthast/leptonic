@@ -170,6 +170,7 @@ impl TableState {
 
 /// Creates the state of a table (see [`TableState`]).
 pub fn use_table_state(input: UseTableStateInput) -> TableState {
+    crate::metrics::subject!();
     let UseTableStateInput {
         table,
         show_selection_checkboxes,

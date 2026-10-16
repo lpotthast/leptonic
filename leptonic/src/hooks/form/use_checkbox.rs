@@ -53,6 +53,7 @@ pub type UseCheckboxReturn = UseToggleReturn;
 /// }
 /// ```
 pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
+    crate::metrics::subject!();
     use_checkbox_with(input, None)
 }
 

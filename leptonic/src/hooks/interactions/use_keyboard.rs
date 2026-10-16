@@ -206,6 +206,7 @@ pub type UseKeyboardAttrs = (OnEvent<ev::keydown>, OnEvent<ev::keyup>);
 /// }
 /// ```
 pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
+    crate::metrics::subject!();
     let UseKeyboardInput {
         is_disabled: disabled,
         on_key_down,

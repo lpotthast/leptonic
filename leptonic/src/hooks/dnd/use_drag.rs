@@ -188,6 +188,7 @@ enum PointerModality {
 /// A draggable element: drags start natively with the mouse or touch, and with the keyboard
 /// (Enter) or a screen reader through the drag manager.
 pub fn use_drag(input: UseDragInput) -> UseDragReturn {
+    crate::metrics::subject!();
     let UseDragInput {
         items,
         allowed_drop_operations,

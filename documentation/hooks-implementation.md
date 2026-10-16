@@ -36,6 +36,12 @@ Hooks follow the `use_*` naming convention.
 - A hook adding "move" functionality is named `use_move`.
 - ...
 
+Every public hook starts with `crate::metrics::subject!();` (after any `use` items of its body), and so does
+every atom (`atoms-implementation.md`): with the `metrics` feature (only the test-app enables it), it reports that
+the hook ran, named after the function it is in, so the performance tests know what each measurement ran without
+anyone listing it; without the feature it is nothing. Every hook and atom has a performance test
+(`leptonic/tests/perf_tests/hooks/<hook>.rs`, `testing.md`, "Performance measurements").
+
 ## Module Organization
 
 Each hook must be implemented in its own module (file). Do not combine multiple hooks in a single file,

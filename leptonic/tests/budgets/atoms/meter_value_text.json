@@ -1,0 +1,164 @@
+{
+  "format_changes": {
+    "format decimal": {
+      "ran": [
+        "atoms/meter",
+        "atoms/meter_value_text",
+        "atoms/theme_provider",
+        "hooks/use_label",
+        "hooks/use_meter"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 47,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "format percent": {
+      "ran": [
+        "atoms/meter",
+        "atoms/meter_value_text",
+        "atoms/theme_provider",
+        "hooks/use_label",
+        "hooks/use_meter"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 49,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/meter",
+        "atoms/meter_value_text",
+        "atoms/theme_provider",
+        "hooks/use_label",
+        "hooks/use_meter"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 59,
+        "reallocations": 4,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/meter",
+        "atoms/meter_value_text",
+        "atoms/theme_provider",
+        "hooks/use_label",
+        "hooks/use_meter"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "value_changes": {
+    "lower": {
+      "ran": [
+        "atoms/meter",
+        "atoms/meter_value_text",
+        "atoms/theme_provider",
+        "hooks/use_label",
+        "hooks/use_meter"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 65,
+        "reallocations": 1,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "raise": {
+      "ran": [
+        "atoms/meter",
+        "atoms/meter_value_text",
+        "atoms/theme_provider",
+        "hooks/use_label",
+        "hooks/use_meter"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 65,
+        "reallocations": 1,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

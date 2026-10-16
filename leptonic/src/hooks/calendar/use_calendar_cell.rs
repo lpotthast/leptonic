@@ -207,6 +207,7 @@ fn focus_cell(button: &web_sys::Element) {
 /// two presses or by dragging), its label ("Today, Monday, May 20, 2024 selected"), and moving
 /// the browser's focus to it when it becomes the focused date.
 pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
+    crate::metrics::subject!();
     let UseCalendarCellInput {
         data,
         date,

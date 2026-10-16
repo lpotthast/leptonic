@@ -29,6 +29,7 @@ pub struct UseSafelyMouseToSubmenuInput {
 /// menu: while it moves towards the submenu, the menu ignores pointer events (so hovering another
 /// item doesn't close the submenu). Once the pointer rests, the item under it gets hovered again.
 pub fn use_safely_mouse_to_submenu(input: UseSafelyMouseToSubmenuInput) {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         let _ = input;

@@ -20,6 +20,7 @@ use crate::utils::{
 
 /// The description of a drop target during a keyboard or screen reader drag: how to drop.
 pub fn use_virtual_drop() -> Signal<Option<String>> {
+    crate::metrics::subject!();
     let modality = use_drag_modality();
     let session = use_drag_session();
     let strings = use_localized_strings::<DndStrings>();

@@ -220,6 +220,7 @@ fn closest_thumb(value: f64, values: &[f64]) -> Option<usize> {
 /// closest thumb there (and drags it). Render each thumb with
 /// [`use_slider_thumb`](fn@super::use_slider_thumb).
 pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
+    crate::metrics::subject!();
     let UseSliderInput {
         state,
         id,

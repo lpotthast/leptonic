@@ -38,6 +38,7 @@ impl IntoAttrs for UseTableHeaderRowProps {
 
 /// A row of column headers (see `TableCollection::header_rows`).
 pub fn use_table_header_row() -> UseTableHeaderRowProps {
+    crate::metrics::subject!();
     UseTableHeaderRowProps {
         role: AriaRole::Row,
     }
@@ -87,6 +88,7 @@ impl IntoAttrs for UseTableHeaderPlaceholderProps {
 pub fn use_table_header_placeholder(
     input: UseTableHeaderPlaceholderInput,
 ) -> UseTableHeaderPlaceholderProps {
+    crate::metrics::subject!();
     let UseTableHeaderPlaceholderInput { table, key } = input;
     let table = table.state.table;
     let position = Memo::new(move |_| {

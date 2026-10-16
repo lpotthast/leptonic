@@ -267,6 +267,7 @@ impl Default for UseToastStateInput {
 pub fn use_toast_state<T: Clone + Send + Sync + 'static>(
     input: UseToastStateInput,
 ) -> ToastQueue<T> {
+    crate::metrics::subject!();
     ToastQueue::new(Some(input.max_visible_toasts))
 }
 

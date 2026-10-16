@@ -1,0 +1,202 @@
+{
+  "description": {
+    "hide": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 37,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "show": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 52,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "error_message": {
+    "hide": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 41,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "show": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 53,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "further_description": {
+    "add": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 22,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "remove": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 20,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 287,
+        "reallocations": 14,
+        "memo_runs": 6,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 7,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 5,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_field",
+        "hooks/use_label"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 5,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

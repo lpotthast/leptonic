@@ -58,6 +58,7 @@ pub(crate) fn use_node_aria_label(collection: CollectionMemo, key: Key) -> Memo<
 pub fn use_collection(
     build: impl Fn(&mut CollectionBuilder) + Send + Sync + 'static,
 ) -> CollectionMemo {
+    crate::metrics::subject!();
     Memo::new(move |_| Arc::new(Collection::build(&build)))
 }
 
@@ -88,6 +89,7 @@ where
     Tx: Fn(&T) -> S + Send + Sync + 'static,
     S: Into<Arc<str>>,
 {
+    crate::metrics::subject!();
     let UseListCollectionInput {
         items,
         key,

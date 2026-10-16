@@ -128,6 +128,7 @@ pub fn TagGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TagGroup", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
@@ -207,6 +208,7 @@ pub fn TagList(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TagList", classes);
     let Some(ctx) = use_context::<TagListContext>() else {
         crate::utils::dev_warn!("A <TagList> must be inside a <TagGroup>.");
@@ -257,6 +259,7 @@ pub fn Tag(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Tag", classes);
     let Some(group) = use_context::<TagGroupData>() else {
         crate::utils::dev_warn!("A <Tag> must be inside a <TagList>.");
@@ -327,6 +330,7 @@ where
     F: Fn(Node) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let Some(group) = use_context::<TagGroupData>() else {
         crate::utils::dev_warn!("A <TagItems> must be inside a <TagList>.");
         return None;
@@ -369,6 +373,7 @@ pub fn TagRemoveButton(
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TagRemoveButton", classes);
     let Some(ctx) = use_context::<TagRemoveContext>() else {
         crate::utils::dev_warn!("A <TagRemoveButton> must be inside a <Tag>.");

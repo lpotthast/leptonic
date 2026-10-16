@@ -236,6 +236,7 @@ impl IntoAttrs for UseNumberFieldInputProps {
 /// Render a hidden input (`type="hidden"`, `name`, `value` = the state's `number_value`) to
 /// submit the value with a form.
 pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNumberFieldReturn {
+    crate::metrics::subject!();
     let UseNumberFieldInput {
         state,
         id,

@@ -50,6 +50,7 @@ pub struct UseTableCellReturn {
 /// what the row's `aria-labelledby` refers to. The cell's role follows the table's row header
 /// columns; for a cell moving to another column, create the cell again with its new key.
 pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
+    crate::metrics::subject!();
     let UseTableCellInput {
         table,
         key,

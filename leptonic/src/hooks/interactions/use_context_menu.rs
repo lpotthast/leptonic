@@ -79,6 +79,7 @@ impl IntoAttrs for UseContextMenuProps {
 /// keyboard (Shift+F10, the context menu key, Control+Enter on macOS), touch (long press) and
 /// screen readers. The target's own context menu is prevented.
 pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
+    crate::metrics::subject!();
     let UseContextMenuInput { on_context_menu } = input;
     let Some(on_context_menu) = on_context_menu else {
         return UseContextMenuReturn {

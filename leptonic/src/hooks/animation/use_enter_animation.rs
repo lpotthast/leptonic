@@ -97,6 +97,7 @@ fn hidden_until_ready(is_ready: Signal<bool>) -> Memo<bool> {
 /// // .overlay[data-entering] { animation: fade-in 200ms; }
 /// ```
 pub fn use_enter_animation(input: UseEnterAnimationInput) -> UseEnterAnimationReturn {
+    crate::metrics::subject!();
     let UseEnterAnimationInput {
         element,
         is_ready,

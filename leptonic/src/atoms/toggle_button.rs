@@ -109,6 +109,7 @@ pub fn ToggleButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToggleButton", classes);
     let button = UseButtonInput {
         aria_label,
@@ -221,6 +222,7 @@ pub fn ToggleButtonGroup<V: SelectionValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToggleButtonGroup", classes);
     let KeyedStateProps {
         default_value,

@@ -123,6 +123,7 @@ impl IntoAttrs for UseColorFieldInputProps {
 /// digits, the color is committed on blur and Enter, arrow keys, Page Up/Down, Home/End and the
 /// scroll wheel step it (a text field with a spin button's keys).
 pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorFieldReturn {
+    crate::metrics::subject!();
     let UseColorFieldInput {
         state,
         id,

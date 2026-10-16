@@ -7,7 +7,7 @@ use leptos_router::{
     path,
 };
 
-use crate::pages::{FIXTURES, find_fixture};
+use crate::pages::{all_fixtures, find_fixture};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -79,8 +79,12 @@ pub fn App() -> impl IntoView {
                         view=|| view! { <PageFixture group="hooks" /> }
                     />
                     <Route
-                        path=path!("/perf/:name")
-                        view=|| view! { <PageFixture group="perf" /> }
+                        path=path!("/perf/atoms/:name")
+                        view=|| view! { <PageFixture group="perf/atoms" /> }
+                    />
+                    <Route
+                        path=path!("/perf/hooks/:name")
+                        view=|| view! { <PageFixture group="perf/hooks" /> }
                     />
                 </Routes>
             </Router>
@@ -95,8 +99,7 @@ fn PageIndex() -> impl IntoView {
             <h1>"Leptonic Test App"</h1>
             <p>"Available test pages:"</p>
             <ul>
-                {FIXTURES
-                    .iter()
+                {all_fixtures()
                     .map(|fixture| {
                         view! {
                             <li>

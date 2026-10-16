@@ -49,6 +49,7 @@ pub struct UseTypeSelectProps {
 /// typed. Typing within a second continues the search ("ap" finds "Apple" after "Avocado"), and
 /// a space then belongs to the search instead of selecting the focused item.
 pub fn use_type_select(input: UseTypeSelectInput) -> UseTypeSelectReturn {
+    crate::metrics::subject!();
     let UseTypeSelectInput {
         delegate,
         selection,

@@ -243,6 +243,7 @@ impl<T: NumberValue> Spinner<T> {
 ///
 /// Value changes are announced to screen readers while the spin button has focus.
 pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinButtonReturn {
+    crate::metrics::subject!();
     let UseSpinButtonInput {
         value,
         text_value,

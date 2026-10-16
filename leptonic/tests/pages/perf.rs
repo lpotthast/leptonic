@@ -1,5 +1,6 @@
 //! Performance scenarios of the test-app's `/perf` fixtures (`testing/test-app/src/pages/perf`):
-//! run in the page, measured on its clock.
+//! timed in the page, on its clock ([`run`]), or counted action by action
+//! (`Page::count_perf_scenario`, [`COUNT`]).
 
 use std::sync::Arc;
 
@@ -28,14 +29,6 @@ pub struct PerfMetric {
 }
 
 impl PerfResults {
-    /// The samples of `metric`.
-    pub fn samples(&self, metric: &str) -> Result<&[f64], Report> {
-        match self.metrics.iter().find(|m| m.name == metric) {
-            Some(metric) => Ok(&metric.samples),
-            None => bail!("{} measured no {metric:?}", self.scenario),
-        }
-    }
-
     /// The integer parameter `name`.
     pub fn parameter(&self, name: &str) -> Result<u64, Report> {
         match self.parameters.get(name).and_then(Value::as_u64) {
@@ -63,5 +56,48 @@ pub(crate) async fn run(session: &Arc<SessionHandle>, name: &str) -> Result<Perf
         (Some(json), _) => Ok(serde_json::from_str(&json)?),
         (None, Some(error)) => bail!("the scenario {name:?} failed: {error}"),
         (None, None) => bail!("the scenario {name:?} returned nothing"),
+    }
+}
+
+/// Where a counting run of a scenario stopped: at a measurement, at its end, or at an error.
+#[derive(Deserialize)]
+pub(crate) struct Stop {
+    pub(crate) metric: Option<String>,
+    results: Option<String>,
+    error: Option<String>,
+}
+
+/// Starts the scenario for counting and resolves at its first stop.
+pub(crate) const COUNT: &str =
+    "const [name, done] = [arguments[0], arguments[arguments.length - 1]];
+    if (!window.leptonicPerf) { done({error: 'the page has no performance scenarios'}); return; }
+    window.leptonicPerf.count(name);
+    window.leptonicPerf.next().then(done);";
+
+/// Runs the action the scenario stopped at.
+pub(crate) const GO: &str = "window.leptonicPerf.go();";
+
+/// Lets the scenario go on and resolves at its next stop.
+pub(crate) const NEXT: &str = "const done = arguments[arguments.length - 1];
+    window.leptonicPerf.done();
+    window.leptonicPerf.next().then(done);";
+
+impl Stop {
+    /// The parameters of the scenario `name`, if it ended here (`None`: it stopped at a
+    /// measurement).
+    pub(crate) fn parameters(self, name: &str) -> Result<Option<Map<String, Value>>, Report> {
+        match self {
+            Self {
+                metric: Some(_), ..
+            } => Ok(None),
+            Self {
+                results: Some(json),
+                ..
+            } => Ok(Some(serde_json::from_str::<PerfResults>(&json)?.parameters)),
+            Self {
+                error: Some(error), ..
+            } => bail!("counting the scenario {name:?} failed: {error}"),
+            Self { .. } => bail!("counting the scenario {name:?} stopped without a result"),
+        }
     }
 }

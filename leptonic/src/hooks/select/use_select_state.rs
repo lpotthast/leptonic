@@ -235,6 +235,7 @@ impl SelectState {
 
 /// Creates the state of a select (see [`SelectState`]).
 pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
+    crate::metrics::subject!();
     let UseSelectStateInput {
         collection,
         selection_mode,

@@ -1716,6 +1716,7 @@ dependencies = [
  "itertools 0.15.0",
  "jiff",
  "js-sys",
+ "leptonic-perf-metrics",
  "leptonic-theme",
  "leptos",
  "leptos-browser-test",
@@ -1741,6 +1742,10 @@ dependencies = [
  "web-sys",
  "writeable",
 ]
+
+[[package]]
+name = "leptonic-perf-metrics"
+version = "0.1.0"
 
 [[package]]
 name = "leptonic-theme"

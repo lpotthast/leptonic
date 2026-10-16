@@ -147,6 +147,7 @@ struct ScrollState {
 /// A scrollable view of a virtualized collection's content (react-aria's `useScrollView`):
 /// reports the visible rectangle as it scrolls and resizes.
 pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
+    crate::metrics::subject!();
     let UseScrollViewInput {
         element,
         content_size,

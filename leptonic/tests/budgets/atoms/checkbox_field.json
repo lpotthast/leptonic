@@ -1,0 +1,543 @@
+{
+  "click_through_set_selected": {
+    "check": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 121,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 7,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 13,
+        "dom_attributes": 8,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    }
+  },
+  "controlled_selection": {
+    "deselect": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 8,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "select": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 8,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 32,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 4,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 21,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 4,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "indeterminate": {
+    "set-indeterminate": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 8,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "unset-indeterminate": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 8,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "invalid_and_valid": {
+    "invalidate": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 73,
+        "reallocations": 0,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "validate": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 77,
+        "reallocations": 1,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1144,
+        "reallocations": 49,
+        "memo_runs": 11,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 11,
+        "render_effect_runs": 30,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "read_only_and_editable": {
+    "make-editable": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "make-read-only": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "required_and_optional": {
+    "make-optional": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 10,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "require": {
+      "ran": [
+        "atoms/checkbox_button",
+        "atoms/checkbox_field",
+        "atoms/theme_provider",
+        "hooks/use_checkbox",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_toggle_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 12,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

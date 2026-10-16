@@ -1,0 +1,130 @@
+{
+  "append_at_start": {
+    "append": {
+      "ran": [
+        "atoms/theme_provider",
+        "atoms/virtual_list",
+        "hooks/use_collection",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_item_measurer",
+        "hooks/use_scroll_view",
+        "hooks/use_virtualizer_item",
+        "hooks/use_virtualizer_state"
+      ],
+      "windows": 30,
+      "totals": {
+        "allocations": 654750,
+        "reallocations": 420,
+        "memo_runs": 30,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 60,
+        "render_effect_runs": 60,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 60,
+        "dom_attributes": 30,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 30,
+        "style_recalcs": 30
+      }
+    }
+  },
+  "append_following_end": {
+    "append": {
+      "ran": [
+        "atoms/theme_provider",
+        "atoms/virtual_list",
+        "hooks/use_collection",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_item_measurer",
+        "hooks/use_scroll_view",
+        "hooks/use_virtualizer_item",
+        "hooks/use_virtualizer_state"
+      ],
+      "windows": 30,
+      "totals": {
+        "allocations": 725697,
+        "reallocations": 7132,
+        "memo_runs": 644,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 854,
+        "render_effect_runs": 674,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1200,
+        "dom_attributes": 284,
+        "dom_text": 0,
+        "dom_added_nodes": 330,
+        "dom_removed_nodes": 331,
+        "layouts": 60,
+        "style_recalcs": 60
+      }
+    }
+  },
+  "mount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "atoms/virtual_list",
+        "hooks/use_collection",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_item_measurer",
+        "hooks/use_scroll_view",
+        "hooks/use_virtualizer_item",
+        "hooks/use_virtualizer_state"
+      ],
+      "windows": 5,
+      "totals": {
+        "allocations": 337154,
+        "reallocations": 3643,
+        "memo_runs": 330,
+        "memo_runs_unchanged": 5,
+        "effect_runs": 455,
+        "render_effect_runs": 370,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 605,
+        "dom_attributes": 155,
+        "dom_text": 0,
+        "dom_added_nodes": 165,
+        "dom_removed_nodes": 130,
+        "layouts": 40,
+        "style_recalcs": 40
+      }
+    }
+  },
+  "resize_grown": {
+    "resize": {
+      "ran": [
+        "atoms/theme_provider",
+        "atoms/virtual_list",
+        "hooks/use_collection",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_item_measurer",
+        "hooks/use_scroll_view",
+        "hooks/use_virtualizer_item",
+        "hooks/use_virtualizer_state"
+      ],
+      "windows": 30,
+      "totals": {
+        "allocations": 152789,
+        "reallocations": 2107,
+        "memo_runs": 639,
+        "memo_runs_unchanged": 111,
+        "effect_runs": 670,
+        "render_effect_runs": 621,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 285,
+        "dom_attributes": 551,
+        "dom_text": 0,
+        "dom_added_nodes": 7,
+        "dom_removed_nodes": 10,
+        "layouts": 97,
+        "style_recalcs": 98
+      }
+    }
+  }
+}

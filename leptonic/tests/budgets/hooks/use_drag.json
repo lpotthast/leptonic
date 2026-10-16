@@ -1,0 +1,466 @@
+{
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 6,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 8,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "ignored start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 0,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "keyboard_drag": {
+    "cancel": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 47,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 18,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    },
+    "focus": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 36,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    },
+    "start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 139,
+        "reallocations": 5,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 18,
+        "dom_text": 0,
+        "dom_added_nodes": 3,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    }
+  },
+  "keyboard_drop": {
+    "drop": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 53,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 18,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 227,
+        "reallocations": 11,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 18,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mouse_click": {
+    "click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "native_drag": {
+    "end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 22,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "move": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 0,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 36,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "native_drop": {
+    "end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 22,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "screen_reader_drag": {
+    "drop": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 43,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 18,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    },
+    "start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_drag",
+        "hooks/use_drag_modality",
+        "hooks/use_drag_session",
+        "hooks/use_drop",
+        "hooks/use_interaction_modality",
+        "hooks/use_virtual_drop"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 114,
+        "reallocations": 5,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 17,
+        "dom_text": 0,
+        "dom_added_nodes": 3,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    }
+  }
+}

@@ -81,6 +81,7 @@ impl IntoAttrs for UseColorSwatchProps {
 /// Accessibility of a swatch showing a color: an image named after the color (and the given
 /// label), with the color as its background.
 pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
+    crate::metrics::subject!();
     let UseColorSwatchInput {
         color,
         color_name,

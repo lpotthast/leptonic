@@ -89,6 +89,7 @@ impl<T: NumberValue> Default for UseMeterInput<T> {
 /// }
 /// ```
 pub fn use_meter<T: NumberValue>(input: UseMeterInput<T>) -> UseProgressBarReturn {
+    crate::metrics::subject!();
     let UseMeterInput {
         value,
         min_value,

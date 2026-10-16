@@ -118,6 +118,7 @@ pub type UseMoveAttrs = (OnEvent<ev::pointerdown>, OnEvent<ev::keydown>);
 /// one-pixel move in its direction (callers decide what a move along an axis means). Only one
 /// pointer moves at a time.
 pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         let _ = input;

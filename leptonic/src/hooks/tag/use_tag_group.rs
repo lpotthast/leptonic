@@ -124,6 +124,7 @@ impl IntoAttrs for UseTagGroupProps {
 /// A tag group: a list of tags (keywords, filters, recipients), navigated with arrow keys and
 /// optionally removable with Delete/Backspace. Built on the grid list.
 pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
+    crate::metrics::subject!();
     let UseTagGroupInput {
         state,
         element,

@@ -1,0 +1,346 @@
+{
+  "hold_and_release": {
+    "hold": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 30,
+        "reallocations": 1,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    },
+    "release": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 20,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "hover_and_leave": {
+    "hover": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 7,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "leave": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 5,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "keyboard_focus_and_blur": {
+    "blur": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 34,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "focus": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 32,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 3
+      }
+    }
+  },
+  "modified_click": {
+    "ctrl+click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 6,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 418,
+        "reallocations": 19,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 16,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "press_with_enter": {
+    "enter": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 45,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "press_with_the_mouse": {
+    "click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_anchor_link",
+        "hooks/use_focus",
+        "hooks/use_focus_ring",
+        "hooks/use_focusable",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_link",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 50,
+        "reallocations": 2,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 4,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 6,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    }
+  }
+}

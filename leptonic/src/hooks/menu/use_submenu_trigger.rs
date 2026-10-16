@@ -129,6 +129,7 @@ pub struct UseSubmenuTriggerReturn {
 /// `delay`) and the arrow key pointing into the submenu, closing by the other arrow key, Escape
 /// or focusing another item of the menu, and letting the pointer travel to the submenu.
 pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerReturn {
+    crate::metrics::subject!();
     let UseSubmenuTriggerInput {
         state,
         trigger,

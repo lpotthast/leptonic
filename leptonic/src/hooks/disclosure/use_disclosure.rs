@@ -110,6 +110,7 @@ pub type UseDisclosurePanelAttrs = (
 /// }
 /// ```
 pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
+    crate::metrics::subject!();
     let UseDisclosureInput { state, is_disabled } = input;
     let trigger_id = use_id("disclosure-trigger");
     let panel_id = use_id("disclosure-panel");

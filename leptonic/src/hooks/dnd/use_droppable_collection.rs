@@ -137,6 +137,7 @@ fn drop_item_types(item: &DropItem) -> DragTypes {
 pub fn use_droppable_collection(
     input: UseDroppableCollectionInput,
 ) -> UseDroppableCollectionReturn {
+    crate::metrics::subject!();
     let UseDroppableCollectionInput {
         state,
         element,

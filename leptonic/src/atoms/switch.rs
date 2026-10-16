@@ -77,6 +77,7 @@ pub fn SwitchField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SwitchField", classes);
     let switch = use_switch_atom(SwitchSetup {
         default_selected,
@@ -149,6 +150,7 @@ pub fn SwitchButton(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-SwitchButton", classes);
     let Some(ctx) = use_context::<SwitchButtonContext>() else {
         dev_warn!("a <SwitchButton> belongs in a <SwitchField>");

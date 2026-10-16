@@ -203,6 +203,7 @@ impl<V: DateValue> DatePickerState<V> {
 pub fn use_date_picker_state<V: DateValue>(
     input: UseDatePickerStateInput<V>,
 ) -> DatePickerState<V> {
+    crate::metrics::subject!();
     let UseDatePickerStateInput {
         default_value,
         value,

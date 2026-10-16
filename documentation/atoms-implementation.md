@@ -22,6 +22,13 @@ Anything visible or stylable is its own atom. Structural wrappers too: a calenda
 `CalendarCellButton` (the focusable `<div role="button">` inside it), where react-aria-components renders both from
 one component (decided by the user, 2026-10-06).
 
+## Performance Reporting
+
+Every atom's body starts with `crate::metrics::subject!();` (after any `use` items), as every hook's does
+(`hooks-implementation.md`, "Hook Naming"): with the `metrics` feature, the performance tests learn that the atom
+ran (named after its body function, `__component_<name in snake case>`: `button`). Every atom has a performance test
+(`leptonic/tests/perf_tests/atoms/<name in snake case>.rs`, `testing.md`, "Performance measurements").
+
 ## Wrapping Hooks
 
 An atom calls its hooks, splits their props into attributes and styles (`into_parts()`, see "Props and Styles" in

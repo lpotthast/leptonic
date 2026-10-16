@@ -211,6 +211,7 @@ pub type UsePopoverAttrs = (UseOverlayAttrs, UseOverlayPositionAttrs);
 /// }
 /// ```
 pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverReturn {
+    crate::metrics::subject!();
     let UsePopoverInput {
         state,
         trigger: trigger_element,

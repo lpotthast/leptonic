@@ -67,6 +67,7 @@ pub struct UseCalendarHeadingInput {
 
 /// The heading of a calendar's month (or of the visible days): "May 2024".
 pub fn use_calendar_heading(input: UseCalendarHeadingInput) -> Signal<String> {
+    crate::metrics::subject!();
     let UseCalendarHeadingInput {
         state,
         offset,
@@ -145,6 +146,7 @@ pub struct UseCalendarMonthPickerInput {
 
 /// A picker of the focused date's month: the year's months.
 pub fn use_calendar_month_picker(input: UseCalendarMonthPickerInput) -> UseCalendarPickerReturn {
+    crate::metrics::subject!();
     let UseCalendarMonthPickerInput { state, format } = input;
     let calendar = state.calendar();
     let locale = use_locale();
@@ -216,6 +218,7 @@ pub struct UseCalendarYearPickerInput {
 /// A picker of the focused date's year: `visible_years` years around it, kept within min and
 /// max.
 pub fn use_calendar_year_picker(input: UseCalendarYearPickerInput) -> UseCalendarPickerReturn {
+    crate::metrics::subject!();
     let UseCalendarYearPickerInput {
         state,
         visible_years,

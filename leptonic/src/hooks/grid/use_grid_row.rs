@@ -79,6 +79,7 @@ impl IntoAttrs for UseGridRowProps {
 
 /// A row of a grid: selected and activated by press (via `use_selectable_item`).
 pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
+    crate::metrics::subject!();
     let UseGridRowInput {
         grid,
         key,

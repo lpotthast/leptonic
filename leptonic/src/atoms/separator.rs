@@ -43,6 +43,7 @@ pub fn Separator(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Separator", classes);
     let context = use_context::<SeparatorContext>();
     // The element follows the orientation: an `<hr>` can't be vertical.

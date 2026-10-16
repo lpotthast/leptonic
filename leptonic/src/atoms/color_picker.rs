@@ -90,6 +90,7 @@ pub fn ColorPicker(
     on_change: Option<Callback<Color>>,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_color_picker_state(UseColorPickerStateInput {
         default_value: default_value.unwrap_or_default(),

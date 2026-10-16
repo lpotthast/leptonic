@@ -90,6 +90,7 @@ pub fn ThemeProvider<T>(
 where
     T: Theme + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ThemeProvider", classes);
     let (binding, on_theme_change) =
         ValueBinding::from_state_props(theme, set_theme, on_theme_change);

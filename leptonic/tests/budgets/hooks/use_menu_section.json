@@ -1,0 +1,150 @@
+{
+  "heading_changes": {
+    "rename": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_menu",
+        "hooks/use_menu_item",
+        "hooks/use_menu_section",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 338,
+        "reallocations": 0,
+        "memo_runs": 14,
+        "memo_runs_unchanged": 12,
+        "effect_runs": 2,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "rename back": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_menu",
+        "hooks/use_menu_item",
+        "hooks/use_menu_section",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 338,
+        "reallocations": 0,
+        "memo_runs": 14,
+        "memo_runs_unchanged": 12,
+        "effect_runs": 2,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_menu",
+        "hooks/use_menu_item",
+        "hooks/use_menu_section",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1538,
+        "reallocations": 45,
+        "memo_runs": 21,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 18,
+        "render_effect_runs": 30,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_menu",
+        "hooks/use_menu_item",
+        "hooks/use_menu_section",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

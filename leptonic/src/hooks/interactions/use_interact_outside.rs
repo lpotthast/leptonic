@@ -132,6 +132,7 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 /// }
 /// ```
 pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsideReturn {
+    crate::metrics::subject!();
     let UseInteractOutsideInput {
         is_disabled,
         on_interact_outside_start,

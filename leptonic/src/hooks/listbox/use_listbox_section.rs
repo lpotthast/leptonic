@@ -113,6 +113,7 @@ impl IntoAttrs for UseListBoxSectionGroupProps {
 
 /// A section of a listbox: a group of options with an optional heading.
 pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionReturn {
+    crate::metrics::subject!();
     let UseListBoxSectionInput { list, key } = input;
     let heading_id = use_id("listbox-section-heading");
 

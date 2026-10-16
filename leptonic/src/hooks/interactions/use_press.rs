@@ -682,6 +682,7 @@ fn merge_force_is_pressed(responder: Option<Signal<bool>>, own: Signal<bool>) ->
 /// `usePress`), and long presses (react-aria's `useLongPress`, with
 /// [`long_press`](UsePressInput::long_press)).
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         // The responder's forced state too, so `data-pressed` agrees with the client.

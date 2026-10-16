@@ -1,0 +1,86 @@
+{
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/menu",
+        "atoms/menu_item",
+        "atoms/menu_item_description",
+        "atoms/menu_item_label",
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_menu",
+        "hooks/use_menu_item",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 64,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/menu",
+        "atoms/menu_item",
+        "atoms/menu_item_description",
+        "atoms/menu_item_label",
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_hover",
+        "hooks/use_keyboard",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_menu",
+        "hooks/use_menu_item",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 37,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

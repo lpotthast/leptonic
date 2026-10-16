@@ -191,6 +191,7 @@ impl CheckboxGroupState {
 
 /// Creates the state of a checkbox group.
 pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGroupState {
+    crate::metrics::subject!();
     let UseCheckboxGroupStateInput {
         default_value,
         value,

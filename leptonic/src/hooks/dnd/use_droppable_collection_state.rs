@@ -320,6 +320,7 @@ fn is_dragging_within_parent(
 pub fn use_droppable_collection_state(
     input: UseDroppableCollectionStateInput,
 ) -> DroppableCollectionState {
+    crate::metrics::subject!();
     let UseDroppableCollectionStateInput {
         list,
         options,

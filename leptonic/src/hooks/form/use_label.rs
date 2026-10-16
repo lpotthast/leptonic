@@ -114,6 +114,7 @@ impl IntoAttrs for UseLabelFieldProps {
 /// }
 /// ```
 pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
+    crate::metrics::subject!();
     let UseLabelInput {
         id,
         label_id,

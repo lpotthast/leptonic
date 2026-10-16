@@ -155,6 +155,7 @@ fn parse_input(text: &str) -> Option<jiff::civil::DateTime> {
 pub fn use_hidden_date_input<V: DateValue>(
     input: UseHiddenDateInputInput<V>,
 ) -> UseHiddenDateInputReturn {
+    crate::metrics::subject!();
     let UseHiddenDateInputInput {
         value,
         base,

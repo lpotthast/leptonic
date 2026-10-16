@@ -5,19 +5,24 @@ use browser_test::{BrowserTest, TestSettings, async_trait, thirtyfour::WebDriver
 use futures::FutureExt as _;
 use rootcause::{Report, prelude::ResultExt};
 
-use crate::pages::{Page, health::PagePanic};
+use crate::{
+    pages::{Page, health::PagePanic},
+    ui_tests::Suite,
+};
 
 /// Supply the page context, enforce fixture health policy, and clean up after a browser test.
 pub(crate) fn fixture_test(
     test: impl for<'a> BrowserTest<Page<'a>> + 'static,
 ) -> impl BrowserTest<str> {
+    crate::perf::budgets::register(&test.name());
     FixtureTest(test)
 }
 
 /// Runs a test, then checks the page's health (what it reported: panics, uncaught errors, console
 /// errors and warnings; and its DOM: duplicate ids, dangling id references, literal `attr:`
 /// attributes; see `fixtures::check_health`; `Page::goto_path` checks the page it leaves):
-/// - the test passed: page problems fail it;
+/// - the test passed: page problems fail it; in the regular suite, so do measurements
+///   (`Page::measure`) beside their budget (`perf::budgets::check`);
 /// - the test failed or panicked after the page panicked: the page's panic is the error, with the
 ///   test's failure after it (usually its consequence: a wait that gave up);
 /// - the test failed otherwise: page problems are added to its failure, as they are often the
@@ -56,6 +61,11 @@ impl<T: for<'a> BrowserTest<Page<'a>>> BrowserTest<str> for FixtureTest<T> {
         match (outcome, page_errors) {
             (Ok(Ok(())), page_errors) => {
                 page_errors.context("the page reported problems after the test passed")?;
+                // Only the regular suite's build has budgets (the performance suite's has no
+                // debug assertions).
+                if crate::ui_tests::suite() == Suite::Regular {
+                    crate::perf::budgets::check(&self.0.name(), &page.take_measurements())?;
+                }
                 Ok(())
             }
             (Ok(Err(failure)), Ok(())) => Err(failure),

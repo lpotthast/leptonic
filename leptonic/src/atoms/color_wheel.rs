@@ -103,6 +103,7 @@ pub fn ColorWheel<C: ColorValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorWheel", classes);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<C>);
@@ -165,6 +166,7 @@ pub fn ColorWheelTrack(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorWheelTrack", classes);
     let Some(ColorWheelTrackContext { is_disabled, track }) = use_context() else {
         crate::utils::dev_warn!("A <ColorWheelTrack> must be inside a <ColorWheel>.");

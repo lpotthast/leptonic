@@ -4,6 +4,74 @@ Finished work, moved out of `PLAN.md` (which holds open work only), condensed to
 when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
 recent first within each part.
 
+## Testing: performance tests by kind, for every hook and atom (2026-10-16)
+
+- The user's decision: it must be clear which test is for a hook and which for an atom. The library reports typed
+  subjects (`leptonic::metrics::Subject`: kind and name; ids `hooks/use_press`, `atoms/button`); performance tests
+  live in `leptonic/tests/perf_tests/{atoms,hooks}/<subject>.rs` (tests named
+  `perf_tests::atoms::button::mount_and_unmount`), fixtures in `testing/test-app/src/pages/perf/{atoms,hooks}/`
+  (`/perf/atoms/button`), budgets in `leptonic/tests/budgets/{atoms,hooks}/<subject>.json`. Every subject's module
+  exists and is wired in (generated stubs), each registering its own tests, so that the tests of all 356 can be
+  written in parallel without shared edits; the coverage check fails unfiltered runs only.
+- Written by 9 parallel agents, one per domain (interactions and focus; forms; toggles and ranges; collections;
+  grids and tables; overlays; dates; color, tabs and toasts; drag and drop and the virtualizer): 356 of 356 hooks and
+  atoms have performance tests (about 2,330 tests), every one passed two exact check runs after its last recording;
+  the regular suite has 3,926 tests. The final full runs: 3,924, 3,924 and 3,925 of 3,926 passed; the failures were
+  stale budgets of the first two subjects (re-recorded), a scroll test that polled a 300 ms state across WebDriver
+  round trips (now waits in the page, frame by frame), a load-dependent extra resize in
+  `virtual_list::resize_grown`, and `test_dnd::talkback_click_on_the_drag_source_cancels`, flaky alone too (both in
+  `PLAN.md`). The findings (costs, bugs) are in `PLAN.md`, "Performance: findings of the performance tests"; the
+  pitfalls of deterministic measurements in `testing.md`.
+- Test runs: unbatched runs serialized by a lock rebuilt the test-app (3.5-4.5 minutes) for every agent, one agent's
+  unfinished file broke every run, and a tree-wide fix script (an agent's) broke 40 files at 14:23. Then the
+  coordinating session ran tests for all (AGENTS.md, "Test Runs"): agents queued requests, a runner ran everything
+  queued in one build and one run per round (`BROWSER_TEST_PERF_BUDGETS_UPDATE=<filters>` records some tests'
+  budgets and checks the others'), each agent got its own tests' results. `allocated_bytes` became unbudgeted (16-48
+  byte differences between runs with equal counts, seen by three agents).
+
+## Testing: a performance test per hook and atom; the library reports what ran (2026-10-16)
+
+- The user's decisions: dedicated performance tests, measuring everything a hook or atom offers (behavior tests
+  don't measure: their steps change for behavior's sake), and the library reports what ran instead of tests listing
+  a measurement's subjects (a hand-written `MEASURES` list was untyped knowledge of internals). Every public hook and
+  atom (356) starts with `crate::metrics::subject!();` (feature `metrics`; the test-app enables it), which notes the
+  function it is in without allocating; budgets record what ran. A performance test is `test_perf_<subject>.rs`
+  (its name is its subject: `button`, `use_press`); every measurement must have run that subject; the coverage
+  check counts subjects with performance tests. Fixtures get `PerfControls` (`page.control(name)`: mount, unmount,
+  prop changes, reads). Reference: `test_perf_button.rs` (10 tests: mount, clicks, hold, keys, hover, focus,
+  disabled, pending, tab order, ARIA state); the measurements in the `Button`, `CheckboxField` and `TextField`
+  behavior tests were removed.
+
+## Testing: performance measured by every test (2026-10-16)
+
+- The user's goal: know the performance metrics of every hook and atom at all times, measured by the same tests
+  that check behavior. Any browser test measures a step with `page.measure(MEASURES, "press", action)`; the harness
+  checks a passed test's measurements against its budget (`leptonic/tests/budgets/<module>.json`); the regular
+  suite runs it all, the performance suite only times the scenarios. The metrics are defined once, in
+  `testing/perf-metrics` (shared by the test-app, which counts the app's, and the tests); the app's counters are
+  page-global (`window.leptonicCounters`), no longer per scenario. A coverage check after every regular run
+  compares the measured subjects with every public hook and atom (read from the sources) and
+  `leptonic/tests/budgets/unmeasured.txt`. First measurements: `Button` (hover, press, release, keyboard focus),
+  `CheckboxField` (select, deselect), `TextField` (typing, committing) and the `VirtualList` scenarios. Details:
+  `documentation/testing.md`, "Performance measurements".
+- WebDriver-driven measurements repeated exactly over 5 runs (3 with all CPU threads busy); the regular build's
+  debug assertions barely change counts (5 of 337,154 allocations), so budgets live in the regular suite.
+
+## Testing: performance counts and budgets (2026-10-16)
+
+- The plan for a durable performance framework (the user's request, 2026-10-16; open steps in `PLAN.md`, "Testing
+  infrastructure"): counts first, as they are exact and can fail a test, timings to compare. Done: the performance
+  suite counts every measurement of its scenarios (allocations, reactive work, DOM mutations, layouts and style
+  recalculations) in windows the test drives, and checks the totals against budgets checked in under
+  `leptonic/tests/perf/budgets/`; the timings run as before, in a fresh page. Details: `documentation/testing.md`,
+  "Performance measurements".
+- Leptos counts no reactive work, so `reactive_graph` got a `metrics` feature (memo computations, unchanged ones,
+  effect, render effect and immediate effect runs, signal notifications) on the user's fork at `~/dev/leptos`,
+  branch `leptonic-metrics` (v0.8.22), patched into the test-app.
+- Determinism: the counts repeated exactly once the scenarios' waits waited until the page was idle when counting
+  (with one frame per step, a busy machine's late frames let warm-up appends overlap the virtualizer's measuring, and
+  the windows started from other states); `retained_bytes` and `frames` still change under load and have no budget.
+
 ## Testing: published browser-test and assertr (2026-10-13)
 
 - Both browser test suites (leptonic's, the book's) use the published crates instead of path dependencies on the

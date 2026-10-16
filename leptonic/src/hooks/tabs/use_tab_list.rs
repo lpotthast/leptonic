@@ -105,6 +105,7 @@ impl IntoAttrs for UseTabListProps {
 /// one of them is always selected. Render the tabs with `use_tab` and the selected tab's
 /// content with `use_tab_panel`.
 pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
+    crate::metrics::subject!();
     let UseTabListInput {
         state,
         element,

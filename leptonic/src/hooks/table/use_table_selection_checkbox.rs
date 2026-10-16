@@ -36,6 +36,7 @@ pub struct UseTableSelectionCheckboxInput {
 
 /// A checkbox selecting a row of a table, labelled "Select" plus the row's row header cells.
 pub fn use_table_selection_checkbox(input: UseTableSelectionCheckboxInput) -> UseCheckboxInput {
+    crate::metrics::subject!();
     let UseTableSelectionCheckboxInput { table, key } = input;
     let mut checkbox = use_grid_selection_checkbox(UseGridSelectionCheckboxInput {
         selection: table.state.grid.list.selection,
@@ -62,6 +63,7 @@ pub struct UseTableSelectAllCheckboxInput {
 /// A checkbox selecting all rows of a table (in multiple selection mode), indeterminate when
 /// some rows are selected.
 pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> UseCheckboxInput {
+    crate::metrics::subject!();
     let UseTableSelectAllCheckboxInput { table } = input;
     let selection = table.state.grid.list.selection;
     let rows = table.state.table;

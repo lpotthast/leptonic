@@ -176,6 +176,7 @@ impl IntoAttrs for UseDatePickerGroupProps {
 pub fn use_date_picker_group(
     input: UseDatePickerGroupInput,
 ) -> PropsWithStyles<UseDatePickerGroupProps> {
+    crate::metrics::subject!();
     let UseDatePickerGroupInput {
         element,
         arrow_keys,
@@ -546,6 +547,7 @@ impl IntoAttrs for UseDateFieldInputProps {
 /// segments labelled by the field, describing its value ("Selected Date: ..."), committing an
 /// incomplete value and showing validation when left, with a hidden input for forms.
 pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateFieldReturn<V> {
+    crate::metrics::subject!();
     let UseDateFieldInput {
         state,
         element,
@@ -784,6 +786,7 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
 /// Behavior and accessibility of a time field (react-aria's `useTimeField`): a date field over the
 /// time state's field whose hidden input submits the time (`"08:30:00"`), not a date and time.
 pub fn use_time_field<T: TimeValue>(input: UseTimeFieldInput<T>) -> UseDateFieldReturn<T::Field> {
+    crate::metrics::subject!();
     let UseTimeFieldInput {
         state,
         element,

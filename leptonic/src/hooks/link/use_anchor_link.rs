@@ -117,6 +117,7 @@ fn scroll_to_anchor(href: &Href, scroll_behavior: ScrollBehavior) {
 /// A link to an element on the same page: pressing it scrolls the element into view and
 /// replaces the URL fragment (without a history entry or the browser's jump).
 pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseLinkReturn {
+    crate::metrics::subject!();
     let UseAnchorLinkInput {
         href,
         scroll_behavior,

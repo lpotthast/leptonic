@@ -64,6 +64,7 @@ pub fn Focusable<V>(
 where
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     // Auto focus happens in `manage_child`, once the child has its `tabindex`.
     let focusable = use_focusable(UseFocusableInput {
         is_disabled,

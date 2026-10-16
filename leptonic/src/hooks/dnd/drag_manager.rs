@@ -216,6 +216,7 @@ pub(crate) fn begin_dragging(target: DragTarget) -> Result<(), DragInProgress> {
 
 /// The current keyboard drag session, if any (react-aria's `useDragSession`).
 pub fn use_drag_session() -> Signal<Option<DragSessionInfo>> {
+    crate::metrics::subject!();
     let info = SESSION_INFO.with(Clone::clone);
     Signal::derive(move || info.get())
 }

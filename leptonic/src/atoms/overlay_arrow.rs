@@ -65,6 +65,7 @@ pub fn OverlayArrow(
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-OverlayArrow", classes);
     let Some(ctx) = use_context::<OverlayArrowContext>() else {
         crate::utils::dev_warn!("An <OverlayArrow> must be inside a <Popover> or <Tooltip>.");

@@ -29,6 +29,7 @@ impl IntoAttrs for UseGridRowGroupProps {
 
 /// A group of rows in a grid.
 pub fn use_grid_row_group() -> UseGridRowGroupReturn {
+    crate::metrics::subject!();
     UseGridRowGroupReturn {
         row_group_props: UseGridRowGroupProps {
             role: AriaRole::Rowgroup,

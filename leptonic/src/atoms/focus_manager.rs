@@ -23,6 +23,7 @@ where
     C: Fn(FocusManager) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-FocusManagerProvider", classes);
     let CreateFocusManagerReturn {
         focus_manager,

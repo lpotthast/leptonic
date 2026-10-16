@@ -69,6 +69,7 @@ impl IntoAttrs for UseToggleButtonGroupProps {
 /// navigation), or a `radiogroup` when only one button can be selected. Render the buttons
 /// with [`use_toggle_button_group_item`].
 pub fn use_toggle_button_group(input: UseToggleButtonGroupInput) -> UseToggleButtonGroupReturn {
+    crate::metrics::subject!();
     let UseToggleButtonGroupInput { state, toolbar } = input;
     let mut toolbar = use_toolbar(toolbar).props;
     if state.selection_mode == ToggleGroupSelectionMode::Single {
@@ -97,6 +98,7 @@ pub struct UseToggleButtonGroupItemInput {
 /// single-selection group, it is a `radio` with `aria-checked`. Returns the input of
 /// [`use_button`](fn@super::use_button).
 pub fn use_toggle_button_group_item(input: UseToggleButtonGroupItemInput) -> UseButtonInput {
+    crate::metrics::subject!();
     let UseToggleButtonGroupItemInput {
         group,
         key,

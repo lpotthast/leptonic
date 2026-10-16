@@ -61,6 +61,7 @@ pub struct UseDraggableItemReturn {
 
 /// A draggable item of a collection: dragging a selected item drags all selected items.
 pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemReturn {
+    crate::metrics::subject!();
     let UseDraggableItemInput {
         state,
         key,

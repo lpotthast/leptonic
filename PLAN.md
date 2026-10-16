@@ -70,8 +70,88 @@ atoms, book heads-up), then cross-cutting work.
   the start costs more in the browser is open); 100 appends per second would take ~30–40% of the main thread, so
   apps appending that often should batch appends (one per animation frame). Where the time goes and the route to
   O(k log n) appends: "Virtualizer" below.
+- [ ] `VirtualList` counts (budgets in `leptonic/tests/budgets/atoms/virtual_list.json`, 2026-10-16), to bring
+  down: mounting 20,000 lines makes 67,418 allocations (27.4 MB allocated, 15.6 MB still
+  held: ~780 bytes per line, though ~20 rows render) and takes 8 layouts and style recalculations over 4 frames;
+  appending 50 lines while showing the start (nothing visible changes) makes ~21,830 allocations (8.9 MB, 1
+  layout), following the end ~24,170 (9.1 MB, 2 layouts over 3 frames). Changing a grown log's width: ~4,900
+  allocations (1.9 MB), 3 layouts. Look for
+  forced layouts (more layouts than frames) and what the per-line allocations are (collection nodes, keys, maps).
+
+### Performance: findings of the performance tests (2026-10-16)
+The performance tests of all 356 hooks and atoms (`leptonic/tests/perf_tests/`, budgets in `leptonic/tests/budgets/`)
+show where leptonic is slow. Fix the causes, then lower the budgets (`BROWSER_TEST_PERF_BUDGETS=update`).
+- [ ] Per-item work on every change of a collection or group: per item, memos that read the whole value or
+  collection rerun on every change, so a change costs O(n) (and mostly reruns to "unchanged"). A keyed selector
+  (per-key subscription; the controlled single selection already has one: 42 allocations) or memos that read only
+  the item's own data would make these constant. Evidence (1,000 items unless noted):
+  - RadioGroup: one selection 4,004 render effects, ~39k allocations; `use_radio_group` an arrow key 2,000 render
+    effects. CheckboxGroup: one click 3,004 render effects, 52k allocations; `use_checkbox_group` checking one 26k
+    (every item calls `state.is_selected(&value)` on the whole `HashSet`; `add_value`/`remove_value` clone it).
+    Disabling a group ~30k, 4,000 effects. A user's click costs 3-4x the app setting the same value (suspected:
+    the commit validates every item's native validity, `use_checkbox_group.rs`; unconfirmed).
+  - Tabs (100): a selection change reruns every `TabPanel`'s `is_selected` memo (3,500 allocations instead of 900).
+    ColorSwatchPicker (100): adding a color 16k, 614 memo runs. DisclosureGroup: each toggle 1,000 memos, 20k.
+  - Collections: appending one option to a ListBox 92k (4,010 memos; `is_disabled`/`is_link` in
+    `use_selectable_item`, `use_node_aria_label`, the link memo in `use_option`); adding a menu item 95k; removing a
+    tag 142k; adding a grid row 260k (11k memos; the rebuild itself ~12k), a hook table row 683k; renaming one
+    section header (200 sections) 104k.
+  - Drag and drop: a keyboard drag start over 1,000 droppable rows 169k allocations, 9,014 memos, 4,023 attribute
+    writes; every drop target change 2,002 memos (22-32k); native drag start of one row 1,000 render effects (each
+    row's `is_dragging` reads the shared `dragging_keys`); Tab into a draggable list 2,003 memos (the drag modality
+    turning keyboard reruns every row's description). `register_drop_item`/`register_drop_target` `retain`-scan
+    every registration on each registration: O(n²) mounting (read in the code, not measured).
+  - Calendars: one arrow key in 12 months reruns every cell's memos (14k, 639 memo runs; 1,479 in one month);
+    selecting a date 38k; paging 10k (one month) and 123k (twelve).
+- [ ] Mount costs per item: CheckboxField ~1,140 allocations (~62 KB), RadioButton ~800, Button-based atoms
+  450-610 (every Button runs `use_context_menu`, `use_keyboard`, `use_focusable`, `use_focus_ring`, `use_hover`,
+  `use_press`; `use_press` alone 144), ToggleButtonGroup ~600 per button, Tag ~1,370 (twice a ListBox option, ~720),
+  Table row ~4,500 (Grid row with 3 cells ~2,100, GridList item ~800), calendar cell ~950 (25 render effects; a
+  12-month Calendar ~400k), color swatch ~1,500, menu item ~890, disclosure in a group ~1,060, toast ~800, tab
+  ~730, NumberField 2,840 (TextField 1,142). Look for what each item allocates that could be shared or lazy.
+- [ ] Specific costs: toggling the Table's selection column re-renders every cell (4.1M allocations, 85k render
+  effects at 1,000 rows: cell keys and indexes shift); Select and ComboBox popovers render every option (opening
+  with 1,000: 720-738k; not virtualized); type-ahead without a match costs ~18 allocations per item (collation);
+  a rejected character in a NumberField 440 allocations and 105 reallocations (`beforeinput` →
+  `is_valid_partial_number`); every keystroke copies a text value about five times (50 KB for 10,000 characters);
+  opening a DatePicker ~42k (mounting the calendar); disabling a Link rebuilds it (`<a>`/`<span>`, the router's
+  `<A>`); the first key press on a page makes ~40 allocations once (probably platform detection,
+  `utils/platform.rs`); opening a 10-item menu with Enter 10,669 allocations and 5 layouts; SliderMarks re-render
+  every mark on a range or step change (keyed by value); changing a collection re-lays out a virtualized list
+  (appending 10 to 10,000: ~40k).
+- [ ] Bugs the performance tests found:
+  - `AvailableRange::around` reads a signal with `.get()` outside a tracking context
+    (`use_range_calendar_state.rs:148`, from `focus_nearest_available_date` when a range starts with Enter in a
+    RangeCalendar with `is_date_unavailable`): a Leptos warning. Then restore the unavailable date and its test in
+    the RangeCalendar performance fixture.
+  - Parts that take their props once (`Option::take`) can't mount a second time inside their parent:
+    `CalendarCellButton`, `DateInput`, `DatePickerGroup`, `ToastDescription`, `ListBoxSectionHeading` (which never
+    gives them back on cleanup, unlike `slot()` in `listbox.rs`).
+  - `ColorChannelField`: the scroll wheel never steps it (`use_number_field` puts the handlers on `group_props`,
+    which the atom drops).
+  - `use_tag.rs`: every tag's `tabindex` depends on `!selection.has_focused_key()`, so all tags are tab stops until
+    one is focused, and the first focus rewrites every tag (1,009 attribute writes at 1,000); the comment says "The
+    first tag is the tab stop".
+  - Virtualizer layout options from `None` to `Some` are ignored (`virtualizer_state.rs` ~331: `(Some(new), None)`
+    falls into `_ => false`; upstream invalidates). Changing an estimated row size keeps the rows laid out before
+    at the old estimate (maybe a deviation).
+  - `data-focus-visible` documented but not rendered: `NumberFieldGroup` (`number_field.rs:248`, though
+    `ring.is_focus_visible` is there), `NumberFieldIncrementButton`, `NumberFieldDecrementButton` (`stepper_button`),
+    `SearchFieldClearButton` (`search_field.rs:204`).
+  - `attr:id` on `ListBox` doesn't reach its element (its view is wrapped in providers).
+  - Dangling ARIA references when a part unmounts: `SelectValue` (the trigger's `aria-labelledby`), an open
+    `SelectPopover`/`ComboBoxPopover` (`aria-controls`), `DisclosurePanel`, `DisclosureTrigger`, `Tooltip`.
+  - Check against upstream: `NumberFieldState::increment` ignores `is_disabled`.
+  - Verify and document (`leptos-and-dom.md`): `style=styles` plus `style:width=` on one element dropped the width
+    (like the `class=` rule).
 
 ### Bugs and review leftovers
+- [ ] Flaky (2026-10-16): `test_dnd::talkback_click_on_the_drag_source_cancels`: after the TalkBack click that should
+  cancel the drag, the source keeps `data-dragging="true"` (5 s); 1 of 3 runs alone, once in the full suite. Find
+  whether a click right after the drag start is lost (library race) or the test races.
+- [ ] Flaky under the full suite's load (2026-10-16): `perf_tests::atoms::virtual_list::resize_grown` once counted
+  more than its budget (+2,025 allocations, +1 memo run, +3 effect runs over 30 resizes); deterministic alone (3 of
+  3) and in 8 earlier runs. Find which resize does extra work (log the per-window counts) and why.
 - [ ] Flaky: `overlay_position` cases fail under load in the full suite (no `[data-placement=bottom]`/`top]` within
   10 s; `placed_above`, `reopened_with_arrow`), pass alone. No root cause yet; `placed_above` waits in steps
   (`aria-expanded`, presence, placement) so the next failure shows which. The hide-until-placed styles no longer get
@@ -475,8 +555,41 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   visit and an unstable Leptos feature: try a coarser grouping first).
 
 ### Testing infrastructure
-- [ ] Performance suite (`just browser-perf`, `documentation/testing.md`, "Performance measurements"): only
-  `perf/virtual-list` so far. Candidates, by expected value: a `Table` of 1,000 rows (mount, sorting, selecting
+- [ ] Clean up the performance tests' shared fixtures: some agents shared one fixture page between the subjects of a
+  family, against "the fixture renders the subject alone" (each test still measures its own subject): drag and drop
+  (`DraggableListPage` in `perf/hooks/use_draggable_item.rs`, `DroppableListPage` in `use_droppable_collection.rs`),
+  grids (helpers in `perf/hooks/use_grid.rs`, `use_grid_list.rs`, `use_table.rs`, `perf/atoms/table.rs`; five
+  fixtures re-export a sibling's `PagePerf`), collections (one fixture component per family, in `atoms/select.rs`,
+  `combo_box.rs`, `tag_group.rs`, `hooks/use_listbox.rs`, `use_selectable_list.rs`, `use_collection.rs`,
+  `use_select.rs`, `use_combobox.rs`, `use_tag_group.rs`); `pub(crate)` test helpers shared between sibling test
+  modules. Decide (user): allow a family fixture (and say so in `testing.md`), or one fixture per subject.
+- [ ] `Page` helper for desktop Safari emulation: `use_auto_scroll` scrolls only there, and
+  `perf_tests/hooks/use_auto_scroll.rs` sends its own CDP user-agent override (`send_raw`).
+- [ ] `allocated_bytes` became unbudgeted (2026-10-16): some measurements differ by 16-48 bytes between runs with
+  equal counts (closing overlays, reopening a popover, collection changes). Find the cause (allocator tracing per
+  call site; suspected: generated ids crossing a digit) and budget it again if it can be made deterministic.
+
+- [ ] Performance framework, next steps (the plan of 2026-10-16; done: performance tests with budgets in the
+  regular suite, what ran reported by the library, coverage):
+  - Native counts: a test binary of its own with a thread-local counting allocator and `reactive_graph`'s
+    `metrics` (patch the workspace too): allocations and reactive work per hook setup and per update, with counting
+    inputs ("changing `is_disabled` runs the press state once"); allocations and time of rendering each atom on the
+    server. Same metrics and budget files.
+  - Leak checks: mount, use and unmount a fixture N times, collect garbage (`HeapProfiler.collectGarbage`), then
+    live wasm bytes, DOM nodes and JS event listeners (`Memory.getDOMCounters`) must be back at their baseline
+    (what `retained_bytes` per measurement can't tell).
+  - Timings as A/B: `just perf-ab <git-ref>` builds the baseline in a worktree and the current tree, alternates
+    their runs on one machine and reports the median difference with a confidence interval (bootstrap).
+  - Explaining: `just perf-trace <scenario>`: a CDP trace (DevTools, Perfetto), a CPU profile summarized as text
+    (hottest wasm functions by self time; needs a profile keeping the wasm's names section) and the scenario's steps
+    as `performance.measure` marks. Forced layouts per measurement (layouts during the action's effects, before its
+    frame) also need the trace.
+  - The book: hydration of every page (wasm compile and instantiation, hydration time), layout shifts during
+    hydration (budget 0), a few interactions on large pages.
+  - Decide (user): measure at `opt-level = "z"` only (the test-app's), or also `3`.
+  - Upstream `reactive_graph::metrics` (the fork's branch `leptonic-metrics`, ~30 lines plus a test) so that the
+    patch can go.
+- [ ] Performance suite scenarios: only `perf/virtual-list` so far. Candidates, by expected value: a `Table` of 1,000 rows (mount, sorting, selecting
   all), `ComboBox` filtering a long list per keystroke, `Select` with 320 options (opening), `ListBox` of 5,000 options
   (mount, range selection), `Calendar` mount and month changes, `DatePicker` opening, a `NumberField`/`DateField`
   keystroke, a `Tree` expanding 1,000 rows, page hydration of a large fixture; a `VirtualList` with single-line

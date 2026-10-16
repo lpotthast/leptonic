@@ -72,6 +72,7 @@ pub fn Breadcrumbs(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Breadcrumbs", classes);
     let breadcrumbs = use_breadcrumbs(UseBreadcrumbsInput { aria_label });
     let context = BreadcrumbsContext {
@@ -109,6 +110,7 @@ pub fn Breadcrumb(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Breadcrumb", classes);
     let Some(breadcrumbs) = use_context::<BreadcrumbsContext>() else {
         crate::utils::dev_warn!("A <Breadcrumb> must be inside <Breadcrumbs>.");

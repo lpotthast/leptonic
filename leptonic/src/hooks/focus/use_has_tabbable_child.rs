@@ -83,6 +83,7 @@ pub type UseHasTabbableChildAttrs = (ElementCaptureAttr,);
 /// }
 /// ```
 pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbableChildReturn {
+    crate::metrics::subject!();
     let UseHasTabbableChildInput {
         is_disabled: disabled,
     } = input;

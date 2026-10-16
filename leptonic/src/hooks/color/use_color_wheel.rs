@@ -235,6 +235,7 @@ struct Press {
 /// on the ring, arrow keys (with Shift: page steps), PageUp/PageDown, a visually hidden range
 /// input for assistive technology and forms.
 pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorWheelReturn {
+    crate::metrics::subject!();
     let UseColorWheelInput {
         state,
         outer_radius,

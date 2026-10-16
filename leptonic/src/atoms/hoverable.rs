@@ -23,6 +23,7 @@ pub fn Hoverable<V>(
 where
     V: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let UseHoverReturn {
         props: hover_props,
         is_hovered,

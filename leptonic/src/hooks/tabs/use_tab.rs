@@ -105,6 +105,7 @@ impl IntoAttrs for UseTabProps {
 
 /// A tab of a tab list: selected by press (and, with automatic activation, by focus).
 pub fn use_tab(input: UseTabInput) -> UseTabReturn {
+    crate::metrics::subject!();
     let UseTabInput {
         state,
         key,

@@ -136,6 +136,7 @@ fn label(strings: &DndStrings, collection: &Collection, target: &DropTarget) -> 
 /// A drop indicator: a drop position between items (or on the collection), reachable during
 /// keyboard drags, shown while the drag is over it.
 pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorReturn {
+    crate::metrics::subject!();
     let UseDropIndicatorInput {
         collection,
         target,

@@ -1,0 +1,506 @@
+{
+  "click_the_label": {
+    "click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 33,
+        "reallocations": 14,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 108,
+        "reallocations": 0,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 23,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 23,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 123,
+        "reallocations": 0,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 23,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 23,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 4
+      }
+    }
+  },
+  "focus_and_blur": {
+    "blur": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 50,
+        "reallocations": 1,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "focus": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 31,
+        "reallocations": 12,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 3
+      }
+    }
+  },
+  "minimum": {
+    "clear min": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 87,
+        "reallocations": 1,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 5,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "set min": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 128,
+        "reallocations": 15,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 5,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 3282,
+        "reallocations": 126,
+        "memo_runs": 41,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 15,
+        "render_effect_runs": 74,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 8,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 4,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 4,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "set_and_clear_the_value": {
+    "clear": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 798,
+        "reallocations": 7,
+        "memo_runs": 17,
+        "memo_runs_unchanged": 6,
+        "effect_runs": 4,
+        "render_effect_runs": 30,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 12,
+        "dom_text": 3,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "set": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 837,
+        "reallocations": 14,
+        "memo_runs": 19,
+        "memo_runs_unchanged": 6,
+        "effect_runs": 4,
+        "render_effect_runs": 30,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 12,
+        "dom_text": 3,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "type_a_date": {
+    "type the day": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 1354,
+        "reallocations": 30,
+        "memo_runs": 23,
+        "memo_runs_unchanged": 12,
+        "effect_runs": 2,
+        "render_effect_runs": 50,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 5,
+        "dom_text": 2,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 3,
+        "style_recalcs": 3
+      }
+    },
+    "type the month": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 744,
+        "reallocations": 40,
+        "memo_runs": 14,
+        "memo_runs_unchanged": 7,
+        "effect_runs": 1,
+        "render_effect_runs": 25,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 3,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 2,
+        "style_recalcs": 2
+      }
+    },
+    "type the year": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_date_field",
+        "hooks/use_date_field_state",
+        "hooks/use_date_picker_group",
+        "hooks/use_date_segment",
+        "hooks/use_field",
+        "hooks/use_focus_within",
+        "hooks/use_form_reset",
+        "hooks/use_form_validation",
+        "hooks/use_form_validation_state",
+        "hooks/use_keyboard",
+        "hooks/use_label",
+        "hooks/use_press",
+        "hooks/use_spin_button"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 3762,
+        "reallocations": 60,
+        "memo_runs": 62,
+        "memo_runs_unchanged": 32,
+        "effect_runs": 8,
+        "render_effect_runs": 112,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 12,
+        "dom_attributes": 21,
+        "dom_text": 4,
+        "dom_added_nodes": 8,
+        "dom_removed_nodes": 7,
+        "layouts": 4,
+        "style_recalcs": 4
+      }
+    }
+  }
+}

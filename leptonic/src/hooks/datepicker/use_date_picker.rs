@@ -108,6 +108,7 @@ pub struct UseDatePickerReturn {
 /// field and a button opening a dialog with a calendar, labelled and described as one ("Selected
 /// Date: ..."); Alt+ArrowDown opens it.
 pub fn use_date_picker<V: DateValue>(input: UseDatePickerInput<V>) -> UseDatePickerReturn {
+    crate::metrics::subject!();
     let UseDatePickerInput {
         state,
         group,
@@ -141,6 +142,7 @@ pub fn use_date_picker<V: DateValue>(input: UseDatePickerInput<V>) -> UseDatePic
 pub fn use_date_range_picker<V: DateValue>(
     input: UseDateRangePickerInput<V>,
 ) -> UseDatePickerReturn {
+    crate::metrics::subject!();
     let UseDateRangePickerInput {
         state,
         group,

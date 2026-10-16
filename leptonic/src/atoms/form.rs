@@ -46,6 +46,7 @@ pub fn Form(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Form", classes);
     let errors = FormValidationContext {
         errors: validation_errors.unwrap_or_default(),

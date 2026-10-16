@@ -22,6 +22,11 @@ use leptos_use::use_window;
 pub mod atoms;
 mod attrs;
 pub mod hooks;
+/// Which hooks and atoms ran, for leptonic's performance tests (feature `metrics`).
+#[cfg(feature = "metrics")]
+pub mod metrics;
+#[cfg(not(feature = "metrics"))]
+mod metrics;
 #[cfg(test)]
 pub(crate) mod testing;
 pub(crate) mod utils;

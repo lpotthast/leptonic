@@ -165,6 +165,7 @@ enum Interaction {
 /// selection), activated by press, Enter or Space. Activating performs the menu's action and
 /// closes the menu (see [`UseMenuItemInput::should_close_on_select`]).
 pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
+    crate::metrics::subject!();
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseMenuItemInput {
         menu,

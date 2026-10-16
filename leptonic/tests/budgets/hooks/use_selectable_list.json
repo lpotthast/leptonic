@@ -1,0 +1,946 @@
+{
+  "keyboard_focus_and_blur": {
+    "blur": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 69,
+        "reallocations": 4,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    },
+    "focus": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 89,
+        "reallocations": 0,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 6,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 5
+      }
+    }
+  },
+  "keyboard_navigation": {
+    "arrow down": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 152,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "arrow up": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 146,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 140,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "home": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 142,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "page down": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 240,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "page up": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 240,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "keyboard_navigation_large": {
+    "arrow down": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 152,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "arrow up": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 146,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 140,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "home": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 142,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "page down": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 266,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    },
+    "page up": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 260,
+        "reallocations": 1,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 3,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 4,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4374,
+        "reallocations": 186,
+        "memo_runs": 62,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 42,
+        "render_effect_runs": 65,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 22,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 20,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount_large": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 411271,
+        "reallocations": 17045,
+        "memo_runs": 6002,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 4002,
+        "render_effect_runs": 6005,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2002,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 20,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "orientation": {
+    "horizontal": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "vertical": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 5,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_all_and_clear": {
+    "escape": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 269,
+        "reallocations": 0,
+        "memo_runs": 11,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 13,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "select all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 321,
+        "reallocations": 1,
+        "memo_runs": 10,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 10,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 11,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "select_all_and_clear_large": {
+    "escape": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 22049,
+        "reallocations": 0,
+        "memo_runs": 1001,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1003,
+        "dom_attributes": 1000,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "select all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 24081,
+        "reallocations": 1,
+        "memo_runs": 1000,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 1000,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1001,
+        "dom_attributes": 1000,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "type_ahead": {
+    "match": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 57,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "no match": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 229,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "type_ahead_large": {
+    "match": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 57,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "no match": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_collection",
+        "hooks/use_context_menu",
+        "hooks/use_keyboard",
+        "hooks/use_list_collection",
+        "hooks/use_list_keyboard_delegate",
+        "hooks/use_list_state",
+        "hooks/use_press",
+        "hooks/use_selectable_collection",
+        "hooks/use_selectable_item",
+        "hooks/use_selectable_list",
+        "hooks/use_type_select"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 18049,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

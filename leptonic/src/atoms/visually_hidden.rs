@@ -35,6 +35,7 @@ pub fn VisuallyHidden(
     #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-VisuallyHidden", classes);
     let props = use_visually_hidden(UseVisuallyHiddenInput { is_focusable }).props;
     match element {

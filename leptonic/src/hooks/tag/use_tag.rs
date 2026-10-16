@@ -100,6 +100,7 @@ impl IntoAttrs for UseTagRowProps {
 /// A tag of a tag group: a grid list row that is the group's tab stop while nothing is focused,
 /// and can be removed with Delete/Backspace or its remove button.
 pub fn use_tag(input: UseTagInput) -> UseTagReturn {
+    crate::metrics::subject!();
     let UseTagInput { group, key } = input;
     let TagGroupData { list, on_remove } = group;
     let selection = list.state.selection;

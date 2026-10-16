@@ -154,6 +154,7 @@ pub fn Select<S: SelectedValues>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Select", classes);
     let KeyedStateProps {
         default_value,
@@ -293,6 +294,7 @@ pub fn SelectTrigger(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let Some(ctx) = use_context::<SelectContext>() else {
         crate::utils::dev_warn!("SelectTrigger: not inside a Select");
         return None;
@@ -338,6 +340,7 @@ pub fn SelectValue(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let Some(ctx) = use_context::<SelectContext>() else {
         crate::utils::dev_warn!("SelectValue: not inside a Select");
         return None;
@@ -409,6 +412,7 @@ pub fn SelectPopover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let Some(ctx) = use_context::<SelectContext>() else {
         crate::utils::dev_warn!("SelectPopover: not inside a Select");
         return None;
@@ -487,6 +491,7 @@ pub fn HiddenSelect(
     #[prop(into, optional)]
     label: MaybeProp<String>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let Some(ctx) = use_context::<SelectContext>() else {
         crate::utils::dev_warn!("HiddenSelect: not inside a Select");
         return None;

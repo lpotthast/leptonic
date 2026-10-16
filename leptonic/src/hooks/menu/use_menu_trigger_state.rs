@@ -158,6 +158,7 @@ impl MenuTriggerStateApi for MenuTriggerState {
 /// state.close();
 /// ```
 pub fn use_menu_trigger_state(input: UseMenuTriggerStateInput) -> MenuTriggerState {
+    crate::metrics::subject!();
     let UseMenuTriggerStateInput {
         default_open,
         value,

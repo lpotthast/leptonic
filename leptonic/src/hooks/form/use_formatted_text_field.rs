@@ -77,6 +77,7 @@ pub struct FormattedTextFieldHandlers {
 pub fn use_formatted_text_field<S: FormattedTextState>(
     input: UseFormattedTextFieldInput<S>,
 ) -> FormattedTextFieldHandlers {
+    crate::metrics::subject!();
     let UseFormattedTextFieldInput { element, state } = input;
 
     let input = move || {

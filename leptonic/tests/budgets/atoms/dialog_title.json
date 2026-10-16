@@ -1,0 +1,56 @@
+{
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/dialog",
+        "atoms/dialog_title",
+        "atoms/theme_provider",
+        "hooks/use_dialog",
+        "hooks/use_overlay_focus_contain"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 50,
+        "reallocations": 2,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/dialog",
+        "atoms/dialog_title",
+        "atoms/theme_provider",
+        "hooks/use_dialog",
+        "hooks/use_overlay_focus_contain"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 25,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 1,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  }
+}

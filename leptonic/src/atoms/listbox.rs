@@ -151,6 +151,7 @@ pub fn ListBox(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ListBox", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
@@ -292,6 +293,7 @@ pub fn ListBoxItem(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ListBoxItem", classes);
     let Some(list) = use_context::<ListBoxData>() else {
         crate::utils::dev_warn!("<ListBoxItem> must be inside a <ListBox>");
@@ -380,6 +382,7 @@ where
     F: Fn(Node) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
+    crate::metrics::subject!();
     let Some(list) = use_context::<ListBoxData>() else {
         crate::utils::dev_warn!("<ListBoxItems> must be inside a <ListBox>.");
         return None;
@@ -421,6 +424,7 @@ pub fn ListBoxItemLabel(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ListBoxItemLabel", classes);
     let Some(ctx) = use_context::<ListBoxItemContext>() else {
         crate::utils::dev_warn!("<ListBoxItemLabel> must be inside a <ListBoxItem>");
@@ -444,6 +448,7 @@ pub fn ListBoxItemDescription(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ListBoxItemDescription", classes);
     let Some(ctx) = use_context::<ListBoxItemContext>() else {
         crate::utils::dev_warn!("<ListBoxItemDescription> must be inside a <ListBoxItem>");
@@ -519,6 +524,7 @@ pub fn ListBoxSection(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ListBoxSection", classes);
     let Some(list) = use_context::<ListBoxData>() else {
         crate::utils::dev_warn!("<ListBoxSection> must be inside a <ListBox>");
@@ -553,6 +559,7 @@ pub fn ListBoxSectionHeading(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ListBoxSectionHeading", classes);
     let Some(ctx) = use_context::<ListBoxSectionContext>() else {
         crate::utils::dev_warn!("<ListBoxSectionHeading> must be inside a <ListBoxSection>");

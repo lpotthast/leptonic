@@ -172,6 +172,7 @@ pub fn Label(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Label", classes);
     let context = use_clearable_context::<LabelContext>();
     let default_text = context.as_ref().and_then(|context| context.default_text);
@@ -217,6 +218,7 @@ pub fn Description(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Description", classes);
     let props = use_clearable_context::<FieldContext>().map_or_else(
         || {
@@ -246,6 +248,7 @@ pub fn FieldError(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-FieldError", classes);
     let Some(ctx) = use_clearable_context::<FieldContext>() else {
         dev_warn!("A <FieldError> shows nothing outside a field (TextField, Checkbox, ...).");

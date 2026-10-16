@@ -105,6 +105,7 @@ impl<T: TimeValue> Copy for TimeFieldState<T> {}
 /// State of a time field: a date field of hours to seconds (with a day period in 12-hour
 /// cycles), whose value is a time (or the time of a date value).
 pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> TimeFieldState<T> {
+    crate::metrics::subject!();
     let UseTimeFieldStateInput {
         default_value,
         value,

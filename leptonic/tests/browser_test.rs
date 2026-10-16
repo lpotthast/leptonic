@@ -18,9 +18,13 @@
 //! - `BROWSER_TEST_PAUSE=1`: pause before each test for manual inspection.
 //! - `BROWSER_TEST_DRIVER_OUTPUT=1`: forward chromedriver output.
 //! - `BROWSER_TEST_SUITE=<suite>`: which tests run: `regular` (the default), `known-issues` (tests of
-//!   known upstream bugs, failing until they are fixed) or `performance` (measurements, one after
-//!   the other, of a build without debug assertions; `just browser-perf`, see
-//!   `documentation/testing.md`, "Performance measurements").
+//!   known upstream bugs, failing until they are fixed) or `performance` (the performance
+//!   scenarios' timings, one after the other, of a build without debug assertions;
+//!   `just browser-perf`, see `documentation/testing.md`, "Performance measurements").
+//! - `BROWSER_TEST_PERF_BUDGETS=update`: record the regular tests' measurements (`Page::measure`)
+//!   as their budgets (`tests/budgets/`) instead of checking them (`check`, the default).
+//! - `BROWSER_TEST_PERF_BUDGETS_UPDATE=<filters>`: record the budgets of the tests whose names
+//!   contain one of the comma-separated texts only, and check the others' in the same run.
 //! - `BROWSER_TEST_GROUP=<name>`: only run these exact logical groups (comma-separated names).
 //!   Names and membership are explicit in `ui_tests/mod.rs`, independent of Rust module placement.
 //! - `BROWSER_TEST_FILTER=<text>`: only run the tests whose name contains `<text>` (several
@@ -43,6 +47,7 @@ mod fixtures;
 mod harness;
 mod pages;
 mod perf;
+mod perf_tests;
 mod ui_tests;
 
 use std::{

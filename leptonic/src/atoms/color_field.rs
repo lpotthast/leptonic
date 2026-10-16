@@ -90,6 +90,7 @@ pub fn ColorField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorField", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let value = value.or_else(ColorPickerContext::optional_binding::<RGB8>);
@@ -229,6 +230,7 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ColorChannelField", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let value = value.or_else(ColorPickerContext::optional_binding::<Ch::Color>);

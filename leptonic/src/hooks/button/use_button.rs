@@ -490,6 +490,7 @@ impl IntoAttrs for UseButtonProps {
 /// view! { <button {..attrs} style=styles>"Press me"</button> }
 /// ```
 pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
+    crate::metrics::subject!();
     let UseButtonInput {
         element_type,
         button_type,

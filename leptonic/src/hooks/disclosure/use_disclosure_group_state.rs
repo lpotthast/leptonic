@@ -95,6 +95,7 @@ impl DisclosureGroupState {
 
 /// Manages which disclosures of a group are expanded.
 pub fn use_disclosure_group_state(input: UseDisclosureGroupStateInput) -> DisclosureGroupState {
+    crate::metrics::subject!();
     let UseDisclosureGroupStateInput {
         expansion,
         is_disabled,

@@ -201,6 +201,7 @@ impl IntoAttrs for UseRadioInputProps {
 /// `<label>`, in a [`use_radio_group`](fn@super::use_radio_group). Only the selected radio (or,
 /// while none is, the one focused last or each) is a tab stop.
 pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
+    crate::metrics::subject!();
     let UseRadioInput {
         group,
         value,

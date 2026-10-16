@@ -81,6 +81,7 @@ fn black<C: ColorValue + Default>() -> C {
 pub fn use_color_channel_field_state<C: ColorValue + Default>(
     input: UseColorChannelFieldStateInput<C>,
 ) -> ColorChannelFieldState<C> {
+    crate::metrics::subject!();
     let UseColorChannelFieldStateInput {
         default_value,
         value,

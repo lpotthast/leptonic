@@ -303,6 +303,7 @@ fn range_validation<V: DateValue>(
 pub fn use_date_range_picker_state<V: DateValue>(
     input: UseDateRangePickerStateInput<V>,
 ) -> DateRangePickerState<V> {
+    crate::metrics::subject!();
     let UseDateRangePickerStateInput {
         default_value,
         value,

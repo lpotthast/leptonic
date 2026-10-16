@@ -207,6 +207,7 @@ impl<C: ColorValue> ColorWheelState<C> {
 pub fn use_color_wheel_state<C: ColorValue>(
     input: UseColorWheelStateInput<C>,
 ) -> ColorWheelState<C> {
+    crate::metrics::subject!();
     let UseColorWheelStateInput {
         default_value,
         value,

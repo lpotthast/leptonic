@@ -49,6 +49,7 @@ pub struct UseFormResetInput<T: Clone + Send + Sync + 'static> {
 /// });
 /// ```
 pub fn use_form_reset<T: Clone + Send + Sync + 'static>(input: UseFormResetInput<T>) {
+    crate::metrics::subject!();
     let UseFormResetInput {
         element,
         initial_value,

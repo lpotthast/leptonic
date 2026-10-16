@@ -36,6 +36,7 @@ pub struct UseCloseOnScrollInput {
 /// This prevents stale positioning when the trigger scrolls out of view.
 /// Ignores scroll events on input/textarea elements (e.g. combobox text scrolling).
 pub fn use_close_on_scroll(input: UseCloseOnScrollInput) {
+    crate::metrics::subject!();
     let UseCloseOnScrollInput {
         is_open,
         trigger_element,

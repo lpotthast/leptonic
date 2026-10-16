@@ -286,6 +286,7 @@ impl RangeCalendarState {
 
 /// Creates the state of a range calendar.
 pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalendarState {
+    crate::metrics::subject!();
     let UseRangeCalendarStateInput {
         default_value,
         value,

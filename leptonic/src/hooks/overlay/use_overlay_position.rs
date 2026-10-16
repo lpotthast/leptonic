@@ -212,6 +212,7 @@ fn px(value: f64) -> Option<LengthPercentageAuto> {
 /// view! { <div {..attrs} style=styles>"Content"</div> }
 /// ```
 pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositionReturn {
+    crate::metrics::subject!();
     let UseOverlayPositionInput {
         target,
         is_open,

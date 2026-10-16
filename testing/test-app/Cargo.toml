@@ -52,11 +52,16 @@ http-body = { version = "1.0.1", optional = true, default-features = false }
 # Performance fixtures (`src/pages/perf`): promises of the page's clock and tasks, results as JSON.
 js-sys = { version = "0.3.106", default-features = false, features = ["std"] }
 gloo-timers = { version = "0.4.0", default-features = false, features = ["futures"] }
-leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard", "intl-strings"] }
+# `metrics`: the hooks and atoms report that they ran, for the browser tests' measurements.
+leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard", "intl-strings", "metrics"] }
+# The metrics the browser tests measure; the app counts its own (`src/pages/perf/counters.rs`).
+leptonic-perf-metrics = { path = "../perf-metrics" }
 leptos = { version = "0.8.22", default-features = false }
 leptos_axum = { version = "0.8.10", optional = true, default-features = false, features = ["default"] }
 leptos_meta = { version = "0.8.7", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
+# The reactive graph's work, counted by the performance fixtures (`src/pages/perf/counters.rs`).
+reactive_graph = { version = "0.2.15", default-features = false, features = ["metrics"] }
 # `DragPreview` holds its element in a `SendWrapper`.
 send_wrapper = { version = "0.6.0", default-features = false }
 serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
@@ -74,6 +79,16 @@ web-sys = { version = "0.3.106", default-features = false, features = [
     "ShadowRootInit",
     "ShadowRootMode",
 ] }
+
+[patch.crates-io]
+# `reactive_graph` with counters of its work (feature `metrics`, `reactive_graph::metrics`) for the performance
+# fixtures, until upstream has them: the user's Leptos fork, checked out at `~/dev/leptos`, branch `leptonic-metrics`
+# (v0.8.22 plus the counters). The crates it takes from its workspace come from there too, so that each exists once.
+any_spawner = { path = "../../../leptos/any_spawner" }
+hydration_context = { path = "../../../leptos/hydration_context" }
+or_poisoned = { path = "../../../leptos/or_poisoned" }
+reactive_graph = { path = "../../../leptos/reactive_graph" }
+throw_error = { path = "../../../leptos/any_error" }
 
 [profile.dev.package."*"]
 # No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): smaller

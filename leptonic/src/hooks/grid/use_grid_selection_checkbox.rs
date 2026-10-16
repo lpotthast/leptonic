@@ -35,6 +35,7 @@ pub struct UseGridSelectionCheckboxInput {
 
 /// A checkbox selecting a row of a grid (or grid list, or table).
 pub fn use_grid_selection_checkbox(input: UseGridSelectionCheckboxInput) -> UseCheckboxInput {
+    crate::metrics::subject!();
     let UseGridSelectionCheckboxInput { selection, key } = input;
     let key = StoredValue::new(key);
     let strings = use_localized_strings::<GridStrings>();

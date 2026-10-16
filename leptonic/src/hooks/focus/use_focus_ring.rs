@@ -159,6 +159,7 @@ pub type UseFocusRingAttrs = (
 /// }
 /// ```
 pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
+    crate::metrics::subject!();
     let UseFocusRingInput {
         is_disabled: disabled,
         target,

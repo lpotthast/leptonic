@@ -75,6 +75,7 @@ impl IntoAttrs for UseDroppableItemProps {
 /// An item of a droppable collection (or a drop indicator between items): a drop target of
 /// keyboard and screen reader drags.
 pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemReturn {
+    crate::metrics::subject!();
     let UseDroppableItemInput {
         collection,
         target,

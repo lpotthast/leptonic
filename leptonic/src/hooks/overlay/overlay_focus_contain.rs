@@ -41,6 +41,7 @@ impl Default for OverlayFocusContain {
 /// Makes the surrounding overlay contain focus, once mounted (react-aria: `useOverlayFocusContain`).
 /// Does nothing outside an overlay.
 pub fn use_overlay_focus_contain() {
+    crate::metrics::subject!();
     if let Some(overlay) = use_context::<OverlayFocusContain>() {
         Effect::new(move |_| overlay.contain.set(true));
     }

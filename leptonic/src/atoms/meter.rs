@@ -77,6 +77,7 @@ pub fn Meter<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Meter", classes);
     let defaults = UseMeterInput::<T>::default();
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
@@ -118,6 +119,7 @@ pub fn MeterFill(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MeterFill", classes);
     fill("MeterFill", classes, styles)
 }
@@ -130,6 +132,7 @@ pub fn MeterValueText(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-MeterValueText", classes);
     value_text("MeterValueText", classes, styles)
 }

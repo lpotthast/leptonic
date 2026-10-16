@@ -182,6 +182,7 @@ struct HoverState {
 /// after a touch are ignored) and ends when it leaves, the element is removed or `is_disabled`
 /// becomes true.
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         let _ = input;

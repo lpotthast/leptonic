@@ -134,6 +134,7 @@ pub struct UseMenuTriggerMenuProps {
 pub fn use_menu_trigger<S: MenuTriggerStateApi>(
     input: UseMenuTriggerInput<S>,
 ) -> UseMenuTriggerReturn {
+    crate::metrics::subject!();
     let UseMenuTriggerInput {
         menu_type,
         is_disabled: disabled,

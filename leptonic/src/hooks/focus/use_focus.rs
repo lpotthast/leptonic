@@ -68,6 +68,7 @@ pub type UseFocusAttrs = (OnEvent<ev::focus>, OnEvent<ev::blur>);
 
 /// Track focus of an element.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
+    crate::metrics::subject!();
     #[cfg(feature = "ssr")]
     {
         let _ = input;

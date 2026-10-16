@@ -121,6 +121,7 @@ pub type UseScrollWheelAttrs = (OnEvent<ev::wheel>,);
 /// }
 /// ```
 pub fn use_scroll_wheel(input: UseScrollWheelInput) -> UseScrollWheelReturn {
+    crate::metrics::subject!();
     let UseScrollWheelInput {
         is_disabled: disabled,
         on_scroll,

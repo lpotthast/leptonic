@@ -88,6 +88,7 @@ pub struct UseExitAnimationReturn {
 /// // CSS: .overlay[data-exiting] { animation: fade-out 150ms; }
 /// ```
 pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationReturn {
+    crate::metrics::subject!();
     let UseExitAnimationInput {
         element,
         is_open,

@@ -56,6 +56,7 @@ pub struct UseColorChannelFieldInput<C: ColorValue> {
 pub fn use_color_channel_field<C: ColorValue>(
     input: UseColorChannelFieldInput<C>,
 ) -> UseNumberFieldReturn {
+    crate::metrics::subject!();
     let UseColorChannelFieldInput {
         state,
         id,

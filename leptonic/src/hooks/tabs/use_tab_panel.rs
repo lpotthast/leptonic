@@ -104,6 +104,7 @@ impl IntoAttrs for UseTabPanelProps {
 
 /// The content of a tab, labelled by the tab: a tab stop unless it contains tabbable elements.
 pub fn use_tab_panel(input: UseTabPanelInput) -> UseTabPanelReturn {
+    crate::metrics::subject!();
     let UseTabPanelInput {
         state,
         key,

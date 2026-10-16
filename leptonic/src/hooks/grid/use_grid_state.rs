@@ -75,6 +75,7 @@ impl GridState {
 
 /// Creates the state of a grid (see [`GridState`]).
 pub fn use_grid_state(input: UseGridStateInput) -> GridState {
+    crate::metrics::subject!();
     let UseGridStateInput {
         collection,
         selection,

@@ -33,6 +33,7 @@ pub fn ShortcutKeys(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-ShortcutKeys", classes);
     let apple = RwSignal::new(false);
     // As `Shortcut::matches` (react-aria's `Mod`): Command where `isMac()`.
@@ -63,6 +64,7 @@ pub fn Keys(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Keys", classes);
     view! {
         <kbd dir="ltr" class=classes style=styles>

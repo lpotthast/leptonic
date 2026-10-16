@@ -1,0 +1,478 @@
+{
+  "disable_and_enable": {
+    "disable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2018,
+        "reallocations": 0,
+        "memo_runs": 102,
+        "memo_runs_unchanged": 12,
+        "effect_runs": 30,
+        "render_effect_runs": 90,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 90,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "enable": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2048,
+        "reallocations": 0,
+        "memo_runs": 102,
+        "memo_runs_unchanged": 12,
+        "effect_runs": 30,
+        "render_effect_runs": 90,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 90,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "ignored click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 61,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "focus_follows_the_focused_date": {
+    "right": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 937,
+        "reallocations": 22,
+        "memo_runs": 61,
+        "memo_runs_unchanged": 59,
+        "effect_runs": 3,
+        "render_effect_runs": 30,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "hold_and_release": {
+    "hold": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 71,
+        "reallocations": 1,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 2,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    },
+    "release": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2904,
+        "reallocations": 34,
+        "memo_runs": 148,
+        "memo_runs_unchanged": 144,
+        "effect_runs": 3,
+        "render_effect_runs": 34,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 6,
+        "dom_attributes": 7,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 22969,
+        "reallocations": 1089,
+        "memo_runs": 544,
+        "memo_runs_unchanged": 42,
+        "effect_runs": 133,
+        "render_effect_runs": 563,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 46,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "select_a_range_by_dragging": {
+    "drag": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 3009,
+        "reallocations": 49,
+        "memo_runs": 98,
+        "memo_runs_unchanged": 83,
+        "effect_runs": 5,
+        "render_effect_runs": 45,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 18,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    },
+    "hold": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4109,
+        "reallocations": 156,
+        "memo_runs": 147,
+        "memo_runs_unchanged": 141,
+        "effect_runs": 3,
+        "render_effect_runs": 35,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 8,
+        "dom_attributes": 8,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 3
+      }
+    },
+    "release": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4282,
+        "reallocations": 146,
+        "memo_runs": 131,
+        "memo_runs_unchanged": 126,
+        "effect_runs": 2,
+        "render_effect_runs": 3,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 5,
+        "dom_attributes": 3,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "select_a_range_with_clicks": {
+    "click end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4316,
+        "reallocations": 148,
+        "memo_runs": 131,
+        "memo_runs_unchanged": 126,
+        "effect_runs": 2,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 7,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 2
+      }
+    },
+    "click start": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4132,
+        "reallocations": 157,
+        "memo_runs": 147,
+        "memo_runs_unchanged": 141,
+        "effect_runs": 3,
+        "render_effect_runs": 36,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 10,
+        "dom_attributes": 10,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 4
+      }
+    },
+    "hover end": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press",
+        "hooks/use_range_calendar",
+        "hooks/use_range_calendar_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 3002,
+        "reallocations": 49,
+        "memo_runs": 98,
+        "memo_runs_unchanged": 83,
+        "effect_runs": 5,
+        "render_effect_runs": 44,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 6,
+        "dom_attributes": 16,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 0,
+        "style_recalcs": 2
+      }
+    }
+  },
+  "select_with_the_keyboard": {
+    "enter": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2482,
+        "reallocations": 10,
+        "memo_runs": 128,
+        "memo_runs_unchanged": 125,
+        "effect_runs": 1,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 5,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "select_with_the_mouse": {
+    "click": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_calendar",
+        "hooks/use_calendar_cell",
+        "hooks/use_calendar_grid",
+        "hooks/use_calendar_state",
+        "hooks/use_keyboard",
+        "hooks/use_press"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 2975,
+        "reallocations": 35,
+        "memo_runs": 148,
+        "memo_runs_unchanged": 144,
+        "effect_runs": 3,
+        "render_effect_runs": 35,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 7,
+        "dom_attributes": 9,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 5
+      }
+    }
+  }
+}

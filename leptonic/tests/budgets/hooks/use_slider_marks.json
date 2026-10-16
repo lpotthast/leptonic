@@ -1,0 +1,242 @@
+{
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 693,
+        "reallocations": 55,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 23,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount_custom": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 159,
+        "reallocations": 11,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 5,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 4,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "range_changes": {
+    "narrow": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 353,
+        "reallocations": 32,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 11,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 19,
+        "dom_removed_nodes": 19,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "widen": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 354,
+        "reallocations": 34,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 11,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 15,
+        "dom_removed_nodes": 15,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "step_changes": {
+    "coarsen": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 50,
+        "reallocations": 8,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 10,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "refine": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 353,
+        "reallocations": 32,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 11,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 19,
+        "dom_removed_nodes": 9,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "value_changes": {
+    "reset": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 45,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 21,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 6,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "set": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_slider_marks"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 45,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 21,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 6,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

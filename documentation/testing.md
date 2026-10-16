@@ -507,33 +507,135 @@ in `ui_tests/mod.rs`, never in per-file macros or module-derived registration fu
 
 ## Performance measurements
 
-The performance suite times leptonic in the browser, on the page's clock, so that WebDriver round trips don't
-count: `just browser-perf` (`BROWSER_TEST_SUITE=performance`; `BROWSER_TEST_FILTER` selects scenarios). It is kept
-out of the regular suite: its cases run one after the other (parallel browsers would compete for the machine), and
-the test-app is built without debug assertions and overflow checks (Leptos' and leptonic's debug-only checks would
-count; `CARGO_PROFILE_WASM_RELEASE_*` overrides of the `wasm-release` profile, in `<target>/performance`, a second
-build next to the regular suite's).
+Every hook and atom has a **performance test** that measures what everything it offers costs, and the regular suite
+checks those counts against budgets: one library of tests and one run check behavior and performance. Behavior tests
+don't measure (their steps change for behavior's sake, and their fixtures render many variants). The metrics are
+defined (and described) once, in `testing/perf-metrics/src/lib.rs` (`leptonic_perf_metrics::Metric`): heap
+`allocations`, `reallocations`, `allocated_bytes`, `retained_bytes`; `memo_runs`, `memo_runs_unchanged`,
+`effect_runs`, `render_effect_runs`, `immediate_effect_runs`, `signal_notifications`; `dom_attributes`, `dom_text`,
+`dom_added_nodes`, `dom_removed_nodes`; `layouts`, `style_recalcs`; `frames` until idle.
 
-- **Fixtures** (`testing/test-app/src/pages/perf/`, at `/perf/{name}`): a fixture renders a `PerfScenarios` with
-  its scenarios, named workloads returning `Measurements`; `window.leptonicPerf.run(name)` runs one (the page also
-  renders a button per scenario, for runs by hand with `just serve-test-app`). `Measurements::measure(metric,
-  action)` times an action, e.g. a signal update, twice: `<metric>.settled`, until every effect it caused has run
-  (the next task, after all microtasks), and `<metric>.render`, the next frame's own work (from its animation
-  frame callbacks to the first task after it: style, layout, resize observers, paint), without waiting for the
-  frame. Record what the run did (`with_parameter`: rows, batch size, rounds, ...); warm up before measuring.
-- **Cases** (`leptonic/tests/ui_tests/test_perf_*.rs`, registered in `performance_tests`): load the fixture,
-  `page.run_perf_scenario(name)`, `crate::perf::report(&results)`, then check that the scenario did its work (every
-  round measured, the expected rows rendered), taking the expected values from its parameters.
-- **Reports**: each scenario's statistics (count, median, p90, max, mean, in milliseconds) are logged and written
-  to `<target>/tmp/performance/<scenario>.json` with the samples. A run compares each median with the previous
-  run's file of the same scenario and parameters: measure, change, measure again. Timings depend on the machine and
-  its load, so cases assert no budgets; compare runs of one machine, on a quiet machine (other sessions' builds and
-  suites moved medians of ~3 ms by up to 30% between runs: run before and after twice). The clock's resolution is
-  0.1 ms (`performance.now()` without cross-origin isolation): sub-millisecond metrics change in steps of 0.1 ms, so
-  the report gives their change in milliseconds only, and percentages from 1 ms up.
-- **Today**: `/perf/virtual-list` (`test_perf_virtual_list.rs`): a 20,000-line log, mounted and appended to while
-  following its end or showing its start; and a log that grew to 2,000 lines while following its end (every line
-  laid out), whose width changes (`resize-grown`).
+- **A performance test** is `leptonic/tests/perf_tests/<kind>/<subject>.rs`, by kind: `perf_tests/atoms/` (an
+  atom, by its name in snake case: `atoms/button.rs`) and `perf_tests/hooks/` (a hook, by its name:
+  `hooks/use_press.rs`). Its path is the subject's id (`atoms/button`, `hooks/use_press`; `perf/inventory.rs`),
+  and its tests' names say it (`perf_tests::atoms::button::mount_and_unmount`). Every subject has its module,
+  listed in `perf_tests/atoms/mod.rs` or `perf_tests/hooks/mod.rs`; the module registers its own tests in its
+  `register` function (unlike the regular tests, registered in `ui_tests/mod.rs`: one list per subject keeps
+  hundreds of lists next to their tests). Reference: `perf_tests/atoms/button.rs`. Its fixture
+  (`testing/test-app/src/pages/perf/<kind>/<subject>.rs`, a `PagePerf` component, at `/perf/<kind>/<subject>`,
+  listed in `perf/atoms/mod.rs` or `perf/hooks/mod.rs`) renders the subject alone (an atom; a hook on a plain
+  element, or with what it needs: a state hook with controls for its methods, an item hook in its collection), mounted at first, with plain elements around it to tab from and to, and
+  `PerfControls`: what the test does to the subject besides user input (`mount`, `unmount`, prop changes, reads like
+  a press counter), called with `page.control(name)` from a script, so that the page allocates nothing for the call.
+- **What it measures: everything the subject offers**, one test per offer, each from a fresh page:
+  - mounting and unmounting (controls `mount`, `unmount`);
+  - every interaction: pointer (click; hold and release where it has a pressed state; hover and leave; drag),
+    keyboard (each key it handles), focus and blur (by keyboard and by pointer), typing, scrolling;
+  - every reactive prop and controlled state: each change and back (disable and enable, pending, selection, open
+    and close, value changes);
+  - what it ignores where it decides that (a click while disabled: the cost of ignoring);
+  - for collections and other subjects whose cost grows with their content: sizes that show how (10, 1,000,
+    10,000 items), as scenarios where an action repeats (below).
+- **Measuring** (`page.measure(name, action)`): wraps the step, e.g. `page.measure("click", button.click())`, and
+  returns what the step returns; measurements of one name in a test add up. Check behavior after the measurement
+  as anywhere (it ends with the page idle, so waits pass at once): that the press counted, the attribute changed.
+- **What ran is reported, not listed**: every public hook and atom starts with `crate::metrics::subject!();`
+  (`leptonic::metrics`, feature `metrics`, which only the test-app enables): it notes that the subject ran, named
+  after the function it is in, without allocating. Each measurement records the hooks and atoms that ran on the page
+  (`ran` in the budget, by id), and every measurement of a performance test must have run its subject (else: does
+  the fixture render it, does it start with `subject!()`?). So nobody needs to know what a subject uses
+  internally, and a new dependency shows in the budget's diff (`atoms/button` runs `hooks/use_context_menu`, too).
+- **How a measurement works**: it waits until the page is idle (a frame without DOM mutations, allocations and
+  reactive work; at most 60 frames, else it fails), reads CDP's `Performance.getMetrics` (layouts, style
+  recalculations), resets a `MutationObserver` on the document and starts the app's counters
+  (`window.leptonicCounters`, `testing/test-app/src/pages/perf/counters.rs`: a counting global allocator in the
+  wasm, and `reactive_graph::metrics`, below), runs the action, waits until the page is idle again and reads
+  everything again, with the subjects that ran (`leptonic/tests/pages/measure.rs`). No wasm runs in the page between
+  start and end but the action and what it causes, and the counters' reads allocate nothing.
+- **Budgets** (`leptonic/tests/budgets/<kind>/<subject>.json`, checked in): per test and measurement the hooks
+  and atoms that ran, how often it was measured, and every budgeted metric's total. After a test passed, the harness checks its
+  measurements (`perf::budgets::check`): counts are exact, so they must equal the budget; above is a regression,
+  below an improvement to lock in, and both fail until the budget is recorded again:
+  `BROWSER_TEST_PERF_BUDGETS=update BROWSER_TEST_FILTER=<test> just browser-test` (the failure names the command;
+  `BROWSER_TEST_PERF_BUDGETS_UPDATE=<filters>` records the matching tests' budgets and checks the others' in the same
+  run, so that one run serves both kinds of request);
+  review the budget diff like code. A test with measurements and no budget fails the same way. Re-record after
+  changing Leptos or other dependencies, the wasm profile or Chrome (Chrome for Testing takes the latest stable:
+  layouts and style recalculations may change with it). Three metrics are reported without a budget
+  (`Metric::is_budgeted`): `retained_bytes` (some memory is freed at times nothing in the page decides, after the
+  browser's garbage collection) and `frames` (a late frame takes in work that otherwise spans two) change on a busy
+  machine; `allocated_bytes` differs by a few bytes between runs in some measurements while the counts stay equal
+  (closing overlays, reopening a popover, collection changes: 16-48 bytes; seen by three of the agents writing the
+  performance tests, 2026-10-16), probably text whose length depends on the page's history (generated ids crossing a
+  digit). The allocation count is budgeted.
+- **Determinism** (measured 2026-10-16): every budgeted count of the `Button` and `VirtualList` performance tests
+  (WebDriver clicks, holds, hovers, keys, typing; control calls; scenario actions) repeated exactly in every run, also
+  with all 32 CPU threads busy, once the scenarios' waits waited until the page was idle (with one frame per step,
+  late frames let a scenario go on while the page still worked, and its measurements started from other states).
+  The regular build's debug assertions barely count: mounting a `VirtualList` of 20,000 lines makes 337,154
+  allocations in 5 mounts, 337,149 without them.
+- **Coverage** (`perf::budgets::PerformanceCoverage`, after every regular run, also filtered ones): every hook (a
+  `pub fn use_*` in `src/hooks/`) and atom (a `#[component] pub fn` in `src/atoms/`, `perf/inventory.rs`) has a
+  performance test with budgets or is listed in `leptonic/tests/budgets/unmeasured.txt`; budgets belong to
+  registered tests of performance test modules named for a hook or atom; whatever reported that it ran is a hook or
+  atom. Update runs remove the budgets of tests that no longer exist and rewrite `unmeasured.txt`, which only
+  shrinks: a new hook or atom comes with its performance test. Problems fail unfiltered runs only (a filtered run
+  logs them: while performance tests are written in parallel, other runs change the coverage under it).
+- **Scenarios**: workloads of many actions in a performance test (a long list growing), as a fixture's
+  `PerfScenarios` of named scenarios calling `Measurements::measure(metric, action)` per action and
+  waiting with `next_frame()` (when counting: until the page is idle). Record what the run did
+  (`with_parameter`: rows, batch size, rounds, ...); warm up before measuring. Their cases
+  (`perf_tests/atoms/virtual_list.rs`) run in both suites: the regular suite counts each action
+  (`page.count_perf_scenario(name)`: the scenario stops before each action, the test measures it with
+  `Page::measure`), the performance suite (`performance_tests`) times them.
+- **Timings** (`just browser-perf`, `BROWSER_TEST_SUITE=performance`): the scenarios' timings on the page's clock
+  (`window.leptonicPerf.run(name)`), so that WebDriver round trips don't count, one case after the other (parallel
+  browsers would compete for the machine), in a build without debug assertions and overflow checks
+  (`CARGO_PROFILE_WASM_RELEASE_*` overrides of the `wasm-release` profile, in `<target>/performance`). `measure`
+  times each action twice: `<metric>.settled`, until every effect it caused has run (the next task, after all
+  microtasks), and `<metric>.render`, the next frame's own work (from its animation frame callbacks to the first
+  task after it: style, layout, resize observers, paint), without waiting for the frame. Each scenario's
+  statistics (count, median, p90, max, mean, in milliseconds) are logged and written to
+  `<target>/tmp/performance/<fixture>/<scenario>.json` with the samples, and each median is compared with the
+  previous run's: measure, change, measure again. Timings depend on the machine and its load (other sessions'
+  builds moved medians of ~3 ms by up to 30%, full load by 80–200%), so they have no budgets: compare runs of one
+  machine, on a quiet machine, before and after twice. The clock's resolution is 0.1 ms (`performance.now()`
+  without cross-origin isolation): the report gives sub-millisecond changes in milliseconds only.
+- **Keeping measurements deterministic** (what the performance tests of all 356 subjects ran into, 2026-10-16): a
+  measured step must start from the same state and contain no timer whose firing depends on timing.
+  - The live announcer's first announcement waits on a 100 ms timer (`FIRST_ANNOUNCEMENT_DELAY`): fixtures whose
+    subject announces (selection, sorting, spin buttons, drag and drop) set it up at mount (`announce("")`) and wait
+    for it, or the first announcement lands inside a measurement on some runs. Sort tests also wait out the
+    announcement's 500 ms removal.
+  - `use_dialog` starts a 500 ms blur and refocus timer for every opened dialog (react-aria's VoiceOver workaround):
+    wait it out (about 600 ms) before measuring. Tooltips have a 500 ms global cooldown after closing: no delays,
+    one opening per test. Number field steppers auto-repeat after 400 ms: click them, don't hold them. A
+    long-press timer starts on hold where the subject has a row action: hold tests use fixtures without one.
+  - Scrolling keeps `is_scrolling` until 300 ms after the last event: explicit scroll measurements include the end,
+    others wait for it unmeasured. Overscan direction depends on whether the previous scroll was less than 500 ms
+    earlier: measure downward scrolls only.
+  - WebDriver's default pointer moves take 250 ms and send a varying number of `pointermove`s: drag with
+    `action_chain_with_delay(None, Some(Duration::ZERO))`. Keys sent together may land in different frames (type
+    ahead): send one key per measured step.
+  - Animations that start inside a measured step gave varying style recalculations: start them at mount (paused
+    long enough), and finish them in the step with `getAnimations().finish()`.
+  - The first key press on a page makes about 40 allocations once (lazy initialization): it is part of whichever
+    step presses the first key, so keep that step the same.
+  - Reading the state of a hook fixture from a control outside a tracking context logs Leptos warnings, which fail
+    the page-health check: read it with `untrack`.
+  - Unmounting a part whose element a parent references (`aria-controls`, `aria-labelledby`, a `<label for>`)
+    leaves a dangling reference the page-health check reports: mount it again before the test ends.
+  - In lists of 1,000 rows, lookups by text can exceed 5 s: give rows a `data-*` attribute and select by it.
+  - WebDriver reads boolean attributes (`disabled`, `readonly`, `hidden="until-found"`) as `"true"`; read the
+    property where the value matters. `checkValidity()` fires `invalid` (which commits a native-mode field's
+    validation): read `validationMessage`.
+- **`reactive_graph::metrics`**: Leptos has no counters of its reactive work, so the test-app patches
+  `reactive_graph` (`[patch.crates-io]` in its `Cargo.toml`) with the user's fork at `~/dev/leptos`, branch
+  `leptonic-metrics`: v0.8.22 plus a `metrics` feature (global counters, `metrics::snapshot()`, `Metrics::since`;
+  nothing without the feature), with the crates it takes from that workspace (`any_spawner`, `hydration_context`,
+  `or_poisoned`, `throw_error`), so that each exists once. The test-app builds only while that checkout is on the
+  branch. When leptonic updates Leptos, rebase the branch onto the new release (the patch must match the version
+  the test-app locks), or drop the patch once upstream has the counters.
 
 ## Speed and memory
 

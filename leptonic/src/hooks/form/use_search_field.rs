@@ -74,6 +74,7 @@ pub struct UseSearchFieldReturn {
 /// }
 /// ```
 pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
+    crate::metrics::subject!();
     let UseSearchFieldInput {
         text_field,
         on_submit,

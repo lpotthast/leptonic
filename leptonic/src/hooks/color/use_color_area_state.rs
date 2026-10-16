@@ -214,6 +214,7 @@ fn snap(value: f64, step: f64, range: &ColorChannelRange) -> f64 {
 
 /// Creates the state of a 2D color area.
 pub fn use_color_area_state<C: ColorValue>(input: UseColorAreaStateInput<C>) -> ColorAreaState<C> {
+    crate::metrics::subject!();
     let UseColorAreaStateInput {
         default_value,
         value,

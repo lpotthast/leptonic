@@ -169,6 +169,7 @@ pub fn Virtualizer<L: Layout + Clone>(
     should_observe_item_size: bool,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let layout = StoredValue::new(layout);
     let create_root = Arc::new(move |input: VirtualizedRootInput| {
         create_virtualized(
@@ -285,6 +286,7 @@ where
     R: Fn(T) -> IV + Send + Sync + 'static,
     IV: IntoView + 'static,
 {
+    crate::metrics::subject!();
     // The anchoring state (C4).
     let (binding, on_change) = ValueBinding::from_state_props(
         is_anchored_to_end,

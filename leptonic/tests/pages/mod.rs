@@ -15,12 +15,13 @@ mod keyboard;
 mod locator;
 mod lookup;
 pub(crate) use lookup::terminal_lookup_error;
+mod measure;
 mod perf;
 mod platform;
 pub(crate) mod script;
 mod stopwatch;
 
-use std::time::Duration;
+use std::{sync::Mutex, time::Duration};
 
 use assertr::{pattern, prelude::*};
 pub use browser_test::thirtyfour::WebElement;
@@ -40,7 +41,7 @@ use rootcause::{Report, bail, prelude::ResultExt};
 use serde::{Deserialize, de::DeserializeOwned};
 pub use stopwatch::{Stopwatch, StopwatchEnd, StopwatchStart};
 
-use crate::pages::lookup::Root;
+use crate::{pages::lookup::Root, perf::budgets::Measured};
 
 /// A target of [`Page::dispatch_to`] that is no element.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,11 +64,26 @@ impl GlobalTarget {
 pub struct Page<'d> {
     driver: &'d WebDriver,
     base_url: &'d str,
+    /// The test's measurements so far ([`Page::measure`]).
+    measurements: Mutex<Vec<Measured>>,
 }
 
 impl<'d> Page<'d> {
     pub(crate) fn new(driver: &'d WebDriver, base_url: &'d str) -> Self {
-        Self { driver, base_url }
+        Self {
+            driver,
+            base_url,
+            measurements: Mutex::new(Vec::new()),
+        }
+    }
+    /// The test's measurements, for the check against its budgets after the test.
+    pub(crate) fn take_measurements(&self) -> Vec<Measured> {
+        std::mem::take(
+            &mut *self
+                .measurements
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        )
     }
     pub(crate) fn driver(&self) -> &WebDriver {
         self.driver
@@ -314,6 +330,75 @@ impl<'d> Page<'d> {
     /// its results, measured on the page's clock.
     pub async fn run_perf_scenario(&self, name: &str) -> Result<PerfResults, Report> {
         perf::run(self.driver(), name).await
+    }
+
+    /// Measures what `action` (any step of the test: a click, typing, a script) makes the app and
+    /// the browser do, from the action until the page is idle again: allocations, reactive work,
+    /// DOM mutations, layouts, ... (every `leptonic_perf_metrics::Metric`), and which hooks and
+    /// atoms ran (leptonic reports them). `name` names the measurement in the test (measurements
+    /// of one name add up). Only the performance test of a hook or atom measures
+    /// (`test_perf_<subject>.rs`, see `perf::budgets`); the harness checks its measurements
+    /// against its budget (`tests/budgets/test_perf_<subject>.json`) after it passed. Returns
+    /// what `action` returned.
+    pub async fn measure<T, E>(
+        &self,
+        name: &str,
+        action: impl Future<Output = Result<T, E>> + Send,
+    ) -> Result<T, Report>
+    where
+        Report: From<E>,
+    {
+        let (output, counted) = measure::measure(self.driver(), async { Ok(action.await?) })
+            .step("measure")
+            .await?;
+        self.measurements
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(Measured {
+                name: name.to_owned(),
+                values: counted.values,
+                ran: counted.ran,
+            });
+        Ok(output)
+    }
+
+    /// Runs the control `name` of the current performance fixture (`window.leptonicControls`,
+    /// `testing/test-app/src/pages/perf`): an action on its subject (mount it, disable it; `0`)
+    /// or a read (a press counter). The page allocates nothing for the call itself, so it can be
+    /// measured ([`Page::measure`]).
+    pub async fn control(&self, name: &str) -> Result<f64, Report> {
+        let value: Option<f64> = script::eval(
+            self.driver(),
+            "const control = window.leptonicControls?.[arguments[0]];
+             return control ? control() : null;",
+            vec![name.into()],
+        )
+        .await?;
+        value.ok_or_else(|| {
+            rootcause::report!("the page has no control {name:?} (`window.leptonicControls`)")
+                .into_dynamic()
+        })
+    }
+
+    /// Runs the performance scenario `name` of the current page (a `/perf` fixture) for counting:
+    /// measures each of its actions ([`Page::measure`], named by the scenario's metric). Returns
+    /// the scenario's parameters.
+    pub async fn count_perf_scenario(
+        &self,
+        name: &str,
+    ) -> Result<serde_json::Map<String, serde_json::Value>, Report> {
+        let mut stop: perf::Stop =
+            script::eval_async(self.driver(), perf::COUNT, vec![name.into()]).await?;
+        loop {
+            let Some(metric) = stop.metric.clone() else {
+                return stop.parameters(name)?.ok_or_else(|| {
+                    rootcause::report!("the scenario {name:?} didn't end").into_dynamic()
+                });
+            };
+            self.measure(&metric, script::eval::<()>(self.driver(), perf::GO, vec![]))
+                .await?;
+            stop = script::eval_async(self.driver(), perf::NEXT, vec![]).await?;
+        }
     }
 
     /// Click with the mouse at the point (`x`, `y`) of the viewport (CSS pixels), on whatever is

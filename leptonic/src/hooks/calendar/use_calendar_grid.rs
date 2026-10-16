@@ -217,6 +217,7 @@ fn is_focus_fixup(e: &FocusEvent) -> bool {
 /// Behavior and accessibility of a calendar's grid of dates: keyboard navigation, its label, the
 /// weekday names and the number of week rows.
 pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
+    crate::metrics::subject!();
     let UseCalendarGridInput {
         data,
         start_date,

@@ -53,6 +53,7 @@ pub struct UseTreeInput {
 /// collapsed with ArrowRight/ArrowLeft or an expand button. Render one `use_tree_item` per
 /// visible item (`state.list.collection`), in order.
 pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
+    crate::metrics::subject!();
     let UseTreeInput {
         state,
         element,

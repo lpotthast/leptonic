@@ -71,6 +71,7 @@ pub struct UsePreventScrollInput {
 /// there touch moves outside scrollable elements are prevented, nested scroll areas don't chain to
 /// the page, and focusing an element scrolls only its scroll parents.
 pub fn use_prevent_scroll(input: UsePreventScrollInput) {
+    crate::metrics::subject!();
     let UsePreventScrollInput { is_disabled } = input;
 
     // Whether this instance holds one of the shared count's references: only then may it release

@@ -95,6 +95,7 @@ pub type OptionMatcher = Box<dyn Fn(&str) -> bool>;
 /// A filter matching options whose text contains the input, ignoring case and accents in the
 /// current locale (react-aria: `useFilter({sensitivity: 'base'}).contains`).
 pub fn use_contains_filter() -> ComboBoxFilter {
+    crate::metrics::subject!();
     // One filter per locale; reading it tracked lets a filtered collection follow the locale.
     let filter = crate::utils::filter::use_filter(crate::utils::filter::CollatorOptions::default());
     Arc::new(move |input: &str| {
@@ -526,6 +527,7 @@ impl ComboBoxState {
 
 /// Creates the state of a combo box (see [`ComboBoxState`]).
 pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
+    crate::metrics::subject!();
     let UseComboBoxStateInput {
         collection: original,
         filter,

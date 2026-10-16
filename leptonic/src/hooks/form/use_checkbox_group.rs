@@ -124,6 +124,7 @@ impl IntoAttrs for UseCheckboxGroupProps {
 /// label, description and error message). Render its checkboxes with
 /// [`use_checkbox_group_item`].
 pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupReturn {
+    crate::metrics::subject!();
     let UseCheckboxGroupInput {
         state,
         id,
@@ -214,6 +215,7 @@ impl std::fmt::Debug for UseCheckboxGroupItemInput {
 
 /// Provides the behavior and accessibility of a checkbox in a [`use_checkbox_group`].
 pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxReturn {
+    crate::metrics::subject!();
     let UseCheckboxGroupItemInput {
         group,
         value,

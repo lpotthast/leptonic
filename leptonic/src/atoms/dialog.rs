@@ -74,6 +74,7 @@ pub fn Dialog(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Dialog", classes);
     let trigger = use_context::<DialogTriggerContext>();
     // Without a title, `aria_label` or `aria_labelledby`, the trigger names the dialog
@@ -125,6 +126,7 @@ pub fn DialogTitle(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DialogTitle", classes);
     let props = use_context::<DialogContext>().map_or_else(
         || {
@@ -149,6 +151,7 @@ pub fn DialogDescription(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-DialogDescription", classes);
     let props = use_context::<DialogContext>().map_or_else(
         || {
@@ -263,6 +266,7 @@ pub fn DialogTrigger(
     set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let (value, on_open_change) = ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
         default_open,

@@ -37,6 +37,7 @@ pub struct UseToggleButtonInput {
 /// }));
 /// ```
 pub fn use_toggle_button(input: UseToggleButtonInput) -> UseButtonInput {
+    crate::metrics::subject!();
     let UseToggleButtonInput { state, mut button } = input;
     let on_press = button.on_press;
     button.on_press = Some(Callback::new(move |e: PressEvent| {

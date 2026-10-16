@@ -146,6 +146,7 @@ pub fn Input(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Input", classes);
     let Some(ctx) = use_clearable_context::<InputContext>() else {
         return Either::Right(view! {
@@ -200,6 +201,7 @@ pub fn TextArea(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-TextArea", classes);
     let Some((ctx, text_field)) = use_clearable_context::<InputContext>()
         .and_then(|ctx| ctx.text_field.map(|text_field| (ctx, text_field)))

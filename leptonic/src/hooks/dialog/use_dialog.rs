@@ -137,6 +137,7 @@ pub type UseDialogAttrs = (
 /// }
 /// ```
 pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
+    crate::metrics::subject!();
     let UseDialogInput {
         role: dialog_role,
         aria_label,

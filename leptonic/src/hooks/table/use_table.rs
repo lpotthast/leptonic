@@ -128,6 +128,7 @@ pub struct UseTableKeyboardDelegateInput {
 pub fn use_table_keyboard_delegate(
     input: UseTableKeyboardDelegateInput,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
+    crate::metrics::subject!();
     let UseTableKeyboardDelegateInput { state, element } = input;
     // One collator per locale, not per read of the delegate.
     let collator = use_collator(CollatorOptions::default());
@@ -158,6 +159,7 @@ pub fn use_table_keyboard_delegate(
 /// navigated in two dimensions, with sortable columns and selectable rows. Render column headers
 /// with `use_table_column_header`, rows with `use_table_row` and cells with `use_table_cell`.
 pub fn use_table(input: UseTableInput) -> UseTableReturn {
+    crate::metrics::subject!();
     let UseTableInput {
         state,
         element,

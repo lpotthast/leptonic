@@ -60,6 +60,7 @@ fn map_modality(modality: Option<Modality>) -> DragModality {
 
 /// The current drag modality, updated as the interaction modality changes.
 pub fn use_drag_modality() -> Signal<DragModality> {
+    crate::metrics::subject!();
     let modality = use_interaction_modality();
     // A memo: the mapping queries a media feature, and many items read it.
     Memo::new(move |_| map_modality(modality.get())).into()

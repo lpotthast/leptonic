@@ -42,6 +42,9 @@ syntax-highlight = ["dep:syntect"]
 # they are English (en-US) in every locale (a smaller wasm).
 intl-strings = []
 
+# Notes which hooks and atoms ran (`metrics::ran`), for leptonic's performance tests (the test-app enables it).
+metrics = []
+
 full = ["atoms", "clipboard", "syntax-highlight", "intl-strings"]
 
 nightly = ["leptos/nightly"]
@@ -160,6 +163,8 @@ any_spawner = { version = "0.3.0", default-features = false, features = ["tracin
 assertr = { version = "0.8.0", default-features = false, features = ["std", "num", "thirtyfour-cdp"] }
 browser-test = { version = "0.7.0", default-features = false, features = ["rustls-no-provider"] }
 futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
+# The metrics of the browser tests' measurements (`Page::measure`).
+leptonic-perf-metrics = { path = "../testing/perf-metrics" }
 leptos-browser-test = { version = "0.4.0", default-features = false }
 reactive_graph = { version = "0.2.15", default-features = false, features = ["effects"] }
 rootcause = { version = "0.13.0", default-features = false }

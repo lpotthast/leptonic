@@ -108,6 +108,7 @@ fn restore_focus(element: &web_sys::Element) {
 pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
     input: UseToastRegionInput<T>,
 ) -> UseToastRegionReturn {
+    crate::metrics::subject!();
     let UseToastRegionInput {
         queue,
         element,

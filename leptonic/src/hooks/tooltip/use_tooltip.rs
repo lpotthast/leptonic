@@ -91,6 +91,7 @@ pub type UseTooltipAttrs = (
 /// }
 /// ```
 pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
+    crate::metrics::subject!();
     let UseTooltipInput { is_disabled, state } = input;
 
     let hover = use_hover(UseHoverInput {

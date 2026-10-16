@@ -93,6 +93,7 @@ pub fn RadioGroup<V: SelectionValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-RadioGroup", classes);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let KeyedStateProps {
@@ -198,6 +199,7 @@ pub fn RadioField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-RadioField", classes);
     let (Some(group), Some(group_field)) = (
         use_context::<RadioGroupContext>(),
@@ -263,6 +265,7 @@ pub fn RadioButton(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-RadioButton", classes);
     let (Some(group), Some(ctx)) = (
         use_context::<RadioGroupContext>(),

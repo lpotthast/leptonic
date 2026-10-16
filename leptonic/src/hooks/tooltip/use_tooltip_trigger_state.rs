@@ -115,6 +115,7 @@ impl TooltipTriggerState {
 /// });
 /// ```
 pub fn use_tooltip_trigger_state(input: UseTooltipTriggerStateInput) -> TooltipTriggerState {
+    crate::metrics::subject!();
     let UseTooltipTriggerStateInput {
         delay,
         close_delay,

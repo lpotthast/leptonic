@@ -15,5 +15,6 @@ pub type UseSwitchReturn = UseToggleReturn;
 /// role="switch">` inside a `<label>` (render the track and thumb next to the visually hidden
 /// input). It submits, resets and validates like a checkbox.
 pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
+    crate::metrics::subject!();
     use_toggle_with(input, Some(AriaRole::Switch), None)
 }

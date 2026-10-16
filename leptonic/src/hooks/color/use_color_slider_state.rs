@@ -86,6 +86,7 @@ impl<C: ColorValue> ColorSliderState<C> {
 pub fn use_color_slider_state<C: ColorValue>(
     input: UseColorSliderStateInput<C>,
 ) -> ColorSliderState<C> {
+    crate::metrics::subject!();
     let UseColorSliderStateInput {
         default_value,
         value,

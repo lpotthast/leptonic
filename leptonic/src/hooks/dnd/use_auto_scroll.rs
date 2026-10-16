@@ -102,6 +102,7 @@ impl AutoScroll {
 
 /// Auto scrolling for the drop target `element` (or its scroll parent) during native drags.
 pub fn use_auto_scroll(element: CapturedElement) -> AutoScroll {
+    crate::metrics::subject!();
     let scrollable = StoredValue::new(None);
     Effect::new(move || {
         let Some(el) = element.get() else {

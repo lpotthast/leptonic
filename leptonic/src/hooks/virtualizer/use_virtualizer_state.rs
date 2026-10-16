@@ -177,6 +177,7 @@ fn now() -> f64 {
 
 /// Lays out a collection and tracks what is visible (react-stately's `useVirtualizerState`).
 pub fn use_virtualizer_state<L: Layout>(input: UseVirtualizerStateInput<L>) -> VirtualizerState<L> {
+    crate::metrics::subject!();
     let UseVirtualizerStateInput {
         layout,
         collection,

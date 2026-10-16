@@ -57,6 +57,7 @@ impl DisclosureState {
 
 /// Manages whether a disclosure is expanded.
 pub fn use_disclosure_state(input: UseDisclosureStateInput) -> DisclosureState {
+    crate::metrics::subject!();
     let UseDisclosureStateInput {
         default_expanded,
         value,

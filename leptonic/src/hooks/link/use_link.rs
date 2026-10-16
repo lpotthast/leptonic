@@ -253,6 +253,7 @@ impl IntoAttrs for UseLinkProps {
 /// view! { <a {..attrs} style=styles>"Example"</a> }
 /// ```
 pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
+    crate::metrics::subject!();
     let UseLinkInput {
         href,
         target,

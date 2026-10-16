@@ -1,0 +1,160 @@
+{
+  "close_all": {
+    "close all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_submenu_trigger_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 24,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_submenu_trigger_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 81,
+        "reallocations": 3,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_submenu_trigger_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "open_and_close": {
+    "close": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_submenu_trigger_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "open": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_submenu_trigger_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 18,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "toggle": {
+    "toggle": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_menu_trigger_state",
+        "hooks/use_overlay_trigger_state",
+        "hooks/use_submenu_trigger_state"
+      ],
+      "windows": 2,
+      "totals": {
+        "allocations": 39,
+        "reallocations": 0,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 2,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

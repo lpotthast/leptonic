@@ -14,8 +14,6 @@ dependencies = [
 [[package]]
 name = "any_spawner"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1384d3fe1eecb464229fcf6eebb72306591c56bf27b373561489458a7c73027d"
 dependencies = [
  "futures",
  "thiserror 2.0.21",
@@ -828,8 +826,6 @@ checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 [[package]]
 name = "hydration_context"
 version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "285b05858fe7d58c5eff059f7b46c228fd86996d996c59eb35fc0340d174f640"
 dependencies = [
  "futures",
  "js-sys",
@@ -1403,6 +1399,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "leptonic-perf-metrics"
+version = "0.1.0"
+
+[[package]]
 name = "leptonic-test-app"
 version = "0.1.0"
 dependencies = [
@@ -1412,10 +1412,12 @@ dependencies = [
  "http-body",
  "js-sys",
  "leptonic",
+ "leptonic-perf-metrics",
  "leptos",
  "leptos_axum",
  "leptos_meta",
  "leptos_router",
+ "reactive_graph",
  "send_wrapper",
  "serde_json",
  "tokio",
@@ -1861,8 +1863,6 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 [[package]]
 name = "or_poisoned"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c04f5d74368e4d0dfe06c45c8627c81bd7c317d52762d118fb9b3076f6420fd"
 
 [[package]]
 name = "parking"
@@ -2066,8 +2066,6 @@ dependencies = [
 [[package]]
 name = "reactive_graph"
 version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79f11fac67625645add76313dab8dae510fca0654d96ef98fd8f961a7d2e22c1"
 dependencies = [
  "any_spawner",
  "async-lock",
@@ -2601,8 +2599,6 @@ dependencies = [
 [[package]]
 name = "throw_error"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0ed6038fcbc0795aca7c92963ddda636573b956679204e044492d2b13c8f64"
 dependencies = [
  "pin-project-lite",
 ]

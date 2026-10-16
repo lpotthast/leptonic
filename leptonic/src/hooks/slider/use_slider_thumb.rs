@@ -238,6 +238,7 @@ fn parse_value<T: NumberValue>(text: &str) -> Option<T> {
 /// A thumb of a slider: drag it, or focus its range input and use the arrow keys (Shift: by a
 /// page), PageUp/PageDown, Home and End.
 pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSliderThumbReturn {
+    crate::metrics::subject!();
     let UseSliderThumbInput {
         state,
         slider,

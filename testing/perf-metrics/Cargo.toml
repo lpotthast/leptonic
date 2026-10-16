@@ -1,0 +1,15 @@
+[package]
+name = "leptonic-perf-metrics"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The performance metrics of leptonic's browser tests: their one definition, shared by the test-app (which counts them) and the tests (which check them)"
+
+[dependencies]
+
+[dev-dependencies]
+assertr = { version = "0.8.0", default-features = false, features = ["std"] }
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }

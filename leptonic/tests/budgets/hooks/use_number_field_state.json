@@ -1,0 +1,278 @@
+{
+  "format": {
+    "as dollars": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 188,
+        "reallocations": 21,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 333,
+        "reallocations": 10,
+        "memo_runs": 6,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 2,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 1,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 17,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 1,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "set_the_value": {
+    "set": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 63,
+        "reallocations": 2,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 3,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "step": {
+    "decrement": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 90,
+        "reallocations": 0,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "increment": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 89,
+        "reallocations": 1,
+        "memo_runs": 5,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "step_to_the_limits": {
+    "ignored increment": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 53,
+        "reallocations": 2,
+        "memo_runs": 2,
+        "memo_runs_unchanged": 1,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    },
+    "to the maximum": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 66,
+        "reallocations": 2,
+        "memo_runs": 4,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "to the minimum": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 65,
+        "reallocations": 0,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "type_and_commit": {
+    "commit": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 99,
+        "reallocations": 3,
+        "memo_runs": 3,
+        "memo_runs_unchanged": 2,
+        "effect_runs": 1,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 4,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "type": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_form_validation_state",
+        "hooks/use_number_field_state"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 9,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 1,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

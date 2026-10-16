@@ -137,6 +137,7 @@ pub fn option_id(list_id: &str, key: &Key) -> String {
 /// An option of a listbox: selection on press (as configured by the listbox), focus handling,
 /// and `role="option"` with its ARIA state.
 pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
+    crate::metrics::subject!();
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseOptionInput {
         list,

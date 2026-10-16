@@ -84,6 +84,7 @@ pub fn TooltipTrigger(
     set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let (is_open, on_open_change) =
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
@@ -187,6 +188,7 @@ pub fn Tooltip(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    crate::metrics::subject!();
     let classes = with_default_class("leptonic-Tooltip", classes);
     let Some(TooltipTriggerContext {
         state,

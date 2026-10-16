@@ -52,6 +52,7 @@ pub struct UseFormValidationInput {
 ///   first invalid field on submission,
 /// - resets the validation when the form is reset.
 pub fn use_form_validation(input: UseFormValidationInput) {
+    crate::metrics::subject!();
     let UseFormValidationInput {
         element,
         state,

@@ -65,6 +65,7 @@ pub struct UseColorSliderReturn {
 /// Behavior and accessibility of a slider changing one channel of a color, on top of
 /// [`use_slider`](fn@use_slider) and [`use_slider_thumb`](fn@use_slider_thumb): a gradient track, the channel's value text.
 pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColorSliderReturn {
+    crate::metrics::subject!();
     let UseColorSliderInput {
         state,
         has_label,

@@ -468,6 +468,7 @@ fn display_segments(
 /// State of a date field: the value, its segments in the locale's order and their editing
 /// (typing, stepping, clearing), with validation against min, max and unavailable dates.
 pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> DateFieldState<V> {
+    crate::metrics::subject!();
     let UseDateFieldStateInput {
         default_value,
         value,

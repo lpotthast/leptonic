@@ -97,6 +97,7 @@ pub type UseOverlayTriggerAttrs = (
 /// The trigger's ARIA attributes for the overlay it opens: `aria-expanded`, `aria-controls` (while
 /// open) and, for menus and list boxes, `aria-haspopup`.
 pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
+    crate::metrics::subject!();
     let UseOverlayTriggerInput {
         is_open,
         overlay_id,

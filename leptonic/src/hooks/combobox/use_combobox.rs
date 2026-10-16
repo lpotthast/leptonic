@@ -177,6 +177,7 @@ impl IntoAttrs for UseComboBoxInputProps {
 /// (with the state's filter), arrow keys move a virtual focus through them while DOM focus stays
 /// in the input, Enter selects, Escape reverts.
 pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
+    crate::metrics::subject!();
     let UseComboBoxInput {
         state,
         id,

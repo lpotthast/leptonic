@@ -118,6 +118,7 @@ impl IntoAttrs for UseGridListSectionRowGroupProps {
 /// A section of a grid list: a row group with an optional header row. The group is labelled by
 /// its rendered header and its `aria_label` (both, as react-aria's `useLabels`).
 pub fn use_grid_list_section(input: UseGridListSectionInput) -> UseGridListSectionReturn {
+    crate::metrics::subject!();
     let UseGridListSectionInput { list, key } = input;
     let id = use_id("grid-list-section");
     let header = use_slot("grid-list-section-header");
