@@ -3,8 +3,6 @@
 // Upstream: react-aria-components/test/ColorArea.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/color/ColorArea.test.tsx @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
     ev,
     prelude::*,
     tachys::html::property::{Property, prop},
@@ -15,7 +13,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::use_color_area_state::ColorAreaState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         focus::{
             FocusWithinEvent, UseFocusInput, UseFocusWithinInput, use_focus, use_focus_within,
@@ -26,7 +24,6 @@ use crate::{
             use_move,
         },
     },
-    labels,
     utils::{
         aria::{AriaHidden, AriaOrientation, AriaRole},
         color::{BlendMode, ColorValue},
@@ -40,12 +37,14 @@ use crate::{
         },
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        part::{Part, Remount},
         platform::{
             device::{is_android, is_ios},
             use_platform_check,
         },
         point::Point,
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         styles::{
             Styles,
             css::{ForcedColorAdjust, LengthPercentageAuto, TouchAction, computed_pct},
@@ -76,9 +75,9 @@ pub struct UseColorAreaInput<C: ColorValue> {
     pub is_disabled: Signal<bool>,
     /// Names the area (its inputs get "{label}, Color picker").
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
     /// The name of the x channel's input, for form submission.
     pub x_name: Option<String>,
     /// The name of the y channel's input, for form submission.
@@ -87,34 +86,46 @@ pub struct UseColorAreaInput<C: ColorValue> {
     pub form: Option<String>,
 }
 
-/// Return value of [`use_color_area`].
+/// The return value of [`use_color_area`].
 #[derive(Debug)]
 pub struct UseColorAreaReturn {
-    /// For the area (the gradient).
-    pub color_area_props: PropsWithStyles<UseColorAreaProps>,
-    /// For the thumb inside the area.
-    pub thumb_props: PropsWithStyles<UseColorAreaThumbProps>,
-    /// For the visually hidden range input of the x channel (inside the thumb).
-    pub x_input_props: PropsWithStyles<UseColorAreaInputProps>,
-    /// For the visually hidden range input of the y channel (inside the thumb).
-    pub y_input_props: PropsWithStyles<UseColorAreaInputProps>,
+    /// The color area element: `let (attrs, styles) = area.attrs();`.
+    pub area: Part<PropsWithStyles<UseColorAreaProps>>,
+    /// The thumb element.
+    pub thumb: Part<PropsWithStyles<UseColorAreaThumbProps>>,
+    /// The (visually hidden) range input of the horizontal channel.
+    pub x_input: Part<PropsWithStyles<UseColorAreaInputProps>>,
+    /// The (visually hidden) range input of the vertical channel.
+    pub y_input: Part<PropsWithStyles<UseColorAreaInputProps>>,
 }
 
 /// Props of the color area's element.
 #[derive(Debug)]
 pub struct UseColorAreaProps {
-    pub id: String,
+    pub id: Id,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseColorAreaProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            on_pointerdown: self.on_pointerdown.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseColorAreaAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
     OnEvent<ev::pointerdown>,
     ElementCaptureAttr,
 );
@@ -124,10 +135,10 @@ impl IntoAttrs for UseColorAreaProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, AriaRole::Group),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("id", self.id),
+            fixed_attr("role", AriaRole::Group),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.element_capture,
         )
@@ -144,8 +155,20 @@ pub struct UseColorAreaThumbProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
+impl Remount for UseColorAreaThumbProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
 pub type UseColorAreaThumbAttrs = (
-    Attr<attr::Role, AriaRole>,
+    FixedAttr,
     OnEvent<ev::pointerdown>,
     OnEvent<ev::keydown>,
     OnEvent<ev::keyup>,
@@ -158,7 +181,7 @@ impl IntoAttrs for UseColorAreaThumbProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, AriaRole::Presentation),
+            fixed_attr("role", AriaRole::Presentation),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown.into_on(ev::keydown),
             self.on_keyup.into_on(ev::keyup),
@@ -171,7 +194,7 @@ impl IntoAttrs for UseColorAreaThumbProps {
 /// Props of a channel's visually hidden range input.
 #[derive(Debug)]
 pub struct UseColorAreaInputProps {
-    pub id: String,
+    pub id: Id,
     /// "2D slider" (localized).
     pub aria_roledescription: Signal<String>,
     pub min: f64,
@@ -183,9 +206,9 @@ pub struct UseColorAreaInputProps {
     pub form: Option<String>,
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
     pub aria_orientation: AriaOrientation,
     pub aria_valuetext: Signal<String>,
     pub aria_hidden: Signal<Option<AriaHidden>>,
@@ -196,29 +219,57 @@ pub struct UseColorAreaInputProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseColorAreaInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_roledescription: self.aria_roledescription,
+            min: self.min,
+            max: self.max,
+            step: self.step,
+            value: self.value,
+            is_disabled: self.is_disabled,
+            name: self.name.clone(),
+            form: self.form.clone(),
+            tabindex: self.tabindex,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_details: self.aria_details,
+            aria_orientation: self.aria_orientation,
+            aria_valuetext: self.aria_valuetext,
+            aria_hidden: self.aria_hidden,
+            on_input: self.on_input.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseColorAreaInputAttrs = (
     (
-        Attr<attr::Id, String>,
-        Attr<attr::Type, &'static str>,
-        Attr<attr::Min, f64>,
-        Attr<attr::Max, f64>,
-        Attr<attr::Step, f64>,
-        Attr<attr::Value, Signal<f64>>,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<f64>,
         Property<&'static str, Signal<f64>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Form, Option<String>>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
+        SignalAttr<bool>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<i32>>,
     ),
     (
-        Attr<attr::AriaRoledescription, Signal<String>>,
-        Attr<attr::AriaLabel, Signal<Option<String>>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaDetails, Signal<Option<String>>>,
-        Attr<attr::AriaOrientation, AriaOrientation>,
-        Attr<attr::AriaValuetext, Signal<String>>,
-        Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
+        SignalAttr<String>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        FixedAttr,
+        SignalAttr<String>,
+        SignalAttr<Option<AriaHidden>>,
     ),
     (
         OnEvent<ev::input>,
@@ -234,29 +285,29 @@ impl IntoAttrs for UseColorAreaInputProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             (
-                Attr(attr::Id, self.id),
-                Attr(attr::Type, "range"),
-                Attr(attr::Min, self.min),
-                Attr(attr::Max, self.max),
-                Attr(attr::Step, self.step),
-                Attr(attr::Value, self.value),
+                fixed_attr("id", self.id),
+                fixed_attr("type", "range"),
+                fixed_attr("min", self.min),
+                fixed_attr("max", self.max),
+                fixed_attr("step", self.step),
+                signal_attr("value", self.value),
                 // The attribute is the initial value only: once changed (e.g. by assistive
                 // technology), the input follows its property.
                 prop("value", self.value),
-                Attr(attr::Disabled, self.is_disabled),
-                Attr(attr::Name, self.name),
-                Attr(attr::Form, self.form),
-                Attr(attr::Tabindex, self.tabindex),
+                signal_attr("disabled", self.is_disabled),
+                fixed_attr("name", self.name),
+                fixed_attr("form", self.form),
+                signal_attr("tabindex", self.tabindex),
             ),
             (
-                Attr(attr::AriaRoledescription, self.aria_roledescription),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                Attr(attr::AriaDetails, self.aria_details),
-                Attr(attr::AriaOrientation, self.aria_orientation),
-                Attr(attr::AriaValuetext, self.aria_valuetext),
-                Attr(attr::AriaHidden, self.aria_hidden),
+                signal_attr("aria-roledescription", self.aria_roledescription),
+                signal_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-describedby", self.aria_describedby),
+                signal_attr("aria-details", self.aria_details),
+                fixed_attr("aria-orientation", self.aria_orientation),
+                signal_attr("aria-valuetext", self.aria_valuetext),
+                signal_attr("aria-hidden", self.aria_hidden),
             ),
             (
                 self.on_input.into_on(ev::input),
@@ -370,9 +421,12 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 }),
         ),
         allow_repeats: true,
-        ..UseKeyboardInput::default()
+        on_key_down: None,
+        on_key_up: None,
+        allow_composing: false,
     })
-    .props;
+    .target
+    .into_props();
 
     // -- Moving: dragging (pointer deltas over the area's size) and arrow keys (steps) --
     let press = StoredValue::new(None::<Press>);
@@ -446,7 +500,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         on_move: Some(on_move),
         on_move_end: Some(on_move_end),
     })
-    .props;
+    .target
+    .into_props();
     // The area forwards its moves only while a press started on it.
     let on_area = move || press.get_value().is_some_and(|press| press.on_area);
     let area_move = use_move(UseMoveInput {
@@ -467,7 +522,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             }
         })),
     })
-    .props;
+    .target
+    .into_props();
 
     let focus_within = use_focus_within(UseFocusWithinInput {
         on_blur_within: Some(Callback::new(move |_: FocusWithinEvent| {
@@ -476,7 +532,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         })),
         ..UseFocusWithinInput::default()
     })
-    .props;
+    .target
+    .into_props();
 
     // -- Presses: on the thumb (start dragging it) or the area (jump there, then drag) --
     let pointer_up_listener = StoredValue::new(None::<SendWrapper<Listener>>);
@@ -575,7 +632,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             on_focus: Some(Callback::new(move |_| focused_input.set(Some(axis)))),
             ..UseFocusInput::default()
         })
-        .props
+        .target
+        .into_props()
     };
     let x_focus = input_focus(Axis::X);
     let y_focus = input_focus(Axis::Y);
@@ -624,10 +682,14 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     })
     .into();
     // The inputs are named by their label too, next to other labels (`labels`).
-    let labelled_by = |own_id: &str| {
-        let own_id = own_id.to_owned();
+    let labelled_by = |own_id: &Id| {
+        let own_id = own_id.clone();
         Signal::derive(move || {
-            labels(&own_id, input_label.get(), aria_labelledby.get().as_deref()).aria_labelledby
+            crate::utils::labels::labelledby_ids(
+                &own_id,
+                input_label.with(|label| label.as_deref().is_some_and(|label| !label.is_empty())),
+                aria_labelledby.get().as_ref(),
+            )
         })
     };
     let area_id = use_id("color-area");
@@ -755,11 +817,15 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     let area_labelledby = {
         let area_id = area_id.clone();
         Signal::derive(move || {
-            labels(&area_id, area_label.get(), aria_labelledby.get().as_deref()).aria_labelledby
+            crate::utils::labels::labelledby_ids(
+                &area_id,
+                area_label.with(|label| label.as_deref().is_some_and(|label| !label.is_empty())),
+                aria_labelledby.get().as_ref(),
+            )
         })
     };
     UseColorAreaReturn {
-        color_area_props: PropsWithStyles::new(
+        area: Part::stored(PropsWithStyles::new(
             UseColorAreaProps {
                 id: area_id,
                 aria_label: area_label,
@@ -768,8 +834,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 element_capture: area_element.attr(),
             },
             area_styles,
-        ),
-        thumb_props: PropsWithStyles::new(
+        )),
+        thumb: Part::stored(PropsWithStyles::new(
             UseColorAreaThumbProps {
                 on_pointerdown: on_thumb_down.chain(thumb_move.on_pointerdown),
                 on_keydown: keyboard.on_keydown.chain(thumb_move.on_keydown),
@@ -778,8 +844,14 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 on_focusout: focus_within.on_focusout,
             },
             thumb_styles,
-        ),
-        x_input_props: PropsWithStyles::new(x_input_props, visually_hidden_full_size_styles()),
-        y_input_props: PropsWithStyles::new(y_input_props, visually_hidden_full_size_styles()),
+        )),
+        x_input: Part::stored(PropsWithStyles::new(
+            x_input_props,
+            visually_hidden_full_size_styles(),
+        )),
+        y_input: Part::stored(PropsWithStyles::new(
+            y_input_props,
+            visually_hidden_full_size_styles(),
+        )),
     }
 }

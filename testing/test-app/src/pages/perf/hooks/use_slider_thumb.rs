@@ -8,7 +8,7 @@
 //! (`value`) and how often a change ended (`change-ends`).
 
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::slider::{
         SliderState, UseSliderInput, UseSliderStateInput, UseSliderThumbInput, use_slider,
         use_slider_state, use_slider_thumb,
@@ -84,12 +84,16 @@ fn Subject(
         aria_errormessage: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (track_attrs, track_styles) = slider.track_props.into_parts();
-    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    let (track_attrs, track_styles) = slider
+        .track
+        .props()
+        .expect("the first track takes the props")
+        .into_parts();
+    let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
     let (is_dragging, is_focused) = (thumb.is_dragging, thumb.is_focused);
     view! {
-        <div {..slider.group_props.into_attrs()}>
-            <span {..slider.label_props.into_attrs()}>"Volume"</span>
+        <div {..slider.group.attrs()}>
+            <span {..slider.label.attrs()}>"Volume"</span>
             <div id="perf-slider-track" {..track_attrs} style=track_styles>
                 <div
                     id="perf-slider-thumb"
@@ -98,7 +102,7 @@ fn Subject(
                     data-dragging=move || is_dragging.get().then_some("true")
                     data-focused=move || is_focused.get().then_some("true")
                 >
-                    <input {..thumb.input_props.into_attrs()} />
+                    <input {..thumb.input.attrs()} />
                 </div>
             </div>
         </div>

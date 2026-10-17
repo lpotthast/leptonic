@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use crate::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::toolbar::{UseToolbarInput, use_toolbar},
     utils::{default_class::with_default_class, styles::Styles},
 };
@@ -43,11 +43,11 @@ pub fn Toolbar(
         element: CapturedElement::new(),
         orientation,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
     });
     view! {
         <div
-            {..toolbar.props.into_attrs()}
+            {..toolbar.toolbar.attrs()}
             class=classes
             style=styles
             data-orientation=move || orientation.get().as_str()

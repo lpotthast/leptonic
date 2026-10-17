@@ -3,7 +3,7 @@
 //! controls ([`Control`]) mount and unmount it, and change its orientation and label.
 
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator},
 };
 use leptos::prelude::*;
@@ -43,9 +43,9 @@ fn PlainSeparator(
     let separator = use_separator(UseSeparatorInput {
         orientation: orientation.into(),
         element_type: SeparatorElementType::Div,
-        id: Some("perf-separator".to_owned()),
+        id: Some("perf-separator".into()),
         aria_label: label.into(),
         aria_labelledby: Signal::default(),
     });
-    view! { <div {..separator.props.into_attrs()}></div> }
+    view! { <div {..separator.separator.attrs()}></div> }
 }

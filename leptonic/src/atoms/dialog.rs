@@ -4,6 +4,7 @@
 // Upstream: react-aria-components/test/Dialog.ssr.test.js @ 99e6102368
 use leptos::{
     context::Provider,
+    either::Either,
     prelude::*,
     tachys::html::{class::class, style::style},
 };
@@ -11,7 +12,7 @@ use leptos_classes::Classes;
 
 use super::press::PressResponder;
 use crate::{
-    CapturedElement, IntoAttrs, Out, ValueBinding,
+    CapturedElement, Id, IntoAttrs, Out, Part, ValueBinding,
     hooks::{
         dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog},
         interactions::PressResponderTrigger,
@@ -48,8 +49,8 @@ use crate::{
 /// Context provided by [`Dialog`] for its [`DialogTitle`] and [`DialogDescription`].
 #[derive(Debug, Clone)]
 struct DialogContext {
-    title: StoredValue<SlotProps>,
-    content: StoredValue<SlotProps>,
+    title: Part<SlotProps>,
+    content: Part<SlotProps>,
 }
 
 /// A dialog: `role="dialog"` (or `alertdialog`), named by its [`DialogTitle`] (or `aria_label`),
@@ -80,14 +81,14 @@ pub fn Dialog(
     // Without a title, `aria_label` or `aria_labelledby`, the trigger names the dialog
     // (react-aria-components).
     let UseDialogReturn {
-        dialog_props,
-        title_props,
-        content_props,
+        dialog: dialog_props,
+        title,
+        content,
     } = use_dialog(UseDialogInput {
         role,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         fallback_aria_labelledby: trigger
             .and_then(|trigger| trigger.dialog_labelledby)
             .or_else(|| {
@@ -99,15 +100,13 @@ pub fn Dialog(
             .unwrap_or_default(),
         ..UseDialogInput::default()
     });
+    let dialog_props = dialog_props.into_props();
     // A dialog opened by a `DialogTrigger` is what its trigger controls (react-aria-components passes
     // the overlay id to the dialog).
     if let Some(trigger) = trigger {
         trigger.overlay_id.set(Some(dialog_props.id.clone()));
     }
-    let context = DialogContext {
-        title: StoredValue::new(title_props),
-        content: StoredValue::new(content_props),
-    };
+    let context = DialogContext { title, content };
 
     view! {
         <section {..dialog_props.into_attrs()} class=classes style=styles>
@@ -128,16 +127,21 @@ pub fn DialogTitle(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-DialogTitle", classes);
+    // A second title of one dialog gets no props (`Part`).
     let props = use_context::<DialogContext>().map_or_else(
         || {
             dev_warn!("A <DialogTitle> must be inside a <Dialog>.");
-            use_slot("dialog-title").props
+            use_slot("dialog-title").part.props()
         },
-        |ctx| ctx.title.get_value(),
+        |ctx| ctx.title.props(),
     );
     level
         .render(children)
-        .add_any_attr(props.into_attrs())
+        .add_any_attr(
+            props
+                .map(IntoAttrs::into_attrs)
+                .map_or(Either::Right(()), Either::Left),
+        )
         .add_any_attr(class(classes))
         .add_any_attr(style(styles))
 }
@@ -153,14 +157,18 @@ pub fn DialogDescription(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-DialogDescription", classes);
+    // A second description of one dialog gets no props (`Part`).
     let props = use_context::<DialogContext>().map_or_else(
         || {
             dev_warn!("A <DialogDescription> must be inside a <Dialog>.");
-            use_slot("dialog-content").props
+            use_slot("dialog-content").part.props()
         },
-        |ctx| ctx.content.get_value(),
+        |ctx| ctx.content.props(),
     );
-    view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> }
+    let attrs = props
+        .map(IntoAttrs::into_attrs)
+        .map_or(Either::Right(()), Either::Left);
+    view! { <div {..attrs} class=classes style=styles>{children()}</div> }
 }
 
 /// The open state of an overlay atom (`ModalBackdrop`, `Popover`) from its state props, as RAC's
@@ -206,13 +214,13 @@ pub struct DialogTriggerContext {
     /// The element that opens the overlay (the trigger's pressable child), for positioning.
     pub trigger: CapturedElement,
     /// The id of the open overlay, set by it: the trigger's `aria-controls`.
-    pub overlay_id: RwSignal<Option<String>>,
+    pub overlay_id: RwSignal<Option<Id>>,
     /// The trigger element's id (see [`PressResponderTrigger::id`]): an untitled dialog or menu
     /// is named by it.
-    pub trigger_id: RwSignal<String>,
+    pub trigger_id: RwSignal<Id>,
     /// What names an untitled dialog instead of the trigger (e.g. a date picker's button and
     /// label).
-    pub(crate) dialog_labelledby: Option<Signal<Option<String>>>,
+    pub(crate) dialog_labelledby: Option<Signal<Option<Id>>>,
 }
 
 impl DialogTriggerContext {
@@ -229,7 +237,7 @@ impl DialogTriggerContext {
 
     /// An untitled dialog is named by `labelledby` instead of the trigger.
     #[must_use]
-    pub(crate) fn with_dialog_labelledby(mut self, labelledby: Signal<Option<String>>) -> Self {
+    pub(crate) fn with_dialog_labelledby(mut self, labelledby: Signal<Option<Id>>) -> Self {
         self.dialog_labelledby = Some(labelledby);
         self
     }

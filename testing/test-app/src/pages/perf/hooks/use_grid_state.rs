@@ -1,20 +1,51 @@
 //! The state of a grid (`use_grid_state`) alone, for its performance test
-//! (`leptonic/tests/perf_tests/hooks/use_grid_state.rs`): the rows of the `use_grid` fixture
-//! ([`super::use_grid`]: [`SMALL`] rows "Row <i>" of three cells, key `i`) with multiple
-//! selection, created by a mounted component (mounted at first) that shows how many rows are
-//! selected (`#perf-selected`) and which is focused (`#perf-focused`). Its controls ([`Control`])
-//! mount and unmount it, set its size while unmounted (`small`, `large`: [`LARGE`] rows), add and
-//! remove the last row, call its methods (selection, focus, keyboard navigation) and read how
-//! many rows are selected (`selected`, -1 for all) and which is focused (`focused`, -1 for none).
+//! (`leptonic/tests/perf_tests/hooks/use_grid_state.rs`): [`SMALL`] rows "Row <i>" of three cells
+//! (key `i`) with multiple selection, created by a mounted component (mounted at first) that shows
+//! how many rows are selected (`#perf-selected`) and which is focused (`#perf-focused`). Its
+//! controls ([`Control`]) mount and unmount it, set its size while unmounted (`small`, `large`:
+//! [`LARGE`] rows), add and remove the last row, call its methods (selection, focus, keyboard
+//! navigation) and read how many rows are selected (`selected`, -1 for all) and which is focused
+//! (`focused`, -1 for none).
+
+use std::sync::Arc;
 
 use leptonic::hooks::{
-    collections::{Key, SelectionMode, SelectionOptions},
+    collections::{Collection, CollectionMemo, Key, Selection, SelectionMode, SelectionOptions},
     grid::{GridFocusMode, GridState, UseGridStateInput, use_grid_state},
 };
 use leptos::prelude::*;
 
-use super::use_grid::{LARGE, SMALL, grid_collection, selected_count};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small grid.
+const SMALL: usize = 10;
+
+/// The rows of the large grid.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`), each with the cells "Row <i>", "Value <i>" and
+/// "Group <i % 3>".
+fn grid_collection(rows: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..rows.get() {
+                b.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
+
+/// How many rows of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
 
 /// Creates the state (into `state`, while mounted) and shows it.
 #[component]

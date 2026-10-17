@@ -41,6 +41,9 @@ use crate::{
 //   so content that overflowed it still does. Nodes outside the requested area are estimated
 //   again, as upstream: they are counted at the row size, and laying them out later must not
 //   change the content's length (the virtualizer only takes it over when it lays out again).
+// - A new estimated row or heading size also applies to the nodes laid out at the old estimate
+//   (not measured yet); react-stately keeps their old estimate until they are measured, so the
+//   content's length mixes both estimates.
 // - Rows before the requested area are skipped only if they were never laid out. Upstream
 //   checks whether their cached position is valid (and checks the section for section rows):
 //   invalid positions must be rebuilt while keeping measured sizes, not replaced by estimates.
@@ -1012,14 +1015,39 @@ impl ListLayout {
         cross_axis_changed || self.options_invalidate_everything(options)
     }
 
+    /// Before the estimated row or heading size changes to the one in `options`: forgets the
+    /// nodes still at the old estimate (never measured, or measured before the breadth changed),
+    /// so they are laid out at the new one, as the nodes not laid out yet are (react-stately
+    /// keeps their old estimate). Measured nodes keep their lengths. The sections (whose lengths
+    /// add up their children) and loaders sized like rows are laid out again too.
+    fn forget_old_estimates(&mut self, options: &ListLayoutOptions) {
+        let changed = |old: ItemSize, new: ItemSize| matches!((old, new), (ItemSize::Estimated(old), ItemSize::Estimated(new)) if old != new);
+        let rows = changed(self.options.row_size, options.row_size);
+        let headings = changed(self.options.heading_size, options.heading_size);
+        if !rows && !headings {
+            return;
+        }
+        let loaders = rows && self.options.loader_size.is_none();
+        self.layout_nodes.retain(|_, node| {
+            let info = &node.layout_info;
+            match info.kind {
+                NodeKind::Section => false,
+                NodeKind::Header => !(headings && info.estimated_size),
+                NodeKind::Loader => !loaders,
+                _ => !(rows && info.estimated_size),
+            }
+        });
+    }
+
     /// Whether changing from the current options to `options` invalidates every laid out node,
     /// including its measured length (`update` then forgets all of them instead of keeping the
     /// lengths as estimates, as it does when only the view's breadth changed).
     ///
     /// The options react-stately's `shouldInvalidateEverything` checks, plus our additions:
     /// - `row_size`/`heading_size` switching between fixed and estimated: a fixed size replaces
-    ///   every measured one. A different estimate alone keeps the laid out lengths (measured ones
-    ///   stay correct); only nodes not laid out yet take the new estimate.
+    ///   every measured one. A different estimate alone keeps the measured lengths (they stay
+    ///   correct); the nodes still at the old estimate take the new one
+    ///   ([`Self::forget_old_estimates`]).
     /// - `orientation`: lengths are measured along the other axis.
     /// - `allows_overflow_across`: the content's breadth is measured differently (overflowing
     ///   rows widen it or not).
@@ -1165,6 +1193,7 @@ impl Layout for ListLayout {
             && *options != self.options
         {
             warn_about_ignored(options);
+            self.forget_old_estimates(options);
             self.options = options.clone();
             options_changed = true;
         }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::{
         checkbox::{CheckboxButton, CheckboxField},
         focus_scope::FocusScope,
@@ -117,12 +117,10 @@ fn MenuButton(
         state,
     });
     let menu_props = menu_trigger.menu_props;
-    let (trigger_attrs, trigger_styles) = use_button(menu_trigger.button).props.into_parts();
+    let (trigger_attrs, trigger_styles) = use_button(menu_trigger.button).button.attrs();
 
     let UsePopoverReturn {
-        props: popover_props,
-        trigger_props: popover_trigger_props,
-        ..
+        popover, trigger, ..
     } = use_popover(UsePopoverInput {
         position: OverlayPositionOptions {
             placement: Signal::stored(Placement::BottomStart),
@@ -139,13 +137,12 @@ fn MenuButton(
         is_submenu: false,
         scroll: None,
     });
-    let (popover_attrs, popover_styles) = popover_props.into_parts();
     let contents = StoredValue::new(contents);
 
     view! {
         <button
             {..trigger_attrs}
-            {..popover_trigger_props.into_attrs()}
+            {..trigger.attrs()}
             class="demo-btn-primary demo-menu-trigger"
             style=trigger_styles
         >
@@ -154,8 +151,8 @@ fn MenuButton(
         </button>
         <Show when=move || state.is_open()>
             {
-                let popover_attrs = popover_attrs.clone();
-                let popover_styles = popover_styles.clone();
+                // Mounted on every opening: each mount spreads the popover's part again.
+                let (popover_attrs, popover_styles) = popover.attrs();
                 let menu_id = menu_props.id.clone();
                 view! {
                     <div {..popover_attrs} style=popover_styles>
@@ -180,8 +177,8 @@ fn MenuButton(
 /// The menu only exists while it is open, so it is focused anew on every opening.
 #[component]
 fn Menu(
-    id: String,
-    labelled_by: Signal<String>,
+    id: leptonic::Id,
+    labelled_by: Signal<leptonic::Id>,
     auto_focus: Signal<Option<AutoFocus>>,
     contents: MenuContents,
     on_action: Option<Callback<Key>>,
@@ -201,9 +198,9 @@ fn Menu(
             ..SelectionOptions::default()
         },
     });
-    let UseMenuReturn { props, data } = use_menu(UseMenuInput {
+    let UseMenuReturn { menu, data } = use_menu(UseMenuInput {
         id: Some(id),
-        aria_labelledby: labelled_by.into(),
+        aria_labelledby: Signal::derive(move || Some(labelled_by.get())),
         options: CollectionOptions {
             auto_focus,
             should_focus_wrap: true,
@@ -233,7 +230,7 @@ fn Menu(
     });
 
     view! {
-        <ul {..props.into_attrs()} class="demo-menu-list">
+        <ul {..menu.attrs()} class="demo-menu-list">
             {nodes
                 .into_iter()
                 .map(|(key, kind, items)| match kind {
@@ -248,9 +245,9 @@ fn Menu(
 #[component]
 fn MenuSection(menu: MenuData, key: Key, items: Vec<Key>) -> impl IntoView {
     let UseMenuSectionReturn {
-        item_props,
-        heading_props,
-        group_props,
+        section,
+        header,
+        group,
         heading,
     } = use_menu_section(UseMenuSectionInput {
         menu: menu.clone(),
@@ -258,14 +255,11 @@ fn MenuSection(menu: MenuData, key: Key, items: Vec<Key>) -> impl IntoView {
     });
 
     view! {
-        <li {..item_props.into_attrs()} class="demo-menu-section">
-            {
-                let heading_attrs = heading_props.into_attrs();
-                move || heading.get().map(|text| view! {
-                    <span {..heading_attrs.clone()} class="demo-menu-heading">{text}</span>
-                })
-            }
-            <ul {..group_props.into_attrs()}>
+        <li {..section.attrs()} class="demo-menu-section">
+            {move || heading.get().map(|text| view! {
+                <span {..header.attrs()} class="demo-menu-heading">{text}</span>
+            })}
+            <ul {..group.attrs()}>
                 {items.into_iter().map(|key| view! { <MenuItem menu=menu.clone() key/> }).collect_view()}
             </ul>
         </li>
@@ -281,8 +275,8 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
         .unwrap_or_default();
     let selectable = menu.state.selection.selection_mode() != SelectionMode::None;
     let UseMenuItemReturn {
-        props,
-        label_props,
+        item,
+        label,
         is_focused,
         is_focus_visible,
         is_selected,
@@ -293,7 +287,7 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
         should_close_on_select: leptonic::hooks::collections::CloseOnSelect::Auto,
         submenu_trigger: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = item.attrs();
 
     view! {
         <li
@@ -308,7 +302,7 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
                     {move || if is_selected.get() { "\u{2713}" } else { "" }}
                 </span>
             })}
-            <span {..label_props.into_attrs()}>{text}</span>
+            <span {..label.attrs()}>{text}</span>
         </li>
     }
 }

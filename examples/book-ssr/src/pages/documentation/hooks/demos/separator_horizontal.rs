@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::separator::{UseSeparatorInput, use_separator},
-};
+use leptonic::hooks::separator::{UseSeparatorInput, use_separator};
 use leptos::prelude::*;
 
 #[component]
@@ -11,7 +8,7 @@ pub fn SeparatorHorizontalDemo() -> impl IntoView {
 
     view! {
         <p>"Content above the separator"</p>
-        <hr {..separator.props.into_attrs()} class="demo-separator-line"/>
+        <hr {..separator.separator.attrs()} class="demo-separator-line"/>
         <p>"Content below the separator"</p>
     }
 }

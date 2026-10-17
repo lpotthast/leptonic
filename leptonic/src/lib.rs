@@ -48,6 +48,14 @@ pub use leptos_styles;
 pub use crate::utils::clipboard::{ClipboardError, write_text, write_text_deferred};
 #[cfg(feature = "syntax-highlight")]
 pub use crate::utils::syntax_highlight::highlight_to_classed_html;
+/// The atoms' building blocks, for atoms of your own built like leptonic's.
+#[cfg(feature = "atoms")]
+pub use crate::utils::{
+    data_attributes::{DataFlags, data_flags, selection_mode},
+    default_class::with_default_class,
+    id::id_ref_prop,
+    scoped_context::{ClearContexts, clear_context, use_clearable_context},
+};
 pub use crate::{
     attrs::{IntoAttrs, PropsWithStyles},
     utils::{
@@ -72,7 +80,7 @@ pub use crate::{
             DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, DateTimeStyle, HourCycle,
             MonthFormat, NumericFormat, TimeZoneFormat,
         },
-        dom_ext::ContainsTarget,
+        dom_ext::{ContainsTarget, EventAccessors},
         event_handler::{EventHandler, OnEvent},
         filter::{
             Collator, CollatorOptions, CollatorSensitivity, Filter, FilterQuery, use_collator,
@@ -80,8 +88,8 @@ pub use crate::{
         },
         focus::{focus_element, focus_safely},
         focusability::{
-            FOCUSABLE_SELECTOR, Focusability, TABBABLE_SELECTOR, is_focusable, is_tabbable,
-            is_typing_target, prevent_focus_attr, will_open_keyboard,
+            FOCUSABLE_SELECTOR, Focusability, PreventFocusAttr, TABBABLE_SELECTOR, is_focusable,
+            is_tabbable, is_typing_target, prevent_focus_attr, will_open_keyboard,
         },
         fraction::Fraction,
         heading_level::HeadingLevel,
@@ -89,7 +97,7 @@ pub use crate::{
             I18nContext, I18nProvider, InvalidLocale, Locale, WritingDirection, locale,
             use_direction, use_i18n, use_locale,
         },
-        id::use_id,
+        id::{Id, IdListBuilder, join_ids, use_id},
         id_refs::IdRefs,
         intl_strings::{
             AtomStrings, BreadcrumbsStrings, Bundle, CalendarStrings, ColorInputLabelArgs,
@@ -108,6 +116,7 @@ pub use crate::{
             Announcement, Assertiveness, announce, announce_assertive, announce_polite,
             announce_with_timeout, clear_announcer, destroy_announcer,
         },
+        maybe_signal::MaybeSignal,
         modifiers::{EventModifiers, Modifiers},
         number_formatter::{
             CurrencyDisplay, CurrencySign, NumberFormatOptions, NumberFormatter, NumberPart,
@@ -117,6 +126,7 @@ pub use crate::{
         number_parser::NumberParser,
         number_value::{NumberSignal, NumberValue, OptionalNumberSignal},
         orientation::Orientation,
+        part::{Part, Presence, Remount},
         platform::{
             browser::{is_chrome, is_firefox, is_safari, is_webkit},
             device::{
@@ -128,12 +138,17 @@ pub use crate::{
         point::Point,
         pointer_type::PointerType,
         propagation_control::{Propagation, PropagationControl},
+        scoped_context::scoped_view,
         scroll::{
             ScrollAlignment, ScrollIntoViewOpts, ScrollIntoViewportOpts, get_scroll_parent,
             get_scroll_parents, is_scrollable, scroll_into_view, scroll_into_viewport,
         },
         scroll_behavior::ScrollBehavior,
+        signal_attr::{
+            AttrText, FixedAttr, SignalAttr, ToAttrText, fixed_attr, maybe_attr, signal_attr,
+        },
         slot_id::{Slot, SlotAttrs, SlotProps, use_slot},
+        spread::{AttrKeys, Spread},
         styles::css::{computed_pct, computed_px, computed_size},
         use_description::use_description,
         use_viewport_size::{ViewportSize, use_viewport_size},

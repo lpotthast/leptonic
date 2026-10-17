@@ -9,7 +9,7 @@ use super::use_form_validation_state::{
     FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
     ValidationResult, merge_validation, use_form_validation_state,
 };
-use crate::hooks::collections::Key;
+use crate::{hooks::collections::Key, utils::keyed_triggers::KeyedTriggers};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -92,6 +92,13 @@ pub struct CheckboxGroupState {
     /// The invalid checkboxes' validations, in the order they became invalid (react-aria: a
     /// `Map`, which keeps insertion order), so the group's errors keep that order.
     invalid_values: StoredValue<Vec<(Key, ValidationResult)>>,
+    /// The value, when the state owns it: changed in place (a bound value is the app's).
+    owned: Option<RwSignal<HashSet<Key>>>,
+    /// The checkboxes, by value: notified when their selection changes (`performance.md` R1).
+    checkboxes: KeyedTriggers<Key>,
+    /// The value the checkboxes were last notified of (bound values only: the app may change
+    /// them directly).
+    notified: Option<StoredValue<HashSet<Key>>>,
 }
 
 impl std::fmt::Debug for CheckboxGroupState {
@@ -103,9 +110,30 @@ impl std::fmt::Debug for CheckboxGroupState {
 }
 
 impl CheckboxGroupState {
-    /// Whether `value` is checked.
+    /// Whether `value` is checked. Tracks only this value's selection: a reader reruns when
+    /// it is checked or unchecked, not on every change of the value.
     pub fn is_selected(&self, value: &Key) -> bool {
-        self.value.with(|v| v.contains(value))
+        self.checkboxes.track(value);
+        self.value.with_untracked(|v| v.contains(value))
+    }
+
+    /// Tells the checkboxes of a bound value whose selection changed since they were last told.
+    fn notify_bound(&self) {
+        let Some(notified) = self.notified else {
+            return;
+        };
+        let changed = notified.try_update_value(|notified| {
+            self.value.with_untracked(|current| {
+                let changed: Vec<Key> = notified.symmetric_difference(current).cloned().collect();
+                if !changed.is_empty() {
+                    notified.clone_from(current);
+                }
+                changed
+            })
+        });
+        if let Some(changed) = changed {
+            self.checkboxes.notify(&changed);
+        }
     }
 
     /// The initially checked values (restored on form reset).
@@ -126,9 +154,43 @@ impl CheckboxGroupState {
         if self.value.with_untracked(|v| *v == value) {
             return;
         }
+        let changed: Option<Vec<Key>> = self.notified.is_none().then(|| {
+            self.value
+                .with_untracked(|current| current.symmetric_difference(&value).cloned().collect())
+        });
         self.set_value.set(value.clone());
+        match changed {
+            Some(changed) => self.checkboxes.notify(&changed),
+            None => self.notify_bound(),
+        }
         if let Some(on_change) = self.on_change {
             on_change.run(value);
+        }
+    }
+
+    /// Adds or removes `value`: in place when the state owns the value (no copy of the set,
+    /// `performance.md` R10), else as a new value for the app.
+    fn change_one(&self, value: &Key, insert: bool) {
+        let Some(owned) = self.owned else {
+            let mut values = self.value.get_untracked();
+            if insert {
+                values.insert(value.clone());
+            } else {
+                values.remove(value);
+            }
+            self.update(values);
+            return;
+        };
+        owned.update(|values| {
+            if insert {
+                values.insert(value.clone());
+            } else {
+                values.remove(value);
+            }
+        });
+        self.checkboxes.notify([value]);
+        if let Some(on_change) = self.on_change {
+            on_change.run(owned.get_untracked());
         }
     }
 
@@ -142,18 +204,14 @@ impl CheckboxGroupState {
     /// Check `value`.
     pub fn add_value(&self, value: Key) {
         if self.can_change() && !self.value.with_untracked(|v| v.contains(&value)) {
-            let mut values = self.value.get_untracked();
-            values.insert(value);
-            self.update(values);
+            self.change_one(&value, true);
         }
     }
 
     /// Uncheck `value`.
     pub fn remove_value(&self, value: &Key) {
         if self.can_change() && self.value.with_untracked(|v| v.contains(value)) {
-            let mut values = self.value.get_untracked();
-            values.remove(value);
-            self.update(values);
+            self.change_one(value, false);
         }
     }
 
@@ -204,8 +262,12 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         validation_behavior,
         name,
     } = input;
-    let set_value =
-        value.unwrap_or_else(|| crate::ValueBinding::from(RwSignal::new(default_value)));
+    let (set_value, owned) = if let Some(binding) = value {
+        (binding, None)
+    } else {
+        let owned = RwSignal::new(default_value);
+        (crate::ValueBinding::from(owned), Some(owned))
+    };
     let value = set_value.value;
     let default_value = value.get_untracked();
     let validation = use_form_validation_state(UseFormValidationStateInput {
@@ -216,7 +278,7 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         validation_behavior,
         names: name.clone().into_iter().collect(),
     });
-    CheckboxGroupState {
+    let state = CheckboxGroupState {
         value,
         is_disabled,
         is_read_only,
@@ -229,7 +291,20 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         set_value,
         on_change,
         invalid_values: StoredValue::new(Vec::new()),
+        owned,
+        checkboxes: KeyedTriggers::new(),
+        notified: owned
+            .is_none()
+            .then(|| StoredValue::new(value.get_untracked())),
+    };
+    // A bound value the app changes (not through the state): tell the checkboxes right away.
+    if state.notified.is_some() {
+        ImmediateEffect::new_scoped(move || {
+            value.track();
+            state.notify_bound();
+        });
     }
+    state
 }
 
 #[cfg(test)]

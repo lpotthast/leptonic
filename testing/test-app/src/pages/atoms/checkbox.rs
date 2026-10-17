@@ -43,10 +43,13 @@ fn TestCheckbox(
 }
 
 /// Checkboxes and checkbox groups (react-aria-components' `Checkbox.test.js` and
-/// `CheckboxGroup.test.js` setups).
+/// `CheckboxGroup.test.js` setups). "Remounted": `#test-cb-remount-toggle` unmounts and mounts its
+/// `CheckboxButton`; its selection is in `#test-cb-remounted-value`.
 #[component]
 pub fn PageAtomCheckbox() -> impl IntoView {
     let bound = RwSignal::new(false);
+    let remounted = RwSignal::new(false);
+    let remounted_shown = RwSignal::new(true);
     let bound_read_only = RwSignal::new(false);
     let bound_reported = RwSignal::new(false);
     let reported = RwSignal::new(String::new());
@@ -69,6 +72,15 @@ pub fn PageAtomCheckbox() -> impl IntoView {
         // Bound to a signal, which a button changes from outside.
         <CheckboxField is_selected=bound set_selected=bound><CheckboxButton>"Bound"</CheckboxButton></CheckboxField>
         <button id="test-cb-bound-flip" on:click=move |_| bound.update(|b| *b = !*b)>"Flip"</button>
+        <CheckboxField is_selected=remounted set_selected=remounted>
+            <Show when=move || remounted_shown.get()>
+                <CheckboxButton>"Remounted"</CheckboxButton>
+            </Show>
+        </CheckboxField>
+        <button id="test-cb-remount-toggle" on:click=move |_| remounted_shown.update(|shown| *shown = !*shown)>
+            "Hide or show the remounted checkbox"
+        </button>
+        <div>"Remounted: " <span id="test-cb-remounted-value">{move || remounted.get().to_string()}</span></div>
         // Bound and read-only; `on_change` reports changes of a bound state too.
         <CheckboxField is_selected=bound_read_only set_selected=bound_read_only is_read_only=true><CheckboxButton>"Bound read only"</CheckboxButton></CheckboxField>
         <CheckboxField

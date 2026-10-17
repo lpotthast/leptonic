@@ -331,3 +331,40 @@ pub async fn sections_and_descriptions(page: &Page<'_>) -> Result<(), Report> {
         .is_equal_to("Banana Yellow");
     Ok(())
 }
+
+/// A section's `GridListHeader` and a row's `GridListItemDescription` mounted again label their
+/// section and row again: their parent hands them their props back when they unmount (no
+/// upstream test: React passes them on every render).
+#[browser_test]
+pub async fn header_and_description_mount_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let fruit = page.first_element("#glf-sections [role=rowgroup]").await?;
+    assert_that!(fruit)
+        .accessible_name()
+        .await
+        .is_equal_to("Fruit");
+    let toggle = page.element("#glf-toggle-parts").await?;
+    toggle.click().await?;
+    page.wait_for_count("#glf-sections .leptonic-GridListHeader", 1)
+        .await?;
+    page.wait_for_count("#glf-sections .leptonic-GridListItemDescription", 0)
+        .await?;
+    toggle.click().await?;
+    page.wait_for_count("#glf-sections .leptonic-GridListHeader", 2)
+        .await?;
+    assert_that!(|| fruit.accessible_name())
+        .eventually_ok()
+        .matches(eq("Fruit"))
+        .await;
+    let banana = row_labelled(page, "#glf-sections", "Banana").await?;
+    let description = page
+        .element("#glf-sections .leptonic-GridListItemDescription")
+        .await?;
+    let description_id = description.id().await?.unwrap_or_default();
+    assert_that!(&description_id).is_not_empty();
+    assert_that!(|| banana.accessible_name())
+        .eventually_ok()
+        .matches(eq("Banana Yellow"))
+        .await;
+    Ok(())
+}

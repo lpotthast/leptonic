@@ -6,7 +6,7 @@
 //! enable it, and read how often focus entered it (`entries`).
 
 use leptonic::{
-    IntoAttrs, flag,
+    flag,
     hooks::focus::{UseFocusWithinInput, use_focus_within},
 };
 use leptos::prelude::*;
@@ -50,7 +50,7 @@ fn Group(disabled: RwSignal<bool>, entry_count: StoredValue<u32>) -> impl IntoVi
         <div
             id="perf-group"
             role="group"
-            {..within.props.into_attrs()}
+            {..within.target.attrs()}
             data-focus-within=flag(within.is_focus_within)
         >
             <button id="perf-first">"First"</button>

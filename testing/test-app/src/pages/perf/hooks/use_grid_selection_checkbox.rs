@@ -1,17 +1,16 @@
 //! Row selection checkboxes (`use_grid_selection_checkbox`, rendered with `use_checkbox`) for the
 //! rows of a grid state, for the performance test of `use_grid_selection_checkbox`
 //! (`leptonic/tests/perf_tests/hooks/use_grid_selection_checkbox.rs`): one checkbox per row of
-//! the `use_grid` fixture's rows ([`super::use_grid`]: [`SMALL`] rows "Row <i>"), with multiple
-//! selection, in `#perf-checkboxes` (a `div` per row), between two plain buttons
-//! (`#perf-before`, `#perf-after`) to tab from and to, mounted at first. Its controls
-//! ([`Control`]) mount and unmount the checkboxes, set the size while unmounted (`small`,
-//! `large`: [`LARGE`] rows), select all rows and none, disable the first row and enable it, and
-//! read how many rows are selected (`selected`, -1 for all).
+//! [`SMALL`] rows "Row <i>" of three cells, with multiple selection, in `#perf-checkboxes` (a `div`
+//! per row), between two plain buttons (`#perf-before`, `#perf-after`) to tab from and to, mounted
+//! at first. Its controls ([`Control`]) mount and unmount the checkboxes, set the size while
+//! unmounted (`small`, `large`: [`LARGE`] rows), select all rows and none, disable the first row
+//! and enable it, and read how many rows are selected (`selected`, -1 for all).
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use leptonic::hooks::{
-    collections::{Key, SelectionMode, SelectionOptions},
+    collections::{Collection, CollectionMemo, Key, Selection, SelectionMode, SelectionOptions},
     form::use_checkbox,
     grid::{
         GridFocusMode, GridState, UseGridSelectionCheckboxInput, UseGridStateInput,
@@ -20,8 +19,37 @@ use leptonic::hooks::{
 };
 use leptos::prelude::*;
 
-use super::use_grid::{LARGE, SMALL, grid_collection, selected_count};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small grid.
+const SMALL: usize = 10;
+
+/// The rows of the large grid.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`), each with the cells "Row <i>", "Value <i>" and
+/// "Group <i % 3>".
+fn grid_collection(rows: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..rows.get() {
+                b.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
+
+/// How many rows of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
 
 /// The checkbox selecting row `i`.
 #[component]
@@ -30,7 +58,11 @@ fn SelectionCheckbox(state: GridState, i: usize) -> impl IntoView {
         selection: state.list.selection,
         key: Key::from(i),
     }));
-    let (attrs, styles) = checkbox.input_props.into_parts();
+    let (attrs, styles) = checkbox
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <div>
             <input {..attrs} style=styles />

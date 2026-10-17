@@ -4,7 +4,6 @@ use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    IntoAttrs,
     atoms::{
         field::{LabelContext, LabelPresence},
         progress_bar::{ValueContext, fill, value_text},
@@ -67,7 +66,7 @@ pub fn Meter<T: NumberValue>(
     /// Replaces the formatted value text (e.g. "3 of 4 GB").
     #[prop(into, optional)]
     value_label: MaybeProp<String>,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     /// Names the meter when it has no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -83,8 +82,8 @@ pub fn Meter<T: NumberValue>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseProgressBarReturn {
-        props,
-        label_props,
+        progress_bar: props,
+        label: label_props,
         percentage,
         value_text,
     } = use_meter(UseMeterInput {
@@ -96,13 +95,13 @@ pub fn Meter<T: NumberValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
     });
     view! {
         <Provider value=LabelContext::span(label_props).with_presence(label_presence)>
             <Provider value=ValueContext { percentage, value_text }>
-                <div {..props.into_attrs()} class=classes style=styles>
+                <div {..props.attrs()} class=classes style=styles>
                     {children.map(|children| children())}
                 </div>
             </Provider>

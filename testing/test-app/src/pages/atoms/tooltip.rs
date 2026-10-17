@@ -18,9 +18,12 @@ use leptos::prelude::*;
 /// - "Focus only" (`#test-tooltip-focus-only`): `trigger=Focus`.
 /// - "Scrolled" (`#test-tooltip-scroll-trigger`) in a scrolling container
 ///   (`#test-tooltip-scroll-container`), without delay.
+/// - "Unmounted" (`#test-tooltip-unmounted`), without delay: `#test-tooltip-toggle` unmounts and
+///   mounts its `Tooltip` ("Sometimes rendered").
 #[component]
 pub fn PageAtomTooltip() -> impl IntoView {
     let saves = RwSignal::new(0_u32);
+    let tooltip_shown = RwSignal::new(true);
     view! {
         <h1>"Tooltip"</h1>
         <style>
@@ -66,5 +69,14 @@ pub fn PageAtomTooltip() -> impl IntoView {
                 </TooltipTrigger>
             </div>
         </div>
+        <TooltipTrigger delay=Duration::ZERO>
+            <Button id="test-tooltip-unmounted">"Unmounted"</Button>
+            <Show when=move || tooltip_shown.get()>
+                <Tooltip>"Sometimes rendered"</Tooltip>
+            </Show>
+        </TooltipTrigger>
+        <button id="test-tooltip-toggle" on:click=move |_| tooltip_shown.update(|shown| *shown = !*shown)>
+            "Hide or show the tooltip"
+        </button>
     }
 }

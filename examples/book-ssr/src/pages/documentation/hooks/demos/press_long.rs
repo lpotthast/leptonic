@@ -23,7 +23,7 @@ pub fn PressLongDemo() -> impl IntoView {
     let threshold =
         Signal::derive(move || Duration::from_millis(threshold_ms.get().unwrap_or(500)));
 
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn { target, is_pressed } = use_press(UsePressInput {
         is_disabled: lp_disabled.into(),
         long_press: Some(LongPress {
             on_long_press_start: Some(Callback::new(move |e: LongPressEvent| {
@@ -60,7 +60,7 @@ pub fn PressLongDemo() -> impl IntoView {
         }),
         ..Default::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = target.attrs();
 
     view! {
         <p>

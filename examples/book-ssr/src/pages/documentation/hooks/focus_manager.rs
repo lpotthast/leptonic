@@ -93,6 +93,8 @@ pub fn PageUseFocusManager() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
+                            IntoAttrs,
+                            KeyboardKey,
                             KeyboardShortcuts,
                             Shortcut,
                             hooks::{
@@ -117,7 +119,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
                         });
 
                         view! {
-                            <div role="group" aria-label="Clipboard" {..props.into_attrs()} {..keyboard.props.into_attrs()}>
+                            <div role="group" aria-label="Clipboard" {..props.into_attrs()} {..keyboard.target.attrs()}>
                                 <button>"Cut"</button>
                                 <button>"Copy"</button>
                                 <button>"Paste"</button>

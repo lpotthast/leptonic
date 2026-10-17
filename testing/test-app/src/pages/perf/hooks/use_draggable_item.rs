@@ -1,9 +1,9 @@
 //! The hook `use_draggable_item` in its collection, for its performance test
-//! (`leptonic/tests/perf_tests/hooks/use_draggable_item.rs`): [`DraggableListPage`], a grid list
-//! (`#perf-list`, "Items", multiple selection) of [`SMALL`] or [`LARGE`] rows ("Item 0", ...; keys
-//! `item-0`, ...; `data-row` holds a row's number), each draggable (`use_draggable_item`, dragging the text of every dragged
-//! row), with the collection's drag state (`use_draggable_collection_state`) and
-//! `use_draggable_collection`. The fixtures of those two hooks are the same page.
+//! (`leptonic/tests/perf_tests/hooks/use_draggable_item.rs`): a grid list (`#perf-list`, "Items",
+//! multiple selection) of [`SMALL`] or [`LARGE`] rows ("Item 0", ...; keys `item-0`, ...;
+//! `data-row` holds a row's number), each draggable (`use_draggable_item`, dragging the text of
+//! every dragged row), with the collection's drag state (`use_draggable_collection_state`) and
+//! `use_draggable_collection`.
 //!
 //! The list is mounted at first (with [`SMALL`] rows), between a plain button (`#perf-before`)
 //! and a `use_drop` target (`#perf-drop`, "Drop here") followed by another plain button
@@ -11,16 +11,15 @@
 //! announcer (which keyboard drags announce through) exists before the test measures.
 //!
 //! Its controls ([`Control`]) mount and unmount the list, switch its size (`small`, `large`; while
-//! unmounted), select all rows and none (`select-all`, `clear-selection`), disable and enable
-//! dragging (`disable`, `enable`: the drag state's `is_disabled`), and read the drag state
-//! (`drag-count`: how many rows a drag of the first one drags; `items`: how many drag items it
-//! carries; `dragging`: how many rows are being dragged) and what the callbacks saw (`starts`,
-//! `ends`, `drops`, `last-internal`: whether the last drag ended inside the list, 1 or 0).
+//! unmounted), select all rows (`select-all`), disable and enable
+//! dragging (`disable`, `enable`: the drag state's `is_disabled`), and read how many rows are
+//! being dragged (`dragging`) and what the callbacks saw (`starts`, `ends`, `drops`,
+//! `last-internal`: whether the last drag ended inside the list, 1 or 0).
 
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation, announce_polite, flag,
+    CapturedElement, Orientation, announce_polite, flag,
     hooks::{
         collections::{
             CollectionOptions, Key, ListLayout, ListState, SelectionMode, SelectionOptions,
@@ -44,14 +43,9 @@ use leptos::{context::Provider, prelude::*};
 use crate::pages::perf::{Control, PerfControls};
 
 /// The rows of the small list.
-pub const SMALL: u32 = 10;
+const SMALL: u32 = 10;
 /// The rows of the large list.
-pub const LARGE: u32 = 1_000;
-
-#[component]
-pub fn PagePerf() -> impl IntoView {
-    view! { <DraggableListPage title="use_draggable_item performance" /> }
-}
+const LARGE: u32 = 1_000;
 
 /// What the list's states and callbacks share with the page.
 #[derive(Clone, Copy)]
@@ -64,9 +58,8 @@ struct Shared {
     last_internal: StoredValue<bool>,
 }
 
-/// The page of the draggable list (see the module documentation), titled `title`.
 #[component]
-pub fn DraggableListPage(title: &'static str) -> impl IntoView {
+pub fn PagePerf() -> impl IntoView {
     let mounted = RwSignal::new(true);
     let count = RwSignal::new(SMALL);
     let shared = Shared {
@@ -95,17 +88,8 @@ pub fn DraggableListPage(title: &'static str) -> impl IntoView {
         Control::action("select-all", move || {
             with_list(|list| list.selection.select_all());
         }),
-        Control::action("clear-selection", move || {
-            with_list(|list| list.selection.clear_selection());
-        }),
         Control::action("disable", move || shared.disabled.set(true)),
         Control::action("enable", move || shared.disabled.set(false)),
-        Control::read("drag-count", move || {
-            read_state(|state| state.drag_count(&Key::from("item-0")))
-        }),
-        Control::read("items", move || {
-            read_state(|state| state.items(&Key::from("item-0")).len())
-        }),
         Control::read("dragging", move || {
             read_state(|state| state.dragging_keys.with_untracked(HashSet::len))
         }),
@@ -124,7 +108,7 @@ pub fn DraggableListPage(title: &'static str) -> impl IntoView {
 
     let element = CapturedElement::new();
     let UseDropReturn {
-        drop_props,
+        drop_target: drop_props,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -142,7 +126,7 @@ pub fn DraggableListPage(title: &'static str) -> impl IntoView {
         is_disabled: Signal::stored(false),
     });
     view! {
-        <h1>{title}</h1>
+        <h1>"use_draggable_item performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
         <Show when=move || mounted.get()>
@@ -152,7 +136,7 @@ pub fn DraggableListPage(title: &'static str) -> impl IntoView {
             id="perf-drop"
             role="button"
             tabindex="0"
-            {..drop_props.into_attrs()}
+            {..drop_props.attrs()}
             data-drop-target=flag(is_drop_target)
         >
             "Drop here"
@@ -206,11 +190,14 @@ fn DraggableList(count: u32, shared: Shared) -> impl IntoView {
     on_cleanup(move || shared.states.set_value(None));
     let element = CapturedElement::new();
     use_draggable_collection(UseDraggableCollectionInput { state, element });
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+    let UseGridListReturn {
+        grid_list: props,
+        data,
+    } = use_grid_list(UseGridListInput {
         aria_label: "Items".into(),
         state: list,
         element,
-        id: Some("perf-list".to_owned()),
+        id: Some("perf-list".into()),
         aria_labelledby: Signal::stored(None),
         layout: ListLayout::Stack,
         orientation: Orientation::Vertical.into(),
@@ -223,7 +210,7 @@ fn DraggableList(count: u32, shared: Shared) -> impl IntoView {
     });
     view! {
         <Provider value=RowContext { list: data, state }>
-            <div {..props.into_attrs()}>
+            <div {..props.attrs()}>
                 {(0..count).map(|index| view! { <Row index /> }).collect_view()}
             </div>
         </Provider>
@@ -236,8 +223,8 @@ fn Row(index: u32) -> impl IntoView {
     let RowContext { list, state } = expect_context::<RowContext>();
     let key = Key::from(format!("item-{index}"));
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         ..
     } = use_grid_list_item(UseGridListItemInput {
         list,
@@ -247,7 +234,7 @@ fn Row(index: u32) -> impl IntoView {
         on_context_menu: None,
     });
     let UseDraggableItemReturn {
-        drag_props,
+        item: drag_props,
         is_dragging,
         ..
     } = use_draggable_item(UseDraggableItemInput {
@@ -256,16 +243,16 @@ fn Row(index: u32) -> impl IntoView {
         has_drag_button: false,
         has_action: false,
     });
-    let (row_attrs, row_styles) = row_props.into_parts();
+    let (row_attrs, row_styles) = row_props.attrs();
     view! {
         <div
             {..row_attrs}
-            {..drag_props.into_attrs()}
+            {..drag_props.attrs()}
             style=row_styles
             data-row=index
             data-dragging=flag(is_dragging)
         >
-            <div {..grid_cell_props.into_attrs()}>{format!("Item {index}")}</div>
+            <div {..grid_cell_props.attrs()}>{format!("Item {index}")}</div>
         </div>
     }
 }

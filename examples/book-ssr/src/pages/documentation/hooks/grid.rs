@@ -61,7 +61,7 @@ pub fn PageUseGrid() -> impl IntoView {
                             selection: SelectionOptions::default(),
                             focus_mode: GridFocusMode::Row,
                         });
-                        let UseGridReturn { props, data } = use_grid(UseGridInput {
+                        let UseGridReturn { grid, data } = use_grid(UseGridInput {
                             state,
                             element: CapturedElement::new(),
                             id: None,
@@ -77,7 +77,7 @@ pub fn PageUseGrid() -> impl IntoView {
 
                         // Per row:
                         let row = use_grid_row(UseGridRowInput { grid: data.clone(), key: Key::from("ada"), on_context_menu: None });
-                        let (row_attrs, row_styles) = row.row_props.into_parts();
+                        let (row_attrs, row_styles) = row.row.attrs();
                         // Per cell:
                         let cell = use_grid_cell(UseGridCellInput {
                             grid: data.clone(),
@@ -87,7 +87,7 @@ pub fn PageUseGrid() -> impl IntoView {
                             allows_arrow_navigation: false,
                             should_select_on_press_up: false,
                         });
-                        let (cell_attrs, cell_styles) = cell.grid_cell_props.into_parts();
+                        let (cell_attrs, cell_styles) = cell.cell.attrs();
                     "#)}
                 </Code>
             </Section>
@@ -144,9 +144,9 @@ pub fn PageUseGrid() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseGridInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseGridInput">
                         <ApiRow name="state" ty="GridState">"From "<Code inline=true>"use_grid_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The grid element; the props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<String>>" default="None">"Names the grid."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The grid element; the part captures it. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<Id>>" default="None">"Names the grid."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the "<Link href=format!("{}#use-grid-keyboard-delegate", routes::doc::CollectionState.materialize())>"grid keyboard delegate"</Link>"."
                         </ApiRow>
@@ -167,7 +167,7 @@ pub fn PageUseGrid() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-grid-return">
                     <ApiTable kind=ApiKind::Return of="UseGridReturn">
-                        <ApiRow name="props" ty="UseGridProps">
+                        <ApiRow name="grid" ty="Part<UseGridProps>">
                             "For the grid element: "<Code inline=true>"role=\"grid\""</Code>", labelling, "
                             <Code inline=true>"aria-multiselectable"</Code>", keyboard and focus handling."
                         </ApiRow>
@@ -182,7 +182,7 @@ pub fn PageUseGrid() -> impl IntoView {
                 <p>"Takes no input. Groups rows, like "<Code inline=true>"<tbody>"</Code>"."</p>
                 <Section title="Return" id="use-grid-row-group-return">
                     <ApiTable kind=ApiKind::Return of="UseGridRowGroupReturn">
-                        <ApiRow name="row_group_props" ty="UseGridRowGroupProps">
+                        <ApiRow name="row_group" ty="Part<UseGridRowGroupProps>">
                             "For the element grouping rows: "<Code inline=true>"role=\"rowgroup\""</Code>"."
                         </ApiRow>
                     </ApiTable>
@@ -202,10 +202,10 @@ pub fn PageUseGrid() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-grid-row-return">
                     <ApiTable kind=ApiKind::Return of="UseGridRowReturn">
-                        <ApiRow name="row_props" ty="PropsWithStyles<UseGridRowProps>">
+                        <ApiRow name="row" ty="Part<PropsWithStyles<UseGridRowProps>>">
                             "For the row: "<Code inline=true>"role=\"row\""</Code>", "<Code inline=true>"aria-selected"</Code>", "
-                            <Code inline=true>"aria-disabled"</Code>", press and focus handling. Spread with "
-                            <Code inline=true>"into_parts()"</Code>"."
+                            <Code inline=true>"aria-disabled"</Code>", press and focus handling. "
+                            <Code inline=true>"row.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_selected, is_focused, is_disabled, is_pressed" ty="Signal<bool>">"The row\u{2019}s state."</ApiRow>
                         <ApiRow name="allows_selection, has_action" ty="Signal<bool>">
@@ -227,7 +227,7 @@ pub fn PageUseGrid() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseGridCellInput">
                         <ApiRow name="grid" ty="GridData">"From "<Code inline=true>"use_grid"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The cell\u{2019}s key, "<Code inline=true>"Key::cell(&row, column)"</Code>". Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="focus_mode" ty="Option<CellFocusMode>" default="None">
                             "What gets focus, see "<AnchorLink href="#focus-modes">"Focus Modes"</AnchorLink>". "
                             <Code inline=true>"None"</Code>": "<Code inline=true>"Cell"</Code>" with the "<Code inline=true>"Tab"</Code>
@@ -242,7 +242,7 @@ pub fn PageUseGrid() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-grid-cell-return">
                     <ApiTable kind=ApiKind::Return of="UseGridCellReturn">
-                        <ApiRow name="grid_cell_props" ty="PropsWithStyles<UseGridCellProps>">
+                        <ApiRow name="cell" ty="Part<PropsWithStyles<UseGridCellProps>>">
                             "For the cell: "<Code inline=true>"role=\"gridcell\""</Code>", "<Code inline=true>"aria-colindex"</Code>", "
                             <Code inline=true>"aria-colspan"</Code>", press, focus and key handling."
                         </ApiRow>

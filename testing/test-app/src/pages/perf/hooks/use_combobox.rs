@@ -7,25 +7,22 @@
 //! (`use_option`, `data-perf-option` holding the number; [`SMALL`] at first, [`LARGE`] after the
 //! control `large`). Between two plain buttons (`#perf-before`, `#perf-after`), mounted at first.
 //!
-//! [`ComboBoxFixture`] renders it for `use_combobox_state`'s performance test too: the controls
-//! `mount` and `unmount` mount everything (creating the state, [`Part::State`]) or the combo box's
-//! elements (calling `use_combobox`, [`Part::ComboBox`]). The other controls ([`Control`]) call the
-//! state's methods (open, close, set the input text and the value), change `use_combobox`'s
-//! disabled input, prepare the live announcer (`prepare-announcer`: its first announcement waits
-//! for its live regions), and read the value (`value`: the selected option's number, `-1` for
-//! none).
+//! Its controls ([`Control`]) mount and unmount the combo box's elements (calling `use_combobox`;
+//! the state stays), change the options, change `use_combobox`'s disabled input, prepare the live
+//! announcer (`prepare-announcer`: its first announcement waits for its live regions), and read the
+//! value (`value`: the selected option's number, `-1` for none).
 
 use std::collections::HashSet;
 
 use leptonic::{
-    Assertiveness, CapturedElement, IntoAttrs, announce,
+    Assertiveness, CapturedElement, announce,
     hooks::{
         button::use_button,
         collections::{Key, Node, UseListCollectionInput, use_list_collection},
         combobox::{
-            ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxState, MenuTriggerAction,
-            UseComboBoxInput, UseComboBoxReturn, UseComboBoxStateInput, use_combobox,
-            use_combobox_state, use_contains_filter,
+            ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxState, UseComboBoxInput,
+            UseComboBoxReturn, UseComboBoxStateInput, use_combobox, use_combobox_state,
+            use_contains_filter,
         },
         form::{UseTextFieldReturn, ValidationBehavior, use_text_field},
         listbox::{
@@ -40,67 +37,21 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The options at first.
-pub const SMALL: u32 = 10;
+const SMALL: u32 = 10;
 /// The options after the control `large`.
-pub const LARGE: u32 = 1_000;
-
-/// What the controls `mount` and `unmount` mount.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Part {
-    /// Everything, with the state.
-    State,
-    /// The combo box's elements (`use_combobox`), the state staying.
-    ComboBox,
-}
+const LARGE: u32 = 1_000;
 
 #[component]
 pub fn PagePerf() -> impl IntoView {
-    view! { <ComboBoxFixture title="use_combobox performance" part=Part::ComboBox /> }
-}
-
-/// The combo box (see the module documentation), `part` mounted by the controls.
-#[component]
-pub fn ComboBoxFixture(title: &'static str, part: Part) -> impl IntoView {
     let mounted = RwSignal::new(true);
-    let is_mounted = move |of: Part| Signal::derive(move || of != part || mounted.get());
     let items = RwSignal::new((0..SMALL).collect::<Vec<u32>>());
     let disabled = RwSignal::new(false);
     // The state while mounted, for the controls.
     let state = StoredValue::new(None::<ComboBoxState>);
-    let with_state = move |run: fn(&ComboBoxState)| {
-        move || {
-            state.with_value(|state| {
-                if let Some(state) = state {
-                    run(state);
-                }
-            });
-        }
-    };
     let controls = vec![
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),
         Control::action("large", move || items.set((0..LARGE).collect())),
-        Control::action(
-            "open",
-            with_state(|state| state.open(None, MenuTriggerAction::Manual)),
-        ),
-        Control::action("close", with_state(ComboBoxState::close)),
-        Control::action(
-            "set-text",
-            with_state(|state| state.set_input_value("Option 5".to_owned())),
-        ),
-        Control::action(
-            "clear-text",
-            with_state(|state| state.set_input_value(String::new())),
-        ),
-        Control::action(
-            "select-first",
-            with_state(|state| state.set_value(vec![Key::from(0_u32)])),
-        ),
-        Control::action(
-            "clear-value",
-            with_state(|state| state.set_value(Vec::new())),
-        ),
         Control::action("disable", move || disabled.set(true)),
         Control::action("enable", move || disabled.set(false)),
         Control::action("prepare-announcer", || announce("", Assertiveness::Polite)),
@@ -118,25 +69,22 @@ pub fn ComboBoxFixture(title: &'static str, part: Part) -> impl IntoView {
             .map_or(-1.0, f64::from)
         }),
     ];
-    let combo_box_mounted = is_mounted(Part::ComboBox);
     view! {
-        <h1>{title}</h1>
+        <h1>"use_combobox performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <Show when=move || is_mounted(Part::State).get()>
-            <PlainComboBox items disabled state combo_box_mounted />
-        </Show>
+        <PlainComboBox items disabled state combo_box_mounted=mounted />
         <button id="perf-after">"After"</button>
     }
 }
 
-/// The state (`use_combobox_state`, created while mounted) and the combo box's elements.
+/// The state (`use_combobox_state`) and the combo box's elements, while `combo_box_mounted`.
 #[component]
 fn PlainComboBox(
     items: RwSignal<Vec<u32>>,
     disabled: RwSignal<bool>,
     state: StoredValue<Option<ComboBoxState>>,
-    combo_box_mounted: Signal<bool>,
+    combo_box_mounted: RwSignal<bool>,
 ) -> impl IntoView {
     let combo_box_state = use_combobox_state(UseComboBoxStateInput {
         filter: Some(use_contains_filter()),
@@ -179,8 +127,8 @@ fn ComboBoxElements(state: ComboBoxState, disabled: RwSignal<bool>) -> impl Into
     let popover = CapturedElement::new();
     let button_element = CapturedElement::new();
     let UseComboBoxReturn {
-        input,
-        input_props,
+        text_field: input,
+        input: input_props,
         button,
         listbox,
         ..
@@ -204,13 +152,12 @@ fn ComboBoxElements(state: ComboBoxState, disabled: RwSignal<bool>) -> impl Into
         on_blur: None,
     });
     let UseTextFieldReturn {
-        input_props: field_props,
-        ..
+        input: field_props, ..
     } = use_text_field(input);
-    let (button_attrs, button_styles) = use_button(button).props.into_parts();
+    let (button_attrs, button_styles) = use_button(button).button.attrs();
     let listbox = StoredValue::new(listbox);
     view! {
-        <input {..field_props.into_attrs()} {..input_props.into_attrs()} data-perf-input />
+        <input {..field_props.attrs()} {..input_props.attrs()} data-perf-input />
         <button
             {..button_attrs}
             {..button_element.attr()}
@@ -230,12 +177,15 @@ fn ComboBoxElements(state: ComboBoxState, disabled: RwSignal<bool>) -> impl Into
 /// The listbox of the open combo box (`use_listbox`), showing the matching options.
 #[component]
 fn PlainListBox(input: UseListBoxInput) -> impl IntoView {
-    let UseListBoxReturn { props, data } = use_listbox(input);
+    let UseListBoxReturn {
+        listbox: props,
+        data,
+    } = use_listbox(input);
     let collection = data.state.collection;
     let options = move || collection.with(|c| c.items().cloned().collect::<Vec<Node>>());
     let data = StoredValue::new(data);
     view! {
-        <div {..props.into_attrs()} style="max-height: 200px; overflow: auto">
+        <div {..props.attrs()} style="max-height: 200px; overflow: auto">
             <For each=options key=|node| node.key.clone() let:node>
                 <PlainOption list=data.get_value() node />
             </For>
@@ -247,13 +197,15 @@ fn PlainListBox(input: UseListBoxInput) -> impl IntoView {
 #[component]
 fn PlainOption(list: ListBoxData, node: Node) -> impl IntoView {
     let UseOptionReturn {
-        props, is_focused, ..
+        option: props,
+        is_focused,
+        ..
     } = use_option(UseOptionInput {
         list,
         key: node.key.clone(),
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <div
             {..attrs}

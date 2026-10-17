@@ -5,20 +5,22 @@
 // Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 740c6c5c4a
 use std::sync::Arc;
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, Orientation,
+    CapturedElement, EventHandler, Id, IntoAttrs, Orientation,
     hooks::collections::{
         AutoFocus, CollectionOptions, FocusStrategy, Key, KeyboardDelegate, LinkBehavior,
         ListLayout, ListState, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
         UseSelectableListInput, use_selectable_list,
     },
-    utils::{aria::AriaRole, id::use_id},
+    utils::{
+        aria::AriaRole,
+        id::use_id,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -39,19 +41,18 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_menu`].
-#[derive(Clone)]
+/// Input of [`use_menu`]. Not `Clone`: `submenu` is single-use.
 pub struct UseMenuInput {
     /// The items and their selection (`SelectionMode::None` for action menus).
     pub state: ListState,
     /// The menu element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id. Generated when `None`. A menu trigger provides one (`menu_props.id`).
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the menu. A menu trigger provides them
     /// (`menu_props.aria_labelledby`); a signal, as the trigger's id may change.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Keyboard and focus behavior. react-aria's `useMenu` lets the arrow keys wrap around by
     /// default: set `should_focus_wrap` (the `Menu` atom does).
     pub options: CollectionOptions,
@@ -72,7 +73,7 @@ pub struct UseMenuInput {
 pub struct MenuData {
     pub state: ListState,
     /// See `UseSelectableItemInput::collection_id`.
-    pub collection_id: String,
+    pub collection_id: Id,
     pub on_action: Option<Callback<Key>>,
     pub on_close: Option<Callback<()>>,
     /// The level in the menu tree of the submenus this menu's items open: 0 in the root menu,
@@ -80,29 +81,42 @@ pub struct MenuData {
     pub submenu_level: usize,
 }
 
-/// Return value of [`use_menu`].
+/// The return value of [`use_menu`].
 #[derive(Debug)]
 pub struct UseMenuReturn {
-    pub props: UseMenuProps,
+    /// The menu element.
+    pub menu: Part<UseMenuProps>,
     pub data: MenuData,
 }
 
 /// Props for the menu element.
 #[derive(Debug)]
 pub struct UseMenuProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_list`).
     pub collection: UseSelectableCollectionProps,
 }
 
+impl Remount for UseMenuProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            collection: self.collection.remount(),
+        }
+    }
+}
+
 pub type UseMenuAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
     UseSelectableCollectionAttrs,
 );
 
@@ -111,10 +125,10 @@ impl IntoAttrs for UseMenuProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
             self.collection.into_attrs(),
         )
     }
@@ -185,7 +199,8 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
         keyboard_delegate,
         options,
     })
-    .props;
+    .collection
+    .into_props();
 
     // Escape bubbles to the overlay (which closes the menu) instead of clearing the selection.
     let list_keydown = collection.on_keydown;
@@ -208,12 +223,12 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
             on_close,
             submenu_level,
         },
-        props: UseMenuProps {
+        menu: Part::stored(UseMenuProps {
             id: id.unwrap_or_else(|| use_id("menu")),
             role: AriaRole::Menu,
             aria_label,
             aria_labelledby,
             collection,
-        },
+        }),
     }
 }

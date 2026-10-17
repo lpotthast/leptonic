@@ -4,10 +4,7 @@
 //! `data-focused`. Its controls ([`Control`]) mount and unmount it, disable and enable it, and
 //! read how often it got focus (`focuses`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{UseFocusInput, use_focus},
-};
+use leptonic::hooks::focus::{UseFocusInput, use_focus};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -50,7 +47,7 @@ fn Focused(disabled: RwSignal<bool>, focus_count: StoredValue<u32>) -> impl Into
     view! {
         <button
             id="perf-focus"
-            {..focus.props.into_attrs()}
+            {..focus.target.attrs()}
             data-focused=move || focused.get().then_some("true")
         >
             "Focus me"

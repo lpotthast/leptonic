@@ -106,7 +106,7 @@ pub fn PageFocus() -> impl IntoView {
                         </li>
                         <li>
                             "Combine "<Link href=routes::doc::Interactions.materialize()>"interaction hooks"</Link>
-                            " and focus hooks by spreading each hook\u{2019}s props onto the same element."
+                            " and focus hooks by spreading each hook\u{2019}s part onto the same element."
                         </li>
                     </ul>
                 </Section>

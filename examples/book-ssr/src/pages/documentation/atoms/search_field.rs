@@ -127,7 +127,7 @@ pub fn PageAtomSearchField() -> impl IntoView {
                         <ApiRow name="input_mode" ty="Option<InputMode>" default="None">"Which virtual keyboard to show."</ApiRow>
                         <ApiRow name="enter_key_hint" ty="Option<EnterKeyHint>" default="None">"The label of the virtual keyboard\u{2019}s Enter key."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>"."
                         </ApiRow>

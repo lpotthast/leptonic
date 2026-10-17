@@ -1,7 +1,7 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! The performance of the hook `use_selectable_item` (`/perf/hooks/use_selectable_item`, the plain
-//! items of the list of `use_selectable_list`'s performance test): what each thing it offers costs,
-//! measured (`Page::measure`) and checked against its budget
+//! The performance of the hook `use_selectable_item` (`/perf/hooks/use_selectable_item`, on the
+//! plain items of a `use_selectable_list` list): what each thing it offers costs, measured
+//! (`Page::measure`) and checked against its budget
 //! (`tests/budgets/hooks/use_selectable_item.json`): mounting and unmounting 10 and 1,000 items,
 //! selecting one with the mouse (at both sizes) and the keyboard, its pressed state, the focus
 //! moving from item to item, disabling it, and the state's selection changing (all items, at both
@@ -10,7 +10,6 @@ use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use super::use_selectable_list::{ITEMS, item, large, mount_and_unmount_in, tab_in};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -31,6 +30,46 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(Disabled))
         .with(fixture_test(StateSelection))
         .with(fixture_test(StateSelectionLarge))
+}
+const ITEMS: &str = "[data-perf-option]";
+
+/// The fixture's items after the control `large`.
+const LARGE: u32 = 1_000;
+
+/// The item "Option `i`".
+fn item(i: u32) -> String {
+    format!("[data-perf-option='{i}']")
+}
+
+/// Switches to [`LARGE`] items (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.element(item(LARGE - 1)).await?;
+    Ok(())
+}
+
+/// Focuses the first item with the keyboard (Tab from the plain button before the list).
+async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#perf-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    let first = page.element(item(0)).await?;
+    page.wait_for_focus(&first).await?;
+    Ok(first)
+}
+
+/// Mounting the list with `count` items and unmounting it.
+async fn mount_and_unmount_in(
+    page: &Page<'_>,
+    container: &str,
+    count: usize,
+) -> Result<(), Report> {
+    page.control("unmount").await?;
+    page.wait_for_count(container, 0).await?;
+    page.measure("mount", page.control("mount")).await?;
+    page.wait_for_count(ITEMS, count).await?;
+    page.measure("unmount", page.control("unmount")).await?;
+    page.wait_for_count(container, 0).await?;
+    Ok(())
 }
 
 /// Mounting 10 items and unmounting them.

@@ -62,7 +62,10 @@ pub fn PagePerf() -> impl IntoView {
 /// The element with `use_press`.
 #[component]
 fn Pressed(inputs: Inputs) -> impl IntoView {
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn {
+        target: props,
+        is_pressed,
+    } = use_press(UsePressInput {
         is_disabled: inputs.disabled.into(),
         force_is_pressed: inputs.forced.into(),
         on_press: Some(Callback::new(move |_| {
@@ -73,7 +76,7 @@ fn Pressed(inputs: Inputs) -> impl IntoView {
         })),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <div
             id="perf-press"

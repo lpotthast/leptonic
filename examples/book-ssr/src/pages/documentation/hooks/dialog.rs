@@ -25,17 +25,17 @@ pub fn PageUseDialog() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "Names a dialog without a title element; the title then doesn\u{2019}t name it."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">
                         "Ids of the elements naming the dialog, instead of its title element."
                     </ApiRow>
-                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">
                         "Ids of the elements describing the dialog. Without them, an alert dialog is described by its "
-                        "content element ("<Code inline=true>"content_props"</Code>")."
+                        "content element (the "<Code inline=true>"content"</Code>" part)."
                     </ApiRow>
                     <ApiRow name="is_entering" ty="Signal<bool>" default="false">
                         "While "<Code inline=true>"true"</Code>" (an entry animation runs), the dialog isn\u{2019}t focused yet."
                     </ApiRow>
-                    <ApiRow name="fallback_aria_labelledby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="fallback_aria_labelledby" ty="Signal<Option<Id>>" default="None">
                         "Names the dialog when it has neither a title, nor "<Code inline=true>"aria_label"</Code>" or "
                         <Code inline=true>"aria_labelledby"</Code>": the "
                         <Link href=routes::doc::dialog::Atom.materialize()>"Dialog"</Link>" atom passes the id of its "
@@ -46,15 +46,15 @@ pub fn PageUseDialog() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseDialogReturn">
-                    <ApiRow name="dialog_props" ty="UseDialogProps">
-                        "Spread "<Code inline=true>"{..dialog_props.into_attrs()}"</Code>" onto the dialog element: its id, "
+                    <ApiRow name="dialog" ty="Part<UseDialogProps>">
+                        "Spread "<Code inline=true>"{..dialog.attrs()}"</Code>" onto the dialog element: its id, "
                         "role, labelling, "<Code inline=true>"tabindex=\"-1\""</Code>", a focus handler and the element "
                         "capture used to focus it."
                     </ApiRow>
-                    <ApiRow name="title_props" ty="SlotProps">
+                    <ApiRow name="title" ty="Part<SlotProps>">
                         "Spread onto the title element (a heading): while it is rendered, it names the dialog."
                     </ApiRow>
-                    <ApiRow name="content_props" ty="SlotProps">
+                    <ApiRow name="content" ty="Part<SlotProps>">
                         "Spread onto the content element: while it is rendered, it describes an alert dialog."
                     </ApiRow>
                 </ApiTable>
@@ -65,7 +65,7 @@ pub fn PageUseDialog() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::hooks::dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog};
 
-                        let UseDialogReturn { dialog_props, title_props, content_props } =
+                        let UseDialogReturn { dialog, title, content } =
                             use_dialog(UseDialogInput {
                                 role: DialogRole::AlertDialog,
                                 ..UseDialogInput::default()
@@ -73,9 +73,9 @@ pub fn PageUseDialog() -> impl IntoView {
 
                         view! {
                             // Named by the heading, described by the paragraph.
-                            <section {..dialog_props.into_attrs()}>
-                                <h2 {..title_props.into_attrs()}>"Delete file?"</h2>
-                                <p {..content_props.into_attrs()}>"It is deleted permanently."</p>
+                            <section {..dialog.attrs()}>
+                                <h2 {..title.attrs()}>"Delete file?"</h2>
+                                <p {..content.attrs()}>"It is deleted permanently."</p>
                                 <button>"Delete"</button>
                             </section>
                         }
@@ -102,15 +102,15 @@ pub fn PageUseDialog() -> impl IntoView {
 
             <Section title="Naming">
                 <p>
-                    "Every dialog needs an accessible name. Spread "<Code inline=true>"title_props"</Code>" onto its heading: "
+                    "Every dialog needs an accessible name. Spread the "<Code inline=true>"title"</Code>" part onto its heading: "
                     "while the heading is rendered, the dialog\u{2019}s "<Code inline=true>"aria-labelledby"</Code>" points "
                     "to it. A dialog without a visible title gets "<Code inline=true>"aria_label"</Code>" instead; "
                     <Code inline=true>"aria_labelledby"</Code>" points to other elements. In debug builds, a dialog "
                     "without a name logs a warning once it is rendered."
                 </p>
                 <p>
-                    "An alert dialog is also described by the element you spread "<Code inline=true>"content_props"</Code>
-                    " onto ("<Code inline=true>"aria-describedby"</Code>"). A regular dialog is described only through "
+                    "An alert dialog is also described by the element you spread the "<Code inline=true>"content"</Code>
+                    " part onto ("<Code inline=true>"aria-describedby"</Code>"). A regular dialog is described only through "
                     <Code inline=true>"aria_describedby"</Code>"."
                 </p>
             </Section>

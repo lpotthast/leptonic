@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         button::use_button,
         collections::{
@@ -31,8 +31,8 @@ pub fn PageHookTagGroup() -> impl IntoView {
         selection: SelectionOptions::default(),
     });
     let UseTagGroupReturn {
-        grid_props,
-        label_props,
+        grid: grid_props,
+        label: label_props,
         data,
         ..
     } = use_tag_group(UseTagGroupInput {
@@ -54,8 +54,8 @@ pub fn PageHookTagGroup() -> impl IntoView {
         <div id="test-page-hook-tag-group">
             <h1>"Tag group"</h1>
             <button id="test-tg-before">"Before"</button>
-            <span {..label_props.into_attrs()}>"Categories"</span>
-            <div {..grid_props.into_attrs()}>
+            <span {..label_props.attrs()}>"Categories"</span>
+            <div {..grid_props.attrs()}>
                 <For each=move || tags.get() key=|tag| *tag let:tag>
                     <Tag group=data.clone() key=Key::from(tag) />
                 </For>
@@ -70,20 +70,20 @@ pub fn PageHookTagGroup() -> impl IntoView {
 fn Tag(group: TagGroupData, key: Key) -> impl IntoView {
     let text = key.to_string();
     let UseTagReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         remove_button,
         ..
     } = use_tag(UseTagInput { group, key });
-    let (attrs, styles) = row_props.into_parts();
+    let (attrs, styles) = row_props.attrs();
     let remove = remove_button.map(|input| {
-        let (attrs, styles) = use_button(input).props.into_parts();
+        let (attrs, styles) = use_button(input).button.attrs();
         view! { <button {..attrs} style=styles>"×"</button> }
     });
 
     view! {
         <div {..attrs} style=styles>
-            <div {..grid_cell_props.into_attrs()}>{text} {remove}</div>
+            <div {..grid_cell_props.attrs()}>{text} {remove}</div>
         </div>
     }
 }

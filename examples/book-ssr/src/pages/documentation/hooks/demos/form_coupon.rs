@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::button::Button,
     hooks::{
         button::ButtonType,
@@ -101,10 +101,10 @@ fn CouponField(code: RwSignal<String>) -> impl IntoView {
     });
 
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label,
+        field,
+        description,
+        error_message,
         ..
     } = use_field(UseFieldInput {
         has_label: true.into(),
@@ -113,7 +113,7 @@ fn CouponField(code: RwSignal<String>) -> impl IntoView {
 
     view! {
         <div class="demo-field">
-            <label class="demo-field-label" {..label_props.into_attrs()}>"Coupon code"</label>
+            <label class="demo-field-label" {..label.attrs()}>"Coupon code"</label>
             <input
                 type="text"
                 name="coupon"
@@ -123,11 +123,11 @@ fn CouponField(code: RwSignal<String>) -> impl IntoView {
                 on:input=move |e| code.set(event_target_value(&e))
                 aria-invalid=move || validation.is_invalid.get().then_some("true")
                 {..element.attr()}
-                {..field_props.into_attrs()}
+                {..field.attrs()}
             />
-            <p class="demo-field-description" {..description_props.into_attrs()}>"For example SPRING26."</p>
+            <p class="demo-field-description" {..description.attrs()}>"For example SPRING26."</p>
             <Show when=move || validation.is_invalid.get()>
-                <p class="demo-field-error" {..error_message_props.clone().into_attrs()}>
+                <p class="demo-field-error" {..error_message.attrs()}>
                     {move || validation.validation_errors.get().join(" ")}
                 </p>
             </Show>

@@ -10,16 +10,19 @@ use super::{
     press::ClearTriggerContexts,
 };
 use crate::{
-    CapturedElement, IntoAttrs, Out,
+    CapturedElement, ElementCaptureAttr, IntoAttrs, Out, Part,
     hooks::{
         animation::{
             UseEnterAnimationInput, UseExitAnimationInput, use_enter_animation, use_exit_animation,
         },
-        modal::{UseModalBackdropInput, UseModalBackdropReturn, use_modal_backdrop},
-        overlay::{OverlayFocusContain, UseOverlayAttrs},
+        modal::{
+            UseModalBackdropInput, UseModalBackdropModalProps, UseModalBackdropReturn,
+            use_modal_backdrop,
+        },
+        overlay::OverlayFocusContain,
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class, styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class, styles::Styles,
         use_viewport_size::use_viewport_size,
     },
 };
@@ -54,11 +57,11 @@ use crate::{
 // =============================================================================
 
 /// Context provided by [`ModalBackdrop`] for [`ModalContent`].
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct ModalBackdropContext {
-    modal_props_attrs: StoredValue<UseOverlayAttrs>,
-    /// The modal element, whose exit animations the backdrop waits for.
-    modal: CapturedElement,
+    modal_content: Part<UseModalBackdropModalProps>,
+    /// Captures the modal element, whose exit animations the backdrop waits for.
+    modal_capture: ElementCaptureAttr,
     is_exiting: Signal<bool>,
     /// Whether interacting outside closes the modal: then it gets a dismiss button for screen
     /// reader users.
@@ -144,7 +147,10 @@ pub fn ModalBackdrop(
         on_open_change,
         use_context::<DialogTriggerContext>(),
     );
-    let UseModalBackdropReturn { modal_props, id: _ } = use_modal_backdrop(UseModalBackdropInput {
+    let UseModalBackdropReturn {
+        modal: modal_content,
+        id: _,
+    } = use_modal_backdrop(UseModalBackdropInput {
         is_dismissable,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
@@ -177,8 +183,6 @@ pub fn ModalBackdrop(
     );
     let is_exiting = Signal::derive(move || is_backdrop_exiting.get() || is_modal_exiting.get());
 
-    let modal_props_attrs = StoredValue::new(modal_props.into_attrs());
-
     // Store children, classes, styles in StoredValue (Copy) so Show's Fn closure can call it repeatedly.
     let children = StoredValue::new(children);
     let classes = StoredValue::new(classes);
@@ -188,8 +192,8 @@ pub fn ModalBackdrop(
     // `ModalContent` gets its own backdrop's props.
     view! {
         <Provider value=ModalBackdropContext {
-            modal_props_attrs,
-            modal,
+            modal_content,
+            modal_capture: modal.attr(),
             is_exiting,
             is_dismissable,
             close: Callback::new(move |()| state.close()),
@@ -237,8 +241,10 @@ pub fn ModalBackdrop(
                                 {..backdrop.attr().chain(entering.attr())}
                                 class=classes.get_value()
                                 style=move || size_styles().merge(styles.get_value())
-                                data-entering=flag(is_entering)
-                                data-exiting=flag(is_exiting)
+                                {..data_flags([
+                                    ("data-entering", is_entering),
+                                    ("data-exiting", is_exiting),
+                                ])}
                             >
                                 // Pressing in the modal must not toggle it through the trigger's
                                 // responder. A dialog inside switches on this modal's containment
@@ -307,6 +313,8 @@ pub fn ModalContent(
         crate::utils::dev_warn!("A <ModalContent> must be inside a <ModalBackdrop>.");
         return None;
     };
+    // One modal per backdrop (`Part`: a second one gets no props and renders nothing).
+    let modal_props = ctx.modal_content.props()?;
     ctx.on_modal_exit.set_value(on_exit);
 
     let entering = CapturedElement::new();
@@ -326,12 +334,13 @@ pub fn ModalContent(
             auto_focus=auto_focus.get_untracked()
         >
             <div
-                {..ctx.modal_props_attrs.get_value()}
-                {..ctx.modal.attr().chain(entering.attr())}
+                {..(modal_props.into_attrs(), ctx.modal_capture.clone(), entering.attr())}
                 class=classes
-                style=styles
-                data-entering=flag(is_entering)
-                data-exiting=flag(ctx.is_exiting)
+                style={styles}
+                {..data_flags([
+                    ("data-entering", is_entering),
+                    ("data-exiting", ctx.is_exiting),
+                ])}
             >
                 {move || {
                     ctx.is_dismissable.get().then(|| view! { <DismissButton on_dismiss=close /> })

@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         collections::{Key, SelectOnPressUp, use_collection},
         tabs::{
@@ -33,8 +33,8 @@ fn DemoTab(state: TabListState, key: &'static str, label: &'static str) -> impl 
         on_blur: None,
         on_focus_change: None,
     })
-    .props
-    .into_parts();
+    .tab
+    .attrs();
 
     view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
 }
@@ -49,7 +49,7 @@ fn DemoTabPanel(state: TabListState, key: &'static str, text: &'static str) -> i
             {
                 let panel = use_tab_panel(UseTabPanelInput { state, key: Some(Key::from(key)), aria_label: MaybeProp::default(), aria_describedby: Signal::default(), aria_details: Signal::default() });
                 view! {
-                    <div {..panel.props.into_attrs()} class="demo-tab-panel">
+                    <div {..panel.tab_panel.attrs()} class="demo-tab-panel">
                         <p>{text}</p>
                     </div>
                 }
@@ -75,7 +75,7 @@ pub fn TabsVerticalDemo() -> impl IntoView {
     });
 
     // Vertical: Arrow Up and Arrow Down move between the tabs (Arrow Left and Arrow Right still work).
-    let UseTabListReturn { props } = use_tab_list(UseTabListInput {
+    let UseTabListReturn { tab_list } = use_tab_list(UseTabListInput {
         orientation: Orientation::Vertical.into(),
         aria_label: "Settings".into(),
         state,
@@ -86,7 +86,7 @@ pub fn TabsVerticalDemo() -> impl IntoView {
 
     view! {
         <div class="demo-tabs-vertical">
-            <div {..props.into_attrs()} class="demo-tab-list">
+            <div {..tab_list.attrs()} class="demo-tab-list">
                 {TABS
                     .map(|(key, label, _)| view! { <DemoTab state=state key=key label=label/> })
                     .collect_view()}

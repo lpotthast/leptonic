@@ -15,6 +15,7 @@ use crate::{
     utils::{
         date::{DateDuration, DateExt, DateRange, max_date, min_date},
         i18n::use_locale,
+        keyed_triggers::KeyedTriggers,
     },
 };
 
@@ -120,6 +121,64 @@ pub struct RangeCalendarState {
     dragging: RwSignal<bool>,
     available_range: Memo<Option<(Option<Date>, Option<Date>)>>,
     available_range_for: StoredValue<AvailableRange>,
+    /// Readers of single cells' selection, by date: a change of the highlighted range notifies
+    /// the dates that entered or left it (`performance.md` R1).
+    highlighted_cells: KeyedTriggers<Date>,
+}
+
+/// The dates in `a` but not in `b`, in order; `None` beyond `limit` dates (then notify all).
+fn dates_leaving(
+    a: Option<DateRange>,
+    b: Option<DateRange>,
+    limit: usize,
+    out: &mut Vec<Date>,
+) -> bool {
+    let Some(a) = a else {
+        return true;
+    };
+    let mut date = a.start;
+    loop {
+        if !b.is_some_and(|b| b.contains(date)) {
+            if out.len() == limit {
+                return false;
+            }
+            out.push(date);
+        }
+        if date >= a.end {
+            return true;
+        }
+        match date.tomorrow() {
+            Ok(next) => date = next,
+            Err(_) => return true,
+        }
+    }
+}
+
+/// The highlighted cells' triggers, following `range`.
+fn follow_highlighted(range: Signal<Option<DateRange>>) -> KeyedTriggers<Date> {
+    let cells = KeyedTriggers::new();
+    let notified = StoredValue::new(range.get_untracked());
+    ImmediateEffect::new_scoped(move || {
+        let current = range.get();
+        let Some(previous) =
+            notified.try_update_value(|notified| std::mem::replace(notified, current))
+        else {
+            return;
+        };
+        if previous == current {
+            return;
+        }
+        // Moving the end by a day changes one date; a whole new range up to its length.
+        let mut changed = Vec::new();
+        if dates_leaving(previous, current, 1000, &mut changed)
+            && dates_leaving(current, previous, 1000, &mut changed)
+        {
+            cells.notify(&changed);
+        } else {
+            cells.notify_all();
+        }
+    });
+    cells
 }
 
 /// The available range around an anchor (react-aria's `getAvailableRange`).
@@ -240,8 +299,11 @@ impl RangeCalendarState {
 
     /// Whether `date` lies in the highlighted range (and is selectable).
     pub fn is_selected(&self, date: Date) -> bool {
+        // Only the highlighted cells read the rest (a range change notifies the dates entering
+        // or leaving it).
+        self.highlighted_cells.track(&date);
         self.highlighted_range
-            .get()
+            .get_untracked()
             .is_some_and(|range| range.contains(date))
             && !self.calendar.is_cell_disabled(date)
             && !self.calendar.is_cell_unavailable(date)
@@ -268,7 +330,9 @@ impl RangeCalendarState {
 
     /// Focuses the date after `anchor` (else the one before) if it can be part of a range.
     pub fn focus_nearest_available_date(&self, anchor: Date) {
-        let available = self.available_range_for.get_value().around(Some(anchor));
+        // An action, called from event handlers: reads the visible duration and the app's
+        // `is_date_unavailable` without tracking.
+        let available = untrack(|| self.available_range_for.get_value().around(Some(anchor)));
         let is_date_invalid = |date: Date| {
             untrack(|| self.is_invalid(date))
                 || available.is_some_and(|(start, end)| is_invalid(date, start, end))
@@ -441,6 +505,7 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
         dragging,
         available_range,
         available_range_for: StoredValue::new(available),
+        highlighted_cells: follow_highlighted(highlighted_range),
     }
 }
 

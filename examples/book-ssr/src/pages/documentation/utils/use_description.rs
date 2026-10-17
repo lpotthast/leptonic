@@ -29,9 +29,10 @@ pub fn PageUseDescription() -> impl IntoView {
 
             <Section title="Return">
                 <p>
-                    "A "<Code inline=true>"Signal<Option<String>>"</Code>": the id of the hidden element, or "
-                    <Code inline=true>"None"</Code>" without a description. Pass it to "<Code inline=true>"aria-describedby"</Code>
-                    "; an attribute with the value "<Code inline=true>"None"</Code>" isn\u{2019}t rendered."
+                    "A "<Code inline=true>"Signal<Option<Id>>"</Code>": the id of the hidden element, or "
+                    <Code inline=true>"None"</Code>" without a description (and until the element is mounted). Pass it to "
+                    <Code inline=true>"aria-describedby"</Code>", or to the "<Code inline=true>"aria_describedby"</Code>
+                    " of a hook\u{2019}s input; an attribute with the value "<Code inline=true>"None"</Code>" isn\u{2019}t rendered."
                 </p>
             </Section>
 

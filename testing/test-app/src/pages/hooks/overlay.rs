@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         dialog::Dialog,
@@ -21,7 +20,7 @@ fn HookOverlay(
     #[prop(optional)] filter: Option<InteractOutsideFilter>,
 ) -> impl IntoView {
     let closes = RwSignal::new(0_u32);
-    let UseOverlayReturn { props, .. } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn { overlay: props, .. } = use_overlay(UseOverlayInput {
         is_open: is_open.into(),
         on_close: Callback::new(move |()| {
             closes.update(|closes| *closes += 1);
@@ -35,7 +34,7 @@ fn HookOverlay(
     });
     view! {
         <div id=id style:display=move || if is_open.get() { "block" } else { "none" }>
-            <div {..props.into_attrs()}>
+            <div {..props.attrs()}>
                 <button id=format!("{id}-inside")>"Inside " {id}</button>
             </div>
         </div>

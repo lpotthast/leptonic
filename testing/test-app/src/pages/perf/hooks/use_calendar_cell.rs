@@ -12,7 +12,7 @@
 //! selection, and the first announcement of a page waits 100 ms for the live regions.
 
 use leptonic::{
-    Assertiveness, CapturedElement, DateExt, DateRange, DateTimeFormat, IntoAttrs, announce, flag,
+    Assertiveness, CapturedElement, DateExt, DateRange, DateTimeFormat, announce, flag,
     hooks::calendar::{
         CalendarData, CommitBehavior, UseCalendarCellInput, UseCalendarCellReturn,
         UseCalendarGridInput, UseCalendarInput, UseCalendarReturn, UseCalendarStateInput,
@@ -45,7 +45,7 @@ fn MonthGrid(data: CalendarData, cells_disabled: RwSignal<bool>) -> impl IntoVie
     let month = grid.start_date;
     let data = StoredValue::new(data);
     view! {
-        <table {..grid.grid_props.into_attrs()}>
+        <table {..grid.grid.attrs()}>
             <tbody>
                 <For each=move || 0..grid.weeks_in_month.get() key=|week| *week let(week)>
                     <tr>
@@ -81,8 +81,8 @@ fn DayCell(
     is_disabled: Signal<bool>,
 ) -> impl IntoView {
     let UseCalendarCellReturn {
-        cell_props,
-        button_props,
+        cell: cell_props,
+        button: button_props,
         is_selected,
         is_pressed,
         formatted_date,
@@ -94,9 +94,9 @@ fn DayCell(
         is_outside_month,
         element: CapturedElement::new(),
     });
-    let (attrs, styles) = button_props.into_parts();
+    let (attrs, styles) = button_props.attrs();
     view! {
-        <td {..cell_props.into_attrs()}>
+        <td {..cell_props.attrs()}>
             <div
                 {..attrs}
                 style=styles
@@ -119,19 +119,19 @@ fn SingleCalendar(value: RwSignal<Option<Date>>, cells_disabled: RwSignal<bool>)
         ..UseCalendarStateInput::default()
     });
     let UseCalendarReturn {
-        calendar_props,
+        calendar: calendar_props,
         data,
         ..
     } = use_calendar(UseCalendarInput {
         state,
-        id: Some("perf-calendar".to_owned()),
+        id: Some("perf-calendar".into()),
         aria_label: "Event date".into(),
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
     view! {
-        <div {..calendar_props.into_attrs()}>
+        <div {..calendar_props.attrs()}>
             <MonthGrid data=data cells_disabled=cells_disabled />
         </div>
     }
@@ -149,20 +149,20 @@ fn RangeCalendar(
         ..UseRangeCalendarStateInput::default()
     });
     let UseCalendarReturn {
-        calendar_props,
+        calendar: calendar_props,
         data,
         ..
     } = use_range_calendar(UseRangeCalendarInput {
         state,
         commit_behavior: CommitBehavior::Select,
-        id: Some("perf-calendar".to_owned()),
+        id: Some("perf-calendar".into()),
         aria_label: "Trip".into(),
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
     view! {
-        <div {..calendar_props.into_attrs()}>
+        <div {..calendar_props.attrs()}>
             <MonthGrid data=data cells_disabled=cells_disabled />
         </div>
     }

@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use leptos::{
-    attr::custom::custom_attribute,
     either::Either,
     prelude::*,
     tachys::html::{class::class, style::style},
@@ -22,7 +21,8 @@ use crate::{
         },
     },
     utils::{
-        aria::AriaCurrent, data_attributes::flag, default_class::with_default_class, styles::Styles,
+        aria::AriaCurrent, data_attributes::data_flags, default_class::with_default_class,
+        styles::Styles,
     },
 };
 
@@ -189,13 +189,17 @@ where
         auto_focus,
         ..UseLinkInput::default()
     });
+    // At most 3 signals per effect (`performance.md` R4): the interaction state, and the
+    // disabled state.
     let data = (
-        custom_attribute("data-pressed", flag(link.is_pressed)),
-        custom_attribute("data-hovered", flag(link.is_hovered)),
-        custom_attribute("data-focused", flag(link.is_focused)),
-        custom_attribute("data-disabled", flag(link.is_disabled)),
+        data_flags([
+            ("data-pressed", link.is_pressed),
+            ("data-hovered", link.is_hovered),
+            ("data-focused", link.is_focused),
+        ]),
+        data_flags([("data-disabled", link.is_disabled)]),
     );
-    let (attrs, link_styles) = link.props.into_parts();
+    let (attrs, link_styles) = link.link.attrs();
     let rendering = StoredValue::new((attrs, data, link_styles.merge(styles), classes));
 
     move || {
@@ -262,16 +266,18 @@ pub fn AnchorLink(
         },
         href,
     });
-    let (attrs, link_styles) = link.props.into_parts();
+    let (attrs, link_styles) = link.link.attrs();
 
     view! {
         <a
             {..attrs}
             class=classes
             style=link_styles.merge(styles)
-            data-pressed=flag(link.is_pressed)
-            data-hovered=flag(link.is_hovered)
-            data-focused=flag(link.is_focused)
+            {..data_flags([
+                ("data-pressed", link.is_pressed),
+                ("data-hovered", link.is_hovered),
+                ("data-focused", link.is_focused),
+            ])}
         >
             {children()}
         </a>

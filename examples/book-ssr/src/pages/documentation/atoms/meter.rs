@@ -67,7 +67,7 @@ pub fn PageAtomMeter() -> impl IntoView {
                             "How the value text is formatted: a percent style formats the percentage, other styles the value."
                         </ApiRow>
                         <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the value text (e.g. \u{201c}3 of 4 GB\u{201d})."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the meter when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the meter."</ApiRow>
                         <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">"Ids of elements describing the meter."</ApiRow>

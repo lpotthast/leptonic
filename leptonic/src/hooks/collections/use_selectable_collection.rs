@@ -4,15 +4,7 @@
 // Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    attr,
-    attr::{
-        Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
@@ -24,7 +16,7 @@ use super::{
     use_type_select::{UseTypeSelectInput, UseTypeSelectProps, use_type_select},
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent,
     hooks::{
         focus::use_focus_visible::{Modality, get_modality},
         interactions::use_keyboard::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
@@ -38,11 +30,13 @@ use crate::{
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         modifiers::EventModifiers,
+        part::{Part, Remount},
         platform::device,
         scroll::{
             ScrollIntoViewOpts, ScrollIntoViewportOpts, scroll_into_view, scroll_into_viewport,
         },
         shadow_dom::{get_active_element, get_event_target, node_contains},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -136,10 +130,13 @@ pub struct UseSelectableCollectionInput {
     pub options: CollectionOptions,
 }
 
-/// Return value of [`use_selectable_collection`].
+/// The return value of [`use_selectable_collection`].
 #[derive(Debug)]
 pub struct UseSelectableCollectionReturn {
-    pub props: UseSelectableCollectionProps,
+    /// The collection element.
+    pub collection: Part<UseSelectableCollectionProps>,
+    /// The collection's id (its `data-collection`), for its items' `collection_id`.
+    pub collection_id: Id,
 }
 
 /// Props for the collection element.
@@ -149,7 +146,7 @@ pub struct UseSelectableCollectionProps {
     /// is the tab stop).
     pub tabindex: Signal<Option<i32>>,
     /// Marks the collection, so items can tell their own children from nested collections.
-    pub collection_id: String,
+    pub collection_id: Id,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -160,9 +157,26 @@ pub struct UseSelectableCollectionProps {
     pub on_scroll: EventHandler<Event>,
 }
 
+impl Remount for UseSelectableCollectionProps {
+    fn remount(&self) -> Self {
+        Self {
+            tabindex: self.tabindex,
+            collection_id: self.collection_id.clone(),
+            element_capture: self.element_capture.clone(),
+            on_keydown_capture: self.on_keydown_capture.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+            on_mousedown: self.on_mousedown.clone(),
+            on_scroll: self.on_scroll.clone(),
+        }
+    }
+}
+
 pub type UseSelectableCollectionAttrs = (
-    Attr<attr::Tabindex, Signal<Option<i32>>>,
-    CustomAttr<&'static str, String>,
+    SignalAttr<Option<i32>>,
+    FixedAttr,
     ElementCaptureAttr,
     OnEvent<ev::Capture<ev::keydown>>,
     OnEvent<ev::keydown>,
@@ -178,8 +192,8 @@ impl IntoAttrs for UseSelectableCollectionProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Tabindex, self.tabindex),
-            custom_attribute("data-collection", self.collection_id),
+            signal_attr("tabindex", self.tabindex),
+            fixed_attr("data-collection", self.collection_id),
             self.element_capture,
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
             self.on_keydown.into_on(ev::keydown),
@@ -446,16 +460,18 @@ pub fn use_selectable_collection(
         });
 
     let UseKeyboardReturn {
-        props: repeat_keyboard,
+        target: repeat_keyboard,
     } = use_keyboard(UseKeyboardInput {
         shortcuts: Some(repeatable),
         allow_repeats: true,
         ..UseKeyboardInput::default()
     });
-    let UseKeyboardReturn { props: keyboard } = use_keyboard(UseKeyboardInput {
+    let repeat_keyboard = repeat_keyboard.into_props();
+    let UseKeyboardReturn { target: keyboard } = use_keyboard(UseKeyboardInput {
         shortcuts: Some(once),
         ..UseKeyboardInput::default()
     });
+    let keyboard = keyboard.into_props();
 
     // Remember the scroll position, so focusing the collection again doesn't jump.
     let scroll_position = StoredValue::new((0.0, 0.0));
@@ -721,12 +737,14 @@ pub fn use_selectable_collection(
             selection,
             on_type_select: None,
         })
-        .props;
+        .collection
+        .into_props();
         (on_keydown_capture, on_keydown)
     };
 
     UseSelectableCollectionReturn {
-        props: UseSelectableCollectionProps {
+        collection_id: collection_id.clone(),
+        collection: Part::stored(UseSelectableCollectionProps {
             // With virtual focus, the collection isn't focusable itself.
             tabindex: Signal::derive(move || {
                 (!should_use_virtual_focus).then(|| {
@@ -748,7 +766,7 @@ pub fn use_selectable_collection(
             on_focusout: EventHandler::new(on_focusout),
             on_mousedown: EventHandler::new(on_mousedown),
             on_scroll: EventHandler::new(on_scroll),
-        },
+        }),
     }
 }
 

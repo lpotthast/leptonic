@@ -1,11 +1,22 @@
 # The atom theme
 
 `leptonic-theme/scss/leptonic-atoms.scss` styles leptonic's atoms: a port of react-aria-components' starter styles
-(`~/dev/react-spectrum/starters/docs/src/*.css`, Apache-2.0, Copyright Adobe). Apps opt in with
-`@use "leptonic/leptonic-atoms";` (the build script copies the SCSS into the app's `style-dir`). It is leptonic's
-only theme (the component themes went with the components, 2026-10-07). Kept and maintained (the user,
-2026-10-07); the book styles the atoms itself and never loads it, and the test-app needs no theme (the user,
-2026-10-07): visual checks of the theme need an app of their own.
+(`~/dev/react-spectrum/starters/docs/src/*.css`, Apache-2.0, Copyright Adobe). It is leptonic's only theme, optional
+and maintained (the user). The book styles the atoms itself and never loads it, and the test-app needs none, so
+visual checks of the theme need an app of their own (`PLAN.md`).
+
+## Using it
+
+Apps opt in with `@use "leptonic/leptonic-atoms";`. leptonic's build script copies the SCSS to
+`<style-dir>/leptonic`, configured in the app's `Cargo.toml`:
+
+```toml
+[package.metadata.leptonic]
+style-dir = "style"
+```
+
+The build script finds that `Cargo.toml` by walking up from `OUT_DIR`: a `CARGO_TARGET_DIR` inside the app works as
+is, one elsewhere needs `LEPTONIC_APP_DIR=<app dir>`, or the theme is silently not copied.
 
 ## Files
 
@@ -21,31 +32,26 @@ only theme (the component themes went with the components, 2026-10-07). Kept and
 ## Porting a stylesheet
 
 1. `scripts/port-starter-css.py ListBox.css > leptonic-theme/scss/atoms/list-box.scss` does the mechanical part:
-   the `// Upstream:` header (`scripts/upstream-drift.sh` reports upstream changes), `.react-aria-X` → `.leptonic-X`,
-   dark/light media → the mode mixins.
-2. Map the selectors to our atoms' markup by hand. Read the upstream component (`<Name>.tsx` next to the CSS: it
-   shows which classes and elements the starter renders; add an `// Upstream:` line for it below the CSS's) and our
-   atom (`leptonic/src/atoms/`), and:
-   - Rename classes whose atom has another name: e.g. upstream `Group` (a field's group) →
-     `leptonic-NumberFieldGroup`, `leptonic-DatePickerGroup`; `Row`/`Cell`/`Column` → `leptonic-TableRow`/
-     `leptonic-TableCell`/`leptonic-TableColumnHeader`; `Text` slots → `leptonic-ListBoxItemLabel`/
-     `leptonic-ListBoxItemDescription` (or `MenuItem…`); `Heading` → the atom's heading (`leptonic-DialogTitle`,
-     `leptonic-CalendarHeading`). Keep a selector list when one upstream class covers several atoms.
-   - Utility classes the starter component adds to the atom's element (`button-base`, `indicator`, `inset`) become
+   the `// Upstream:` header, `.react-aria-X` → `.leptonic-X`, dark/light media → the mode mixins.
+2. Map the selectors to our atoms' markup by hand. Read the upstream component (`<Name>.tsx` next to the CSS: which
+   classes and elements the starter renders; add an `// Upstream:` line for it) and our atom, and:
+   - Rename classes whose atom has another name: upstream `Group` → `leptonic-NumberFieldGroup`,
+     `leptonic-DatePickerGroup`; `Row`/`Cell`/`Column` → `leptonic-TableRow`/`leptonic-TableCell`/
+     `leptonic-TableColumnHeader`; `Text` slots → `leptonic-ListBoxItemLabel`/`leptonic-ListBoxItemDescription` (or
+     `MenuItem…`); `Heading` → the atom's heading (`leptonic-DialogTitle`, `leptonic-CalendarHeading`). Keep a
+     selector list when one upstream class covers several atoms.
+   - Utility classes the starter adds to the atom's element (`button-base`, `indicator`, `inset`) become
      `@include utilities.<name>` on the atom selectors inside `@layer utilities { .. }` at the top of the file
-     (see `button.scss`), so the atoms' own rules still win, as upstream.
-   - Classes of parts the starter component renders itself (e.g. a checkbox's `.indicator` box with its `svg`, a
-     slider's `track inset` around the fill, a select's chevron) stay as they are: apps render that markup. Document
-     it in the file's header comment ("Markup: ...").
+     (`button.scss`), so the atoms' own rules still win, as upstream.
+   - Classes of parts the starter renders itself (a checkbox's `.indicator` box with its `svg`, a slider's
+     `track inset`, a select's chevron) stay: apps render that markup. Document it in the header ("Markup: ...").
    - Variants upstream passes as props become data attributes the app sets (`attr:data-variant="secondary"`),
      documented in the header.
-   - Data attributes: our atoms render the same `data-*` state attributes as react-aria-components (absent when
-     false). Where an atom lacks one the stylesheet uses, note it in `PLAN.md` instead of working around it.
-   - Drop rules for atoms we don't have (record them in `PLAN.md`).
+   - Our atoms render the same `data-*` state attributes as react-aria-components (absent when false). Where an atom
+     lacks one the stylesheet uses, or an atom is missing, note it in `PLAN.md` instead of working around it.
 3. Compile: `~/.cache/cargo-leptos/sass-*/sass-*/dart-sass/sass leptonic-theme/scss/leptonic-atoms.scss out.css`.
 
 ## Absorbing upstream changes
 
-`scripts/upstream-drift.sh -v leptonic-theme/` lists upstream commits since each file's sync point (both its
-`.css` and `.tsx` lines); re-run the converter on the new upstream file, diff against ours, port the changes, and
-`--mark-synced` the file.
+`scripts/upstream-drift.sh -v leptonic-theme/` lists upstream commits since each file's sync point (its `.css` and
+`.tsx` lines); re-run the converter on the new upstream file, diff against ours, port the changes, `--mark-synced`.

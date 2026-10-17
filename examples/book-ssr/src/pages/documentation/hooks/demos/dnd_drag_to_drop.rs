@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::dnd::{
         DragEndEvent, DragItem, DragType, DropEvent, DropItem, DropOperation, DropOperationQuery,
@@ -97,7 +97,7 @@ fn Card(drag: UseDragReturn, title: &'static str, content: &'static str) -> impl
     view! {
         // Focusable, so that Enter starts a keyboard drag.
         <div
-            {..drag.drag_props.into_attrs()}
+            {..drag.draggable.attrs()}
             role="button"
             tabindex="0"
             class="demo-dnd-card"
@@ -118,7 +118,7 @@ fn Target(
     // The last 50 drops.
     let dropped = RwSignal::new(VecDeque::<String>::new());
     let UseDropReturn {
-        drop_props,
+        drop_target,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -144,9 +144,9 @@ fn Target(
 
     view! {
         <div class="demo-dnd-target-column">
-            // The props capture the element; keyboard drags focus it.
+            // The part captures the element; keyboard drags focus it.
             <div
-                {..drop_props.into_attrs()}
+                {..drop_target.attrs()}
                 role="button"
                 tabindex="0"
                 class="demo-dnd-target"

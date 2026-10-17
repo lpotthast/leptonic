@@ -57,7 +57,7 @@ fn Subject(state: StoredValue<Option<MenuTriggerState>>) -> impl IntoView {
     });
     let menu_id = trigger.menu_props.id;
     let labelled_by = trigger.menu_props.aria_labelledby;
-    let (attrs, styles) = use_button(trigger.button).props.into_parts();
+    let (attrs, styles) = use_button(trigger.button).button.attrs();
     let is_open = menu_state.overlay.is_open;
     let strategy = menu_state.focus_strategy;
     let shown_strategy = move || match strategy.get() {

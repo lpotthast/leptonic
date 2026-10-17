@@ -14,7 +14,7 @@
 //
 // =============================================================================
 
-use crate::IdRefs;
+use crate::{Id, utils::id::IdListBuilder};
 
 /// The labelling attributes of an element, from [`labels`].
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -22,24 +22,41 @@ pub struct Labels {
     /// `aria-label`.
     pub aria_label: Option<String>,
     /// `aria-labelledby`.
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Option<Id>,
 }
 
 /// The labelling of the element `id`, named by `aria_label` and/or the elements `aria_labelledby`
 /// lists. With both (an empty `aria_label` counts as none), the element's own id joins the
 /// labelling ids (first), so that the label is part of its name; the ids are normalized (each
 /// once, single spaces). `aria_label` is returned as given. Upstream: `useLabels`.
-pub fn labels(id: &str, aria_label: Option<String>, aria_labelledby: Option<&str>) -> Labels {
-    let mut refs = IdRefs::default();
+pub fn labels(id: &Id, aria_label: Option<String>, aria_labelledby: Option<&Id>) -> Labels {
     let has_label = aria_label.as_deref().is_some_and(|label| !label.is_empty());
-    if has_label && aria_labelledby.is_some_and(|ids| !ids.trim().is_empty()) {
-        refs.push(id);
-    }
-    refs.extend(aria_labelledby);
     Labels {
+        aria_labelledby: labelledby_ids(id, has_label, aria_labelledby),
         aria_label,
-        aria_labelledby: refs.into_value(),
     }
+}
+
+/// [`labels`]' `aria-labelledby` for [`Id`]s: the labelling of the element `id`, named by an
+/// `aria-label` (`has_aria_label`: a non-empty one) and/or `aria_labelledby`. Shares the given
+/// list when it needs no change (no allocation).
+///
+/// Migration: takes `labels`' name once every reference is an `Id`.
+pub(crate) fn labelledby_ids(
+    id: &Id,
+    has_aria_label: bool,
+    aria_labelledby: Option<&Id>,
+) -> Option<Id> {
+    let labelledby = aria_labelledby.filter(|ids| !ids.trim().is_empty())?;
+    if !has_aria_label && labelledby.is_joined() {
+        return Some(labelledby.clone());
+    }
+    let mut ids = IdListBuilder::default();
+    if has_aria_label {
+        ids.push(id);
+    }
+    ids.push(labelledby);
+    ids.finish()
 }
 
 #[cfg(test)]
@@ -51,7 +68,7 @@ mod tests {
     // Upstream has no test of `useLabels`; the cases follow its implementation.
     #[test]
     fn label_only() {
-        assert_that!(labels("el", Some("Name".to_owned()), None)).is_equal_to(Labels {
+        assert_that!(labels(&Id::from("el"), Some("Name".to_owned()), None)).is_equal_to(Labels {
             aria_label: Some("Name".to_owned()),
             aria_labelledby: None,
         });
@@ -59,31 +76,62 @@ mod tests {
 
     #[test]
     fn labelledby_only_is_normalized() {
-        assert_that!(labels("el", None, Some("  a   b a "))).is_equal_to(Labels {
-            aria_label: None,
-            aria_labelledby: Some("a b".to_owned()),
-        });
+        assert_that!(labels(&Id::from("el"), None, Some(&Id::from("  a   b a ")))).is_equal_to(
+            Labels {
+                aria_label: None,
+                aria_labelledby: Some(Id::from("a b")),
+            },
+        );
     }
 
     #[test]
     fn both_add_the_own_id_first() {
-        assert_that!(labels("el", Some("Name".to_owned()), Some("a el b"))).is_equal_to(Labels {
+        assert_that!(labels(
+            &Id::from("el"),
+            Some("Name".to_owned()),
+            Some(&Id::from("a el b"))
+        ))
+        .is_equal_to(Labels {
             aria_label: Some("Name".to_owned()),
-            aria_labelledby: Some("el a b".to_owned()),
+            aria_labelledby: Some(Id::from("el a b")),
         });
     }
 
     #[test]
     fn an_empty_label_counts_as_none() {
-        assert_that!(labels("el", Some(String::new()), Some("a"))).is_equal_to(Labels {
+        assert_that!(labels(
+            &Id::from("el"),
+            Some(String::new()),
+            Some(&Id::from("a"))
+        ))
+        .is_equal_to(Labels {
             aria_label: Some(String::new()),
-            aria_labelledby: Some("a".to_owned()),
+            aria_labelledby: Some(Id::from("a")),
         });
     }
 
     #[test]
+    fn ids_variant_matches() {
+        let el = Id::from("el");
+        assert_that!(labelledby_ids(&el, true, Some(&Id::from("a el b"))))
+            .is_equal_to(Some(Id::from("el a b")));
+        assert_that!(labelledby_ids(&el, false, Some(&Id::from("  a   b a "))))
+            .is_equal_to(Some(Id::from("a b")));
+        assert_that!(labelledby_ids(&el, true, Some(&Id::from("  ")))).is_none();
+        assert_that!(labelledby_ids(&el, true, None)).is_none();
+    }
+
+    #[test]
     fn neither() {
-        assert_that!(labels("el", None, None)).is_equal_to(Labels::default());
-        assert_that!(labels("el", Some("Name".to_owned()), Some("  ")).aria_labelledby).is_none();
+        assert_that!(labels(&Id::from("el"), None, None)).is_equal_to(Labels::default());
+        assert_that!(
+            labels(
+                &Id::from("el"),
+                Some("Name".to_owned()),
+                Some(&Id::from("  "))
+            )
+            .aria_labelledby
+        )
+        .is_none();
     }
 }

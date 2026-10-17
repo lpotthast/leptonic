@@ -142,3 +142,37 @@ pub async fn holding_the_remove_key(page: &Page<'_>) -> Result<(), Report> {
     }
     Ok(())
 }
+
+/// Until a tag has been focused, every tag is a tab stop; once one is, only that one is
+/// ("handles keyboard focus management properly", React Spectrum's `TagGroup.test.js`).
+#[browser_test]
+pub async fn tab_stops(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let tags = page.elements("[role=grid] [role=row]").await?;
+    assert_that!(&tags).has_length(4);
+    for tag in &tags {
+        assert_that!(tag)
+            .has_attribute("tabindex")
+            .await
+            .is_equal_to("0");
+    }
+    page.element("#test-tg-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&tags[0]).await?;
+    tags[1].wait_for_attr("tabindex", Some("-1")).await?;
+    assert_that!(&tags[0])
+        .has_attribute("tabindex")
+        .await
+        .is_equal_to("0");
+    for tag in &tags[2..] {
+        assert_that!(tag)
+            .has_attribute("tabindex")
+            .await
+            .is_equal_to("-1");
+    }
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&tags[1]).await?;
+    tags[1].wait_for_attr("tabindex", Some("0")).await?;
+    tags[0].wait_for_attr("tabindex", Some("-1")).await?;
+    Ok(())
+}

@@ -7,8 +7,10 @@ use wasm_bindgen::JsCast;
 ///
 /// **Exception:** `current_target` becomes `null` after the handler returns (per DOM spec),
 /// so stored/deferred events must use `if let Some(...)` for `.current_target()`.
-pub(crate) trait EventAccessors {
+pub trait EventAccessors {
+    /// The event's target (`Some` while the event is dispatched).
     fn expect_target(&self) -> web_sys::EventTarget;
+    /// The element whose listener runs (`Some` while the event is dispatched).
     fn expect_current_target(&self) -> web_sys::EventTarget;
 }
 

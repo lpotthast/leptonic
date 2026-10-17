@@ -737,3 +737,25 @@ pub async fn aria_group_server_validation(page: &Page<'_>) -> Result<(), Report>
     inputs[0].wait_for_attr("aria-invalid", None).await?;
     Ok(())
 }
+
+/// A `CheckboxButton` mounted again works again: its `CheckboxField` hands it the checkbox back when it unmounts
+/// (no upstream test: React passes the props on every render).
+#[browser_test]
+pub async fn button_mounts_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let toggle = page.element("#test-cb-remount-toggle").await?;
+    toggle.click().await?;
+    page.wait_for_count(css("label").text("Remounted"), 0)
+        .await?;
+    toggle.click().await?;
+    let label = page.element(css("label").text("Remounted")).await?;
+    let input = label.element("input").await?;
+    label.click().await?;
+    label.wait_for_attr("data-selected", Some("true")).await?;
+    page.element("#test-cb-remounted-value")
+        .await?
+        .wait_for_inner_text("true")
+        .await?;
+    assert_that!(input).selected().await.is_true();
+    Ok(())
+}

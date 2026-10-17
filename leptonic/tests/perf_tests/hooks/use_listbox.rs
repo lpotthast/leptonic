@@ -4,8 +4,6 @@
 //! (`tests/budgets/hooks/use_listbox.json`): mounting and unmounting the listbox, keyboard focus
 //! coming in and leaving, keyboard navigation, select all and Escape, type-ahead, and changes of
 //! its reactive input (orientation, label), with 10 options and with 1,000.
-//!
-//! `use_option`'s performance test uses the same fixture and the helpers here.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -32,25 +30,25 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(Orientation))
         .with(fixture_test(AriaLabel))
 }
-pub(crate) const LISTBOX: &str = "[role=listbox]";
-pub(crate) const OPTIONS: &str = "[data-perf-option]";
+const LISTBOX: &str = "[role=listbox]";
+const OPTIONS: &str = "[data-perf-option]";
 /// The fixture's options after the control `large`.
-pub(crate) const LARGE: u32 = 1_000;
+const LARGE: u32 = 1_000;
 
 /// The option "Option `i`".
-pub(crate) fn option(i: u32) -> String {
+fn option(i: u32) -> String {
     format!("[data-perf-option='{i}']")
 }
 
 /// Switches to [`LARGE`] options (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.element(option(LARGE - 1)).await?;
     Ok(())
 }
 
 /// Focuses the first option with the keyboard (Tab from the plain button before the listbox).
-pub(crate) async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
+async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#perf-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     let first = page.element(option(0)).await?;
@@ -59,7 +57,7 @@ pub(crate) async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
 }
 
 /// The `data-perf-option` of the focused element.
-pub(crate) async fn focused_option(page: &Page<'_>) -> Result<Option<String>, Report> {
+async fn focused_option(page: &Page<'_>) -> Result<Option<String>, Report> {
     Ok(page
         .focused_element()
         .await?
@@ -112,7 +110,7 @@ pub async fn keyboard_focus_and_blur(page: &Page<'_>) -> Result<(), Report> {
 
 /// ArrowDown, ArrowUp, End, Home, PageDown and PageUp moving the focus, from the first option
 /// of `last + 1`.
-pub(crate) async fn keyboard_navigation_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn keyboard_navigation_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     tab_in(page).await?;
     page.measure("arrow down", page.send_keys(Key::Down))
         .await?;
@@ -149,7 +147,7 @@ pub async fn keyboard_navigation_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// Ctrl+A selecting every option and Escape clearing the selection, from the first option of
 /// `last + 1`.
-pub(crate) async fn select_all_and_clear_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn select_all_and_clear_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     tab_in(page).await?;
     let last = page.element(option(last)).await?;
     let select_all = page.primary_modifier().await? + "a";
@@ -178,7 +176,7 @@ pub async fn select_all_and_clear_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// Type-ahead from the first option: "x" matches no option (a search through all of them), "o"
 /// matches the focused option (the search starts at it). (Measured last: the search resets a second later.)
-pub(crate) async fn type_ahead_in(page: &Page<'_>) -> Result<(), Report> {
+async fn type_ahead_in(page: &Page<'_>) -> Result<(), Report> {
     tab_in(page).await?;
     page.measure("no match", page.send_keys("x")).await?;
     assert_that!(focused_option(page).await?).is_equal_to(Some("0".to_owned()));

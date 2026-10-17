@@ -89,6 +89,7 @@ pub fn PageAtomTagGroup() -> impl IntoView {
                 <Section title="Props" id="taggroup-props">
                     <ApiTable kind=ApiKind::Props of="TagGroup">
                         <ApiRow name="collection" ty="CollectionMemo">"The tags. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The tag list\u{2019}s id (its tags\u{2019} ids derive from it). Generated when not given."</ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>
                             " tags can be selected."

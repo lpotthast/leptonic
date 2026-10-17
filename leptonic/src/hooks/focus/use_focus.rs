@@ -1,17 +1,30 @@
 // Upstream: react-aria/src/interactions/useFocus.ts @ 99e6102368
 // Upstream: react-aria/test/interactions/useFocus.test.js @ 99e6102368
+use std::sync::Arc;
+
 use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
-use crate::{EventHandler, IntoAttrs, OnEvent};
+use crate::{
+    EventHandler, IntoAttrs, OnEvent,
+    utils::part::{Part, Remount},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
+// ## API DIFFERENCES
+// - `mark` (a `FocusMark`): a reaction to the focus state that runs before the callbacks, for
+//   hooks tracking the state themselves on top of the caller's callbacks (`use_focus_ring`). Not
+//   in react-aria, whose `useFocusRing` passes only its own `onFocusChange` (ours also forwards
+//   the caller's callbacks: one `Arc` instead of wrapping each in a new `Callback`,
+//   `performance.md` R8).
+//
 // ## DIFFERENT BEHAVIOR
-// - The handlers are always attached and check `is_disabled` when they run (react-aria attaches
-//   none when there are no callbacks): `is_disabled` is reactive.
+// - The handlers are attached whenever there is a callback, and check `is_disabled` when they run
+//   (react-aria attaches none while disabled): `is_disabled` is reactive. As react-aria, without
+//   callbacks none are attached.
 // - A blur is reported only after a reported focus, once: Chrome fires its own blur for an
 //   element disabled while focused after the synthetic one (react-aria would report both).
 //
@@ -22,8 +35,34 @@ use crate::{EventHandler, IntoAttrs, OnEvent};
 //
 // =============================================================================
 
+/// A reaction to an element's focus state, run before [`use_focus`]'s callbacks: `true` before
+/// `on_focus`, `false` before `on_blur`, under the same conditions. For hooks that track the focus
+/// state themselves and also forward their caller's callbacks (`use_focus_ring`): the state is
+/// up to date when the callbacks run. One allocation (the `Arc`), unlike wrapping the caller's
+/// callbacks in new `Callback`s.
+#[derive(Clone)]
+pub struct FocusMark(Arc<dyn Fn(bool) + Send + Sync>);
+
+impl FocusMark {
+    /// Runs `mark` with the new focus state.
+    pub fn new(mark: impl Fn(bool) + Send + Sync + 'static) -> Self {
+        Self(Arc::new(mark))
+    }
+
+    #[cfg_attr(feature = "ssr", allow(dead_code))]
+    fn run(&self, is_focused: bool) {
+        (self.0)(is_focused);
+    }
+}
+
+impl std::fmt::Debug for FocusMark {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("FocusMark")
+    }
+}
+
 /// Input of [`use_focus`].
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct UseFocusInput {
     /// Disables the handling of focus events when true.
     pub is_disabled: Signal<bool>,
@@ -33,13 +72,16 @@ pub struct UseFocusInput {
     pub on_blur: Option<Callback<FocusEvent>>,
     /// Called when the element's focus state changes.
     pub on_focus_change: Option<Callback<bool>>,
+    /// Runs before the callbacks with the new focus state (a hook tracking the state itself).
+    /// Default: `None`.
+    pub mark: Option<FocusMark>,
 }
 
 /// The return value of [`use_focus`].
 #[derive(Debug)]
 pub struct UseFocusReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseFocusProps,
+    /// The element whose focus is tracked.
+    pub target: Part<UseFocusProps>,
 }
 
 /// Props from `use_focus` that can be extracted and merged programmatically.
@@ -50,6 +92,15 @@ pub struct UseFocusReturn {
 pub struct UseFocusProps {
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
+}
+
+impl Remount for UseFocusProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseFocusProps {
@@ -73,10 +124,10 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     {
         let _ = input;
         UseFocusReturn {
-            props: UseFocusProps {
+            target: Part::stored(UseFocusProps {
                 on_focus: EventHandler::empty(),
                 on_blur: EventHandler::empty(),
-            },
+            }),
         }
     }
 
@@ -87,6 +138,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         use crate::utils::{
             dom_ext::{EventAccessors, EventTargetExt},
             shadow_dom,
+            stored_field::StoredField,
             synthetic_blur::SyntheticBlurObserver,
         };
 
@@ -95,15 +147,28 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             on_focus,
             on_blur,
             on_focus_change,
+            mark,
         } = input;
 
-        // Blur events for a form element disabled while focused (Firefox fires none). Set up on
-        // focus, dropped on blur or unmount.
-        let blur_observer: StoredValue<Option<SyntheticBlurObserver>, LocalStorage> =
-            StoredValue::new_local(None);
-        // Whether the element has focus (as reported): a blur ends it once. Chrome blurs an element
-        // disabled while focused only after the synthetic blur was dispatched.
-        let has_focus = StoredValue::new(false);
+        // Nothing to report to: no handlers (react-aria).
+        if on_focus.is_none() && on_blur.is_none() && on_focus_change.is_none() && mark.is_none() {
+            return UseFocusReturn {
+                target: Part::stored(UseFocusProps {
+                    on_focus: EventHandler::empty(),
+                    on_blur: EventHandler::empty(),
+                }),
+            };
+        }
+        let blur_mark = mark.clone();
+
+        // The focus state, in one `StoredValue` (`performance.md` R7). The blur observer: blur
+        // events for a form element disabled while focused (Firefox fires none), set up on focus,
+        // dropped on blur or unmount. Whether the element has focus (as reported): a blur ends it
+        // once. Chrome blurs an element disabled while focused only after the synthetic blur was
+        // dispatched.
+        let state = StoredValue::new_local((None::<SyntheticBlurObserver>, false));
+        let blur_observer = StoredField::new(state, |s| &s.0, |s| &mut s.0);
+        let has_focus = StoredField::new(state, |s| &s.1, |s| &mut s.1);
 
         let handle_focus = move |e: FocusEvent| {
             // The event is the element's own, and the active element is the focused one, in case
@@ -126,6 +191,9 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
                 }
                 has_focus.set_value(true);
 
+                if let Some(mark) = &mark {
+                    mark.run(true);
+                }
                 if let Some(on_focus) = on_focus {
                     on_focus.run(e);
                 }
@@ -149,6 +217,9 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
                 && !is_disabled
                 && has_focus.try_update_value(|f| std::mem::replace(f, false)) == Some(true)
             {
+                if let Some(mark) = &blur_mark {
+                    mark.run(false);
+                }
                 if let Some(on_blur) = on_blur {
                     on_blur.try_run(e);
                 }
@@ -164,10 +235,10 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         });
 
         UseFocusReturn {
-            props: UseFocusProps {
+            target: Part::stored(UseFocusProps {
                 on_focus: EventHandler::new(handle_focus),
                 on_blur: EventHandler::new(handle_blur),
-            },
+            }),
         }
     }
 }

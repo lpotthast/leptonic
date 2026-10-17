@@ -1,19 +1,20 @@
 // Upstream: react-aria/src/focus/useFocusRing.ts @ 99e6102368
 // Upstream: react-aria-components/test/ShadowDOMFocus.browser.test.tsx @ 99e6102368
-use leptos::{
-    attr::custom::{CustomAttr, custom_attribute},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
 use crate::{
     EventHandler, IntoAttrs, OnEvent,
     hooks::focus::{
-        use_focus::{UseFocusInput, use_focus},
+        use_focus::{FocusMark, UseFocusInput, use_focus},
         use_focus_within::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
     },
-    utils::data_attributes::flag,
+    utils::{
+        data_attributes::flag,
+        part::{Part, Remount},
+        reactions::when_true,
+        signal_attr::{SignalAttr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -73,17 +74,15 @@ pub struct UseFocusRingInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
-/// The return value of the `use_focus_ring` hook.
+/// The return value of [`use_focus_ring`].
 #[derive(Debug)]
 pub struct UseFocusRingReturn {
     /// Whether the focus ring should be visible.
     pub is_focus_visible: Signal<bool>,
-
     /// Whether the element is currently focused (or has focus within, for [`FocusRingTarget::Within`]).
     pub is_focused: Signal<bool>,
-
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseFocusRingProps,
+    /// The element showing the focus ring.
+    pub target: Part<UseFocusRingProps>,
 }
 
 /// Props from `use_focus_ring` that can be extracted and merged programmatically.
@@ -97,6 +96,18 @@ pub struct UseFocusRingProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
+impl Remount for UseFocusRingProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+            data_focus_visible: self.data_focus_visible,
+        }
+    }
+}
+
 impl IntoAttrs for UseFocusRingProps {
     type Attrs = UseFocusRingAttrs;
 
@@ -106,7 +117,7 @@ impl IntoAttrs for UseFocusRingProps {
             self.on_blur.into_on(ev::blur),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-            custom_attribute("data-focus-visible", self.data_focus_visible),
+            signal_attr("data-focus-visible", self.data_focus_visible),
         )
     }
 }
@@ -117,7 +128,7 @@ pub type UseFocusRingAttrs = (
     OnEvent<ev::blur>,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
-    CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    SignalAttr<Option<&'static str>>,
 );
 
 /// Determines whether a focus ring should be displayed for an element.
@@ -140,7 +151,7 @@ pub type UseFocusRingAttrs = (
 ///
 /// view! {
 ///     <button
-///         {..focus_ring.props.into_attrs()}
+///         {..focus_ring.target.attrs()}
 ///         tabindex="0"
 ///     >
 ///         "Focus me"
@@ -172,11 +183,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     let (focused, set_focused) = signal(false);
     // Disabled, the focus handlers are off: the element no longer counts as focused (it would stay
     // so until the next blur after enabling).
-    Effect::new(move || {
-        if disabled.get() {
-            set_focused.set(false);
-        }
-    });
+    when_true(disabled, move || set_focused.set(false));
 
     // Whether focus is visible, from the modality when the element got focus (react-aria's
     // `onFocusChange` reads `isFocusVisible()`), then following the change notifications. Read
@@ -189,7 +196,9 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
         let kind = ListenerKind::from_is_text_input(is_text_input);
         let since = StoredValue::new(None::<FocusVisibleSince>);
         let changes = FocusState::get().changes.clone();
-        let focus_visible = Memo::new(move |_| {
+        // A derive, not a memo: its readers (the attribute, the atom's) are as cheap as a memo's
+        // recomputation, and a memo costs 8 allocations, 2 per read (`performance.md` R5).
+        let focus_visible = Signal::derive(move || {
             focused.get()
                 && since
                     .get_value()
@@ -206,7 +215,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
             }
             set_focused.set(is_focused);
         };
-        (Signal::from(focus_visible), mark_focused)
+        (focus_visible, mark_focused)
     };
     #[cfg(feature = "ssr")]
     let (focus_visible, mark_focused) = {
@@ -228,13 +237,13 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     UseFocusRingReturn {
         is_focus_visible: focus_visible,
         is_focused: focused.into(),
-        props: UseFocusRingProps {
+        target: Part::stored(UseFocusRingProps {
             on_focus: handle_focus,
             on_blur: handle_blur,
             on_focusin: handle_focusin,
             on_focusout: handle_focusout,
             data_focus_visible: Signal::derive(flag(focus_visible)),
-        },
+        }),
     }
 }
 
@@ -269,35 +278,29 @@ fn track_focus(
             })),
             on_focus_within_change: on_focus_change,
         });
+        let focus_within_props = focus_within.target.into_props();
 
         (
             EventHandler::empty(),
             EventHandler::empty(),
-            focus_within.props.on_focusin,
-            focus_within.props.on_focusout,
+            focus_within_props.on_focusin,
+            focus_within_props.on_focusout,
         )
     } else {
-        // Track focus on the element itself.
+        // Track focus on the element itself: `use_focus` marks the state before the callbacks.
         let focus = use_focus(UseFocusInput {
             is_disabled: disabled,
-            on_focus: Some(Callback::new(move |e| {
-                set_focused(true);
-                if let Some(on_focus) = on_focus {
-                    on_focus.run(e);
-                }
-            })),
-            on_blur: Some(Callback::new(move |e| {
-                set_focused(false);
-                if let Some(on_blur) = on_blur {
-                    on_blur.try_run(e);
-                }
-            })),
+            on_focus,
+            on_blur,
             on_focus_change,
-        });
+            mark: Some(FocusMark::new(set_focused)),
+        })
+        .target
+        .into_props();
 
         (
-            focus.props.on_focus,
-            focus.props.on_blur,
+            focus.on_focus,
+            focus.on_blur,
             EventHandler::empty(),
             EventHandler::empty(),
         )

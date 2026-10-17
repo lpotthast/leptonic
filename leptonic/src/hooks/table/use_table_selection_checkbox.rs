@@ -4,7 +4,7 @@ use leptos::prelude::*;
 
 use super::TableData;
 use crate::{
-    IdRefs, ValueBinding,
+    ValueBinding,
     hooks::{
         collections::{Key, SelectionMode},
         form::{
@@ -45,9 +45,7 @@ pub fn use_table_selection_checkbox(input: UseTableSelectionCheckboxInput) -> Us
     // Its own label, then the row's (following the row header columns and cells).
     let own_id = checkbox.options.id.clone();
     checkbox.options.aria_labelledby = Memo::new(move |_| {
-        let mut labelledby: IdRefs = own_id.iter().collect();
-        labelledby.extend(table.row_labelledby(&key).ids());
-        labelledby.into_value()
+        crate::utils::id::join_ids([own_id.clone(), table.row_labelledby(&key)])
     })
     .into();
     checkbox
@@ -97,5 +95,6 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
             ..ToggleOptions::default()
         },
         state,
+        validation: None,
     }
 }

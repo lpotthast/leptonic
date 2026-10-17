@@ -5,7 +5,7 @@
 //! read how often a hover started (`hovers`).
 
 use leptonic::{
-    IntoAttrs, flag,
+    flag,
     hooks::interactions::{UseHoverInput, use_hover},
 };
 use leptos::prelude::*;
@@ -46,7 +46,7 @@ fn Hovered(disabled: RwSignal<bool>, hover_count: StoredValue<u32>) -> impl Into
         ..UseHoverInput::default()
     });
     view! {
-        <div id="perf-hover" {..hover.props.into_attrs()} data-hovered=flag(hover.is_hovered)>
+        <div id="perf-hover" {..hover.target.attrs()} data-hovered=flag(hover.is_hovered)>
             "Hover me"
         </div>
     }

@@ -5,8 +5,6 @@
 //! (mounting) and dropping it, and rebuilding it when its data changes (an item appended and
 //! removed, renamed, the order reversed, and a change the collection doesn't depend on, which
 //! notifies nobody), with 10 items and with 1,000.
-//!
-//! `use_list_collection`'s performance test uses the same fixture and the helpers here.
 use browser_test::{TestGroup, browser_test};
 use rootcause::Report;
 
@@ -40,14 +38,14 @@ fn item(i: u32) -> String {
 }
 
 /// Switches to 1,000 items (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.wait_for_count(ITEMS, 1_000).await?;
     Ok(())
 }
 
 /// Building the collection of `count` items (mounting) and dropping it.
-pub(crate) async fn mount_and_unmount_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
+async fn mount_and_unmount_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
     page.control("unmount").await?;
     page.wait_for_count(LIST, 0).await?;
     page.measure("mount", page.control("mount")).await?;
@@ -58,7 +56,7 @@ pub(crate) async fn mount_and_unmount_in(page: &Page<'_>, count: usize) -> Resul
 }
 
 /// An item appended to `count` and removed again.
-pub(crate) async fn append_and_remove_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
+async fn append_and_remove_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
     page.measure("append", page.control("append")).await?;
     page.element(item(count)).await?;
     page.measure("remove", page.control("remove-last")).await?;
@@ -67,7 +65,7 @@ pub(crate) async fn append_and_remove_in(page: &Page<'_>, count: u32) -> Result<
 }
 
 /// The first item renamed and back.
-pub(crate) async fn rename_in(page: &Page<'_>) -> Result<(), Report> {
+async fn rename_in(page: &Page<'_>) -> Result<(), Report> {
     page.measure("rename", page.control("rename-first")).await?;
     page.element(item(0))
         .await?
@@ -83,7 +81,7 @@ pub(crate) async fn rename_in(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The order of `count` items reversed and back.
-pub(crate) async fn reverse_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
+async fn reverse_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
     page.measure("reverse", page.control("reverse")).await?;
     page.element(format!("{ITEMS}:first-child{}", item(count - 1)))
         .await?;
@@ -95,7 +93,7 @@ pub(crate) async fn reverse_in(page: &Page<'_>, count: u32) -> Result<(), Report
 
 /// A change of data the build reads but the collection doesn't depend on: the build runs, the
 /// equal collection notifies nobody (the list keeps its `count` entries).
-pub(crate) async fn unchanged_rebuild_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
+async fn unchanged_rebuild_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
     page.measure("touch", page.control("touch")).await?;
     page.count_stays(ITEMS, count, std::time::Duration::from_millis(100))
         .await?;

@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel},
-};
+use leptonic::hooks::interactions::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel};
 use leptos::prelude::*;
 
 /// `use_scroll_wheel`: a target logging every scroll as `delta_x,delta_y` (pixels) to
@@ -19,7 +16,7 @@ pub fn PageHookScrollWheel() -> impl IntoView {
         <div id="test-page-hook-scroll-wheel">
             <h1>"use_scroll_wheel"</h1>
             <div on:wheel=move |_| log.update(|l| l.push("wrapper".to_owned()))>
-                <div id="test-scroll-wheel-target" tabindex="0" {..scroll_wheel.props.into_attrs()}>
+                <div id="test-scroll-wheel-target" tabindex="0" {..scroll_wheel.target.attrs()}>
                     "Scroll here"
                 </div>
             </div>

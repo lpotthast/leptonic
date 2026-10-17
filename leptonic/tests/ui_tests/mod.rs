@@ -41,6 +41,7 @@ pub mod test_grid_list;
 pub mod test_grid_list_cases;
 pub mod test_grid_list_features;
 pub mod test_has_tabbable_child;
+pub mod test_hide_outside;
 pub mod test_helpers;
 pub mod test_hover;
 pub mod test_hydration_ids;
@@ -62,6 +63,7 @@ pub mod test_move;
 pub mod test_number_field;
 pub mod test_number_field_atoms;
 pub mod test_orphan_parts;
+pub mod test_own_ids;
 pub mod test_overlay;
 pub mod test_overlay_position;
 pub mod test_overlay_state;
@@ -70,6 +72,7 @@ pub mod test_press;
 pub mod test_pressable;
 pub mod test_progress_bar;
 pub mod test_radio_group;
+pub mod test_remounted_parts;
 pub mod test_scroll;
 pub mod test_scroll_wheel;
 pub mod test_search_field;
@@ -102,6 +105,7 @@ pub mod test_use_button;
 pub mod test_virtual_list;
 pub mod test_virtualizer;
 pub mod test_visually_hidden;
+pub mod test_wheel_stepping;
 
 use std::sync::OnceLock;
 
@@ -489,6 +493,30 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_scroll_wheel::ControlWheelZooms)),
         )
         .with_test_group(
+            TestGroup::new("wheel_stepping")
+                .with(fixture_test(test_wheel_stepping::TheWheelStepsTheFocusedField))
+                .with(fixture_test(
+                    test_wheel_stepping::FocusWithinTheFieldLetsTheWheelStep,
+                ))
+                .with(fixture_test(test_wheel_stepping::AnUnfocusedFieldIgnoresTheWheel))
+                .with(fixture_test(test_wheel_stepping::AHorizontalWheelDoesntStep))
+                .with(fixture_test(test_wheel_stepping::AReadOnlyFieldDoesntStep))
+                .with(fixture_test(test_wheel_stepping::ADisabledFieldDoesntStep))
+                .with(fixture_test(test_wheel_stepping::AWheelDisabledFieldDoesntStep)),
+        )
+        .with_test_group(
+            TestGroup::new("hide_outside")
+                .with(fixture_test(
+                    test_hide_outside::AModalMakesThePageInertWhileOpen,
+                ))
+                .with(fixture_test(
+                    test_hide_outside::ANonModalOverlayLeavesThePageAlone,
+                ))
+                .with(fixture_test(
+                    test_hide_outside::ANonModalOverlayStaysUsableOverAModal,
+                )),
+        )
+        .with_test_group(
             TestGroup::new("hover")
                 .with(fixture_test(test_hover::TargetIsTheHookedElement))
                 .with(fixture_test(test_hover::NoHoverByTouch))
@@ -570,7 +598,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_color_field::MouseWheel))
                 .with(fixture_test(test_color_field::Flags))
                 .with(fixture_test(test_color_field::FormReset))
-                .with(fixture_test(test_color_field::Channel)),
+                .with(fixture_test(test_color_field::Channel))
+                .with(fixture_test(test_color_field::ChannelMouseWheel)),
         )
         .with_test_group(
             TestGroup::new("color_picker")
@@ -900,6 +929,10 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                     test_listbox_features::LabelsFollowTheCollection,
                 ))
                 .with(fixture_test(test_listbox_features::RenamedItemsUpdate))
+                .with(fixture_test(
+                    test_listbox_features::SectionHeadingMountsAgain,
+                ))
+                .with(fixture_test(test_listbox_features::OwnId))
                 .with(fixture_test(test_listbox_selection::SingleSelection))
                 .with(fixture_test(test_listbox_selection::FixedSingleSelection))
                 .with(fixture_test(
@@ -967,6 +1000,46 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_orphan_parts::CheckboxFieldWithoutValue)),
         )
         .with_test_group(
+            TestGroup::new("remounted_parts")
+                .with(fixture_test(test_remounted_parts::DescriptionMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondDescription))
+                .with(fixture_test(test_remounted_parts::FieldErrorMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondFieldError))
+                .with(fixture_test(test_remounted_parts::LabelMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondLabel))
+                .with(fixture_test(test_remounted_parts::InputMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondInput))
+                .with(fixture_test(test_remounted_parts::OptionLabelMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondOptionLabel))
+                .with(fixture_test(test_remounted_parts::OptionDescriptionMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondOptionDescription))
+                .with(fixture_test(test_remounted_parts::SecondSectionHeading))
+                .with(fixture_test(test_remounted_parts::DialogTitleMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondDialogTitle))
+                .with(fixture_test(test_remounted_parts::SecondDisclosurePanel))
+                .with(fixture_test(test_remounted_parts::MenuItemLabelMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondMenuItemLabel))
+                .with(fixture_test(test_remounted_parts::SecondCheckboxButton))
+                .with(fixture_test(test_remounted_parts::DialogDescriptionMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondDialogDescription))
+                .with(fixture_test(test_remounted_parts::SliderOutputMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondSliderOutput))
+                .with(fixture_test(test_remounted_parts::SliderTrackMountsAgain))
+                .with(fixture_test(test_remounted_parts::SecondSliderTrack))
+                .with(fixture_test(test_remounted_parts::SecondModalContent))
+                .with(fixture_test(test_remounted_parts::SecondSubmenuMenu)),
+        )
+        .with_test_group(
+            TestGroup::new("own_ids")
+                .with(fixture_test(test_own_ids::GridList))
+                .with(fixture_test(test_own_ids::Grid))
+                .with(fixture_test(test_own_ids::Table))
+                .with(fixture_test(test_own_ids::TagGroup))
+                .with(fixture_test(test_own_ids::ComboBox))
+                .with(fixture_test(test_own_ids::Select))
+                .with(fixture_test(test_own_ids::ColorSwatch)),
+        )
+        .with_test_group(
             TestGroup::new("select")
                 .with(fixture_test(
                     test_select::PartsWithoutParentWarnAndRenderNothing,
@@ -981,6 +1054,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_select::TriggerArrowKeysDontBubble))
                 .with(fixture_test(test_select::Labelling))
                 .with(fixture_test(test_select::FormReset))
+                .with(fixture_test(test_select::ReferencesOnlyRenderedParts))
                 .with(fixture_test(test_select_forms::TriggerHoverAndPlaceholder))
                 .with(fixture_test(test_select_forms::MultipleSelection))
                 .with(fixture_test(test_select_forms::OpenStateBoundToAppState))
@@ -1141,6 +1215,9 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 ))
                 .with(fixture_test(
                     test_grid_list_features::ClickingATabbableChildInTabNavigation,
+                ))
+                .with(fixture_test(
+                    test_grid_list_features::HeaderAndDescriptionMountAgain,
                 ))
                 .with(fixture_test(test_grid_list_cases::AutoFocus))
                 .with(fixture_test(test_grid_list_cases::AutoFocusFirstSelectsIt))
@@ -1399,7 +1476,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                     test_calendar::RangeUnavailableSelectionIsInvalid,
                 ))
                 .with(fixture_test(test_calendar::RangeStartAndEndStates))
-                .with(fixture_test(test_calendar::CommitClearWithoutARange)),
+                .with(fixture_test(test_calendar::CommitClearWithoutARange))
+                .with(fixture_test(test_calendar::CellButtonsMountedAgain)),
         )
         .with_test_group(
             TestGroup::new("date_field")
@@ -1520,7 +1598,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_date_field::TimeFieldNativeMinAndMax))
                 .with(fixture_test(test_date_field::TimeFieldDescriptionAndReset))
                 .with(fixture_test(test_date_field::HiddenDateInputContainer))
-                .with(fixture_test(test_date_field::RemovingTheFocusedField)),
+                .with(fixture_test(test_date_field::RemovingTheFocusedField))
+                .with(fixture_test(test_date_field::PartsMountedAgain)),
         )
         .with_test_group(
             TestGroup::new("date_picker")
@@ -2022,6 +2101,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_combobox::HeldArrowKeysRepeat))
                 .with(fixture_test(test_combobox::ArrowKeysWaitForTheComposition))
                 .with(fixture_test(test_combobox::ReadOnlyLetsKeysBubble))
+                .with(fixture_test(test_combobox::ControlsOnlyARenderedListbox))
                 .with(fixture_test(test_combobox_forms::SelectAnOption))
                 .with(fixture_test(test_combobox_forms::CustomTextOnBlur))
                 .with(fixture_test(test_combobox_forms::EscapeKeepsCustomText))
@@ -2073,7 +2153,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_checkbox::CustomNativeErrorMessage))
                 .with(fixture_test(test_checkbox::AriaGroupValidateFunction))
                 .with(fixture_test(test_checkbox::AriaCheckboxValidateFunction))
-                .with(fixture_test(test_checkbox::AriaGroupServerValidation)),
+                .with(fixture_test(test_checkbox::AriaGroupServerValidation))
+                .with(fixture_test(test_checkbox::ButtonMountsAgain)),
         )
         .with_test_group(
             TestGroup::new("forms")
@@ -2105,7 +2186,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_radio_group::PressStateWithKeyboard))
                 .with(fixture_test(test_radio_group::Controlled))
                 .with(fixture_test(test_radio_group::LabelContextStaysInside))
-                .with(fixture_test(test_radio_group::TypedValues)),
+                .with(fixture_test(test_radio_group::TypedValues))
+                .with(fixture_test(test_radio_group::ButtonMountsAgain)),
         )
         .with_test_group(
             TestGroup::new("switch")
@@ -2118,7 +2200,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_switch::DisabledState))
                 .with(fixture_test(test_switch::ReadOnlyState))
                 .with(fixture_test(test_switch::BoundState))
-                .with(fixture_test(test_switch::BoundReadOnly)),
+                .with(fixture_test(test_switch::BoundReadOnly))
+                .with(fixture_test(test_switch::ButtonMountsAgain)),
         )
         .with_test_group(
             TestGroup::new("toggle_button")
@@ -2312,7 +2395,10 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_disclosure::GroupOnExpandedChange))
                 .with(fixture_test(test_disclosure::GroupControlled))
                 .with(fixture_test(test_disclosure::NestedGroups))
-                .with(fixture_test(test_disclosure::RemountedPanel)),
+                .with(fixture_test(test_disclosure::RemountedPanel))
+                .with(fixture_test(
+                    test_disclosure::ReferencesOnlyRenderedParts,
+                )),
         )
         .with_test_group(
             TestGroup::new("popover")
@@ -2419,7 +2505,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_toast::ProgrammaticClose))
                 .with(fixture_test(test_toast::RemainingTimeAfterPause))
                 .with(fixture_test(test_toast::OneAtATime))
-                .with(fixture_test(test_toast::FocusedToastAfterNewToast)),
+                .with(fixture_test(test_toast::FocusedToastAfterNewToast))
+                .with(fixture_test(test_toast::DescriptionMountsAgain)),
         )
         .with_test_group(
             TestGroup::new("tooltip")
@@ -2437,7 +2524,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_tooltip::StaysOpenWhileHovered))
                 .with(fixture_test(test_tooltip::ClosesWhenThePointerLeavesIt))
                 .with(fixture_test(test_tooltip::StaysOpenBackOnTheTrigger))
-                .with(fixture_test(test_tooltip::StaysOpenWhenPressedInto)),
+                .with(fixture_test(test_tooltip::StaysOpenWhenPressedInto))
+                .with(fixture_test(test_tooltip::DescribesOnlyWhileRendered)),
         )
         .with_test_group(
             TestGroup::new("tag_group")
@@ -2475,7 +2563,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(
                     test_tag_group::RemovingEveryTagFocusesTheGroup,
                 ))
-                .with(fixture_test(test_tag_group::HoldingTheRemoveKey)),
+                .with(fixture_test(test_tag_group::HoldingTheRemoveKey))
+                .with(fixture_test(test_tag_group::TabStops)),
         )
         .with_test_group(
             TestGroup::new("virtual_list")
@@ -2490,6 +2579,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                     test_virtual_list::ScrollJumpsRenderRowsInOrder,
                 ))
                 .with(fixture_test(test_virtual_list::ScrollingAwayStopsFollowing))
+                .with(fixture_test(test_virtual_list::ShrinkingContentKeepsFollowing))
                 .with(fixture_test(test_virtual_list::SelectedRowStaysRendered))
                 .with(fixture_test(
                     test_virtual_list::TurningFollowingOnScrollsToTheEnd,

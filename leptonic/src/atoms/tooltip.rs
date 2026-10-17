@@ -7,7 +7,7 @@ use leptos_classes::Classes;
 
 use super::{overlay_arrow::OverlayArrowContext, press::ClearTriggerContexts};
 use crate::{
-    CapturedElement, IntoAttrs, Out, ValueBinding,
+    CapturedElement, IntoAttrs, Out, Part, ValueBinding,
     hooks::{
         animation::{
             UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
@@ -16,15 +16,16 @@ use crate::{
         focus::{FocusableContext, FocusableContextAttrs},
         overlay::{
             OverlayPositionOptions, Placement, PlacementAxis, UseOverlayPositionInput,
-            UseOverlayPositionReturn, use_overlay_position,
+            UseOverlayPositionProps, UseOverlayPositionReturn, use_overlay_position,
         },
         tooltip::{
             TooltipTiming, TooltipTriggerMode, TooltipTriggerState, UseTooltipInput,
-            UseTooltipTriggerInput, UseTooltipTriggerReturn, UseTooltipTriggerStateInput,
-            use_tooltip, use_tooltip_trigger, use_tooltip_trigger_state,
+            UseTooltipProps, UseTooltipTriggerInput, UseTooltipTriggerReturn,
+            UseTooltipTriggerStateInput, UseTooltipTriggerTooltipProps, use_tooltip,
+            use_tooltip_trigger, use_tooltip_trigger_state,
         },
     },
-    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
+    utils::{data_attributes::data_flags, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -52,7 +53,8 @@ use crate::{
 #[derive(Debug, Clone)]
 struct TooltipTriggerContext {
     state: TooltipTriggerState,
-    tooltip_id: String,
+    /// The tooltip element (its id), one tooltip element at a time.
+    tooltip: Part<UseTooltipTriggerTooltipProps>,
     trigger: CapturedElement,
 }
 
@@ -95,8 +97,8 @@ pub fn TooltipTrigger(
         on_open_change,
     });
     let UseTooltipTriggerReturn {
-        trigger_props,
-        tooltip_props,
+        trigger: trigger_props,
+        tooltip,
         ..
     } = use_tooltip_trigger(UseTooltipTriggerInput {
         state,
@@ -104,6 +106,7 @@ pub fn TooltipTrigger(
         trigger,
         should_close_on_press,
     });
+    let trigger_props = trigger_props.into_props();
     let trigger_element = CapturedElement::new();
     let pointer_handlers = StoredValue::new((
         trigger_props.on_pointerenter,
@@ -145,7 +148,7 @@ pub fn TooltipTrigger(
     };
     let context = TooltipTriggerContext {
         state,
-        tooltip_id: tooltip_props.id,
+        tooltip,
         trigger: trigger_element,
     };
 
@@ -192,7 +195,7 @@ pub fn Tooltip(
     let classes = with_default_class("leptonic-Tooltip", classes);
     let Some(TooltipTriggerContext {
         state,
-        tooltip_id,
+        tooltip: tooltip_trigger,
         trigger,
     }) = use_context::<TooltipTriggerContext>()
     else {
@@ -202,8 +205,8 @@ pub fn Tooltip(
     let is_open = state.overlay.is_open;
 
     let UseOverlayPositionReturn {
-        props: position_props,
-        arrow_props,
+        overlay: position_props,
+        arrow: arrow_props,
         placement: resolved_placement,
         trigger_anchor_point,
         ..
@@ -226,12 +229,16 @@ pub fn Tooltip(
         target_rect: Signal::stored(None),
         scroll: None,
     });
+    let position_props = position_props.into_props();
+    let arrow_props = arrow_props.into_props();
     let tooltip = use_tooltip(UseTooltipInput {
         state: Some(state),
         ..UseTooltipInput::default()
     });
+    let tooltip_props = tooltip.tooltip.into_props();
 
-    let (position_attrs, position_styles) = position_props.into_parts();
+    let (UseOverlayPositionProps { element_capture }, position_styles) =
+        position_props.into_inner();
     let anchor_point = Styles::builder()
         .with_optional_unchecked("--trigger-anchor-point", move || {
             trigger_anchor_point
@@ -240,12 +247,28 @@ pub fn Tooltip(
         })
         .build();
     let arrow_context = StoredValue::new(OverlayArrowContext::new(arrow_props, resolved_placement));
-    let position_attrs = StoredValue::new(position_attrs);
-    let tooltip_attrs = StoredValue::new(tooltip.props.into_attrs());
+    // The tooltip element, built for each opening (one element at a time).
+    let UseTooltipProps {
+        role,
+        on_pointerenter,
+        on_pointerleave,
+    } = tooltip_props;
+    let tooltip_element = StoredValue::new(Part::new(move || {
+        (
+            UseOverlayPositionProps {
+                element_capture: element_capture.clone(),
+            },
+            UseTooltipProps {
+                role,
+                on_pointerenter: on_pointerenter.clone(),
+                on_pointerleave: on_pointerleave.clone(),
+            },
+        )
+    }));
     let classes = StoredValue::new(classes);
     let styles = StoredValue::new(position_styles.merge(anchor_point).merge(styles));
     let children = StoredValue::new(children);
-    let tooltip_id = StoredValue::new(tooltip_id);
+    let tooltip_trigger = StoredValue::new(tooltip_trigger);
     // The tooltip stays rendered while its exit animations run (`data-exiting`), unless it closes
     // instantly (another tooltip replaces it during the warm-up).
     let element = CapturedElement::new();
@@ -278,12 +301,21 @@ pub fn Tooltip(
                 view! {
                     <Portal>
                         <div
-                            {..position_attrs.get_value()}
-                            {..tooltip_attrs.get_value()}
+                            {..tooltip_element.with_value(|part| {
+                                match part.props() {
+                                    Some((position, tooltip)) => leptos::either::Either::Left((
+                                        position.into_attrs(),
+                                        tooltip.into_attrs(),
+                                    )),
+                                    None => leptos::either::Either::Right(()),
+                                }
+                            })}
                             {..element.attr().chain(entering.attr())}
-                            data-entering=flag(is_entering)
-                            data-exiting=flag(is_exiting)
-                            id=tooltip_id.get_value()
+                            {..tooltip_trigger.with_value(|part| part.attrs())}
+                            {..data_flags([
+                                ("data-entering", is_entering),
+                                ("data-exiting", is_exiting),
+                            ])}
                             class=classes.get_value()
                             style=styles.get_value()
                             data-placement=move || {

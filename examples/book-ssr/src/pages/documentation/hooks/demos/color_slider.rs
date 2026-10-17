@@ -1,5 +1,5 @@
 use leptonic::{
-    ColorValue, HSV, HsvChannel, IntoAttrs, Orientation,
+    ColorValue, HSV, HsvChannel, Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         color::{
@@ -56,9 +56,9 @@ pub fn ColorSliderDemo() -> impl IntoView {
     });
 
     // The track's own styles (position, touch action) plus the gradient of the channel.
-    let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
+    let (track_attrs, slider_track_styles) = slider.track.attrs();
     // The thumb positions itself on the track; its fill is the color the track shows at its position.
-    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
     let display_color = state.display_color();
     let thumb_styles = thumb_styles.add_reactive(move || {
         BackgroundColorProperty.declare(CssColor::from(display_color.get().to_rgb8()))
@@ -67,17 +67,17 @@ pub fn ColorSliderDemo() -> impl IntoView {
 
     view! {
         <div class="demo-color-slider">
-            <span {..slider.label_props.into_attrs()}>"Hue"</span>
-            <output class="demo-color-slider-output" {..slider.output_props.into_attrs()}>{formatted}</output>
+            <span {..slider.label.attrs()}>"Hue"</span>
+            <output class="demo-color-slider-output" {..slider.output.attrs()}>{formatted}</output>
             // The track is the slider's group.
             <div
                 class="demo-color-slider-track"
-                {..slider.group_props.into_attrs()}
+                {..slider.group.attrs()}
                 {..track_attrs}
                 style=slider_track_styles.merge(track_styles)
             >
-                <div class="demo-color-slider-thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
-                    <input {..thumb.input_props.into_attrs()} style=input_styles/>
+                <div class="demo-color-slider-thumb" {..thumb_attrs} {..focus_ring.target.attrs()} style=thumb_styles>
+                    <input {..thumb.input.attrs()} style=input_styles/>
                 </div>
             </div>
         </div>

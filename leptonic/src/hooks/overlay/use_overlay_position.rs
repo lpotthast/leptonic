@@ -1,9 +1,6 @@
 // Upstream: react-aria/src/overlays/useOverlayPosition.ts @ 99e6102368
 // Upstream: react-aria/test/overlays/useOverlayPosition.test.tsx @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 pub use super::calculate_position::{Placement, PlacementAxis, Position, PositionResult, Rect};
 use super::use_close_on_scroll::{UseCloseOnScrollInput, use_close_on_scroll};
@@ -12,7 +9,9 @@ use crate::{
     utils::{
         aria::{AriaHidden, AriaRole},
         i18n::use_direction,
+        part::{Part, Remount},
         point::Point,
+        signal_attr::{FixedAttr, fixed_attr},
         styles::{
             Styles,
             css::{LengthPercentageAuto, MaxSize, NonNegativeLengthPercentage, ZIndex, try_px},
@@ -128,14 +127,13 @@ impl PositionUpdater {
     }
 }
 
-/// Return value of [`use_overlay_position`].
+/// The return value of [`use_overlay_position`].
 #[derive(Debug)]
 pub struct UseOverlayPositionReturn {
-    /// Props for the overlay element: its capture and position styles.
-    pub props: PropsWithStyles<UseOverlayPositionProps>,
-    /// Props for an arrow element inside the overlay: hidden from assistive technology and
-    /// positioned along the overlay's edge (pin it to the edge facing the target yourself).
-    pub arrow_props: PropsWithStyles<UseOverlayArrowProps>,
+    /// The positioned overlay element: `let (attrs, styles) = overlay.attrs();`.
+    pub overlay: Part<PropsWithStyles<UseOverlayPositionProps>>,
+    /// The overlay's arrow element: `let (attrs, styles) = arrow.attrs();`.
+    pub arrow: Part<PropsWithStyles<UseOverlayArrowProps>>,
     /// The side of the target the overlay is on, once positioned.
     pub placement: Signal<Option<PlacementAxis>>,
     /// The point of the overlay closest to the target in its own coordinates, once positioned
@@ -150,6 +148,14 @@ pub struct UseOverlayPositionReturn {
 #[derive(Debug)]
 pub struct UseOverlayPositionProps {
     pub element_capture: ElementCaptureAttr,
+}
+
+impl Remount for UseOverlayPositionProps {
+    fn remount(&self) -> Self {
+        Self {
+            element_capture: self.element_capture.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseOverlayPositionProps {
@@ -168,23 +174,27 @@ pub struct UseOverlayArrowProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseOverlayArrowProps {
+    fn remount(&self) -> Self {
+        Self {
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseOverlayArrowProps {
     type Attrs = UseOverlayArrowAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
             self.element_capture,
-            Attr(attr::AriaHidden, AriaHidden::True),
-            Attr(attr::Role, AriaRole::Presentation),
+            fixed_attr("aria-hidden", AriaHidden::True),
+            fixed_attr("role", AriaRole::Presentation),
         )
     }
 }
 
-pub type UseOverlayArrowAttrs = (
-    ElementCaptureAttr,
-    Attr<attr::AriaHidden, AriaHidden>,
-    Attr<attr::Role, AriaRole>,
-);
+pub type UseOverlayArrowAttrs = (ElementCaptureAttr, FixedAttr, FixedAttr);
 
 fn px(value: f64) -> Option<LengthPercentageAuto> {
     try_px(value).ok().map(LengthPercentageAuto::from)
@@ -208,7 +218,7 @@ fn px(value: f64) -> Option<LengthPercentageAuto> {
 ///     scroll: None,
 ///     on_close: None,
 /// });
-/// let (attrs, styles) = position.props.into_parts();
+/// let (attrs, styles) = position.overlay.attrs();
 /// view! { <div {..attrs} style=styles>"Content"</div> }
 /// ```
 pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositionReturn {
@@ -574,18 +584,18 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
         .build();
 
     UseOverlayPositionReturn {
-        props: PropsWithStyles::new(
+        overlay: Part::stored(PropsWithStyles::new(
             UseOverlayPositionProps {
                 element_capture: overlay_element.attr(),
             },
             styles,
-        ),
-        arrow_props: PropsWithStyles::new(
+        )),
+        arrow: Part::stored(PropsWithStyles::new(
             UseOverlayArrowProps {
                 element_capture: arrow_element.attr(),
             },
             arrow_styles,
-        ),
+        )),
         placement: Signal::derive(move || position.with(|p| p.as_ref().map(|p| p.placement))),
         trigger_anchor_point: Signal::derive(move || {
             position.with(|p| p.as_ref().map(|p| p.trigger_anchor_point))

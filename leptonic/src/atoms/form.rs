@@ -41,7 +41,7 @@ pub fn Form(
     /// Errors from the server, by field `name`. A field shows its errors until its value changes.
     #[prop(into, optional)]
     validation_errors: Option<Signal<HashMap<String, Vec<String>>>>,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,

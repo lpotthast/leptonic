@@ -7,12 +7,12 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 263,
-        "reallocations": 14,
+        "allocations": 232,
+        "reallocations": 11,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 4,
-        "render_effect_runs": 8,
+        "render_effect_runs": 5,
         "immediate_effect_runs": 0,
         "signal_notifications": 3,
         "dom_attributes": 0,
@@ -30,7 +30,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -55,12 +55,12 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5783,
-        "reallocations": 418,
+        "allocations": 4936,
+        "reallocations": 369,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 100,
-        "render_effect_runs": 152,
+        "render_effect_runs": 53,
         "immediate_effect_runs": 0,
         "signal_notifications": 51,
         "dom_attributes": 0,
@@ -78,7 +78,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -103,7 +103,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 9,
+        "allocations": 7,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -126,7 +126,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 7,
+        "allocations": 6,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -149,7 +149,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 12,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -172,7 +172,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 12,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -195,7 +195,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 16,
+        "allocations": 13,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -218,7 +218,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 16,
+        "allocations": 13,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -243,7 +243,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 9,
+        "allocations": 7,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -266,7 +266,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 7,
+        "allocations": 6,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -289,7 +289,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 12,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -312,7 +312,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 12,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -335,7 +335,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 16,
+        "allocations": 13,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -358,7 +358,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 16,
+        "allocations": 13,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -383,7 +383,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 14,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

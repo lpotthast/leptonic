@@ -96,6 +96,11 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="is_indeterminate" ty="Signal<bool>" default="false">
                             "Shows the checkbox as neither checked nor unchecked. Purely visual: the state stays as it is."
                         </ApiRow>
+                        <ApiRow name="validation" ty="Option<FormValidationState>" default="None">
+                            "A validation managed elsewhere, used instead of the checkbox\u{2019}s own: "
+                            <AnchorLink href="#use-checkbox-group-item">"use_checkbox_group_item"</AnchorLink>" passes the item\u{2019}s, which shows the group\u{2019}s errors. "
+                            <Code inline=true>"None"</Code>": the checkbox validates itself."
+                        </ApiRow>
                         <ApiRow name="options" ty="ToggleOptions" default="ToggleOptions::default()">
                             "Everything else, shared with the other toggles: see "<AnchorLink href="#toggleoptions">"ToggleOptions"</AnchorLink>"."
                         </ApiRow>
@@ -108,7 +113,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         " besides its state. "<Code inline=true>"ToggleOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."
                     </p>
                     <ApiTable kind=ApiKind::Input of="ToggleOptions">
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the input and its label."</ApiRow>
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">
                             "The toggle can be focused but not changed. Sets "<Code inline=true>"aria-readonly"</Code>"."
@@ -138,10 +143,10 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "The accessible name, for a toggle without visible label text."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Signal<Option<Id>>" default="None">
                             "Ids of further elements labelling or describing the input, or showing its error."
                         </ApiRow>
-                        <ApiRow name="aria_controls" ty="Signal<Option<String>>" default="None">"The id of the element the toggle controls."</ApiRow>
+                        <ApiRow name="aria_controls" ty="Signal<Option<Id>>" default="None">"The id of the element the toggle controls."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="exclude_from_tab_order" ty="Signal<bool>" default="false">"Removes the input from the tab order."</ApiRow>
                         <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Focus callbacks of the input."</ApiRow>
@@ -160,17 +165,17 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         ", an alias of "<Code inline=true>"UseToggleReturn"</Code>" (the return of all toggle hooks)."
                     </p>
                     <ApiTable kind=ApiKind::Return of="UseToggleReturn">
-                        <ApiRow name="label_props" ty="PropsWithStyles<UseToggleLabelProps>">
-                            "Press handlers for the "<Code inline=true>"<label>"</Code>" wrapping the input. Call "
-                            <Code inline=true>"into_parts()"</Code>" and spread "<Code inline=true>"{..attrs}"</Code>" with "
-                            <Code inline=true>"style=styles"</Code>"."
+                        <ApiRow name="label" ty="Part<PropsWithStyles<UseToggleLabelProps>>">
+                            "Press handlers for the "<Code inline=true>"<label>"</Code>" wrapping the input. "
+                            <Code inline=true>"label.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>": spread "
+                            <Code inline=true>"{..attrs}"</Code>" and set "<Code inline=true>"style=styles"</Code>"."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="PropsWithStyles<UseToggleInputProps>">
+                        <ApiRow name="input" ty="Part<PropsWithStyles<UseToggleInputProps>>">
                             "Attributes and handlers for the "<Code inline=true>"<input>"</Code>", including "
                             <Code inline=true>"type=\"checkbox\""</Code>" and the "<Code inline=true>"checked"</Code>" and "
                             <Code inline=true>"indeterminate"</Code>" DOM properties."
                         </ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">
                             "For a description and an error message of this toggle. The input references them while they are rendered; "
                             "render the error message only while invalid."
                         </ApiRow>
@@ -266,10 +271,10 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 <Section title="Input" id="use-checkbox-group-input">
                     <ApiTable kind=ApiKind::Input of="UseCheckboxGroupInput">
                         <ApiRow name="state" ty="CheckboxGroupState">"From "<Code inline=true>"use_checkbox_group_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with the "<Code inline=true>"label"</Code>" part."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the group without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<Id>>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the checkboxes belong to, when they aren\u{2019}t inside it."</ApiRow>
@@ -280,12 +285,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
 
                 <Section title="Return" id="use-checkbox-group-return">
                     <ApiTable kind=ApiKind::Return of="UseCheckboxGroupReturn">
-                        <ApiRow name="props" ty="UseCheckboxGroupProps">
+                        <ApiRow name="group" ty="Part<UseCheckboxGroupProps>">
                             <Code inline=true>"role=\"group\""</Code>", id, labelling and "<Code inline=true>"aria-disabled"</Code>
-                            ". Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            ". Spread with "<Code inline=true>"{..group.attrs()}"</Code>"."
                         </ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"The id of the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"The id of the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">
                             "For the group\u{2019}s description and error message. Render the error message only while invalid."
                         </ApiRow>
                         <ApiRow name="data" ty="CheckboxGroupData">
@@ -352,7 +357,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     "Validate the selection with "<Code inline=true>"validate"</Code>", or set the result with "
                     <Code inline=true>"is_invalid"</Code>". While it is invalid, the input has "<Code inline=true>"aria-invalid"</Code>
                     ", "<Code inline=true>"validation_errors"</Code>" holds the messages, and an error message rendered with "
-                    <Code inline=true>"error_message_props"</Code>" describes the input."
+                    "the "<Code inline=true>"error_message"</Code>" part describes the input."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -372,6 +377,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                             },
                             state,
                             is_indeterminate: false.into(),
+                            validation: None,
                         });
 
                     "#)}

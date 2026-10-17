@@ -1,6 +1,5 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move},
+use leptonic::hooks::interactions::{
+    MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move,
 };
 use leptos::prelude::*;
 
@@ -52,7 +51,7 @@ fn Movable(
             id=format!("test-move-{name}")
             tabindex="0"
             style="display: inline-block; padding: 16px; border: 1px solid; touch-action: none"
-            {..movement.props.into_attrs()}
+            {..movement.target.attrs()}
         >
             {name}
             {children.map(|children| children())}

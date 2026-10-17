@@ -12,21 +12,20 @@
 //! `sort-descending`: by Value), prepare the live announcer (`prepare-announcer`: its first
 //! announcement waits for its live regions) and read how many rows are selected (`selected`, -1
 //! for all).
-//!
-//! [`HookTable`], [`HookTableHeader`], [`HookTableBody`] and [`HookTableRow`] also build the
-//! tables of the fixtures of the other table hooks.
 
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use leptonic::{
-    Assertiveness, CapturedElement, IntoAttrs, announce, flag,
+    Assertiveness, CapturedElement, announce, flag,
     hooks::{
-        collections::{CollectionOptions, Key, NodeKind, SelectionMode, SelectionOptions},
+        collections::{
+            CollectionOptions, Key, NodeKind, Selection, SelectionMode, SelectionOptions,
+        },
         form::use_checkbox,
         grid::GridFocusMode,
         gridlist::KeyboardNavigationBehavior,
         table::{
-            ColumnKind, SortDirection, TableData, TableState, UseTableCellInput,
+            ColumnKind, SortDirection, TableCollection, TableData, TableState, UseTableCellInput,
             UseTableCellReturn, UseTableColumnHeaderInput, UseTableColumnHeaderReturn,
             UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn, UseTableRowInput,
             UseTableRowReturn, UseTableSelectionCheckboxInput, UseTableStateInput, use_table,
@@ -37,13 +36,47 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-pub use crate::pages::perf::atoms::table::{LARGE, SMALL, selected_count, table_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small table.
+const SMALL: usize = 10;
+/// The rows of the large table.
+const LARGE: usize = 1_000;
+
+/// How many rows of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
+
+/// `rows` rows ("Row <i>", key `i`) in the sortable columns `name` (the row header), `value` and
+/// `group`.
+fn table_collection(rows: RwSignal<usize>) -> Memo<Arc<TableCollection>> {
+    Memo::new(move |_| {
+        Arc::new(TableCollection::build(|t| {
+            for (key, text) in [("name", "Name"), ("value", "Value"), ("group", "Group")] {
+                let column = t.column(key, text).allows_sorting();
+                if key == "name" {
+                    let _ = column.row_header();
+                }
+            }
+            for i in 0..rows.get() {
+                t.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
 
 /// A column header: `use_table_column_header` on a `<th>` with the column's name, its pressed
 /// state in `data-pressed`.
 #[component]
-pub fn HookColumnHeader(table: TableData, key: Key) -> impl IntoView {
+fn HookColumnHeader(table: TableData, key: Key) -> impl IntoView {
     let columns = table.state.columns;
     let name_key = key.clone();
     let name = move || {
@@ -55,14 +88,14 @@ pub fn HookColumnHeader(table: TableData, key: Key) -> impl IntoView {
         })
     };
     let UseTableColumnHeaderReturn {
-        column_header_props,
+        column_header: column_header_props,
         is_pressed,
     } = use_table_column_header(UseTableColumnHeaderInput {
         table,
         key,
         allows_arrow_navigation: false,
     });
-    let (attrs, styles) = column_header_props.into_parts();
+    let (attrs, styles) = column_header_props.attrs();
     view! {
         <th {..attrs} style=styles data-pressed=flag(is_pressed)>
             {name}
@@ -72,7 +105,7 @@ pub fn HookColumnHeader(table: TableData, key: Key) -> impl IntoView {
 
 /// The header: a `<thead>` of `use_table_header_row`s, their column headers and placeholders.
 #[component]
-pub fn HookTableHeader(table: TableData) -> impl IntoView {
+fn HookTableHeader(table: TableData) -> impl IntoView {
     let rows = table.state.table;
     view! {
         <thead>
@@ -90,7 +123,7 @@ pub fn HookTableHeader(table: TableData) -> impl IntoView {
                         })
                     };
                     view! {
-                        <tr {..use_table_header_row().into_attrs()}>
+                        <tr {..use_table_header_row().attrs()}>
                             <For
                                 each=cells
                                 key=|(key, _)| key.clone()
@@ -100,7 +133,7 @@ pub fn HookTableHeader(table: TableData) -> impl IntoView {
                                             table: table.clone(),
                                             key,
                                         });
-                                        view! { <th {..placeholder.into_attrs()}></th> }.into_any()
+                                        view! { <th {..placeholder.attrs()}></th> }.into_any()
                                     } else {
                                         view! { <HookColumnHeader table=table.clone() key /> }
                                             .into_any()
@@ -119,7 +152,7 @@ pub fn HookTableHeader(table: TableData) -> impl IntoView {
 /// `index` of row `row`, with the cell's text, or the row's selection checkbox
 /// (`use_table_selection_checkbox`) in a selection column.
 #[component]
-pub fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView {
+fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView {
     let (key, kind, text) = table.state.table.with_untracked(|t| {
         let key = t
             .cell_key(&row, index)
@@ -139,13 +172,17 @@ pub fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView 
                 key: row,
             },
         ));
-        let (attrs, styles) = checkbox.input_props.into_parts();
+        let (attrs, styles) = checkbox
+            .input
+            .props()
+            .expect("the first input takes its props")
+            .into_parts();
         view! { <input {..attrs} style=styles /> }.into_any()
     } else {
         text.into_any()
     };
     let UseTableCellReturn {
-        grid_cell_props,
+        cell: grid_cell_props,
         is_pressed,
     } = use_table_cell(UseTableCellInput {
         should_select_on_press_up: table.grid.should_select_on_press_up,
@@ -154,7 +191,7 @@ pub fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView 
         focus_mode: None,
         allows_arrow_navigation: false,
     });
-    let (attrs, styles) = grid_cell_props.into_parts();
+    let (attrs, styles) = grid_cell_props.attrs();
     view! {
         <td {..attrs} style=styles data-pressed=flag(is_pressed)>
             {content}
@@ -165,10 +202,10 @@ pub fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView 
 /// A row: `use_table_row` on a `<tr>` (its pressed state in `data-pressed`) with a cell per
 /// column.
 #[component]
-pub fn HookTableRow(table: TableData, key: Key) -> impl IntoView {
+fn HookTableRow(table: TableData, key: Key) -> impl IntoView {
     let columns = table.state.table.with_untracked(|t| t.column_count());
     let UseTableRowReturn {
-        row_props,
+        row: row_props,
         is_pressed,
         ..
     } = use_table_row(UseTableRowInput {
@@ -176,7 +213,7 @@ pub fn HookTableRow(table: TableData, key: Key) -> impl IntoView {
         key: key.clone(),
         on_context_menu: None,
     });
-    let (attrs, styles) = row_props.into_parts();
+    let (attrs, styles) = row_props.attrs();
     view! {
         <tr {..attrs} style=styles data-pressed=flag(is_pressed)>
             {(0..columns)
@@ -190,7 +227,7 @@ pub fn HookTableRow(table: TableData, key: Key) -> impl IntoView {
 
 /// The body: a `<tbody>` with `rows` rows.
 #[component]
-pub fn HookTableBody(table: TableData, rows: RwSignal<usize>) -> impl IntoView {
+fn HookTableBody(table: TableData, rows: RwSignal<usize>) -> impl IntoView {
     view! {
         <tbody>
             <For each=move || 0..rows.get() key=|i| *i let:i>
@@ -200,16 +237,10 @@ pub fn HookTableBody(table: TableData, rows: RwSignal<usize>) -> impl IntoView {
     }
 }
 
-/// The table: `use_table` on a `<table>`, with its header and body; the actions count row and
-/// cell actions.
+/// The table: `use_table` on a `<table>`, with its header and body.
 #[component]
-pub fn HookTable(
-    state: TableState,
-    rows: RwSignal<usize>,
-    on_row_action: Option<Callback<Key>>,
-    on_cell_action: Option<Callback<Key>>,
-) -> impl IntoView {
-    let UseTableReturn { props, data } = use_table(UseTableInput {
+fn HookTable(state: TableState, rows: RwSignal<usize>) -> impl IntoView {
+    let UseTableReturn { table: props, data } = use_table(UseTableInput {
         state,
         element: CapturedElement::new(),
         id: None,
@@ -219,31 +250,24 @@ pub fn HookTable(
         options: CollectionOptions::default(),
         keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
         should_select_on_press_up: false,
-        on_row_action,
-        on_cell_action,
+        on_row_action: None,
+        on_cell_action: None,
     });
     view! {
-        <table {..props.into_attrs()}>
+        <table {..props.attrs()}>
             <HookTableHeader table=data.clone() />
             <HookTableBody table=data rows />
         </table>
     }
 }
 
-/// The state of a table of `rows` rows with multiple selection (`checkboxes`: with selection
-/// checkboxes), the rows `disabled` disabled (the key set of the selection options).
-#[allow(clippy::implicit_hasher)]
-pub fn hook_table_state(
-    rows: RwSignal<usize>,
-    checkboxes: bool,
-    disabled: Signal<HashSet<Key>>,
-) -> TableState {
+/// The state of a table of `rows` rows with multiple selection.
+fn hook_table_state(rows: RwSignal<usize>) -> TableState {
     use_table_state(UseTableStateInput {
-        table: table_collection(rows, false),
-        show_selection_checkboxes: Signal::stored(checkboxes),
+        table: table_collection(rows),
+        show_selection_checkboxes: Signal::stored(false),
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
-            disabled_keys: disabled,
             ..SelectionOptions::default()
         },
         focus_mode: GridFocusMode::Row,
@@ -258,7 +282,7 @@ pub fn hook_table_state(
 pub fn PagePerf() -> impl IntoView {
     let mounted = RwSignal::new(true);
     let rows = RwSignal::new(SMALL);
-    let state = hook_table_state(rows, false, Signal::stored(HashSet::new()));
+    let state = hook_table_state(rows);
     let value = Arc::new(Key::from("value"));
     let ascending = Arc::clone(&value);
     let controls = vec![
@@ -283,7 +307,7 @@ pub fn PagePerf() -> impl IntoView {
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
         <Show when=move || mounted.get()>
-            <HookTable state rows on_row_action=None on_cell_action=None />
+            <HookTable state rows />
         </Show>
         <button id="perf-after">"After"</button>
     }

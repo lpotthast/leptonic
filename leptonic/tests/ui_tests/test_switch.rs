@@ -218,3 +218,25 @@ pub async fn bound_read_only(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(input).selected().await.is_false();
     Ok(())
 }
+
+/// A `SwitchButton` mounted again works again: its `SwitchField` hands it the switch back when it unmounts
+/// (no upstream test: React passes the props on every render).
+#[browser_test]
+pub async fn button_mounts_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let toggle = page.element("#test-sw-remount-toggle").await?;
+    toggle.click().await?;
+    page.wait_for_count(css("label").text("Remounted"), 0)
+        .await?;
+    toggle.click().await?;
+    let label = page.element(css("label").text("Remounted")).await?;
+    let input = label.element("input").await?;
+    label.click().await?;
+    label.wait_for_attr("data-selected", Some("true")).await?;
+    page.element("#test-sw-remounted-value")
+        .await?
+        .wait_for_inner_text("true")
+        .await?;
+    assert_that!(input).selected().await.is_true();
+    Ok(())
+}

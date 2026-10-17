@@ -65,6 +65,7 @@ pub fn PageAtomColorSwatch() -> impl IntoView {
                             "of the "<Code inline=true>"ColorSwatchPickerItem"</Code>" or else the "<Code inline=true>"ColorPicker"</Code>
                             " around it (black, with a warning, outside both)."
                         </ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The swatch\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="color_name" ty="MaybeProp<String>" default="None">
                             "Replaces the color\u{2019}s generated name, e.g. \u{201c}Ocean\u{201d} instead of \u{201c}dark "
                             "vibrant cyan blue\u{201d}."

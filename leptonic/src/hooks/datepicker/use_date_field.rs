@@ -6,7 +6,6 @@
 // Upstream: @adobe/react-spectrum/test/datepicker/DateField.test.js @ 740c6c5c4a
 // Upstream: @adobe/react-spectrum/test/datepicker/TimeField.test.js @ 740c6c5c4a
 use leptos::{
-    attr::{self, Attr},
     ev::{self},
     prelude::*,
 };
@@ -19,7 +18,8 @@ use super::{
     use_time_field_state::TimeFieldState,
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IdRefs, IntoAttrs, OnEvent, Part,
+    PropsWithStyles,
     hooks::{
         focus::{FocusManager, FocusManagerOptions, UseFocusWithinInput, use_focus_within},
         form::{
@@ -40,7 +40,9 @@ use crate::{
         intl_strings::{DatePickerStrings, use_localized_strings},
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        part::Remount,
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         slot_id::SlotProps,
         use_description::use_description,
     },
@@ -87,8 +89,8 @@ pub(crate) fn display_name(strings: &DatePickerStrings, kind: DateSegmentType) -
 pub struct DateFieldData<V: DateValue> {
     pub state: DateFieldState<V>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub(crate) focus_manager: StoredValue<FocusManager>,
 }
 
@@ -157,6 +159,16 @@ pub struct UseDatePickerGroupProps {
     pub on_keyup: EventHandler<KeyboardEvent>,
 }
 
+impl Remount for UseDatePickerGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            press: self.press.remount(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseDatePickerGroupProps {
     type Attrs = (UsePressAttrs, OnEvent<ev::keydown>, OnEvent<ev::keyup>);
 
@@ -175,7 +187,7 @@ impl IntoAttrs for UseDatePickerGroupProps {
 /// outside the segments focuses the last segment with a value.
 pub fn use_date_picker_group(
     input: UseDatePickerGroupInput,
-) -> PropsWithStyles<UseDatePickerGroupProps> {
+) -> Part<PropsWithStyles<UseDatePickerGroupProps>> {
     crate::metrics::subject!();
     let UseDatePickerGroupInput {
         element,
@@ -247,6 +259,7 @@ pub fn use_date_picker_group(
         allow_repeats: true,
         ..UseKeyboardInput::default()
     });
+    let keyboard_props = keyboard.target.into_props();
 
     // Pressing the field (not a segment: they stop the pointer events) focuses the segment
     // before the pressed point, or the last one, skipping back over empty segments.
@@ -298,9 +311,17 @@ pub fn use_date_picker_group(
                 focus_last(press_target.get_value().map(SendWrapper::take));
             }
         })),
-        ..UsePressInput::default()
+        is_disabled: Signal::stored(false),
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
+        on_press_up: None,
+        on_press_end: None,
+        on_press_change: None,
+        on_double_press: None,
+        long_press: None,
     });
-    let (mut press_props, press_styles) = press.props.into_inner();
+    let (mut press_props, press_styles) = press.target.into_props().into_inner();
     press_props.on_pointerdown = EventHandler::new(move |e: PointerEvent| {
         press_target.set_value(
             wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target())
@@ -317,14 +338,14 @@ pub fn use_date_picker_group(
         );
     })
     .chain(press_props.on_click);
-    PropsWithStyles::new(
+    Part::stored(PropsWithStyles::new(
         UseDatePickerGroupProps {
             press: press_props,
-            on_keydown: keyboard.props.on_keydown,
-            on_keyup: keyboard.props.on_keyup,
+            on_keydown: keyboard_props.on_keydown,
+            on_keyup: keyboard_props.on_keyup,
         },
         press_styles,
-    )
+    ))
 }
 
 /// The tabbable elements of a group (its segments, a picker's button), in document order.
@@ -366,22 +387,22 @@ pub struct DateFieldPicker {
     /// The picker's focus manager, when it spans more fields (a range picker's).
     pub focus_manager: Option<FocusManager>,
     /// What labels the picker, and so the field's segments (`UseDatePickerReturn::labelledby`).
-    pub labelledby: Signal<Option<String>>,
+    pub labelledby: Signal<Option<Id>>,
     /// What describes the picker, and so the field's first segment
     /// (`UseDatePickerReturn::field_describedby`).
-    pub describedby: Signal<Option<String>>,
+    pub describedby: Signal<Option<Id>>,
 }
 
 /// The options of a date or time field (the parts of [`UseDateFieldInput`] and
 /// [`UseTimeFieldInput`] besides the state and the elements).
 #[derive(Clone, Default)]
 pub struct DateFieldOptions {
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label labels the field.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub auto_focus: bool,
     /// The hidden input's form (when outside it).
     pub form: Option<String>,
@@ -413,16 +434,16 @@ pub struct UseTimeFieldInput<T: TimeValue> {
     pub options: DateFieldOptions,
 }
 
-/// Return value of [`use_date_field`].
+/// The return value of [`use_date_field`].
 pub struct UseDateFieldReturn<V: DateValue> {
-    /// For the label (a `span`: it labels a group).
-    pub label_props: UseDateFieldLabelProps,
-    /// For the group of segments.
-    pub field_props: PropsWithStyles<UseDateFieldProps>,
-    /// For the hidden input carrying the value in forms.
-    pub input_props: UseDateFieldInputProps,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    /// The label element.
+    pub label: Part<UseDateFieldLabelProps>,
+    /// The field element holding the segments: `let (attrs, styles) = field.attrs();`.
+    pub field: Part<PropsWithStyles<UseDateFieldProps>>,
+    /// The hidden input element (the value in forms).
+    pub input: Part<UseDateFieldInputProps>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     /// What the segments need (`use_date_segment`).
     pub data: DateFieldData<V>,
 }
@@ -432,6 +453,15 @@ pub struct UseDateFieldReturn<V: DateValue> {
 pub struct UseDateFieldLabelProps {
     pub label: UseLabelProps,
     pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl Remount for UseDateFieldLabelProps {
+    fn remount(&self) -> Self {
+        Self {
+            label: self.label.remount(),
+            on_click: self.on_click.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseDateFieldLabelProps {
@@ -445,11 +475,11 @@ impl IntoAttrs for UseDateFieldLabelProps {
 /// Props of the group of segments.
 #[derive(Debug)]
 pub struct UseDateFieldProps {
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub group: UseDatePickerGroupProps,
     pub on_focusin: EventHandler<FocusEvent>,
@@ -457,13 +487,30 @@ pub struct UseDateFieldProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseDateFieldProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_disabled: self.aria_disabled,
+            group: self.group.remount(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseDateFieldAttrs = (
     (
-        Attr<attr::Id, Option<String>>,
-        Attr<attr::Role, AriaRole>,
-        Attr<attr::AriaLabel, Signal<Option<String>>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<AriaDisabled>>,
     ),
     UsePressAttrs,
     (
@@ -485,11 +532,11 @@ impl IntoAttrs for UseDateFieldProps {
         press.aria_describedby = IdRefs::derive([self.aria_describedby, press.aria_describedby]);
         (
             (
-                Attr(attr::Id, self.id),
-                Attr(attr::Role, self.role),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDisabled, self.aria_disabled),
+                fixed_attr("id", self.id),
+                fixed_attr("role", self.role),
+                signal_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-disabled", self.aria_disabled),
             ),
             press.into_attrs(),
             (
@@ -517,27 +564,42 @@ pub struct UseDateFieldInputProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseDateFieldInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            input_type: self.input_type,
+            hidden: self.hidden,
+            name: self.name.clone(),
+            form: self.form.clone(),
+            value: self.value,
+            disabled: self.disabled,
+            required: self.required,
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseDateFieldInputProps {
     type Attrs = (
-        Attr<attr::Type, &'static str>,
-        Attr<attr::Hidden, bool>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Form, Option<String>>,
-        Attr<attr::Value, Signal<String>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Required, Signal<bool>>,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<String>,
+        SignalAttr<bool>,
+        SignalAttr<bool>,
         ElementCaptureAttr,
     );
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Type, self.input_type),
-            Attr(attr::Hidden, self.hidden),
-            Attr(attr::Name, self.name),
-            Attr(attr::Form, self.form),
-            Attr(attr::Value, self.value),
-            Attr(attr::Disabled, self.disabled),
-            Attr(attr::Required, self.required),
+            fixed_attr("type", self.input_type),
+            fixed_attr("hidden", self.hidden),
+            fixed_attr("name", self.name),
+            fixed_attr("form", self.form),
+            signal_attr("value", self.value),
+            signal_attr("disabled", self.disabled),
+            signal_attr("required", self.required),
             self.element_capture,
         )
     }
@@ -585,10 +647,10 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
     let validation = state.validation;
 
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         ..
     } = use_field(UseFieldInput {
         id,
@@ -599,6 +661,8 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
         aria_describedby,
         ..UseFieldInput::default()
     });
+    let label_props = label_props.into_props();
+    let field_props = field_props.into_props();
 
     // Leaving the field commits an incomplete value, and shows the validation if it changed.
     let value_on_focus = StoredValue::new(None::<V>);
@@ -620,6 +684,7 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
         on_focus_within_change: on_focus_change,
         ..UseFocusWithinInput::default()
     });
+    let focus_within_props = focus_within.target.into_props();
 
     // "Selected Date: May 20, 2024" ("Selected Time" for time fields).
     let strings = use_localized_strings::<DatePickerStrings>();
@@ -639,11 +704,7 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
         if let Some((_, picker_describedby)) = picker_labels {
             return picker_describedby.get();
         }
-        [description_id.get(), field_describedby.get()]
-            .into_iter()
-            .flatten()
-            .collect::<IdRefs>()
-            .into_value()
+        crate::utils::id::join_ids([description_id.get(), field_describedby.get()])
     });
 
     let focus_manager =
@@ -656,21 +717,18 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
             GroupArrowKeys::MoveBetweenSegments
         },
         overlay,
-    });
+    })
+    .into_props();
 
     let label_id = label_props.id.clone();
     let segments_labelledby = Signal::derive(move || {
         if let Some((picker_labelledby, _)) = picker_labels {
             return picker_labelledby.get();
         }
-        [
+        crate::utils::id::join_ids([
             has_label.get().then(|| label_id.clone()),
             aria_labelledby.get(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<IdRefs>()
-        .into_value()
+        ])
     });
     let data = DateFieldData {
         state,
@@ -727,8 +785,8 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
                 on_keyup,
                 ..group_props
             },
-            on_focusin: focus_within.props.on_focusin,
-            on_focusout: focus_within.props.on_focusout,
+            on_focusin: focus_within_props.on_focusin,
+            on_focusout: focus_within_props.on_focusout,
             element_capture: element.attr(),
         }
     } else {
@@ -744,23 +802,23 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
                 on_keyup,
                 ..group_props
             },
-            on_focusin: focus_within.props.on_focusin,
-            on_focusout: focus_within.props.on_focusout,
+            on_focusin: focus_within_props.on_focusin,
+            on_focusout: focus_within_props.on_focusout,
             element_capture: element.attr(),
         }
     };
     let native = state.validation_behavior == ValidationBehavior::Native;
 
     UseDateFieldReturn {
-        label_props: UseDateFieldLabelProps {
+        label: Part::stored(UseDateFieldLabelProps {
             label: label_props,
             on_click: EventHandler::new(move |_| data.focus_first()),
-        },
-        field_props: PropsWithStyles::new(
+        }),
+        field: Part::stored(PropsWithStyles::new(
             field,
             group_styles.add_unchecked("unicode-bidi", "isolate"),
-        ),
-        input_props: UseDateFieldInputProps {
+        )),
+        input: Part::stored(UseDateFieldInputProps {
             input_type: if native { "text" } else { "hidden" },
             hidden: native,
             name: state.name(),
@@ -776,9 +834,9 @@ pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateField
             disabled: is_disabled,
             required: Signal::derive(move || native && state.is_required.get()),
             element_capture: input_element.attr(),
-        },
-        description_props,
-        error_message_props,
+        }),
+        description: description_props,
+        error_message: error_message_props,
         data,
     }
 }
@@ -799,13 +857,15 @@ pub fn use_time_field<T: TimeValue>(input: UseTimeFieldInput<T>) -> UseDateField
         input_element,
         options,
     });
+    let mut input = field.input.into_props();
     let time_value = state.time_value;
-    field.input_props.value = Signal::derive(move || {
+    input.value = Signal::derive(move || {
         time_value
             .get()
             .map(|time| time.to_string())
             .unwrap_or_default()
     });
+    field.input = Part::stored(input);
     field
 }
 

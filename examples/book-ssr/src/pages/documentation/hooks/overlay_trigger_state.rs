@@ -90,7 +90,7 @@ pub fn PageUseOverlayTriggerState() -> impl IntoView {
                         });
 
                         // Open it from a button, close it from the overlay (or let the overlay hooks close it).
-                        let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+                        let UseButtonReturn { button, .. } = use_button(UseButtonInput {
                             on_press: Some(Callback::new(move |_| state.toggle())),
                             ..UseButtonInput::default()
                         });

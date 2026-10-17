@@ -12,7 +12,7 @@
 //! regions.
 
 use leptonic::{
-    Assertiveness, IntoAttrs, announce,
+    Assertiveness, announce,
     hooks::{
         button::use_button,
         calendar::{
@@ -46,23 +46,23 @@ fn HookCalendar(inputs: Inputs, state: StoredValue<Option<CalendarState>>) -> im
     state.set_value(Some(calendar_state));
     on_cleanup(move || state.set_value(None));
     let UseCalendarReturn {
-        calendar_props,
+        calendar: calendar_props,
         previous_button,
         next_button,
         title,
         ..
     } = use_calendar(UseCalendarInput {
         state: calendar_state,
-        id: Some("perf-calendar".to_owned()),
+        id: Some("perf-calendar".into()),
         aria_label: inputs.label.into(),
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
-    let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
+    let (previous_attrs, previous_styles) = use_button(previous_button).button.attrs();
+    let (next_attrs, next_styles) = use_button(next_button).button.attrs();
     view! {
-        <div {..calendar_props.into_attrs()}>
+        <div {..calendar_props.attrs()}>
             <button {..previous_attrs} style=previous_styles>
                 "<"
             </button>

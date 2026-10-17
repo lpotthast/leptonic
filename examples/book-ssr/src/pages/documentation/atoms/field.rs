@@ -32,11 +32,11 @@ pub fn PageAtomField() -> impl IntoView {
 
             <Section title="Hooks Used">
                 <p>
-                    "The parts render the label, description and error message props of the field\u{2019}s hook, which "
+                    "The atoms render the label, description and error message parts of the field\u{2019}s hook, which "
                     "come from "<Link href=routes::doc::field::Hook.materialize()>"Field Hooks"</Link>" ("
                     <Code inline=true>"use_label"</Code>" and "<Code inline=true>"use_field"</Code>
-                    "). The field passes the label props on in a "<Code inline=true>"LabelContext"</Code>", the description "
-                    "and error message props in a "<Code inline=true>"FieldContext"</Code>"."
+                    "). The field passes the label\u{2019}s part on in a "<Code inline=true>"LabelContext"</Code>", the "
+                    "description\u{2019}s and the error message\u{2019}s in a "<Code inline=true>"FieldContext"</Code>"."
                 </p>
             </Section>
 
@@ -193,8 +193,8 @@ pub fn PageAtomField() -> impl IntoView {
 
                 <Section title="FieldContext">
                     <ApiTable kind=ApiKind::Fields of="FieldContext">
-                        <ApiRow name="description" ty="SlotProps">"The hook\u{2019}s "<Code inline=true>"description_props"</Code>"."</ApiRow>
-                        <ApiRow name="error_message" ty="SlotProps">"The hook\u{2019}s "<Code inline=true>"error_message_props"</Code>"."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">"The hook\u{2019}s "<Code inline=true>"description"</Code>" part."</ApiRow>
+                        <ApiRow name="error_message" ty="Part<SlotProps>">"The hook\u{2019}s "<Code inline=true>"error_message"</Code>" part."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the field is invalid; "<Code inline=true>"FieldError"</Code>" is rendered only while it is."</ApiRow>
                         <ApiRow name="validation_errors" ty="Signal<Vec<String>>">"The errors a "<Code inline=true>"FieldError"</Code>" without children shows."</ApiRow>
                         <ApiRow name="validation_details" ty="Signal<ValidityStateSnapshot>">
@@ -213,14 +213,14 @@ pub fn PageAtomField() -> impl IntoView {
                     <p>"Create it with one of its constructors:"</p>
                     <DocTable headers=&["Constructor", "Renders"]>
                         <TableRow>
-                            <TableCell><Code inline=true>"LabelContext::label(props)"</Code></TableCell>
+                            <TableCell><Code inline=true>"LabelContext::label(label)"</Code></TableCell>
                             <TableCell>
                                 "A "<Code inline=true>"<label>"</Code>", for fields with a native input. Pass "
                                 <Code inline=true>"LabelElementType::Label"</Code>" to the hook."
                             </TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"LabelContext::span(props)"</Code></TableCell>
+                            <TableCell><Code inline=true>"LabelContext::span(label)"</Code></TableCell>
                             <TableCell>
                                 "A "<Code inline=true>"<span>"</Code>", for fields a "<Code inline=true>"<label>"</Code>
                                 " can\u{2019}t label (groups, custom elements). Pass "<Code inline=true>"LabelElementType::Span"</Code>

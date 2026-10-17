@@ -5,7 +5,7 @@
 //! ([`Control`]) mount and unmount it, and change its orientation and label.
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::toolbar::{UseToolbarInput, use_toolbar},
 };
 use leptos::prelude::*;
@@ -47,7 +47,7 @@ fn PlainToolbar(orientation: RwSignal<Orientation>, label: RwSignal<String>) -> 
         aria_labelledby: Signal::default(),
     });
     view! {
-        <div id="perf-toolbar" {..toolbar.props.into_attrs()}>
+        <div id="perf-toolbar" {..toolbar.toolbar.attrs()}>
             {(0..5)
                 .map(|i| view! { <button id=format!("perf-tool-{i}")>{i}</button> })
                 .collect_view()}

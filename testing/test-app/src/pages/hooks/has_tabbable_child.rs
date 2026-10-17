@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{UseHasTabbableChildInput, use_has_tabbable_child},
-};
+use leptonic::hooks::focus::{UseHasTabbableChildInput, use_has_tabbable_child};
 use leptos::prelude::*;
 
 #[component]
@@ -37,7 +34,7 @@ pub fn PageHookHasTabbableChild() -> impl IntoView {
 
             <section>
                 <h2>"Dynamic Toggle"</h2>
-                <div id="test-htc-container" {..htc.props.into_attrs()}>
+                <div id="test-htc-container" {..htc.target.attrs()}>
                     <Show when=move || show_child.get()>
                         <button id="test-htc-child-btn">"Child Button"</button>
                     </Show>
@@ -55,7 +52,7 @@ pub fn PageHookHasTabbableChild() -> impl IntoView {
 
             <section>
                 <h2>"No Tabbable Children"</h2>
-                <div id="test-htc-none-container" {..htc_none.props.into_attrs()}>
+                <div id="test-htc-none-container" {..htc_none.target.attrs()}>
                     <span>"Just a span"</span>
                     <div tabindex="-1">"Focusable but not tabbable"</div>
                 </div>
@@ -69,7 +66,7 @@ pub fn PageHookHasTabbableChild() -> impl IntoView {
 
             <section>
                 <h2>"Disabled Hook"</h2>
-                <div id="test-htc-disabled-container" {..htc_disabled.props.into_attrs()}>
+                <div id="test-htc-disabled-container" {..htc_disabled.target.attrs()}>
                     <button>"A button child"</button>
                 </div>
                 <div>
@@ -82,7 +79,7 @@ pub fn PageHookHasTabbableChild() -> impl IntoView {
 
             <section>
                 <h2>"Deeply Nested"</h2>
-                <div id="test-htc-nested-container" {..htc_nested.props.into_attrs()}>
+                <div id="test-htc-nested-container" {..htc_nested.target.attrs()}>
                     <div>
                         <div>
                             <button>"Deeply Nested Button"</button>
@@ -99,7 +96,7 @@ pub fn PageHookHasTabbableChild() -> impl IntoView {
 
             <section>
                 <h2>"Attribute Mutation"</h2>
-                <div id="test-htc-attr-container" {..htc_attr.props.into_attrs()}>
+                <div id="test-htc-attr-container" {..htc_attr.target.attrs()}>
                     <button disabled=move || child_disabled.get()>"Attr Button"</button>
                 </div>
                 <div>

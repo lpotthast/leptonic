@@ -103,7 +103,7 @@ pub fn PageAtomSwitch() -> impl IntoView {
                             "The value submitted while on. Without it, the browser submits "<Code inline=true>"on"</Code>"."
                         </ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, when it isn\u{2019}t inside it."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a switch without label text."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Further labelling or describing elements."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the switch when it mounts."</ApiRow>

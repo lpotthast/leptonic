@@ -331,7 +331,7 @@ pub fn PageUseCombobox() -> impl IntoView {
             <Section title="use_combobox">
                 <p>
                     "Configures the parts of a combobox for a "<Code inline=true>"ComboBoxState"</Code>". It doesn\u{2019}t "
-                    "render anything and doesn\u{2019}t return DOM props for the whole combobox. Instead, it returns the inputs "
+                    "render anything and doesn\u{2019}t return parts for the whole combobox. Instead, it returns the inputs "
                     "of the hooks that make up the parts: "
                     <Link href=routes::doc::text_field::Hook.materialize()>"use_text_field"</Link>" for the input, "
                     <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" for the button and "
@@ -358,7 +358,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                         use leptos::prelude::*;
 
                         let popover = CapturedElement::new();
-                        let UseComboBoxReturn { input, input_props, button, listbox, form_values } =
+                        let UseComboBoxReturn { text_field, input, button, listbox, form_values } =
                             use_combobox(UseComboBoxInput {
                                 state,
                                 id: None,
@@ -378,13 +378,14 @@ pub fn PageUseCombobox() -> impl IntoView {
                                 on_blur: None,
                             });
 
-                        let UseTextFieldReturn { label_props, input_props: field_props, .. } = use_text_field(input);
-                        let (button_attrs, button_styles) = use_button(button).props.into_parts();
+                        // The input takes the parts of both hooks.
+                        let UseTextFieldReturn { label, input: field_input, .. } = use_text_field(text_field);
+                        let (button_attrs, button_styles) = use_button(button).button.attrs();
                         let listbox = StoredValue::new(listbox);
 
                         view! {
-                            <label {..label_props.into_attrs()}>"Fruit"</label>
-                            <input {..field_props.into_attrs()} {..input_props.into_attrs()}/>
+                            <label {..label.attrs()}>"Fruit"</label>
+                            <input {..field_input.attrs()} {..input.attrs()}/>
                             <button {..button_attrs} style=button_styles><span aria-hidden="true">"▼"</span></button>
                             // With a `name` in the state: the selected keys, for form submission.
                             <For each=move || form_values.get() key=Clone::clone let(value)>
@@ -419,16 +420,16 @@ pub fn PageUseCombobox() -> impl IntoView {
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseComboBoxInput">
                         <ApiRow name="state" ty="ComboBoxState">"From "<Code inline=true>"use_combobox_state"</Code>"."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
                             "Disables the input and the button."
                         </ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the input as required."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
-                            "Whether you render a visible label with "<Code inline=true>"label_props"</Code>" of "
+                            "Whether you render a visible label with the "<Code inline=true>"label"</Code>" part of "
                             <Code inline=true>"use_text_field"</Code>". It then labels the input, the button and the listbox."
                         </ApiRow>
-                        <ApiRow name="aria_label, aria_labelledby, aria_describedby" ty="MaybeProp<String>, Signal<Option<String>>, Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_label, aria_labelledby, aria_describedby" ty="MaybeProp<String>, Signal<Option<Id>>, Signal<Option<Id>>" default="None">
                             "Labels or describes the input when there is no visible label, or in addition to it. "
                             <Code inline=true>"aria_labelledby"</Code>" also labels the button and the listbox."
                         </ApiRow>
@@ -462,14 +463,14 @@ pub fn PageUseCombobox() -> impl IntoView {
 
                 <Section title="Return" id="use-combobox-return">
                     <ApiTable kind=ApiKind::Return of="UseComboBoxReturn">
-                        <ApiRow name="input" ty="UseTextFieldInput">
+                        <ApiRow name="text_field" ty="UseTextFieldInput">
                             "The input\u{2019}s configuration, for "<Code inline=true>"use_text_field"</Code>": the text, "
                             <Code inline=true>"aria-activedescendant"</Code>", "<Code inline=true>"aria-autocomplete=\"list\""</Code>", "
                             <Code inline=true>"aria-controls"</Code>" (while open), autocomplete and spell checking turned off, "
                             "and the keyboard interaction."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="UseComboBoxInputProps">
-                            "Spread onto the input in addition to the text field\u{2019}s props: "<Code inline=true>"role=\"combobox\""</Code>", "
+                        <ApiRow name="input" ty="Part<UseComboBoxInputProps>">
+                            "Spread onto the input in addition to the text field\u{2019}s "<Code inline=true>"input"</Code>": "<Code inline=true>"role=\"combobox\""</Code>", "
                             <Code inline=true>"aria-expanded"</Code>", a touch handler (tapping the input\u{2019}s center, as "
                             "screen readers do, toggles the popover) and the element capture for form reset."
                         </ApiRow>

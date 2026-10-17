@@ -2,11 +2,11 @@
 // Upstream: react-aria/src/checkbox/useCheckboxGroupItem.ts @ 99e6102368
 // Upstream: react-aria/test/checkbox/useCheckboxGroup.test.tsx @ 99e6102368
 // Upstream: react-aria-components/test/CheckboxGroup.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
 use super::{
-    use_checkbox::{UseCheckboxInput, UseCheckboxReturn, use_checkbox_with},
+    use_checkbox::{UseCheckboxInput, UseCheckboxReturn, use_checkbox},
     use_checkbox_group_state::CheckboxGroupState,
     use_field::{UseFieldInput, UseFieldReturn, use_field},
     use_form_validation_state::{
@@ -18,12 +18,18 @@ use super::{
     use_toggle_state::{UseToggleStateInput, use_toggle_state},
 };
 use crate::{
-    EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps, ValueBinding,
+    EventHandler, Id, IdRefs, IntoAttrs, OnEvent, Part, SlotProps, ValueBinding,
     hooks::{
         collections::Key,
         focus::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
     },
-    utils::aria::{AriaDisabled, AriaRole, aria_true},
+    utils::{
+        aria::{AriaDisabled, AriaRole, aria_true},
+        part::Remount,
+        probe::either,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        spread::Spread,
+    },
 };
 
 // =============================================================================
@@ -42,12 +48,12 @@ use crate::{
 pub struct UseCheckboxGroupInput {
     pub state: CheckboxGroupState,
     /// The group element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// The id of the form the checkboxes belong to, when not their ancestor.
     pub form: Option<String>,
     pub on_focus: Option<Callback<FocusEvent>>,
@@ -60,19 +66,19 @@ pub struct UseCheckboxGroupInput {
 pub struct CheckboxGroupData {
     pub state: CheckboxGroupState,
     form: Option<String>,
-    description_id: Signal<Option<String>>,
-    error_message_id: Signal<Option<String>>,
+    description_id: Signal<Option<Id>>,
+    error_message_id: Signal<Option<Id>>,
 }
 
-/// Output of [`use_checkbox_group`].
+/// The return value of [`use_checkbox_group`].
 #[derive(Debug)]
 pub struct UseCheckboxGroupReturn {
-    /// Props for the group element.
-    pub props: UseCheckboxGroupProps,
-    /// Props for the group's label (a `<span>`).
-    pub label_props: UseLabelProps,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    /// The group element.
+    pub group: Part<UseCheckboxGroupProps>,
+    /// The group's label element.
+    pub label: Part<UseLabelProps>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     /// For [`use_checkbox_group_item`].
     pub data: CheckboxGroupData,
     pub is_invalid: Signal<bool>,
@@ -83,40 +89,54 @@ pub struct UseCheckboxGroupReturn {
 /// Props for the checkbox group element.
 #[derive(Debug)]
 pub struct UseCheckboxGroupProps {
-    pub id: String,
+    pub id: Id,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-pub type UseCheckboxGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Id, String>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+impl Remount for UseCheckboxGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_disabled: self.aria_disabled,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
+pub type UseCheckboxGroupAttrs = Spread<(
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<AriaDisabled>>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<Id>>,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
-);
+)>;
 
 impl IntoAttrs for UseCheckboxGroupProps {
     type Attrs = UseCheckboxGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Role, AriaRole::Group),
-            Attr(attr::Id, self.id),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+        Spread((
+            fixed_attr("role", AriaRole::Group),
+            fixed_attr("id", self.id),
+            signal_attr("aria-disabled", self.aria_disabled),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-describedby", self.aria_describedby),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-        )
+        ))
     }
 }
 
@@ -138,10 +158,10 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
         on_focus_change,
     } = input;
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         description_id,
         error_message_id,
     } = use_field(UseFieldInput {
@@ -153,6 +173,7 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
         aria_describedby,
         ..UseFieldInput::default()
     });
+    let field_props = field_props.into_props();
     let focus_within = use_focus_within(UseFocusWithinInput {
         on_focus_within: on_focus
             .map(|cb| Callback::new(move |e: FocusWithinEvent| cb.run(e.event))),
@@ -160,21 +181,22 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
         on_focus_within_change: on_focus_change,
         ..UseFocusWithinInput::default()
     });
+    let focus_within_props = focus_within.target.into_props();
     let is_disabled = state.is_disabled;
     let validation = state.validation;
     UseCheckboxGroupReturn {
-        props: UseCheckboxGroupProps {
+        group: Part::stored(UseCheckboxGroupProps {
             id: field_props.id,
             aria_disabled: aria_true(is_disabled),
             aria_label: field_props.aria_label,
             aria_labelledby: field_props.aria_labelledby,
             aria_describedby: field_props.aria_describedby,
-            on_focusin: focus_within.props.on_focusin,
-            on_focusout: focus_within.props.on_focusout,
-        },
-        label_props,
-        description_props,
-        error_message_props,
+            on_focusin: focus_within_props.on_focusin,
+            on_focusout: focus_within_props.on_focusout,
+        }),
+        label: label_props,
+        description: description_props,
+        error_message: error_message_props,
         data: CheckboxGroupData {
             state,
             form,
@@ -225,12 +247,9 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
     } = input;
     let state = group.state;
 
-    let item_read_only = options.is_read_only;
-    let item_disabled = options.is_disabled;
-    let item_required = options.is_required;
-    options.is_read_only = Signal::derive(move || item_read_only.get() || state.is_read_only.get());
-    options.is_disabled = Signal::derive(move || item_disabled.get() || state.is_disabled.get());
-    options.is_required = Signal::derive(move || item_required.get() || state.is_required.get());
+    options.is_read_only = either(options.is_read_only, state.is_read_only);
+    options.is_disabled = either(options.is_disabled, state.is_disabled);
+    options.is_required = either(options.is_required, state.is_required);
     options.name = options.name.or_else(|| state.name());
     options.form = options.form.or_else(|| group.form.clone());
     // Submitted with the form as the group's value.
@@ -242,12 +261,15 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         .unwrap_or(state.validation_behavior);
     options.validation_behavior = Some(validation_behavior);
 
-    let selected_value = value.clone();
     let toggled_value = value.clone();
     let toggle_state = use_toggle_state(UseToggleStateInput {
         default_selected: false,
         value: Some(ValueBinding::new(
-            Signal::derive(move || state.is_selected(&selected_value)),
+            // Only this checkbox's value's changes (`performance.md` R1).
+            {
+                let value = value.clone();
+                Signal::derive(move || state.is_selected(&value))
+            },
             Callback::new(move |is_selected: bool| {
                 if is_selected {
                     state.add_value(toggled_value.clone());
@@ -320,18 +342,7 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         group_validation,
     );
 
-    let mut checkbox = use_checkbox_with(
-        UseCheckboxInput {
-            state: toggle_state,
-            is_indeterminate,
-            options,
-        },
-        Some(item_validation),
-    );
-
     // Also described by the group's description and (while invalid) its error message.
-    let (mut input_props, input_styles) = checkbox.input_props.into_inner();
-    let own = input_props.aria_describedby;
     let group_error = Signal::derive(move || {
         if state.is_invalid.get() {
             group.error_message_id.get()
@@ -339,7 +350,12 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
             None
         }
     });
-    input_props.aria_describedby = IdRefs::derive([own, group_error, group.description_id]);
-    checkbox.input_props = PropsWithStyles::new(input_props, input_styles);
-    checkbox
+    options.aria_describedby =
+        IdRefs::derive([options.aria_describedby, group_error, group.description_id]);
+    use_checkbox(UseCheckboxInput {
+        state: toggle_state,
+        is_indeterminate,
+        validation: Some(item_validation),
+        options,
+    })
 }

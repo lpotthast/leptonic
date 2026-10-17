@@ -20,10 +20,10 @@ pub fn PageUseColorArea() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "Create the state, pass it to "<Code inline=true>"use_color_area"</Code>", and spread the returned props "
-                    "onto the area, its thumb and two inputs inside the thumb. Each props value carries the styles its "
-                    "element needs (the gradient, the thumb\u{2019}s position, the visually hidden inputs); split them with "
-                    <Code inline=true>"into_parts"</Code>":"
+                    "Create the state, pass it to "<Code inline=true>"use_color_area"</Code>", and spread the returned parts "
+                    "onto the area, its thumb and two inputs inside the thumb. Each part carries the styles its element "
+                    "needs (the gradient, the thumb\u{2019}s position, the visually hidden inputs): "
+                    <Code inline=true>"attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>":"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -55,10 +55,10 @@ pub fn PageUseColorArea() -> impl IntoView {
                             y_name: None,
                             form: None,
                         });
-                        let (area_attrs, area_styles) = area.color_area_props.into_parts();
-                        let (thumb_attrs, thumb_styles) = area.thumb_props.into_parts();
-                        let (x_attrs, x_styles) = area.x_input_props.into_parts();
-                        let (y_attrs, y_styles) = area.y_input_props.into_parts();
+                        let (area_attrs, area_styles) = area.area.attrs();
+                        let (thumb_attrs, thumb_styles) = area.thumb.attrs();
+                        let (x_attrs, x_styles) = area.x_input.attrs();
+                        let (y_attrs, y_styles) = area.y_input.attrs();
 
                         view! {
                             <div {..area_attrs} style=area_styles>
@@ -186,9 +186,9 @@ pub fn PageUseColorArea() -> impl IntoView {
                             "Names the area; its inputs are named \u{201c}<label>, Color picker\u{201d}. The area has no visible "
                             "label, so set this or "<Code inline=true>"aria_labelledby"</Code>"."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the area."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the inputs."</ApiRow>
-                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">"The ids of the elements with details about the inputs."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The ids of the elements naming the area."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"The ids of the elements describing the inputs."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<Id>>" default="None">"The ids of the elements with details about the inputs."</ApiRow>
                         <ApiRow name="x_name, y_name" ty="Option<String>" default="None">"Form field names of the hidden range inputs."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the inputs belong to."</ApiRow>
                     </ApiTable>
@@ -196,15 +196,15 @@ pub fn PageUseColorArea() -> impl IntoView {
 
                 <Section title="Return" id="use-color-area-return">
                     <ApiTable kind=ApiKind::Return of="UseColorAreaReturn">
-                        <ApiRow name="color_area_props" ty="PropsWithStyles<UseColorAreaProps>">
+                        <ApiRow name="area" ty="Part<PropsWithStyles<UseColorAreaProps>>">
                             <Code inline=true>"role=\"group\""</Code>", its name, the "
                             "pointer handling that moves the thumb to a pressed point, and the gradient as styles."
                         </ApiRow>
-                        <ApiRow name="thumb_props" ty="PropsWithStyles<UseColorAreaThumbProps>">
+                        <ApiRow name="thumb" ty="Part<PropsWithStyles<UseColorAreaThumbProps>>">
                             <Code inline=true>"role=\"presentation\""</Code>", dragging and keyboard handling, and the thumb\u{2019}s "
                             "position as styles."
                         </ApiRow>
-                        <ApiRow name="x_input_props, y_input_props" ty="PropsWithStyles<UseColorAreaInputProps>">
+                        <ApiRow name="x_input, y_input" ty="Part<PropsWithStyles<UseColorAreaInputProps>>">
                             "For the two "<Code inline=true>"<input type=\"range\">"</Code>" elements inside the thumb: range, step "
                             "and value of the axis channel, "<Code inline=true>"aria-roledescription=\"2D slider\""</Code>", the value "
                             "text, and visually hiding styles."

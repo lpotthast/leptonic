@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    IntoAttrs,
     atoms::{
         checkbox::{CheckboxButton, CheckboxField},
         focus_scope::FocusScope,
@@ -57,10 +56,10 @@ pub fn SelectDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let UseSelectReturn {
-        label_props,
+        label,
+        trigger_button,
         trigger,
-        trigger_props,
-        value_props,
+        value,
         listbox,
         hidden_select,
         ..
@@ -80,8 +79,7 @@ pub fn SelectDemo() -> impl IntoView {
         form: None,
     });
 
-    let button = use_button(trigger);
-    let (button_attrs, button_styles) = button.props.into_parts();
+    let (button_attrs, button_styles) = use_button(trigger_button).button.attrs();
 
     let selected_text = move || {
         state.selected_items().first().map_or_else(
@@ -92,16 +90,16 @@ pub fn SelectDemo() -> impl IntoView {
 
     view! {
         <div class="demo-select">
-            <span {..label_props.into_attrs()} class="demo-select-label">
+            <span {..label.attrs()} class="demo-select-label">
                 "Fruit"
             </span>
             <button
                 {..button_attrs}
-                {..trigger_props.into_attrs()}
+                {..trigger.attrs()}
                 style=button_styles
                 class="demo-select-trigger"
             >
-                <span {..value_props.into_attrs()}>{selected_text}</span>
+                <span {..value.attrs()}>{selected_text}</span>
                 <span aria-hidden="true">"\u{25bc}"</span>
             </button>
 
@@ -138,12 +136,12 @@ fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView 
         should_close_on_interact_outside: None,
         group: None,
     });
-    let UseListBoxReturn { props, data } = use_listbox(listbox);
+    let UseListBoxReturn { listbox, data } = use_listbox(listbox);
 
     view! {
         <FocusScope restore_focus=true>
-            <div {..overlay.props.into_attrs()} class="demo-select-popover">
-                <div {..props.into_attrs()}>
+            <div {..overlay.overlay.attrs()} class="demo-select-popover">
+                <div {..listbox.attrs()}>
                     {FRUITS
                         .map(|(key, label)| {
                             view! { <FruitOption list=data.clone() key=key label=label /> }
@@ -159,13 +157,13 @@ fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView 
 #[component]
 fn FruitOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
     let UseOptionReturn {
-        props, is_focused, ..
+        option, is_focused, ..
     } = use_option(UseOptionInput {
         list,
         key: Key::from(key),
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = option.attrs();
 
     view! {
         <div {..attrs} style=styles data-focused=move || is_focused.get().then_some("") class="demo-select-option">
@@ -182,15 +180,15 @@ fn FruitHiddenSelect(
 ) -> impl IntoView {
     let state = hidden_select.state;
     let UseHiddenSelectReturn {
-        container_props,
-        select_props,
+        container,
+        select,
         options,
         ..
     } = use_hidden_select(hidden_select);
 
     view! {
-        <div {..container_props.into_attrs()}>
-            <select {..select_props.into_attrs()}>
+        <div {..container.attrs()}>
+            <select {..select.attrs()}>
                 <For
                     each=move || options.get()
                     key=|option| option.key.clone()

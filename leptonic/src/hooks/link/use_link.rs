@@ -1,25 +1,17 @@
 // Upstream: react-aria/src/link/useLink.ts @ 99e6102368
 // Upstream: react-aria/test/link/useLink.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Link.test.js @ 99e6102368
-use leptos::{
-    attr,
-    attr::{
-        Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    oco::Oco,
-    prelude::*,
-};
+use leptos::{ev, oco::Oco, prelude::*};
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IdRefs, IntoAttrs, OnEvent,
+    PropsWithStyles,
     hooks::{
         focus::{
-            FocusHandle, FocusableContextAttr, FocusableContextAttrs, UseFocusRingInput,
-            UseFocusRingReturn, UseFocusableInput, UseFocusableReturn, use_focus_ring,
-            use_focusable,
+            FocusHandle, FocusRingTarget, FocusableContextAttr, FocusableContextAttrs,
+            UseFocusRingInput, UseFocusRingReturn, UseFocusableInput, UseFocusableReturn,
+            use_focus_ring, use_focusable,
         },
         interactions::{
             HoverEndEvent, HoverStartEvent, PressEvent, PressPropagation, PressResponderContext,
@@ -28,7 +20,14 @@ use crate::{
         },
         link::{LinkRel, LinkTarget, link_rel},
     },
-    utils::aria::{AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole, aria_true},
+    utils::{
+        aria::{AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole, aria_true},
+        part::{Part, Remount},
+        probe::either,
+        reactions::sharing_one_effect,
+        signal_attr::{SignalAttr, maybe_attr, signal_attr},
+        spread::Spread,
+    },
 };
 
 // =============================================================================
@@ -113,11 +112,12 @@ pub struct UseLinkInput {
     pub exclude_from_tab_order: Signal<bool>,
 }
 
-/// Return value of [`use_link`].
+/// The return value of [`use_link`].
 #[derive(Debug)]
 pub struct UseLinkReturn {
-    /// For the link element. Call `.into_parts()` for spreading and styles.
-    pub props: PropsWithStyles<UseLinkProps>,
+    /// The link element: `let (attrs, styles) = link.attrs();`, the styles merged with the
+    /// element's own.
+    pub link: Part<PropsWithStyles<UseLinkProps>>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
     pub is_hovered: Signal<bool>,
@@ -141,8 +141,8 @@ pub struct UseLinkProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
-    pub aria_controls: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub data_focus_visible: Signal<Option<&'static str>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -161,24 +161,58 @@ pub struct UseLinkProps {
     pub context_attrs: Option<FocusableContextAttrs>,
 }
 
+impl Remount for UseLinkProps {
+    fn remount(&self) -> Self {
+        Self {
+            href: self.href,
+            target: self.target,
+            rel: self.rel,
+            role: self.role,
+            tabindex: self.tabindex,
+            aria_label: self.aria_label,
+            aria_current: self.aria_current,
+            aria_disabled: self.aria_disabled,
+            aria_haspopup: self.aria_haspopup,
+            aria_expanded: self.aria_expanded,
+            aria_controls: self.aria_controls,
+            aria_describedby: self.aria_describedby,
+            data_focus_visible: self.data_focus_visible,
+            element_capture: self.element_capture.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            on_click: self.on_click.clone(),
+            on_dblclick: self.on_dblclick.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_pointerup: self.on_pointerup.clone(),
+            on_mousedown: self.on_mousedown.clone(),
+            on_dragstart: self.on_dragstart.clone(),
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerleave: self.on_pointerleave.clone(),
+            context_attrs: self.context_attrs.clone(),
+        }
+    }
+}
+
 /// Spread onto the link element: `<a {..attrs}/>`.
-pub type UseLinkAttrs = (
+pub type UseLinkAttrs = Spread<(
     (
-        Attr<attr::Href, Signal<Option<String>>>,
-        Attr<attr::Target, Signal<Option<Oco<'static, str>>>>,
-        Attr<attr::Rel, Signal<Option<String>>>,
-        Attr<attr::Role, Signal<Option<AriaRole>>>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaCurrent, Signal<Option<AriaCurrent>>>,
-        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Oco<'static, str>>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<AriaRole>>,
+        SignalAttr<Option<i32>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<AriaCurrent>>,
+        SignalAttr<Option<AriaDisabled>>,
     ),
     (
-        Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
-        Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-        Attr<attr::AriaControls, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        CustomAttr<&'static str, Signal<Option<&'static str>>>,
+        SignalAttr<Option<AriaHasPopup>>,
+        SignalAttr<Option<AriaExpanded>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<&'static str>>,
         ElementCaptureAttr,
     ),
     (
@@ -196,29 +230,29 @@ pub type UseLinkAttrs = (
         OnEvent<ev::pointerleave>,
     ),
     FocusableContextAttr,
-);
+)>;
 
 impl IntoAttrs for UseLinkProps {
     type Attrs = UseLinkAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
+        Spread((
             (
-                Attr(attr::Href, self.href),
-                Attr(attr::Target, self.target),
-                Attr(attr::Rel, self.rel),
-                Attr(attr::Role, self.role),
-                Attr(attr::Tabindex, self.tabindex),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaCurrent, self.aria_current),
-                Attr(attr::AriaDisabled, self.aria_disabled),
+                signal_attr("href", self.href),
+                signal_attr("target", self.target),
+                signal_attr("rel", self.rel),
+                signal_attr("role", self.role),
+                signal_attr("tabindex", self.tabindex),
+                maybe_attr("aria-label", self.aria_label),
+                signal_attr("aria-current", self.aria_current),
+                signal_attr("aria-disabled", self.aria_disabled),
             ),
             (
-                Attr(attr::AriaHaspopup, self.aria_haspopup),
-                Attr(attr::AriaExpanded, self.aria_expanded),
-                Attr(attr::AriaControls, self.aria_controls),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                custom_attribute("data-focus-visible", self.data_focus_visible),
+                signal_attr("aria-haspopup", self.aria_haspopup),
+                signal_attr("aria-expanded", self.aria_expanded),
+                signal_attr("aria-controls", self.aria_controls),
+                signal_attr("aria-describedby", self.aria_describedby),
+                signal_attr("data-focus-visible", self.data_focus_visible),
                 self.element_capture,
             ),
             (
@@ -236,7 +270,7 @@ impl IntoAttrs for UseLinkProps {
                 self.on_pointerleave.into_on(ev::pointerleave),
             ),
             FocusableContextAttr(self.context_attrs),
-        )
+        ))
     }
 }
 
@@ -249,11 +283,17 @@ impl IntoAttrs for UseLinkProps {
 ///     target: Signal::stored(LinkTarget::Blank),
 ///     ..UseLinkInput::default()
 /// });
-/// let (attrs, styles) = link.props.into_parts();
+/// let (attrs, styles) = link.link.attrs();
 /// view! { <a {..attrs} style=styles>"Example"</a> }
 /// ```
 pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     crate::metrics::subject!();
+    // The disabled resets of `use_press`, `use_hover` and `use_focus_ring` share one effect.
+    sharing_one_effect(|| link(input))
+}
+
+/// The body of [`use_link`].
+fn link(input: UseLinkInput) -> UseLinkReturn {
     let UseLinkInput {
         href,
         target,
@@ -287,16 +327,14 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         .and_then(|ctx| ctx.shortcuts)
         .map(|shortcuts| shortcuts.get_value());
     let is_disabled = match responder.as_ref().and_then(|ctx| ctx.is_disabled) {
-        Some(responder_disabled) => {
-            Signal::derive(move || is_disabled.get() || responder_disabled.get())
-        }
+        Some(responder_disabled) => either(is_disabled, responder_disabled),
         None => is_disabled,
     };
 
     let is_anchor = move || element_type.get() == LinkElementType::Anchor;
 
     let UseFocusableReturn {
-        props: focusable_props,
+        target: focusable_props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
         is_disabled,
@@ -308,11 +346,12 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         on_key_down,
         on_key_up,
         shortcuts,
-        ..UseFocusableInput::default()
+        allow_shortcut_repeats: false,
     });
+    let focusable_props = focusable_props.into_props();
 
     let UsePressReturn {
-        props: press_props,
+        target: press_props,
         is_pressed,
     } = use_press(UsePressInput {
         is_disabled,
@@ -322,11 +361,20 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         on_press_start,
         on_press_end,
         on_press_change,
-        ..UsePressInput::default()
+        // Every field named: `..UsePressInput::default()` would create a stored signal for each
+        // `Signal` field (`performance.md` R14).
+        on_press_up: None,
+        on_double_press: None,
+        long_press: None,
+        prevent_focus_on_press: Signal::stored(false),
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
     });
+    let press_props = press_props.into_props();
 
     let UseHoverReturn {
-        props: hover_props,
+        target: hover_props,
         is_hovered,
     } = use_hover(UseHoverInput {
         is_disabled,
@@ -334,15 +382,21 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         on_hover_end,
         on_hover_change,
     });
+    let hover_props = hover_props.into_props();
 
     let UseFocusRingReturn {
-        props: focus_ring_props,
+        target: focus_ring_props,
         is_focused,
         is_focus_visible,
     } = use_focus_ring(UseFocusRingInput {
         is_disabled,
-        ..UseFocusRingInput::default()
+        target: FocusRingTarget::Element,
+        is_text_input: false,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
+    let focus_ring_props = focus_ring_props.into_props();
 
     let (press_props, press_styles) = press_props.into_inner();
     let context_describedby = focusable_props.context_aria_describedby;
@@ -414,7 +468,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     };
 
     UseLinkReturn {
-        props: PropsWithStyles::new(props, press_styles),
+        link: Part::stored(PropsWithStyles::new(props, press_styles)),
         is_disabled,
         is_pressed,
         is_hovered,

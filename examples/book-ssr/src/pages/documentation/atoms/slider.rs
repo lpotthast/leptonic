@@ -171,7 +171,7 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <ApiRow name="format_options" ty="Signal<NumberFormatOptions>" default="NumberFormatOptions::default()">
                             "How values are formatted for the output, the tooltips and assistive technology."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="MaybeProp<String>" default="None">"Ids of elements naming the slider."</ApiRow>
                         <ApiRow name="aria_describedby" ty="MaybeProp<String>" default="None">

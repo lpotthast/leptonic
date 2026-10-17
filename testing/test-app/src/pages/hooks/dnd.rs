@@ -54,7 +54,7 @@ pub fn PageHookDnd() -> impl IntoView {
 #[component]
 fn Draggable(log: impl Fn(String) + Copy + Send + Sync + 'static) -> impl IntoView {
     let UseDragReturn {
-        drag_props,
+        draggable: drag_props,
         is_dragging,
         ..
     } = use_drag(UseDragInput {
@@ -73,7 +73,7 @@ fn Draggable(log: impl Fn(String) + Copy + Send + Sync + 'static) -> impl IntoVi
         <div
             id="test-dnd-draggable"
             tabindex="0"
-            {..drag_props.into_attrs()}
+            {..drag_props.attrs()}
             data-dragging=flag(is_dragging)
         >
             "Drag me"
@@ -89,7 +89,7 @@ fn Droppable(
 ) -> impl IntoView {
     let element = CapturedElement::new();
     let UseDropReturn {
-        drop_props,
+        drop_target: drop_props,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -123,7 +123,7 @@ fn Droppable(
             role="button"
             tabindex="0"
             class="test-dnd-droppable"
-            {..drop_props.into_attrs()}
+            {..drop_props.attrs()}
             data-drop-target=flag(is_drop_target)
         >
             {label}
@@ -155,7 +155,10 @@ fn ReorderableList() -> impl IntoView {
         selection: SelectionOptions::default(),
     });
     let element = CapturedElement::new();
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+    let UseGridListReturn {
+        grid_list: props,
+        data,
+    } = use_grid_list(UseGridListInput {
         aria_label: "Letters".into(),
         state: list,
         element,
@@ -220,12 +223,12 @@ fn ReorderableList() -> impl IntoView {
         is_disabled: Signal::stored(false),
     });
     let UseDroppableCollectionReturn {
-        collection_props,
+        collection: collection_props,
         data: drop,
     } = use_droppable_collection(UseDroppableCollectionInput {
         state: drop_state,
         element,
-        collection_id: props.id.clone(),
+        collection_id: data.id.clone(),
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
             element,
@@ -249,7 +252,7 @@ fn ReorderableList() -> impl IntoView {
     let last = move || letters.with(|l| l.last().copied());
     view! {
         <Provider value=context>
-            <div {..props.into_attrs()} {..collection_props.into_attrs()}>
+            <div {..props.attrs()} {..collection_props.attrs()}>
                 <For
                     each=move || letters.get()
                     key=|letter| *letter
@@ -276,8 +279,8 @@ fn Row(letter: &'static str) -> impl IntoView {
     } = expect_context::<ListContext>();
     let key = Key::from(letter);
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         ..
     } = use_grid_list_item(UseGridListItemInput {
         list,
@@ -287,7 +290,7 @@ fn Row(letter: &'static str) -> impl IntoView {
         on_context_menu: None,
     });
     let UseDraggableItemReturn {
-        mut drag_props,
+        item: drag_props,
         is_dragging,
         ..
     } = use_draggable_item(UseDraggableItemInput {
@@ -297,24 +300,22 @@ fn Row(letter: &'static str) -> impl IntoView {
         has_action: false,
     });
     let element = CapturedElement::new();
-    let UseDroppableItemReturn { drop_props, .. } = use_droppable_item(UseDroppableItemInput {
+    let UseDroppableItemReturn {
+        item: drop_props, ..
+    } = use_droppable_item(UseDroppableItemInput {
         collection: drop,
         target: DropTarget::item(key, DropPosition::On).into(),
         element,
         activate_button: None,
     });
+    let mut drag_props = drag_props.props().expect("a new part's props");
+    let drop_props = drop_props.props().expect("a new part's props");
     // Both describe the row: join the ids (react-aria merges them).
     let drag_description = drag_props.aria_describedby;
     let drop_description = drop_props.aria_describedby;
-    drag_props.aria_describedby = Signal::derive(move || {
-        let ids: Vec<String> = [drag_description.get(), drop_description.get()]
-            .into_iter()
-            .flatten()
-            .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
-    });
+    drag_props.aria_describedby = leptonic::IdRefs::derive([drag_description, drop_description]);
     let aria_hidden = drop_props.aria_hidden;
-    let (row_attrs, row_styles) = row_props.into_parts();
+    let (row_attrs, row_styles) = row_props.attrs();
 
     view! {
         <DropIndicator letter position=DropPosition::Before />
@@ -326,7 +327,7 @@ fn Row(letter: &'static str) -> impl IntoView {
             aria-hidden=move || aria_hidden.get()
             data-dragging=flag(is_dragging)
         >
-            <div {..grid_cell_props.into_attrs()}>{letter}</div>
+            <div {..grid_cell_props.attrs()}>{letter}</div>
         </div>
     }
 }
@@ -335,7 +336,7 @@ fn Row(letter: &'static str) -> impl IntoView {
 fn DropIndicator(letter: &'static str, position: DropPosition) -> impl IntoView {
     let ListContext { drop, .. } = expect_context::<ListContext>();
     let UseDropIndicatorReturn {
-        drop_indicator_props,
+        indicator: drop_indicator_props,
         is_drop_target,
         is_hidden,
     } = use_drop_indicator(UseDropIndicatorInput {
@@ -347,7 +348,7 @@ fn DropIndicator(letter: &'static str, position: DropPosition) -> impl IntoView 
         <div role="row" class="test-dnd-indicator">
             <div
                 role="gridcell"
-                {..drop_indicator_props.into_attrs()}
+                {..drop_indicator_props.attrs()}
                 data-drop-target=flag(is_drop_target)
                 data-hidden=flag(is_hidden)
             ></div>

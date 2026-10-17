@@ -1,13 +1,13 @@
 //! The state of a table (`use_table_state`) alone, for its performance test
-//! (`leptonic/tests/perf_tests/hooks/use_table_state.rs`): the rows of the `use_table` fixture
-//! ([`super::use_table`]: [`SMALL`] rows "Row <i>" in the sortable columns Name, Value and Group),
-//! with multiple selection, or (`mount-tree`) a tree table of [`SMALL`] / 2 parent rows ("Parent
-//! <p>", key `p<p>`) with a child row each (key `c<p>`), created by a mounted component (mounted
-//! at first) that shows how many rows are visible (`#perf-rows`), how many columns the table has
-//! (`#perf-columns`) and its sort (`#perf-sort`). Its controls ([`Control`]) mount and unmount it,
-//! set its size while unmounted (`small`, `large`: [`LARGE`] rows), add and remove a row, show
-//! and hide the selection checkboxes, change the selection mode, sort by Value, expand and
-//! collapse every row of the tree table and read how many rows are visible (`rows`).
+//! (`leptonic/tests/perf_tests/hooks/use_table_state.rs`): [`SMALL`] rows "Row <i>" in the sortable
+//! columns Name, Value and Group, with multiple selection, or (`mount-tree`) a tree table of
+//! [`SMALL`] / 2 parent rows ("Parent <p>", key `p<p>`) with a child row each (key `c<p>`), created
+//! by a mounted component (mounted at first) that shows how many rows are visible (`#perf-rows`),
+//! how many columns the table has (`#perf-columns`) and its sort (`#perf-sort`). Its controls
+//! ([`Control`]) mount and unmount it, set its size while unmounted (`small`, `large`: [`LARGE`]
+//! rows), add and remove a row, show and hide the selection checkboxes, change the selection mode,
+//! sort by Value, expand and collapse every row of the tree table and read how many rows are
+//! visible (`rows`).
 
 use std::{collections::HashSet, sync::Arc};
 
@@ -24,8 +24,34 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-use super::use_table::{LARGE, SMALL, table_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small table.
+const SMALL: usize = 10;
+/// The rows of the large table.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`) in the sortable columns `name` (the row header), `value` and
+/// `group`.
+fn table_collection(rows: RwSignal<usize>) -> Memo<Arc<TableCollection>> {
+    Memo::new(move |_| {
+        Arc::new(TableCollection::build(|t| {
+            for (key, text) in [("name", "Name"), ("value", "Value"), ("group", "Group")] {
+                let column = t.column(key, text).allows_sorting();
+                if key == "name" {
+                    let _ = column.row_header();
+                }
+            }
+            for i in 0..rows.get() {
+                t.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
 
 /// A tree table of `rows / 2` parent rows with a child row each.
 fn tree_collection(rows: RwSignal<usize>) -> Memo<Arc<TableCollection>> {
@@ -70,7 +96,7 @@ fn PerfState(settings: Settings, state: StoredValue<Option<TableState>>) -> impl
         table: if tree {
             tree_collection(settings.rows)
         } else {
-            table_collection(settings.rows, false)
+            table_collection(settings.rows)
         },
         show_selection_checkboxes: settings.checkboxes.into(),
         selection: SelectionOptions {

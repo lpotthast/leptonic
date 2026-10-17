@@ -51,7 +51,7 @@ pub fn PageToastHooks() -> impl IntoView {
                         #[component]
                         fn Notifications(queue: ToastQueue<String>) -> impl IntoView {
                             let element = CapturedElement::new();
-                            let UseToastRegionReturn { region_props } =
+                            let UseToastRegionReturn { region } =
                                 use_toast_region(UseToastRegionInput {
                                     queue,
                                     element,
@@ -59,7 +59,7 @@ pub fn PageToastHooks() -> impl IntoView {
                                     aria_labelledby: Signal::default(),
                                 });
                             view! {
-                                <div {..region_props.into_attrs()} {..element.attr()}>
+                                <div {..region.attrs()} {..element.attr()}>
                                     <For
                                         each=move || queue.visible_toasts.get()
                                         key=|toast| toast.key.clone()
@@ -79,12 +79,12 @@ pub fn PageToastHooks() -> impl IntoView {
                                 aria_labelledby: Signal::default(),
                                 aria_describedby: Signal::default(),
                             };
-                            let UseToastReturn { toast_props, content_props, title_id, close_button, .. } = use_toast(input);
-                            let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
+                            let UseToastReturn { toast, content, title, close_button, .. } = use_toast(input);
+                            let (close_attrs, close_styles) = use_button(close_button).button.attrs();
                             view! {
-                                <div {..toast_props.into_attrs()}>
-                                    <div {..content_props.into_attrs()}>
-                                        <div id=title_id>{message}</div>
+                                <div {..toast.attrs()}>
+                                    <div {..content.attrs()}>
+                                        <div {..title.attrs()}>{message}</div>
                                     </div>
                                     <button {..close_attrs} style=close_styles>"\u{00d7}"</button>
                                 </div>
@@ -190,13 +190,13 @@ pub fn PageToastHooks() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the region. Default: \u{201c}1 notification.\u{201d}, \u{201c}2 notifications.\u{201d}, \u{2026}"
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of elements naming the region."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of elements naming the region."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-toast-region-return">
                     <ApiTable kind=ApiKind::Return of="UseToastRegionReturn">
-                        <ApiRow name="region_props" ty="UseToastRegionProps">
+                        <ApiRow name="region" ty="Part<UseToastRegionProps>">
                             "Spread on the region: "<Code inline=true>"role=\"region\""</Code>", its name, "
                             <Code inline=true>"tabindex=\"-1\""</Code>", "<Code inline=true>"data-leptonic-top-layer"</Code>
                             " (it stays usable while a modal is open) and the hover and focus handlers."
@@ -218,24 +218,24 @@ pub fn PageToastHooks() -> impl IntoView {
                         <ApiRow name="queue" ty="ToastQueue<T>">"The queue the toast is in; closing removes it from there. Required."</ApiRow>
                         <ApiRow name="toast" ty="QueuedToast<T>">"The toast, from "<Code inline=true>"visible_toasts"</Code>". Required."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the toast instead of its title."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of elements naming the toast. Default: its title."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing the toast. Default: its description."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of elements naming the toast. Default: its title."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of elements describing the toast. Default: its description."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-toast-return">
                     <ApiTable kind=ApiKind::Return of="UseToastReturn">
-                        <ApiRow name="toast_props" ty="UseToastProps">
+                        <ApiRow name="toast" ty="Part<UseToastProps>">
                             "Spread on the toast: "<Code inline=true>"role=\"alertdialog\""</Code>", "
                             <Code inline=true>"aria-modal=\"false\""</Code>", its name and description, "
                             <Code inline=true>"tabindex=\"0\""</Code>"."
                         </ApiRow>
-                        <ApiRow name="content_props" ty="UseToastContentProps">
+                        <ApiRow name="content" ty="Part<UseToastContentProps>">
                             "Spread on the element around the title and the description: "<Code inline=true>"role=\"alert\""</Code>
                             " and "<Code inline=true>"aria-atomic"</Code>", so screen readers announce the content when the toast appears."
                         </ApiRow>
-                        <ApiRow name="title_id" ty="String">"The id to give the title, which names the toast."</ApiRow>
-                        <ApiRow name="description_props" ty="SlotProps">
+                        <ApiRow name="title" ty="Part<UseToastTitleProps>">"For the title, which names the toast: its id."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">
                             "Spread on the description: its id, referenced by "<Code inline=true>"aria-describedby"</Code>
                             " while it is rendered."
                         </ApiRow>

@@ -101,6 +101,13 @@ pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
         .has_attribute("tabindex")
         .await
         .is_equal_to("-1");
+    // The button is named by its own label and the field's ("Show suggestions Fruit").
+    let button_id = button.attr("id").await?;
+    assert_that!(button_id.as_deref()).is_some();
+    assert_that!(button)
+        .attribute("aria-labelledby")
+        .await
+        .is_equal_to(button_id.map(|id| format!("{id} {labelled_by}")));
     Ok(())
 }
 
@@ -760,5 +767,32 @@ pub async fn read_only_lets_keys_bubble(page: &Page<'_>) -> Result<(), Report> {
         .property("value")
         .await
         .is_equal_to(Some("Apple".to_owned()));
+    Ok(())
+}
+
+/// The input refers to the open popover's listbox (`aria-controls`) only while it is rendered
+/// (react-aria ties optional elements' ids to their rendering, `useSlotId`): a popover that
+/// unmounts while open leaves no reference to a missing element.
+#[browser_test]
+pub async fn controls_only_a_rendered_listbox(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = input_labelled(page, "Fruit").await?;
+    input.type_keys("a").await?;
+    let listbox_id = page.element(LISTBOX).await?.id().await?.unwrap_or_default();
+    input
+        .wait_for_attr("aria-controls", Some(listbox_id.as_str()))
+        .await?;
+    // A script click: no interaction outside, the combo box stays open.
+    let toggle = page.element("#test-cb-toggle-popover").await?;
+    toggle.virtual_click().await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    input.wait_for_attr("aria-controls", None).await?;
+    toggle.virtual_click().await?;
+    if input.attr("aria-expanded").await?.as_deref() == Some("true") {
+        let listbox_id = page.element(LISTBOX).await?.id().await?.unwrap_or_default();
+        input
+            .wait_for_attr("aria-controls", Some(listbox_id.as_str()))
+            .await?;
+    }
     Ok(())
 }

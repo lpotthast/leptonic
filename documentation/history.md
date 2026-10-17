@@ -1,997 +1,231 @@
 # Leptonic: history
 
-Finished work, moved out of `PLAN.md` (which holds open work only), condensed to what was done and decided, and
-when. The rules that came out of it live in the documents `README.md` lists; git history has the details. Most
-recent first within each part.
-
-## Testing: performance tests by kind, for every hook and atom (2026-10-16)
-
-- The user's decision: it must be clear which test is for a hook and which for an atom. The library reports typed
-  subjects (`leptonic::metrics::Subject`: kind and name; ids `hooks/use_press`, `atoms/button`); performance tests
-  live in `leptonic/tests/perf_tests/{atoms,hooks}/<subject>.rs` (tests named
-  `perf_tests::atoms::button::mount_and_unmount`), fixtures in `testing/test-app/src/pages/perf/{atoms,hooks}/`
-  (`/perf/atoms/button`), budgets in `leptonic/tests/budgets/{atoms,hooks}/<subject>.json`. Every subject's module
-  exists and is wired in (generated stubs), each registering its own tests, so that the tests of all 356 can be
-  written in parallel without shared edits; the coverage check fails unfiltered runs only.
-- Written by 9 parallel agents, one per domain (interactions and focus; forms; toggles and ranges; collections;
-  grids and tables; overlays; dates; color, tabs and toasts; drag and drop and the virtualizer): 356 of 356 hooks and
-  atoms have performance tests (about 2,330 tests), every one passed two exact check runs after its last recording;
-  the regular suite has 3,926 tests. The final full runs: 3,924, 3,924 and 3,925 of 3,926 passed; the failures were
-  stale budgets of the first two subjects (re-recorded), a scroll test that polled a 300 ms state across WebDriver
-  round trips (now waits in the page, frame by frame), a load-dependent extra resize in
-  `virtual_list::resize_grown`, and `test_dnd::talkback_click_on_the_drag_source_cancels`, flaky alone too (both in
-  `PLAN.md`). The findings (costs, bugs) are in `PLAN.md`, "Performance: findings of the performance tests"; the
-  pitfalls of deterministic measurements in `testing.md`.
-- Test runs: unbatched runs serialized by a lock rebuilt the test-app (3.5-4.5 minutes) for every agent, one agent's
-  unfinished file broke every run, and a tree-wide fix script (an agent's) broke 40 files at 14:23. Then the
-  coordinating session ran tests for all (AGENTS.md, "Test Runs"): agents queued requests, a runner ran everything
-  queued in one build and one run per round (`BROWSER_TEST_PERF_BUDGETS_UPDATE=<filters>` records some tests'
-  budgets and checks the others'), each agent got its own tests' results. `allocated_bytes` became unbudgeted (16-48
-  byte differences between runs with equal counts, seen by three agents).
-
-## Testing: a performance test per hook and atom; the library reports what ran (2026-10-16)
-
-- The user's decisions: dedicated performance tests, measuring everything a hook or atom offers (behavior tests
-  don't measure: their steps change for behavior's sake), and the library reports what ran instead of tests listing
-  a measurement's subjects (a hand-written `MEASURES` list was untyped knowledge of internals). Every public hook and
-  atom (356) starts with `crate::metrics::subject!();` (feature `metrics`; the test-app enables it), which notes the
-  function it is in without allocating; budgets record what ran. A performance test is `test_perf_<subject>.rs`
-  (its name is its subject: `button`, `use_press`); every measurement must have run that subject; the coverage
-  check counts subjects with performance tests. Fixtures get `PerfControls` (`page.control(name)`: mount, unmount,
-  prop changes, reads). Reference: `test_perf_button.rs` (10 tests: mount, clicks, hold, keys, hover, focus,
-  disabled, pending, tab order, ARIA state); the measurements in the `Button`, `CheckboxField` and `TextField`
-  behavior tests were removed.
-
-## Testing: performance measured by every test (2026-10-16)
-
-- The user's goal: know the performance metrics of every hook and atom at all times, measured by the same tests
-  that check behavior. Any browser test measures a step with `page.measure(MEASURES, "press", action)`; the harness
-  checks a passed test's measurements against its budget (`leptonic/tests/budgets/<module>.json`); the regular
-  suite runs it all, the performance suite only times the scenarios. The metrics are defined once, in
-  `testing/perf-metrics` (shared by the test-app, which counts the app's, and the tests); the app's counters are
-  page-global (`window.leptonicCounters`), no longer per scenario. A coverage check after every regular run
-  compares the measured subjects with every public hook and atom (read from the sources) and
-  `leptonic/tests/budgets/unmeasured.txt`. First measurements: `Button` (hover, press, release, keyboard focus),
-  `CheckboxField` (select, deselect), `TextField` (typing, committing) and the `VirtualList` scenarios. Details:
-  `documentation/testing.md`, "Performance measurements".
-- WebDriver-driven measurements repeated exactly over 5 runs (3 with all CPU threads busy); the regular build's
-  debug assertions barely change counts (5 of 337,154 allocations), so budgets live in the regular suite.
-
-## Testing: performance counts and budgets (2026-10-16)
-
-- The plan for a durable performance framework (the user's request, 2026-10-16; open steps in `PLAN.md`, "Testing
-  infrastructure"): counts first, as they are exact and can fail a test, timings to compare. Done: the performance
-  suite counts every measurement of its scenarios (allocations, reactive work, DOM mutations, layouts and style
-  recalculations) in windows the test drives, and checks the totals against budgets checked in under
-  `leptonic/tests/perf/budgets/`; the timings run as before, in a fresh page. Details: `documentation/testing.md`,
-  "Performance measurements".
-- Leptos counts no reactive work, so `reactive_graph` got a `metrics` feature (memo computations, unchanged ones,
-  effect, render effect and immediate effect runs, signal notifications) on the user's fork at `~/dev/leptos`,
-  branch `leptonic-metrics` (v0.8.22), patched into the test-app.
-- Determinism: the counts repeated exactly once the scenarios' waits waited until the page was idle when counting
-  (with one frame per step, a busy machine's late frames let warm-up appends overlap the virtualizer's measuring, and
-  the windows started from other states); `retained_bytes` and `frames` still change under load and have no budget.
-
-## Testing: published browser-test and assertr (2026-10-13)
-
-- Both browser test suites (leptonic's, the book's) use the published crates instead of path dependencies on the
-  user's checkouts: assertr 0.8.0, then browser-test 0.7.0 (`SessionSettings` became `TestSettings`,
-  `BrowserTest::session_settings` became `settings`; tests time out after 10 minutes by default). The lesson that
-  `cargo fmt --all` reformatted the `../browser-test` checkout no longer applies and was removed.
-
-## Library: virtualizer froze on a scrollbar loop (2026-10-12)
-
-- A page froze completely (no input, ~100% CPU, gigabytes of memory) when a `VirtualList` of a few dozen wrapping
-  log lines opened. At the estimated 20px per row the lines fit the view; measured, they overflowed it. A loop
-  followed: the scrollbar appeared and narrowed the view, the new width made `ListLayout` drop every measured size,
-  the estimates fit again, the scrollbar disappeared, the width changed back, and so on. Every step ran in a
-  microtask (effects, item measuring in `queue_microtask`, `use_scroll_view` measuring the content again), so the
-  browser never rendered or handled input again.
-- `ListLayout`: when only the breadth changes, the update lays out the requested area again and uses the nodes'
-  measured lengths as their estimates (`previous_lengths`, kept only during that update). The rows covering the view
-  keep their lengths, so content that overflowed still does. Nodes outside the requested area fall back to the row
-  size's estimate, as they are counted: the virtualizer relies on laying out more never changing the content's
-  length. Changed options still drop every measured length (`options_invalidate_everything`).
-- `use_scroll_view`: a size change starts a size update of at most two passes, like react-aria's `isUpdatingSize`.
-  The second pass runs in the next frame, once the content laid out for the first one rendered; content size
-  changes during the update come from its own passes and don't measure the view again. Rows whose height follows
-  their width (`aspect-ratio`) overflow without a scrollbar and fit with one, so no layout can end that loop: the
-  bound does, and the list settles at the second pass's size, as in react-aria.
-- Tests: `a_new_width_keeps_measured_lengths_as_estimates`,
-  `rows_outside_the_area_laid_out_for_a_new_width_are_estimated_again`,
-  `changed_options_and_a_new_width_drop_measured_lengths`; browser tests
-  `test_virtual_list::a_scrollbar_appearing_for_measured_rows_settles` (`#test-vl-scrollbar`: wrapping lines, a
-  classic scrollbar forced with `::-webkit-scrollbar`; needs both changes) and `rows_growing_with_the_width_settle`
-  (`#test-vl-aspect`: needs the bound). Both check that the list stays unchanged for 500 ms, with a time limit of
-  15 s.
-- browser-test (sibling crate): time limits (`BrowserTest::time_limit`, `#[browser_test(time_limit = ...)]`, a
-  runner default of 10 minutes). A test exceeding its limit fails; browser-test closes its frozen pages through
-  Chrome's DevTools endpoint and names them in the report.
-- Performance: `resize-grown` (`/perf/virtual-list`) changes the width of a log grown to 2,000 lines, all of them
-  laid out. Keeping their lengths as estimates costs little: the frame's median went from 0.6 to 0.5 ms, the mean
-  from 1.6 to 2.0 ms (within the runs' variance).
-
-## Testing: performance suite (2026-10-12)
-
-- `just browser-perf` (`BROWSER_TEST_SUITE=performance`, which also replaces `BROWSER_TEST_KNOWN_ISSUES=1`:
-  `known-issues`): in-page timings of the test-app's `/perf` fixtures (`testing/test-app/src/pages/perf/`:
-  `PerfScenarios`, `Measurements::measure` with `.settled` and `.render`), one case after the other, built without
-  debug assertions and overflow checks in `<target>/performance`. Reports are logged and written to
-  `<target>/tmp/performance/<scenario>.json`, each compared with the previous run's (`leptonic/tests/perf`).
-  `documentation/testing.md`, "Performance measurements".
-- First scenarios, `perf/virtual-list` (20,000 lines, 50 per append, 20 warm-up appends, 30 measured; headless
-  Chrome on the user's Mac): mount ~7 ms (cold p90 ~18 ms); an append ~3.0 ms until settled following the end and
-  3.4–3.9 ms at the start (with 5 warm-up appends, runs varied by up to 40%: wasm tiers up late); each frame's work
-  0.1–0.3 ms.
-
-## Library: collection arena (2026-10-12)
-
-- `Collection` stores its nodes in a `Vec` in document order, their links (parent, siblings, first and last child)
-  by position in a parallel `Vec`, and a `HashMap<Key, u32>` of positions (std's seeded hasher stays). Traversals
-  (`iter`, `children`, `items`, `key_after`/`key_before`, ...) no longer hash; the build hashes each key once (the
-  position map's entry API is the duplicate check). Equality compares the vectors.
-- API: `Node` keeps its content, `parent_key`, `level` and `index`; `prev_key`, `next_key`, `first_child_key`,
-  `last_child_key` (and the crate-private `position`) are gone: `Collection::next_sibling`, `previous_sibling`,
-  `first_child`, `last_child` and `siblings_from` replace them (a cloned node no longer carries another collection's
-  neighbors). `Collection::keys` is in document order. `Node::same_content` no longer compares the child keys.
-  No structural sharing between rebuilds (the plan's `Vec<Arc<Node>>`): content comparisons are cheap enough, and
-  contiguous nodes traverse faster.
-- `ListLayout`: after a collection change it continues from the first top-level node that differs from the
-  previous collection's (compared up to the last laid out root, without lookups) and looks for deleted nodes only
-  after it (in the cache or the previous collection's remaining nodes, whichever has fewer).
-- 20,000 rows (native, release): collection build 4.9 → ~2 ms, an append following the end 4.75 → ~0.6 ms of
-  layout, an append with the view at the start 2.3 → 0.21 ms. Equivalence tests against a build from the start:
-  `collection_changes_continue_after_the_unchanged_rows`,
-  `measuring_in_the_middle_continues_from_the_first_resized_row`.
-
-## Library: performance (2026-10-12)
-
-Native release timings (`cargo test --release`); wasm is slower in absolute terms. No `unsafe`.
-- One bounded cache type, `utils::recent_cache::RecentCache` (in `thread_local!`s), for values costly to build:
-  `NumberFormatter::cached`, `ListFormatter::cached` (`ListFormatter` is `Clone`/`Debug` now, its ICU4X formatter
-  shared), `DateTimeFormatter::cached`, `NumberParser::cached`, the date field `Formatters::cached`, plural rules
-  (`plural_category`), the intl bundles' messages per locale; the color module's two private caches moved onto it.
-  Number fields and date segments share parsers (a parser formats numbers four ways to learn the symbols), date
-  fields of one format and reopened pickers their formatters, the calendar's descriptions no longer build ICU4X
-  formatters per change.
-- Localized messages: plain-text messages aren't parsed, the others once per thread. A plural message with a
-  count went from ~6.4 µs (parse 2.9, formatter 2.4, rules 1.1) to 0.9 µs.
-- Calendar cells share today (`use_today`: one signal and effect per calendar instead of ~42) and the strings memo
-  through `CalendarData`.
-- `HiddenSelectOption::is_selected` reads the option's own selection (the selection manager's per-key
-  `is_selected`) instead of sorting the whole value per option.
-- Virtualizer: after measured sizes (only) changed, `ListLayout` continues from the first root node holding a
-  resized node instead of walking every laid out node (DIFFERENT BEHAVIOR entry). 20,000 rows: an append
-  following the end 8.5 → 4.75 ms of layout, scrolling down one view 300 → 24 µs. The benchmark
-  (`timing_a_long_list`) now measures rows together, as the item measurer reports them (it laid out after each row:
-  74 ms per append).
-- `Collection::build`: one hash map operation less per node (positions numbered by a counter, a node inserted
-  after its children), duplicates removed in place, no staging copy of the nodes: 7.3 → 4.8 ms at 20,000 rows.
-  Std's seeded hasher stays (user-controlled keys, server builds); a faster hasher saved only ~25% of a layout pass.
-
-## Library: three bugs from the quality pass (2026-10-12)
-
-- `MenuItems` and `TagItems` render an item again when its content changes under the same key: the `For` is keyed
-  by key and each row reads its node through `use_node` (a per-key memo comparing `Node::same_content`), which
-  `ListBoxItems` used inline before. `virtualizer/list_layout.rs`'s private copy of `same_content` is gone. Browser
-  cases `menu_atoms::renamed_items_update`, `tag_group_atoms::renamed_tags_update`.
-- `TabPanels` holds `--tab-panel-width`/`--tab-panel-height` in its `Styles` too (it still writes them directly
-  around its measurement): a change of a reactive part of the caller's `styles` no longer drops them mid-animation.
-  Browser case `tabs::tab_panels_restyled_while_animating`.
-- A `CheckboxField` in a `CheckboxGroup` without `value` warns and renders nothing (it panicked). Browser case
-  `orphan_parts::checkbox_field_without_value`.
-- Book: `FocusScope`'s default class, `ListBoxItem`'s `data-hovered`/`data-selection-mode`, `SliderTrack` and
-  `CheckboxField` rendering nothing when misplaced, and the changelog's "Unreleased" notes.
-
-## Library: code quality and consistency pass (2026-10-12)
-
-A pass over all of `leptonic/src` against the written rules (open findings: `PLAN.md`, "Quality pass 2026-10-12").
-No public API changed except the removals and additions below.
-- Headers: every ported file lists its upstream sources and test files (paths checked at their sha) and has a
-  deviation block in the documented format or the one-line note; leptonic-only files (`utils/{aria,data_attributes,
-  default_class,fraction,heading_level,point,styles,syntax_highlight,scoped_context}.rs`, `attrs.rs`, `link/mod.rs`)
-  start with `// No upstream:`. Stale entries removed or corrected (e.g. `use_toggle`'s `ToggleState::new`, the date
-  range picker's server errors, `use_enter_animation`'s hiding), pure C3/C4/C11 repeats trimmed where nothing else
-  was said, missing reasons added. `virtualizer/list_layout.rs`'s fixed upstream bug is under `DIFFERENT BEHAVIOR`.
-- `cfg_attr(feature = "ssr", allow(dead_code))` gone: `calculate_position.rs` splits into a computing and a DOM
-  module, `atoms/virtualizer.rs` keeps its client-only state in a `cfg(not(ssr))` module, `use_overlay` runs its body
-  on the server too (empty thread-safe stores).
-- One helper per job: `utils::aria::aria_true` (a typed ARIA value present only while true) replaces two private
-  copies and 25 hand-written derives; `dom_ext::node_contains` (the `Option` wrapper) is gone, every caller uses
-  `shadow_dom::node_contains`; merged duplicates: wheel stepping (number and color field), the popover/modal
-  hide-outside effect, the date picker contexts, the color space conversions, `synthetic_blur`'s focus event,
-  `EventModifiers` impls, `CollectionBuilder::finish`/`build`, three selection setting types, the top-layer check.
-- Shadow DOM: raw `e.target()`/`Node::contains`/`document.active_element()` replaced by `get_event_target`/
-  `node_contains`/`get_active_element` where upstream uses its shadow-aware helpers (collections, grid, grid list,
-  combo box, submenus, hover, press, toolbar, radio group, number field, toast region, drag manager, popover).
-- `Signal::derive` → `Memo` where "Derived Values" applies (per-item and per-cell flags, labels,
-  `first_day_of_week`, `highlighted_range`, the drag modality's `matchMedia`, slider values, ...).
-- Atoms: `FocusScope` has the default class `leptonic-FocusScope`; `ListBoxItem` renders `data-selection-mode`;
-  `SliderTrack` outside a `Slider` warns and renders nothing; `flag` for the remaining signal-backed boolean data
-  attributes; "Data attributes:" docs match what is rendered; `DismissButton`'s `tabindex` is `i32`.
-- Removed: `AsRef<str>` for `AriaHasPopup` (returned the attribute name for every value) and the lone
-  `FromStr for AriaExpanded`. Added `Debug` to ~16 `*Return` types. `#[allow(clippy::too_many_lines)]` and
-  `float_cmp` (allowed workspace-wide) and other allows no lint needed removed; `use_viewport_size` uses leptos-use's
-  `use_event_listener`; `KeyboardKey::F6` in the landmark manager; an animation port fix (animations without a
-  timeline are excluded, as upstream).
-
-## Library: tooltip text can be selected (2026-10-10)
-
-- `use_tooltip_trigger`: blurring the trigger no longer closes the tooltip while the pointer is on it (a documented
-  deviation; react-aria closes it right away). Pressing into the tooltip to select its text took the focus from a
-  focused trigger (e.g. one pressed before) and closed it. Browser case `tooltip::stays_open_when_pressed_into`.
-
-## Library: PLAN leftovers (2026-10-10, evening)
-
-- Atom parts outside their parent warn (`dev_warn!`) and render nothing instead of panicking: `SearchFieldClearButton`,
-  the `NumberField` group and stepper buttons, `ListBoxItems`, `ComboBoxPopover`, `RadioField`, and the menu parts
-  (`MenuItem`, `MenuItems`, `MenuSection`, `SubmenuTrigger`, the item label/description/shortcut). Browser cases
-  `orphan_parts::*` on a new fixture (`/atoms/orphan-parts`) mount each family's misplaced parts.
-- The item hooks warn (debug builds) about a key missing from the collection, as `use_option` did: `use_menu_item`,
-  `use_grid_list_item` (so tags and tree items), `use_grid_row` (so table rows).
-- `GridFocusVisible`/`TableFocusVisible` contexts dropped: rows and column headers read `is_focus_visible()`.
-- `HourCycle` and `Focusability` are exported from the crate root (were reachable only through
-  `hooks::datepicker`/`hooks::focus`).
-- Id lists through `IdRefs`: the slider output's `for` (now absent without thumbs), table row labels
-  (`TableData::row_labelledby` returns `IdRefs`), the table selection checkbox, the column resizer.
-- Tests: raw double-click action chains replaced by `ElementActions::double_click`; `test_tree`'s blocking
-  `thread::sleep` became `tokio::time::sleep`; six consistency assertions state their duration.
-- Atoms return `None`/`Some(view)` (`Either` for two branches) instead of `().into_any()` early returns (55); the
-  test-app's wasm grew 0.18% (`build-performance.md`, "Opportunities").
-- Id references are reactive (C2, 2026-10-11): atom props `aria_labelledby`/`aria_describedby`/`aria_details`/
-  `aria_controls`/`aria_errormessage` are `MaybeProp<String>` (83 props; `Button`/`ToggleButton` were the only
-  reactive ones), hook inputs and the props they feed `Signal<Option<String>>` (35 inputs). The table selection
-  checkbox follows its row's labels (was read once). Hand-joined id lists on the way moved to `IdRefs` (color area,
-  wheel and swatch, Button's pending label, number field steppers). Browser cases
-  `button::references_follow_their_signals`, `text_field::described_by_a_changing_reference`.
-- `*Props`/`*Return` types are no longer `Clone` (the user, 2026-10-11: enforce the rule; 30 types; exception:
-  the signals-only `UseFocusVisibleReturn`). Atoms keep attributes in their contexts instead of props; the
-  `TextField` tracks which element renders it (react-aria's `inputElementType`: `UseTextFieldInput::element` is a
-  signal set by `Input`/`TextArea`), so `TextArea` no longer copies the props, and a field switching between both
-  works (browser case `text_field::switching_between_input_and_textarea`); `InputContext::new` takes the attributes;
-  submenu keyboard handling travels as `EventHandler`s; `UseDisclosurePanelProps::{labelled_by, with_role}` removed
-  (unused; its fields are public). `UseFormValidationStateInput` implements `Clone` and `Debug`.
-- `data-focus-visible` has one writer per element (the user, 2026-10-11: the hooks keep rendering it): atoms
-  spreading `use_focus_ring`/`use_button`/`use_link` attributes no longer render it again (21 elements);
-  `atoms-implementation.md` documents the rule. `focus_ring::within_tab_focus` checks the within ring's attribute.
-- Toasts: a zero `timeout` sets no timer (react-stately's falsy `timeout: 0`; it created one that never started).
-- Weak cases strengthened: `focus_manager::radio_group_wrap_{next,prev}` check the element the call focused (the
-  fixture reports it; a no-op passed before), `virtual_list::rebuilt_views_drop_the_old_handlers` waits for the
-  focus each click causes; `tree::collapsing_the_parent_of_the_focused_row` loads its page once; a wrong comment in
-  `radio_group::arrow_keys`. `tag_group_atoms::tabbing_to_remove_buttons` stays as is: upstream's `onRemove` is a
-  mock that removes nothing either.
-- Stale comments: the list box theme header, `Out`'s variants, the Justfile's consumer note.
-
-## Library: review of commit 07f628b1 against react-aria (2026-10-10)
-
-The commit (1,254 files, another model's work) was reviewed area by area against react-spectrum `740c6c5c4a`.
-Most of it held up; these defects were fixed:
-- Interactions: merged long press groups ran a disabled group's callbacks; a disabled element's click propagates
-  again (pointer and virtual clicks, as upstream; the comment claiming otherwise was wrong).
-- Focus: `use_focus` compares the event target (`getEventTarget`) with the current target and the active
-  element, so focus inside a shadow host's own shadow root is no longer the host's; the synthetic blur observer
-  runs for every focus (Firefox: disabling a focused element with only `on_focus` dispatched no blur).
-- Collections: listbox links follow the configured selection behavior (not the touch-selection `Toggle`);
-  `ListBoxItems` no longer rebuilds every item's content when another item comes or goes (`Node::same_content`);
-  label/description slot ids survive a content re-render; an earlier scroll frame is cancelled; submenu dialogs
-  are labelled by their trigger item; rows and tags show `data-focus-visible` only while they have focus
-  themselves.
-- Tables: lazily mounted tree rows and cells no longer vanish or rebuild when a signal read while building them
-  changes (`untrack`); select-all checkbox says "Select" in single selection; Grid/GridList/Table
-  `aria_labelledby` back to `Option<String>` (C2); missing RAC data attributes on `TableCell`, `TableRow`,
-  `Table`, `TableBody`, `GridListItem`; `data-tree-column="true"`; `Tag`/`TagItems` warn instead of panicking.
-- Forms and pickers: number field `inputmode` tracks `min_value` and the format; a date-time range edited by day
-  keeps its times; the enter animation hides a popover only until it is first ready (closing popovers were
-  clipped away during their exit animation); read-only combo boxes let keys bubble; arrows wait for IME
-  composition; a handled Select trigger arrow stops; `ComboBoxButton` `data-pressed` and `ComboBoxValue`
-  `data-placeholder` as RAC; bound combo box text no longer follows a renamed option (upstream). `Input` and
-  `TextArea` work outside a field as plain styled inputs (RAC). `labels()` treats an empty `aria_label` as none
-  (calendar callers build upstream's label).
-- Dead code and docs: unused element captures in the color hooks, stale doc examples, deviation headings, the
-  `prevent_focus` deviation block; upstream headers synced (no-op commits); `upstream-drift.sh --mark-synced`
-  works with BSD sed.
-- Tests: 18 slider browser cases the commit added were never registered (one needed a fix to stay inside the
-  viewport); the "Timed fruit" fixture and its full timer sequence are back.
-
-The 42 browser failures blamed on Chrome 155 had host causes: the suite ran on macOS for the first time
-(Ctrl-based select all, Ctrl+arrow and Ctrl-click are Meta/Alt there, as react-aria's `isCtrlKeyPressed` and
-`isNonContiguousSelectionModifier`; Shift+F10 fires no `contextmenu`), Chrome 155 ignores the user-agent
-override's `navigator.platform` (iPhone emulation now sets `userAgentData`), and a touch drag case raced the
-200 ms drag delay. Tests now take the page's modifiers (`primary_modifier`, `non_contiguous_selection_modifier`,
-`click_with_primary_modifier`), emulate `Platform::Linux` where they describe non-Mac behavior, and
-`dispatch_all` sends timed sequences in one script. Four cases still fail with a German keyboard layout
-(`PLAN.md`, "Testing infrastructure").
-
-Then the leftovers, decided and fixed:
-- Overlays: resize-triggered repositioning (`use_overlay_position`) and the popover's `--trigger-width` run in the
-  next animation frame (`utils::next_frame::NextFrame`, coalesced, cancelled on close and cleanup): writing them in
-  the `ResizeObserver` callback, as upstream does, resized the shallower popover during the browser's delivery,
-  which reports "ResizeObserver loop completed with undelivered notifications" as an uncaught error (and in apps'
-  error monitoring). Rule in `leptos-and-dom.md`, "Resize Observers".
-- `aria_labelledby`: atoms take id lists as `Option<String>` (C2); hook inputs `Signal<Option<String>>` only where
-  composing callers supply changing ids; `UseMenuInput`'s `MaybeProp` aligned. Rule in `conventions.md` C2.
-- `TimeField` bounds: `TimeBound::{TimeOfDay(Time), Absolute(T::Absolute)}` (upstream's `TimeValue` bounds, typed;
-  a `TimeField<Time>` takes only times of day).
-- `GridList` `orientation` (prop, hook input, `data-orientation`, atom theme rules); table rows and cells always
-  carry `data-level` (`--table-row-level`), as RAC; `is_tabbable` excludes only `tabindex="-1"` and both
-  selectors equal upstream's.
-- Browser tests type printable characters through CDP with US key definitions (`tests/pages/keyboard.rs`,
-  `ElementActions::type_keys`), independent of the host's keyboard layout; chords and named keys stay on WebDriver.
-- Book: removed APIs (`Shortcut::key`, state constructors, `OverlayTriggerState::from`), standalone
-  `Input`/`TextArea`, `TimeBound`, GridList orientation, table/grid list data attributes, `VirtualList` wide rows,
-  the changelog; its own shell tests detected Apple platforms case-sensitively.
-
-Verification: 687 native tests, clippy (full, full+ssr, default, browser harness, test-app ssr and hydrate, book ssr
-and hydrate), all 1,575 library browser cases, all 240 book browser cases and 47 book native tests.
-
-## Library: `VirtualList` horizontal overflow, assertr 0.8 (2026-10-10)
-
-- `VirtualList` scrolls horizontally when rows are wider than the list (log lines that don't wrap were cut off).
-  `ListLayout` gained `ListLayoutOptions::allows_overflow_across` (an addition, off by default): measured items
-  overflowing their layout info widen the content to the widest one, items keep the view's breadth and stay visible
-  wherever it scrolls across. Upstream (react-stately's `ListLayout`, still on `main`) keeps the content as wide as the
-  view, its `ScrollView` then sets `overflow-x: hidden` (against scrollbar flicker while resizing), and the items'
-  `contain: size layout style` keeps their overflow out of the scrollable area; both stay. The widest overflow is cached
-  (recomputed only when the widest one narrows or goes), removed items are dropped with the cached layout nodes they
-  belong to, and a new view width forgets them (the items are measured again), so appends cost no extra pass. Three
-  native cases and two browser cases (`wide_lines_scroll_horizontally`, `wrapping_lines_ends_horizontal_scrolling`: a
-  wrap toggle restyles the rows, observed rows are measured again); both browser cases failed with the option off.
-- Tests adapted to assertr's latest API: extractors without the `get_` prefix (`ok`, `some`, ...), `Patience`'s
-  `with_timeout`/`with_interval`/`with_consistency_duration`.
-- Verification: 668 native tests passed (one ignored benchmark), strict clippy passed for `--tests`, `--tests
-  --features full`, the browser harness and the test app. The browser suite (1,545 cases, Chrome for Testing
-  155.0.8059.39, browser-test 0.6) passed except 42 keyboard and iOS-emulation cases, which also fail in fresh
-  sessions and don't involve the virtualizer (`PLAN.md`, "Testing infrastructure").
-
-## Library: focused PLAN fixes (2026-10-09)
-
-- Slider percentage conversion rounds to the step, then clamps once, matching upstream. A range of 0..230 with
-  step 20 converts 100% to 230; changing a thumb still snaps to a valid step. Integer and fractional regressions
-  failed before the fix and cover clamped endpoints, below-midpoint rounding and unchanged setter behavior.
-- Root ThemeProvider cleanup restores the document's previous `data-theme`, or removes it if absent initially.
-  It preserves later external writes and leaves nested providers out of document ownership. Four browser cases
-  cover removal/remount, restoration after a theme change, nested disposal and external writes; both missing
-  cleanup behaviors were reproduced before the fix. Cleanup stores only Send-safe strings for SSR.
-- SelectTrigger, SelectValue, SelectPopover and HiddenSelect warn and render nothing outside Select. Guards
-  precede hooks and children; concrete Option views avoid adding erasure. Four SSR cases and a browser case
-  first reproduced the panics, then passed. The component signature stays `impl IntoView` for Leptos debug erasure.
-- Updated the corresponding book pages and atom implementation guidance. Removed the stale field-button
-  focus-visible finding after confirming the shared button props and existing browser regressions for number
-  steppers and the search clear button.
-- Verification through Just: 665 native, 664 SSR and 2 theme tests passed (one intentional ignored benchmark in
-  each library configuration), all 1,543 library browser cases passed (94.7 s), all 240 book browser cases passed
-  (18.64 s), and rustdoc passed with warnings denied. Strict clippy passed for full, SSR, atoms without defaults,
-  hooks without defaults, the browser harness and the test app's SSR/hydrate builds. Formatting and whitespace
-  checks passed, as did the book's 47 native/API checks and 2 server asset tests. Theme storage replacement,
-  Select auto-focus and other families' context guards remain in PLAN.
-
-## Library and book: build warnings and canonical imports (2026-10-09)
-
-- Removed the flat internal hook and utility re-exports. Library consumers now import hooks from their family,
-  shared public types from the crate root, private helpers from their defining module, and dependency types from
-  their crate. Public root exports refer directly to definitions; there is no internal convenience alias layer.
-- Browser focus-scope tracking and item-measurement state compile only where they are used. The scope registry is
-  absent from SSR and hooks-only builds while its pure native tests remain available; overlays without atoms
-  retain their top-layer focus exemption. Atom-only context and default-class helpers are gated without hiding
-  their native tests.
-- Removed the book's unsupported `watch` and `env` cargo-leptos metadata. The remaining third-party
-  `proc-macro-error2` future-incompatibility notice is tracked in PLAN with its dependency chain and upstream issue.
-- Book verification exposed a date-picker SSR cleanup panic: local storage wrapped an empty DOM reference in a
-  thread-bound value. Ordinary storage now holds an optional wrapped DOM element, leaving a movable `None` on the
-  server. A native regression first reproduced cleanup on another thread, then passed with the fix.
-- Verification through Just: native 663 passed, SSR 658 passed (one intentionally ignored benchmark each),
-  theme 2 passed; date-picker browser cases 86/86 and book browser cases 240/240. Strict clippy checks passed for
-  full, SSR, default and no-default feature sets, including the ordinary hooks-only library build. The book's
-  development build has no source or cargo-leptos metadata warnings; the dependency notice remains.
-- `just doc` passes with warnings denied after replacing three public rustdoc links to private implementation
-  details with descriptions of the public behavior.
-
-## Library: refactor integration completed (2026-10-09)
-
-- Reconciled the in-progress hook/atom APIs with the test app, browser helpers and book: explicit input structs,
-  family imports, typed values and callbacks, state setters, date/time generics, slots and attribute spreads.
-- Collection rendering follows per-key node changes. Hidden selects retain selected values outside the current
-  options, synchronize native selection reactively and map submitted values once; Select triggers stay pressed
-  while open and popovers clear field/label contexts.
-- Fixed combo-box selection against the original collection, removed-tab keyboard navigation terminating when
-  all remaining tabs are disabled, and virtualizer reuse of measured section rows. Re-enabled its regression test
-  and verified repeated appends and text-size changes.
-- EventHandler uses a reusable native `Fn` listener, preserving owner, listener options and cleanup while allowing
-  synchronous nested dispatch; empty handlers attach nothing. Focusable context handlers follow disabled-state
-  changes; FocusScope containment and restoration respect the active scope tree and shadow-root focus.
-- Space-triggered native clicks no longer duplicate press callbacks or suppress checkbox toggling. Context-menu
-  labels follow the active trigger; drag state covers selected items and clears when the dragged source disappears.
-- Inert overlay isolation also sets `aria-hidden`, preserving accessible names from referenced background labels;
-  cleanup restores an author's previous `aria-hidden` value. The SVG/inert regression covers both behaviors.
-- Date-picker fields preserve description attributes when combining press props, pass their label to segments,
-  clear field contexts inside popovers and connect open buttons to their dialogs. Calendar focus clamps to current
-  bounds; pressing a disabled navigation button preserves an unfinished range. Hour padding uses a single-digit
-  reference hour rather than midnight in a twelve-hour clock.
-- Optional slot references are published after hydration, so descriptions and error messages work before or
-  after their controls in the markup; the initial client attribute now agrees with the server's absent reference.
-  Date-range separator presses use the native event target to restore the correct segment's focus.
-- Completed the calendar/date state attributes and upstream implementation headers, and consolidated redundant
-  calendar/picker fixtures. The controlled-valid override remains an explicit API difference: `is_invalid` adds
-  invalidity rather than hiding native validation errors.
-- ThemeProvider follows the shared state-binding rules for setter-only and read-only controlled values, and
-  suppresses notifications for unchanged themes. Storage API replacement and document-theme cleanup remain open.
-- Corrected fixtures and browser helpers where migrations had changed native focus, labels, element structure,
-  serialization or event order; retained behavioral assertions. Tests locate the deepest focused shadow element
-  while still sending keys through WebDriver's native element command.
-- Final verification: all 1,538 library browser cases passed (84.2 s), including the newly added slot-ordering
-  case; native full 663 passed and full+SSR 657 passed (one intentionally ignored benchmark in each), theme 2
-  passed, doctests 5 passed (143 examples explicitly marked ignored). The book passed 47 native/API checks,
-  2 server asset tests and all 240 browser cases against the integrated tree.
-- Checked the library's default, no-default, atoms+clipboard, full, full+SSR and WASM hydrate feature builds with
-  clippy, plus the browser harness and both apps' SSR/hydrate builds. Repository formatting and whitespace checks
-  passed. Further API redesigns, coverage additions, theme work and performance measurements remain in PLAN.
-
-## Library: review fixes 2026-10-09 (Grid, Table, GridList, Tree)
-- Tree/table expand button on a fresh page kept focus: `prevent_focus` now blurs the target when nothing had focus
-  (`<body>` can't be refocused; upstream has the same bug); `tree::expand_button` left the known issues.
-- GridList/Tree rows listen on `focusin` (React's `onFocus`): clicking a row's child makes the row the focused key.
-- `calculate_column_sizes` compares signs like `Math.sign` (a column clamped at its minimum left the others
-  overflowing); removed focused column headers refocus the same column of the first row.
-- Section labels as `useLabels` (header via a slot, plus `aria_label`, reactive); "sortable column" description on
-  sortable headers; the selection column derives from `show_selection_checkboxes` + selection mode
-  (`TableCollection::with_selection_column`, `TableOptions` removed); cell-count/duplicate-column `dev_warn`.
-- Doubled accessible names fixed: resizers labelled by the column's name element ("Resizer Name"), table expand
-  buttons by "Expand/Collapse <row text>" (upstream's structure gives "Collapse Collapse Games" in Chrome).
-- Tree hooks take `keyboard_navigation_behavior`, `should_select_on_press_up`, `focus_mode`,
-  `allows_arrow_navigation`, `on_context_menu`; atoms `should_select_on_press_up`, reactive `aria_labelledby` (undone 2026-10-10, C2); a
-  grid-layout `GridList` uses Tab navigation (RAC); `TableHeader` hover; `expect_context` → `dev_warn`.
-- Performance: tree row positions once per table change, constant-time `(row, column)` cell lookups
-  (`cell_key`), a columns-only memo (`TableState.columns`) for headers and the column layout, tree tables build
-  rows only once shown.
-- Tests: native (sign bug, fp rounding, later column smaller, removed column header, selection column); browser
-  cases in `test_grid_list_cases.rs` (new fixture `/atoms/grid-list-cases`), tree (type-ahead, Home/End, no expand
-  when selectable/action, empty tree, Escape none, press up, text inputs), table (selection column, removed header,
-  Mod+A single, sortable description, header hover); upstream headers completed; native tests on `with_owner`.
-
-## Library: review fixes 2026-10-09 (Focus)
-
-- Modality: one global state (`use_focus_visible.rs`): `Option<Modality>` (no `Unknown`), the notified modality and
-  per-kind (text input or not) notifications in `ArcRwSignal`s written only on change; no subscriber registry.
-  `use_focus_visible` is a `Memo` over them (`is_disabled` and `modality` removed); `use_focus_ring` reads them only
-  while focused and takes the modality at focus (fixes the stale value after a click); new `is_focus_visible()`
-  (tracked). Per-item subscribers migrated (`use_option`, `use_menu_item`, `use_grid_list_item`, `use_tag`, Table/
-  Grid contexts). The default window's tracking survives `beforeunload`; `add_window_focus_tracking(&Element) ->
-  WindowFocusTracking` guard (waits for `DOMContentLoaded`), `tear_down_window_focus_tracking` removed; listeners
-  use `utils::event_listeners`.
-- FocusScope: active-scope tracking per react-aria (`focus_scope_tree::track_focus`; exact `shouldContainFocus`,
-  `is_containing`; focus can't escape a containing scope to a sibling or ancestor scope); `first_in_scope`
-  (tabbable, else focusable) for auto focus, recapture and restore fallback; recapture to the active scope's first;
-  restore Tab handler skips while a containing scope is in between; pending focusout frame cancelled on cleanup /
-  `contain` off; shadow-aware active element, targets and containment; `restore_focus: Signal<bool>`; typed
-  `RestoreFocusEvent` (const removed); provides `FocusManager` directly (`FocusScopeContext` removed,
-  `use_focus_manager_context()`); `focus_scope_tree` crate-private; `is_element_in_child_of_active_scope` includes
-  the active scope.
-- Focus manager: `FocusManager` is `Copy` (state in a `StoredValue`), `create_focus_manager()` (was
-  `use_focus_manager(UseFocusManagerInput)`), `from` only positions the walker (container elements work),
-  `focusability: Focusability::{Focusable, Tabbable}`; toolbar/radio group create theirs once (no per-key arena
-  leak). Tree walker: tri-state filter (`NodeFilterResult`), radios deduped by the walker's current node, `from`
-  option removed (no upstream caller).
-- `use_focus_ring`: `target: FocusRingTarget` (was `within: bool`), `auto_focus` removed (no effect upstream; also
-  on the `FocusRing` atom). `use_focus`: target/current-target checks as upstream (they weren't; fixed 2026-10-10), blur observer only with a blur
-  callback. `use_has_tabbable_child` writes only on change; `Signal::stored` defaults. `is_tabbable` reads the
-  `tabindex` attribute. Headers (incl. upstream test files) completed; deviation blocks for `Focusable`/`FocusRing`;
-  stale doc examples fixed; unused `focus_html_element`/`get_radio_group_name` removed.
-- Tests added (verified in the completion run above): FocusScope multiple scopes, non-tabbable/contenteditable skipping, modifier
-  Tab, restore after children change, skip-after-trigger, no Tab without restore, DOM order, auto focus kept /
-  fallback, focusable-first-in-scope, portal child (with/without contain), child active regardless of DOM, correct
-  scope on unmount, 4 stacked-dialog variants, 4 shadow-DOM cases; focus manager of a FocusScope and container
-  elements; focus visible beforeunload and 4 other-window (iframe) cases; focusSafely and useFocus in shadow DOM;
-  native tests for the modality signals and `shouldContainFocus`. Fixtures merged (focus manager wrap/accept/
-  outside scopes, FocusScope containment = select-on-tab scope).
-
-## Library: review fixes 2026-10-09 (Buttons, links, disclosure, tabs, toolbar, small widgets)
-- One way for id lists: `IdRefs` (`IdRefs::derive([..])`, `collect::<IdRefs>()`; each id once) replaces
-  `AriaDescribedby`, `AriaControls`, `join_slot_ids`, `dedup_ids` and every hand-written join (button, link, menu
-  item, field, text field, slider thumb, calendar cell, select, date field/picker, table, column header, toggle,
-  radio, checkbox group, `Focusable`); `utils::labels` (react-aria's `useLabels`) replaces `use_label::labels` and
-  labels the tab list, tab panels (new `aria_label`), `DismissButton`, calendars and date segments.
-- `hooks/merged/*`, `MergeWith`/`MergeWithExt` deleted: independent hooks are each spread onto the element;
-  `UsePopoverProps { overlay, position }`; docs updated (hooks-implementation.md, conventions.md).
-- Ids known while rendering: `PressResponderTrigger.id: RwSignal<String>` (the trigger's generated id, replaced by
-  the pressable's own: `use_button` while rendering, `Pressable`/`use_link` once mounted); `Button` has an `id` prop
-  (default: generated); disclosure panels, untitled dialogs, popovers and menus reference it in the server HTML;
-  `ensure_element_id`, `DialogTriggerContext::ensure_trigger_id` deleted; `<Button attr:id>` migrated to `id`.
-- Tabs: `TabListState` holds the tab/panel ids and the collection id (`TabListData`/`TabListItemData` deleted;
-  hooks take `state`); `TabListState` is the atoms' context (RAC `TabListStateContext`); `use_tab` takes a
-  `FocusableContext` (tooltips on tabs) and focus callbacks (`UseFocusableItemProps`, moved from the column header
-  to `use_focusable`); `Tabs` root `data-focused`/`data-focus-visible`/`data-disabled`; `TabPanel` enter/exit
-  animations (`data-entering`/`data-exiting`), `aria_label`; `Tab` hover/focus callbacks; disabled keys a `Memo`;
-  missing context warns instead of panicking.
-- Disclosure: a panel rendered again picks up the current state (`hidden_until_found` per render,
-  `manage_panel` tracks the element); grouped `is_expanded` a `Memo`; `DisclosureState` in the context; panel role
-  without writing a signal during render; group `expansion` a signal; group state tests on `with_owner`.
-- Link: one `use_link` per `Link` (`element_type` a signal); `target` signals on `use_link`/`use_button`/`Link`;
-  `link_rel` (no `noopener` with `Opener`); context `on_press` first; `UseLinkInput`/`Link` focus, key, hover-change,
-  press-start/end/change callbacks and `auto_focus`.
-- Button: `aria_disabled` passthrough, pending anchors drop `target`, per-element-type constants,
-  `prevent_focus_on_press`/`allow_focus_when_disabled` signals, deviation block completed.
-- ToggleButton: no panic without `value` in a group (warns, standalone), press/hover/focus/key callbacks,
-  `auto_focus`, `prevent_focus_on_press`, ARIA relations; toolbar hook takes its `element`.
-- `ProgressBarFill`/`MeterFill` set `--percent`; parts warn outside their parent; the deliberately unlabelled
-  progress bar (and its fixture expectation) removed; typed-values conversion a `Memo`.
-- Tests written (verified in the completion run above): tabs keyboard delegate (native), tab list state (with_owner + flush), IdRefs,
-  labels, link_rel; browser: disclosure remount and merged Report/Group fixture, theme setter/controlled, progress
-  zero range, meter ranges, default classes + `--percent`, toolbar classes/orientation/dividers/aria-label, tabs
-  (disabled tabs, default key, Home/End, panel label, RTL, Space, panel tab stop, tooltip, roving tabindex, root
-  state).
-
-## Library: review fixes 2026-10-09 (Color and slider)
-- Bugs (native failing tests first): HSV/HSL → RGB wrap hues (`rem_euclid`; 450° chartreuse, −30° rose); the
-  area/wheel/color-slider states step from the current value instead of an Effect-updated `latest` (stale between
-  an app change and the flush, never in SSR, and a rejected color was not re-sent); `latest` only for
-  `on_change_end`, reset at drag start; color field: `#rgba` parses (alpha), committing an empty field reports no
-  change; color slider value text names the display color (hue at full saturation, opaque color).
-- Fidelity: `ColorArea` defaults to white, `ColorWheel` to `hsl(0, 100%, 50%)`, `ColorSwatchPicker` to black;
-  no `aria-disabled` on the area group; color slider thumb `forced-color-adjust: none`; hover as RAC (disabled
-  sliders' tracks/fills and color thumbs hover; a slider thumb only by its own `is_disabled`).
-- Performance: channel formatters and color-name strings cached per locale (`utils/color`); `channels()` is an
-  array.
-- API: C13 (`Fraction` in `SliderState` percent methods, marks; `Point` in area/wheel states); wheel radii
-  `Signal<f64>` + `aria_errormessage`; `SliderPopover::{Never, OnHover, OnDrag, OnHoverOrDrag, Always}`; hook
-  marks types renamed `SliderMarkPlacement`/`CustomSliderMark`, `SliderMarkValue::Fraction`;
-  `UseColorChannelFieldInput` flat (no throw-away number state); `ColorValue::gradient_stops` replaces
-  `ColorChannelRange.gradient_stops`; `ColorArea` `x_channel_step`/`y_channel_step`/`aria_details`,
-  `ColorWheel`/`ColorSlider` `aria_describedby`/`aria_details`; `expect_context` → `dev_warn` + nothing
-  (ColorThumb, ColorSlider parts, ColorWheelTrack, ColorSwatchPickerItems).
-- Tests: native ports of useSliderState, useColorFieldState and Slider.test page size/clamping; native tests on
-  `testing::with_owner`; `/atoms/slider-interactions` in sections (the missing-value warning only in its
-  section, `missing_value` takes it), redundant instances merged. Many browser cases added and verified in the completion run above.
-
-## Library: review fixes 2026-10-09 (cross-cutting)
-- Dead API deleted: `Language`, `Mount`, `ViewProducer`/`ViewCallback` (`utils/callback.rs`), crate-root CSS aliases,
-  `track_in_local_storage` (`read_from_local_storage` private), `Out::Fn`/`new_fn`/`Default`, `AriaGrabbed`; the
-  `hooks` feature (it gated nothing) removed; feature comment typos fixed.
-- No prelude, one path per public item (the user's decision): `leptonic::prelude`/`atoms::prelude` deleted; hook
-  families are public modules (`leptonic::hooks::<family>::X`; implementation submodules crate-private,
-  flat hook re-exports removed); `utils` private, user-facing items re-exported flat at the crate root (`leptonic::Locale`,
-  `leptonic::IntoAttrs` (moved to private `attrs.rs`), `leptonic::leptos_styles`/`leptos_classes`, ...); every import
-  in leptonic, test-app, tests and book migrated by script.
-- `utils::{style,styles,css}` merged into private `utils::styles`; `utils/locale.rs` merged into `i18n.rs`;
-  RTL from ICU4X `LocaleDirectionality` (Mend, Rohg now RTL; native tests); `Locale.direction` private + accessor;
-  `I18nContext` `Copy` with `set_locale()` method; i18n header fixed.
-- Atom API: Calendar/RangeCalendar `on_focused_value_change`; Tabs `on_selected_key_change`; ComboBox
-  `on_input_value_change`; Table `on_sort_descriptor_change: Callback<Option<SortDescriptor>>` via `from_state_props`;
-  `default_selected_keys: Vec<Key>` -> `default_selection: Selection` (ListBox, GridList, Grid, Table, TagGroup, Menu,
-  MenuSection); DisclosureGroup `default_expanded_keys: HashSet` (hook too); reactive `orientation` (RadioGroup,
-  ListBox, ToggleButtonGroup; list hooks take `Signal<Orientation>`), `selection_behavior` (Grid, Table),
-  `disallow_empty_selection` (6 atoms, toggle group state); `Breadcrumb`/`Disclosure` `key`; `*Ctx` -> `*Context`;
-  `Menu.aria_labelledby: Option<String>`; `dev_warn!` for an overlay in a `DialogTrigger` ignoring its `set_open`.
-- C3/C8/C12: `UseScrollViewReturn.scroller: ScrollViewScroller` (methods); `UseGridKeyboardDelegateInput`,
-  `UseTableKeyboardDelegateInput`, `UseListStateViewInput`, `UseToastStateInput`, `UseListCollectionInput`; overlay
-  arrow role typed.
-- Hydration: `use_platform_check` (false until mounted) for the date segment's iOS role, the color area's mobile
-  inputs and the number field's iOS role description/input mode (`UseTextFieldInput.input_mode` is a signal).
-
-## Library: review fixes 2026-10-09 (Virtualizer)
-
-- `ListLayout` (native benchmark `list_layout::tests::timing_a_long_list`, 20,000 rows estimated, release; before →
-  after, layout only): append at the top 2.6 → 0.4 ms (collection build ~9.3 ms excluded), append at the end with
-  everything laid out 11.9 → ~5.6 ms, scroll frame over a fully laid out list 1.42 ms → 3.5 µs, scrolling down a
-  fresh list one view 1.87 ms → 13 µs. Visible root nodes by binary search plus a side list (headers, loaders,
-  sticky, persisted keys + ancestors computed once per call); continuation of a partial build when only the end of
-  the requested area moves; content-only node comparison (index/position/siblings ignored: a log dropping lines
-  keeps measured sizes); sections rebuilt when the collection changes; top-level count/loaders counted once per
-  collection; removal pass skipped when the build visited every cached node; one hash lookup per cached node.
-- UPSTREAM BUGS FIXED: `buildSectionHeader` subtracted the position twice (headers narrower than rows; test
-  `section_headers_are_as_wide_as_the_rows`); `buildSection`'s skip check uses the row (test still open, PLAN).
-- API: `ItemSize { Fixed, Estimated }` for `row_size`/`heading_size`; `anchor_to_end: Option<EndAnchor { threshold }>`
-  (warns in horizontal lists); `VirtualList` takes `VirtualListOptions { row_size, gap, padding, end_threshold }`.
-- Measuring: `use_item_measurer` → `ItemMeasurer` shared by a collection's items: estimated items measured together
-  in one microtask (reads only), one `ResizeObserver` per collection observing a `display: flow-root` content wrapper
-  per item (text-only rows observed; new rows observed in the next frame, avoiding the RO loop error).
-- `Virtualizer`: no `is_scrolling` reordering or scroll-end pass (renderer keeps rows in place); `is_scrolling`
-  read untracked; clock `performance.now()`.
-- Tests: `ScrollExtent` (`ElementActions::scroll_extent`), `tests/fixtures/virtual_list.rs` (`VirtualListActions`).
-
-## Library: review fixes 2026-10-09 (Drag and drop, clipboard)
-
-- App callbacks run untracked: the drag manager's session listeners, its first-frame setup and its mutation observer
-  run in `untrack` (as Leptos runs `on:` handlers), `DroppableCollectionState::get_drop_operation` is untracked, the
-  clipboard's document listeners and the post-drop focus update too; the "signal read outside a reactive context"
-  warnings on `/hooks/dnd*` are gone (the `dnd_targets` fixture's `get_drop_operation` still reads a signal).
-- Bugs: `utils::clipboard` returns `Unavailable` when `navigator.clipboard` is undefined (insecure contexts) instead of
-  throwing; `use_drag` survives `drag`/`dragend` sent to a removed drag source (`try_*`, one end per drag through a
-  shared `NativeDrag`), and a `dragend` before the first frame keeps the source from being marked dragging (drag
-  generation); `begin_dragging` returns `Err(DragInProgress)` while a drag is set up, so a second Enter starts no
-  second drag (no `on_drag_start`, no console error).
-- Performance: one `Memo` of the dragged keys per draggable collection (`drag_count`), session drag types computed
-  once (`DragSessionInfo.types`), droppable items' validity a `Memo`, borrowing `DropOperationEvent<'_>` with shared
-  dragging keys, `use_drop`'s `dragover` reads the target's rect and the drag types once, `ListDropTargetDelegate`
-  caches the item keys per collection.
-- Fidelity: shadow-DOM-aware event targets (`event_target_element`) and `expect_current_target` in `use_drag`,
-  `use_drop` and the drag manager; a disabled drop button isn't described; the post-drop selection includes nested
-  (tree) items; auto scroll starts in an animation frame; `ListDropTargetDelegate::new` no longer calls a hook (the
-  direction is passed to `drop_target_from_point`); `use_clipboard` moved to `hooks::clipboard`; fixtures write
-  `data-dragging`/`data-drop-target` as `"true"`/absent.
-- Tests: `test_dnd_native.rs` (46 cases of dnd.test.js: events, nested sources and targets, drag data, files and
-  directories, drop operations, drag previews, keyboard data and nested targets, the bug cases) on the new
-  `/hooks/dnd-native` fixture with a stand-in `DataTransfer` (`DndActions::begin_external_drag`, typed `transfer()`);
-  `test_dnd_draggable_collection.rs` (all 13 cases of useDraggableCollection.test.js) on
-  `/hooks/dnd-draggable-collection`; 6 screen reader cases (TalkBack on Android, targets added/removed/hidden),
-  4 screen reader cases of useDroppableCollection; clipboard writes denied and without a clipboard
-  (`fixtures/clipboard.rs`); native tests for backward horizontal drop target navigation, touch texts and
-  `drag_count`. `Platform::Android`, `SyntheticEvent::detail`/`size` added to the test helpers.
-
-## Library: review fixes 2026-10-09 (ComboBox, Menu, TagGroup)
-
-- Context clearing (RAC `clearContexts`), one mechanism: `utils/scoped_context.rs` `clear_context::<T>()` /
-  `use_clearable_context::<T>()` / `ClearContexts` (a cleared context remembers the provided value it hides;
-  providers stay unchanged). `PopoverParts.clear_contexts` and `PopoverDefaults.clear_contexts` apply it to a
-  popover's content; `ComboBoxPopover` clears `LabelContext`, `FieldContext`, `InputContext`; a `ListBox` clears
-  `ListBoxParent` for its descendants. `Label`, `Description`, `FieldError`, `Input`, `TextArea` and `ListBox`
-  read through it; `Input`/`TextArea` without a field `dev_warn` and render nothing (no panic).
-- Combo box: a server-filtered one (`filter: None`) opens without options (`can_open`: react-aria's `|| items`);
-  `ComboBoxButton` is `data-pressed` while open, renders `data-focused`/`data-focus-visible`, is captured
-  (`UseComboBoxInput.button_element`; no `get_element_by_id` per event); the popover's `--trigger-width` spans input
-  and button (`PopoverParts.width_with`), re-measured on resize; Escape no longer prevents the default; arrow keys
-  act on repeats (Enter/Tab/Escape don't); button and listbox labelled through `labels()` (useLabels);
-  `menu_trigger`/`allows_custom_value`/`allows_empty_collection` are signals; `should_focus_wrap` prop; new
-  `ComboBoxValue` atom; closing snapshots the shown options before the text resets (upstream's frozen collection).
-  `ComboBoxState` holds its `Copy` settings directly (no `StoredValue` lock per read) and the value as a `Memo`.
-- Menu: hovering any expanded trigger keeps focus in its submenu; submenu levels come from the menu
-  (`MenuData::submenu_level`, `UseSubmenuTriggerStateInput.level`); `open_submenu`/`close_submenu` notify only on
-  change; section headings follow the collection; `Menu` props `should_focus_wrap` (default true),
-  `disallow_empty_selection`, `empty_state`; `MenuItem` `data-hovered`; slot attributes cloned per render; the
-  dead `ContextMenuTrigger` `target_id` state and its `UseMenuTriggerMenuProps` in the trigger context are gone;
-  typed `KeyboardKey` in `use_menu_item`; EventAccessors in `use_submenu_trigger`/`use_menu_trigger`.
-- Tags: typed `AriaAtomic`/`AriaRelevant`; no keyboard handlers without `on_remove`; the remove description
-  treats a virtual modality on touch devices as pointer; `TagList` re-renders keep its attributes;
-  `TagRemoveButton` renders `data-focused`/`data-focus-visible`/`data-disabled`.
-- Tests: native combo box state cases of useComboBoxState.test.js (open/toggle reasons, async loading, frozen
-  collection, ...), submenu levels, menu trigger change notifications, context clearing; browser cases for the
-  combo box (pressed button, toggling, read-only, disabled, scrolling, clear contexts, server filtering, trigger
-  width, form reset, section headers, ...), menu states (`/atoms/menu-states`), press-drag-release, submenu
-  sections, nested subdialogs, menu trigger hook (disabled, long press) and tag groups (hover, press, disabled
-  removal, actions, order, RTL, keyboard selection, held Backspace). Helpers: `ElementActions::count_synthetic_events`,
-  `style_property`, `double_click`. Fixtures: TimedComboBox merged into ControlledComboBox; unused buttons removed.
-- Upstream headers of every module of the family list their source and test files.
-
-## Library: review fixes 2026-10-09 (Interactions)
-
-- `use_press`: the click after a long press is prevented (a long-pressed link doesn't navigate, a submit button
-  doesn't submit); long press start and its timer moved into the press start (re-entering restarts it, one end per
-  start); coordinates relative to the pressed element for every event (`point: Point`, keyboard and synthetic: its
-  center); `type_()` for input/button key checks (a text `<input>` without `type` no longer presses on Space/Enter);
-  a script click during a dragged-out pointer press ends that press instead of pressing as virtual; the virtual
-  pointer flag resets on every real pointer down; several press hooks on one link open it once; no user callback
-  runs under the state borrow; no long press machinery (description, listeners) without a `LongPress` group.
-- APIs: `EventHandler::into_on` gives `OnEvent<D>` (nothing attached for empty handlers; `to_on` gone);
-  `PointerType` is `Copy` (`Unknown`, `PointerType::of`); `PressEventKind`/`LongPressEventKind`, `Element` targets
-  (press, long press, hover); `LongPress` group (C11 signals, merged through `PressResponder`); `Shortcut` keyed by
-  `KeyboardKey` (case-insensitive key names in `parse`); `InteractOutsideEvent`; `ScrollEvent` in pixels for every
-  `deltaMode`; `EventWrapper` folded into `KeyboardEventWrapper`, one `Arc<AtomicBool>` per `PropagationControl`;
-  `prevent_focus` returns a `FocusPrevention` disposed at press end/unmount; `use_move` uses the target's window,
-  unknown pointers move as a mouse, no `CapturedElement`; `use_prevent_scroll` moved to `hooks::overlay`;
-  `Pressable` takes every press prop, `Hoverable` `on_hover_change` and `TypedChildren`. `use_keyboard`'s propagation
-  with shortcuts documented as a deviation (one model for wrapped handlers).
-- Tests: usePress cases (touch, the click fallback, left button only, pointer/keyboard modifiers, coordinates for
-  mouse, touch, keyboard and cancel, focus on click, VoiceOver/Android/TalkBack virtual pointers, links and the link
-  role, checkboxes, re-entrancy, iOS page `user-select`, style changes during a press), the bug cases above, long
-  press click prevention and re-entry, hover after touch, Pressable role warnings, Android context menu, scroll wheel
-  (new fixture), useKeyboard's Mac/Windows shortcut matching and createKeyboardShortcutHandler parsing (native).
-
-## Library: review fixes 2026-10-09 (Collections core, ListBox, Select)
-
-- Per-key notification in `SelectionManager`: `is_selected(key)`/`is_focused_key(key)` subscribe their reader to
-  that key only (ref-counted `ArcTrigger`s); `set_focused_key` notifies the old and new key, selection changes the
-  changed keys (synchronously; a bound selection changed by the app through an Effect). `has_focused_key()` and
-  `is_empty()` are memos. Item hooks read focus key-first (only the focused item tracks `is_focused()`), item flags
-  are `Memo`s; tag tabindex, table header focus and draggable items migrated.
-- Keyboard delegates are memos (`keyboard_delegate_memo`: list, grid, table, tabs); the arrow wrap target is computed
-  only when wrapping.
-- `FilterQuery` (normalized once) for `Filter::contains/starts_with/ends_with` (no per-call allocations);
-  `ComboBoxFilter` is `Fn(input) -> OptionMatcher`, so `use_contains_filter` prepares the input once per keystroke.
-- `Key::id_fragment` (unambiguous, no whitespace) for every key-derived element id (options, grid list rows, tabs,
-  table headers and cells); integer keys hold `i128` (`From<u64>`, `SelectionValue for u64`/`isize`).
-- Select: single mode keeps one key of a longer default or bound value; trigger ArrowLeft/Right repeat while held.
-- Collections: auto focus sorts the selected keys (deviation recorded), the scroll frame is cancelled on focus change
-  and unmount; `use_listbox`'s link behavior follows the selection behavior (`link_behavior: Signal<LinkBehavior>`
-  in `CollectionOptions`, `UseSelectableItemInput`, `GridListData`); section heading text and `UseOptionReturn.link`
-  follow the collection; `ListBox` atoms `dev_warn` instead of panicking outside their parents.
-- `use_list_collection`'s `text_value` returns any `Into<Arc<str>>`; explicit `CloseOnSelect`/`SelectOnFocus`/
-  `SelectOnPressUp` enums (no macro); upstream headers incl. test files; native tests on `with_owner`; new native
-  tests (per-key notification, grid edges, horizontal grid, collection rebuilds, single-mode select).
-- New fixtures/cases (verified in the completion run above): `/atoms/listbox-selection` (23 cases), `/atoms/select-behavior`
-  (25 cases); `#sf-empty` merged into `#sf-unloaded`.
-
-## Library: review fixes 2026-10-09 (Calendar and date pickers)
-
-- Date fields format the Gregorian date they edit in every locale (`format.rs` forces `CalendarAlgorithm::Gregory`):
-  th-TH, fa-IR and `-u-ca-` locales showed Buddhist/Persian years in descriptions and min/max errors.
-- `DatePicker<DateTime>` with `granularity = Day` keeps the value's time when a date is selected (was midnight).
-- `DateRangePicker`: a value emptied from outside clears the shown ends at once (derived, no `Effect::watch`).
-- `DateTimeFormatter`'s 12-hour clock is the locale's (`Clock12`: h11 in ja-JP), as the date field's.
-- First day of the week: Monday for `-u-ca-iso8601` (unless `-fw-`); upstream's fr/fr-CA/fr-FR cases tested.
-- `TimeField`/`use_time_field_state` bounds are times of day (`civil::Time`) on the value's day (react-aria's
-  `convertValue(minValue, day)`): a `TimeField<DateTime>` can say "not before 09:00" on any day.
-- Typed picker state contexts: `use_date_picker_state_context::<V>()`, `use_date_range_picker_state_context::<V>()`
-  (RAC `DatePickerStateContext`), e.g. for a `TimeField` in the popover.
-- `DateFieldPicker` carries the picker's `labelledby`/`describedby`: the field labels its segments with them (callers
-  no longer patch `DateFieldData`), and the picker's inner field no longer warns about a missing label.
-- Memoized: field/picker formatters (`format::Formatters`, built on first use), segment number formatters,
-  validation (`Memo`, limits formatted only when violated), the segment's month/hour text formatters, the calendar
-  heading's and year picker's formatters. Month/year picker labels localized (`aria_label: Signal<String>`).
-- `ListFormatOptions::kind` (was `r#type`), `ListFormatter::new` falls back to the root locale's list of the same
-  type; `plurals.rs` and `list_formatter.rs` headers and deviation blocks; hidden date input `aria-hidden` typed.
-- Native tests of `hooks/{calendar,datepicker}` on `testing::with_owner` (19 sites); new native tests mirror
-  `@internationalized/date`'s manipulation, queries and conversion (DST) tests.
-
-## Library: review fixes 2026-10-09 (Overlays)
-
-- Hide-until-placed styles of `use_enter_animation` are returned (`UseEnterAnimationReturn::styles`) and merged into
-  the popover's and tooltip's `Styles` (one writer of `style`, `lessons.md`): before, a reactive part (the popover's
-  `--trigger-width`) wiped them, and a popover whose positioning paused showed unplaced at (0,0).
-- Landmark navigation skips landmarks inside `[inert]` (the page behind our modals), as inside `[aria-hidden]`.
-- `aria_hide_outside` in `HideMode::Inert` hides non-HTML elements (SVG) with `aria-hidden`, as upstream; its node
-  sets are JavaScript `Set`s (one call per membership check instead of one per compared element).
-- `DismissButton` renders `type="button"` (no longer submits an enclosing form; addition).
-- API: `use_modal` deleted (legacy `ModalProvider` API; the book's demos use `use_modal_backdrop` alone); one
-  `OverlayPositionOptions` (with `Default`) in `UseOverlayPositionInput` and `UsePopoverInput` (field `position`);
-  `UsePopoverInput::scroll`, passed the list box by `Select`/`ComboBox` and the menu by `MenuTrigger`'s popover;
-  `Popover` props `boundary`, `should_update_position`, `target_rect`, `on_enter`, `on_exit`; `ModalBackdrop`/
-  `ModalContent` `on_enter`/`on_exit`; `use_modal_backdrop` generic over `S: OverlayState`; `ToastKey(u64)` toast
-  keys; `Popover` without a trigger and `ModalContent` outside a `ModalBackdrop` `dev_warn` and render nothing;
-  `Debug` on the overlay hooks' returns; stale comments fixed; `// Upstream:` headers name the upstream tests.
-- Tests: page-clock timing for the tooltip and toast timers (`StopwatchStart` from plain events, `StopwatchEnd::
-  Disappears`); new helpers `Page::click_at`, `Page::dispatch_to` (window/document), `Page::record_attr_of`; new
-  fixtures `overlay-position-options` and `overlay-state`; cases for the positioning options (props change, window
-  resize, max height, target margin, cross offset, RTL start/end, target rect, arrow boundary offset, boundary),
-  hidden until placed, document/window scroll, modal popovers on scroll, own open state inside a `DialogTrigger`,
-  standalone popovers, popovers in modals, the modal's outside filter, enter/exit callbacks, auto focus in a modal
-  opened from a menu, useDialog's descriptions, title warnings and shadow-root focus, useTooltip's hover cases,
-  landmark backward wrap and Shift+F6; `aria_hide_outside::mutations` split into its six upstream cases; popover
-  cases use the "Toggled" instance (the "Info" one is gone).
+Finished work, one short entry each (what, when, where). Rules and knowledge that came out of it live in the
+documents `README.md` lists; git history has the details. Most recent first.
 
 ## Library
 
-### Review 2026-10-09: findings fixed the same day
+### 2026-10-17
 
-Found done when `PLAN.md` was condensed (2026-10-09, checked against the code); the open rest is in `PLAN.md`.
+- Shared crate-private helpers public and documented (the user: "Make these hooks public and add documentation for
+  them in the book"): `use_hide_outside(UseHideOutsideInput { is_open, overlay, behavior: HideOutsideBehavior })`
+  (overlay; was positional with a `keep_visible_only` bool), `use_wheel_stepping` (interactions; returns `group` and
+  `input` parts), `use_tree_expansion(UseTreeExpansionInput)` (tree; `TreeExpansion::set_expanded_keys` replaces
+  `TreeState::set_expanded_keys`, `toggle_key` a method), `use_node(UseNodeInput)` and
+  `use_node_aria_label(UseNodeAriaLabelInput)` (collections, own file `use_node.rs`),
+  `FormValidationState::register_native_validity_reader` (`NativeValidityReaders` private), `merge_long_press`. Five
+  new perf tests and fixtures, behavior tests `test_hide_outside.rs`, `test_wheel_stepping.rs` (+ `delta_x` on wheel
+  events), native tests; budgets of 82 files re-recorded (`ran` gains the new hooks). Book: pages `use_hide_outside`,
+  `use_wheel_stepping`; sections on Tree Hooks, Collection State, `use_press`, Form Hooks.
+- No crate-private hook variants (the user, option 1): `focus_props`, `use_toggle_with`, `use_checkbox_with` and
+  `use_progress_bar::progress` are gone; their extra inputs are public fields: `UseFocusInput::mark` (`FocusMark`),
+  `UseToggleInput::role` (`ToggleRole`) and `::validation`, `UseCheckboxInput::validation` (`FormValidationState`,
+  `from_parts` public), `UseProgressBarInput::role` (`ProgressRole`); `UseSwitchInput` is its own struct; a checkbox
+  group item adds the group's ids to `aria_describedby` (the former `ToggleGroup`). Budgets: counts unchanged, `ran`
+  lists name the inner hooks (56 files).
+- Leptonic's code is user code (the user: "I want users to be able to look at how we implement atoms and be able to
+  copy most code for their own spin"): the crate-private `use_x_raw` bodies and `UseXRaw` structs are gone (95); atoms
+  and composing hooks call the public hooks and use their parts as users do (`attrs()` to render, `into_props()` to
+  build on a part, new; parts passed through unchanged), `metrics.rs` no longer strips `_raw`. Public now: `Part::new`,
+  `Part::stored`, `Part::observed`, `Remount`, `Presence::new`/`hold`, `fixed_attr`, `signal_attr`, `maybe_attr`,
+  `FixedAttr`, `SignalAttr`, `ToAttrText`, `AttrText`, `Spread`, `AttrKeys`, `EventAccessors`, `join_ids`,
+  `IdListBuilder`, `PreventFocusAttr`, `scoped_view`, and (atoms) `data_flags`, `DataFlags`, `selection_mode`,
+  `with_default_class`, `id_ref_prop`, `clear_context`, `use_clearable_context`, `ClearContexts`, `LabelPresence`,
+  `LabelContext::with_presence`. `EventHandler` chains are one shared `Arc<[..]>` (a copy per mount is a refcount
+  bump). `ColorThumb` and `ColorSliderTrack` take the hooks' parts directly (no combined stored structs). Budgets
+  +1.3% allocations (87.22M → 88.32M; effects, memos, DOM unchanged; Button mount 289 → 300), wasm: Button probe
+  +0.8% brotli (278,772 → 281,096), test-app +0.08% (3,140,895 → 3,143,255). Docs: `hooks-implementation.md`
+  ("One way: leptonic composes its public hooks"), `atoms-implementation.md`, `conventions.md`, `performance.md`
+  ("Part costs"), the book's Hooks & Atoms "Parts" (a hook of your own).
+- `Part` everywhere (the user): every props value a public hook returns is a `Part` named after its element (C9;
+  `target` for behavior hooks), built with `Part::stored` (`Remount`, one implementation per props type); hooks and
+  atoms compose through crate-private `use_x_raw` bodies (they report as `use_x`); `Part::map` public; a
+  `PropsWithStyles` part's `attrs()` gives attributes and styles; `Presence` (a lease without props) replaces
+  `use_rendered` (select and combo box listboxes; `UseListBoxInput::presence`); `TagList`, `SelectTrigger`, the
+  hidden select, `CalendarCellButton`, `DateInput`, `DatePickerGroup`, `InputContext` (takes a `Part`),
+  `LabelContext` (takes a `Part`), `ColorThumb` and the color slider track take fresh props per mount. `Id` lost
+  `Default` (the tab's fallback collection id is the tab list's id; the combo box takes its button id from the menu
+  trigger). Budgets: atoms unchanged (50.80M), public-hook fixtures +0.7% (36.17M → 36.42M: a part costs 2-3
+  allocations per mount). Wasm: Button probe unchanged, test-app +0.7% brotli (3,119,199 → 3,141,570).
+- Consistency sweep over every hook and atom (the user: "everything we decided applied to all hooks and atoms"):
+  ids are `Id` everywhere (`use_id -> Id`, element ids `Option<Id>`/`Id`, references `Signal<Option<Id>>` joined by
+  `IdRefs::derive`, slots' `referenced_id`, `labels()`; atoms convert their `MaybeProp<String>` references with
+  `id_ref_prop`; the `String` bridges and `IdRefs`' string API are gone); every hook's attributes through
+  `signal_attr`/`fixed_attr`/`maybe_attr`, every atom's data attributes through `data_flags` (≤3 per group);
+  `KeyedTriggers` for CheckboxGroup (in-place updates of an owned value), ToggleButtonGroup, Tabs, DisclosureGroup,
+  tree/table expansion, drag and drop, calendar cells, collection node changes (one diff per change,
+  `SelectionManager::track_node`) and the selection manager (its `KeySubscribers` merged into `KeyedTriggers::track`);
+  `Part`s for the overlay arrow, popover and tooltip elements, `NumberFieldGroup`, `ColorWheelTrack` and
+  `DisclosureTrigger` (its presence names the panel: no `use_rendered`); merged stores in `use_combobox_state`,
+  `use_scroll_view`, `use_move`, `use_focus_within`; named input fields where a default's stored signal was
+  overwritten. Budgets: all allocations 123.5M → 87.0M (−30%; collections −31%, dates −42%, forms −19%, button/link/
+  toggle −38%); e.g. ListBox append (1,000) 91,714 → 2,556, calendar arrow key (12 months) 14,393 → 1,216,
+  CheckboxGroup click (1,000) 54,120 → 13,106 and 3,005 → 7 render effects, DisclosureGroup toggle (1,000) 20,078 →
+  88, Tabs (100) 3,480 → 564, grid row add (1,000) 352k → 98k, CheckboxField mount 1,035 → 753. Test-app wasm
+  (brotli) 3,113,820 → 3,117,200 bytes (+0.1%). Left: `PLAN.md`.
 
-- Cross-cutting: empty event handlers attach no DOM listener; `IdRefs` and `labels` (useLabels) join id lists;
-  `ClearContexts`/`clear_context` keep contexts out of popovers (ComboBox, nested ListBox); EventAccessors and
-  shadow-aware `get_event_target` in the combo box, menu and DnD hooks; RTL from `LocaleDirectionality`; dead API
-  removed (`Language`, `Mount`, `ViewCallback`/`ViewProducer`, the CSS aliases, `track_in_local_storage`,
-  `Out::Fn`, `MergeWith`/`hooks/merged`, `AriaGrabbed`, the `hooks` feature); atom API consistency (C4 names,
-  `default_selection: Selection`, `HashSet` set values, C11 signals, `key` props, `*Context` names); the C recount's
-  C3/C8/C10/C12 cases; `Signal::derive` → `Memo` and per-locale ICU4X caches in forms, number field, dates, tabs,
-  color; `KNOWN_PAGE_PROBLEMS` replaced by exact declared expectations (`tests/fixtures/expectations.rs`).
-- Interactions and focus: `use_press` (click prevented after a long press, long press on re-entry, `point`
-  coordinates relative to the pressed element, `type_()` key checks, `LINK_CLICKED` guard, no callbacks under a state
-  borrow, `Option<LongPress>`), typed `PressEvent`/`PointerType`/`InteractOutsideEvent`, `Pressable` with every press
-  prop; FocusScope containment (`should_contain_focus`), one `first_in_scope`, modality tracking deduped and kept
-  across `beforeunload`, `FocusManager` context API, RAII window tracking, typed focus options; their upstream tests.
-- Overlays: hide-until-placed styles through `Styles`, `OverlayPositionOptions`, popover `scroll`/`boundary`/
-  `target_rect`/`on_enter`/`on_exit`, `use_modal` removed, `ToastKey`, generic `use_modal_backdrop`, `js_sys::Set`
-  in `aria_hide_outside`, page-clock timing checks.
-- Forms and collections: number formatting/parsing fixes (fraction digits, overflow, "1.2."), a generic spin button,
-  per-key subscriptions in `SelectionManager`, `FilterQuery`, `Key::id_fragment`, ListBox/Select fidelity fixes;
-  combo box async opening, menu/tag fidelity, their RAC test cases.
-- Grid, DnD, virtualizer: GridList rows on `focusin`, `js_sign` column layout, column refocus, sortable descriptions,
-  the selection column following the selection mode, malformed-table warnings, constant-time cell lookups; DnD page
-  health, drag-generation guard, untracked event reads, borrowing `DropOperationEvent`, 46 native DnD cases and all of
-  useDraggableCollection; layout by binary search and content comparison, batched item measuring, `ItemSize`/
-  `EndAnchor`/`VirtualListOptions`.
-- Dates, color, widgets: Gregorian formatting forced, times kept on date selection, memoized formatters, `Time`
-  bounds, picker state contexts, the date test suites; hue normalization, color defaults as upstream, C13 types,
-  reactive wheel radii; one `use_link` per `Link`, `use_tab` with `FocusableContext`, Tabs data attributes, event
-  props on links, toggle buttons and tabs.
-- assertr's thirtyfour integration (assertr 0.8, unreleased; features `thirtyfour`, `thirtyfour-cdp`): assertions and
-  shared reads on `WebElement` (attributes, text, state, focus, accessible name/role/description), adopted by the
-  browser tests (verified in the completion run above).
+### 2026-10-16
 
-### Browser test suite rebuilt (2026-10-08 – 10-09)
+- Fixed, found by the performance tests: the RangeCalendar's `focus_nearest_available_date` read the visible
+  duration tracked from a keyup listener (warning; `untrack`); `ColorChannelField` never stepped by wheel (its root
+  takes the number field's focus-within handlers). Not bugs: the stepper/clear buttons' `data-focus-visible`,
+  `NumberFieldState::increment` without `is_disabled` (as upstream).
+- Fixed, found by the performance tests: dangling ARIA references (Select value/listbox, ComboBox listbox,
+  Disclosure panel/trigger, Tooltip; `use_rendered`); atoms rendering their hook's id ignored `attr:id` (an `id` prop
+  on eight atoms, `test_own_ids.rs`); virtualizer layout options `None`→`Some` and estimate changes now relayout
+  (deviations: upstream ignores both). Not a bug: `use_tag` tab stops (as upstream, `test_tag_group::tab_stops`).
+- Leptonic's own `MaybeSignal<T>` (the user): a fixed value without allocation, tracking or render effect, or a
+  `Signal<T>` (`utils/maybe_signal.rs`; why: `conventions.md`); first use: `Separator`'s `aria-orientation` (−11
+  allocations, −1 render effect). `testing::count_allocations` for native tests.
+- Per-key subscription pilot (R1) on the RadioGroup family: `utils/keyed_triggers.rs` (`KeyedTriggers<K>`);
+  selecting in a group of 1,000: 4,008 → 16 render effects, the app selecting 16,014 → 56 allocations, the first
+  selection 4,004 → 1,007 render effects; +4 allocations per radio at mount (`performance.md` R1, section 3).
+- Button stack pilot: Button mount 586 → 301 allocations, 23 → 10 render effects; click 57 → 45; keyboard focus
+  44 → 20; wasm −0.6% brotli (`utils/{probe,signal_attr,spread,data_attributes,stored_field,reactions}.rs`;
+  `performance.md` R2, R4–R8, R11, R13, R14).
+- Flaky tests fixed: `virtual_list::resize_grown` (the browser's scroll clamp on shrinking content counted as user
+  scrolling: `use_scroll_view.rs`; `test_virtual_list::shrinking_content_keeps_following`), DnD TalkBack click before
+  the drag session's frame (test race), slow role/text lookups (one in-page query, `tests/pages/lookup.rs`),
+  `use_safely_mouse_to_submenu` (single-step pointer moves).
+- `erase_components` measured (`build-performance.md`): kept for every build. reactive_graph (fork): notifications
+  snapshot into a `Vec` instead of cloning subscriber sets.
+- `Part<P>` (`utils/part.rs`: props built per mount, an owner-scoped lease: one element at a time) and `Id`
+  (`utils/id.rs`) introduced; slots, field/label contexts, dialog, modal, menu, slider, listbox, grid list, select
+  value, toast, tooltip, disclosure, text field, checkbox/switch/radio and calendar error converted;
+  `test_remounted_parts.rs` (27 tests); `PartProps` removed; slot presence from the lease (no Effect).
+- `use_hidden_date_input`'s container is a `Part<PropsWithStyles<..>>` (its styles were a field `attrs()` dropped);
+  the `ssr` dead-code warning on `ScrollState::view_scroll` is gone.
+- `chain_optional_callbacks` public (documented on the `use_press` page next to `merge_long_press`).
+- Performance fixtures: one per subject, no shared helpers between fixtures or test modules.
+- Documentation trimmed to long-term knowledge; `AGENTS.md` cut to the hard rules (the user). New rules: run only
+  the subject's tests while working, fix bugs and flaky tests when found, performance priorities (wasm size,
+  allocation count, allocated bytes), one performance fixture per subject.
+- Documentation contradictions resolved on the documentation side: `design-collections.md` states C4's bindings
+  and the kept `data-collection`; `hooks-implementation.md` no longer describes `CapturedElement`'s internals.
+- Opt-level comparison of the test-app (leptonic-e5): counts identical at `opt-level = 3` and `"z"`, `3` makes the
+  wasm 70% larger; decided: measure at `"z"` only (`testing.md`, `build-performance.md`).
+- Performance tests for all 356 hooks and atoms (~2,330 tests, written by 9 parallel agents), by kind:
+  `tests/perf_tests/{atoms,hooks}/<subject>.rs`, fixtures `/perf/{atoms,hooks}/<subject>`, budgets
+  `tests/budgets/{atoms,hooks}/<subject>.json`. The library reports what ran (`metrics::subject!()`, feature
+  `metrics`); a coverage check keeps `unmeasured.txt` shrinking. Findings in `PLAN.md`, "Performance".
+- Performance counts with budgets in the regular suite: allocations, reactive work (`reactive_graph` `metrics`
+  feature on the user's fork, branch `leptonic-metrics`), DOM mutations, layouts (`testing/perf-metrics`).
+  `allocated_bytes` unbudgeted (16-48 byte jitter).
+- Test runs centralized: one agent runs batched requests for all (`AGENTS.md`), after unbatched runs rebuilt the
+  test-app per agent and a tree-wide fix script broke 40 files.
 
-From 139 tests sharing state to ~875 independent cases; the result is described in `testing.md`.
+### 2026-10-13
 
-- One test per case (2026-10-08): every case a `pub async fn` loading its own page. 68 cases had silently depended
-  on earlier ones, several had stopped checking anything, one hid a library bug (tree expand button). Registration
-  went from `cases!` macros to explicit `TestGroup`s in `tests/ui_tests/mod.rs` (2026-10-09; logical groups span
-  modules), with `#[browser_test]` (crate `browser-test-macros`) generating each case's type, name and description;
-  test selection (`TestFilter::from_env()`: `BROWSER_TEST_FILTER`, `BROWSER_TEST_GROUP`) moved into browser-test.
-- One way per check: lookups by `Locator` (CSS, `role(AriaRole::X)` on browser-computed roles, `.text`, `.has`; the
-  XPath locator, the local role table and the JavaScript query engine are gone), singular lookups reject ambiguity,
-  every state has read / `wait_for_*` / `*_stays`. Waits went from hand-rolled poll loops through `wait_for!` macros
-  and a polling builder to assertr's eventual assertions (`eventually_ok`, `consistently_ok`, `Patience`; assertr
-  0.8 and borrow-for were extended in the user's checkouts for this). Tests use thirtyfour's `WebElement` with
-  `ElementActions`; fixture navigation, adapters and the health policy live in `tests/fixtures/`.
-- Strength (review 2026-10-09): vacuous cases fixed, single reads after actions became waits or stays checks, packed
-  cases split into one case per upstream test, full accessible names and validation messages asserted, timers
-  measured in the page (`start_stopwatch`) instead of slept (~75 fixed sleeps were gone already), macOS/iOS paths
-  through `emulate_platform`, typed `SyntheticEvent` builders, `HeldPointer`. Every case's doc comment names its
-  upstream test.
-- Page health after every test (panics, uncaught errors, `console.error`/`console.warn`, duplicate ids, dangling id
-  references, literal `attr:` attributes): when introduced it failed 117 cases on 8 fixtures (unlabeled fields,
-  `form="test"` without its form, the slider's missing-value warning, untracked reads in DnD), now PLAN items with
-  exact per-route warning exceptions. After a Rust panic, waits give up at once. The hydration test reports every
-  failing fixture, checks that ids keep their element and covers the query variants (`QUERY_VARIANTS`);
-  `server_did_not_panic` names each panic's request.
-- Speed and isolation: Chrome Headless Shell, session reuse with a per-test reset (`SessionReset::manual` keeping the
-  HTTP cache), the test-app built `--release` (13 MB of wasm instead of 33) with its server at `opt-level = 1`,
-  content-hashed immutable assets, hydration awaited in the page, lookups filtered in the page, per-section fixtures
-  (`?only=`), ICU4X data of the fixtures' locales only, shorter fixture timers: 821 tests took 2m 40s at parallelism
-  4, 871 now take ~35 s at 8 (`testing.md`, "Speed and memory"). A suite serves its site from its own target
-  dir; the suite is no default test target (`cargo test --test browser_test`).
-- browser-test 0.6 (the user's checkout): failure reports with the test-code frames, the last steps and the last
-  value seen; Chrome profiles under `<target>/tmp`; cancellation on Ctrl-C; `ring` instead of `aws-lc-rs`; pages
-  brought to the front (chromedriver started them unfocused, so script focus fired no events).
-- Found on the way: the virtualizer took its own scrolls for the user's, so `VirtualList` stopped following its end
-  (`lessons.md`); the tree expand button bug; doubled accessible names (PLAN).
-- Also 2026-10-09: a read-only review of every hook, atom and test by 13 agents (findings in `PLAN.md`, "Review
-  2026-10-09"); native toast-queue tests (react-stately's `useToastState.test.js`); `testing::with_owner` suppresses
-  untracked-read warnings only for the test body; broken `// Upstream:` headers fixed so the drift script reads them.
+- Both browser suites on the published crates (assertr 0.8, browser-test 0.7; `TestSettings`, 10-minute default time
+  limit).
 
-### Features and fixes (2026-10-07 – 10-08)
+### 2026-10-12
 
-- Tree tables (react-aria-components' `Treeble`): child rows via `ItemBuilder::children`,
-  `TableTreeInput` (tree column + an expansion state shared with trees), `role="treegrid"` with levels and positions,
-  ArrowRight/ArrowLeft expand, collapse and go to the parent (mirrored in RTL), `Table`'s `tree_column` and
-  expanded-keys props, `TableExpandButton`; collapsed rows stay rendered but `hidden`. Type-ahead walks the shown
-  rows; a row collapsed out of view hands focus to its nearest shown ancestor. Tests mirror `Treeble.test.js`.
-- Typed selection values (C16, the user's decision): `RadioGroup`, `CheckboxGroup` and `ToggleButtonGroup` generic
-  over `V: SelectionValue`, `Select<S>`/`ComboBox<S>` over the selection's shape (replacing `selection_mode`, where
-  several values compiled with single selection); `selection_value!` for enums. Hooks stay key-based.
-- Localized strings (`utils::intl_strings`, feature `intl-strings`, default on): react-aria's 21 message bundles in
-  34 locales, converted by `scripts/port-intl-strings.py` into typed per-family structs and formatted at runtime
-  (ICU plural/select); a test parses every message of every locale (it found upstream's sr-SP `{veza}`). Every family
-  uses them. With them came the grid selection announcements and the highlight-selection description.
-- The single `Checkbox`, `Radio` and `Switch` atoms removed (the user, 2026-10-07; react-aria-components deprecates
-  them): `*Field` + `*Button` pairs.
-- Dates: 12-hour times use the locale's own clock (ja-JP "午前0:30", h11) and day periods are AM/PM as in `Intl`
-  (ICU4X's flexible day periods replaced); ICU4X 2.3 required.
-- Fixes: `use_table` merges its sort description into `aria-describedby`; item labels and menu item roles follow the
-  collection; tree rows follow an item gaining children; merged press + hover props fire `on_double_press`;
-  `CollatorSensitivity` maps as ECMA-402; collection nodes carry their document position (a 20,000-row append 14.3 →
-  11.6 ms); the keyboard delegates use the per-locale collator instead of building one per key press; the
-  virtualizer's and the toast's clocks are WebAssembly-only (they panicked natively); `just clippy` also checks
-  release builds; rustdoc is warning-free.
-- Not reproduced or not library bugs: RTL menus, nested-modal focus restore, Enter on a table cell's `Button`
-  (`table_navigation_tests` guards it), the safe triangle (the test moved too coarsely), RTL date picker arrows (the
-  fixture had no `dir="rtl"`), two flakes caused by test timing (`lessons.md`).
-- 42 native `*_state` tests (color channel field, picker and slider, form validation, text field, virtualizer).
+- Virtualizer froze on a scrollbar loop (wrapping rows overflowing once measured): `ListLayout` keeps measured lengths
+  as estimates when only the breadth changes, `use_scroll_view` bounds a size update to two passes
+  (`leptos-and-dom.md`, "Effect Timing"); browser-test got per-test time limits and closes frozen pages.
+- Performance suite (`just browser-perf`): in-page timings of `/perf` scenarios, first `perf/virtual-list`.
+- Collection arena (`Collection` in document-order `Vec`s with a position map; `Node`'s sibling/child keys replaced
+  by `Collection` methods); `ListLayout` continues after unchanged nodes: 20,000 rows build 4.9 → ~2 ms, an append
+  following the end 4.75 → 0.6 ms of layout.
+- Caches: `utils::recent_cache::RecentCache` for formatters, parsers, plural rules and localized messages (a plural
+  message 6.4 → 0.9 µs); calendar cells share `use_today` and their strings.
+- Quality pass over `leptonic/src` against the written rules: upstream headers and deviation blocks completed,
+  `// No upstream:` for leptonic-only files, one helper per job (`aria_true`, `shadow_dom::node_contains`, merged
+  duplicates), shadow-aware DOM queries, `Signal::derive` → `Memo`, `FocusScope` default class. Open findings:
+  `PLAN.md`, "Quality pass".
+- Fixed: `MenuItems`/`TagItems` re-render renamed items; `TabPanels` keeps its size properties in its `Styles`; a
+  `CheckboxField` without `value` in a group warns instead of panicking.
 
-### Fidelity review (2026-10-07)
+### 2026-10-10 – 10-11
 
-A read-only review of the whole library against react-spectrum @ 99e6102368 (one pass per family plus architecture,
-docs and tests), applied the same day by nine agents, failing test first. The user's decisions: modals focus the
-dialog on open (`ModalContent` `auto_focus` defaults to false) and set no `aria-modal`, as upstream; the `LinkButton`
-atom is removed (use `Link`); `Propagation` covers only press and keyboard events. Most hooks moved to one input
-struct (C8); the book's changelog lists the renames ("Changed during development").
-
-- Interactions and focus: `use_press` keyup in the capture phase, the macOS Meta keyup synthesis, drag out/in through
-  `pointerenter`/`pointerleave`; `use_move` re-ported (no axis filter, which fixed the sliders' cross-axis arrows);
-  `use_focus_visible` synced; FocusScope select-on-Tab and Tab outside the scope.
-- Collections: `Filter` by characters, a memoized collator per locale, the combo box's custom value, validation and
-  hidden form inputs, `Collection::build` in O(n), section atoms (`ListBoxSection` + heading, `GridListSection`,
-  `GridListHeader`, `GridListItemDescription`), per-item `disabled_behavior`.
-- Grid, table, virtualizer, DnD: nested column groups, reactive table atoms, follow mode keeps measured sizes, RTL
-  `scroll_to`, keyboard DnD hides with `inert`, DnD tests with synthesized native drags.
-- Overlays: containment and measurements per opening, positions reset on reopen, popover `dir`, toast focus by key.
-- Forms: `NumberParser` re-ported from `@internationalized/number` (~40 upstream tests), `format_to_parts`, saturating
-  integer values, `FormValidationState` (C3), `CheckboxField`/`RadioField`/`SwitchField` with their `*Button`s.
-- Calendar and dates: the range calendar's touch tap, the server's today during SSR, `CalendarMonthPicker`/
-  `CalendarYearPicker`, autofill (`use_hidden_date_input`), formatting on ICU4X field sets.
-- Slider, color, buttons, tabs: per-thumb labels, `ColorWheel` without a channel, `Button`'s pending state,
-  `TabPanels`, `Fraction` for meter and progress bar.
-- The six tests still failing afterwards were fixed at their root causes: the item registry keeps every live
-  registration per key; a disabled first tab is skipped while rendering (it was skipped in a client Effect only, so
-  hydration differed); `SelectionManager` notifies only on changes; group items keep their own validation behavior;
-  native validity is re-read when constraint attributes change.
-
-### Roadmap R1–R5 (2026-10-05 – 10-07)
-
-The 2026-10-05 audit found 18 bug/crash risks, 13 library-wide conventions to settle, ~78 untested hooks and 101
-files on an old upstream commit; the roadmap worked through them:
-
-- R1 bugs and crash risks: a typed, infallible `Href`; timers and deferred callbacks outliving their owner
-  (`OwnerAlive`); transient global listeners as drop guards (`utils::event_listeners`); hydration-stable ids
-  (`use_id` instead of random `Uuid`s); SSR global state (`use_description` client-only, `use_prevent_scroll`
-  releasing only its own count); the Effect Read Order rule (a ComboBox missed a value change); `I18nProvider` scoped
-  to its children; a modal's hide-outside revealing overlays opened from inside it (`keep_visible`).
-- R2 conventions C1–C16 applied library-wide (`conventions.md`): no `new()` on inputs (66 removed), C4 state props
-  on every atom (`ValueBinding::from_state_props`), typed keys (`KeyboardKey`), `use_locale()`/`use_direction()`,
-  one `Orientation`, `SelectionMode` defaulting to `None`, `dev_warn!`, no direct `web_sys::window()`.
-- R3 families re-ported to 99e6102368, each with its deviation block, tests derived from upstream and atoms:
-  toggles, checkbox/radio groups and the toolbar; fields (`use_label`/`use_field`, C14 field parts, `Form`, the
-  number field generic over its value, C15); overlays (`OverlayTriggerState`; dialog, modal, popover, tooltip,
-  menu; positioning with upstream's 22 placements and arrows; submenus, subdialogs, context menus, close on scroll,
-  entry/exit animations); interactions and focus (`PressPropagation`, `Pressable`/`Focusable` on their child,
-  FocusScope re-sync; tests from all of upstream's interaction tests); label slots (`LabelPresence`, RAC's
-  `useSlot`); links, breadcrumbs, disclosure; meter, progress bar, spin button, slider (generic over
-  `NumberValue`), separator, tabs; color (area, slider, wheel, fields, swatches, picker; `Color` keeps its color
-  space, `Alpha<C>`, color names); calendar, date/time fields and pickers on jiff (`IncompleteDate`, segments from
-  ICU4X parts; the `time` crate is gone); toast and landmarks; virtualization (react-stately's virtualizer and
-  layouts; `Virtualizer` and `VirtualList` atoms); keyboard shortcuts (`use_global_shortcuts`, `Keys`,
-  `ShortcutKeys`); TagGroup atoms; clipboard (`write_text_deferred`); collections (`design-collections.md`;
-  `hooks::selection` and react-aria's legacy API removed).
-- R4/R5: interaction modality tracked from hook creation (focus jumped in grids); `utils::scroll` public;
-  assertr in unit tests; parallel browser tests; the harness writes the atom theme before starting the app.
-
-### Components layer removed (2026-10-07, the user's decision)
-
-Steps: default classes `leptonic-<AtomName>`, the atom theme (react-aria-components' starter styles,
-`atom-theme.md`), the book off `leptonic::components`, then the deletion with the features `components`, `tiptap`,
-`sanitize` and `themes` and their dependencies. The starter templates moved to atoms + the atom theme. What replaced
-each component:
-
-- Atoms: `Button`, `Link` (also for `LinkButton`), `Checkbox`/`Radio`/`Switch`, `TextField`, `NumberField`,
-  `Slider`, `Select`, `Tabs`, `Table`, `Meter`, `ProgressBar`, `Separator`, `Modal`, `Popover`, the calendar and
-  date picker atoms (`DateSelector`, `DatePicker`), `ColorPicker`, `Disclosure` (`Collapsible`), `ToastRegion` +
-  `Toast` on a `ToastQueue`, `ShortcutKeys`/`Keys` (`Kbd`), `TagGroup`/`Tag` (`Chip`).
-- Plain markup + CSS (recipes in the book): `Card`, `Stack`, `Grid`, `Tile`, `Skeleton`, `Typography`, `AppBar`,
-  `Drawer`, `Alert`, `Icon` (use `leptos_icons`), the transitions (atoms expose `data-entering`/`data-exiting`).
-- `Root`: `ThemeProvider` + `ToastRegion`, `dvh` units; `Code`: `utils::syntax_highlight` + the clipboard util;
-  `TiptapEditor` and `SanitizedHtml`: use `leptos-tiptap` and `ammonia` directly.
-
-Dependencies (2026-10-07, the user's priority): all upgraded, unused ones removed, every one declared with
-`default-features = false`; the feature flags gate their modules; `syntect` without theme dumps and loaders.
-
-### Found by the book and apps (2026-10-04 – 10-07)
-
-Most gaps of these weeks were found by the book and apps built on leptonic. Notable: closing a
-focused dialog panicked (handlers running during unmount use `try_*` accessors: "Blur After Disposal"); random
-element ids broke hydration (`use_id`, `test_hydration_ids`); the listbox lacked `aria-disabled`, listened to
-non-bubbling `focus`/`blur` and always wrapped; `use_press` stopped every click (now upstream's propagation); macOS
-lacked Cmd + Home/End in collections; the live announcer became react-aria's singleton. The themed components' gaps
-went with the layer.
-
-## Book
+- Parts outside their parent warn and render nothing (`orphan_parts::*`, `/atoms/orphan-parts`); item hooks warn
+  about keys missing from the collection.
+- Id references reactive (C2: `MaybeProp<String>` in 83 atom props, `Signal<Option<String>>` in 35 hook inputs),
+  id lists through `IdRefs`.
+- `*Props`/`*Return` no longer `Clone` (the user); `TextField` tracks which element renders it.
+- `data-focus-visible` has one writer per element (the user; `atoms-implementation.md`).
+- Tooltip stays open while the pointer is on it after the trigger blurs (selectable tooltip text).
+- `VirtualList` scrolls horizontally for wide rows (`ListLayoutOptions::allows_overflow_across`).
+- Review of commit 07f628b1 (1,254 files) against react-spectrum `740c6c5c4a`: defects fixed in interactions, focus,
+  collections, tables, forms and pickers; resize-triggered repositioning in the next frame (`leptos-and-dom.md`,
+  "Resize Observers"); `TimeBound`; tests type through CDP with US key definitions and take the page's modifiers, so
+  the suite runs on macOS hosts.
 
 ### 2026-10-09
 
-- Completed the refactor integration across API tables, live demos, snippets and prose: flat exports and feature
-  flags, typed styles and callbacks, focus/interactions, collections, overlays, virtualizers, dates and colors.
-  API checking now understands slice types; hidden-select docs and demos use reactive option selection.
-- The browser harness honors `BOOK_TARGET_DIR` (or `CARGO_TARGET_DIR`) and puts its generated site inside that
-  target, so agents use the shared book target without creating another dependency build tree.
-- Verified 47 native/API checks, 2 server asset tests, all 240 book browser tests, and SSR plus WASM hydrate clippy.
-  The final browser run includes the integrated library and startup precompression changes. The browser checks
-  cover page health, links, phone widths, dark-theme readability and Markdown exports.
-- WASM is served precompressed in every profile, including `just serve` (`wasm-dev` / `server-dev`): server startup
-  generates missing or stale gzip-6 and Brotli-4 sidecars atomically before accepting requests, reuses fresh
-  production sidecars, and lets `leptos_axum` negotiate the encoding. No per-request WASM compression or additional
-  command-line tools. Native tests cover negotiation, decoding, cache headers and refreshing stale files.
+- Review of every hook, atom and test against upstream 99e610236 (13 agents); per family fixed the same day:
+  - Interactions: `use_press` click prevention after a long press, coordinates relative to the element, typed
+    events, `EventHandler::into_on` (nothing attached for empty handlers).
+  - Focus: one global modality state, FocusScope active-scope tracking as react-aria, `FocusManager` `Copy`.
+  - Collections: per-key notification in `SelectionManager`, `FilterQuery`, `Key::id_fragment`, keyboard delegates as
+    memos.
+  - Grid/table/tree: GridList rows on `focusin`, `js_sign` column sizing, constant-time cell lookups, no doubled
+    accessible names.
+  - Overlays: hide-until-placed styles through `Styles`, `OverlayPositionOptions`, `use_modal` removed, `ToastKey`.
+  - Buttons/links/tabs/disclosure: `IdRefs` and `labels` as the one way to join ids, `hooks/merged` deleted, ids
+    known while rendering (`Button` `id`), `TabListState` as the tabs' context.
+  - Color and slider: hue wrapping, states step from the current value, C13 types.
+  - Calendar and dates: Gregorian formatting forced, times kept on date selection, `Time` bounds, picker state
+    contexts, memoized formatters.
+  - DnD and clipboard: untracked app callbacks, drag generation guard, 46 native DnD cases.
+  - Virtualizer: binary-search layout, batched item measuring, `ItemSize`/`EndAnchor`/`VirtualListOptions`.
+  - Cross-cutting: no prelude and one path per public item (the user), dead API removed, RTL from ICU4X.
+- Refactor integration: the reworked APIs reconciled with the test-app, tests and book; final run 1,538 browser cases.
+- Build warnings fixed, canonical imports, `just doc` warning-free.
+- Slider percentage rounding as upstream; `ThemeProvider` restores the document's `data-theme` on cleanup.
 
-### 2026-10-08
+### 2026-10-08 – 10-09: browser test suite rebuilt
 
-- Guide "Optimizing Compile Times & Binary Sizes" (`/doc/optimizing-builds`), from `build-performance.md`'s advice;
-  every number names the app it was measured on.
-- Browser tests on browser-test 0.6 like the library's: every check a test of its own (240 tests in ~32 s; before:
-  23 tests in 32 s with 23 browsers), the page walk one test per page, contrast one per theme and page.
-- `wasm-dev` at `opt-level = "z"`: 19.7 MB of wasm instead of 43.8 MB, rebuilds no slower.
-- Tree tables (Table Atoms "Tree Tables", a file-browser demo, `TableExpandButton`, the `<tr hidden>` styling
-  pitfall), typed selects (`Select`/`ComboBox` value shapes, `selection_value!`), a live `use_color_picker_state`
-  demo, a static review of 30 pages' snippets against the library.
+From 139 tests sharing state to ~875 independent cases (`testing.md`): one case per test loading its own page
+(68 had depended on earlier ones), explicit `TestGroup` registration with `#[browser_test]`, `Locator`s on
+browser-computed roles, assertr's eventual assertions instead of polling macros, page health after every test,
+session reuse with per-test resets, the test-app built `--release` with ICU4X data of its locales (821 tests 2m 40s →
+871 tests ~35 s).
 
-### 2026-10-07
+### 2026-10-07 – 10-08
 
-- Off the components layer: shell, kit, pages and demos on atoms + book CSS; Component tabs removed (redirects to
-  the atom pages' styling sections); recipes for layout pieces; changelog "Removed: the components layer".
-- Pages on the re-ported library: Date & Time, Calendar, Toast, Color, virtualizer and keyboard APIs; shell
-  landmarks (`MainLandmark`, `NavLandmark`, the skip link); small-screen menus on `Drawer`.
-- Dependencies: each with `default-features = false` and only its features; `scraper` 0.27, `tower-http` 0.7, `syn`
-  3; unused crates removed; TLS on `ring` (23 s less CPU per server build); ICU4X data for 2.3.
-- Fidelity follow-up: `kit::api_check` also compares types; `TabPanels`, `ContextMenuTrigger`, Button `is_pending`,
-  the month/year pickers, grid list sections and localized strings documented; Markdown export fixes (line breaks in
-  code blocks, `.md` links, `###` items in the index).
-- Visual pass (light, dark, 390px): prose line height, code typography, identifiers breaking between words.
-- The `*Field` + `*Button` pairs replace the single Checkbox/Radio/Switch atoms (125 files); keyboard tables only on
-  concept overviews; accuracy sweeps of every prop default, `leptonic-<Atom>` class and data attribute.
-- The theme is kept in a cookie and rendered by the server (no theme flash; the Themes guide shows the pattern).
-- The server no longer compresses the dev wasm on the fly (suite 2m31s → 31 s; `lessons.md`).
+- Tree tables (`role="treegrid"`, `TableExpandButton`), typed selection values (C16), localized strings from
+  react-aria's 21 bundles in 34 locales (`utils::intl_strings`), the single `Checkbox`/`Radio`/`Switch` atoms removed
+  for `*Field` + `*Button` pairs (the user), 12-hour times in the locale's clock.
+- Fidelity review against 99e6102368, applied by nine agents: modals focus the dialog and set no `aria-modal`,
+  `LinkButton` removed, `Propagation` only on press and keyboard events (the user); most hooks on one input (C8);
+  `NumberParser` re-ported.
 
-### 2026-10-04 – 10-06
+### 2026-10-07: components layer removed (the user)
 
-- All ~130 pages on the page kit; the book built with leptonic (shell, search with Ctrl/Cmd+K, kit components);
-  `kit::api_check` compares every API table with the library source; one demo stylesheet per sidebar section; narrow
-  screens stack table rows into cards.
-- Navigation restructure (2026-10-06): Guides, Concepts and Building blocks (`nav.rs`, placement rules tested, old
-  URLs redirect).
-- Audit fixes across shell, kit, search and every area; Quick Starts for the collection overviews; the Event
-  Propagation demo; the virtual focus page; context menus, submenus, subdialogs and overlay animations documented;
-  shell tests; parallel book browser tests (4m19s → 2m13s, then 51 s in shards).
+Atoms with default classes `leptonic-<AtomName>`, the atom theme (`atom-theme.md`), then the deletion of the
+`components`, `tiptap`, `sanitize` and `themes` features. Replacements: atoms (`Button`, `Link`, fields, `Select`,
+`Tabs`, `Table`, overlays, date pickers, `ToastRegion`, `TagGroup`, ...), plain markup + CSS recipes in the book
+(`Card`, `Stack`, `Drawer`, `Alert`, ...), `leptos-tiptap`/`ammonia` directly. All dependencies upgraded and declared
+with `default-features = false`.
+
+### 2026-10-05 – 10-07: roadmap R1–R5
+
+The 2026-10-05 audit (18 bug and crash risks, 13 conventions to settle, ~78 untested hooks, 101 files on an old
+upstream commit) worked off: R1 crash risks (`Href`, `OwnerAlive`, drop-guard listeners, `use_id`, SSR global
+state, Effect Read Order); R2 conventions C1–C16 library-wide; R3 every family re-ported to 99e6102368 with deviation
+blocks, tests from upstream and atoms (dates on jiff, the `time` crate gone; collections per `design-collections.md`);
+R4/R5 modality tracking, assertr, parallel browser tests.
+
+### 2026-10-04 – 10-07: found by the book and apps
+
+Closing a focused dialog panicked ("Blur After Disposal"), random ids broke hydration (`use_id`), listbox ARIA and
+focus fixes, `use_press` stopped every click (now upstream's propagation), Cmd + Home/End on macOS, the live announcer
+as react-aria's singleton.
+
+## Book
+
+- 2026-10-17: adopted the library's `Part`s and `Id`s everywhere (demos, code samples, API tables, prose): parts
+  named after their element, `attrs()` at the element that renders it (no stored or cloned attributes; a
+  `StoredValue` of the part in nested children closures), `props()` only where a demo reads or changes props; new
+  "Parts" and "Ids" sections in Hooks & Atoms, changelog entries, `id` rows for the eight atoms, `presence`,
+  `collection_id` and the grid list section's `header` part.
+- 2026-10-09: refactor integration across API tables, demos and prose; the browser harness honors `BOOK_TARGET_DIR`;
+  wasm precompressed at server startup in every profile (`src/assets.rs`).
+- 2026-10-08: guide "Optimizing Compile Times & Binary Sizes"; browser tests on browser-test 0.6, one test per check
+  (240 tests in ~32 s); `wasm-dev` at `opt-level = "z"`; tree tables and typed selects documented.
+- 2026-10-07: off the components layer (atoms + book CSS, recipes); re-ported library documented; dependencies
+  trimmed (TLS on `ring`); theme kept in a cookie and rendered by the server; dev wasm no longer compressed per request.
+- 2026-10-04 – 10-06: all ~130 pages on the page kit, the book built with leptonic, `kit::api_check`; navigation as
+  Guides, Concepts and Building blocks (`nav.rs`).

@@ -9,10 +9,6 @@ use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use super::use_tag_group::{
-    TAGS, goto, large, mount_and_unmount_in, remove_button, remove_with_the_keyboard_in, tab_in,
-    tag,
-};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -34,6 +30,75 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(Disabled))
         .with(fixture_test(StateSelection))
         .with(fixture_test(StateSelectionLarge))
+}
+const TAGS: &str = "[data-perf-tag]";
+
+/// Loads the fixture at `path` and creates the live announcer's regions (its first announcement
+/// waits for them, so an announcing step measured first would count them, or not).
+async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
+    page.goto_path(path).await?;
+    page.control("prepare-announcer").await?;
+    page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
+        .await?;
+    Ok(())
+}
+
+/// The tag "Tag `i`".
+fn tag(i: u32) -> String {
+    format!("[data-perf-tag='{i}']")
+}
+
+/// The remove button of the tag "Tag `i`".
+fn remove_button(i: u32) -> String {
+    format!("{} [data-perf-remove]", tag(i))
+}
+
+/// Switches to 1,000 tags (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.element(tag(999)).await?;
+    Ok(())
+}
+
+/// Focuses the first tag with the keyboard (Tab from the plain button before the group).
+async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#perf-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    let first = page.element(tag(0)).await?;
+    page.wait_for_focus(&first).await?;
+    Ok(first)
+}
+
+/// Mounting `container` (the group, or its tags) with `count` tags and unmounting it.
+async fn mount_and_unmount_in(
+    page: &Page<'_>,
+    container: &str,
+    count: usize,
+) -> Result<(), Report> {
+    page.control("unmount").await?;
+    page.wait_for_count(container, 0).await?;
+    page.measure("mount", page.control("mount")).await?;
+    page.wait_for_count(TAGS, count).await?;
+    page.measure("unmount", page.control("unmount")).await?;
+    page.wait_for_count(container, 0).await?;
+    Ok(())
+}
+
+/// Delete removing the focused fourth tag (focus moves to the next) and Backspace removing that
+/// one.
+async fn remove_with_the_keyboard_in(page: &Page<'_>) -> Result<(), Report> {
+    tab_in(page).await?;
+    for i in 1..4 {
+        page.send_keys(Key::Right).await?;
+        page.wait_for_focus(&page.element(tag(i)).await?).await?;
+    }
+    page.measure("delete", page.send_keys(Key::Delete)).await?;
+    page.wait_for_count(tag(3), 0).await?;
+    page.wait_for_focus(&page.element(tag(4)).await?).await?;
+    page.measure("backspace", page.send_keys(Key::Backspace))
+        .await?;
+    page.wait_for_count(tag(4), 0).await?;
+    Ok(())
 }
 
 /// Mounting 10 tags and unmounting them.

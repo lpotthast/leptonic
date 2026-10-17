@@ -1,12 +1,26 @@
 // Upstream: react-aria/src/switch/useSwitch.ts @ 99e6102368
 // Upstream: react-aria-components/test/Switch.test.js @ 99e6102368
-use super::use_toggle::{UseToggleInput, UseToggleReturn, use_toggle_with};
-use crate::utils::aria::AriaRole;
+use super::{
+    use_toggle::{ToggleOptions, ToggleRole, UseToggleInput, UseToggleReturn, use_toggle},
+    use_toggle_state::ToggleState,
+};
 
-// No deviations from react-aria beyond the project-wide API conventions.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Calls `use_toggle` with `role: ToggleRole::Switch` (react-aria adds `role: 'switch'` to
+//   `useToggle`'s returned `inputProps`).
+//
+// =============================================================================
 
 /// Input of [`use_switch`]: the toggle's state and settings.
-pub type UseSwitchInput = UseToggleInput;
+#[derive(Debug, Clone)]
+pub struct UseSwitchInput {
+    pub state: ToggleState,
+    pub options: ToggleOptions,
+}
 
 /// Output of [`use_switch`].
 pub type UseSwitchReturn = UseToggleReturn;
@@ -16,5 +30,11 @@ pub type UseSwitchReturn = UseToggleReturn;
 /// input). It submits, resets and validates like a checkbox.
 pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
     crate::metrics::subject!();
-    use_toggle_with(input, Some(AriaRole::Switch), None)
+    let UseSwitchInput { state, options } = input;
+    use_toggle(UseToggleInput {
+        state,
+        role: ToggleRole::Switch,
+        validation: None,
+        options,
+    })
 }

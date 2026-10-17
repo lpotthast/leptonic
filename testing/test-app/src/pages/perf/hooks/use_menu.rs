@@ -6,7 +6,7 @@
 //! size and unmount it, and read how many actions it reported (`actions`).
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         collections::{
             CloseOnSelect, CollectionOptions, Key, SelectionOptions, UseListStateInput,
@@ -85,7 +85,7 @@ fn Subject(size: i32, actions: StoredValue<u32>) -> impl IntoView {
     });
     let data = menu.data;
     view! {
-        <ul {..menu.props.into_attrs()}>
+        <ul {..menu.menu.attrs()}>
             {(0..size)
                 .map(|i| {
                     let text = if i == size - 1 { "Zebra".to_owned() } else { format!("Item {i}") };
@@ -105,7 +105,7 @@ fn Item(menu: MenuData, key: Key, text: String) -> impl IntoView {
         should_close_on_select: CloseOnSelect::Auto,
         submenu_trigger: None,
     });
-    let (attrs, styles) = item.props.into_parts();
+    let (attrs, styles) = item.item.attrs();
     view! {
         <li {..attrs} style=styles>
             {text}

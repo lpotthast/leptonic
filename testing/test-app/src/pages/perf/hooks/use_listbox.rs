@@ -5,16 +5,11 @@
 //! scroll view. Between two plain buttons (`#perf-before`, `#perf-after`) to tab from and to,
 //! mounted at first.
 //!
-//! [`ListBoxFixture`] renders it for `use_option`'s performance test too: the controls `mount` and
-//! `unmount` mount the listbox (calling `use_listbox`) or only its options (calling `use_option`).
-//! The other controls ([`Control`]) change the options, the state (its methods: select all, clear,
-//! select the first option) and the listbox's reactive input (orientation, label, disabled
-//! options).
-
-use std::collections::HashSet;
+//! Its controls ([`Control`]) mount and unmount the listbox, change the options and the listbox's
+//! reactive input (orientation, label).
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         collections::{
             CollectionOptions, Key, ListLayout, ListState, SelectionMode, SelectionOptions,
@@ -31,41 +26,23 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The options at first.
-pub const SMALL: u32 = 10;
+const SMALL: u32 = 10;
 /// The options after the control `large`.
-pub const LARGE: u32 = 1_000;
-
-/// What the controls `mount` and `unmount` mount.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Part {
-    /// The listbox with its options.
-    ListBox,
-    /// The options (in the mounted listbox).
-    Options,
-}
+const LARGE: u32 = 1_000;
 
 #[component]
 pub fn PagePerf() -> impl IntoView {
-    view! { <ListBoxFixture title="use_listbox performance" part=Part::ListBox /> }
-}
-
-/// The listbox (see the module documentation), `part` mounted by the controls.
-#[component]
-pub fn ListBoxFixture(title: &'static str, part: Part) -> impl IntoView {
     let mounted = RwSignal::new(true);
-    let is_mounted = move |of: Part| Signal::derive(move || of != part || mounted.get());
     let items = RwSignal::new((0..SMALL).collect::<Vec<u32>>());
     let collection = use_list_collection(UseListCollectionInput {
         items: items.into(),
         key: |i| Key::from(*i),
         text_value: |i| format!("Option {i}"),
     });
-    let disabled_keys = RwSignal::new(HashSet::<Key>::new());
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
-            disabled_keys: disabled_keys.into(),
             ..SelectionOptions::default()
         },
     });
@@ -75,45 +52,38 @@ pub fn ListBoxFixture(title: &'static str, part: Part) -> impl IntoView {
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),
         Control::action("large", move || items.set((0..LARGE).collect())),
-        Control::action("select-first", move || {
-            state.selection.set_selected_keys([Key::from(0_u32)]);
-        }),
-        Control::action("select-all", move || state.selection.select_all()),
-        Control::action("clear-selection", move || state.selection.clear_selection()),
-        Control::action("disable-first", move || {
-            disabled_keys.set(HashSet::from([Key::from(0_u32)]));
-        }),
-        Control::action("enable-all", move || disabled_keys.set(HashSet::new())),
         Control::action("horizontal", move || {
             orientation.set(Orientation::Horizontal);
         }),
         Control::action("vertical", move || orientation.set(Orientation::Vertical)),
         Control::action("rename", move || label.set("Choices".to_owned())),
     ];
-    let options_mounted = is_mounted(Part::Options);
     view! {
-        <h1>{title}</h1>
+        <h1>"use_listbox performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <Show when=move || is_mounted(Part::ListBox).get()>
-            <PlainListBox state items orientation label options_mounted />
+        <Show when=move || mounted.get()>
+            <PlainListBox state items orientation label />
         </Show>
         <button id="perf-after">"After"</button>
     }
 }
 
-/// The listbox element (`use_listbox`) with its options, while `options_mounted`.
+/// The listbox element (`use_listbox`) with its options.
 #[component]
 fn PlainListBox(
     state: ListState,
     items: RwSignal<Vec<u32>>,
     orientation: RwSignal<Orientation>,
     label: RwSignal<String>,
-    options_mounted: Signal<bool>,
 ) -> impl IntoView {
-    let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+    let UseListBoxReturn {
+        listbox: props,
+        data,
+    } = use_listbox(UseListBoxInput {
         state,
         element: CapturedElement::new(),
+        presence: None,
         id: None,
         aria_label: label.into(),
         aria_labelledby: Signal::stored(None),
@@ -133,14 +103,12 @@ fn PlainListBox(
     let data = StoredValue::new(data);
     view! {
         <div
-            {..props.into_attrs()}
+            {..props.attrs()}
             style="max-height: 200px; overflow: auto"
         >
-            <Show when=move || options_mounted.get()>
-                <For each=move || items.get() key=|i| *i let:i>
-                    <PlainOption list=data.get_value() i />
-                </For>
-            </Show>
+            <For each=move || items.get() key=|i| *i let:i>
+                <PlainOption list=data.get_value() i />
+            </For>
         </div>
     }
 }
@@ -149,7 +117,7 @@ fn PlainListBox(
 #[component]
 fn PlainOption(list: ListBoxData, i: u32) -> impl IntoView {
     let UseOptionReturn {
-        props,
+        option: props,
         is_focus_visible,
         is_pressed,
         is_hovered,
@@ -159,7 +127,7 @@ fn PlainOption(list: ListBoxData, i: u32) -> impl IntoView {
         key: Key::from(i),
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <div
             {..attrs}

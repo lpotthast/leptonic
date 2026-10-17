@@ -16,6 +16,7 @@ use crate::{
     utils::{
         date::{DateDuration, DateExt, DateRange, first_day_of_week, min_date, today},
         i18n::use_locale,
+        keyed_triggers::KeyedTriggers,
     },
 };
 
@@ -155,6 +156,10 @@ pub struct CalendarState {
     page_behavior: Signal<PageBehavior>,
     selection_alignment: Signal<SelectionAlignment>,
     weeks_in_month: Signal<Option<u8>>,
+    /// Readers of single cells' focus and selection, by date (`performance.md` R1): a focus move
+    /// or a selection notifies the old and the new date's cells.
+    focused_cells: KeyedTriggers<Date>,
+    selected_cells: KeyedTriggers<Date>,
 }
 
 /// The last visible date of a range starting at `start`.
@@ -432,14 +437,19 @@ impl CalendarState {
 
     /// Whether `date` is the selected date (and selectable).
     pub fn is_selected(&self, date: Date) -> bool {
-        self.value.get() == Some(date)
+        // Only the selected cell reads the rest (a selection notifies the old and the new date).
+        self.selected_cells.track(&date);
+        self.value.get_untracked() == Some(date)
             && !self.is_cell_disabled(date)
             && !self.is_cell_unavailable(date)
     }
 
     /// Whether `date` is focused (the grid has focus and it is the focused date).
     pub fn is_cell_focused(&self, date: Date) -> bool {
-        self.is_focused.get() && self.focused_date.get() == date
+        // Only the focused date's cell tracks the grid's focus (a focus move notifies the old and
+        // the new date).
+        self.focused_cells.track(&date);
+        self.focused_date.get_untracked() == date && self.is_focused.get()
     }
 
     /// Whether `date` can't be focused or selected: the calendar is disabled, or the date is not
@@ -644,6 +654,8 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
         page_behavior,
         selection_alignment,
         weeks_in_month,
+        focused_cells: KeyedTriggers::following_one(focus.value, |date| Some(*date)),
+        selected_cells: KeyedTriggers::following_one(binding.value, |date| *date),
     };
 
     // A changed visible duration re-aligns the visible range around the focused date.

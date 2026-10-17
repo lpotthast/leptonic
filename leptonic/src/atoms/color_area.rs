@@ -7,7 +7,7 @@ use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
-    color_thumb::{AreaThumbParts, ColorThumbContext, ThumbParts},
+    color_thumb::{ColorThumbContext, ThumbParts},
 };
 use crate::{
     Out, ValueBinding,
@@ -16,7 +16,7 @@ use crate::{
     },
     utils::{
         color::{Color, ColorValue, RGB8},
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         styles::Styles,
     },
@@ -124,9 +124,9 @@ pub fn ColorArea<C: ColorValue>(
         state,
         is_disabled,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_details: crate::utils::prop_signal(aria_details),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        aria_details: crate::utils::id::id_ref_prop(aria_details),
         x_name,
         y_name,
         form,
@@ -136,20 +136,20 @@ pub fn ColorArea<C: ColorValue>(
         Signal::derive(move || color.get().to_css_string()),
         state.is_dragging,
         is_disabled,
-        ThumbParts::Area(Box::new(AreaThumbParts {
-            thumb: area.thumb_props,
-            x_input: area.x_input_props,
-            y_input: area.y_input_props,
-        })),
+        ThumbParts::Area {
+            thumb: area.thumb,
+            x_input: area.x_input,
+            y_input: area.y_input,
+        },
     );
-    let (area_attrs, area_styles) = area.color_area_props.into_parts();
+    let (area_attrs, area_styles) = area.area.attrs();
 
     view! {
         <div
             {..area_attrs}
             class=classes
             style=area_styles.merge(styles)
-            data-disabled=flag(is_disabled)
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             <Provider value=context>{children()}</Provider>
         </div>

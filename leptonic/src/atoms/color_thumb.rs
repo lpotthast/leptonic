@@ -5,21 +5,17 @@ use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use crate::{
-    IntoAttrs, PropsWithStyles,
+    Part, PropsWithStyles,
     hooks::{
         color::{
-            UseColorAreaInputAttrs, UseColorAreaInputProps, UseColorAreaThumbAttrs,
-            UseColorAreaThumbProps, UseColorWheelInputAttrs, UseColorWheelInputProps,
-            UseColorWheelThumbAttrs, UseColorWheelThumbProps,
+            UseColorAreaInputProps, UseColorAreaThumbProps, UseColorWheelInputProps,
+            UseColorWheelThumbProps,
         },
         focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
         interactions::{UseHoverInput, use_hover},
-        slider::{
-            UseSliderThumbAttrs, UseSliderThumbInputAttrs, UseSliderThumbInputProps,
-            UseSliderThumbProps,
-        },
+        slider::{UseSliderThumbInputProps, UseSliderThumbProps},
     },
-    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
+    utils::{data_attributes::data_flags, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -32,86 +28,36 @@ use crate::{
 //
 // =============================================================================
 
-/// The props a [`ColorThumb`] takes from the color atom around it (the hooks' props).
+/// The parts a [`ColorThumb`] renders, from the color atom around it (its hook's parts).
+#[derive(Clone)]
 pub(crate) enum ThumbParts {
     /// A color area's thumb, with the inputs of both channels.
-    Area(Box<AreaThumbParts>),
-    /// A color slider's thumb, with its input.
-    Slider(Box<SliderThumbParts>),
-    /// A color wheel's thumb, with its input.
-    Wheel(Box<WheelThumbParts>),
-}
-
-/// A color area's thumb and inputs.
-pub(crate) struct AreaThumbParts {
-    pub thumb: PropsWithStyles<UseColorAreaThumbProps>,
-    pub x_input: PropsWithStyles<UseColorAreaInputProps>,
-    pub y_input: PropsWithStyles<UseColorAreaInputProps>,
-}
-
-/// A color slider's thumb and input.
-pub(crate) struct SliderThumbParts {
-    pub thumb: PropsWithStyles<UseSliderThumbProps>,
-    pub input: UseSliderThumbInputProps,
-    pub input_styles: Styles,
-}
-
-/// A color wheel's thumb and input.
-pub(crate) struct WheelThumbParts {
-    pub thumb: PropsWithStyles<UseColorWheelThumbProps>,
-    pub input: PropsWithStyles<UseColorWheelInputProps>,
-}
-
-/// The thumb's attributes, cloned for every render of the thumb (it may mount again, e.g.
-/// inside a `<Show>`), as the slider atoms do.
-// One per color atom, in a `StoredValue`: the size of the variants doesn't matter.
-#[allow(clippy::large_enum_variant)]
-#[derive(Clone)]
-enum ThumbAttrs {
     Area {
-        thumb: (UseColorAreaThumbAttrs, Styles),
-        x_input: (UseColorAreaInputAttrs, Styles),
-        y_input: (UseColorAreaInputAttrs, Styles),
+        thumb: Part<PropsWithStyles<UseColorAreaThumbProps>>,
+        x_input: Part<PropsWithStyles<UseColorAreaInputProps>>,
+        y_input: Part<PropsWithStyles<UseColorAreaInputProps>>,
     },
+    /// A color slider's thumb, with its input.
     Slider {
-        thumb: (UseSliderThumbAttrs, Styles),
-        input: (UseSliderThumbInputAttrs, Styles),
+        thumb: Part<PropsWithStyles<UseSliderThumbProps>>,
+        input: Part<PropsWithStyles<UseSliderThumbInputProps>>,
     },
+    /// A color wheel's thumb, with its input.
     Wheel {
-        thumb: (UseColorWheelThumbAttrs, Styles),
-        input: (UseColorWheelInputAttrs, Styles),
+        thumb: Part<PropsWithStyles<UseColorWheelThumbProps>>,
+        input: Part<PropsWithStyles<UseColorWheelInputProps>>,
     },
-}
-
-impl From<ThumbParts> for ThumbAttrs {
-    fn from(parts: ThumbParts) -> Self {
-        match parts {
-            ThumbParts::Area(area) => Self::Area {
-                thumb: area.thumb.into_parts(),
-                x_input: area.x_input.into_parts(),
-                y_input: area.y_input.into_parts(),
-            },
-            ThumbParts::Slider(slider) => Self::Slider {
-                thumb: slider.thumb.into_parts(),
-                input: (slider.input.into_attrs(), slider.input_styles),
-            },
-            ThumbParts::Wheel(wheel) => Self::Wheel {
-                thumb: wheel.thumb.into_parts(),
-                input: wheel.input.into_parts(),
-            },
-        }
-    }
 }
 
 /// What a [`ColorThumb`] gets from the color atom around it (react-aria-components'
 /// `InternalColorThumbContext`).
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct ColorThumbContext {
     /// The current color, as CSS.
     pub color: Signal<String>,
     pub is_dragging: Signal<bool>,
     pub is_disabled: Signal<bool>,
-    attrs: StoredValue<ThumbAttrs>,
+    thumb: ThumbParts,
 }
 
 impl ColorThumbContext {
@@ -119,13 +65,13 @@ impl ColorThumbContext {
         color: Signal<String>,
         is_dragging: Signal<bool>,
         is_disabled: Signal<bool>,
-        parts: ThumbParts,
+        thumb: ThumbParts,
     ) -> Self {
         Self {
             color,
             is_dragging,
             is_disabled,
-            attrs: StoredValue::new(parts.into()),
+            thumb,
         }
     }
 }
@@ -154,7 +100,7 @@ pub fn ColorThumb(
         color,
         is_dragging,
         is_disabled,
-        attrs,
+        thumb,
     }) = use_context::<ColorThumbContext>()
     else {
         crate::utils::dev_warn!(
@@ -165,7 +111,7 @@ pub fn ColorThumb(
 
     // Focus is on the hidden inputs inside the thumb.
     let UseFocusRingReturn {
-        props: focus_ring,
+        target: focus_ring,
         is_focused,
         ..
     } = use_focus_ring(UseFocusRingInput {
@@ -183,68 +129,82 @@ pub fn ColorThumb(
     };
     let children = move || children.map(|children| children());
 
-    Some(match attrs.get_value() {
-        ThumbAttrs::Area {
-            thumb: (thumb_attrs, area_thumb_styles),
-            x_input: (x_attrs, x_styles),
-            y_input: (y_attrs, y_styles),
-        } => view! {
+    // The thumb's parts render at one element at a time (a second thumb gets none).
+    Some(match thumb {
+        ThumbParts::Area {
+            thumb,
+            x_input,
+            y_input,
+        } => {
+            let (thumb_attrs, area_thumb_styles) = thumb.attrs();
+            let (x_attrs, x_styles) = x_input.attrs();
+            let (y_attrs, y_styles) = y_input.attrs();
+            view! {
             <div
                 {..thumb_attrs}
-                {..focus_ring.into_attrs()}
-                {..hover.props.into_attrs()}
+                {..focus_ring.attrs()}
+                {..hover.target.attrs()}
                 class=classes
                 style=thumb_styles(area_thumb_styles)
-                data-dragging=flag(is_dragging)
-                data-focused=flag(is_focused)
-                data-hovered=flag(hover.is_hovered)
-                data-disabled=flag(is_disabled)
+                {..data_flags([
+                    ("data-dragging", is_dragging),
+                    ("data-focused", is_focused),
+                    ("data-hovered", hover.is_hovered),
+                ])}
+                {..data_flags([("data-disabled", is_disabled)])}
             >
                 <input {..x_attrs} style=x_styles />
                 <input {..y_attrs} style=y_styles />
                 {children()}
             </div>
+            }
+            .into_any()
         }
-        .into_any(),
-        ThumbAttrs::Slider {
-            thumb: (thumb_attrs, slider_thumb_styles),
-            input: (input_attrs, input_styles),
-        } => view! {
+        ThumbParts::Slider { thumb, input } => {
+            let (thumb_attrs, slider_thumb_styles) = thumb.attrs();
+            let (input_attrs, input_styles) = input.attrs();
+            view! {
             <div
                 {..thumb_attrs}
-                {..focus_ring.into_attrs()}
-                {..hover.props.into_attrs()}
+                {..focus_ring.attrs()}
+                {..hover.target.attrs()}
                 class=classes
                 style=thumb_styles(slider_thumb_styles)
-                data-dragging=flag(is_dragging)
-                data-focused=flag(is_focused)
-                data-hovered=flag(hover.is_hovered)
-                data-disabled=flag(is_disabled)
+                {..data_flags([
+                    ("data-dragging", is_dragging),
+                    ("data-focused", is_focused),
+                    ("data-hovered", hover.is_hovered),
+                ])}
+                {..data_flags([("data-disabled", is_disabled)])}
             >
                 <input {..input_attrs} style=input_styles />
                 {children()}
             </div>
+            }
+            .into_any()
         }
-        .into_any(),
-        ThumbAttrs::Wheel {
-            thumb: (thumb_attrs, wheel_thumb_styles),
-            input: (input_attrs, input_styles),
-        } => view! {
+        ThumbParts::Wheel { thumb, input } => {
+            let (thumb_attrs, wheel_thumb_styles) = thumb.attrs();
+            let (input_attrs, input_styles) = input.attrs();
+            view! {
             <div
                 {..thumb_attrs}
-                {..focus_ring.into_attrs()}
-                {..hover.props.into_attrs()}
+                {..focus_ring.attrs()}
+                {..hover.target.attrs()}
                 class=classes
                 style=thumb_styles(wheel_thumb_styles)
-                data-dragging=flag(is_dragging)
-                data-focused=flag(is_focused)
-                data-hovered=flag(hover.is_hovered)
-                data-disabled=flag(is_disabled)
+                {..data_flags([
+                    ("data-dragging", is_dragging),
+                    ("data-focused", is_focused),
+                    ("data-hovered", hover.is_hovered),
+                ])}
+                {..data_flags([("data-disabled", is_disabled)])}
             >
                 <input {..input_attrs} style=input_styles />
                 {children()}
             </div>
+            }
+            .into_any()
         }
-        .into_any(),
     })
 }

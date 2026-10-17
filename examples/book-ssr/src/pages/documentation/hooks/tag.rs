@@ -35,11 +35,11 @@ pub fn PageUseTag() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseTagGroupInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseTagGroupInput">
                         <ApiRow name="state" ty="ListState">"The tags and their selection. Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The group element; the props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The group element; the part captures it. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with the "<Code inline=true>"label"</Code>" part."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the tag group without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Further labelling and describing elements."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<Id>>" default="None">"Further labelling and describing elements."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the horizontal "
                             <Link href=format!("{}#use-list-keyboard-delegate", routes::doc::CollectionState.materialize())>"list keyboard delegate"</Link>"."
@@ -53,12 +53,12 @@ pub fn PageUseTag() -> impl IntoView {
 
                 <Section title="Return" id="use-tag-group-return">
                     <ApiTable kind=ApiKind::Return of="UseTagGroupReturn">
-                        <ApiRow name="grid_props" ty="UseTagGroupProps">
+                        <ApiRow name="grid" ty="Part<UseTagGroupProps>">
                             "For the group element: "<Code inline=true>"role=\"grid\""</Code>" ("<Code inline=true>"group"</Code>
                             " while empty), labelling, and a polite live region announcing added tags while focus is in the group."
                         </ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"For the label."</ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"For the label."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">
                             "For a description and an error message, referenced only while rendered."
                         </ApiRow>
                         <ApiRow name="data" ty="TagGroupData">"Hand this to "<Code inline=true>"use_tag"</Code>" for every tag."</ApiRow>
@@ -94,7 +94,7 @@ pub fn PageUseTag() -> impl IntoView {
                             });
                             let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions::default() });
 
-                            let UseTagGroupReturn { grid_props, label_props, data, .. } = use_tag_group(UseTagGroupInput {
+                            let UseTagGroupReturn { grid, label, data, .. } = use_tag_group(UseTagGroupInput {
                                 state,
                                 element: CapturedElement::new(),
                                 id: None,
@@ -125,12 +125,12 @@ pub fn PageUseTag() -> impl IntoView {
 
                 <Section title="Return" id="use-tag-return">
                     <ApiTable kind=ApiKind::Return of="UseTagReturn">
-                        <ApiRow name="row_props" ty="PropsWithStyles<UseTagRowProps>">
+                        <ApiRow name="row" ty="Part<PropsWithStyles<UseTagRowProps>>">
                             "For the tag: "<Code inline=true>"role=\"row\""</Code>", selection and disabled state, press handling, "
                             "and removal with "<Keys keys="Delete"/>" or "<Keys keys="Backspace"/>". Removable tags are described as "
                             "\u{201c}Press Delete or Backspace to remove.\u{201d}"
                         </ApiRow>
-                        <ApiRow name="grid_cell_props" ty="UseGridListItemCellProps">"For the tag\u{2019}s content: "<Code inline=true>"role=\"gridcell\""</Code>"."</ApiRow>
+                        <ApiRow name="cell" ty="Part<UseGridListItemCellProps>">"For the tag\u{2019}s content: "<Code inline=true>"role=\"gridcell\""</Code>"."</ApiRow>
                         <ApiRow name="remove_button" ty="Option<UseButtonInput>">
                             "The remove button\u{2019}s configuration, for "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
                             ". "<Code inline=true>"None"</Code>" when the group has no "<Code inline=true>"on_remove"</Code>"."

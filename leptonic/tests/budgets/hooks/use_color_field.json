@@ -19,11 +19,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 89,
+        "allocations": 61,
         "reallocations": 1,
         "memo_runs": 3,
         "memo_runs_unchanged": 2,
@@ -60,11 +61,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 10,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -99,11 +101,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 11,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -140,11 +143,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 42,
+        "allocations": 31,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
@@ -179,11 +183,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 21,
+        "allocations": 18,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -220,11 +225,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 62,
+        "allocations": 45,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 1,
@@ -259,11 +265,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 64,
+        "allocations": 47,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 1,
@@ -298,11 +305,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 42,
+        "allocations": 33,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -337,11 +345,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 43,
+        "allocations": 34,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -376,11 +385,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 63,
+        "allocations": 46,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 1,
@@ -415,11 +425,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 65,
+        "allocations": 48,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 1,
@@ -456,18 +467,19 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 993,
-        "reallocations": 30,
-        "memo_runs": 12,
-        "memo_runs_unchanged": 1,
-        "effect_runs": 11,
-        "render_effect_runs": 19,
+        "allocations": 721,
+        "reallocations": 17,
+        "memo_runs": 9,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 9,
+        "render_effect_runs": 7,
         "immediate_effect_runs": 0,
-        "signal_notifications": 4,
+        "signal_notifications": 2,
         "dom_attributes": 0,
         "dom_text": 0,
         "dom_added_nodes": 3,
@@ -495,11 +507,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -536,11 +549,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -575,7 +589,8 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
@@ -614,11 +629,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -655,11 +671,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 52,
+        "allocations": 35,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 1,
@@ -696,11 +713,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 93,
+        "allocations": 67,
         "reallocations": 2,
         "memo_runs": 3,
         "memo_runs_unchanged": 2,
@@ -735,11 +753,12 @@
         "hooks/use_scroll_wheel",
         "hooks/use_spin_button",
         "hooks/use_text_field",
-        "hooks/use_text_field_state"
+        "hooks/use_text_field_state",
+        "hooks/use_wheel_stepping"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 31,
+        "allocations": 30,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

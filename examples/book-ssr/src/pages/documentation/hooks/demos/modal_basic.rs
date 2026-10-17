@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -43,7 +42,7 @@ pub fn ModalHooksDemo() -> impl IntoView {
     };
 
     // Escape, outside clicks, the scroll lock and the inert page.
-    let UseModalBackdropReturn { modal_props, .. } = use_modal_backdrop(UseModalBackdropInput {
+    let UseModalBackdropReturn { modal, .. } = use_modal_backdrop(UseModalBackdropInput {
         is_dismissable: close_on_outside_click.into(),
         is_keyboard_dismiss_disabled: Signal::derive(move || !close_on_escape.get()),
         state,
@@ -51,16 +50,13 @@ pub fn ModalHooksDemo() -> impl IntoView {
         is_entering: Signal::stored(false),
     });
     // The dialog role, the name from the title, and focus when it opens.
-    let UseDialogReturn {
-        dialog_props,
-        title_props,
-        ..
-    } = use_dialog(UseDialogInput::default());
+    let UseDialogReturn { dialog, title, .. } = use_dialog(UseDialogInput::default());
 
-    // `<Show>` renders the modal anew on every opening: keep the attributes to spread them each time.
-    let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
-    let title_attrs = StoredValue::new(title_props.into_attrs());
+    // `<Show>` mounts the modal on every opening, and each mount spreads the parts again. A
+    // `StoredValue` makes a part `Copy` for the nested children closures.
+    let modal = StoredValue::new(modal);
+    let dialog = StoredValue::new(dialog);
+    let title = StoredValue::new(title);
 
     view! {
         <Button on_press=move |_| state.open() classes="demo-btn">"Discard draft\u{2026}"</Button>
@@ -92,11 +88,11 @@ pub fn ModalHooksDemo() -> impl IntoView {
                     // Keeps focus in the dialog and returns it to the button when the dialog closes.
                     <FocusScope contain=true restore_focus=true auto_focus=true>
                         <div
-                            {..modal_attrs.get_value()}
-                            {..dialog_attrs.get_value()}
+                            {..modal.with_value(|modal| modal.attrs())}
+                            {..dialog.with_value(|dialog| dialog.attrs())}
                             class="demo-dialog"
                         >
-                            <h2 {..title_attrs.get_value()} class="demo-dialog-title">"Discard the draft?"</h2>
+                            <h2 {..title.with_value(|title| title.attrs())} class="demo-dialog-title">"Discard the draft?"</h2>
                             <p class="demo-dialog-description">"Your unsaved changes will be lost."</p>
                             <div class="demo-dialog-actions">
                                 <Button on_press=move |_| close_with("with \u{201c}Keep editing\u{201d}") classes="demo-btn">

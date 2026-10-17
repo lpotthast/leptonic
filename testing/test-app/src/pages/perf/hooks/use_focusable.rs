@@ -6,7 +6,7 @@
 //! inputs, focus it (`focus`, its focus handle), and read the counts (`key-downs`, `shortcuts`).
 
 use leptonic::{
-    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    KeyboardKey, KeyboardShortcuts, Shortcut,
     hooks::focus::{FocusHandle, UseFocusableInput, UseFocusableReturn, use_focusable},
 };
 use leptos::prelude::*;
@@ -71,7 +71,7 @@ pub fn PagePerf() -> impl IntoView {
 fn Focusable(inputs: Inputs) -> impl IntoView {
     let focused = RwSignal::new(false);
     let UseFocusableReturn {
-        props,
+        target: props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
         is_disabled: inputs.disabled.into(),
@@ -92,7 +92,7 @@ fn Focusable(inputs: Inputs) -> impl IntoView {
         <div
             id="perf-focusable"
             role="button"
-            {..props.into_attrs()}
+            {..props.attrs()}
             data-focused=move || focused.get().then_some("true")
         >
             "Focus me"

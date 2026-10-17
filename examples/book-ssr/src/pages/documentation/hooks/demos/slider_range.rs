@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, Orientation, computed_pct, computed_size,
+    Orientation, computed_pct, computed_size,
     hooks::{
         focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
         slider::{
@@ -63,16 +63,16 @@ pub fn SliderRangeDemo() -> impl IntoView {
             target: FocusRingTarget::Within,
             ..UseFocusRingInput::default()
         });
-        let (attrs, styles) = thumb.thumb_props.into_parts();
+        let (attrs, styles) = thumb.thumb.attrs();
         view! {
-            <div class="demo-slider-thumb" {..attrs} {..focus_ring.props.into_attrs()} style=styles>
-                <input class="demo-visually-hidden-input" {..thumb.input_props.into_attrs()}/>
+            <div class="demo-slider-thumb" {..attrs} {..focus_ring.target.attrs()} style=styles>
+                <input class="demo-visually-hidden-input" {..thumb.input.attrs()}/>
             </div>
         }
     };
     let minimum = thumb(0, "Minimum price");
     let maximum = thumb(1, "Maximum price");
-    let (track_attrs, track_styles) = slider.track_props.into_parts();
+    let (track_attrs, track_styles) = slider.track.attrs();
     // The fill spans the two thumbs.
     let fill_styles = Styles::new()
         .add_reactive(move || {
@@ -86,15 +86,15 @@ pub fn SliderRangeDemo() -> impl IntoView {
         });
 
     view! {
-        <div class="demo-slider demo-slider-blue" {..slider.group_props.into_attrs()}>
-            <span class="demo-slider-label" {..slider.label_props.into_attrs()}>"Price"</span>
+        <div class="demo-slider demo-slider-blue" {..slider.group.attrs()}>
+            <span class="demo-slider-label" {..slider.label.attrs()}>"Price"</span>
             <div class="demo-slider-track" {..track_attrs} style=track_styles>
                 <div class="demo-slider-fill" style=fill_styles></div>
                 {minimum}
                 {maximum}
             </div>
             // "20 – 80"
-            <output class="demo-slider-output demo-slider-output-wide" {..slider.output_props.into_attrs()}>
+            <output class="demo-slider-output demo-slider-output-wide" {..slider.output.attrs()}>
                 {move || state.formatted_values()}
             </output>
         </div>

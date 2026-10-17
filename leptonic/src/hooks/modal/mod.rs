@@ -2,7 +2,7 @@
 //!
 //! - `use_modal_backdrop` (react-aria's `useModalOverlay`): dismissing (Escape, interacting
 //!   outside, through `use_overlay`), scroll prevention, and hiding everything outside the modal
-//!   (inert, through `utils::aria_hide_outside`), which is what makes the modal modal.
+//!   (inert, through `use_hide_outside`), which is what makes the modal modal.
 //!
 //! No `use_modal` (react-aria's `useModal`, the legacy `ModalProvider` API): as
 //! react-aria-components, modals set no `aria-modal` (WebKit bug 211934: Safari focuses the first

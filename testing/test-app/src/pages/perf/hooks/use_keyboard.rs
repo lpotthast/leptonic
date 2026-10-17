@@ -5,7 +5,7 @@
 //! (`key-downs`, `key-ups`, `shortcuts`).
 
 use leptonic::{
-    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    KeyboardKey, KeyboardShortcuts, Shortcut,
     hooks::interactions::{UseKeyboardInput, use_keyboard},
 };
 use leptos::prelude::*;
@@ -74,7 +74,7 @@ fn Keyed(inputs: Inputs) -> impl IntoView {
         ..UseKeyboardInput::default()
     });
     view! {
-        <div id="perf-keyboard" tabindex="0" {..keyboard.props.into_attrs()}>
+        <div id="perf-keyboard" tabindex="0" {..keyboard.target.attrs()}>
             "Type here"
         </div>
     }

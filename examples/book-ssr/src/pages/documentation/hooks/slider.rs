@@ -97,22 +97,22 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             aria_errormessage: Signal::default(),
                             aria_details: Signal::default(),
                         });
-                        let (track_attrs, track_styles) = slider.track_props.into_parts();
-                        let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+                        let (track_attrs, track_styles) = slider.track.attrs();
+                        let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
                         let fill_styles = Styles::new().add_reactive(move || {
                             WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0).as_percent())))
                         });
 
                         view! {
-                            <div {..slider.group_props.into_attrs()}>
+                            <div {..slider.group.attrs()}>
                                 <div class="track" {..track_attrs} style=track_styles>
                                     <div class="fill" style=fill_styles></div>
                                     // The thumb positions itself on the track.
                                     <div class="thumb" {..thumb_attrs} style=thumb_styles>
-                                        <input class="visually-hidden" {..thumb.input_props.into_attrs()}/>
+                                        <input class="visually-hidden" {..thumb.input.attrs()}/>
                                     </div>
                                 </div>
-                                <output {..slider.output_props.into_attrs()}>{move || state.formatted_values()}</output>
+                                <output {..slider.output.attrs()}>{move || state.formatted_values()}</output>
                             </div>
                         }
                     "#)}
@@ -183,8 +183,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         });
 
                         view! {
-                            <div class="thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
-                                <input class="visually-hidden" {..thumb.input_props.into_attrs()}/>
+                            <div class="thumb" {..thumb_attrs} {..focus_ring.target.attrs()} style=thumb_styles>
+                                <input class="visually-hidden" {..thumb.input.attrs()}/>
                             </div>
                         }
                     "#)}
@@ -286,12 +286,12 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseSliderInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseSliderInput">
                         <ApiRow name="state" ty="SliderState<T>">"The slider state. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with the "<Code inline=true>"label"</Code>" part)."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider when there is no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming the slider."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements describing every thumb."</ApiRow>
-                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of further elements naming the slider."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of further elements describing every thumb."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<Id>>" default="None">
                             "Ids of elements with details about every thumb ("<Code inline=true>"aria-details"</Code>")."
                         </ApiRow>
                     </ApiTable>
@@ -299,22 +299,22 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
                 <Section title="Return" id="use-slider-return">
                     <ApiTable kind=ApiKind::Return of="UseSliderReturn">
-                        <ApiRow name="group_props" ty="UseSliderGroupProps">"For the element around everything: "<Code inline=true>"role=\"group\""</Code>", named by the label."</ApiRow>
-                        <ApiRow name="label_props" ty="UseSliderLabelProps">"For the label: a click focuses the first thumb."</ApiRow>
-                        <ApiRow name="description_props" ty="SlotProps">"For a description; while rendered, it describes every thumb."</ApiRow>
-                        <ApiRow name="error_message_props" ty="SlotProps">"For an error message. Render it only while the slider is invalid."</ApiRow>
-                        <ApiRow name="track_props" ty="PropsWithStyles<UseSliderTrackProps>">
+                        <ApiRow name="group" ty="Part<UseSliderGroupProps>">"For the element around everything: "<Code inline=true>"role=\"group\""</Code>", named by the label."</ApiRow>
+                        <ApiRow name="label" ty="Part<UseSliderLabelProps>">"For the label: a click focuses the first thumb."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">"For a description; while rendered, it describes every thumb."</ApiRow>
+                        <ApiRow name="error_message" ty="Part<SlotProps>">"For an error message. Render it only while the slider is invalid."</ApiRow>
+                        <ApiRow name="track" ty="Part<PropsWithStyles<UseSliderTrackProps>>">
                             "For the track: pointer handling and "<Code inline=true>"position: relative"</Code>
-                            ". Split it with "<Code inline=true>"into_parts()"</Code>" into attributes and styles."
+                            ". "<Code inline=true>"track.attrs()"</Code>" returns the attributes and the styles."
                         </ApiRow>
-                        <ApiRow name="output_props" ty="UseSliderOutputProps">"For an "<Code inline=true>"<output>"</Code>": "<Code inline=true>"for"</Code>" all thumbs, not announced while dragging."</ApiRow>
+                        <ApiRow name="output" ty="Part<UseSliderOutputProps>">"For an "<Code inline=true>"<output>"</Code>": "<Code inline=true>"for"</Code>" all thumbs, not announced while dragging."</ApiRow>
                         <ApiRow name="data" ty="SliderData">"What the thumbs need: the group\u{2019}s id, the label and the description."</ApiRow>
                         <ApiRow name="track_element" ty="CapturedElement">"The track, for the thumbs."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Example" id="use-slider-example">
-                    <p>"With a visible label, set "<Code inline=true>"has_label"</Code>" and spread "<Code inline=true>"label_props"</Code>" on it:"</p>
+                    <p>"With a visible label, set "<Code inline=true>"has_label"</Code>" and spread the "<Code inline=true>"label"</Code>" part on it:"</p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             let slider = use_slider(UseSliderInput {
@@ -328,10 +328,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             });
 
                             view! {
-                                <div {..slider.group_props.into_attrs()}>
-                                    <span {..slider.label_props.into_attrs()}>"Volume"</span>
+                                <div {..slider.group.attrs()}>
+                                    <span {..slider.label.attrs()}>"Volume"</span>
                                     // The track and its thumbs.
-                                    <output {..slider.output_props.into_attrs()}>{move || state.formatted_values()}</output>
+                                    <output {..slider.output.attrs()}>{move || state.formatted_values()}</output>
                                 </div>
                             }
                         "#)}
@@ -361,12 +361,12 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Whether the value is invalid ("<Code inline=true>"aria-invalid"</Code>")."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s name, to submit its value with a form."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, if not its ancestor."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether the thumb has a visible label of its own (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether the thumb has a visible label of its own (with the "<Code inline=true>"label"</Code>" part)."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the thumb next to the slider\u{2019}s name, e.g. \u{201c}Minimum\u{201d}."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming the thumb."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements describing the thumb."</ApiRow>
-                        <ApiRow name="aria_errormessage" ty="Signal<Option<String>>" default="None">"The id of the element with the thumb\u{2019}s error message."</ApiRow>
-                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of further elements naming the thumb."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of further elements describing the thumb."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Signal<Option<Id>>" default="None">"The id of the element with the thumb\u{2019}s error message."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<Id>>" default="None">
                             "Ids of further elements with details about the thumb (next to the slider\u{2019}s)."
                         </ApiRow>
                     </ApiTable>
@@ -374,15 +374,15 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
                 <Section title="Return" id="use-slider-thumb-return">
                     <ApiTable kind=ApiKind::Return of="UseSliderThumbReturn">
-                        <ApiRow name="thumb_props" ty="PropsWithStyles<UseSliderThumbProps>">
+                        <ApiRow name="thumb" ty="Part<PropsWithStyles<UseSliderThumbProps>>">
                             "For the thumb element: dragging, and its position ("<Code inline=true>"position: absolute"</Code>
-                            ", centered on its value along the track). Split it with "<Code inline=true>"into_parts()"</Code>"."
+                            ", centered on its value along the track). "<Code inline=true>"thumb.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="UseSliderThumbInputProps">
+                        <ApiRow name="input" ty="Part<UseSliderThumbInputProps>">
                             "For the visually hidden "<Code inline=true>"<input type=\"range\">"</Code>" inside the thumb: focus, keys "
                             "and the ARIA state ("<Code inline=true>"aria-valuetext"</Code>", min, max, step)."
                         </ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"For the thumb\u{2019}s own label, if it has one."</ApiRow>
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"For the thumb\u{2019}s own label, if it has one."</ApiRow>
                         <ApiRow name="is_dragging" ty="Signal<bool>">"Whether the thumb is dragged."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the thumb or the slider is disabled."</ApiRow>
                         <ApiRow name="is_focused" ty="Signal<bool>">"Whether the thumb\u{2019}s input has focus (by any means)."</ApiRow>
@@ -411,11 +411,11 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 aria_details: Signal::default(),
                             });
 
-                            let (thumb_attrs, thumb_styles) = maximum.thumb_props.into_parts();
+                            let (thumb_attrs, thumb_styles) = maximum.thumb.attrs();
 
                             view! {
                                 <div class="thumb" {..thumb_attrs} style=thumb_styles>
-                                    <input class="visually-hidden" {..maximum.input_props.into_attrs()}/>
+                                    <input class="visually-hidden" {..maximum.input.attrs()}/>
                                 </div>
                             }
                         "#)}

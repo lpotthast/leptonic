@@ -8,7 +8,7 @@
 //! without a color).
 
 use leptonic::{
-    HSV, HsvChannel, IntoAttrs,
+    HSV, HsvChannel,
     hooks::{
         button::use_button,
         color::{
@@ -62,15 +62,15 @@ fn Field(disabled: RwSignal<bool>, hue: StoredValue<f64>) -> impl IntoView {
         on_key_down: None,
         on_key_up: None,
     });
-    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).props.into_parts();
-    let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
+    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).button.attrs();
+    let (increment_attrs, increment_styles) = use_button(field.increment_button).button.attrs();
     view! {
-        <label {..field.label_props.into_attrs()}>"Hue"</label>
-        <div {..field.group_props.into_attrs()}>
+        <label {..field.label.attrs()}>"Hue"</label>
+        <div {..field.group.attrs()}>
             <button {..decrement_attrs} class="perf-decrement" style=decrement_styles>
                 "-"
             </button>
-            <input {..field.input_props.into_attrs()} class="perf-input" />
+            <input {..field.input.attrs()} class="perf-input" />
             <button {..increment_attrs} class="perf-increment" style=increment_styles>
                 "+"
             </button>

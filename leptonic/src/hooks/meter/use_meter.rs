@@ -3,8 +3,9 @@
 use leptos::prelude::*;
 
 use crate::{
-    hooks::progress::{UseProgressBarInput, UseProgressBarReturn, use_progress_bar::progress},
-    utils::{aria::AriaRole, number_formatter::NumberFormatOptions, number_value::NumberValue},
+    Id,
+    hooks::progress::{ProgressRole, UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
+    utils::{number_formatter::NumberFormatOptions, number_value::NumberValue},
 };
 
 // =============================================================================
@@ -14,7 +15,8 @@ use crate::{
 // ## API DIFFERENCES
 // - As `use_progress_bar` (generic value type, string `value_label`, the offered DOM props, the
 //   returned `percentage` and `value_text`), with a value that is always known.
-// - Returns `use_progress_bar`'s types (`props` with `role="meter"`).
+// - Returns `use_progress_bar`'s types: calls it with `role: ProgressRole::Meter` (react-aria
+//   replaces the role in `useProgressBar`'s returned props).
 //
 // =============================================================================
 
@@ -33,13 +35,13 @@ pub struct UseMeterInput<T: NumberValue> {
     /// Replaces the formatted value text (e.g. "3 of 4 GB").
     pub value_label: MaybeProp<String>,
     /// The element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     /// Names the meter when there is no visible label.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
 }
 
 impl<T: NumberValue> Default for UseMeterInput<T> {
@@ -82,8 +84,8 @@ impl<T: NumberValue> Default for UseMeterInput<T> {
 ///     ..UseMeterInput::default()
 /// });
 /// view! {
-///     <div {..meter.props.into_attrs()}>
-///         <span {..meter.label_props.into_attrs()}>"Storage"</span>
+///     <div {..meter.progress_bar.attrs()}>
+///         <span {..meter.label.attrs()}>"Storage"</span>
 ///         <span>{meter.value_text}</span>
 ///     </div>
 /// }
@@ -102,21 +104,19 @@ pub fn use_meter<T: NumberValue>(input: UseMeterInput<T>) -> UseProgressBarRetur
         aria_labelledby,
         aria_describedby,
     } = input;
-    progress(
-        UseProgressBarInput {
-            value: Signal::derive(move || Some(value.get())),
-            min_value,
-            max_value,
-            format_options,
-            value_label,
-            id,
-            has_label,
-            aria_label,
-            aria_labelledby,
-            aria_describedby,
-        },
-        AriaRole::Meter,
-    )
+    use_progress_bar(UseProgressBarInput {
+        value: Signal::derive(move || Some(value.get())),
+        min_value,
+        max_value,
+        format_options,
+        value_label,
+        id,
+        has_label,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        role: ProgressRole::Meter,
+    })
 }
 
 #[cfg(test)]
@@ -124,6 +124,7 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::utils::aria::AriaRole;
 
     // Upstream: "renders" and "supports a custom range".
     #[test]
@@ -135,10 +136,11 @@ mod tests {
                 aria_label: "Storage".into(),
                 ..UseMeterInput::default()
             });
-            assert_that!(meter.props.role).is_equal_to(AriaRole::Meter);
-            assert_that!(meter.props.aria_valuenow.get_untracked())
+            let meter_props = meter.progress_bar.into_props();
+            assert_that!(meter_props.role).is_equal_to(AriaRole::Meter);
+            assert_that!(meter_props.aria_valuenow.get_untracked())
                 .is_equal_to(Some("3".to_owned()));
-            assert_that!(meter.props.aria_valuetext.get_untracked())
+            assert_that!(meter_props.aria_valuetext.get_untracked())
                 .is_equal_to(Some("50%".to_owned()));
             assert_that!(
                 meter

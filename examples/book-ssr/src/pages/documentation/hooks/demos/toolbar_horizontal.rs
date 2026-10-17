@@ -1,10 +1,7 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::{UseButtonInput, UseToggleButtonInput, use_button, use_toggle_button},
-        form::{ToggleState, UseToggleStateInput, use_toggle_state},
-        toolbar::{UseToolbarInput, use_toolbar},
-    },
+use leptonic::hooks::{
+    button::{UseButtonInput, UseToggleButtonInput, use_button, use_toggle_button},
+    form::{ToggleState, UseToggleStateInput, use_toggle_state},
+    toolbar::{UseToolbarInput, use_toolbar},
 };
 use leptos::prelude::*;
 
@@ -29,7 +26,7 @@ pub fn ToolbarHorizontalDemo() -> impl IntoView {
 
     // The arrow keys move focus between the buttons; Tab leaves the toolbar.
     view! {
-        <div {..toolbar.props.into_attrs()} class="demo-toolbar">
+        <div {..toolbar.toolbar.attrs()} class="demo-toolbar">
             <FormatButton state=bold format=Format::Bold/>
             <FormatButton state=italic format=Format::Italic/>
             <FormatButton state=underline format=Format::Underline/>
@@ -61,7 +58,7 @@ fn FormatButton(state: ToggleState, format: Format) -> impl IntoView {
         },
         state,
     }));
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     // Pressed buttons are styled through `aria-pressed`, keyboard focus through the hook's `is_focus_visible`.
     view! {
         <button

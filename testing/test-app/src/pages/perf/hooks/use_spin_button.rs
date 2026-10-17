@@ -5,12 +5,9 @@
 //! buttons (`#perf-before`, `#perf-after`). Its controls ([`Control`]) mount and unmount it,
 //! disable and enable it, set the value (`set-value`: 8) and read it (`value`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::{UseButtonInput, use_button},
-        spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
-    },
+use leptonic::hooks::{
+    button::{UseButtonInput, use_button},
+    spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
 };
 use leptos::prelude::*;
 
@@ -49,7 +46,7 @@ fn SpinButton(value: RwSignal<f64>, disabled: RwSignal<bool>) -> impl IntoView {
         }))
     };
     let UseSpinButtonReturn {
-        props,
+        spin_button: props,
         increment_button,
         ..
     } = use_spin_button(UseSpinButtonInput {
@@ -68,14 +65,14 @@ fn SpinButton(value: RwSignal<f64>, disabled: RwSignal<bool>) -> impl IntoView {
         on_increment_to_max: Some(Callback::new(move |()| value.set(10.0))),
     });
     let (increment_attrs, increment_styles) = use_button(UseButtonInput {
-        id: Some("perf-increment".to_owned()),
+        id: Some("perf-increment".into()),
         aria_label: "Increase".into(),
         ..increment_button
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
     view! {
-        <div id="perf-spin-button" {..props.into_attrs()} tabindex="0" aria-label="Volume"></div>
+        <div id="perf-spin-button" {..props.attrs()} tabindex="0" aria-label="Volume"></div>
         <button {..increment_attrs} style=increment_styles>"+"</button>
     }
 }

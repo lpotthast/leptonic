@@ -25,13 +25,16 @@ use jiff::civil::Date;
 use leptos::prelude::*;
 
 use super::{use_calendar_state::CalendarState, use_range_calendar_state::RangeCalendarState};
-use crate::utils::{
-    date::DateRange,
-    date_time_formatter::{
-        DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
+use crate::{
+    Id,
+    utils::{
+        date::DateRange,
+        date_time_formatter::{
+            DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
+        },
+        i18n::{Locale, use_locale},
+        intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings},
     },
-    i18n::{Locale, use_locale},
-    intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings},
 };
 
 /// A calendar's state: a single date or a range (react-aria: `CalendarState | RangeCalendarState`).
@@ -120,10 +123,10 @@ impl CalendarStates {
 pub struct CalendarData {
     pub state: CalendarStates,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// The id of the calendar's error message while it is rendered (cells with invalid dates
     /// refer to it).
-    pub error_message_id: Signal<Option<String>>,
+    pub error_message_id: Signal<Option<Id>>,
     /// A description of the selection, e.g. "Selected Date: Monday, May 20, 2024".
     pub selected_date_description: Signal<String>,
     /// The formatters of the labels, shared by the cells.

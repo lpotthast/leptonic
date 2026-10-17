@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::focus_ring::FocusRing,
     hooks::focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
 };
@@ -52,7 +51,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
                 <h2>"Basic Focus Ring"</h2>
                 <button id="test-fr-before">"Before"</button>
 
-                <div id="test-fr-target" tabindex="0" {..focus_ring.props.into_attrs()}>
+                <div id="test-fr-target" tabindex="0" {..focus_ring.target.attrs()}>
                     "Focus Ring Target"
                 </div>
 
@@ -76,7 +75,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
                 <h2>"Within Mode"</h2>
                 <button id="test-fr-within-before">"Within Before"</button>
 
-                <div id="test-fr-within-container" {..focus_ring_within.props.into_attrs()}>
+                <div id="test-fr-within-container" {..focus_ring_within.target.attrs()}>
                     <button id="test-fr-within-child-1">"Within Child 1"</button>
                     <button id="test-fr-within-child-2">"Within Child 2"</button>
                 </div>
@@ -102,7 +101,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
                 <div
                     id="test-fr-disabled-target"
                     tabindex="0"
-                    {..disabled_focus_ring.props.into_attrs()}
+                    {..disabled_focus_ring.target.attrs()}
                 >
                     "Disabled Focus Ring Target"
                 </div>

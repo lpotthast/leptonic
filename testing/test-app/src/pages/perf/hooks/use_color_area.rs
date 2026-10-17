@@ -64,10 +64,10 @@ fn Area(
         y_name: None,
         form: None,
     });
-    let (area_attrs, area_styles) = area.color_area_props.into_parts();
-    let (thumb_attrs, thumb_styles) = area.thumb_props.into_parts();
-    let (x_attrs, x_styles) = area.x_input_props.into_parts();
-    let (y_attrs, y_styles) = area.y_input_props.into_parts();
+    let (area_attrs, area_styles) = area.area.attrs();
+    let (thumb_attrs, thumb_styles) = area.thumb.attrs();
+    let (x_attrs, x_styles) = area.x_input.attrs();
+    let (y_attrs, y_styles) = area.y_input.attrs();
     view! {
         <div
             {..area_attrs}

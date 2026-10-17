@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, DateExt, DateTimeFormat, IntoAttrs,
+    CapturedElement, DateExt, DateTimeFormat,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     flag,
     hooks::{
@@ -24,7 +24,7 @@ pub fn CalendarSingleDemo() -> impl IntoView {
         ..Default::default()
     });
     let UseCalendarReturn {
-        calendar_props,
+        calendar,
         previous_button,
         next_button,
         title,
@@ -38,8 +38,8 @@ pub fn CalendarSingleDemo() -> impl IntoView {
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
-    let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
+    let (previous_attrs, previous_styles) = use_button(previous_button).button.attrs();
+    let (next_attrs, next_styles) = use_button(next_button).button.attrs();
 
     let selected = move || {
         state.value.get().map_or_else(
@@ -49,7 +49,7 @@ pub fn CalendarSingleDemo() -> impl IntoView {
     };
 
     view! {
-        <div {..calendar_props.into_attrs()} class="demo-calendar">
+        <div {..calendar.attrs()} class="demo-calendar">
             <header class="demo-calendar-header">
                 <button {..previous_attrs} style=previous_styles class="demo-calendar-nav">
                     <span aria-hidden="true">"\u{2039}"</span>
@@ -90,7 +90,7 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
     let data = StoredValue::new(data);
 
     view! {
-        <table {..grid.grid_props.into_attrs()} class="demo-calendar-grid">
+        <table {..grid.grid.attrs()} class="demo-calendar-grid">
             // Each day's label names its weekday: the header is for sighted users only.
             <thead aria-hidden="true">
                 <tr>{move || grid.week_days.get().into_iter().map(|day| view! { <th>{day}</th> }).collect_view()}</tr>
@@ -120,8 +120,8 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
 #[component]
 fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> impl IntoView {
     let UseCalendarCellReturn {
-        cell_props,
-        button_props,
+        cell,
+        button,
         is_selected,
         is_today,
         formatted_date,
@@ -133,10 +133,10 @@ fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> im
         is_disabled: Signal::stored(false),
         element: CapturedElement::new(),
     });
-    let (button_attrs, button_styles) = button_props.into_parts();
+    let (button_attrs, button_styles) = button.attrs();
 
     view! {
-        <td {..cell_props.into_attrs()}>
+        <td {..cell.attrs()}>
             <div
                 {..button_attrs}
                 style=button_styles

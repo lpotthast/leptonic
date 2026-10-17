@@ -31,8 +31,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <TableRow>
                         <TableCell><Code inline=true>"ListBoxItemLabel"</Code>", "<Code inline=true>"ListBoxItemDescription"</Code></TableCell>
                         <TableCell>
-                            "The "<Code inline=true>"label_props"</Code>" and "<Code inline=true>"description_props"</Code>
-                            " slots of "<Link href=hook_section("use-option")>"use_option"</Link>
+                            "The "<Code inline=true>"label"</Code>" and "<Code inline=true>"description"</Code>
+                            " parts of "<Link href=hook_section("use-option")>"use_option"</Link>
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -122,6 +122,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                             <Code inline=true>"use_list_collection"</Code>". Required unless the listbox is inside a select or "
                             "combobox, which provides it: without either, the listbox panics."
                         </ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The listbox\u{2019}s id (its options\u{2019} ids derive from it). Generated when not given; ignored inside a "<Code inline=true>"Select"</Code>" or "<Code inline=true>"ComboBox"</Code>", which give the listbox its id."</ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             "Whether nothing, one or many options can be selected. "<Code inline=true>"None"</Code>
                             " is a list without selection."

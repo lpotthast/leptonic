@@ -7,6 +7,7 @@ use crate::{
     hooks::collections::{Rect, Size},
     utils::{
         i18n::{WritingDirection, use_direction},
+        stored_field::StoredField,
         styles::Styles,
     },
 };
@@ -32,7 +33,10 @@ use crate::{
 //   event doesn't count as the user scrolling: items are measured in effects after that event
 //   (react-aria: in layout effects before it), and anchoring skips while the user scrolls. Its
 //   event is one of the next two frames at the position it scrolled to, or at the end if
-//   re-measured rows made the browser clamp it there.
+//   re-measured rows made the browser clamp it there. Nor does the browser moving the view up
+//   when the content shrinks (clamping it to the new end; react-aria counts both as scrolling):
+//   a list anchored to its end would stop following it when the 300ms of "scrolling" end while
+//   the content grew again.
 // - A size change starts a size update (react-aria's `isUpdatingSize`) of at most two passes,
 //   as react-aria's: the first applies the measured size, the second measures again once the
 //   content laid out for it rendered (scrollbars may have appeared or disappeared) and applies
@@ -142,6 +146,24 @@ struct ScrollState {
     viewport_offset: (f64, f64),
     viewport_size: Size,
     last_visible_rect: Rect,
+    /// The view's `scrollTop` and `scrollHeight` at its last scroll event (only the browser's
+    /// scroll listener reads it).
+    #[cfg(not(feature = "ssr"))]
+    view_scroll: (f64, i32),
+}
+
+/// The non-reactive state of [`use_scroll_view`].
+#[derive(Default)]
+struct ScrollHook {
+    state: ScrollState,
+    /// The position `scroll_to` last scrolled to (and the scroll's number), for two frames: its
+    /// scroll event comes with the next frame.
+    own_scroll: Option<(u64, (f64, f64))>,
+    own_scroll_count: u64,
+    /// Where the next frame scrolls to (the last request; the end over a rectangle).
+    pending_scroll: Option<ScrollTarget>,
+    /// Counts the user's scrolls: a `scroll_to` requested before one is dropped (the user wins).
+    user_scrolls: u64,
 }
 
 /// A scrollable view of a virtualized collection's content (react-aria's `useScrollView`):
@@ -158,17 +180,16 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
         scroll_direction,
         allows_window_scrolling,
     } = input;
-    let state = StoredValue::new(ScrollState::default());
+    // The hook's non-reactive state, in one store (`performance.md` R7).
+    let hook = StoredValue::new(ScrollHook::default());
+    let state = StoredField::new(hook, |h| &h.state, |h| &mut h.state);
     let is_scrolling = RwSignal::new(false);
     let is_user_scrolling = RwSignal::new(false);
-    // The position `scroll_to` last scrolled to (and the scroll's number), for two frames: its
-    // scroll event comes with the next frame.
-    let own_scroll = StoredValue::new(None::<(u64, (f64, f64))>);
-    let own_scroll_count = StoredValue::new(0_u64);
-    // Where the next frame scrolls to (the last request; the end over a rectangle).
-    let pending_scroll = StoredValue::new(None::<ScrollTarget>);
-    // Counts the user's scrolls: a `scroll_to` requested before one is dropped (the user wins).
-    let user_scrolls = StoredValue::new(0_u64);
+    let own_scroll = StoredField::new(hook, |h| &h.own_scroll, |h| &mut h.own_scroll);
+    let own_scroll_count =
+        StoredField::new(hook, |h| &h.own_scroll_count, |h| &mut h.own_scroll_count);
+    let pending_scroll = StoredField::new(hook, |h| &h.pending_scroll, |h| &mut h.pending_scroll);
+    let user_scrolls = StoredField::new(hook, |h| &h.user_scrolls, |h| &mut h.user_scrolls);
 
     let update_visible_rect = move || {
         let Some(s) = state.try_get_value() else {
@@ -316,20 +337,26 @@ pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
                 let size = state.with_value(|s| s.size);
                 let left = view.scroll_left().abs();
                 let top = view.scroll_top();
+                let scroll_height = view.scroll_height();
+                let (previous_top, previous_height) = state.with_value(|s| s.view_scroll);
                 state.update_value(|s| {
                     s.scroll_position = (
                         left.min(content.width - size.width).max(0.0),
                         top.min(content.height - size.height).max(0.0),
                     );
+                    s.view_scroll = (top, scroll_height);
                 });
                 // Our own scroll (`scroll_to`): not the user scrolling. At the position it scrolled
                 // to, or clamped to the end since (re-measured rows shrank the content).
-                let end = f64::from(view.scroll_height() - view.client_height());
+                let end = f64::from(scroll_height - view.client_height());
                 let ours = own_scroll.get_value().is_some_and(|(_, (x, y))| {
                     (x - left).abs() < 1.0
                         && ((y - top).abs() < 1.0 || (top < y && (end - top).abs() < 1.0))
                 });
-                if ours {
+                // The browser moved the view up as the content shrank (removed or re-measured rows):
+                // clamped it to the end, or kept rows in place. Not the user scrolling either.
+                let moved_by_the_browser = top < previous_top && scroll_height < previous_height;
+                if ours || moved_by_the_browser {
                     update_visible_rect();
                     return;
                 }

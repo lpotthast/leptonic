@@ -25,7 +25,7 @@ pub fn PressBasicDemo() -> impl IntoView {
         });
     };
 
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn { target, is_pressed } = use_press(UsePressInput {
         is_disabled: disabled.into(),
         on_press: Some(Callback::new(move |e: PressEvent| {
             set_count.update(|c| *c += 1);
@@ -43,7 +43,7 @@ pub fn PressBasicDemo() -> impl IntoView {
         })),
         ..Default::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = target.attrs();
 
     let times = |n: i32| {
         if n == 1 {

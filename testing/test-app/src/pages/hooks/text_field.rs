@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use leptonic::{
-    IntoAttrs,
-    hooks::form::{
-        InputType, TextFieldElement, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput,
-        ValidationBehavior, use_text_field, use_text_field_state,
-    },
+use leptonic::hooks::form::{
+    InputType, TextFieldElement, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput,
+    ValidationBehavior, use_text_field, use_text_field_state,
 };
 use leptos::prelude::*;
 
@@ -19,10 +16,10 @@ pub fn PageHookTextField() -> impl IntoView {
         ..UseTextFieldStateInput::default()
     });
     let UseTextFieldReturn {
-        label_props,
-        input_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        input: input_props,
+        description: description_props,
+        error_message: error_message_props,
         is_invalid,
         validation_errors,
         ..
@@ -80,11 +77,11 @@ pub fn PageHookTextField() -> impl IntoView {
         <div id="test-page-hook-text-field">
             <h1>"Text field"</h1>
             <form id="test-tf-form">
-                <label {..label_props.into_attrs()}>"Name"</label>
-                <input {..input_props.into_attrs()} />
-                <div {..description_props.into_attrs()}>"Your first name."</div>
+                <label {..label_props.attrs()}>"Name"</label>
+                <input {..input_props.attrs()} />
+                <div {..description_props.attrs()}>"Your first name."</div>
                 <Show when=move || is_invalid.get()>
-                    <div {..error_message_props.clone().into_attrs()}>
+                    <div {..error_message_props.attrs()}>
                         {move || validation_errors.get().join(" ")}
                     </div>
                 </Show>

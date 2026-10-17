@@ -4,14 +4,11 @@
 //! buttons (`#perf-before`, `#perf-after`). Its controls ([`Control`]) mount and unmount it, make
 //! it read-only, and read how often it submitted (`submits`) and cleared (`clears`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::{UseButtonInput, use_button},
-        form::{
-            InputType, TextFieldElement, UseSearchFieldInput, UseTextFieldInput,
-            UseTextFieldStateInput, ValidationBehavior, use_search_field, use_text_field_state,
-        },
+use leptonic::hooks::{
+    button::{UseButtonInput, use_button},
+    form::{
+        InputType, TextFieldElement, UseSearchFieldInput, UseTextFieldInput,
+        UseTextFieldStateInput, ValidationBehavior, use_search_field, use_text_field_state,
     },
 };
 use leptos::prelude::*;
@@ -63,7 +60,7 @@ fn Search(
         })),
         text_field: UseTextFieldInput {
             state,
-            id: Some("perf-input".to_owned()),
+            id: Some("perf-input".into()),
             element: Signal::stored(TextFieldElement::Input),
             input_type: Signal::stored(InputType::Search),
             is_disabled: Signal::stored(false),
@@ -106,14 +103,14 @@ fn Search(
         },
     });
     let (clear_attrs, clear_styles) = use_button(UseButtonInput {
-        id: Some("perf-clear".to_owned()),
+        id: Some("perf-clear".into()),
         ..search.clear_button
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
     view! {
-        <label {..search.text_field.label_props.into_attrs()}>"Search"</label>
-        <input {..search.text_field.input_props.into_attrs()} />
+        <label {..search.text_field.label.attrs()}>"Search"</label>
+        <input {..search.text_field.input.attrs()} />
         <button {..clear_attrs} style=clear_styles>
             "Clear"
         </button>

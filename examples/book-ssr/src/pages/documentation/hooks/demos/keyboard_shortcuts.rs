@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    KeyboardKey, KeyboardShortcuts, Shortcut,
     hooks::interactions::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
 };
 use leptos::prelude::*;
@@ -33,14 +33,14 @@ pub fn KeyboardShortcutsDemo() -> impl IntoView {
             true
         });
 
-    let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
+    let UseKeyboardReturn { target } = use_keyboard(UseKeyboardInput {
         shortcuts: Some(shortcuts),
         allow_repeats: true,
         ..Default::default()
     });
 
     view! {
-        <div {..props.into_attrs()} tabindex="0" class="demo-keyboard-target">
+        <div {..target.attrs()} tabindex="0" class="demo-keyboard-target">
             "Focus me, then press the arrow keys, Home, or Control + S (Command + S on a Mac)"
         </div>
         <p class="demo-status">

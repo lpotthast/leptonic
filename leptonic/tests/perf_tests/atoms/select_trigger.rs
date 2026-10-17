@@ -1,16 +1,14 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! The performance of the atom `SelectTrigger` (`/perf/atoms/select_trigger`, the fixture of
-//! `Select`'s performance test): what each thing it offers costs, measured (`Page::measure`) and
-//! checked against its budget (`tests/budgets/atoms/select_trigger.json`): mounting and unmounting
-//! it in its select, opening the popover with the mouse and with each key that does (Enter, Space,
-//! ArrowDown, ArrowUp), changing the value with ArrowRight, ArrowLeft and type-ahead (10 and 1,000
-//! options), its pressed, hovered and focused states, and the select's disabled and open states
-//! changing.
+//! The performance of the atom `SelectTrigger` (`/perf/atoms/select_trigger`, in a `Select`): what
+//! each thing it offers costs, measured (`Page::measure`) and checked against its budget
+//! (`tests/budgets/atoms/select_trigger.json`): mounting and unmounting it in its select, opening
+//! the popover with the mouse and with each key that does (Enter, Space, ArrowDown, ArrowUp),
+//! changing the value with ArrowRight, ArrowLeft and type-ahead (10 and 1,000 options), its
+//! pressed, hovered and focused states, and the select's disabled and open states changing.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use super::select::{POPOVER, TRIGGER, change_on_the_trigger_in, focus_trigger, large, option};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -34,6 +32,34 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(KeyboardFocusAndBlur))
         .with(fixture_test(DisableAndEnable))
         .with(fixture_test(OpenState))
+}
+const TRIGGER: &str = ".leptonic-SelectTrigger";
+const VALUE: &str = ".leptonic-SelectValue";
+const POPOVER: &str = ".leptonic-SelectPopover";
+
+/// The option "Option `i`".
+fn option(i: u32) -> String {
+    format!("[data-perf-option='{i}']")
+}
+
+/// The select's value: the selected option's number, `-1` for none.
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
+    page.control("value").await
+}
+
+/// Switches to 1,000 options (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.settle().await
+}
+
+/// Focuses the trigger with the keyboard (Tab from the plain button before it).
+async fn focus_trigger(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#perf-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    let trigger = page.element(TRIGGER).await?;
+    page.wait_for_focus(&trigger).await?;
+    Ok(trigger)
 }
 
 /// Mounting the trigger in its select and unmounting it.
@@ -102,11 +128,33 @@ pub async fn open_with_arrow_up(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
+/// ArrowRight and ArrowLeft on the closed trigger selecting the next and the previous option,
+/// and type-ahead ("o", matching the selected option). (Type-ahead last: the search resets a second
+/// later.)
+async fn change_the_value_in(page: &Page<'_>) -> Result<(), Report> {
+    focus_trigger(page).await?;
+    page.measure("arrow right", page.send_keys(Key::Right))
+        .await?;
+    assert_that!(value(page).await?).is_equal_to(0.0);
+    page.send_keys(Key::Right).await?;
+    page.element(VALUE)
+        .await?
+        .wait_for_inner_text("Option 1")
+        .await?;
+    page.measure("arrow left", page.send_keys(Key::Left))
+        .await?;
+    assert_that!(value(page).await?).is_equal_to(0.0);
+    page.measure("type-ahead", page.send_keys("o")).await?;
+    assert_that!(value(page).await?).is_equal_to(0.0);
+    assert_that!(page.count(POPOVER).await?).is_equal_to(0);
+    Ok(())
+}
+
 /// Changing the value on the closed trigger with 10 options.
 #[browser_test]
 pub async fn change_the_value(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
-    change_on_the_trigger_in(page).await
+    change_the_value_in(page).await
 }
 
 /// Changing the value on the closed trigger with 1,000 options.
@@ -114,7 +162,7 @@ pub async fn change_the_value(page: &Page<'_>) -> Result<(), Report> {
 pub async fn change_the_value_large(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     large(page).await?;
-    change_on_the_trigger_in(page).await
+    change_the_value_in(page).await
 }
 
 /// Holding the pointer down on the trigger (its pressed state; the popover opens) and releasing

@@ -5,7 +5,7 @@
 //! the button, disable and enable the button and the hook.
 
 use leptonic::{
-    IntoAttrs, flag,
+    flag,
     hooks::focus::{UseHasTabbableChildInput, use_has_tabbable_child},
 };
 use leptos::prelude::*;
@@ -66,7 +66,7 @@ fn Group(inputs: Inputs) -> impl IntoView {
     view! {
         <div
             id="perf-group"
-            {..tabbable.props.into_attrs()}
+            {..tabbable.target.attrs()}
             data-has-tabbable-child=flag(tabbable.has_tabbable_child)
         >
             {move || {

@@ -25,7 +25,7 @@ pub fn PageHookMenuTrigger() -> impl IntoView {
         trigger: MenuTriggerType::Press,
         state,
     });
-    let (attrs, styles) = use_button(menu_trigger.button).props.into_parts();
+    let (attrs, styles) = use_button(menu_trigger.button).button.attrs();
     let menu_id = menu_trigger.menu_props.id;
 
     view! {
@@ -86,7 +86,7 @@ fn OtherTrigger(
         trigger,
         state,
     });
-    let (attrs, styles) = use_button(menu_trigger.button).props.into_parts();
+    let (attrs, styles) = use_button(menu_trigger.button).button.attrs();
     let test_id = if trigger == MenuTriggerType::LongPress {
         "long-press-trigger".to_owned()
     } else {

@@ -10,7 +10,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -36,7 +36,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5,
+        "allocations": 4,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -118,7 +118,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5,
+        "allocations": 4,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -144,7 +144,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -172,12 +172,12 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 138,
-        "reallocations": 5,
-        "memo_runs": 2,
+        "allocations": 105,
+        "reallocations": 4,
+        "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 1,
-        "render_effect_runs": 3,
+        "render_effect_runs": 2,
         "immediate_effect_runs": 0,
         "signal_notifications": 3,
         "dom_attributes": 1,
@@ -198,7 +198,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -226,7 +226,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5,
+        "allocations": 4,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -252,7 +252,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5,
+        "allocations": 4,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -280,7 +280,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5,
+        "allocations": 4,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -306,7 +306,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5,
+        "allocations": 4,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

@@ -1013,6 +1013,12 @@ fn interactions() -> NavGroup {
                 doc::interactions::UseScrollWheel.materialize(),
                 Hook,
             ),
+            page(
+                "use_wheel_stepping",
+                "Lets the scroll wheel step a focused field's value, as in a number field",
+                doc::interactions::UseWheelStepping.materialize(),
+                Hook,
+            ),
         ],
     )
 }
@@ -1153,6 +1159,12 @@ fn overlay_behavior() -> NavGroup {
                 "use_prevent_scroll",
                 "Locks page scrolling while a modal or overlay is open",
                 doc::overlay_behavior::UsePreventScroll.materialize(),
+                Hook,
+            ),
+            page(
+                "use_hide_outside",
+                "Makes the page outside an open modal overlay inert",
+                doc::overlay_behavior::UseHideOutside.materialize(),
                 Hook,
             ),
             page(

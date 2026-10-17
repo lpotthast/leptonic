@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::{
         button::{UseButtonInput, use_button},
         toolbar::{UseToolbarInput, use_toolbar},
@@ -18,7 +18,7 @@ pub fn ToolbarVerticalDemo() -> impl IntoView {
 
     // ArrowUp and ArrowDown move focus between the buttons; Tab leaves the toolbar.
     view! {
-        <div {..toolbar.props.into_attrs()} class="demo-toolbar demo-toolbar-vertical">
+        <div {..toolbar.toolbar.attrs()} class="demo-toolbar demo-toolbar-vertical">
             <ActionButton name="New" last_action/>
             <ActionButton name="Save" last_action/>
             <ActionButton name="Export" last_action/>
@@ -39,7 +39,7 @@ fn ActionButton(name: &'static str, last_action: RwSignal<Option<&'static str>>)
         on_press: Some(Callback::new(move |_| last_action.set(Some(name)))),
         ..UseButtonInput::default()
     });
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     view! {
         <button
             {..attrs}

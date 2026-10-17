@@ -1,19 +1,12 @@
 // Upstream: react-aria/src/table/useTableRow.ts @ 99e6102368
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/table/TreeGridTable.test.tsx @ 99e6102368
-use leptos::{
-    attr::{
-        self, Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use web_sys::KeyboardEvent;
 
 use super::TableData;
 use crate::{
-    EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         button::UseButtonInput,
         collections::{Key, Node},
@@ -26,6 +19,8 @@ use crate::{
         i18n::{WritingDirection, use_direction},
         intl_strings::{TableStrings, use_localized_strings},
         key::{KeyboardEventKey, KeyboardKey},
+        part::{Part, Remount},
+        signal_attr::{SignalAttr, signal_attr},
     },
 };
 
@@ -61,10 +56,11 @@ pub struct UseTableRowInput {
     pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
-/// Return value of [`use_table_row`].
+/// The return value of [`use_table_row`].
 #[derive(Debug)]
 pub struct UseTableRowReturn {
-    pub row_props: PropsWithStyles<UseTableRowProps>,
+    /// The row element: `let (attrs, styles) = row.attrs();`.
+    pub row: Part<PropsWithStyles<UseTableRowProps>>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
     pub is_disabled: Signal<bool>,
@@ -91,7 +87,7 @@ pub struct UseTableRowReturn {
 pub struct UseTableRowProps {
     pub row: UseGridRowProps,
     /// The row header cells label the row.
-    pub aria_labelledby: Signal<String>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Tree tables: whether the row's child rows are shown (rows with child rows only).
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// Tree tables: the row's level (from 1), its position among its sibling rows and their
@@ -104,13 +100,27 @@ pub struct UseTableRowProps {
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
 }
 
+impl Remount for UseTableRowProps {
+    fn remount(&self) -> Self {
+        Self {
+            row: self.row.remount(),
+            aria_labelledby: self.aria_labelledby,
+            aria_expanded: self.aria_expanded,
+            aria_level: self.aria_level,
+            aria_posinset: self.aria_posinset,
+            aria_setsize: self.aria_setsize,
+            on_keydown_capture: self.on_keydown_capture.clone(),
+        }
+    }
+}
+
 pub type UseTableRowAttrs = (
     UseGridRowAttrs,
-    Attr<attr::AriaLabelledby, Signal<String>>,
-    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-    CustomAttr<&'static str, Signal<Option<usize>>>,
-    Attr<attr::AriaPosinset, Signal<Option<usize>>>,
-    Attr<attr::AriaSetsize, Signal<Option<usize>>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaExpanded>>,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
     OnEvent<ev::Capture<ev::keydown>>,
 );
 
@@ -120,11 +130,11 @@ impl IntoAttrs for UseTableRowProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             self.row.into_attrs(),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaExpanded, self.aria_expanded),
-            custom_attribute("aria-level", self.aria_level),
-            Attr(attr::AriaPosinset, self.aria_posinset),
-            Attr(attr::AriaSetsize, self.aria_setsize),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-expanded", self.aria_expanded),
+            signal_attr("aria-level", self.aria_level),
+            signal_attr("aria-posinset", self.aria_posinset),
+            signal_attr("aria-setsize", self.aria_setsize),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
         )
     }
@@ -143,13 +153,13 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let aria_labelledby = {
         let table = table.clone();
         let key = key.clone();
-        Memo::new(move |_| table.row_labelledby(&key).to_string())
+        Memo::new(move |_| table.row_labelledby(&key))
     };
     let state = table.state;
     let tree = state.tree;
     let selection = state.grid.list.selection;
     let UseGridRowReturn {
-        row_props,
+        row: row_props,
         is_selected,
         is_focused,
         is_disabled,
@@ -161,7 +171,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         key: key.clone(),
         on_context_menu,
     });
-    let (row, styles) = row_props.into_inner();
+    let (row, styles) = row_props.into_props().into_inner();
 
     // -- Tree tables --
     // From the whole table: collapsed rows keep their child rows there.
@@ -249,12 +259,46 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
                 selection.set_focused(true);
                 selection.set_focused_key(Some(key), None);
             })),
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_labelledby: Signal::stored(None),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            auto_focus: false,
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_describedby: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         }
     });
 
     UseTableRowReturn {
-        row_props: PropsWithStyles::new(
+        row: Part::stored(PropsWithStyles::new(
             UseTableRowProps {
                 row,
                 aria_labelledby: aria_labelledby.into(),
@@ -269,7 +313,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
                 on_keydown_capture,
             },
             styles,
-        ),
+        )),
         is_selected,
         is_focused,
         is_disabled,

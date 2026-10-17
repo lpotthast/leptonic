@@ -19,14 +19,16 @@ use super::event_listeners::{Listener, listen_with_options};
 enum EventHandlerInner<E: 'static> {
     /// Most common: single handler, no Vec allocation
     Single(Arc<dyn Fn(E) + Send + Sync + 'static>),
-    /// Multiple chained handlers
-    Multiple(Vec<Arc<dyn Fn(E) + Send + Sync + 'static>>),
+    /// Multiple chained handlers, shared: cloning a chain (another mount of a part's props) is a
+    /// refcount bump; building it allocates once.
+    Multiple(Arc<[Arc<dyn Fn(E) + Send + Sync + 'static>]>),
     /// Empty handler (no-op)
     Empty,
 }
 
 /// A chainable event handler that wraps `Fn` closures.
-/// Optimized to avoid `Vec` allocation for the common single-handler case.
+/// A single handler is one `Arc`; a chain is one shared slice, allocated once when it is built,
+/// so cloning a handler never allocates.
 ///
 /// **Note:** Handlers must be `Fn + Send + Sync`, not `FnMut`. This works for most Leptos
 /// handlers because signal setters (`set_signal.set(value)`) take `&self`.
@@ -115,18 +117,16 @@ impl<E: 'static> EventHandler<E> {
         let inner = match (self.inner, other.into().inner) {
             (Empty, other) => other,
             (this, Empty) => this,
-            (Single(a), Single(b)) => Multiple(vec![a, b]),
-            (Single(a), Multiple(mut others)) => {
-                others.insert(0, a);
-                Multiple(others)
+            // Each arm collects an exact-size iterator: one allocation for the chain.
+            (Single(a), Single(b)) => Multiple([a, b].into_iter().collect()),
+            (Single(a), Multiple(others)) => {
+                Multiple(std::iter::once(a).chain(others.iter().cloned()).collect())
             }
-            (Multiple(mut these), Single(b)) => {
-                these.push(b);
-                Multiple(these)
+            (Multiple(these), Single(b)) => {
+                Multiple(these.iter().cloned().chain(std::iter::once(b)).collect())
             }
-            (Multiple(mut these), Multiple(others)) => {
-                these.extend(others);
-                Multiple(these)
+            (Multiple(these), Multiple(others)) => {
+                Multiple(these.iter().chain(others.iter()).cloned().collect())
             }
         };
         Self { inner }

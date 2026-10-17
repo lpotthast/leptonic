@@ -82,7 +82,7 @@ fn Subject(
     updater.set_value(Some(position.updater));
     on_cleanup(move || updater.set_value(None));
     let resolved = position.placement;
-    let (attrs, styles) = position.props.into_parts();
+    let (attrs, styles) = position.overlay.attrs();
     let attrs = StoredValue::new(attrs);
     // The overlay's only `style` writer: the hook's styles and its width.
     let styles = StoredValue::new(styles.merge(Styles::new().add_unchecked("width", "200px")));

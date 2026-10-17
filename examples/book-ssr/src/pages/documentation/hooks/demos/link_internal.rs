@@ -7,7 +7,7 @@ pub fn LinkInternalDemo() -> impl IntoView {
         href: Signal::stored(Some("/doc/link".to_owned())),
         ..UseLinkInput::default()
     });
-    let (link_attrs, link_styles) = link.props.into_parts();
+    let (link_attrs, link_styles) = link.link.attrs();
 
     view! {
         <p>

@@ -13,6 +13,7 @@ pub enum Metric {
     Allocations,
     Reallocations,
     AllocatedBytes,
+    LargestAllocation,
     RetainedBytes,
     MemoRuns,
     MemoRunsUnchanged,
@@ -52,10 +53,11 @@ pub enum Unit {
 
 impl Metric {
     /// Every metric, in the order reports list them.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::Allocations,
         Self::Reallocations,
         Self::AllocatedBytes,
+        Self::LargestAllocation,
         Self::RetainedBytes,
         Self::MemoRuns,
         Self::MemoRunsUnchanged,
@@ -79,6 +81,7 @@ impl Metric {
             Self::Allocations => "allocations",
             Self::Reallocations => "reallocations",
             Self::AllocatedBytes => "allocated_bytes",
+            Self::LargestAllocation => "largest_allocation",
             Self::RetainedBytes => "retained_bytes",
             Self::MemoRuns => "memo_runs",
             Self::MemoRunsUnchanged => "memo_runs_unchanged",
@@ -117,11 +120,19 @@ impl Metric {
             }
             Self::AllocatedBytes => {
                 "Bytes requested by allocations, plus what reallocations grew by: the memory \
-                 traffic of the action. Not budgeted: the size of an allocation can differ by a \
-                 few bytes between runs while the counts stay equal (seen when closing overlays, \
-                 reopening a popover, changing collections: 16-48 bytes), probably text whose \
-                 length depends on what the page did before (generated ids crossing a digit). \
-                 `allocations` is budgeted."
+                 traffic of the action. Not budgeted (yet): it depends on the heap's layout. \
+                 Leptos' subscriber sets (`IndexSet<AnySubscriber>`, hashed by the subscribers' \
+                 addresses) size the entries they allocate when cloned (every signal \
+                 notification) or grown to their hash table's capacity, which tombstones left by \
+                 removals lower, and where those fall depends on the addresses. So any change \
+                 to what the page allocated before shifts it by multiples of 16 bytes (seen: \
+                 16-48 bytes when closing overlays, 16 per item in collections), and so do \
+                 frees landing at other times. One build repeats it exactly in most runs."
+            }
+            Self::LargestAllocation => {
+                "The largest single allocation (or reallocation's new size) of the action, in \
+                 bytes: one huge buffer shows here even where the total hides it. Not budgeted, \
+                 like `allocated_bytes`."
             }
             Self::RetainedBytes => {
                 "Bytes allocated and not freed when the measurement ended (negative: more freed \
@@ -182,6 +193,7 @@ impl Metric {
             Self::Allocations
             | Self::Reallocations
             | Self::AllocatedBytes
+            | Self::LargestAllocation
             | Self::RetainedBytes
             | Self::MemoRuns
             | Self::MemoRunsUnchanged
@@ -201,7 +213,7 @@ impl Metric {
     #[must_use]
     pub const fn unit(self) -> Unit {
         match self {
-            Self::AllocatedBytes | Self::RetainedBytes => Unit::Bytes,
+            Self::AllocatedBytes | Self::LargestAllocation | Self::RetainedBytes => Unit::Bytes,
             Self::Frames => Unit::Frames,
             _ => Unit::Count,
         }
@@ -213,7 +225,7 @@ impl Metric {
     pub const fn is_budgeted(self) -> bool {
         !matches!(
             self,
-            Self::AllocatedBytes | Self::RetainedBytes | Self::Frames
+            Self::AllocatedBytes | Self::LargestAllocation | Self::RetainedBytes | Self::Frames
         )
     }
 }

@@ -17,7 +17,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 41,
+        "allocations": 34,
         "reallocations": 16,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -50,7 +50,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 39,
+        "allocations": 32,
         "reallocations": 5,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -85,7 +85,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 10,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -118,7 +118,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 10,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -151,7 +151,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 2,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -186,7 +186,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 76,
+        "allocations": 66,
         "reallocations": 11,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -219,7 +219,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -254,10 +254,10 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 105,
+        "allocations": 73,
         "reallocations": 11,
-        "memo_runs": 2,
-        "memo_runs_unchanged": 1,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 7,
         "immediate_effect_runs": 0,
@@ -287,7 +287,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 9,
+        "allocations": 8,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

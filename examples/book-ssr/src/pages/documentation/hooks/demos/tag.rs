@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::button::Button,
     hooks::{
         button::use_button,
@@ -39,10 +39,7 @@ pub fn TagDemo() -> impl IntoView {
         },
     });
     let UseTagGroupReturn {
-        grid_props,
-        label_props,
-        data,
-        ..
+        grid, label, data, ..
     } = use_tag_group(UseTagGroupInput {
         has_label: true.into(),
         // Removing is up to you: drop the keys from your data.
@@ -77,8 +74,8 @@ pub fn TagDemo() -> impl IntoView {
     };
 
     view! {
-        <span {..label_props.into_attrs()} class="demo-tag-group-label">"Technologies"</span>
-        <div {..grid_props.into_attrs()} class="demo-tag-group">
+        <span {..label.attrs()} class="demo-tag-group-label">"Technologies"</span>
+        <div {..grid.attrs()} class="demo-tag-group">
             <For each=move || tags.get() key=|tag| *tag let:tag>
                 <Tag group=data.clone() key=Key::from(tag)/>
             </For>
@@ -94,16 +91,16 @@ pub fn TagDemo() -> impl IntoView {
 fn Tag(group: TagGroupData, key: Key) -> impl IntoView {
     let text = key.to_string();
     let UseTagReturn {
-        row_props,
-        grid_cell_props,
+        row,
+        cell,
         remove_button,
         is_focus_visible,
         ..
     } = use_tag(UseTagInput { group, key });
-    let (attrs, styles) = row_props.into_parts();
+    let (attrs, styles) = row.attrs();
     // Only present when the group allows removing tags.
     let remove = remove_button.map(|input| {
-        let (attrs, styles) = use_button(input).props.into_parts();
+        let (attrs, styles) = use_button(input).button.attrs();
         view! {
             <button {..attrs} class="demo-tag-remove" style=styles>
                 <span aria-hidden="true">"\u{00d7}"</span>
@@ -113,7 +110,7 @@ fn Tag(group: TagGroupData, key: Key) -> impl IntoView {
 
     view! {
         <div {..attrs} data-focus-visible=move || is_focus_visible.get().then_some("") class="demo-tag" style=styles>
-            <div {..grid_cell_props.into_attrs()} class="demo-tag-cell">{text} {remove}</div>
+            <div {..cell.attrs()} class="demo-tag-cell">{text} {remove}</div>
         </div>
     }
 }

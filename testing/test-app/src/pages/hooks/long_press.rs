@@ -83,7 +83,7 @@ fn LongPressable(
         }),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = pressing.props.into_parts();
+    let (attrs, styles) = pressing.target.attrs();
     view! {
         <div
             id=format!("test-long-press-{name}")
@@ -111,7 +111,7 @@ fn LongPressSubmit(log: RwSignal<Vec<String>>) -> impl IntoView {
         }),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = pressing.props.into_parts();
+    let (attrs, styles) = pressing.target.attrs();
     view! {
         <form on:submit=move |e| {
             e.prevent_default();

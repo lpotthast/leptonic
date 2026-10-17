@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::use_button,
@@ -44,18 +43,18 @@ pub fn NumberFieldBasicDemo() -> impl IntoView {
 
     // The stepper buttons come as `UseButtonInput`s: render them with `use_button`. They are named
     // "Decrease Quantity" and "Increase Quantity".
-    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).props.into_parts();
-    let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
+    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).button.attrs();
+    let (increment_attrs, increment_styles) = use_button(field.increment_button).button.attrs();
 
     view! {
         <div class="demo-field">
-            <label class="demo-field-label" {..field.label_props.into_attrs()}>"Quantity (0\u{2013}100)"</label>
+            <label class="demo-field-label" {..field.label.attrs()}>"Quantity (0\u{2013}100)"</label>
             // The group wraps the input and its stepper buttons.
-            <div class="demo-input-row" {..field.group_props.into_attrs()}>
+            <div class="demo-input-row" {..field.group.attrs()}>
                 <button class="demo-btn" {..decrement_attrs} style=decrement_styles>
                     <span aria-hidden="true">"\u{2212}"</span>
                 </button>
-                <input class="demo-input demo-text-input demo-number-input" {..field.input_props.into_attrs()}/>
+                <input class="demo-input demo-text-input demo-number-input" {..field.input.attrs()}/>
                 <button class="demo-btn" {..increment_attrs} style=increment_styles>
                     <span aria-hidden="true">"+"</span>
                 </button>

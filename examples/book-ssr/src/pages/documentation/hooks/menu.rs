@@ -101,7 +101,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         });
 
                         let button = use_button(menu_trigger.button);
-                        let (attrs, styles) = button.props.into_parts();
+                        let (attrs, styles) = button.button.attrs();
 
                         view! {
                             <button {..attrs} style=styles>"Actions"</button>
@@ -161,7 +161,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                                 on_hover_start: Some(Callback::new(|_| log!("hovered"))),
                                 ..menu_trigger.button
                             });
-                            let (attrs, styles) = button.props.into_parts();
+                            let (attrs, styles) = button.button.attrs();
 
                             view! {
                                 <button {..attrs} style=styles>"\u{22ee}"</button>
@@ -177,7 +177,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         "press callbacks or "<Code inline=true>"shortcuts"</Code>" the trigger sets, since they are what opens the menu. If you need "
                         "your own callback on one of them, chain both with "<Code inline=true>"chain_optional_callbacks"</Code>". See "
                         <Link href=format!("{}#composing-hooks", routes::doc::Architecture.materialize())>"Composing hooks"</Link>
-                        " for why leptonic composes inputs instead of merging DOM props."
+                        " for why leptonic composes inputs instead of spreading two parts."
                     </p>
                 </Section>
             </Section>
@@ -250,14 +250,14 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         <ApiRow name="state" ty="ListState">
                             "The items and their selection, from "<Code inline=true>"use_list_state"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The menu element; the props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">
+                        <ApiRow name="element" ty="CapturedElement">"The menu element; the part captures it. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">
                             "The element id, generated when "<Code inline=true>"None"</Code>". Use "
                             <Code inline=true>"menu_props.id"</Code>" of the menu trigger, which its "
                             <Code inline=true>"aria-controls"</Code>" points to."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the menu."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">
                             "The ids of the elements naming the menu. A menu trigger provides "<Code inline=true>"menu_props.aria_labelledby"</Code>"."
                         </ApiRow>
                         <ApiRow name="options" ty="CollectionOptions" default="should_focus_wrap: true">
@@ -281,9 +281,9 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
                 <Section title="Return" id="use-menu-return">
                     <ApiTable kind=ApiKind::Return of="UseMenuReturn">
-                        <ApiRow name="props" ty="UseMenuProps">
+                        <ApiRow name="menu" ty="Part<UseMenuProps>">
                             "For the menu element: "<Code inline=true>"role=\"menu\""</Code>", id, label and the "
-                            "collection\u{2019}s keyboard and focus handlers. Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            "collection\u{2019}s keyboard and focus handlers. Spread with "<Code inline=true>"{..menu.attrs()}"</Code>"."
                         </ApiRow>
                         <ApiRow name="data" ty="MenuData">
                             "Hand this to "<Code inline=true>"use_menu_item"</Code>" and "<Code inline=true>"use_menu_section"</Code>
@@ -323,13 +323,13 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             selection: SelectionOptions::default(),
                         });
 
-                        let UseMenuReturn { props, data } = use_menu(UseMenuInput {
+                        let UseMenuReturn { menu, data } = use_menu(UseMenuInput {
                             state,
                             element: CapturedElement::new(),
                             // From `use_menu_trigger`, when the menu opens from a button.
                             id: Some(menu_props.id),
                             aria_label: MaybeProp::default(),
-                            aria_labelledby: menu_props.aria_labelledby.into(),
+                            aria_labelledby: Signal::derive(move || Some(menu_props.aria_labelledby.get())),
                             options: CollectionOptions {
                                 auto_focus: menu_props.auto_focus,
                                 should_focus_wrap: true,
@@ -341,7 +341,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             submenu: None,
                         });
 
-                        view! { <ul {..props.into_attrs()}>/* items and sections, see below */</ul> }
+                        view! { <ul {..menu.attrs()}>/* items and sections, see below */</ul> }
                     "#)}
                 </Code>
                 </Section>
@@ -377,11 +377,11 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
                 <Section title="Return" id="use-menu-item-return">
                     <ApiTable kind=ApiKind::Return of="UseMenuItemReturn">
-                        <ApiRow name="props" ty="PropsWithStyles<UseMenuItemProps>">
+                        <ApiRow name="item" ty="Part<PropsWithStyles<UseMenuItemProps>>">
                             "For the item element: role, "<Code inline=true>"aria-disabled"</Code>", "
                             <Code inline=true>"aria-checked"</Code>", labelling and the press, hover and keyboard handlers."
                         </ApiRow>
-                        <ApiRow name="label_props, description_props, keyboard_shortcut_props" ty="SlotProps">
+                        <ApiRow name="label, description, keyboard_shortcut" ty="Part<SlotProps>">
                             "For elements holding the item\u{2019}s label, description and keyboard shortcut. The item is "
                             "labelled and described by the slots you render."
                         </ApiRow>
@@ -469,17 +469,17 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             },
                         };
 
-                        let UseMenuItemReturn { props, label_props, is_focused, .. } = use_menu_item(UseMenuItemInput {
+                        let UseMenuItemReturn { item, label, is_focused, .. } = use_menu_item(UseMenuItemInput {
                             menu: data.clone(),
                             key,
                             should_close_on_select: CloseOnSelect::Auto,
                             submenu_trigger: None,
                         });
-                        let (attrs, styles) = props.into_parts();
+                        let (attrs, styles) = item.attrs();
 
                         view! {
                             <li {..attrs} style=styles>
-                                <span {..label_props.into_attrs()}>{text}</span>
+                                <span {..label.attrs()}>{text}</span>
                             </li>
                         }
                     ")}
@@ -532,14 +532,14 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
                 <Section title="Return" id="use-menu-section-return">
                     <ApiTable kind=ApiKind::Return of="UseMenuSectionReturn">
-                        <ApiRow name="item_props" ty="UseMenuSectionItemProps">
+                        <ApiRow name="section" ty="Part<UseMenuSectionItemProps>">
                             "For the element wrapping heading and group (an "<Code inline=true>"<li>"</Code>" in a "
                             <Code inline=true>"<ul>"</Code>" menu): "<Code inline=true>"role=\"presentation\""</Code>"."
                         </ApiRow>
-                        <ApiRow name="heading_props" ty="UseMenuSectionHeadingProps">
+                        <ApiRow name="header" ty="Part<UseMenuSectionHeadingProps>">
                             "For the heading element; "<Code inline=true>"None"</Code>" when the section has no header."
                         </ApiRow>
-                        <ApiRow name="group_props" ty="UseMenuSectionGroupProps">
+                        <ApiRow name="group" ty="Part<UseMenuSectionGroupProps>">
                             "For the element containing the items: "<Code inline=true>"role=\"group\""</Code>", labelled by the heading."
                         </ApiRow>
                         <ApiRow name="heading" ty="Signal<Option<String>>">"The header text."</ApiRow>
@@ -548,13 +548,13 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <Section title="Example" id="use-menu-section-example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        let UseMenuSectionReturn { item_props, heading_props, group_props, heading } =
+                        let UseMenuSectionReturn { section, header, group, heading } =
                             use_menu_section(UseMenuSectionInput { menu: data.clone(), key });
 
                         view! {
-                            <li {..item_props.into_attrs()}>
-                                {heading_props.map(|props| view! { <span {..props.into_attrs()}>{heading}</span> })}
-                                <ul {..group_props.into_attrs()}>/* the section's items */</ul>
+                            <li {..section.attrs()}>
+                                {move || heading.get().map(|heading| view! { <span {..header.attrs()}>{heading}</span> })}
+                                <ul {..group.attrs()}>/* the section's items */</ul>
                             </li>
                         }
                     ")}
@@ -624,17 +624,18 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             "For the trigger item: pass it to "<Code inline=true>"use_menu_item"</Code>" ("
                             <Code inline=true>"submenu_trigger"</Code>")."
                         </ApiRow>
-                        <ApiRow name="submenu" ty="SubmenuProps">
-                            "For the submenu: pass it to "<Code inline=true>"use_menu"</Code>" ("<Code inline=true>"submenu"</Code>")."
+                        <ApiRow name="submenu" ty="Part<SubmenuProps>">
+                            "For the submenu: in the component that renders it, take the props with "<Code inline=true>"submenu.props()"</Code>
+                            " and pass them to "<Code inline=true>"use_menu"</Code>" ("<Code inline=true>"submenu"</Code>")."
                         </ApiRow>
                         <ApiRow name="should_close_on_interact_outside" ty="InteractOutsideFilter">
                             "For the submenu\u{2019}s popover: an interaction outside it closes it, except on the trigger item."
                         </ApiRow>
                     </ApiTable>
                     <ApiTable kind=ApiKind::Fields of="SubmenuTriggerItem">
-                        <ApiRow name="id" ty="String">"The trigger item\u{2019}s id, which names the submenu."</ApiRow>
+                        <ApiRow name="id" ty="Id">"The trigger item\u{2019}s id, which names the submenu."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The trigger item\u{2019}s element, captured by the item."</ApiRow>
-                        <ApiRow name="aria_controls" ty="Signal<Option<String>>">"The submenu\u{2019}s id while it is open."</ApiRow>
+                        <ApiRow name="aria_controls" ty="Signal<Option<Id>>">"The submenu\u{2019}s id while it is open."</ApiRow>
                         <ApiRow name="aria_haspopup" ty="Signal<Option<AriaHasPopup>>">
                             <Code inline=true>"menu"</Code>" or "<Code inline=true>"dialog"</Code>", after the "<Code inline=true>"kind"</Code>"."
                         </ApiRow>
@@ -651,8 +652,8 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         <ApiRow name="on_hover_change" ty="Callback<bool>">"Opens the submenu after hovering for "<Code inline=true>"delay"</Code>"."</ApiRow>
                     </ApiTable>
                     <ApiTable kind=ApiKind::Fields of="SubmenuProps">
-                        <ApiRow name="id" ty="String">"The submenu\u{2019}s id."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="String">"The trigger item names the submenu."</ApiRow>
+                        <ApiRow name="id" ty="Id">"The submenu\u{2019}s id."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Id">"The trigger item names the submenu."</ApiRow>
                         <ApiRow name="level" ty="usize">"The submenu\u{2019}s level in the menu tree."</ApiRow>
                         <ApiRow name="on_close" ty="Callback<()>">"Closes the whole menu tree, after an item\u{2019}s action."</ApiRow>
                         <ApiRow name="auto_focus" ty="Signal<Option<FocusStrategy>>">"Which item to focus when the submenu opens."</ApiRow>
@@ -716,7 +717,8 @@ pub fn PageUseMenuHook() -> impl IntoView {
                                 submenu_trigger: Some(trigger),
                             });
 
-                            // The submenu, rendered in a popover while `state.is_open` is true.
+                            // The submenu, rendered in a popover while `state.is_open` is true: the
+                            // component rendering it takes the submenu's props on every opening.
                             let share_menu = use_menu(UseMenuInput {
                                 state: share_state,
                                 element: submenu_element,
@@ -730,7 +732,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                                 keyboard_delegate: None,
                                 on_action: None,
                                 on_close: None,
-                                submenu: Some(submenu),
+                                submenu: submenu.props(),
                             });
 
                         "#)}

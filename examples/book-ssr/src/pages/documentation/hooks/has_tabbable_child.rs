@@ -36,9 +36,9 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
                     <ApiRow name="has_tabbable_child" ty="Signal<bool>">
                         "Whether the container has at least one tabbable descendant."
                     </ApiRow>
-                    <ApiRow name="props" ty="UseHasTabbableChildProps">
+                    <ApiRow name="target" ty="Part<UseHasTabbableChildProps>">
                         "Captures the container element. Spread it onto the container with "
-                        <Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        <Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -54,7 +54,7 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::hooks::focus::{UseHasTabbableChildInput, UseHasTabbableChildReturn, use_has_tabbable_child};
 
-                        let UseHasTabbableChildReturn { has_tabbable_child, props } =
+                        let UseHasTabbableChildReturn { has_tabbable_child, target } =
                             use_has_tabbable_child(UseHasTabbableChildInput::default());
 
                         view! {
@@ -62,7 +62,7 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
                                 role="group"
                                 aria-label="Attachments"
                                 tabindex=move || if has_tabbable_child.get() { -1 } else { 0 }
-                                {..props.into_attrs()}
+                                {..target.attrs()}
                             >
                                 <button>"Child button"</button>
                             </div>

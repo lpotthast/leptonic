@@ -1,14 +1,16 @@
 // Upstream: react-aria/src/dialog/useDialog.ts @ 99e6102368
 // Upstream: react-aria/test/dialog/useDialog.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use web_sys::FocusEvent;
 
 use crate::{
-    EventHandler, IntoAttrs, OnEvent,
+    EventHandler, Id, IntoAttrs, OnEvent, Part,
     utils::{
         aria::AriaRole,
         id::use_id,
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         slot_id::{SlotProps, use_slot},
     },
 };
@@ -18,8 +20,9 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The title and content elements are slots (`SlotProps`, spread onto the elements): the dialog
-//   references them only while they are rendered (react-aria: `useSlotId`).
+// - The title and content elements are slots (`Part<SlotProps>`: each mount takes their props,
+//   one element at a time): the dialog references them only while they are rendered
+//   (react-aria: `useSlotId`).
 // - `is_entering` is a signal: focusing waits until it is `false`.
 // - `fallback_aria_labelledby` names a dialog without title or label: react-aria-components labels
 //   a `DialogTrigger`'s dialog by the trigger in the component, which our hook can't tell apart
@@ -50,40 +53,55 @@ pub struct UseDialogInput {
     /// Names the dialog when it has no title element. Replaces the title as its name.
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the dialog, instead of its title element.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// The ids of the elements describing the dialog. Default for alert dialogs: their content
     /// element.
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Whether the dialog is still animating in; it is focused once this is `false`.
     pub is_entering: Signal<bool>,
     /// The ids of the elements naming the dialog when it has neither a title element, nor
     /// `aria_label` or `aria_labelledby` (the trigger that opened it).
-    pub fallback_aria_labelledby: Signal<Option<String>>,
+    pub fallback_aria_labelledby: Signal<Option<Id>>,
 }
 
 /// The return value of [`use_dialog`].
 #[derive(Debug)]
 pub struct UseDialogReturn {
-    /// Props for the dialog element (captures it for focusing on mount).
-    pub dialog_props: UseDialogProps,
-    /// Props for the title element (a heading), which names the dialog while it is rendered.
-    pub title_props: SlotProps,
-    /// Props for the content element, which describes an alert dialog while it is rendered.
-    pub content_props: SlotProps,
+    /// The dialog element.
+    pub dialog: Part<UseDialogProps>,
+    /// The title element (a heading), which names the dialog while it is rendered.
+    pub title: Part<SlotProps>,
+    /// The content element, which describes an alert dialog while it is rendered.
+    pub content: Part<SlotProps>,
 }
 
 /// Props for the dialog element.
 #[derive(Debug)]
 pub struct UseDialogProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub tabindex: i32,
     /// Stops focus leaving during the iOS refocus workaround from reaching parent overlays.
     pub on_focusout: EventHandler<FocusEvent>,
     pub element_capture: ElementCaptureAttr,
+}
+
+impl Remount for UseDialogProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            tabindex: self.tabindex,
+            on_focusout: self.on_focusout.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseDialogProps {
@@ -91,12 +109,12 @@ impl IntoAttrs for UseDialogProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::Tabindex, self.tabindex),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-describedby", self.aria_describedby),
+            fixed_attr("tabindex", self.tabindex),
             self.on_focusout.into_on(ev::focusout),
             self.element_capture,
         )
@@ -105,12 +123,12 @@ impl IntoAttrs for UseDialogProps {
 
 /// Attributes for the dialog element.
 pub type UseDialogAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::Tabindex, i32>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<Id>>,
+    FixedAttr,
     OnEvent<ev::focusout>,
     ElementCaptureAttr,
 );
@@ -129,9 +147,9 @@ pub type UseDialogAttrs = (
 /// });
 ///
 /// view! {
-///     <section {..dialog.dialog_props.into_attrs()}>
-///         <h2 {..dialog.title_props.into_attrs()}>"Delete file?"</h2>
-///         <p {..dialog.content_props.into_attrs()}>"It is deleted permanently."</p>
+///     <section {..dialog.dialog.attrs()}>
+///         <h2 {..dialog.title.attrs()}>"Delete file?"</h2>
+///         <p {..dialog.content.attrs()}>"It is deleted permanently."</p>
 ///         <button>"Delete"</button>
 ///     </section>
 /// }
@@ -275,14 +293,14 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
         {
             crate::utils::dev_warn!(
                 "A dialog must have a title for accessibility: render a title element with \
-                 `title_props` (the `DialogTitle` atom), or set `aria_label` or `aria_labelledby`."
+                 `title` (the `DialogTitle` atom), or set `aria_label` or `aria_labelledby`."
             );
         }
         true
     });
 
     UseDialogReturn {
-        dialog_props: UseDialogProps {
+        dialog: Part::stored(UseDialogProps {
             id: dialog_id,
             role,
             aria_label,
@@ -291,8 +309,8 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
             tabindex: -1,
             on_focusout: EventHandler::new(handle_blur),
             element_capture: element.attr(),
-        },
-        title_props: title.props,
-        content_props: content.props,
+        }),
+        title: title.part,
+        content: content.part,
     }
 }

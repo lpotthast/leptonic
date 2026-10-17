@@ -1,10 +1,10 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::datepicker::{
         DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, TimeBound,
-        UseDateFieldReturn, UseDateSegmentInput, UseDateSegmentReturn, UseTimeFieldInput,
-        UseTimeFieldStateInput, use_date_segment, use_time_field, use_time_field_state,
+        UseDateFieldReturn, UseDateSegmentInput, UseTimeFieldInput, UseTimeFieldStateInput,
+        use_date_segment, use_time_field, use_time_field_state,
     },
     jiff::civil::{DateTime, Time, time},
 };
@@ -22,10 +22,10 @@ pub fn TimeFieldHookDemo() -> impl IntoView {
     });
     // A time field is a date field of hours and minutes: `state.field` edits the time on a date.
     let UseDateFieldReturn {
-        label_props,
-        field_props,
-        input_props,
-        error_message_props,
+        label,
+        field,
+        input,
+        error_message,
         data,
         ..
     } = use_time_field(UseTimeFieldInput {
@@ -37,13 +37,13 @@ pub fn TimeFieldHookDemo() -> impl IntoView {
             ..DateFieldOptions::default()
         },
     });
-    let (field_attrs, field_styles) = field_props.into_parts();
+    let (field_attrs, field_styles) = field.attrs();
     let segments = state.field.segments;
     let errors = state.field.validation.validation_errors;
 
     view! {
         <div class="demo-date-field">
-            <span {..label_props.into_attrs()} class="demo-field-label">"Pickup time"</span>
+            <span {..label.attrs()} class="demo-field-label">"Pickup time"</span>
             <div {..field_attrs} style=field_styles class="demo-date-input">
                 <For
                     each=move || {
@@ -64,8 +64,8 @@ pub fn TimeFieldHookDemo() -> impl IntoView {
                     }
                 />
             </div>
-            <input {..input_props.into_attrs()}/>
-            <span {..error_message_props.into_attrs()} class="demo-field-error">{move || errors.get().join(" ")}</span>
+            <input {..input.attrs()}/>
+            <span {..error_message.attrs()} class="demo-field-error">{move || errors.get().join(" ")}</span>
         </div>
 
         <p class="demo-status">
@@ -100,12 +100,13 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<DateTime>) -> impl 
         }
         .into_any();
     }
-    let UseDateSegmentReturn { segment_props } = use_date_segment(UseDateSegmentInput {
+    let (attrs, styles) = use_date_segment(UseDateSegmentInput {
         segment,
         data,
         element: CapturedElement::new(),
-    });
-    let (attrs, styles) = segment_props.into_parts();
+    })
+    .segment
+    .attrs();
     view! {
         <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>
     }

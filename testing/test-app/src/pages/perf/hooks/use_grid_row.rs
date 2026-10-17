@@ -1,31 +1,129 @@
 //! Hook rows (`use_grid_row` on plain elements) in a hook grid, for the performance test of
-//! `use_grid_row` (`leptonic/tests/perf_tests/hooks/use_grid_row.rs`): the grid of the `use_grid`
-//! fixture ([`super::use_grid`]: [`SMALL`] rows "Row <i>" of three cells, in row focus mode with
-//! multiple selection), between two plain buttons (`#perf-before`, `#perf-after`) to tab from and
-//! to, mounted at first. Its controls ([`Control`]) mount and unmount the grid (`mount`,
-//! `mount-with-actions`: with a row action; `unmount`), set its size while unmounted (`small`,
-//! `large`: [`LARGE`] rows), add and remove a row (mounting and unmounting a `use_grid_row`),
-//! disable the second row, prepare the live announcer (`prepare-announcer`: its first
-//! announcement waits for its live regions) and read how many rows are selected (`selected`) and
-//! how often a row action ran (`actions`).
+//! `use_grid_row` (`leptonic/tests/perf_tests/hooks/use_grid_row.rs`): a grid (`use_grid` on a
+//! `div`) of [`SMALL`] rows "Row <i>" of three cells, in row focus mode with multiple selection,
+//! between two plain buttons (`#perf-before`, `#perf-after`) to tab from and to, mounted at first.
+//! Its controls ([`Control`]) mount and unmount the grid (`mount`, `mount-with-actions`: with a row
+//! action; `unmount`), set its size while unmounted (`small`, `large`: [`LARGE`] rows), add and
+//! remove a row (mounting and unmounting a `use_grid_row`), disable the second row, prepare the
+//! live announcer (`prepare-announcer`: its first announcement waits for its live regions) and read
+//! how many rows are selected (`selected`) and how often a row action ran (`actions`).
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
-    Assertiveness, CapturedElement, IntoAttrs, announce,
+    Assertiveness, CapturedElement, announce, flag,
     hooks::{
-        collections::{CollectionOptions, Key, SelectionMode, SelectionOptions},
+        collections::{
+            Collection, CollectionMemo, CollectionOptions, Key, Selection, SelectionMode,
+            SelectionOptions,
+        },
         grid::{
-            GridFocusMode, GridState, UseGridInput, UseGridReturn, UseGridStateInput, use_grid,
-            use_grid_state,
+            CellFocusMode, GridData, GridFocusMode, GridState, UseGridCellInput, UseGridCellReturn,
+            UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn, UseGridStateInput,
+            use_grid, use_grid_cell, use_grid_row, use_grid_state,
         },
         gridlist::KeyboardNavigationBehavior,
     },
 };
 use leptos::prelude::*;
 
-use super::use_grid::{HookGridRowWithCells, LARGE, SMALL, grid_collection, selected_count};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small grid.
+const SMALL: usize = 10;
+
+/// The rows of the large grid.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`), each with the cells "Row <i>", "Value <i>" and
+/// "Group <i % 3>".
+fn grid_collection(rows: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..rows.get() {
+                b.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
+
+/// How many rows of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
+
+/// A row: `use_grid_row` on a `div`, its pressed state in `data-pressed`.
+#[component]
+fn HookGridRow(grid: GridData, key: Key, children: Children) -> impl IntoView {
+    let UseGridRowReturn {
+        row: row_props,
+        is_pressed,
+        ..
+    } = use_grid_row(UseGridRowInput {
+        grid,
+        key,
+        on_context_menu: None,
+    });
+    let (attrs, styles) = row_props.attrs();
+    view! {
+        <div {..attrs} style=styles data-pressed=flag(is_pressed)>
+            {children()}
+        </div>
+    }
+}
+
+/// A cell: `use_grid_cell` on a `div`, its pressed state in `data-pressed`.
+#[component]
+fn HookGridCell(
+    grid: GridData,
+    key: Key,
+    #[prop(optional)] focus_mode: Option<CellFocusMode>,
+    children: Children,
+) -> impl IntoView {
+    let UseGridCellReturn {
+        cell: grid_cell_props,
+        is_pressed,
+    } = use_grid_cell(UseGridCellInput {
+        should_select_on_press_up: grid.should_select_on_press_up,
+        grid,
+        key,
+        id: None,
+        focus_mode,
+        allows_arrow_navigation: false,
+    });
+    let (attrs, styles) = grid_cell_props.attrs();
+    view! {
+        <div {..attrs} style=styles data-pressed=flag(is_pressed)>
+            {children()}
+        </div>
+    }
+}
+
+/// Row `i` with its three cells.
+#[component]
+fn HookGridRowWithCells(grid: GridData, i: usize) -> impl IntoView {
+    let row = Key::from(i);
+    view! {
+        <HookGridRow grid=grid.clone() key=row.clone()>
+            <HookGridCell grid=grid.clone() key=Key::cell(&row, 0)>
+                {format!("Row {i}")}
+            </HookGridCell>
+            <HookGridCell grid=grid.clone() key=Key::cell(&row, 1)>
+                {format!("Value {i}")}
+            </HookGridCell>
+            <HookGridCell grid=grid key=Key::cell(&row, 2)>
+                {format!("Group {}", i % 3)}
+            </HookGridCell>
+        </HookGridRow>
+    }
+}
 
 /// The grid: `use_grid` on a `div`, with its rows; `on_row_action` counts row actions.
 #[component]
@@ -34,7 +132,7 @@ fn PerfGrid(
     rows: RwSignal<usize>,
     on_row_action: Option<Callback<Key>>,
 ) -> impl IntoView {
-    let UseGridReturn { props, data } = use_grid(UseGridInput {
+    let UseGridReturn { grid: props, data } = use_grid(UseGridInput {
         state,
         element: CapturedElement::new(),
         id: None,
@@ -48,7 +146,7 @@ fn PerfGrid(
         on_cell_action: None,
     });
     view! {
-        <div {..props.into_attrs()}>
+        <div {..props.attrs()}>
             <For each=move || 0..rows.get() key=|i| *i let:i>
                 <HookGridRowWithCells grid=data.clone() i=i />
             </For>

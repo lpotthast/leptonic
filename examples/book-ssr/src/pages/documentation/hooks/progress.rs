@@ -32,21 +32,25 @@ pub fn PageUseProgressBar() -> impl IntoView {
                         "How the value text is formatted: a percent style formats the percentage, other styles the value."
                     </ApiRow>
                     <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the formatted value text (e.g. \u{201c}1 of 4\u{201d})."</ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                    <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
+                    <ApiRow name="id" ty="Option<Id>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with the "<Code inline=true>"label"</Code>" part)."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names it when there is no visible label."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming it."</ApiRow>
-                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing it."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of further elements naming it."</ApiRow>
+                    <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of elements describing it."</ApiRow>
+                    <ApiRow name="role" ty="ProgressRole" default="Progressbar">
+                        "The element\u{2019}s role: "<Code inline=true>"Progressbar"</Code>" or "<Code inline=true>"Meter"</Code>
+                        " (what "<Code inline=true>"use_meter"</Code>" sets)."
+                    </ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseProgressBarReturn">
-                    <ApiRow name="props" ty="UseProgressBarProps">
+                    <ApiRow name="progress_bar" ty="Part<UseProgressBarProps>">
                         "Spread on the progress bar element: "<Code inline=true>"role"</Code>", "<Code inline=true>"aria-valuenow"</Code>", "<Code inline=true>"aria-valuemin"</Code>", "<Code inline=true>"aria-valuemax"</Code>", "
                         <Code inline=true>"aria-valuetext"</Code>", id and labelling."
                     </ApiRow>
-                    <ApiRow name="label_props" ty="UseLabelProps">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                    <ApiRow name="label" ty="Part<UseLabelProps>">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
                     <ApiRow name="percentage" ty="Signal<Option<Fraction>>">
                         "The value as a share of the range, a "<Code inline=true>"Fraction"</Code>" from 0 to 1 ("
                         <Code inline=true>"as_percent()"</Code>": 0 to 100); "<Code inline=true>"None"</Code>" while indeterminate."
@@ -76,9 +80,9 @@ pub fn PageUseProgressBar() -> impl IntoView {
                         });
 
                         view! {
-                            <span {..progress.label_props.into_attrs()}>"Uploading"</span>
+                            <span {..progress.label.attrs()}>"Uploading"</span>
                             <span>{progress.value_text}</span>
-                            <div {..progress.props.into_attrs()} class="track">
+                            <div {..progress.progress_bar.attrs()} class="track">
                                 <div class="fill" style=fill></div>
                             </div>
                         }

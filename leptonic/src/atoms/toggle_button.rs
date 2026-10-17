@@ -10,7 +10,7 @@ use web_sys::FocusEvent;
 
 use super::typed_values::{KeyedStateProps, keyed_state_props};
 use crate::{
-    CapturedElement, IntoAttrs, Orientation, Out,
+    CapturedElement, Orientation, Out,
     hooks::{
         button::{
             ToggleGroupSelectionMode, ToggleGroupState, UseButtonInput, UseToggleButtonGroupInput,
@@ -25,7 +25,7 @@ use crate::{
     },
     utils::{
         aria::{AriaExpanded, AriaHasPopup},
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         styles::Styles,
     },
@@ -113,9 +113,9 @@ pub fn ToggleButton(
     let classes = with_default_class("leptonic-ToggleButton", classes);
     let button = UseButtonInput {
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_controls: crate::utils::prop_signal(aria_controls),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        aria_controls: crate::utils::id::id_ref_prop(aria_controls),
         aria_expanded,
         aria_haspopup,
         is_disabled,
@@ -135,7 +135,23 @@ pub fn ToggleButton(
         on_focus_change,
         on_key_down,
         on_key_up,
-        ..UseButtonInput::default()
+        element_type: crate::hooks::button::ButtonElementType::Button,
+        button_type: crate::hooks::button::ButtonType::Button,
+        id: None,
+        is_pending: Signal::stored(false),
+        allow_focus_when_disabled: Signal::stored(false),
+        href: Signal::stored(None),
+        target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+        rel: Vec::new(),
+        form: crate::hooks::button::ButtonFormAttributes::default(),
+        aria_pressed: Signal::stored(None),
+        aria_checked: Signal::stored(None),
+        role: None,
+        aria_current: Signal::stored(None),
+        aria_disabled: Signal::stored(None),
+        long_press: None,
+        shortcuts: None,
+        on_context_menu: None,
     };
     let group = use_context::<ToggleButtonGroupContext>();
     if group.is_some() && value.is_none() {
@@ -145,6 +161,7 @@ pub fn ToggleButton(
         );
     }
     let (input, is_selected) = if let (Some(group), Some(value)) = (group, value) {
+        // Only this button's key's changes (`performance.md` R1).
         let selected_value = value.clone();
         let is_selected = Signal::derive(move || group.state.is_selected(&selected_value));
         let input = use_toggle_button_group_item(UseToggleButtonGroupItemInput {
@@ -167,18 +184,20 @@ pub fn ToggleButton(
     };
     let is_disabled = input.is_disabled;
     let button = use_button(input);
-    let (attrs, button_styles) = button.props.into_parts();
+    let (attrs, button_styles) = button.button.attrs();
 
     view! {
         <button
             {..attrs}
             class=classes
             style=button_styles.merge(styles)
-            data-selected=flag(is_selected)
-            data-pressed=flag(button.is_pressed)
-            data-hovered=flag(button.is_hovered)
-            data-focused=flag(button.is_focused)
-            data-disabled=flag(is_disabled)
+            // At most 3 signals per effect (`performance.md` R4).
+            {..data_flags([
+                ("data-pressed", button.is_pressed),
+                ("data-hovered", button.is_hovered),
+                ("data-focused", button.is_focused),
+            ])}
+            {..data_flags([("data-selected", is_selected), ("data-disabled", is_disabled)])}
         >
             {children()}
         </button>
@@ -247,18 +266,18 @@ pub fn ToggleButtonGroup<V: SelectionValue>(
             element: CapturedElement::new(),
             orientation,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
         },
     });
 
     view! {
         <Provider value=ToggleButtonGroupContext { state }>
             <div
-                {..group.props.into_attrs()}
+                {..group.group.attrs()}
                 class=classes
                 style=styles
                 data-orientation=move || orientation.get().as_str()
-                data-disabled=flag(state.is_disabled)
+                {..data_flags([("data-disabled", state.is_disabled)])}
             >
                 {children()}
             </div>

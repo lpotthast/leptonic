@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::focus::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
 };
@@ -19,7 +18,7 @@ pub fn FocusRingKeyboardDemo() -> impl IntoView {
     let (focus_count, set_focus_count) = signal(0_u32);
 
     let UseFocusRingReturn {
-        props,
+        target,
         is_focused,
         is_focus_visible,
     } = use_focus_ring(UseFocusRingInput {
@@ -30,7 +29,7 @@ pub fn FocusRingKeyboardDemo() -> impl IntoView {
 
     view! {
         // The CSS draws the ring on `[data-focus-visible]`, which the hook sets.
-        <button type="button" class="demo-focus-ring" {..props.into_attrs()}>
+        <button type="button" class="demo-focus-ring" {..target.attrs()}>
             "Click me, then tab away and back"
         </button>
 

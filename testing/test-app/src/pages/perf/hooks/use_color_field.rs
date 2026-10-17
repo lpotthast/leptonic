@@ -6,7 +6,7 @@
 //! (`value`, as a number `0xRRGGBB`, `-1` without a color).
 
 use leptonic::{
-    IntoAttrs, RGB8,
+    RGB8,
     hooks::color::{
         UseColorFieldInput, UseColorFieldStateInput, use_color_field, use_color_field_state,
     },
@@ -62,8 +62,8 @@ fn Field(
         on_key_up: None,
     });
     view! {
-        <label {..field.label_props.into_attrs()}>"Color"</label>
-        <input {..field.input_props.into_attrs()} class="perf-input" />
+        <label {..field.label.attrs()}>"Color"</label>
+        <input {..field.input.attrs()} class="perf-input" />
     }
 }
 

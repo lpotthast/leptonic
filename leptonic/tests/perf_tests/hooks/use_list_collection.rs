@@ -1,18 +1,18 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! The performance of the hook `use_list_collection` (`/perf/hooks/use_list_collection`, the
-//! fixture of `use_collection`'s performance test, building the collection from a list of
-//! values): what each thing it offers costs, measured (`Page::measure`) and checked against its
-//! budget (`tests/budgets/hooks/use_list_collection.json`): building the collection (mounting)
-//! and dropping it, and rebuilding it when its values change (a value appended and removed,
-//! renamed, the order reversed, and a new list of equal values, which notifies nobody), with 10
-//! values and with 1,000.
+//! The performance of the hook `use_list_collection` (`/perf/hooks/use_list_collection`, a
+//! collection built from a list of values, shown in a plain list): what each thing it offers costs,
+//! measured (`Page::measure`) and checked against its budget
+//! (`tests/budgets/hooks/use_list_collection.json`): building the collection (mounting) and
+//! dropping it, and rebuilding it when its values change (a value appended and removed, renamed,
+//! the order reversed, and a new list of equal values, which notifies nobody), with 10 values and
+//! with 1,000.
 use browser_test::{TestGroup, browser_test};
 use rootcause::Report;
 
-use super::use_collection::{
-    append_and_remove_in, large, mount_and_unmount_in, rename_in, reverse_in, unchanged_rebuild_in,
+use crate::{
+    harness::fixture_test,
+    pages::{ElementActions, Page},
 };
-use crate::{harness::fixture_test, pages::Page};
 
 const PATH: &str = "/perf/hooks/use_list_collection";
 
@@ -29,6 +29,76 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(ReverseLarge))
         .with(fixture_test(UnchangedRebuild))
         .with(fixture_test(UnchangedRebuildLarge))
+}
+const LIST: &str = "#perf-list";
+const ITEMS: &str = "#perf-list > li";
+
+/// The list entry of item `i`.
+fn item(i: u32) -> String {
+    format!("[data-perf-item='{i}']")
+}
+
+/// Switches to 1,000 items (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.wait_for_count(ITEMS, 1_000).await?;
+    Ok(())
+}
+
+/// Building the collection of `count` items (mounting) and dropping it.
+async fn mount_and_unmount_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
+    page.control("unmount").await?;
+    page.wait_for_count(LIST, 0).await?;
+    page.measure("mount", page.control("mount")).await?;
+    page.wait_for_count(ITEMS, count).await?;
+    page.measure("unmount", page.control("unmount")).await?;
+    page.wait_for_count(LIST, 0).await?;
+    Ok(())
+}
+
+/// An item appended to `count` and removed again.
+async fn append_and_remove_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
+    page.measure("append", page.control("append")).await?;
+    page.element(item(count)).await?;
+    page.measure("remove", page.control("remove-last")).await?;
+    page.wait_for_count(item(count), 0).await?;
+    Ok(())
+}
+
+/// The first item renamed and back.
+async fn rename_in(page: &Page<'_>) -> Result<(), Report> {
+    page.measure("rename", page.control("rename-first")).await?;
+    page.element(item(0))
+        .await?
+        .wait_for_inner_text("Renamed 0")
+        .await?;
+    page.measure("restore", page.control("restore-first"))
+        .await?;
+    page.element(item(0))
+        .await?
+        .wait_for_inner_text("Item 0")
+        .await?;
+    Ok(())
+}
+
+/// The order of `count` items reversed and back.
+async fn reverse_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
+    page.measure("reverse", page.control("reverse")).await?;
+    page.element(format!("{ITEMS}:first-child{}", item(count - 1)))
+        .await?;
+    page.measure("restore", page.control("reverse")).await?;
+    page.element(format!("{ITEMS}:first-child{}", item(0)))
+        .await?;
+    Ok(())
+}
+
+/// A change of data the build reads but the collection doesn't depend on: the build runs, the
+/// equal collection notifies nobody (the list keeps its `count` entries).
+async fn unchanged_rebuild_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
+    page.measure("touch", page.control("touch")).await?;
+    page.count_stays(ITEMS, count, std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
 }
 
 /// Building and dropping a collection of 10 items.

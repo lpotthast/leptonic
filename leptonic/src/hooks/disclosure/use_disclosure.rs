@@ -1,19 +1,18 @@
 // Upstream: react-aria/src/disclosure/useDisclosure.ts @ 99e6102368
 // Upstream: react-aria/test/disclosure/useDisclosure.test.ts @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-    tachys::html::attribute::custom::{CustomAttr, custom_attribute},
-};
+use leptos::prelude::*;
 
 use super::use_disclosure_state::DisclosureState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, IntoAttrs,
+    CapturedElement, ElementCaptureAttr, Id, IntoAttrs, Part,
     hooks::{button::UseButtonInput, interactions::PressEvent},
     utils::{
         aria::{AriaExpanded, AriaHidden, AriaRole},
         id::use_id,
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+        slot_id::referenced_id,
+        spread::Spread,
     },
 };
 
@@ -27,6 +26,11 @@ use crate::{
 // - The panel element is captured by `panel_props` instead of passing a ref.
 // - The collapsed panel is rendered with `hidden="until-found"` from the start, on the server too
 //   (react-aria: `hidden` while server rendering, `until-found` once hydrated).
+//
+// ## DIFFERENT BEHAVIOR
+// - The trigger's `aria-controls` refers to the panel only while the panel is rendered (after
+//   mount, as `use_slot`'s references): a panel the app renders conditionally leaves no reference
+//   to a missing element (react-aria always sets it; its panel is always rendered).
 //
 // =============================================================================
 
@@ -45,10 +49,10 @@ pub struct UseDisclosureReturn {
     /// Configuration for the trigger button: pass it to `use_button` (with struct update syntax
     /// for your own settings).
     pub button: UseButtonInput,
-    /// Props for the panel element.
-    pub panel_props: UseDisclosurePanelProps,
+    /// The panel element: the trigger controls it while it is rendered.
+    pub panel: Part<UseDisclosurePanelProps>,
     /// The trigger's id (also in `button`).
-    pub trigger_id: String,
+    pub trigger_id: Id,
     /// The panel element, once rendered.
     pub panel_element: CapturedElement,
 }
@@ -56,10 +60,10 @@ pub struct UseDisclosureReturn {
 /// Props for the panel element.
 #[derive(Debug)]
 pub struct UseDisclosurePanelProps {
-    pub id: String,
+    pub id: Id,
     /// `group` by default; `region` for an important section (a landmark).
-    pub role: Signal<AriaRole>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub role: AriaRole,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub aria_hidden: Signal<Option<AriaHidden>>,
     /// Whether the panel renders collapsed (`hidden="until-found"`): the state when the hook
     /// ran. Afterwards the hook manages the attribute; a panel rendered later (again) sets this
@@ -72,25 +76,25 @@ impl IntoAttrs for UseDisclosurePanelProps {
     type Attrs = UseDisclosurePanelAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaHidden, self.aria_hidden),
-            custom_attribute("hidden", self.hidden_until_found.then_some("until-found")),
+        Spread((
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-hidden", self.aria_hidden),
+            fixed_attr("hidden", self.hidden_until_found.then_some("until-found")),
             self.element_capture,
-        )
+        ))
     }
 }
 
-pub type UseDisclosurePanelAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, Signal<AriaRole>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
-    CustomAttr<&'static str, Option<&'static str>>,
+pub type UseDisclosurePanelAttrs = Spread<(
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaHidden>>,
+    FixedAttr,
     ElementCaptureAttr,
-);
+)>;
 
 /// A disclosure: a trigger button showing and hiding a panel. A collapsed panel is
 /// `hidden="until-found"`, so the browser's find in page still finds (and expands) its content.
@@ -103,10 +107,10 @@ pub type UseDisclosurePanelAttrs = (
 ///     state,
 ///     is_disabled: Signal::stored(false),
 /// });
-/// let (button_attrs, button_styles) = use_button(disclosure.button).props.into_parts();
+/// let (button_attrs, button_styles) = use_button(disclosure.button).button.attrs();
 /// view! {
 ///     <button {..button_attrs} style=button_styles>"Details"</button>
-///     <div {..disclosure.panel_props.into_attrs()}>"Content"</div>
+///     <div {..disclosure.panel.attrs()}>"Content"</div>
 /// }
 /// ```
 pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
@@ -116,6 +120,22 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
     let panel_id = use_id("disclosure-panel");
     let panel_element = CapturedElement::new();
     let is_expanded = state.is_expanded;
+    // Each rendering of the panel: collapsed as the state is then (the panel may render again,
+    // e.g. inside a `Show`).
+    let panel = {
+        let id = panel_id.clone();
+        let aria_labelledby = Signal::stored(Some(trigger_id.clone()));
+        let aria_hidden = Signal::derive(move || (!is_expanded.get()).then_some(AriaHidden::True));
+        let element_capture = panel_element.attr();
+        Part::observed(move || UseDisclosurePanelProps {
+            id: id.clone(),
+            role: AriaRole::Group,
+            aria_labelledby,
+            aria_hidden,
+            hidden_until_found: !is_expanded.get_untracked(),
+            element_capture: element_capture.clone(),
+        })
+    };
 
     #[cfg(not(feature = "ssr"))]
     manage_panel(state, is_disabled, panel_element);
@@ -124,7 +144,8 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         id: Some(trigger_id.clone()),
         is_disabled,
         aria_expanded: Signal::derive(move || Some(AriaExpanded::from(is_expanded.get()))),
-        aria_controls: Signal::stored(Some(panel_id.clone())),
+        // While the panel is rendered.
+        aria_controls: referenced_id(&panel, panel_id),
         // Toggles on press, except for keyboard presses, which toggle on press start.
         on_press: Some(Callback::new(move |e: PressEvent| {
             if !is_disabled.get_untracked() && e.pointer_type != PointerType::Keyboard {
@@ -136,19 +157,45 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
                 state.toggle();
             }
         })),
-        ..UseButtonInput::default()
+        element_type: crate::hooks::button::ButtonElementType::Button,
+        button_type: crate::hooks::button::ButtonType::Button,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: Signal::stored(None),
+        is_pending: Signal::stored(false),
+        allow_focus_when_disabled: Signal::stored(false),
+        exclude_from_tab_order: Signal::stored(false),
+        auto_focus: false,
+        prevent_focus_on_press: Signal::stored(false),
+        href: Signal::stored(None),
+        target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+        rel: Vec::new(),
+        form: crate::hooks::button::ButtonFormAttributes::default(),
+        aria_haspopup: Signal::stored(None),
+        aria_describedby: Signal::stored(None),
+        aria_pressed: Signal::stored(None),
+        aria_checked: Signal::stored(None),
+        role: None,
+        aria_current: Signal::stored(None),
+        aria_disabled: Signal::stored(None),
+        on_press_end: None,
+        on_press_up: None,
+        on_press_change: None,
+        long_press: None,
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
+        on_context_menu: None,
     };
 
     UseDisclosureReturn {
         button,
-        panel_props: UseDisclosurePanelProps {
-            id: panel_id,
-            role: Signal::stored(AriaRole::Group),
-            aria_labelledby: Signal::stored(Some(trigger_id.clone())),
-            aria_hidden: Signal::derive(move || (!is_expanded.get()).then_some(AriaHidden::True)),
-            hidden_until_found: !is_expanded.get_untracked(),
-            element_capture: panel_element.attr(),
-        },
+        panel,
         trigger_id,
         panel_element,
     }

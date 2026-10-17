@@ -5,11 +5,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 42,
+        "allocations": 21,
         "reallocations": 1,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -30,11 +31,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 45,
+        "allocations": 22,
         "reallocations": 2,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -57,16 +59,17 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 306,
-        "reallocations": 15,
+        "allocations": 259,
+        "reallocations": 13,
         "memo_runs": 7,
         "memo_runs_unchanged": 1,
         "effect_runs": 2,
-        "render_effect_runs": 8,
+        "render_effect_runs": 5,
         "immediate_effect_runs": 0,
         "signal_notifications": 2,
         "dom_attributes": 0,
@@ -82,11 +85,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -109,11 +113,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 67,
+        "allocations": 33,
         "reallocations": 2,
         "memo_runs": 3,
         "memo_runs_unchanged": 1,
@@ -134,11 +139,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 67,
+        "allocations": 33,
         "reallocations": 2,
         "memo_runs": 3,
         "memo_runs_unchanged": 1,
@@ -161,11 +167,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 61,
+        "allocations": 32,
         "reallocations": 2,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
@@ -186,11 +193,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 61,
+        "allocations": 32,
         "reallocations": 2,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
@@ -213,11 +221,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 21,
+        "allocations": 11,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -238,11 +247,12 @@
         "atoms/meter",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 29,
+        "allocations": 15,
         "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,

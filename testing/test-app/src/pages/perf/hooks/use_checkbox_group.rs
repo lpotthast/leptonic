@@ -7,15 +7,12 @@
 
 use std::collections::HashSet;
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        collections::Key,
-        form::{
-            CheckboxGroupData, CheckboxGroupState, ToggleOptions, UseCheckboxGroupInput,
-            UseCheckboxGroupItemInput, UseCheckboxGroupStateInput, use_checkbox_group,
-            use_checkbox_group_item, use_checkbox_group_state,
-        },
+use leptonic::hooks::{
+    collections::Key,
+    form::{
+        CheckboxGroupData, CheckboxGroupState, ToggleOptions, UseCheckboxGroupInput,
+        UseCheckboxGroupItemInput, UseCheckboxGroupStateInput, use_checkbox_group,
+        use_checkbox_group_item, use_checkbox_group_state,
     },
 };
 use leptos::prelude::*;
@@ -70,7 +67,7 @@ fn Group(
     });
     let group = use_checkbox_group(UseCheckboxGroupInput {
         state: group_state,
-        id: Some("perf-group".to_owned()),
+        id: Some("perf-group".into()),
         has_label: true.into(),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
@@ -82,8 +79,8 @@ fn Group(
     });
     let data = group.data;
     view! {
-        <div {..group.props.into_attrs()}>
-            <span {..group.label_props.into_attrs()}>"Items"</span>
+        <div {..group.group.attrs()}>
+            <span {..group.label.attrs()}>"Items"</span>
             {(0..size)
                 .map(|item| view! { <GroupCheckbox group=data.clone() item /> })
                 .collect_view()}
@@ -101,8 +98,16 @@ fn GroupCheckbox(group: CheckboxGroupData, item: i32) -> impl IntoView {
         on_change: None,
         options: ToggleOptions::default(),
     });
-    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
-    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let (label_attrs, label_styles) = checkbox
+        .label
+        .props()
+        .expect("the first label takes its props")
+        .into_parts();
+    let (input_attrs, input_styles) = checkbox
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <label {..label_attrs} style=label_styles>
             <input {..input_attrs} style=input_styles />

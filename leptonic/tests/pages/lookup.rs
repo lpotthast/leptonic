@@ -1,8 +1,10 @@
 //! The lookups, shared by pages (below the document) and elements (below the element): one
 //! implementation, so that both scopes behave the same.
 //!
-//! Native WebDriver queries find candidates. Text and descendant filters compose in Rust;
-//! roles come from the browser, so the helper does not duplicate ARIA semantics.
+//! One script in the page finds the candidates of a lookup, already filtered by their text (one
+//! round trip, whatever the page's size); roles come from the browser (WebDriver's computed
+//! role, per remaining candidate), so the helper does not duplicate ARIA semantics. Descendant
+//! filters compose in Rust.
 
 use std::{sync::Arc, time::Duration};
 
@@ -10,12 +12,11 @@ use assertr::{matchers::eq, pattern, prelude::*};
 use browser_test::{
     StepExt,
     thirtyfour::{
-        By,
         error::{WebDriverError, WebDriverErrorInner},
         session::handle::SessionHandle,
     },
 };
-use rootcause::Report;
+use rootcause::{Report, prelude::ResultExt};
 
 use crate::pages::{ElementActions, Locator, WebElement, health, locator::Selector};
 
@@ -121,15 +122,35 @@ fn resolve(
     .step("find")
 }
 
+/// The elements below the root (`arguments[0]`, `null`: the document) matching the CSS selector
+/// `arguments[1]`, in document order; with a text (`arguments[2]`), only those whose text content,
+/// whitespace collapsed, is it.
+const CANDIDATES: &str = "const [root, selector, text] = arguments;
+    const candidates = [...(root ?? document).querySelectorAll(selector)];
+    if (text === null) return candidates;
+    return candidates.filter(element =>
+        element.textContent.trim().split(/\\s+/).join(' ') === text);";
+
 pub(crate) async fn elements(root: Root<'_>, locator: Locator) -> Result<Vec<WebElement>, Report> {
     let selector = match &locator.selector {
         Selector::Css(css) => css.as_str(),
         Selector::Role(_) => "*",
     };
-    let candidates = match root {
-        Root::Page(session) => session.find_all(By::Css(selector)).await?,
-        Root::WebElement(element) => element.find_all(By::Css(selector)).await?,
+    let root_argument = match root {
+        Root::Page(_) => serde_json::Value::Null,
+        Root::WebElement(element) => element.to_json()?,
     };
+    // One round trip: a page of thousands of elements would cost thousands of WebDriver
+    // commands, one per candidate.
+    let candidates = root
+        .handle()
+        .execute(
+            CANDIDATES,
+            vec![root_argument, selector.into(), locator.text.clone().into()],
+        )
+        .await
+        .context_with(|| format!("failed to find the candidates of {locator}"))?
+        .elements()?;
     let mut found = Vec::new();
     for element in candidates {
         let matches = async {
@@ -137,12 +158,6 @@ pub(crate) async fn elements(root: Root<'_>, locator: Locator) -> Result<Vec<Web
                 && element.accessible_role().await? != role.into_str()
             {
                 return Ok(false);
-            }
-            if let Some(text) = &locator.text {
-                let actual = element.prop("textContent").await?.unwrap_or_default();
-                if actual.split_whitespace().collect::<Vec<_>>().join(" ") != *text {
-                    return Ok(false);
-                }
             }
             let mut matches = true;
             for inner in &locator.has {

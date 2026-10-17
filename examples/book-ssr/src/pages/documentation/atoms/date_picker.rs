@@ -49,7 +49,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell><Code inline=true>"DatePickerGroup"</Code></TableCell>
-                        <TableCell>"The picker\u{2019}s group props (with "<Code inline=true>"use_date_picker_group"</Code>"\u{2019}s keys)."</TableCell>
+                        <TableCell>"The picker\u{2019}s group part (with "<Code inline=true>"use_date_picker_group"</Code>"\u{2019}s keys)."</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell><Code inline=true>"DatePickerButton"</Code></TableCell>
@@ -160,7 +160,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                             "What the browser may autofill ("<Code inline=true>"autocomplete"</Code>", e.g. "<Code inline=true>"\"bday\""</Code>"), through a visually hidden date input."
                         </ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when the picker is rendered."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
@@ -217,7 +217,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="start_name, end_name" ty="Option<String>" default="None">"The names of the hidden inputs of the ends."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the hidden inputs belong to."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the start\u{2019}s first segment when rendered."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the picker."</ApiRow>

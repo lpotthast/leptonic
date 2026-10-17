@@ -5,8 +5,6 @@
 //! opening it with its button and selecting an option with the mouse, typing (filtering the
 //! options), the keyboard (opening, moving through the options, selecting, leaving), Escape closing
 //! it, and its disabled input changing, with 10 options and with 1,000.
-//!
-//! `use_combobox_state`'s performance test uses the same fixture and the helpers here.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -32,14 +30,14 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(Escape))
         .with(fixture_test(DisableAndEnable))
 }
-pub(crate) const INPUT: &str = "[data-perf-input]";
-pub(crate) const BUTTON: &str = "[data-perf-button]";
-pub(crate) const POPOVER: &str = "[data-perf-popover]";
-pub(crate) const OPTIONS: &str = "[data-perf-option]";
+const INPUT: &str = "[data-perf-input]";
+const BUTTON: &str = "[data-perf-button]";
+const POPOVER: &str = "[data-perf-popover]";
+const OPTIONS: &str = "[data-perf-option]";
 
 /// Loads the fixture at `path` and creates the live announcer's regions (its first announcement
 /// waits for them, so an announcing step measured first would count them, or not).
-pub(crate) async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
+async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
     page.goto_path(path).await?;
     page.control("prepare-announcer").await?;
     page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
@@ -48,23 +46,23 @@ pub(crate) async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
 }
 
 /// The option "Option `i`".
-pub(crate) fn option(i: u32) -> String {
+fn option(i: u32) -> String {
     format!("[data-perf-option='{i}']")
 }
 
 /// The combo box's value: the selected option's number, `-1` for none.
-pub(crate) async fn value(page: &Page<'_>) -> Result<f64, Report> {
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
     page.control("value").await
 }
 
 /// Switches to 1,000 options (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.settle().await
 }
 
-/// Mounting the combo box's elements (or everything) and unmounting them.
-pub(crate) async fn mount_and_unmount_in(page: &Page<'_>) -> Result<(), Report> {
+/// Mounting the combo box's elements and unmounting them.
+async fn mount_and_unmount_in(page: &Page<'_>) -> Result<(), Report> {
     page.control("unmount").await?;
     page.wait_for_count(INPUT, 0).await?;
     page.measure("mount", page.control("mount")).await?;

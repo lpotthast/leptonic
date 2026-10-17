@@ -32,7 +32,8 @@ const FRUITS: [&str; 3] = ["Apple", "Banana", "Cherry"];
 ///   `#glf-replace-selection`, actions in `#glf-replace-actions`.
 /// - `#glf-links`: link rows "One" (`#glf-one`) and "Two" (`#glf-two`).
 /// - `#glf-sections`: sections "Fruit" (Apple, Banana with a description) and "Vegetables"
-///   (Carrot).
+///   (Carrot); `#glf-toggle-parts` unmounts and mounts the "Fruit" header and Banana's
+///   description.
 #[component]
 pub fn PageAtomGridListFeatures() -> impl IntoView {
     let fruits = || {
@@ -52,6 +53,7 @@ pub fn PageAtomGridListFeatures() -> impl IntoView {
     let input_selection = RwSignal::new(String::new());
     let actions = RwSignal::new(Vec::<String>::new());
     let replace_selection = RwSignal::new(String::new());
+    let parts_shown = RwSignal::new(true);
     let replace_actions = RwSignal::new(Vec::<String>::new());
     let links = use_collection(|b| {
         let _ = b.item("one", "One").link(ItemLink::new("#glf-one"));
@@ -184,11 +186,15 @@ pub fn PageAtomGridListFeatures() -> impl IntoView {
         <div id="glf-sections">
             <GridList collection=sections aria_label="Groceries">
                 <GridListSection key="fruit">
-                    <GridListHeader />
+                    <Show when=move || parts_shown.get()>
+                        <GridListHeader />
+                    </Show>
                     <GridListItem key="apple">"Apple"</GridListItem>
                     <GridListItem key="banana">
                         "Banana"
-                        <GridListItemDescription>"Yellow"</GridListItemDescription>
+                        <Show when=move || parts_shown.get()>
+                            <GridListItemDescription>"Yellow"</GridListItemDescription>
+                        </Show>
                     </GridListItem>
                 </GridListSection>
                 <GridListSection key="vegetables">
@@ -196,6 +202,9 @@ pub fn PageAtomGridListFeatures() -> impl IntoView {
                     <GridListItem key="carrot">"Carrot"</GridListItem>
                 </GridListSection>
             </GridList>
+            <button id="glf-toggle-parts" on:click=move |_| parts_shown.update(|shown| *shown = !*shown)>
+                "Hide or show the header and the description"
+            </button>
         </div>
     }
 }

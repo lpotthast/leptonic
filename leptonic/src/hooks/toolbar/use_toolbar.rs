@@ -1,11 +1,11 @@
 // Upstream: react-aria/src/toolbar/useToolbar.ts @ 99e6102368
-use leptos::{attr, attr::Attr, ev, ev::Capture, prelude::*};
+use leptos::{ev, ev::Capture, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent,
     hooks::focus::{FocusManager, FocusManagerOptions},
     utils::{
         aria::{AriaOrientation, AriaRole},
@@ -13,7 +13,9 @@ use crate::{
         i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
         orientation::Orientation,
+        part::{Part, Remount},
         shadow_dom::{get_active_element, get_event_target, node_contains},
+        signal_attr::{SignalAttr, maybe_attr, signal_attr},
     },
 };
 
@@ -37,7 +39,7 @@ pub struct UseToolbarInput {
     pub orientation: Signal<Orientation>,
     pub aria_label: MaybeProp<String>,
     /// Ignored when `aria_label` is set.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 }
 
 impl Default for UseToolbarInput {
@@ -51,11 +53,11 @@ impl Default for UseToolbarInput {
     }
 }
 
-/// Output of [`use_toolbar`].
+/// The return value of [`use_toolbar`].
 #[derive(Debug)]
 pub struct UseToolbarReturn {
-    /// Props for the toolbar element.
-    pub props: UseToolbarProps,
+    /// The toolbar element.
+    pub toolbar: Part<UseToolbarProps>,
 }
 
 /// Props for the toolbar element.
@@ -65,18 +67,33 @@ pub struct UseToolbarProps {
     pub role: Signal<AriaRole>,
     pub aria_orientation: Signal<AriaOrientation>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     pub on_focus_capture: EventHandler<FocusEvent>,
     pub on_blur_capture: EventHandler<FocusEvent>,
 }
 
+impl Remount for UseToolbarProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_orientation: self.aria_orientation,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            element_capture: self.element_capture.clone(),
+            on_keydown_capture: self.on_keydown_capture.clone(),
+            on_focus_capture: self.on_focus_capture.clone(),
+            on_blur_capture: self.on_blur_capture.clone(),
+        }
+    }
+}
+
 pub type UseToolbarAttrs = (
-    Attr<attr::Role, Signal<AriaRole>>,
-    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    SignalAttr<AriaRole>,
+    SignalAttr<AriaOrientation>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
     ElementCaptureAttr,
     OnEvent<Capture<ev::keydown>>,
     OnEvent<Capture<ev::focus>>,
@@ -88,10 +105,10 @@ impl IntoAttrs for UseToolbarProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            signal_attr("role", self.role),
+            signal_attr("aria-orientation", self.aria_orientation),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
             self.element_capture,
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
             self.on_focus_capture.into_on(ev::capture(ev::focus)),
@@ -227,7 +244,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     });
 
     UseToolbarReturn {
-        props: UseToolbarProps {
+        toolbar: Part::stored(UseToolbarProps {
             role: Signal::derive(move || {
                 if is_in_toolbar.get() {
                     AriaRole::Group
@@ -247,6 +264,6 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
             on_keydown_capture,
             on_focus_capture,
             on_blur_capture,
-        },
+        }),
     }
 }

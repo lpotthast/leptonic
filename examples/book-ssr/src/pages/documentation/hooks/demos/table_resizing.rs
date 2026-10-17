@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use leptonic::{
-    CapturedElement, IntoAttrs, computed_px, computed_size,
+    CapturedElement, computed_px, computed_size,
     hooks::{
         collections::{CollectionOptions, DisabledBehavior, Key, SelectionOptions},
         grid::{GridFocusMode, use_grid_row_group},
@@ -64,7 +64,7 @@ const COLUMNS: [(&str, &str); 4] = [
 
 #[component]
 pub fn TableResizingHookDemo() -> impl IntoView {
-    let table = Memo::new(|_| {
+    let collection = Memo::new(|_| {
         Arc::new(TableCollection::build(|t| {
             // Twice the share of the space left by the fixed columns, but at least 140 pixels.
             t.column("name", "Name")
@@ -94,7 +94,7 @@ pub fn TableResizingHookDemo() -> impl IntoView {
     let state = use_table_state(UseTableStateInput {
         show_selection_checkboxes: Signal::stored(false),
         tree: None,
-        table,
+        table: collection,
         selection: SelectionOptions {
             disabled_behavior: DisabledBehavior::Selection,
             ..SelectionOptions::default()
@@ -104,7 +104,7 @@ pub fn TableResizingHookDemo() -> impl IntoView {
         sort_descriptor: None,
         on_sort_change: None,
     });
-    let UseTableReturn { props, data } = use_table(UseTableInput {
+    let UseTableReturn { table, data } = use_table(UseTableInput {
         aria_label: "Files".into(),
         state,
         element: CapturedElement::new(),
@@ -148,11 +148,11 @@ pub fn TableResizingHookDemo() -> impl IntoView {
 
     view! {
         <div node_ref=container class="demo-table-scroll">
-            <table {..props.into_attrs()} class="demo-table demo-resizable-table">
-                <thead {..use_grid_row_group().row_group_props.into_attrs()}>
-                    <tr {..use_table_header_row().into_attrs()}>{headers}</tr>
+            <table {..table.attrs()} class="demo-table demo-resizable-table">
+                <thead {..use_grid_row_group().row_group.attrs()}>
+                    <tr {..use_table_header_row().attrs()}>{headers}</tr>
                 </thead>
-                <tbody {..use_grid_row_group().row_group_props.into_attrs()}>
+                <tbody {..use_grid_row_group().row_group.attrs()}>
                     {FILES.map(|file| view! { <FileRow table=data.clone() file/> }).collect_view()}
                 </tbody>
             </table>
@@ -189,7 +189,7 @@ fn ColumnHeader(table: TableData, resize: TableColumnResizeState, column: Key) -
         key: column,
         allows_arrow_navigation: false,
     });
-    let (attrs, styles) = header.column_header_props.into_parts();
+    let (attrs, styles) = header.column_header.attrs();
 
     view! {
         <th {..attrs} style=styles.add_reactive(width) data-resizing=is_resizing>
@@ -216,8 +216,8 @@ fn Resizer(table: TableData, resize: TableColumnResizeState, column: Key) -> imp
         on_resize_end: None,
     });
     let is_resizing = resizer.is_resizing;
-    let (attrs, styles) = resizer.resizer_props.into_parts();
-    let (input_attrs, input_styles) = resizer.input_props.into_parts();
+    let (attrs, styles) = resizer.resizer.attrs();
+    let (input_attrs, input_styles) = resizer.input.attrs();
 
     view! {
         <div
@@ -240,7 +240,7 @@ fn FileRow(table: TableData, file: File) -> impl IntoView {
         key: key.clone(),
         on_context_menu: None,
     });
-    let (attrs, styles) = row.row_props.into_parts();
+    let (attrs, styles) = row.row.attrs();
     let cells = [file.name, file.kind, file.size, file.modified]
         .into_iter()
         .enumerate()
@@ -259,7 +259,7 @@ fn Cell(table: TableData, key: Key, children: Children) -> impl IntoView {
         allows_arrow_navigation: false,
         should_select_on_press_up: false,
     });
-    let (attrs, styles) = cell.grid_cell_props.into_parts();
+    let (attrs, styles) = cell.cell.attrs();
 
     view! { <td {..attrs} style=styles>{children()}</td> }
 }

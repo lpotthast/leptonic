@@ -67,24 +67,20 @@ pub fn PageInteractions() -> impl IntoView {
                 <Section title="Combining Hooks">
                     <p>
                         <Code inline=true>"use_press"</Code>" and "<Code inline=true>"use_hover"</Code>" are the most "
-                        "commonly paired hooks. Convert each hook\u{2019}s props to attributes and spread both onto the same "
+                        "commonly paired hooks. Spread both hooks\u{2019} "<Code inline=true>"target"</Code>" parts onto the same "
                         "element. Leptos attaches each event handler, so both hooks receive the events they need:"
                     </p>
 
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{
-                                IntoAttrs,
-                                hooks::interactions::{UseHoverInput, UsePressInput, use_hover, use_press},
-                            };
+                            use leptonic::hooks::interactions::{UseHoverInput, UsePressInput, use_hover, use_press};
                             use leptos::prelude::*;
 
                             let press = use_press(UsePressInput::default());
                             let hover = use_hover(UseHoverInput::default());
-                            let (press_attrs, styles) = press.props.into_parts();
-                            let hover_attrs = hover.props.into_attrs();
+                            let (press_attrs, styles) = press.target.attrs();
 
-                            view! { <button {..press_attrs} {..hover_attrs} style=styles>"Press or hover me"</button> }
+                            view! { <button {..press_attrs} {..hover.target.attrs()} style=styles>"Press or hover me"</button> }
                         "#)}
                     </Code>
 
@@ -105,7 +101,9 @@ pub fn PageInteractions() -> impl IntoView {
                         </li>
                         <li>
                             <Link href=routes::doc::interactions::UseScrollWheel.materialize()>"use_scroll_wheel"</Link>
-                            " steps the value of "<Link href=routes::doc::NumberField.materialize()>"number fields"</Link>
+                            " reads the wheel without scrolling the page; "
+                            <Link href=routes::doc::interactions::UseWheelStepping.materialize()>"use_wheel_stepping"</Link>
+                            " builds on it to step the value of focused "<Link href=routes::doc::NumberField.materialize()>"number fields"</Link>
                             " and "<Link href=routes::doc::ColorField.materialize()>"color fields"</Link>"."
                         </li>
                         <li>

@@ -7,7 +7,6 @@
 //! `datetime-local` or a `date` input) and disable and enable it.
 
 use leptonic::{
-    IntoAttrs,
     hooks::datepicker::{
         Granularity, UseDateFieldStateInput, UseHiddenDateInputInput, UseHiddenDateInputReturn,
         use_date_field_state, use_hidden_date_input,
@@ -33,8 +32,8 @@ fn HiddenInput(
         ..UseDateFieldStateInput::default()
     });
     let UseHiddenDateInputReturn {
-        container_props,
-        input_props,
+        container: container_props,
+        input: input_props,
     } = use_hidden_date_input(UseHiddenDateInputInput {
         value: state.value,
         base: state.date_value,
@@ -44,10 +43,10 @@ fn HiddenInput(
         name: None,
         is_disabled: state.is_disabled,
     });
-    let styles = container_props.styles.clone();
+    let (container_attrs, styles) = container_props.attrs();
     view! {
-        <div {..container_props.into_attrs()} style=styles>
-            <input {..input_props.into_attrs()} id="perf-hidden" />
+        <div {..container_attrs} style=styles>
+            <input {..input_props.attrs()} id="perf-hidden" />
         </div>
     }
 }

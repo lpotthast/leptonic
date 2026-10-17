@@ -78,7 +78,7 @@ pub fn PageDisclosureOverview() -> impl IntoView {
 
                 <ul>
                     <li><Code inline=true>"aria-expanded"</Code>" on the trigger tells whether the panel is shown."</li>
-                    <li><Code inline=true>"aria-controls"</Code>" on the trigger points to the panel."</li>
+                    <li><Code inline=true>"aria-controls"</Code>" on the trigger points to the panel while it is rendered."</li>
                     <li>
                         "The panel is labelled by the trigger ("<Code inline=true>"aria-labelledby"</Code>"). Collapsed, it is "
                         <Code inline=true>"hidden=\"until-found\""</Code>": hidden, but the browser\u{2019}s find in page still "

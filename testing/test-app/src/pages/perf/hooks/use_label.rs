@@ -5,10 +5,7 @@
 //! its props: whether the label is visible, a further label (`aria-labelledby`), an
 //! `aria-label`.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::form::{LabelElementType, UseLabelInput, use_label},
-};
+use leptonic::hooks::form::{LabelElementType, UseLabelInput, use_label};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -17,7 +14,7 @@ use crate::pages::perf::{Control, PerfControls};
 pub fn PagePerf() -> impl IntoView {
     let mounted = RwSignal::new(true);
     let has_label = RwSignal::new(true);
-    let labelled_by = RwSignal::new(None::<String>);
+    let labelled_by = RwSignal::new(None::<leptonic::Id>);
     let aria_label = RwSignal::new(None::<String>);
     let controls = vec![
         Control::action("mount", move || mounted.set(true)),
@@ -25,11 +22,11 @@ pub fn PagePerf() -> impl IntoView {
         Control::action("show-label", move || has_label.set(true)),
         Control::action("hide-label", move || has_label.set(false)),
         Control::action("add-other-label", move || {
-            labelled_by.set(Some("perf-other-label".to_owned()));
+            labelled_by.set(Some("perf-other-label".into()));
         }),
         Control::action("remove-other-label", move || labelled_by.set(None)),
         Control::action("set-aria-label", move || {
-            aria_label.set(Some("Full name".to_owned()));
+            aria_label.set(Some("Full name".into()));
         }),
         Control::action("unset-aria-label", move || aria_label.set(None)),
     ];
@@ -49,19 +46,19 @@ pub fn PagePerf() -> impl IntoView {
 #[component]
 fn LabelledInput(
     has_label: RwSignal<bool>,
-    labelled_by: RwSignal<Option<String>>,
+    labelled_by: RwSignal<Option<leptonic::Id>>,
     aria_label: RwSignal<Option<String>>,
 ) -> impl IntoView {
     let label = use_label(UseLabelInput {
-        id: Some("perf-input".to_owned()),
-        label_id: Some("perf-label".to_owned()),
+        id: Some("perf-input".into()),
+        label_id: Some("perf-label".into()),
         has_label: has_label.into(),
         label_element_type: LabelElementType::Label,
         aria_label: aria_label.into(),
         aria_labelledby: labelled_by.into(),
     });
     view! {
-        <label {..label.label_props.into_attrs()}>"Name"</label>
-        <input {..label.field_props.into_attrs()} />
+        <label {..label.label.attrs()}>"Name"</label>
+        <input {..label.field.attrs()} />
     }
 }

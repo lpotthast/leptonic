@@ -26,19 +26,19 @@ pub fn PageUseToolbar() -> impl IntoView {
                         <Code inline=true>"Vertical"</Code>". Also sets "<Code inline=true>"aria-orientation"</Code>"."
                     </ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The toolbar\u{2019}s accessible name."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">
                         "The id of an element naming the toolbar. Ignored when "<Code inline=true>"aria_label"</Code>" is set."
                     </ApiRow>
-                    <ApiRow name="element" ty="CapturedElement" default="CapturedElement::new()">"Capture of the element receiving the hook props."</ApiRow>
+                    <ApiRow name="element" ty="CapturedElement" default="CapturedElement::new()">"Capture of the element receiving the hook\u{2019}s part."</ApiRow>
                 </ApiTable>
                 <p><Code inline=true>"UseToolbarInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseToolbarReturn">
-                    <ApiRow name="props" ty="UseToolbarProps">
+                    <ApiRow name="toolbar" ty="Part<UseToolbarProps>">
                         <Code inline=true>"role=\"toolbar\""</Code>", "<Code inline=true>"aria-orientation"</Code>
-                        ", the label and the focus handling. Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        ", the label and the focus handling. Spread with "<Code inline=true>"{..toolbar.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -54,7 +54,7 @@ pub fn PageUseToolbar() -> impl IntoView {
                         });
 
                         view! {
-                            <div {..toolbar.props.into_attrs()}>
+                            <div {..toolbar.toolbar.attrs()}>
                                 <button>"Bold"</button>
                                 <button>"Italic"</button>
                                 <button>"Underline"</button>

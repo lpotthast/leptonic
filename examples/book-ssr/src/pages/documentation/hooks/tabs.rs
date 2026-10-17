@@ -152,7 +152,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         "the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseTabListInput">
-                        <ApiRow name="element" ty="CapturedElement">"The tab list element; the hook\u{2019}s props capture it. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The tab list element; the hook\u{2019}s part captures it. Required."</ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                             "Which arrow keys move between the tabs, see "<AnchorLink href="#orientation">"Orientation"</AnchorLink>
                             "; set as "<Code inline=true>"aria-orientation"</Code>"."
@@ -162,16 +162,16 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             <AnchorLink href="#keyboard-activation">"Keyboard Activation"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name for the tab list."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id of a visible label."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The id of a visible label."</ApiRow>
                         <ApiRow name="state" ty="TabListState">"Required. The tab list state shared by the list, tabs and panels."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-tab-list-return">
                     <ApiTable kind=ApiKind::Return of="UseTabListReturn">
-                        <ApiRow name="props" ty="UseTabListProps">
+                        <ApiRow name="tab_list" ty="Part<UseTabListProps>">
                             "The id, "<Code inline=true>"role=\"tablist\""</Code>", "<Code inline=true>"aria-orientation"</Code>
-                            ", the labels, and the keyboard and focus handling. Spread "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            ", the labels, and the keyboard and focus handling. Spread "<Code inline=true>"{..tab_list.attrs()}"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -181,7 +181,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         {indoc!(r#"
                             use leptonic::{
                                 CapturedElement,
-                                IntoAttrs,
                                 Orientation,
                                 hooks::{
                                     tabs::{
@@ -193,7 +192,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                                 },
                             };
 
-                            let UseTabListReturn { props } = use_tab_list(UseTabListInput {
+                            let UseTabListReturn { tab_list } = use_tab_list(UseTabListInput {
                                 state,
                                 element: CapturedElement::new(),
                                 orientation: Orientation::Horizontal.into(),
@@ -203,7 +202,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             });
 
                             view! {
-                                <div {..props.into_attrs()}>
+                                <div {..tab_list.attrs()}>
                                     // One tab per collection item, in collection order.
                                 </div>
                             }
@@ -242,12 +241,12 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Return" id="use-tab-return">
                     <ApiTable kind=ApiKind::Return of="UseTabReturn">
-                        <ApiRow name="props" ty="PropsWithStyles<UseTabProps>">
+                        <ApiRow name="tab" ty="Part<PropsWithStyles<UseTabProps>>">
                             "The id, "<Code inline=true>"role=\"tab\""</Code>", "<Code inline=true>"aria-selected"</Code>", "
                             <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"aria-controls"</Code>" (on the selected "
                             "tab, pointing to its panel), "<Code inline=true>"tabindex"</Code>" ("<Code inline=true>"0"</Code>
                             " on the focused tab, "<Code inline=true>"-1"</Code>" on the others, none on disabled tabs), press and "
-                            "focus handling. Call "<Code inline=true>"props.into_parts()"</Code>" to get "
+                            "focus handling. Call "<Code inline=true>"tab.attrs()"</Code>" to get "
                             <Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_selected" ty="Signal<bool>">"Whether the tab is selected."</ApiRow>
@@ -284,7 +283,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                                     on_blur: None,
                                     on_focus_change: None,
                                 };
-                                let (attrs, styles) = use_tab(input).props.into_parts();
+                                let (attrs, styles) = use_tab(input).tab.attrs();
 
                                 // Style the state through `[aria-selected="true"]` and `[aria-disabled="true"]`.
                                 view! { <div {..attrs} style=styles class="my-tab">{label}</div> }
@@ -309,7 +308,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             "The panel\u{2019}s tab. "<Code inline=true>"None"</Code>": the selected tab; id and label follow the "
                             "selection. Required."
                         </ApiRow>
-                        <ApiRow name="aria_describedby, aria_details" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_describedby, aria_details" ty="Signal<Option<Id>>" default="None">
                             "The ids of elements describing the panel, or holding details about it."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Accessible label when visible content does not provide one."</ApiRow>
@@ -319,11 +318,11 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Return" id="use-tab-panel-return">
                     <ApiTable kind=ApiKind::Return of="UseTabPanelReturn">
-                        <ApiRow name="props" ty="UseTabPanelProps">
+                        <ApiRow name="tab_panel" ty="Part<UseTabPanelProps>">
                             "The id the tab\u{2019}s "<Code inline=true>"aria-controls"</Code>" points to, "
                             <Code inline=true>"role=\"tabpanel\""</Code>", "<Code inline=true>"aria-labelledby"</Code>
                             " (the tab), and "<Code inline=true>"tabindex=\"0\""</Code>" while the panel has no tabbable "
-                            "content. Spread "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            "content. Spread "<Code inline=true>"{..tab_panel.attrs()}"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -332,7 +331,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                IntoAttrs,
                                 hooks::tabs::{UseTabPanelInput, use_tab_panel},
                             };
 
@@ -343,7 +341,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             };
 
                             view! {
-                                <div {..panel.props.into_attrs()}>{text}</div>
+                                <div {..panel.tab_panel.attrs()}>{text}</div>
                             }
                         "#)}
                     </Code>

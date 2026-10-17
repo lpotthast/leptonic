@@ -1,10 +1,7 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::use_button,
-        form::{
-            UseNumberFieldInput, UseNumberFieldStateInput, use_number_field, use_number_field_state,
-        },
+use leptonic::hooks::{
+    button::use_button,
+    form::{
+        UseNumberFieldInput, UseNumberFieldStateInput, use_number_field, use_number_field_state,
     },
 };
 use leptos::prelude::*;
@@ -36,8 +33,8 @@ pub fn PageHookNumberField() -> impl IntoView {
         on_key_down: None,
         on_key_up: None,
     });
-    let (dec_attrs, dec_styles) = use_button(field.decrement_button).props.into_parts();
-    let (inc_attrs, inc_styles) = use_button(field.increment_button).props.into_parts();
+    let (dec_attrs, dec_styles) = use_button(field.decrement_button).button.attrs();
+    let (inc_attrs, inc_styles) = use_button(field.increment_button).button.attrs();
 
     let submits = RwSignal::new(0u32);
 
@@ -49,10 +46,10 @@ pub fn PageHookNumberField() -> impl IntoView {
                 e.prevent_default();
                 submits.update(|s| *s += 1);
             }>
-            <div {..field.group_props.into_attrs()}>
-                <label {..field.label_props.into_attrs()}>"Quantity"</label>
+            <div {..field.group.attrs()}>
+                <label {..field.label.attrs()}>"Quantity"</label>
                 <button {..dec_attrs} style=dec_styles>"-"</button>
-                <input {..field.input_props.into_attrs()} data-testid="input" />
+                <input {..field.input.attrs()} data-testid="input" />
                 <button {..inc_attrs} style=inc_styles>"+"</button>
             </div>
             </form>

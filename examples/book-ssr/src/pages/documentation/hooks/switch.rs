@@ -10,6 +10,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
         "{}#toggleoptions",
         routes::doc::checkbox::Hook.materialize()
     );
+    let toggle_options_of_toggle = toggle_options.clone();
     let toggle_return = format!(
         "{}#use-checkbox-return",
         routes::doc::checkbox::Hook.materialize()
@@ -38,10 +39,9 @@ pub fn PageUseSwitchHook() -> impl IntoView {
 
                 <Section title="Input" id="use-switch-input">
                     <p>
-                        <Code inline=true>"UseSwitchInput"</Code>" is an alias of "<Code inline=true>"UseToggleInput"</Code>
-                        ". Name both fields; "<Code inline=true>"ToggleOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."
+                        "Name both fields; "<Code inline=true>"ToggleOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."
                     </p>
-                    <ApiTable kind=ApiKind::Input of="UseToggleInput">
+                    <ApiTable kind=ApiKind::Input of="UseSwitchInput">
                         <ApiRow name="state" ty="ToggleState">"Whether the switch is on, from "<Code inline=true>"use_toggle_state"</Code>". Required."</ApiRow>
                         <ApiRow name="options" ty="ToggleOptions" default="ToggleOptions::default()">
                             "Disabled, read-only, form and labelling settings: see "<Link href=toggle_options>"ToggleOptions"</Link>"."
@@ -52,8 +52,8 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                 <Section title="Return" id="use-switch-return">
                     <p>
                         <Code inline=true>"UseSwitchReturn"</Code>" is an alias of "<Link href=toggle_return>"UseToggleReturn"</Link>
-                        ": "<Code inline=true>"label_props"</Code>" for the label, "<Code inline=true>"input_props"</Code>
-                        " for the input (with "<Code inline=true>"role=\"switch\""</Code>"), and the state signals "
+                        ": the "<Code inline=true>"label"</Code>" part for the label, the "<Code inline=true>"input"</Code>
+                        " part for the input (with "<Code inline=true>"role=\"switch\""</Code>"), and the state signals "
                         <Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_pressed"</Code>", "
                         <Code inline=true>"is_focus_visible"</Code>", \u{2026} to style the track."
                     </p>
@@ -78,21 +78,40 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                 <p>
                     "The behavior shared by checkboxes and switches, on an "<Code inline=true>"<input type=\"checkbox\">"</Code>
                     " without a role: pressing the input or its label toggles the state, plus validation, form reset and "
-                    "focus-ring tracking. Use it for a toggle that is neither a checkbox nor a switch. It takes the same "
-                    <Code inline=true>"UseToggleInput"</Code>" and returns the same "<Code inline=true>"UseToggleReturn"</Code>
-                    " as "<Code inline=true>"use_switch"</Code>"."
+                    "focus-ring tracking. "<Code inline=true>"use_switch"</Code>" and "<Code inline=true>"use_checkbox"</Code>
+                    " are built on it and return its "<Code inline=true>"UseToggleReturn"</Code>". Name every field of "
+                    <Code inline=true>"UseToggleInput"</Code>"."
                 </p>
                 <ReactAriaSource path="toggle/useToggle.ts"/>
+                <ApiTable kind=ApiKind::Input of="UseToggleInput">
+                    <ApiRow name="state" ty="ToggleState">"Whether the toggle is selected, from "<Code inline=true>"use_toggle_state"</Code>". Required."</ApiRow>
+                    <ApiRow name="role" ty="ToggleRole" default="Checkbox">
+                        "The input\u{2019}s role: "<Code inline=true>"Checkbox"</Code>" (the native role, no attribute) or "
+                        <Code inline=true>"Switch"</Code>" ("<Code inline=true>"role=\"switch\""</Code>", what "<Code inline=true>"use_switch"</Code>" sets)."
+                    </ApiRow>
+                    <ApiRow name="validation" ty="Option<FormValidationState>" default="None">
+                        "A validation managed elsewhere, used instead of the toggle\u{2019}s own: a checkbox group item\u{2019}s, which shows the group\u{2019}s errors. "
+                        <Code inline=true>"None"</Code>": the toggle validates itself."
+                    </ApiRow>
+                    <ApiRow name="options" ty="ToggleOptions" default="ToggleOptions::default()">
+                        "Disabled, read-only, form and labelling settings: see "<Link href=toggle_options_of_toggle>"ToggleOptions"</Link>"."
+                    </ApiRow>
+                </ApiTable>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::hooks::form::{ToggleOptions, UseToggleInput, UseToggleStateInput, use_toggle, use_toggle_state};
+                        use leptonic::hooks::form::{ToggleOptions, ToggleRole, UseToggleInput, UseToggleStateInput, use_toggle, use_toggle_state};
                         use leptos::prelude::*;
 
                         let state = use_toggle_state(UseToggleStateInput::default());
-                        let toggle = use_toggle(UseToggleInput { state, options: ToggleOptions::default() });
+                        let toggle = use_toggle(UseToggleInput {
+                            state,
+                            role: ToggleRole::Checkbox,
+                            validation: None,
+                            options: ToggleOptions::default(),
+                        });
 
-                        let (label_attrs, label_styles) = toggle.label_props.into_parts();
-                        let (input_attrs, input_styles) = toggle.input_props.into_parts();
+                        let (label_attrs, label_styles) = toggle.label.attrs();
+                        let (input_attrs, input_styles) = toggle.input.attrs();
 
                         view! {
                             <label {..label_attrs} style=label_styles>

@@ -1,18 +1,14 @@
 // Upstream: react-aria/src/grid/useGridCell.ts @ 99e6102368
 // Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::GridData;
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         collections::{
             FocusItem, FocusStrategy, Key, LinkBehavior, NavigationOptions, UseSelectableItemAttrs,
@@ -31,8 +27,10 @@ use crate::{
         i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey, redispatch_keyboard_event},
         owner_alive::OwnerAlive,
+        part::{Part, Remount},
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
         shadow_dom::{get_active_element, get_event_target, node_contains},
+        signal_attr::{SignalAttr, signal_attr},
     },
 };
 
@@ -63,7 +61,7 @@ pub struct UseGridCellInput {
     /// The cell's key ([`Key::cell`]).
     pub key: Key,
     /// The element id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// `None`: `Cell` with `KeyboardNavigationBehavior::Tab`, else `Child`.
     pub focus_mode: Option<CellFocusMode>,
     /// Let ArrowLeft/ArrowRight move between the cell's children even with
@@ -73,10 +71,11 @@ pub struct UseGridCellInput {
     pub should_select_on_press_up: bool,
 }
 
-/// Return value of [`use_grid_cell`].
+/// The return value of [`use_grid_cell`].
 #[derive(Debug)]
 pub struct UseGridCellReturn {
-    pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
+    /// The cell element: `let (attrs, styles) = cell.attrs();`.
+    pub cell: Part<PropsWithStyles<UseGridCellProps>>,
     pub is_pressed: Signal<bool>,
 }
 
@@ -95,11 +94,26 @@ pub struct UseGridCellProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
+impl Remount for UseGridCellProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_colspan: self.aria_colspan,
+            aria_colindex: self.aria_colindex,
+            colspan: self.colspan,
+            item: self.item.remount(),
+            on_keydown_capture: self.on_keydown_capture.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+        }
+    }
+}
+
 pub type UseGridCellAttrs = (
-    Attr<attr::Role, Signal<AriaRole>>,
-    Attr<attr::AriaColspan, Signal<Option<usize>>>,
-    Attr<attr::AriaColindex, Signal<Option<usize>>>,
-    Attr<attr::Colspan, Signal<Option<usize>>>,
+    SignalAttr<AriaRole>,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
     UseSelectableItemAttrs,
     OnEvent<ev::Capture<ev::keydown>>,
     OnEvent<ev::focusin>,
@@ -111,10 +125,10 @@ impl IntoAttrs for UseGridCellProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaColspan, self.aria_colspan),
-            Attr(attr::AriaColindex, self.aria_colindex),
-            Attr(attr::Colspan, self.colspan),
+            signal_attr("role", self.role),
+            signal_attr("aria-colspan", self.aria_colspan),
+            signal_attr("aria-colindex", self.aria_colindex),
+            signal_attr("colspan", self.colspan),
             self.item.into_attrs(),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
             self.on_focusin.into_on(ev::focusin),
@@ -228,7 +242,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
 
     let rows = state.list.collection;
     let UseSelectableItemReturn {
-        props: item_props,
+        item: item_props,
         is_pressed,
         allows_selection,
         has_action,
@@ -252,7 +266,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         should_use_virtual_focus: false,
         on_context_menu: None,
     });
-    let (mut item_props, item_styles) = item_props.into_inner();
+    let (mut item_props, item_styles) = item_props.into_props().into_inner();
 
     let reveal = move |target: &web_sys::Element| {
         focus_safely(target);
@@ -495,7 +509,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     };
 
     UseGridCellReturn {
-        grid_cell_props: PropsWithStyles::new(
+        cell: Part::stored(PropsWithStyles::new(
             UseGridCellProps {
                 role: Signal::stored(AriaRole::Gridcell),
                 aria_colspan: Signal::derive(move || position.get().0),
@@ -507,7 +521,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
                 on_pointerdown,
             },
             item_styles,
-        ),
+        )),
         is_pressed,
     }
 }

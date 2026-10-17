@@ -358,6 +358,13 @@ impl SyntheticEvent<Wheel> {
         Self::new("WheelEvent", "wheel")
     }
 
+    /// The horizontal scroll amount (`deltaX`, in the [`delta_mode`](Self::delta_mode)'s unit,
+    /// pixels by default; positive: right).
+    #[must_use]
+    pub fn delta_x(self, delta_x: f64) -> Self {
+        self.set("deltaX", delta_x)
+    }
+
     /// The vertical scroll amount (`deltaY`, in the [`delta_mode`](Self::delta_mode)'s unit,
     /// pixels by default; positive: down).
     #[must_use]

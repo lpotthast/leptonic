@@ -1,17 +1,17 @@
 // Upstream: react-aria/src/tooltip/useTooltip.ts @ 99e6102368
 // Upstream: react-aria/test/tooltip/useTooltip.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use web_sys::PointerEvent;
 
 use super::use_tooltip_trigger_state::{TooltipTiming, TooltipTriggerState};
 use crate::{
     EventHandler, IntoAttrs, OnEvent,
     hooks::interactions::use_hover::{UseHoverInput, use_hover},
-    utils::aria::AriaRole,
+    utils::{
+        aria::AriaRole,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, fixed_attr},
+    },
 };
 
 // =============================================================================
@@ -38,11 +38,11 @@ pub struct UseTooltipInput {
     pub state: Option<TooltipTriggerState>,
 }
 
-/// The return value of the `use_tooltip` hook.
+/// The return value of [`use_tooltip`].
 #[derive(Debug)]
 pub struct UseTooltipReturn {
-    /// Props for the tooltip element. Call `.into_attrs()` for view spreading.
-    pub props: UseTooltipProps,
+    /// The tooltip element.
+    pub tooltip: Part<UseTooltipProps>,
 }
 
 /// Props for the tooltip element.
@@ -53,12 +53,22 @@ pub struct UseTooltipProps {
     pub on_pointerleave: EventHandler<PointerEvent>,
 }
 
+impl Remount for UseTooltipProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerleave: self.on_pointerleave.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseTooltipProps {
     type Attrs = UseTooltipAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
+            fixed_attr("role", self.role),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
         )
@@ -67,7 +77,7 @@ impl IntoAttrs for UseTooltipProps {
 
 /// These attributes must be spread onto the tooltip element.
 pub type UseTooltipAttrs = (
-    Attr<attr::Role, AriaRole>,
+    FixedAttr,
     OnEvent<ev::pointerenter>,
     OnEvent<ev::pointerleave>,
 );
@@ -87,7 +97,7 @@ pub type UseTooltipAttrs = (
 /// });
 ///
 /// view! {
-///     <div id=tooltip_id {..tooltip.props.into_attrs()}>"Tooltip content"</div>
+///     <div id=tooltip_id {..tooltip.tooltip.attrs()}>"Tooltip content"</div>
 /// }
 /// ```
 pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
@@ -106,14 +116,15 @@ pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
                 state.close(TooltipTiming::Delayed);
             })
         }),
-        ..UseHoverInput::default()
+        on_hover_change: None,
     });
+    let hover_props = hover.target.into_props();
 
     UseTooltipReturn {
-        props: UseTooltipProps {
+        tooltip: Part::stored(UseTooltipProps {
             role: AriaRole::Tooltip,
-            on_pointerenter: hover.props.on_pointerenter,
-            on_pointerleave: hover.props.on_pointerleave,
-        },
+            on_pointerenter: hover_props.on_pointerenter,
+            on_pointerleave: hover_props.on_pointerleave,
+        }),
     }
 }

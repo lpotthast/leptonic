@@ -18,7 +18,7 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
             <Section title="Input">
                 <ApiTable kind=ApiKind::Input of="UseOverlayTriggerInput">
                     <ApiRow name="is_open" ty="Signal<bool>">"Whether the overlay is open. Required."</ApiRow>
-                    <ApiRow name="overlay_id" ty="String">
+                    <ApiRow name="overlay_id" ty="Id">
                         "The overlay\u{2019}s id, as returned by "
                         <Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>" or "
                         <Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link>": the trigger\u{2019}s "
@@ -34,9 +34,9 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseOverlayTriggerReturn">
-                    <ApiRow name="props" ty="UseOverlayTriggerProps">
+                    <ApiRow name="trigger" ty="Part<UseOverlayTriggerProps>">
                         "The trigger\u{2019}s ARIA attributes, see "<AnchorLink href="#attributes">"Attributes"</AnchorLink>
-                        ". Spread "<Code inline=true>"{..props.into_attrs()}"</Code>" onto the trigger."
+                        ". Spread "<Code inline=true>"{..trigger.attrs()}"</Code>" onto the trigger."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -60,7 +60,7 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
                         };
 
                         let (is_open, set_is_open) = signal(false);
-                        let UseOverlayReturn { props: overlay_props, id, .. } = use_overlay(UseOverlayInput {
+                        let UseOverlayReturn { overlay, id, .. } = use_overlay(UseOverlayInput {
                             is_open: is_open.into(),
                             on_close: Callback::new(move |()| set_is_open.set(false)),
                             is_dismissable: Signal::stored(false),
@@ -71,19 +71,19 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
                         });
 
 
-                        let UseOverlayTriggerReturn { props: trigger_props } = use_overlay_trigger(UseOverlayTriggerInput {
+                        let UseOverlayTriggerReturn { trigger } = use_overlay_trigger(UseOverlayTriggerInput {
                             is_open: is_open.into(),
                             overlay_id: id,
                             overlay_type: OverlayTriggerType::Dialog,
                         });
-                        let UseButtonReturn { props: button_props, .. } = use_button(UseButtonInput {
+                        let UseButtonReturn { button, .. } = use_button(UseButtonInput {
                             on_press: Some(Callback::new(move |_| set_is_open.update(|open| *open = !*open))),
                             ..UseButtonInput::default()
                         });
-                        let (button_attrs, button_styles) = button_props.into_parts();
+                        let (button_attrs, button_styles) = button.attrs();
 
                         view! {
-                            <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles>"Filters"</button>
+                            <button {..button_attrs} {..trigger.attrs()} style=button_styles>"Filters"</button>
                         }
                     "#)}
                 </Code>

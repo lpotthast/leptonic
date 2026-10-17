@@ -33,8 +33,9 @@ pub fn PageOverlayBehavior() -> impl IntoView {
                     <Link href=routes::doc::overlay_behavior::UseOverlayPosition.materialize()>"use_overlay_position"</Link>
                     " places the overlay. Modal overlays add "
                     <Link href=routes::doc::overlay_behavior::UsePreventScroll.materialize()>"use_prevent_scroll"</Link>" and "
-                    <Link href=routes::doc::overlay_behavior::AriaHideOutside.materialize()>"aria_hide_outside"</Link>
-                    "; non-modal ones close on scroll with "
+                    <Link href=routes::doc::overlay_behavior::UseHideOutside.materialize()>"use_hide_outside"</Link>
+                    " (on "<Link href=routes::doc::overlay_behavior::AriaHideOutside.materialize()>"aria_hide_outside"</Link>
+                    "); non-modal ones close on scroll with "
                     <Link href=routes::doc::overlay_behavior::UseCloseOnScroll.materialize()>"use_close_on_scroll"</Link>
                     ". Focus is managed by a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
                     " from the "<Link href=routes::doc::Focus.materialize()>"Focus"</Link>" building blocks, not by the overlay hooks."
@@ -48,8 +49,8 @@ pub fn PageOverlayBehavior() -> impl IntoView {
                         <TableCell>
                             <Code inline=true>"use_overlay"</Code>" (outside presses close only modal popovers and submenus), "
                             <Code inline=true>"use_overlay_position"</Code>" (closing on scroll when non-modal); "
-                            <Code inline=true>"use_prevent_scroll"</Code>" and "<Code inline=true>"aria_hide_outside"</Code>
-                            " when modal, "<Code inline=true>"keep_visible"</Code>" when not"
+                            <Code inline=true>"use_prevent_scroll"</Code>" when modal; "<Code inline=true>"use_hide_outside"</Code>
+                            " (the page inert when modal, the popover kept visible when not)"
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -77,7 +78,7 @@ pub fn PageOverlayBehavior() -> impl IntoView {
                         </TableCell>
                         <TableCell>
                             <Code inline=true>"use_overlay"</Code>" (not on blur), "<Code inline=true>"use_prevent_scroll"</Code>" and "
-                            <Code inline=true>"aria_hide_outside"</Code>
+                            <Code inline=true>"use_hide_outside"</Code>" (kept visible while it enters)"
                         </TableCell>
                     </TableRow>
                     <TableRow>

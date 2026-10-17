@@ -1,7 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         collections::Key,
@@ -48,21 +47,21 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
         on_focus_change: None,
     });
     let data = group.data;
-    let description_props = group.description_props;
-    let error_message_props = group.error_message_props;
+    let description = group.description;
+    let error_message = group.error_message;
     let validation_errors = group.validation_errors;
 
     view! {
-        <div {..group.props.into_attrs()} class="demo-choice-group">
-            <span {..group.label_props.into_attrs()} class="demo-choice-group-label">"Toppings"</span>
+        <div {..group.group.attrs()} class="demo-choice-group">
+            <span {..group.label.attrs()} class="demo-choice-group-label">"Toppings"</span>
             {TOPPINGS
                 .into_iter()
                 .map(|topping| view! { <ToppingCheckbox group=data.clone() topping/> })
                 .collect_view()}
-            <p {..description_props.into_attrs()} class="demo-choice-group-description">"Toppings cost one euro each."</p>
+            <p {..description.attrs()} class="demo-choice-group-description">"Toppings cost one euro each."</p>
             // Rendered only while invalid, so the checkboxes reference it only then.
             <Show when=move || group.is_invalid.get()>
-                <p {..error_message_props.clone().into_attrs()} class="demo-choice-group-error">
+                <p {..error_message.attrs()} class="demo-choice-group-error">
                     {move || validation_errors.get().join(" ")}
                 </p>
             </Show>
@@ -95,8 +94,8 @@ fn ToppingCheckbox(group: CheckboxGroupData, topping: &'static str) -> impl Into
         on_change: None,
         options: ToggleOptions::default(),
     });
-    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
-    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let (label_attrs, label_styles) = checkbox.label.attrs();
+    let (input_attrs, input_styles) = checkbox.input.attrs();
     let is_focus_visible = checkbox.is_focus_visible;
     view! {
         <label

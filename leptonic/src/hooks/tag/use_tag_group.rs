@@ -4,13 +4,10 @@
 // Upstream: @adobe/react-spectrum/test/tag/TagGroup.test.js @ 99e6102368
 use std::{collections::HashSet, sync::Arc};
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use crate::{
-    CapturedElement, IntoAttrs, SlotProps,
+    CapturedElement, Id, IntoAttrs, Part, SlotProps,
     hooks::{
         collections::{
             CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
@@ -32,6 +29,8 @@ use crate::{
         aria::{AriaAtomic, AriaLive, AriaRelevant, AriaRole},
         focus::focus_safely,
         orientation::Orientation,
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -53,12 +52,12 @@ pub struct UseTagGroupInput {
     /// The group element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Replaces the (horizontal) list keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Called with the keys of tags to remove (Delete/Backspace, or a remove button). Without
@@ -75,13 +74,15 @@ pub struct TagGroupData {
     pub on_remove: Option<Callback<HashSet<Key>>>,
 }
 
-/// Return value of [`use_tag_group`].
+/// The return value of [`use_tag_group`].
 #[derive(Debug)]
 pub struct UseTagGroupReturn {
-    pub grid_props: UseTagGroupProps,
-    pub label_props: UseLabelProps,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    /// The tag list (grid) element.
+    pub grid: Part<UseTagGroupProps>,
+    /// The group's label element.
+    pub label: Part<UseLabelProps>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     pub data: TagGroupData,
 }
 
@@ -89,7 +90,7 @@ pub struct UseTagGroupReturn {
 #[derive(Debug)]
 pub struct UseTagGroupProps {
     pub grid: UseGridListProps,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_atomic: AriaAtomic,
     pub aria_relevant: AriaRelevant,
     /// Announces added tags while focus is in the group.
@@ -97,12 +98,25 @@ pub struct UseTagGroupProps {
     pub focus_within: UseFocusWithinProps,
 }
 
+impl Remount for UseTagGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            grid: self.grid.remount(),
+            aria_describedby: self.aria_describedby,
+            aria_atomic: self.aria_atomic,
+            aria_relevant: self.aria_relevant,
+            aria_live: self.aria_live,
+            focus_within: self.focus_within.remount(),
+        }
+    }
+}
+
 pub type UseTagGroupAttrs = (
     UseGridListAttrs,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaAtomic, AriaAtomic>,
-    Attr<attr::AriaRelevant, AriaRelevant>,
-    Attr<attr::AriaLive, Signal<AriaLive>>,
+    SignalAttr<Option<Id>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<AriaLive>,
     UseFocusWithinAttrs,
 );
 
@@ -112,10 +126,10 @@ impl IntoAttrs for UseTagGroupProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             self.grid.into_attrs(),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaAtomic, self.aria_atomic),
-            Attr(attr::AriaRelevant, self.aria_relevant),
-            Attr(attr::AriaLive, self.aria_live),
+            signal_attr("aria-describedby", self.aria_describedby),
+            fixed_attr("aria-atomic", self.aria_atomic),
+            fixed_attr("aria-relevant", self.aria_relevant),
+            signal_attr("aria-live", self.aria_live),
             self.focus_within.into_attrs(),
         )
     }
@@ -148,10 +162,10 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         })
     });
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         ..
     } = use_field(UseFieldInput {
         id,
@@ -162,9 +176,10 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         aria_describedby,
         ..UseFieldInput::default()
     });
+    let field_props = field_props.into_props();
 
     let UseGridListReturn {
-        props: mut grid,
+        grid_list: grid,
         data,
     } = use_grid_list(UseGridListInput {
         id: Some(field_props.id),
@@ -185,6 +200,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         should_select_on_press_up: false,
         tree: None,
     });
+    let mut grid = grid.into_props();
     let is_empty = Signal::derive(move || state.collection.with(|c| c.is_empty()));
     grid.role = Signal::derive(move || {
         if is_empty.get() {
@@ -195,6 +211,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     });
 
     let focus_within = use_focus_within(UseFocusWithinInput::default());
+    let focus_within_props = focus_within.target.into_props();
     let is_focus_within = focus_within.is_focus_within;
 
     // Removing the last tag keeps focus in the (now empty) group.
@@ -212,7 +229,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     });
 
     UseTagGroupReturn {
-        grid_props: UseTagGroupProps {
+        grid: Part::stored(UseTagGroupProps {
             grid,
             aria_describedby: field_props.aria_describedby,
             aria_atomic: AriaAtomic::False,
@@ -224,11 +241,11 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
                     AriaLive::Off
                 }
             }),
-            focus_within: focus_within.props,
-        },
-        label_props,
-        description_props,
-        error_message_props,
+            focus_within: focus_within_props,
+        }),
+        label: label_props,
+        description: description_props,
+        error_message: error_message_props,
         data: TagGroupData {
             list: data,
             on_remove,

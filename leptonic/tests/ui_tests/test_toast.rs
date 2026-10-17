@@ -345,3 +345,32 @@ pub async fn focused_toast_after_new_toast(page: &Page<'_>) -> Result<(), Report
         .await?;
     Ok(())
 }
+
+/// A `ToastDescription` mounted again describes its toast again: the toast hands the part its
+/// props back when it unmounts (no upstream test: React passes them on every render).
+#[browser_test]
+pub async fn description_mounts_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-toast-add").await?.click().await?;
+    let toast = page.element(TOAST).await?;
+    wait_for_title(&toast, "Toast 1").await?;
+    assert_that!(toast)
+        .accessible_description()
+        .await
+        .is_equal_to("Description");
+    let toggle = page.element("#test-toast-toggle-descriptions").await?;
+    toggle.click().await?;
+    page.wait_for_count(".leptonic-ToastDescription", 0).await?;
+    toast.wait_for_attr("aria-describedby", None).await?;
+    toggle.click().await?;
+    let description = page.element(".leptonic-ToastDescription").await?;
+    assert_that!(description)
+        .has_attribute("id")
+        .await
+        .is_not_empty();
+    assert_that!(|| toast.accessible_description())
+        .eventually_ok()
+        .matches(eq("Description"))
+        .await;
+    Ok(())
+}

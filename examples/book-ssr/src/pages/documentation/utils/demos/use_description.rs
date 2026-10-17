@@ -22,7 +22,7 @@ pub fn UseDescriptionDemo() -> impl IntoView {
     view! {
         <Button
             on_press=move |_| deleted.update(|deleted| *deleted += 1)
-            aria_describedby=description_id
+            aria_describedby=Signal::derive(move || description_id.get().map(|id| id.to_string()))
             classes="demo-btn-danger"
         >
             "Delete draft"

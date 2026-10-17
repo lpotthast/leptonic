@@ -7,11 +7,11 @@ use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
-    color_thumb::{ColorThumbContext, SliderThumbParts, ThumbParts},
+    color_thumb::{ColorThumbContext, ThumbParts},
     field::{LabelContext, LabelPresence},
 };
 use crate::{
-    IntoAttrs, Orientation, Out, ValueBinding,
+    Orientation, Out, Part, PropsWithStyles, ValueBinding,
     hooks::{
         color::{
             UseColorSliderInput, UseColorSliderReturn, UseColorSliderStateInput, use_color_slider,
@@ -19,11 +19,13 @@ use crate::{
         },
         form::UseLabelProps,
         interactions::{UseHoverInput, use_hover},
-        slider::{UseSliderGroupAttrs, UseSliderOutputAttrs, UseSliderTrackAttrs},
+        slider::{
+            UseSliderGroupProps, UseSliderLabelProps, UseSliderOutputProps, UseSliderTrackProps,
+        },
     },
     utils::{
         color::{ColorChannel, ColorValue},
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         i18n::use_locale,
         styles::Styles,
@@ -45,13 +47,15 @@ use crate::{
 // =============================================================================
 
 /// What the parts of a [`ColorSlider`] get from it.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct ColorSliderContext {
     orientation: Signal<Orientation>,
     is_disabled: Signal<bool>,
-    /// The track's attributes (with the group's) and styles, cloned per render.
-    track: StoredValue<(UseSliderGroupAttrs, UseSliderTrackAttrs, Styles)>,
-    output: StoredValue<UseSliderOutputAttrs>,
+    /// The track, also the slider's group (with the gradient styles).
+    track: Part<PropsWithStyles<UseSliderTrackProps>>,
+    group: Part<UseSliderGroupProps>,
+    track_styles: Styles,
+    output: Part<UseSliderOutputProps>,
     formatted: Signal<String>,
 }
 
@@ -136,34 +140,29 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     } = use_color_slider(UseColorSliderInput {
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
         name,
         form,
         state,
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_details: crate::utils::prop_signal(aria_details),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        aria_details: crate::utils::id::id_ref_prop(aria_details),
     });
 
-    let label = LabelContext::span(UseLabelProps {
-        id: slider.label_props.id,
-        html_for: None,
-    })
-    .with_on_click(slider.label_props.on_click)
-    .with_presence(label_presence)
-    .with_default_text({
-        let locale = use_locale();
-        Signal::derive(move || <Ch::Color as ColorValue>::channel_name(channel, &locale.get()))
-    });
-    let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
+    let UseSliderLabelProps { id, on_click } = slider.label.into_props();
+    let label = LabelContext::span(Part::stored(UseLabelProps { id, html_for: None }))
+        .with_on_click(on_click)
+        .with_presence(label_presence)
+        .with_default_text({
+            let locale = use_locale();
+            Signal::derive(move || <Ch::Color as ColorValue>::channel_name(channel, &locale.get()))
+        });
     let context = ColorSliderContext {
         orientation,
         is_disabled,
-        track: StoredValue::new((
-            slider.group_props.into_attrs(),
-            track_attrs,
-            slider_track_styles.merge(track_styles),
-        )),
-        output: StoredValue::new(slider.output_props.into_attrs()),
+        track: slider.track,
+        group: slider.group,
+        track_styles,
+        output: slider.output,
         formatted: state.formatted_value(),
     };
     let color = state.display_color();
@@ -171,11 +170,12 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
         Signal::derive(move || color.get().to_css_string()),
         state.is_dragging,
         thumb.is_disabled,
-        ThumbParts::Slider(Box::new(SliderThumbParts {
-            thumb: thumb.thumb_props,
-            input: thumb.input_props,
-            input_styles,
-        })),
+        ThumbParts::Slider {
+            thumb: thumb.thumb,
+            input: thumb
+                .input
+                .map(move |input| PropsWithStyles::new(input, input_styles.clone())),
+        },
     );
 
     view! {
@@ -186,7 +186,7 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
                         class=classes
                         style=styles
                         data-orientation=move || orientation.get().as_str()
-                        data-disabled=flag(is_disabled)
+                        {..data_flags([("data-disabled", is_disabled)])}
                     >
                         {children()}
                     </div>
@@ -217,21 +217,24 @@ pub fn ColorSliderTrack(
         orientation,
         is_disabled,
         track,
+        group,
+        track_styles,
         ..
     } = expect_color_slider()?;
-    let (group_attrs, attrs, track_styles) = track.get_value();
+    let (attrs, slider_track_styles) = track.attrs();
+    let track_styles = slider_track_styles.merge(track_styles);
     // Hovered also while disabled (react-aria-components' `SliderTrack`).
     let hover = use_hover(UseHoverInput::default());
     Some(view! {
         <div
-            {..group_attrs}
+            {..group.attrs()}
             {..attrs}
-            {..hover.props.into_attrs()}
+            {..hover.target.attrs()}
             class=classes
             style=track_styles.merge(styles)
-            data-hovered=flag(hover.is_hovered)
+            {..data_flags([("data-hovered", hover.is_hovered)])}
             data-orientation=move || orientation.get().as_str()
-            data-disabled=flag(is_disabled)
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             {children()}
         </div>
@@ -259,14 +262,14 @@ pub fn ColorSliderOutput(
         formatted,
         ..
     } = expect_color_slider()?;
-    let attrs = output.get_value();
+    let attrs = output.attrs();
     Some(view! {
         <output
             {..attrs}
             class=classes
             style=styles
             data-orientation=move || orientation.get().as_str()
-            data-disabled=flag(is_disabled)
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             {formatted}
         </output>

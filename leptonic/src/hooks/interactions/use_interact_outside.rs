@@ -4,7 +4,10 @@
 //! Interactions outside an element (e.g. to close an overlay).
 use leptos::prelude::*;
 
-use crate::{CapturedElement, ElementCaptureAttr, IntoAttrs};
+use crate::{
+    CapturedElement, ElementCaptureAttr, IntoAttrs,
+    utils::part::{Part, Remount},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -75,17 +78,25 @@ pub struct UseInteractOutsideInput {
     pub element: Option<CapturedElement>,
 }
 
-/// Return value of [`use_interact_outside`].
+/// The return value of [`use_interact_outside`].
 #[derive(Debug)]
 pub struct UseInteractOutsideReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseInteractOutsideProps,
+    /// The element outside of which interactions are reported.
+    pub target: Part<UseInteractOutsideProps>,
 }
 
 /// Props from `use_interact_outside` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseInteractOutsideProps {
     pub element_capture: ElementCaptureAttr,
+}
+
+impl Remount for UseInteractOutsideProps {
+    fn remount(&self) -> Self {
+        Self {
+            element_capture: self.element_capture.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseInteractOutsideProps {
@@ -126,7 +137,7 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 /// });
 ///
 /// view! {
-///     <div {..interact_outside.props.into_attrs()}>
+///     <div {..interact_outside.target.attrs()}>
 ///         "Click outside to close"
 ///     </div>
 /// }
@@ -220,9 +231,9 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
     }
 
     UseInteractOutsideReturn {
-        props: UseInteractOutsideProps {
+        target: Part::stored(UseInteractOutsideProps {
             element_capture: capture.attr(),
-        },
+        }),
     }
 }
 

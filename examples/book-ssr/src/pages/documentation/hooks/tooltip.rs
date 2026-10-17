@@ -88,8 +88,8 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
             <Section title="use_tooltip_trigger">
                 <p>
-                    "Takes the state from "<Code inline=true>"use_tooltip_trigger_state"</Code>" in its input. Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>" onto the trigger and put "
-                    <Code inline=true>"tooltip_props.id"</Code>" on the tooltip element."
+                    "Takes the state from "<Code inline=true>"use_tooltip_trigger_state"</Code>" in its input. Spread its "<Code inline=true>"trigger"</Code>" part onto the trigger and its "
+                    <Code inline=true>"tooltip"</Code>" part (the id the trigger references) onto the tooltip element."
                 </p>
 
                 <Section title="Input" id="use-tooltip-trigger-input">
@@ -111,11 +111,11 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
                 <Section title="Return" id="use-tooltip-trigger-return">
                     <ApiTable kind=ApiKind::Return of="UseTooltipTriggerReturn">
-                        <ApiRow name="trigger_props" ty="UseTooltipTriggerProps">
+                        <ApiRow name="trigger" ty="Part<UseTooltipTriggerProps>">
                             <Code inline=true>"aria-describedby"</Code>" of the trigger (pointing to the tooltip "
                             "while it is open) and its pointer, focus and keyboard handlers."
                         </ApiRow>
-                        <ApiRow name="tooltip_props" ty="UseTooltipTriggerTooltipProps">
+                        <ApiRow name="tooltip" ty="Part<UseTooltipTriggerTooltipProps>">
                             "The "<Code inline=true>"id"</Code>" of the tooltip element, which describes the trigger while it is open."
                         </ApiRow>
                     </ApiTable>
@@ -124,7 +124,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
             <Section title="use_tooltip">
                 <p>
-                    "Spread "<Code inline=true>"props.into_attrs()"</Code>" onto the tooltip element: it gets "
+                    "Spread its "<Code inline=true>"tooltip"</Code>" part onto the tooltip element: it gets "
                     <Code inline=true>"role=\"tooltip\""</Code>". Moving the pointer "
                     "from the trigger onto the tooltip then keeps it open, so a longer text can be read or selected."
                 </p>
@@ -140,7 +140,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
                 <Section title="Return" id="use-tooltip-return">
                     <ApiTable kind=ApiKind::Return of="UseTooltipReturn">
-                        <ApiRow name="props" ty="UseTooltipProps">
+                        <ApiRow name="tooltip" ty="Part<UseTooltipProps>">
                             "The "<Code inline=true>"role"</Code>" ("<Code inline=true>"tooltip"</Code>") and the "
                             <Code inline=true>"pointerenter"</Code>" and "<Code inline=true>"pointerleave"</Code>" handlers of the tooltip."
                         </ApiRow>

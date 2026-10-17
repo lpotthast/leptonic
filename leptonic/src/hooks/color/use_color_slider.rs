@@ -5,7 +5,7 @@ use leptos::prelude::*;
 
 use super::use_color_slider_state::ColorSliderState;
 use crate::{
-    PropsWithStyles,
+    Id, Part, PropsWithStyles,
     hooks::slider::{
         UseSliderInput, UseSliderReturn, UseSliderThumbInput, UseSliderThumbReturn, use_slider,
         use_slider_thumb,
@@ -38,16 +38,16 @@ pub struct UseColorSliderInput<C: ColorValue> {
     pub has_label: Signal<bool>,
     /// Names the slider. Without any label, the channel's name does.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
     /// The name of the input, for form submission.
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
     pub form: Option<String>,
 }
 
-/// Return value of [`use_color_slider`].
+/// The return value of [`use_color_slider`].
 #[derive(Debug)]
 pub struct UseColorSliderReturn {
     /// The slider: label, output and track (whose styles are `track_styles`). Its
@@ -96,7 +96,14 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         id: None,
         aria_details,
     });
-    let mut thumb = use_slider_thumb(UseSliderThumbInput {
+    let UseSliderThumbReturn {
+        thumb,
+        input,
+        label,
+        is_dragging,
+        is_disabled,
+        is_focused,
+    } = use_slider_thumb(UseSliderThumbInput {
         is_disabled: state.slider.is_disabled,
         name,
         form,
@@ -113,9 +120,10 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_errormessage: Signal::default(),
         aria_details: Signal::default(),
     });
+    let mut input = input.into_props();
     let display_color = state.display_color();
     let formatted = state.formatted_value();
-    thumb.input_props.aria_valuetext = Signal::derive(move || {
+    input.aria_valuetext = Signal::derive(move || {
         // The hue names a hue slider, the color the other channels, nothing an alpha slider
         // (react-aria). Named is the display color: the hue at full saturation (a gray's hue has
         // a name too), the other channels' color opaque.
@@ -131,8 +139,8 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
     });
 
     // Forced colors would replace the thumb's color (react-aria).
-    let (thumb_props, thumb_styles) = thumb.thumb_props.into_inner();
-    thumb.thumb_props = PropsWithStyles::new(
+    let (thumb_props, thumb_styles) = thumb.into_props().into_inner();
+    let thumb = PropsWithStyles::new(
         thumb_props,
         thumb_styles.add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None)),
     );
@@ -155,7 +163,14 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
 
     UseColorSliderReturn {
         slider,
-        thumb,
+        thumb: UseSliderThumbReturn {
+            thumb: Part::stored(thumb),
+            input: Part::stored(input),
+            label,
+            is_dragging,
+            is_disabled,
+            is_focused,
+        },
         track_styles: Styles::new()
             .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None))
             // A computed gradient: no checked grammar in `leptos-css` yet.

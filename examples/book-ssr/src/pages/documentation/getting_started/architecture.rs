@@ -52,7 +52,8 @@ pub fn PageArchitecture() -> impl IntoView {
             <Section title="Hooks">
                 <p>
                     "Hooks hold the interaction and accessibility logic: ARIA attributes, keyboard interaction, focus management. "
-                    "They render nothing and bring no styles. A hook returns props that you spread onto your element. Leptonic\u{2019}s "
+                    "They render nothing and bring no styles. A hook returns a part for each element it gives behavior to, and you "
+                    "spread the part onto your element. Leptonic\u{2019}s "
                     "hooks are ports of "
                     <Link href="https://react-spectrum.adobe.com/react-aria/" target=LinkTarget::Blank>"react-aria"</Link>
                     "\u{2019}s hooks, with APIs adapted to Rust and Leptos."
@@ -62,12 +63,12 @@ pub fn PageArchitecture() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::hooks::button::{ButtonElementType, UseButtonInput, UseButtonReturn, use_button};
 
-                        let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+                        let UseButtonReturn { button, .. } = use_button(UseButtonInput {
                             element_type: ButtonElementType::Other,
                             on_press: Some(Callback::new(|_| { /* handle press */ })),
                             ..Default::default()
                         });
-                        let (attrs, styles) = props.into_parts();
+                        let (attrs, styles) = button.attrs();
 
                         view! {
                             <div {..attrs} style=styles>
@@ -76,6 +77,191 @@ pub fn PageArchitecture() -> impl IntoView {
                         }
                     "#)}
                 </Code>
+
+                <Section title="Parts">
+                    <p>
+                        "Every element a hook gives behavior to comes as a "<Code inline=true>"Part"</Code>" ("
+                        <Code inline=true>"leptonic::Part"</Code>"): the button itself, a field\u{2019}s label, input, "
+                        "description and error message, a list box\u{2019}s options. Each is named after its element ("
+                        <Code inline=true>"button"</Code>", "<Code inline=true>"label"</Code>", "<Code inline=true>"input"</Code>
+                        "); hooks that add a behavior to any element, like "
+                        <Link href=routes::doc::interactions::UsePress.materialize()><Code inline=true>"use_press"</Code></Link>
+                        ", call theirs "<Code inline=true>"target"</Code>". A part holds what its element needs (attributes as "
+                        "signals, event handlers, the capture of the element), and "<Code inline=true>"part.attrs()"</Code>
+                        " gives the attributes to spread. Hooks that also set inline styles ("<Code inline=true>"use_button"</Code>
+                        ", "<Code inline=true>"use_press"</Code>", collection items) hand out a "
+                        <Code inline=true>"Part<PropsWithStyles<..>>"</Code>", whose "<Code inline=true>"attrs()"</Code>
+                        " returns the attributes and the styles, as above. Set the styles with "<Code inline=true>"style="</Code>
+                        ", merged with your own ("<Link href=routes::doc::ClassesAndStyles.materialize()>"Classes & Styles"</Link>")."
+                    </p>
+                    <p>
+                        <b>"One element at a time."</b>" A part belongs to one element: rendered twice, the element\u{2019}s id would "
+                        "exist twice and its handlers would change the hook\u{2019}s state twice. While an element holds a part, "
+                        "a second element gets nothing (and a warning in debug builds)."
+                    </p>
+                    <p>
+                        <b>"Parts mount again."</b>" An element can be removed and rendered again: inside a "
+                        <Code inline=true>"Show"</Code>", in an overlay that opens a second time, in content that changes. Call "
+                        <Code inline=true>"attrs()"</Code>" where the element is rendered, and every mount gets the part again, "
+                        "with the same id and the same references; removing the element gives the part back. Don\u{2019}t take "
+                        "the attributes once outside and clone them into each render. References follow what is rendered: the "
+                        "input below names the error message in "<Code inline=true>"aria-describedby"</Code>" only while it is shown."
+                    </p>
+
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptonic::hooks::form::{UseTextFieldInput, UseTextFieldReturn, use_text_field};
+
+                            let UseTextFieldReturn { label, input, error_message, is_invalid, validation_errors, .. } =
+                                use_text_field(UseTextFieldInput { /* ... */ });
+
+                            view! {
+                                <label {..label.attrs()}>"Email"</label>
+                                <input {..input.attrs()}/>
+                                // Mounted whenever the field becomes invalid: each mount spreads the part again.
+                                <Show when=move || is_invalid.get()>
+                                    <p {..error_message.attrs()}>{move || validation_errors.get().join(" ")}</p>
+                                </Show>
+                            }
+                        "#)}
+                    </Code>
+
+                    <p>
+                        "Where the element sits in nested children closures (a "<Code inline=true>"Portal"</Code>" inside a "
+                        <Code inline=true>"Show"</Code>"), put the part into a "<Code inline=true>"StoredValue"</Code>", which is "
+                        <Code inline=true>"Copy"</Code>", and spread "<Code inline=true>"part.with_value(|part| part.attrs())"</Code>
+                        ". Handing the part to a child component works too: cloning a part shares it."
+                    </p>
+                    <p>
+                        <b>"Changing props."</b>" To read or change what a part sets before spreading it, take its props with "
+                        <Code inline=true>"part.into_props()"</Code>" (the props for good: the part has no other element "
+                        "afterwards), change their fields and spread "<Code inline=true>"props.into_attrs()"</Code>" (the "
+                        <Code inline=true>"leptonic::IntoAttrs"</Code>" trait), or build other props or another hook\u{2019}s input "
+                        "from them. To pass a changed part on to a component that renders it, derive one with "
+                        <Code inline=true>"part.map(|props| ..)"</Code>": both share one lease, so only one of them is rendered at "
+                        "a time."
+                    </p>
+
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            use leptonic::hooks::{
+                                button::{UseButtonInput, UseButtonReturn, use_button},
+                                overlay::{UseOverlayTriggerInput, UseOverlayTriggerReturn, use_overlay_trigger},
+                            };
+
+                            let UseOverlayTriggerReturn { trigger } = use_overlay_trigger(UseOverlayTriggerInput { /* ... */ });
+                            // The button renders the trigger's attributes: they go into its input.
+                            let trigger = trigger.into_props();
+                            let UseButtonReturn { button, .. } = use_button(UseButtonInput {
+                                aria_expanded: trigger.aria_expanded,
+                                aria_controls: trigger.aria_controls,
+                                ..Default::default()
+                            });
+                        ")}
+                    </Code>
+
+                    <p>
+                        <b>"Parts of your own hook."</b>" Leptonic\u{2019}s atoms and hooks are built from the public hooks exactly "
+                        "as above, so their source is a starting point for your own. A hook of your own computes its props once "
+                        "and returns them with "<Code inline=true>"Part::stored(props)"</Code>": every mount gets a copy of them. "
+                        "The copy comes from "<Code inline=true>"Remount"</Code>" ("<Code inline=true>"leptonic::Remount"</Code>
+                        "), which you implement for your props type, field by field: signals are "<Code inline=true>"Copy"</Code>
+                        ", ids, event handlers and the element capture are cloned, which only shares them. Building on another "
+                        "hook for the same element, take its part\u{2019}s props with "<Code inline=true>"into_props()"</Code>
+                        " and put them into your own; "<Code inline=true>"fixed_attr"</Code>", "<Code inline=true>"signal_attr"</Code>
+                        " and "<Code inline=true>"Spread"</Code>" turn the props into attributes."
+                    </p>
+
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptos::{ev, prelude::*};
+                            use leptonic::{
+                                AriaRole, EventHandler, FixedAttr, IntoAttrs, OnEvent, Part, Remount, Spread, fixed_attr,
+                                hooks::interactions::{UsePressInput, UsePressProps, UsePressReturn, use_press},
+                            };
+
+                            #[derive(Debug)]
+                            pub struct UseChipProps {
+                                pub press: UsePressProps,
+                                pub on_keydown: EventHandler<web_sys::KeyboardEvent>,
+                            }
+
+                            impl Remount for UseChipProps {
+                                fn remount(&self) -> Self {
+                                    Self { press: self.press.remount(), on_keydown: self.on_keydown.clone() }
+                                }
+                            }
+
+                            impl IntoAttrs for UseChipProps {
+                                type Attrs = Spread<(FixedAttr, <UsePressProps as IntoAttrs>::Attrs, OnEvent<ev::keydown>)>;
+
+                                fn into_attrs(self) -> Self::Attrs {
+                                    Spread((
+                                        fixed_attr("role", AriaRole::Button),
+                                        self.press.into_attrs(),
+                                        self.on_keydown.into_on(ev::keydown),
+                                    ))
+                                }
+                            }
+
+                            pub fn use_chip(on_remove: Callback<()>) -> Part<UseChipProps> {
+                                let UsePressReturn { target: press, .. } = use_press(UsePressInput::default());
+                                // The press props go into the chip's: consumed, not rendered.
+                                let (press, _styles) = press.into_props().into_inner();
+                                Part::stored(UseChipProps {
+                                    press,
+                                    on_keydown: EventHandler::new(move |e: web_sys::KeyboardEvent| {
+                                        if e.key() == "Delete" {
+                                            on_remove.run(());
+                                        }
+                                    }),
+                                })
+                            }
+
+                            // Rendering it: as any hook's part.
+                            let chip = use_chip(on_remove);
+                            view! { <span {..chip.attrs()} tabindex="0">"Rust"</span> }
+                        "#)}
+                    </Code>
+                </Section>
+
+                <Section title="Ids">
+                    <p>
+                        "Hooks link elements through ids: "<Code inline=true>"aria-labelledby"</Code>", "
+                        <Code inline=true>"aria-controls"</Code>", a label\u{2019}s "<Code inline=true>"for"</Code>". An id is an "
+                        <Code inline=true>"Id"</Code>" ("<Code inline=true>"leptonic::Id"</Code>"), a string that is shared instead "
+                        "of copied, so cloning one is free. Inputs take an element\u{2019}s own id as "
+                        <Code inline=true>"Option<Id>"</Code>": with "<Code inline=true>"None"</Code>", the hook generates one with "
+                        <Code inline=true>"use_id"</Code>", identical on the server and while hydrating (see "
+                        <Link href=routes::doc::Ssr.materialize()>"Server-Side Rendering"</Link>"). References to other elements "
+                        "are "<Code inline=true>"Signal<Option<Id>>"</Code>"; "<Code inline=true>"IdRefs::derive([a, b])"</Code>
+                        " joins several into one (each id once). Your own ids convert with "<Code inline=true>"Id::from"</Code>
+                        " (from a "<Code inline=true>"&'static str"</Code>", a "<Code inline=true>"String"</Code>" or an "
+                        <Code inline=true>"Arc<str>"</Code>"); the "<Code inline=true>"id"</Code>" prop of an atom takes them "
+                        "directly: "<Code inline=true>"id=\"email\""</Code>"."
+                    </p>
+
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptonic::{
+                                Id,
+                                hooks::button::{UseButtonInput, UseButtonReturn, use_button},
+                            };
+
+                            let UseButtonReturn { button, .. } = use_button(UseButtonInput {
+                                // The warning is the app's own element.
+                                aria_describedby: Signal::stored(Some(Id::from("delete-warning"))),
+                                ..Default::default()
+                            });
+                            let (attrs, styles) = button.attrs();
+
+                            view! {
+                                <p id="delete-warning">"Deleted files are gone for good."</p>
+                                <button {..attrs} style=styles>"Delete"</button>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
 
                 <Section title="Hook-Owned State">
                     <p>
@@ -120,7 +306,7 @@ pub fn PageArchitecture() -> impl IntoView {
                         <Link href=routes::doc::menu::Hook.materialize()><Code inline=true>"use_menu_trigger"</Code></Link>", "
                         <Link href=routes::doc::utilities::UseSpinButton.materialize()><Code inline=true>"use_spin_button"</Code></Link>
                         " and "<Link href=routes::doc::number_field::Hook.materialize()><Code inline=true>"use_number_field"</Code></Link>
-                        " therefore don\u{2019}t hand you DOM props for those buttons. They return a "<Code inline=true>"UseButtonInput"</Code>
+                        " therefore don\u{2019}t hand you parts for those buttons. They return a "<Code inline=true>"UseButtonInput"</Code>
                         ", and you render the button with "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
                         ". Input structs implement "<Code inline=true>"Default"</Code>" where every field has a sensible default, "
                         "so you can add your own settings with struct update syntax:"
@@ -134,7 +320,7 @@ pub fn PageArchitecture() -> impl IntoView {
                                 on_hover_start: Some(Callback::new(|_| { /* prefetch the menu's data */ })),
                                 ..menu_trigger.button
                             });
-                            let (attrs, styles) = button.props.into_parts();
+                            let (attrs, styles) = button.button.attrs();
 
                             view! { <button {..attrs} style=styles>"Actions"</button> }
                         "#)}
@@ -150,30 +336,26 @@ pub fn PageArchitecture() -> impl IntoView {
                         <b>"Independent hooks on one element."</b>" When hooks add unrelated behavior to the same element, say "
                         <Link href=routes::doc::interactions::UsePress.materialize()><Code inline=true>"use_press"</Code></Link>
                         " and "<Link href=routes::doc::interactions::UseHover.materialize()><Code inline=true>"use_hover"</Code></Link>
-                        " on an element of your own, spread both sets of props. Leptos attaches each event handler; for "
+                        " on an element of your own, spread both parts. Leptos attaches each event handler; for "
                         "other attributes the last one wins:"
                     </p>
 
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{
-                                IntoAttrs,
-                                hooks::interactions::{UseHoverInput, UsePressInput, use_hover, use_press},
-                            };
+                            use leptonic::hooks::interactions::{UseHoverInput, UsePressInput, use_hover, use_press};
 
                             let press = use_press(UsePressInput { /* ... */ ..Default::default() });
                             let hover = use_hover(UseHoverInput { /* ... */ ..Default::default() });
 
-                            let (press_attrs, styles) = press.props.into_parts();
-                            let hover_attrs = hover.props.into_attrs();
+                            let (press_attrs, styles) = press.target.attrs();
 
-                            view! { <div {..press_attrs} {..hover_attrs} style=styles>"Hover and press me"</div> }
+                            view! { <div {..press_attrs} {..hover.target.attrs()} style=styles>"Hover and press me"</div> }
                         "#)}
                     </Code>
 
                     <p>
                         "When in doubt, prefer input composition: if a hook hands you a "<Code inline=true>"UseButtonInput"</Code>
-                        " (or another hook\u{2019}s input), pass it on rather than merging DOM props."
+                        " (or another hook\u{2019}s input), pass it on rather than spreading two parts."
                     </p>
                 </Section>
             </Section>

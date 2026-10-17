@@ -21,9 +21,9 @@ pub fn PageUseColorWheel() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "Create the state, pass it to "<Code inline=true>"use_color_wheel"</Code>" with the ring\u{2019}s radii, "
-                    "and spread the returned props onto the track, the thumb and an input inside the thumb. Each props value "
+                    "and spread the returned parts onto the track, the thumb and an input inside the thumb. Each part "
                     "carries the styles its element needs (the ring\u{2019}s size, clip path and gradient, the thumb\u{2019}s "
-                    "position, the visually hidden input); split them with "<Code inline=true>"into_parts"</Code>". Put the "
+                    "position, the visually hidden input): "<Code inline=true>"attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>". Put the "
                     "thumb next to the track, not inside it: the track\u{2019}s clip path would cut it off."
                 </p>
                 <Code language=Language::Rust>
@@ -53,9 +53,9 @@ pub fn PageUseColorWheel() -> impl IntoView {
                             name: None,
                             form: None,
                         });
-                        let (track_attrs, track_styles) = wheel.track_props.into_parts();
-                        let (thumb_attrs, thumb_styles) = wheel.thumb_props.into_parts();
-                        let (input_attrs, input_styles) = wheel.input_props.into_parts();
+                        let (track_attrs, track_styles) = wheel.track.attrs();
+                        let (thumb_attrs, thumb_styles) = wheel.thumb.attrs();
+                        let (input_attrs, input_styles) = wheel.input.attrs();
 
                         view! {
                             // Give it `position: relative`: the thumb is positioned in it.
@@ -187,10 +187,10 @@ pub fn PageUseColorWheel() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the wheel."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the wheel."</ApiRow>
-                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">"The ids of the elements with details about the wheel."</ApiRow>
-                        <ApiRow name="aria_errormessage" ty="Signal<Option<String>>" default="None">"The id of the element with the wheel\u{2019}s error message."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The ids of the elements naming the wheel."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"The ids of the elements describing the wheel."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<Id>>" default="None">"The ids of the elements with details about the wheel."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Signal<Option<Id>>" default="None">"The id of the element with the wheel\u{2019}s error message."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to."</ApiRow>
                     </ApiTable>
@@ -198,15 +198,15 @@ pub fn PageUseColorWheel() -> impl IntoView {
 
                 <Section title="Return" id="use-color-wheel-return">
                     <ApiTable kind=ApiKind::Return of="UseColorWheelReturn">
-                        <ApiRow name="track_props" ty="PropsWithStyles<UseColorWheelTrackProps>">
+                        <ApiRow name="track" ty="Part<PropsWithStyles<UseColorWheelTrackProps>>">
                             "The pointer handling of the ring, and as styles its size ("<Code inline=true>"outer_radius * 2"</Code>
                             "), the conic gradient of hues and the clip path that cuts out the hole."
                         </ApiRow>
-                        <ApiRow name="thumb_props" ty="PropsWithStyles<UseColorWheelThumbProps>">
+                        <ApiRow name="thumb" ty="Part<PropsWithStyles<UseColorWheelThumbProps>>">
                             "Dragging and keyboard handling, and the thumb\u{2019}s position as styles (centered on the "
                             "middle of the ring)."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="PropsWithStyles<UseColorWheelInputProps>">
+                        <ApiRow name="input" ty="Part<PropsWithStyles<UseColorWheelInputProps>>">
                             "For the "<Code inline=true>"<input type=\"range\">"</Code>" inside the thumb: range, step and value of "
                             "the hue, its name and value text, and visually hiding styles."
                         </ApiRow>

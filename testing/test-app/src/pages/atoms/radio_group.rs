@@ -17,11 +17,15 @@ enum Size {
 leptonic::selection_value!(Size { Small = "s", Large = "l" });
 
 /// Radio groups (react-aria-components' `RadioGroup.test.js` setup: dogs, cats, dragons).
+/// "Remounted": `#test-rg-remount-toggle` unmounts and mounts the `RadioButton` of "Remounted B";
+/// the value is in `#test-rg-remounted-value`.
 #[component]
 pub fn PageAtomRadioGroup() -> impl IntoView {
     let selected = RwSignal::new(String::new());
     let size = RwSignal::new(Some(Size::Small));
     let bound = RwSignal::new(Some(Key::from("b")));
+    let remounted = RwSignal::new(None::<Key>);
+    let remounted_shown = RwSignal::new(true);
 
     view! {
         <h1>"Radio Group"</h1>
@@ -81,6 +85,24 @@ pub fn PageAtomRadioGroup() -> impl IntoView {
             <RadioField value="a"><RadioButton>"Fixed A"</RadioButton></RadioField>
             <RadioField value="b"><RadioButton>"Fixed B"</RadioButton></RadioField>
         </RadioGroup<Key>>
+
+        <RadioGroup aria_label="Remounted" value=remounted set_value=remounted>
+            <RadioField value="a"><RadioButton>"Remounted A"</RadioButton></RadioField>
+            <RadioField value="b">
+                <Show when=move || remounted_shown.get()>
+                    <RadioButton>"Remounted B"</RadioButton>
+                </Show>
+            </RadioField>
+        </RadioGroup>
+        <button id="test-rg-remount-toggle" on:click=move |_| remounted_shown.update(|shown| *shown = !*shown)>
+            "Hide or show Remounted B"
+        </button>
+        <div>
+            "Remounted: "
+            <span id="test-rg-remounted-value">
+                {move || remounted.get().map(|v| v.to_string()).unwrap_or_default()}
+            </span>
+        </div>
 
         // Typed values: an enum (`selection_value!`), its key submitted with the form.
         <form id="test-rg-typed-form">

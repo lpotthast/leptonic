@@ -6,8 +6,6 @@
 //! moving through the options, selecting, leaving), dismissing it, and changes of its reactive
 //! props (value, input text, disabled, read-only, invalid, required, menu trigger, disabled
 //! options), with 10 options and with 1,000.
-//!
-//! The performance tests of its parts use the same fixture and the helpers here.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -42,15 +40,14 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(OpenOnFocus))
         .with(fixture_test(DisabledOption))
 }
-pub(crate) const COMBO_BOX: &str = ".leptonic-ComboBox";
-pub(crate) const INPUT: &str = "[role=combobox]";
-pub(crate) const BUTTON: &str = ".leptonic-ComboBoxButton";
-pub(crate) const VALUE: &str = ".leptonic-ComboBoxValue";
-pub(crate) const POPOVER: &str = ".leptonic-ComboBoxPopover";
-pub(crate) const OPTIONS: &str = "[role=option]";
+const COMBO_BOX: &str = ".leptonic-ComboBox";
+const INPUT: &str = "[role=combobox]";
+const BUTTON: &str = ".leptonic-ComboBoxButton";
+const POPOVER: &str = ".leptonic-ComboBoxPopover";
+const OPTIONS: &str = "[role=option]";
 /// Loads the fixture at `path` and creates the live announcer's regions (its first announcement
 /// waits for them, so an announcing step measured first would count them, or not).
-pub(crate) async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
+async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
     page.goto_path(path).await?;
     page.control("prepare-announcer").await?;
     page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
@@ -59,20 +56,20 @@ pub(crate) async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
 }
 
 /// The fixture's options after the control `large`.
-pub(crate) const LARGE: u32 = 1_000;
+const LARGE: u32 = 1_000;
 
 /// The option "Option `i`".
-pub(crate) fn option(i: u32) -> String {
+fn option(i: u32) -> String {
     format!("[role=option]:has(> [data-perf-option='{i}'])")
 }
 
 /// The combo box's value: the selected option's number, `-1` for none.
-pub(crate) async fn value(page: &Page<'_>) -> Result<f64, Report> {
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
     page.control("value").await
 }
 
 /// Switches to [`LARGE`] options (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.settle().await
 }
@@ -106,10 +103,7 @@ pub async fn mount_and_unmount_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// A click on the button opening the popover with all `count` options, and a click on an option
 /// selecting it (closing the popover, the input showing its text).
-pub(crate) async fn open_and_select_with_the_mouse_in(
-    page: &Page<'_>,
-    count: usize,
-) -> Result<(), Report> {
+async fn open_and_select_with_the_mouse_in(page: &Page<'_>, count: usize) -> Result<(), Report> {
     let button = page.element(BUTTON).await?;
     page.measure("open", button.click()).await?;
     page.wait_for_count(OPTIONS, count).await?;
@@ -142,7 +136,7 @@ pub async fn open_and_select_with_the_mouse_large(page: &Page<'_>) -> Result<(),
 /// Typing into the input: "1" opens the popover with the options containing it (`ones`), "2"
 /// narrows them to those containing "12" (`twelves`; none: the popover closes), Backspace widens
 /// them again.
-pub(crate) async fn typing_in(page: &Page<'_>, ones: usize, twelves: usize) -> Result<(), Report> {
+async fn typing_in(page: &Page<'_>, ones: usize, twelves: usize) -> Result<(), Report> {
     page.element(INPUT).await?.click().await?;
     page.measure("type", page.send_keys("1")).await?;
     page.wait_for_count(OPTIONS, ones).await?;
@@ -298,7 +292,7 @@ pub async fn required(page: &Page<'_>) -> Result<(), Report> {
 
 /// The controlled value changing: the first option, the last of `last + 1`, none. The input
 /// shows the selected option's text.
-pub(crate) async fn controlled_value_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn controlled_value_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     let input = page.element(INPUT).await?;
     page.measure("select first", page.control("select-first"))
         .await?;

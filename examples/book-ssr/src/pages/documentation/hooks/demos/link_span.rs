@@ -11,7 +11,7 @@ pub fn LinkSpanDemo() -> impl IntoView {
         on_press: Some(Callback::new(move |_| presses.update(|n| *n += 1))),
         ..UseLinkInput::default()
     });
-    let (link_attrs, link_styles) = link.props.into_parts();
+    let (link_attrs, link_styles) = link.link.attrs();
 
     view! {
         <p>

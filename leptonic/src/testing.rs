@@ -31,7 +31,11 @@
 //! reads of state are expected: Effects and the tasks they spawn run in [`flush_effects`], outside
 //! that zone, so their untracked reads warn as they would in the browser.
 
-use std::{cell::RefCell, sync::Once};
+use std::{
+    alloc::{GlobalAlloc, Layout, System},
+    cell::{Cell, RefCell},
+    sync::Once,
+};
 
 use any_spawner::{CustomExecutor, Executor, PinnedFuture, PinnedLocalFuture};
 use futures::{
@@ -117,6 +121,51 @@ pub(crate) fn flush_effects() {
     if in_test_body {
         TEST_BODY_ZONE.set(Some(SpecialNonReactiveZone::enter()));
     }
+}
+
+/// Counts the heap allocations of each thread, for [`count_allocations`].
+struct CountingAllocator;
+
+thread_local! {
+    // Const-initialized and without destructor: reading it never allocates.
+    static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
+}
+
+// SAFETY: forwards every call to `System` unchanged; counting touches only a thread-local `Cell`.
+unsafe impl GlobalAlloc for CountingAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let _ = ALLOCATIONS.try_with(|count| count.set(count.get() + 1));
+        // SAFETY: the caller's contract is `System`'s.
+        unsafe { System.alloc(layout) }
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        let _ = ALLOCATIONS.try_with(|count| count.set(count.get() + 1));
+        // SAFETY: the caller's contract is `System`'s.
+        unsafe { System.alloc_zeroed(layout) }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // SAFETY: the caller's contract is `System`'s.
+        unsafe { System.dealloc(ptr, layout) }
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        let _ = ALLOCATIONS.try_with(|count| count.set(count.get() + 1));
+        // SAFETY: the caller's contract is `System`'s.
+        unsafe { System.realloc(ptr, layout, new_size) }
+    }
+}
+
+#[global_allocator]
+static ALLOCATOR: CountingAllocator = CountingAllocator;
+
+/// Runs `f` and counts the heap allocations (and reallocations) it made on this thread: for
+/// tests of what a construct costs (`documentation/performance.md`).
+pub(crate) fn count_allocations<T>(f: impl FnOnce() -> T) -> (T, usize) {
+    let before = ALLOCATIONS.get();
+    let result = f();
+    (result, ALLOCATIONS.get() - before)
 }
 
 mod tests {

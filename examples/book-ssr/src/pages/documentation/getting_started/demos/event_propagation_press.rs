@@ -34,8 +34,8 @@ pub fn EventPropagationPressDemo() -> impl IntoView {
         })),
         ..Default::default()
     });
-    let (card_attrs, card_styles) = card.props.into_parts();
-    let (button_attrs, button_styles) = button.props.into_parts();
+    let (card_attrs, card_styles) = card.target.attrs();
+    let (button_attrs, button_styles) = button.target.attrs();
 
     view! {
         <div {..card_attrs} style=card_styles class="demo-propagation-panel demo-propagation-card">

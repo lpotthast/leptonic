@@ -35,8 +35,8 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                         <Code inline=true>"Span"</Code>". Decides which attributes are set, see "
                         <AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
                     </ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id."</ApiRow>
-                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<String>>" default="None">
+                    <ApiRow name="id" ty="Option<Id>" default="None">"The element\u{2019}s id."</ApiRow>
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<Id>>" default="None">
                         "Names the separator, e.g. when it separates groups of controls in a toolbar."
                     </ApiRow>
                 </ApiTable>
@@ -44,9 +44,9 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseSeparatorReturn">
-                    <ApiRow name="props" ty="UseSeparatorProps">
+                    <ApiRow name="separator" ty="Part<UseSeparatorProps>">
                         "The "<Code inline=true>"role"</Code>", "<Code inline=true>"aria-orientation"</Code>", id and label "
-                        "for the separator element. Spread them with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        "for the separator element. Spread them with "<Code inline=true>"{..separator.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -67,8 +67,8 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                         });
 
                         view! {
-                            <hr {..hr_sep.props.into_attrs()} />
-                            <div {..div_sep.props.into_attrs()}></div>
+                            <hr {..hr_sep.separator.attrs()} />
+                            <div {..div_sep.separator.attrs()}></div>
                         }
                     "#)}
                 </Code>

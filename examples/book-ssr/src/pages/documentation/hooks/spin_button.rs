@@ -71,10 +71,10 @@ pub fn PageUseSpinButton() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseSpinButtonReturn">
-                    <ApiRow name="props" ty="UseSpinButtonProps">
+                    <ApiRow name="spin_button" ty="Part<UseSpinButtonProps>">
                         "For the element showing the value: "<Code inline=true>"role=\"spinbutton\""</Code>", the "
                         <Code inline=true>"aria-value*"</Code>" attributes and the keyboard and focus handlers. Spread with "
-                        <Code inline=true>"{..props.into_attrs()}"</Code>". Add a "<Code inline=true>"tabindex"</Code>
+                        <Code inline=true>"{..spin_button.attrs()}"</Code>". Add a "<Code inline=true>"tabindex"</Code>
                         " and an accessible name yourself."
                     </ApiRow>
                     <ApiRow name="increment_button" ty="UseButtonInput">
@@ -124,12 +124,12 @@ pub fn PageUseSpinButton() -> impl IntoView {
                             allow_focus_when_disabled: true,
                             ..spin.increment_button
                         })
-                        .props
-                        .into_parts();
+                        .button
+                        .attrs();
                         // ... the same for `spin.decrement_button`
 
                         view! {
-                            <div {..spin.props.into_attrs()} tabindex="0" aria-label="Cups of coffee">
+                            <div {..spin.spin_button.attrs()} tabindex="0" aria-label="Cups of coffee">
                                 {move || cups.get()}
                             </div>
                             <button {..inc_attrs} style=inc_styles>"+"</button>

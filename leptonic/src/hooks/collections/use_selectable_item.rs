@@ -1,14 +1,7 @@
 // Upstream: react-aria/src/selection/useSelectableItem.ts @ 99e6102368
 // Upstream: react-aria/test/selection/useSelectableCollection.test.js @ 99e6102368
 // Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
-use leptos::{
-    attr::{
-        self, Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, FocusEvent, MouseEvent, PointerEvent};
 
@@ -17,7 +10,7 @@ use super::{
     modifiers::{is_ctrl_key_pressed, is_non_contiguous_selection_modifier},
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, Modifiers, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, Modifiers, OnEvent,
     PropsWithStyles,
     hooks::interactions::{
         use_context_menu::{
@@ -36,8 +29,10 @@ use crate::{
         key::KeyboardKey,
         modifiers::EventModifiers,
         open_link::is_opening_link,
+        part::{Part, Remount},
         pointer_type::PointerType,
         shadow_dom::{get_active_element, get_event_target},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         virtual_focus::move_virtual_focus,
     },
 };
@@ -103,10 +98,10 @@ pub struct UseSelectableItemInput {
     /// The item element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// The `collection_id` of the collection the item belongs to (from
     /// `use_selectable_collection`).
-    pub collection_id: String,
+    pub collection_id: Id,
     /// Disables the item, in addition to the selection manager's disabled keys.
     pub is_disabled: Signal<bool>,
     /// Select when the press ends instead of when it starts (menus, select popovers).
@@ -130,9 +125,10 @@ pub struct UseSelectableItemInput {
     pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
-/// Return value of [`use_selectable_item`].
+/// The return value of [`use_selectable_item`].
 pub struct UseSelectableItemReturn {
-    pub props: PropsWithStyles<UseSelectableItemProps>,
+    /// The item element: `let (attrs, styles) = item.attrs();`.
+    pub item: Part<PropsWithStyles<UseSelectableItemProps>>,
     pub is_pressed: Signal<bool>,
     pub is_selected: Signal<bool>,
     /// Whether the item has keyboard focus within the focused collection.
@@ -147,10 +143,10 @@ pub struct UseSelectableItemReturn {
 /// Props for the item element.
 #[derive(Debug)]
 pub struct UseSelectableItemProps {
-    pub id: String,
+    pub id: Id,
     /// `0` for the focused item, `-1` for others, none for disabled items.
     pub tabindex: Signal<Option<i32>>,
-    pub collection_id: String,
+    pub collection_id: Id,
     pub element_capture: ElementCaptureAttr,
     pub press: UsePressProps,
     pub on_focus: EventHandler<FocusEvent>,
@@ -158,10 +154,25 @@ pub struct UseSelectableItemProps {
     pub context_menu: UseContextMenuProps,
 }
 
+impl Remount for UseSelectableItemProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            tabindex: self.tabindex,
+            collection_id: self.collection_id.clone(),
+            element_capture: self.element_capture.clone(),
+            press: self.press.remount(),
+            on_focus: self.on_focus.clone(),
+            on_dragstart_capture: self.on_dragstart_capture.clone(),
+            context_menu: self.context_menu.remount(),
+        }
+    }
+}
+
 pub type UseSelectableItemAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Tabindex, Signal<Option<i32>>>,
-    CustomAttr<&'static str, String>,
+    FixedAttr,
+    SignalAttr<Option<i32>>,
+    FixedAttr,
     ElementCaptureAttr,
     UsePressAttrs,
     OnEvent<ev::focus>,
@@ -174,9 +185,9 @@ impl IntoAttrs for UseSelectableItemProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Tabindex, self.tabindex),
-            custom_attribute("data-collection", self.collection_id),
+            fixed_attr("id", self.id),
+            signal_attr("tabindex", self.tabindex),
+            fixed_attr("data-collection", self.collection_id),
             self.element_capture,
             self.press.into_attrs(),
             self.on_focus.into_on(ev::focus),
@@ -209,9 +220,10 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         on_context_menu,
     } = input;
     let UseContextMenuReturn {
-        props: context_menu_props,
+        target: context_menu_props,
         long_press: context_menu_long_press,
     } = use_context_menu(UseContextMenuInput { on_context_menu });
+    let context_menu_props = context_menu_props.into_props();
 
     let id = id.unwrap_or_else(|| use_id("item"));
     item_elements.register(key.clone(), element);
@@ -258,8 +270,9 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             && allows_selection.get()
             && selection.selection_behavior() == SelectionBehavior::Replace
     });
-    let has_action = Memo::new(move |_| has_primary_action.get() || has_secondary_action.get());
-    let long_press_enabled = Memo::new(move |_| has_action.get() && allows_selection.get());
+    // Trivial combinations: derives, not memos (`performance.md` R5).
+    let has_action = Signal::derive(move || has_primary_action.get() || has_secondary_action.get());
+    let long_press_enabled = move || has_action.get() && allows_selection.get();
 
     // -- DOM focus follows the focused key --
     Effect::new(move |_| {
@@ -282,9 +295,10 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         }
     });
 
-    // A focused item that becomes disabled loses focus.
-    Effect::new(move |_| {
-        if is_disabled.get() && key.with_value(|k| selection.is_focused_key(k)) {
+    // A focused item that becomes disabled loses focus (no effect for an item that is never
+    // disabled, `performance.md` R6).
+    crate::utils::reactions::when_true(is_disabled.into(), move || {
+        if key.with_value(|k| selection.is_focused_key(k)) {
             selection.set_focused_key(None, None);
         }
     });
@@ -359,7 +373,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     let (on_press_start, on_press, on_press_up) = if should_select_on_press_up {
         let on_press_start = Callback::new(move |e: PressEvent| {
             modality.set_value(Some(e.pointer_type));
-            long_press_enabled_on_press_start.set_value(long_press_enabled.get_untracked());
+            long_press_enabled_on_press_start.set_value(untrack(long_press_enabled));
             if e.pointer_type == PointerType::Keyboard
                 && (!has_action.get_untracked() || is_selection_key(&e))
             {
@@ -406,7 +420,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     } else {
         let on_press_start = Callback::new(move |e: PressEvent| {
             modality.set_value(Some(e.pointer_type));
-            long_press_enabled_on_press_start.set_value(long_press_enabled.get_untracked());
+            long_press_enabled_on_press_start.set_value(untrack(long_press_enabled));
             let primary = has_primary_action.get_untracked();
             had_primary_action_on_press_start.set_value(primary);
             if allows_selection.get_untracked()
@@ -469,13 +483,13 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 .and_then(|context_menu| context_menu.on_long_press_start)
                 .map(|on_start| {
                     Callback::new(move |e: LongPressEvent| {
-                        if !long_press_enabled.get_untracked() {
+                        if !untrack(long_press_enabled) {
                             on_start.run(e);
                         }
                     })
                 }),
             on_long_press: Some(Callback::new(move |e: LongPressEvent| {
-                if long_press_enabled.get_untracked() {
+                if untrack(long_press_enabled) {
                     if e.pointer_type == PointerType::Touch {
                         on_select(&e.pointer_type, e.modifiers);
                         selection.set_selection_behavior(SelectionBehavior::Toggle);
@@ -487,13 +501,19 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 }
             })),
             is_disabled: Signal::derive(move || {
-                !long_press_enabled.get() && context_menu_long_press.is_none()
+                !long_press_enabled() && context_menu_long_press.is_none()
             }),
             ..LongPress::default()
         }),
-        ..UsePressInput::default()
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
+        on_press_end: None,
+        on_press_change: None,
+        on_double_press: None,
     });
-    let (press_props, press_styles) = press.props.into_inner();
+    let (press_props, press_styles) = press.target.into_props().into_inner();
 
     // Double-click performs the secondary action.
     let on_dblclick = press_props.on_dblclick.chain(move |e: MouseEvent| {
@@ -534,7 +554,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 break;
             }
             if let Some(collection) = el.get_attribute("data-collection") {
-                return collection != child_collection_id;
+                return child_collection_id != *collection;
             }
             current = el.parent_element();
         }
@@ -593,7 +613,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     });
 
     UseSelectableItemReturn {
-        props: PropsWithStyles::new(
+        item: Part::stored(PropsWithStyles::new(
             UseSelectableItemProps {
                 id,
                 tabindex: Signal::derive(move || {
@@ -619,13 +639,13 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 context_menu: context_menu_props,
             },
             press_styles,
-        ),
+        )),
         is_pressed: press.is_pressed,
         is_selected: is_selected.into(),
         is_focused: is_focused.into(),
         is_disabled: is_disabled.into(),
         allows_selection: allows_selection.into(),
-        has_action: has_action.into(),
+        has_action,
     }
 }
 

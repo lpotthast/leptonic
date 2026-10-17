@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         field::Label,
@@ -34,11 +33,7 @@ pub fn PositioningDemo() -> impl IntoView {
     let target = CapturedElement::new();
     let (is_open, set_is_open) = signal(false);
 
-    let UseOverlayReturn {
-        props: overlay_props,
-        id,
-        ..
-    } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn { overlay, id, .. } = use_overlay(UseOverlayInput {
         is_dismissable: Signal::stored(true),
         // The trigger toggles the overlay itself, so presses on it must not count as "outside".
         should_close_on_interact_outside: Some(InteractOutsideFilter::new(
@@ -54,18 +49,15 @@ pub fn PositioningDemo() -> impl IntoView {
         is_keyboard_dismiss_disabled: Signal::stored(false),
         group: None,
     });
-    let overlay_attrs = StoredValue::new(overlay_props.into_attrs());
 
-    let UseOverlayTriggerReturn {
-        props: trigger_props,
-    } = use_overlay_trigger(UseOverlayTriggerInput {
+    let UseOverlayTriggerReturn { trigger } = use_overlay_trigger(UseOverlayTriggerInput {
         is_open: is_open.into(),
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
 
     let UseOverlayPositionReturn {
-        props: position_props,
+        overlay: position,
         placement: opened_on,
         ..
     } = use_overlay_position(UseOverlayPositionInput {
@@ -80,20 +72,19 @@ pub fn PositioningDemo() -> impl IntoView {
         scroll: None,
         on_close: None,
     });
-    let (position_attrs, position_styles) = position_props.into_parts();
-    let position_attrs = StoredValue::new(position_attrs);
-    let position_styles = StoredValue::new(position_styles);
 
-    let UseButtonReturn {
-        props: button_props,
-        ..
-    } = use_button(UseButtonInput {
+    let UseButtonReturn { button, .. } = use_button(UseButtonInput {
         on_press: Some(Callback::new(move |_| {
             set_is_open.update(|open| *open = !*open);
         })),
         ..UseButtonInput::default()
     });
-    let (button_attrs, button_styles) = button_props.into_parts();
+    let (button_attrs, button_styles) = button.attrs();
+
+    // `<Show>` mounts the overlay on every opening, and each mount spreads the parts again. A
+    // `StoredValue` makes a part `Copy` for the nested children closures.
+    let overlay = StoredValue::new(overlay);
+    let position = StoredValue::new(position);
 
     view! {
         <div class="demo-option-groups">
@@ -134,7 +125,7 @@ pub fn PositioningDemo() -> impl IntoView {
         <div class="demo-positioning-stage">
             <button
                 {..button_attrs}
-                {..trigger_props.into_attrs()}
+                {..trigger.attrs()}
                 {..target.attr()}
                 class="demo-positioning-target"
                 style=button_styles
@@ -152,20 +143,25 @@ pub fn PositioningDemo() -> impl IntoView {
 
         <Portal>
             <Show when=move || is_open.get()>
-                <div
-                    {..overlay_attrs.get_value()}
-                    {..position_attrs.get_value()}
-                    style=position_styles.get_value()
-                    role="dialog"
-                    aria-label="Placement"
-                    class="demo-popover"
-                >
-                    // Moves focus into the overlay, so that Escape reaches its key handler, and back to the trigger.
-                    <FocusScope restore_focus=true auto_focus=true>
-                        <p class="demo-overlay-text">{move || format!("Placed {:?} of the button.", placement.get())}</p>
-                        <Button on_press=move |_| set_is_open.set(false) classes="demo-btn">"Close"</Button>
-                    </FocusScope>
-                </div>
+                {
+                    let (position_attrs, position_styles) = position.with_value(|position| position.attrs());
+                    view! {
+                        <div
+                            {..overlay.with_value(|overlay| overlay.attrs())}
+                            {..position_attrs}
+                            style=position_styles
+                            role="dialog"
+                            aria-label="Placement"
+                            class="demo-popover"
+                        >
+                            // Moves focus into the overlay, so that Escape reaches its key handler, and back to the trigger.
+                            <FocusScope restore_focus=true auto_focus=true>
+                                <p class="demo-overlay-text">{move || format!("Placed {:?} of the button.", placement.get())}</p>
+                                <Button on_press=move |_| set_is_open.set(false) classes="demo-btn">"Close"</Button>
+                            </FocusScope>
+                        </div>
+                    }
+                }
             </Show>
         </Portal>
     }

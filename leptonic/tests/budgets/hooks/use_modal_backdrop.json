@@ -4,6 +4,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -13,7 +14,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 31,
+        "allocations": 21,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -35,6 +36,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -44,7 +46,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1,
+        "allocations": 0,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -64,6 +66,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -73,7 +76,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1,
+        "allocations": 0,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -93,6 +96,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -124,6 +128,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -133,7 +138,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 45,
+        "allocations": 44,
         "reallocations": 1,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -153,6 +158,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -182,6 +188,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -191,7 +198,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -213,6 +220,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -222,8 +230,8 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 192,
-        "reallocations": 7,
+        "allocations": 184,
+        "reallocations": 6,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
         "effect_runs": 5,
@@ -242,6 +250,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -251,7 +260,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -273,6 +282,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -282,7 +292,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 30,
+        "allocations": 20,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -302,6 +312,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -311,7 +322,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 171,
+        "allocations": 162,
         "reallocations": 6,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -333,6 +344,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_modal_backdrop",
@@ -342,7 +354,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 30,
+        "allocations": 20,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,

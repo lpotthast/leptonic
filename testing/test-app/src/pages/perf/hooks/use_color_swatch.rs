@@ -29,8 +29,8 @@ fn Swatch(
         aria_labelledby: Signal::default(),
         id: None,
     })
-    .color_swatch_props
-    .into_parts();
+    .swatch
+    .attrs();
     let styles = styles.merge(
         Styles::new()
             .add_unchecked("width", "20px")

@@ -3,7 +3,7 @@
 // Upstream: react-aria-components/test/AriaMenu.test-util.tsx @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::{context::Provider, either::Either, prelude::*};
 use leptos_classes::Classes;
 
 use super::{
@@ -13,12 +13,12 @@ use super::{
     separator::SeparatorContext,
 };
 use crate::{
-    CapturedElement, IntoAttrs, Out, SlotAttrs, ValueBinding,
+    CapturedElement, Out, Part, SlotProps, ValueBinding,
     hooks::{
         collections::{
             AutoFocus, CloseOnSelect, CollectionMemo, CollectionOptions, FocusStrategy, Key,
             ListState, Node, Selection, SelectionBehavior, SelectionMode, SelectionOptions,
-            UseListStateInput, use_list_state, use_node,
+            UseListStateInput, UseNodeInput, use_list_state, use_node,
         },
         interactions::{ContextMenuEvent, PressResponderTrigger},
         menu::{
@@ -35,7 +35,7 @@ use crate::{
         separator::SeparatorElementType,
     },
     utils::{
-        data_attributes::{self, flag},
+        data_attributes::{self, data_flags},
         default_class::with_default_class,
         point::Point,
         scoped_context::{ClearContexts, scoped_view},
@@ -72,7 +72,7 @@ use crate::{
 #[derive(Debug, Clone)]
 struct MenuTriggerContext {
     /// The menu's id (the trigger's `aria-controls`).
-    menu_id: String,
+    menu_id: crate::Id,
     /// Where focus goes when the menu opens.
     auto_focus: Signal<Option<AutoFocus>>,
     /// Closes the menu.
@@ -103,15 +103,15 @@ struct MenuCloseOnSelect(CloseOnSelect);
 
 /// From a [`SubmenuTrigger`] to the [`Menu`] it opens; `None` inside a menu.
 #[derive(Debug, Clone)]
-struct SubmenuMenuContext(Option<(SubmenuProps, CapturedElement)>);
+struct SubmenuMenuContext(Option<(Part<SubmenuProps>, CapturedElement)>);
 
 /// Context from [`MenuItem`] to its label, description and shortcut, and its state for the item's
 /// content (e.g. a check mark while selected: `use_context::<MenuItemContext>()`).
 #[derive(Debug, Clone)]
 pub struct MenuItemContext {
-    label: StoredValue<SlotAttrs>,
-    description: StoredValue<SlotAttrs>,
-    shortcut: StoredValue<SlotAttrs>,
+    label: Part<SlotProps>,
+    description: Part<SlotProps>,
+    shortcut: Part<SlotProps>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
     pub is_focus_visible: Signal<bool>,
@@ -297,7 +297,9 @@ pub fn ContextMenuTrigger(
         target.set(element.clone());
         // Collection items already own their ids; no PressResponder assigns the generated
         // dialog trigger id to this dynamically chosen row.
-        overlay_trigger.trigger_id.set(element.id());
+        overlay_trigger
+            .trigger_id
+            .set(crate::Id::from(element.id()));
         target_key.set(Some(key));
         let rect = element.get_bounding_client_rect();
         menu_state.set_point(Some(Point {
@@ -414,7 +416,16 @@ pub fn Menu(
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     // A submenu takes its settings from its `SubmenuTrigger`, not from the root trigger.
-    let submenu = use_context::<SubmenuMenuContext>().and_then(|ctx| ctx.0);
+    let submenu = match use_context::<SubmenuMenuContext>().and_then(|ctx| ctx.0) {
+        // One menu at a time is a trigger's submenu (`Part`: a second one renders nothing).
+        Some((part, element)) => {
+            let Some(props) = part.props() else {
+                return Either::Right(());
+            };
+            Some((props, element))
+        }
+        None => None,
+    };
     let trigger_ctx = if submenu.is_some() {
         None
     } else {
@@ -456,6 +467,7 @@ pub fn Menu(
 
     // Inside a trigger: labelled by the trigger.
     let trigger_id = trigger_ctx.as_ref().map(|ctx| ctx.trigger.trigger_id);
+    let aria_labelledby = crate::utils::id::id_ref_prop(aria_labelledby);
     let labelledby = Signal::derive(move || {
         aria_labelledby.get().or_else(|| {
             aria_label
@@ -490,7 +502,7 @@ pub fn Menu(
             }
         })
     };
-    let UseMenuReturn { props, data } = use_menu(UseMenuInput {
+    let UseMenuReturn { menu: props, data } = use_menu(UseMenuInput {
         id: trigger_ctx.as_ref().map(|ctx| ctx.menu_id.clone()),
         aria_label,
         aria_labelledby: labelledby,
@@ -506,7 +518,7 @@ pub fn Menu(
         element,
         keyboard_delegate: None,
     });
-    view! {
+    Either::Left(view! {
         <Provider value=data>
             <Provider value=root>
                 <Provider value=ParentMenuElement(element)>
@@ -519,10 +531,10 @@ pub fn Menu(
                                     element_type: SeparatorElementType::Div,
                                 }>
                                     <div
-                                        {..props.into_attrs()}
+                                        {..props.attrs()}
                                         class=classes
-                                        style=styles
-                                        data-empty=flag(is_empty.into())
+                                        style={styles}
+                                        {..data_flags([("data-empty", is_empty.into())])}
                                     >
                                         {children()}
                                         {empty}
@@ -534,7 +546,7 @@ pub fn Menu(
                 </Provider>
             </Provider>
         </Provider>
-    }
+    })
 }
 
 /// An item of a [`Menu`], for the collection item `key`: `menuitem`, or `menuitemcheckbox` /
@@ -590,10 +602,10 @@ pub fn MenuItem(
         .as_ref()
         .map_or_else(|| Signal::stored(false), |trigger| trigger.is_open);
     let UseMenuItemReturn {
-        props,
-        label_props,
-        description_props,
-        keyboard_shortcut_props,
+        item: props,
+        label,
+        description,
+        keyboard_shortcut,
         is_focused,
         is_focus_visible,
         is_selected,
@@ -607,9 +619,9 @@ pub fn MenuItem(
         submenu_trigger,
     });
     let ctx = MenuItemContext {
-        label: StoredValue::new(label_props.into_attrs()),
-        description: StoredValue::new(description_props.into_attrs()),
-        shortcut: StoredValue::new(keyboard_shortcut_props.into_attrs()),
+        label,
+        description,
+        shortcut: keyboard_shortcut,
         is_selected,
         is_focused,
         is_focus_visible,
@@ -618,7 +630,7 @@ pub fn MenuItem(
         is_hovered,
         selection_mode,
     };
-    let (attrs, item_styles) = props.into_parts();
+    let (attrs, item_styles) = props.attrs();
     let styles = item_styles.merge(styles);
 
     Some(view! {
@@ -626,15 +638,19 @@ pub fn MenuItem(
             <div
                 {..attrs}
                 class=classes
-                style=styles
-                data-focused=flag(is_focused)
-                data-focus-visible=flag(is_focus_visible)
-                data-selected=flag(is_selected)
-                data-disabled=flag(is_disabled)
-                data-pressed=flag(is_pressed)
-                data-hovered=flag(is_hovered)
+                style={styles}
+                {..data_flags([
+                    ("data-focused", is_focused),
+                    ("data-focus-visible", is_focus_visible),
+                    ("data-pressed", is_pressed),
+                ])}
+                {..data_flags([("data-hovered", is_hovered)])}
+                {..data_flags([
+                    ("data-selected", is_selected),
+                    ("data-disabled", is_disabled),
+                ])}
                 data-has-submenu=has_submenu.then_some("true")
-                data-open=flag(is_open)
+                {..data_flags([("data-open", is_open)])}
                 data-selection-mode=data_attributes::selection_mode(move || selection_mode.get())
             >
                 {children()}
@@ -711,14 +727,12 @@ pub fn SubmenuTrigger(
     });
     let popover = SubmenuPopoverContext {
         should_close_on_interact_outside: StoredValue::new(should_close_on_interact_outside),
-        aria_labelledby: StoredValue::new(submenu_props.aria_labelledby.clone()),
+        aria_labelledby: StoredValue::new(item.id.clone()),
     };
     // The popover finds the submenu's state and the trigger item here; an untitled dialog in it
     // is named by the trigger item (whose id no `PressResponder` assigns).
     let dialog_trigger = DialogTriggerContext::new(state.overlay, trigger);
-    dialog_trigger
-        .trigger_id
-        .set(submenu_props.aria_labelledby.clone());
+    dialog_trigger.trigger_id.set(item.id.clone());
     Some(scoped_view(
         move || {
             provide_context(SubmenuItemContext(Some((key, item))));
@@ -755,6 +769,7 @@ where
         return None;
     };
     let collection = menu.state.collection;
+    let selection = menu.state.selection;
     let children = std::sync::Arc::new(children);
     Some(view! {
         <For
@@ -765,7 +780,7 @@ where
             {
                 // The item's content renders again when it changes (e.g. its text), not when
                 // other items come or go.
-                let node = use_node(collection, key.clone());
+                let node = use_node(UseNodeInput { selection, key: key.clone() });
                 let children = children.clone();
                 view! {
                     <MenuItem key=key classes=classes.clone()>
@@ -832,15 +847,17 @@ pub fn MenuItemShortcut(
 }
 
 /// Renders a label/description/shortcut slot (one of each per item: its id is the item's
-/// reference to it).
+/// reference to it; a second one gets no props).
+#[track_caller]
 fn slot(
-    attrs: StoredValue<SlotAttrs>,
+    part: Part<SlotProps>,
     classes: Classes,
     styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let attrs = part.attrs();
     view! {
-        <span {..attrs.get_value()} class=classes style=styles>
+        <span {..attrs} class=classes style=styles>
             {children()}
         </span>
     }
@@ -896,8 +913,8 @@ pub fn MenuSection(
         return None;
     };
     let UseMenuSectionReturn {
-        heading_props,
-        group_props,
+        header: heading_props,
+        group: group_props,
         heading,
         ..
     } = use_menu_section(UseMenuSectionInput {
@@ -927,7 +944,7 @@ pub fn MenuSection(
         own => own,
     };
     // Rendered while the section has a header.
-    let heading_attrs = heading_props.into_attrs();
+    let heading_attrs = heading_props.attrs();
     let heading = move || {
         heading.get().map(|text| {
             view! {
@@ -939,7 +956,7 @@ pub fn MenuSection(
     };
 
     Some(view! {
-        <section {..group_props.into_attrs()} class=classes style=styles>
+        <section {..group_props.attrs()} class=classes style=styles>
             {heading}
             <Provider value=MenuCloseOnSelect(
                 close_on_select,

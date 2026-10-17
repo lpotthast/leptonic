@@ -26,7 +26,11 @@ fn Swatch(color: RGB8, #[prop(optional, into)] color_name: MaybeProp<String>) ->
         id: None,
     });
     // The props carry the swatch's background color as a style.
-    let (props, styles) = swatch.color_swatch_props.into_inner();
+    let (props, styles) = swatch
+        .swatch
+        .props()
+        .expect("only this element renders the swatch")
+        .into_inner();
     let label = props.aria_label;
 
     view! {

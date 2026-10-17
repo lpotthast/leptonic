@@ -57,5 +57,6 @@ pub fn use_grid_selection_checkbox(input: UseGridSelectionCheckboxInput) -> UseC
         },
         state,
         is_indeterminate: Signal::stored(false),
+        validation: None,
     }
 }

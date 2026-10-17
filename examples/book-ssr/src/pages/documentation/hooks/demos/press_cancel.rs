@@ -16,7 +16,7 @@ pub fn PressCancelDemo() -> impl IntoView {
         });
     };
 
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn { target, is_pressed } = use_press(UsePressInput {
         should_cancel_on_pointer_exit: true.into(),
         on_press: Some(Callback::new(move |_| log("Press completed".to_owned()))),
         on_press_start: Some(Callback::new(move |_| log("PressStart".to_owned()))),
@@ -25,7 +25,7 @@ pub fn PressCancelDemo() -> impl IntoView {
         })),
         ..Default::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = target.attrs();
 
     view! {
         <button {..attrs} style=styles class="demo-press-button" data-pressed=flag(is_pressed)>

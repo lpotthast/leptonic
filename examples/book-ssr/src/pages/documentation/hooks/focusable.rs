@@ -61,9 +61,9 @@ pub fn PageUseFocusable() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseFocusableReturn">
-                    <ApiRow name="props" ty="UseFocusableProps">
+                    <ApiRow name="target" ty="Part<UseFocusableProps>">
                         "The "<Code inline=true>"tabindex"</Code>", the focus and keyboard listeners and the element capture. "
-                        "Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        "Spread them onto the element with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                     <ApiRow name="focus_handle" ty="FocusHandle">"Focuses the element programmatically."</ApiRow>
                 </ApiTable>
@@ -79,13 +79,13 @@ pub fn PageUseFocusable() -> impl IntoView {
                         use leptos::{logging::log, prelude::*};
 
                         // A scrollable region has to be focusable, so keyboard users can scroll it.
-                        let UseFocusableReturn { props, focus_handle } = use_focusable(UseFocusableInput {
+                        let UseFocusableReturn { target, focus_handle } = use_focusable(UseFocusableInput {
                             on_focus_change: Some(Callback::new(move |focused| log!("focused: {focused}"))),
                             ..Default::default()
                         });
 
                         view! {
-                            <div role="region" aria-label="Terms" class="scrollable" {..props.into_attrs()}>
+                            <div role="region" aria-label="Terms" class="scrollable" {..target.attrs()}>
                                 // long content
                             </div>
                             <Button on_press=move |_| focus_handle.focus()>"Read the terms"</Button>
@@ -199,7 +199,7 @@ pub fn PageUseFocusable() -> impl IntoView {
                 <ApiTable kind=ApiKind::Fields of="FocusableContext">
                     <ApiRow name="on_focus, on_blur" ty="Option<EventHandler<FocusEvent>>">"Additional focus and blur handlers."</ApiRow>
                     <ApiRow name="on_keydown, on_keyup" ty="Option<EventHandler<KeyboardEvent>>">"Additional keyboard handlers."</ApiRow>
-                    <ApiRow name="aria_describedby" ty="Option<Signal<Option<String>>>">
+                    <ApiRow name="aria_describedby" ty="Option<Signal<Option<Id>>>">
                         "Describes the element as well (e.g. a tooltip), added to its own description."
                     </ApiRow>
                     <ApiRow name="attrs" ty="Option<FocusableContextAttrs>">

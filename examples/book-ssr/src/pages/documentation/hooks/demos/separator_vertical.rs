@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator},
 };
 use leptos::prelude::*;
@@ -15,7 +15,7 @@ pub fn SeparatorVerticalDemo() -> impl IntoView {
     view! {
         <div class="demo-flex-center-row">
             <span>"Left content"</span>
-            <div {..vertical_sep.props.into_attrs()} class="demo-separator-line"></div>
+            <div {..vertical_sep.separator.attrs()} class="demo-separator-line"></div>
             <span>"Right content"</span>
         </div>
     }

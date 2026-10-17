@@ -5,10 +5,7 @@ use leptos::prelude::*;
 use super::visually_hidden::VisuallyHidden;
 use crate::{
     labels,
-    utils::{
-        id::use_id,
-        intl_strings::{OverlayStrings, use_localized_strings},
-    },
+    utils::intl_strings::{OverlayStrings, use_localized_strings},
 };
 
 // =============================================================================
@@ -46,17 +43,18 @@ pub fn DismissButton(
     aria_labelledby: MaybeProp<String>,
     /// The button's id. Default: a generated one.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
 ) -> impl IntoView {
     crate::metrics::subject!();
-    let id = id.unwrap_or_else(|| use_id("dismiss-button"));
+    let id = id.unwrap_or_else(|| crate::utils::id::use_id("dismiss-button"));
+    let aria_labelledby = crate::utils::id::id_ref_prop(aria_labelledby);
     let strings = use_localized_strings::<OverlayStrings>();
     // With both a label and labelling ids, labelled by itself (first) and the referenced
     // elements; without either, "Dismiss" (react-aria's `useLabels` with a default label).
     // A memo: both attributes read it, and it allocates.
     let labelling = {
         let id = id.clone();
-        Memo::new(move |_| labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
+        Memo::new(move |_| labels(&id, aria_label.get(), aria_labelledby.get().as_ref()))
     };
     let label = move || {
         labelling.with(|labelling| {

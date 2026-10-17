@@ -4,17 +4,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 24,
-        "reallocations": 7,
+        "allocations": 19,
+        "reallocations": 14,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -28,17 +29,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1526,
-        "reallocations": 497,
+        "allocations": 1523,
+        "reallocations": 511,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -54,17 +56,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 24,
-        "reallocations": 1,
+        "allocations": 19,
+        "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -78,17 +81,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 41,
-        "reallocations": 1,
+        "allocations": 38,
+        "reallocations": 3,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -104,17 +108,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 241,
-        "reallocations": 8,
+        "allocations": 247,
+        "reallocations": 9,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
         "effect_runs": 4,
         "render_effect_runs": 2,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 0,
@@ -128,11 +133,12 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -154,17 +160,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 5191,
-        "reallocations": 1001,
+        "allocations": 5197,
+        "reallocations": 1002,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
         "effect_runs": 4,
         "render_effect_runs": 2,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 0,
@@ -178,11 +185,12 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -204,11 +212,12 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 8,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -228,11 +237,12 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 10,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -254,11 +264,12 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 8,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -278,11 +289,12 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 15,
+        "allocations": 10,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -304,17 +316,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 27,
+        "allocations": 22,
         "reallocations": 7,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -328,17 +341,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 28,
+        "allocations": 25,
         "reallocations": 7,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -354,17 +368,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 27,
+        "allocations": 22,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,
@@ -378,17 +393,18 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_collection",
+        "hooks/use_tree_expansion",
         "hooks/use_tree_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 28,
+        "allocations": 25,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 0,
         "render_effect_runs": 1,
-        "immediate_effect_runs": 0,
+        "immediate_effect_runs": 2,
         "signal_notifications": 1,
         "dom_attributes": 0,
         "dom_text": 1,

@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::field::{Description, FieldContext, FieldError, Label, LabelContext, TextElement},
     hooks::form::{UseFieldInput, UseFieldReturn, ValidityStateSnapshot, use_field},
 };
@@ -25,10 +24,10 @@ pub fn FieldCustomDemo() -> impl IntoView {
     let is_invalid = Signal::derive(move || !validation_errors.get().is_empty());
 
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label,
+        field,
+        description,
+        error_message,
         ..
     } = use_field(UseFieldInput {
         has_label: true.into(),
@@ -36,10 +35,10 @@ pub fn FieldCustomDemo() -> impl IntoView {
     });
 
     // A `<label for=..>`: the input is a native form control.
-    let label = LabelContext::label(label_props);
-    let field = FieldContext {
-        description: description_props,
-        error_message: error_message_props,
+    let label_context = LabelContext::label(label);
+    let field_context = FieldContext {
+        description,
+        error_message,
         is_invalid,
         validation_errors,
         // The validation is custom: no native constraint applies.
@@ -51,8 +50,8 @@ pub fn FieldCustomDemo() -> impl IntoView {
     };
 
     view! {
-        <Provider value=label>
-        <Provider value=field>
+        <Provider value=label_context>
+        <Provider value=field_context>
             <div class="demo-field">
                 <Label classes="demo-field-label">"Username"</Label>
                 <input
@@ -61,7 +60,7 @@ pub fn FieldCustomDemo() -> impl IntoView {
                     aria-invalid=move || is_invalid.get().then_some("true")
                     prop:value=username
                     on:input=move |ev| username.set(event_target_value(&ev))
-                    {..field_props.into_attrs()}
+                    {..field.attrs()}
                 />
                 <Description classes="demo-field-description">"Shown on your public profile."</Description>
                 // Custom children replace the joined errors; `Div` allows block content.

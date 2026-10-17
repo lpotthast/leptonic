@@ -146,6 +146,7 @@ pub fn PageAtomTable() -> impl IntoView {
                             "The columns and rows. Required. Build it with "<Code inline=true>"TableCollection::build"</Code>". "
                             "Enable the "<Code inline=true>"show_selection_checkboxes"</Code>" prop for a checkbox column."
                         </ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The table\u{2019}s id (its rows\u{2019} and cells\u{2019} ids derive from it). Generated when not given."</ApiRow>
                         <ApiRow name="focus_mode" ty="GridFocusMode" default="Row">
                             <Code inline=true>"Row"</Code>": arrow keys move between rows, arrow right enters the cells. "
                             <Code inline=true>"Cell"</Code>": they move between cells."

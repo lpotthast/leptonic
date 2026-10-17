@@ -1,16 +1,18 @@
 //! `use_grid_selection_announcement` alone, for its performance test
-//! (`leptonic/tests/perf_tests/hooks/use_grid_selection_announcement.rs`): the hook on the state
-//! of the rows of the `use_grid` fixture ([`super::use_grid`]: [`SMALL`] rows "Row <i>"), with
-//! multiple selection, called by a mounted component (`#perf-announcer`, mounted at first). Its
-//! controls ([`Control`]) mount and unmount it, set the size while unmounted (`small`, `large`:
-//! [`LARGE`] rows), mark the grid focused or not (the hook announces changes only while it is),
-//! change the selection (one row, every row by key, all, none) and prepare the live announcer
-//! (`prepare-announcer`: its first announcement waits for its live regions).
+//! (`leptonic/tests/perf_tests/hooks/use_grid_selection_announcement.rs`): the hook on the state of
+//! [`SMALL`] rows "Row <i>" of three cells, with multiple selection, called by a mounted component
+//! (`#perf-announcer`, mounted at first). Its controls ([`Control`]) mount and unmount it, set the
+//! size while unmounted (`small`, `large`: [`LARGE`] rows), mark the grid focused or not (the hook
+//! announces changes only while it is), change the selection (one row, every row by key, all, none)
+//! and prepare the live announcer (`prepare-announcer`: its first announcement waits for its live
+//! regions).
+
+use std::sync::Arc;
 
 use leptonic::{
     Assertiveness, announce,
     hooks::{
-        collections::{Key, SelectionMode, SelectionOptions},
+        collections::{Collection, CollectionMemo, Key, SelectionMode, SelectionOptions},
         grid::{
             GridFocusMode, GridState, UseGridSelectionAnnouncementInput, UseGridStateInput,
             use_grid_selection_announcement, use_grid_state,
@@ -19,8 +21,29 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-use super::use_grid::{LARGE, SMALL, grid_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small grid.
+const SMALL: usize = 10;
+
+/// The rows of the large grid.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`), each with the cells "Row <i>", "Value <i>" and
+/// "Group <i % 3>".
+fn grid_collection(rows: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..rows.get() {
+                b.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
 
 /// Calls the hook.
 #[component]

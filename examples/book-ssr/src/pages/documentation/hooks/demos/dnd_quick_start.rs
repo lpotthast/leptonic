@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::dnd::{
         DragItem, DropEvent, DropItem, UseDragInput, UseDragReturn, UseDropInput, UseDropReturn,
         use_drag, use_drop,
@@ -13,7 +13,7 @@ pub fn DndQuickStartDemo() -> impl IntoView {
     let dropped = RwSignal::new(None::<String>);
 
     let UseDragReturn {
-        drag_props,
+        draggable,
         is_dragging,
         ..
     } = use_drag(UseDragInput {
@@ -28,7 +28,7 @@ pub fn DndQuickStartDemo() -> impl IntoView {
     });
 
     let UseDropReturn {
-        drop_props,
+        drop_target,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -54,7 +54,7 @@ pub fn DndQuickStartDemo() -> impl IntoView {
         <div class="demo-dnd-board">
             // Focusable, so that Enter starts a keyboard drag.
             <div
-                {..drag_props.into_attrs()}
+                {..draggable.attrs()}
                 role="button"
                 tabindex="0"
                 class="demo-dnd-card"
@@ -64,7 +64,7 @@ pub fn DndQuickStartDemo() -> impl IntoView {
             </div>
             // Keyboard drags move focus to the drop target.
             <div
-                {..drop_props.into_attrs()}
+                {..drop_target.attrs()}
                 role="button"
                 tabindex="0"
                 class="demo-dnd-target"

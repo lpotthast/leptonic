@@ -439,3 +439,51 @@ pub async fn renamed_items_update(page: &Page<'_>) -> Result<(), Report> {
     heading.wait_for_inner_text("Animals").await?;
     Ok(())
 }
+
+/// A `ListBoxSectionHeading` mounted again names its section again: the section hands the
+/// heading its props back when it unmounts (no upstream test: React passes them on every render).
+#[browser_test]
+pub async fn section_heading_mounts_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let veggies = page.first_element("#lbf-sections [role=group]").await?;
+    assert_that!(veggies)
+        .accessible_name()
+        .await
+        .is_equal_to("Veggies");
+    let toggle = page.element("#lbf-toggle-heading").await?;
+    toggle.click().await?;
+    page.wait_for_count("#lbf-sections .leptonic-ListBoxSectionHeading", 0)
+        .await?;
+    toggle.click().await?;
+    let heading = page
+        .element("#lbf-sections .leptonic-ListBoxSectionHeading")
+        .await?;
+    assert_that!(heading)
+        .has_attribute("id")
+        .await
+        .is_not_empty();
+    assert_that!(|| veggies.accessible_name())
+        .eventually_ok()
+        .matches(eq("Veggies"))
+        .await;
+    Ok(())
+}
+
+/// An id the app gives the listbox is its element's (react-aria-components: `id`; an `attr:id`
+/// can't replace an element's own id), and its options' ids derive from it.
+#[browser_test]
+pub async fn own_id(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let listbox = page.element("#lbf-own-id [role=listbox]").await?;
+    assert_that!(listbox)
+        .has_attribute("id")
+        .await
+        .is_equal_to("lbf-listbox-own-id");
+    let option_id = listbox
+        .first_element(role(AriaRole::Option))
+        .await?
+        .id()
+        .await?;
+    assert_that!(option_id.unwrap_or_default()).starts_with("lbf-listbox-own-id");
+    Ok(())
+}

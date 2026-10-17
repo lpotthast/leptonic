@@ -5,16 +5,13 @@
 //! at first, [`LARGE`] after the control `large`; removing a tag removes it from the data. Between
 //! two plain buttons (`#perf-before`, `#perf-after`), mounted at first.
 //!
-//! [`TagGroupFixture`] renders it for `use_tag`'s performance test too: the controls `mount` and
-//! `unmount` mount the group (calling `use_tag_group`) or only its tags (calling `use_tag`). The
-//! other controls ([`Control`]) change the tags and the state (its methods: select all, clear) and
-//! the disabled tags, and prepare the live announcer (`prepare-announcer`: its first announcement
-//! waits for its live regions).
+//! Its controls ([`Control`]) mount and unmount the group, change the tags, and prepare the live
+//! announcer (`prepare-announcer`: its first announcement waits for its live regions).
 
 use std::collections::HashSet;
 
 use leptonic::{
-    Assertiveness, CapturedElement, IntoAttrs, announce,
+    Assertiveness, CapturedElement, announce,
     hooks::{
         button::use_button,
         collections::{
@@ -32,31 +29,14 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The tags at first.
-pub const SMALL: u32 = 10;
+const SMALL: u32 = 10;
 /// The tags after the control `large`.
-pub const LARGE: u32 = 1_000;
-
-/// What the controls `mount` and `unmount` mount.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Part {
-    /// The group with its tags.
-    TagGroup,
-    /// The tags (in the mounted group).
-    Tags,
-}
+const LARGE: u32 = 1_000;
 
 #[component]
 pub fn PagePerf() -> impl IntoView {
-    view! { <TagGroupFixture title="use_tag_group performance" part=Part::TagGroup /> }
-}
-
-/// The tag group (see the module documentation), `part` mounted by the controls.
-#[component]
-pub fn TagGroupFixture(title: &'static str, part: Part) -> impl IntoView {
     let mounted = RwSignal::new(true);
-    let is_mounted = move |of: Part| Signal::derive(move || of != part || mounted.get());
     let items = RwSignal::new((0..SMALL).collect::<Vec<u32>>());
-    let disabled_keys = RwSignal::new(HashSet::<Key>::new());
     let state = use_list_state(UseListStateInput {
         collection: use_list_collection(UseListCollectionInput {
             items: items.into(),
@@ -65,7 +45,6 @@ pub fn TagGroupFixture(title: &'static str, part: Part) -> impl IntoView {
         }),
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
-            disabled_keys: disabled_keys.into(),
             ..SelectionOptions::default()
         },
     });
@@ -73,35 +52,26 @@ pub fn TagGroupFixture(title: &'static str, part: Part) -> impl IntoView {
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),
         Control::action("large", move || items.set((0..LARGE).collect())),
-        Control::action("select-all", move || state.selection.select_all()),
-        Control::action("clear-selection", move || state.selection.clear_selection()),
-        Control::action("disable-first", move || {
-            disabled_keys.set(HashSet::from([Key::from(0_u32)]));
-        }),
-        Control::action("enable-all", move || disabled_keys.set(HashSet::new())),
         Control::action("prepare-announcer", || announce("", Assertiveness::Polite)),
     ];
-    let tags_mounted = is_mounted(Part::Tags);
     view! {
-        <h1>{title}</h1>
+        <h1>"use_tag_group performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <Show when=move || is_mounted(Part::TagGroup).get()>
-            <PlainTagGroup state items tags_mounted />
+        <Show when=move || mounted.get()>
+            <PlainTagGroup state items />
         </Show>
         <button id="perf-after">"After"</button>
     }
 }
 
-/// The group element (`use_tag_group`) with its tags, while `tags_mounted`.
+/// The group element (`use_tag_group`) with its tags.
 #[component]
-fn PlainTagGroup(
-    state: ListState,
-    items: RwSignal<Vec<u32>>,
-    tags_mounted: Signal<bool>,
-) -> impl IntoView {
+fn PlainTagGroup(state: ListState, items: RwSignal<Vec<u32>>) -> impl IntoView {
     let UseTagGroupReturn {
-        grid_props, data, ..
+        grid: grid_props,
+        data,
+        ..
     } = use_tag_group(UseTagGroupInput {
         state,
         element: CapturedElement::new(),
@@ -118,12 +88,10 @@ fn PlainTagGroup(
     });
     let data = StoredValue::new(data);
     view! {
-        <div {..grid_props.into_attrs()} data-perf-group>
-            <Show when=move || tags_mounted.get()>
-                <For each=move || items.get() key=|i| *i let:i>
-                    <PlainTag group=data.get_value() i />
-                </For>
-            </Show>
+        <div {..grid_props.attrs()} data-perf-group>
+            <For each=move || items.get() key=|i| *i let:i>
+                <PlainTag group=data.get_value() i />
+            </For>
         </div>
     }
 }
@@ -132,8 +100,8 @@ fn PlainTagGroup(
 #[component]
 fn PlainTag(group: TagGroupData, i: u32) -> impl IntoView {
     let UseTagReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         remove_button,
         is_selected,
         is_focused,
@@ -144,9 +112,9 @@ fn PlainTag(group: TagGroupData, i: u32) -> impl IntoView {
         group,
         key: Key::from(i),
     });
-    let (attrs, styles) = row_props.into_parts();
+    let (attrs, styles) = row_props.attrs();
     let remove_button = remove_button.map(|input| {
-        let (attrs, styles) = use_button(input).props.into_parts();
+        let (attrs, styles) = use_button(input).button.attrs();
         view! {
             <button {..attrs} style=styles data-perf-remove>
                 "×"
@@ -163,7 +131,7 @@ fn PlainTag(group: TagGroupData, i: u32) -> impl IntoView {
             data-disabled=move || is_disabled.get().then_some("true")
             data-pressed=move || is_pressed.get().then_some("true")
         >
-            <div {..grid_cell_props.into_attrs()} style="display: contents">
+            <div {..grid_cell_props.attrs()} style="display: contents">
                 {format!("Tag {i}")}
                 {remove_button}
             </div>

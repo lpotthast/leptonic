@@ -21,12 +21,14 @@
 
 use leptos::prelude::*;
 
+use crate::Id;
+
 /// The id of a visually hidden element containing `description`, for `aria-describedby`: `None`
 /// without a description, during server-side rendering and until mounted.
 ///
 /// Identical texts share one element (reference counted); it is removed when its last user is
 /// disposed or its description changes.
-pub fn use_description(description: Signal<Option<String>>) -> Signal<Option<String>> {
+pub fn use_description(description: Signal<Option<String>>) -> Signal<Option<Id>> {
     #[cfg(feature = "ssr")]
     {
         let _ = description;
@@ -35,34 +37,35 @@ pub fn use_description(description: Signal<Option<String>>) -> Signal<Option<Str
 
     #[cfg(not(feature = "ssr"))]
     {
-        use leptos::oco::Oco;
+        use std::sync::Arc;
 
-        let id = RwSignal::new(None::<String>);
-        let current: StoredValue<Option<(Oco<'static, str>, Oco<'static, str>)>> =
-            StoredValue::new(None);
+        let id = RwSignal::new(None::<Id>);
+        // The description shown now (shared: the registry's key) and its element's id.
+        let current: StoredValue<Option<(Arc<str>, Id)>> = StoredValue::new(None);
         Effect::new(move || {
-            // No element for an empty description (react-aria: `if (!description) return`).
-            let next = description
-                .get()
-                .filter(|description| !description.is_empty())
-                .map(Oco::from);
-            let unchanged =
-                current.with_value(|c| c.as_ref().map(|(text, _)| text) == next.as_ref());
-            if unchanged {
+            let changed = description.with(|next| {
+                let next = next
+                    .as_deref()
+                    .filter(|description| !description.is_empty());
+                let unchanged =
+                    current.with_value(|current| current.as_ref().map(|(text, _)| &**text) == next);
+                (!unchanged).then(|| next.map(Arc::<str>::from))
+            });
+            let Some(next) = changed else {
                 return;
-            }
-            if let Some((text, elem_id)) = current.get_value() {
+            };
+            if let Some((text, elem_id)) = current.try_update_value(Option::take).flatten() {
                 registry::release(&text, &elem_id);
             }
             let acquired = next.map(|text| {
                 let elem_id = registry::acquire(&text);
                 (text, elem_id)
             });
-            id.set(acquired.as_ref().map(|(_, elem_id)| elem_id.to_string()));
+            id.set(acquired.as_ref().map(|(_, elem_id)| elem_id.clone()));
             current.set_value(acquired);
         });
         on_cleanup(move || {
-            if let Some((text, elem_id)) = current.try_get_value().flatten() {
+            if let Some((text, elem_id)) = current.try_update_value(Option::take).flatten() {
                 registry::release(&text, &elem_id);
             }
         });
@@ -75,30 +78,27 @@ mod registry {
     use std::{
         cell::{Cell, RefCell},
         collections::HashMap,
+        sync::Arc,
     };
 
-    use leptos::oco::Oco;
     use leptos_use::use_document;
 
+    use crate::Id;
+
     struct DescriptionEntry {
-        /// Id of the hidden element (e.g. "leptonic-desc-42").
-        elem_id: Oco<'static, str>,
-        /// The number of active users.
+        elem_id: Id,
         ref_count: usize,
     }
 
     thread_local! {
-        /// The descriptions in use, with the id of their element and the number of users. The
-        /// browser runs one page per thread.
-        static DESCRIPTION_NODES: RefCell<HashMap<Oco<'static, str>, DescriptionEntry>> =
+        static DESCRIPTION_NODES: RefCell<HashMap<Arc<str>, DescriptionEntry>> =
             RefCell::new(HashMap::new());
         static NEXT_ID: Cell<u64> = const { Cell::new(0) };
     }
 
-    /// Takes a reference on the element for `description` (creating it), returning its id.
-    pub(super) fn acquire(description: &Oco<'static, str>) -> Oco<'static, str> {
+    pub(super) fn acquire(description: &Arc<str>) -> Id {
         DESCRIPTION_NODES.with_borrow_mut(|map| {
-            map.entry(description.clone())
+            map.entry(Arc::clone(description))
                 .and_modify(|e| e.ref_count += 1)
                 .or_insert_with(|| {
                     let elem_id = next_id();
@@ -113,8 +113,7 @@ mod registry {
         })
     }
 
-    /// Releases a reference taken with [`acquire`].
-    pub(super) fn release(description: &Oco<'static, str>, id: &str) {
+    pub(super) fn release(description: &Arc<str>, id: &str) {
         let removed = DESCRIPTION_NODES.with_borrow_mut(|map| {
             let Some(entry) = map.get_mut(description) else {
                 return false;
@@ -135,10 +134,10 @@ mod registry {
         }
     }
 
-    fn next_id() -> Oco<'static, str> {
+    fn next_id() -> Id {
         let id = NEXT_ID.get();
         NEXT_ID.set(id.wrapping_add(1));
-        Oco::Owned(format!("leptonic-desc-{id}"))
+        Id::derived(format_args!("leptonic-desc-{id}"))
     }
 
     fn insert_dom_node(id: &str, description: &str) {

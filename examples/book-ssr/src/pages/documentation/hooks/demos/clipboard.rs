@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -29,7 +28,7 @@ pub fn ClipboardDemo() -> impl IntoView {
     let last = RwSignal::new(String::from("none yet"));
     let disabled = RwSignal::new(false);
 
-    let UseClipboardReturn { clipboard_props } = use_clipboard(UseClipboardInput {
+    let UseClipboardReturn { target } = use_clipboard(UseClipboardInput {
         // One clipboard item per list entry, as plain text.
         get_items: Some(Callback::new(move |_: ClipboardAction| {
             items
@@ -74,7 +73,7 @@ pub fn ClipboardDemo() -> impl IntoView {
     view! {
         // Focusable, so that the clipboard shortcuts reach it.
         <div
-            {..clipboard_props.into_attrs()}
+            {..target.attrs()}
             tabindex="0"
             role="group"
             aria-label="Shopping list"

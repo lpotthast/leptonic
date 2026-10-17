@@ -15,7 +15,7 @@ use crate::{
         collections::{CollectionMemo, Key, SelectionMode, SelectionOptions},
         grid::{GridFocusMode, GridState, UseGridStateInput, use_grid_state},
         gridlist::{TreeRowPosition, tree_row_positions},
-        tree::{TreeExpansion, use_tree_state::use_tree_expansion},
+        tree::{TreeExpansion, UseTreeExpansionInput, use_tree_expansion},
     },
 };
 
@@ -182,11 +182,11 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
         tree,
     } = input;
     let tree = tree.map(|tree| {
-        let (expansion, _) = use_tree_expansion(
-            tree.default_expanded_keys,
-            tree.expanded_keys,
-            tree.on_expanded_change,
-        );
+        let expansion = use_tree_expansion(UseTreeExpansionInput {
+            default_expanded_keys: tree.default_expanded_keys,
+            expanded_keys: tree.expanded_keys,
+            on_expanded_change: tree.on_expanded_change,
+        });
         TableTree {
             column: StoredValue::new(tree.column),
             expansion,

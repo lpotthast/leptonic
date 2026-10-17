@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::use_button,
@@ -72,14 +71,14 @@ pub fn SearchFieldDemo() -> impl IntoView {
         on_clear: None,
     });
     // The clear button's configuration goes to `use_button`. It is labelled "Clear search".
-    let (clear_attrs, clear_styles) = use_button(clear_button).props.into_parts();
+    let (clear_attrs, clear_styles) = use_button(clear_button).button.attrs();
     let is_empty = move || query.value.with(String::is_empty);
 
     view! {
         <div class="demo-field">
-            <label class="demo-field-label" {..text_field.label_props.into_attrs()}>"Search"</label>
+            <label class="demo-field-label" {..text_field.label.attrs()}>"Search"</label>
             <div class="demo-input-row">
-                <input class="demo-input demo-text-input" {..text_field.input_props.into_attrs()}/>
+                <input class="demo-input demo-text-input" {..text_field.input.attrs()}/>
                 // Nothing to clear while the field is empty.
                 <button {..clear_attrs} style=clear_styles class="demo-btn" hidden=is_empty>
                     <span aria-hidden="true">"\u{2715}"</span>

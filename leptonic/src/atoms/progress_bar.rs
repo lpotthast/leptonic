@@ -4,11 +4,10 @@ use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    IntoAttrs,
     atoms::field::{LabelContext, LabelPresence},
-    hooks::progress::{UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
+    hooks::progress::{ProgressRole, UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
     utils::{
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         fraction::Fraction,
         number_formatter::NumberFormatOptions,
@@ -40,7 +39,7 @@ use crate::{
 /// The id a surrounding [`Button`](super::button::Button) gives the progress bar inside it: it
 /// names the button while the button is pending (react-aria-components' `ProgressBarContext`).
 #[derive(Debug, Clone)]
-pub(crate) struct ProgressBarIdContext(pub(crate) String);
+pub(crate) struct ProgressBarIdContext(pub(crate) crate::Id);
 
 /// What the parts of a progress bar or meter show.
 #[derive(Debug, Clone, Copy)]
@@ -88,7 +87,7 @@ pub fn ProgressBar<T: NumberValue>(
     /// The element's id. Default: the id a surrounding `Button` asks for (it names the pending
     /// button), else generated.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     /// Names the progress bar when it has no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -106,8 +105,8 @@ pub fn ProgressBar<T: NumberValue>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseProgressBarReturn {
-        props,
-        label_props,
+        progress_bar: props,
+        label: label_props,
         percentage,
         value_text,
     } = use_progress_bar(UseProgressBarInput {
@@ -119,18 +118,19 @@ pub fn ProgressBar<T: NumberValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        role: ProgressRole::Progressbar,
     });
     let is_indeterminate = Signal::derive(move || value.with(Option::is_none));
     view! {
         <Provider value=LabelContext::span(label_props).with_presence(label_presence)>
             <Provider value=ValueContext { percentage, value_text }>
                 <div
-                    {..props.into_attrs()}
+                    {..props.attrs()}
                     class=classes
-                    style=styles
-                    data-indeterminate=flag(is_indeterminate)
+                    style={styles}
+                    {..data_flags([("data-indeterminate", is_indeterminate)])}
                 >
                     {children.map(|children| children())}
                 </div>
@@ -199,8 +199,8 @@ pub(crate) fn fill(part: &str, classes: Classes, styles: Styles) -> impl IntoVie
     Some(view! {
         <div
             class=classes
-            style=styles
-            data-indeterminate=flag(Signal::derive(move || percentage.with(Option::is_none)))
+            style={styles}
+            {..data_flags([("data-indeterminate", Signal::derive(move || percentage.with(Option::is_none)))])}
         />
     })
 }

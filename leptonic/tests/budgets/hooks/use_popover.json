@@ -5,6 +5,7 @@
         "atoms/theme_provider",
         "hooks/use_close_on_scroll",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -15,7 +16,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 55,
+        "allocations": 44,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -37,6 +38,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -47,7 +49,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 60,
+        "allocations": 48,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -69,6 +71,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -79,11 +82,11 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 483,
-        "reallocations": 15,
+        "allocations": 474,
+        "reallocations": 13,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
-        "effect_runs": 15,
+        "effect_runs": 14,
         "render_effect_runs": 2,
         "immediate_effect_runs": 0,
         "signal_notifications": 5,
@@ -99,6 +102,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -109,7 +113,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -131,6 +135,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -141,7 +146,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 59,
+        "allocations": 47,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -161,6 +166,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -171,8 +177,8 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 358,
-        "reallocations": 16,
+        "allocations": 343,
+        "reallocations": 17,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
         "effect_runs": 16,
@@ -193,6 +199,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -203,7 +210,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 59,
+        "allocations": 47,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -225,6 +232,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -235,7 +243,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 42,
+        "allocations": 40,
         "reallocations": 2,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -255,6 +263,7 @@
       "ran": [
         "atoms/theme_provider",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -265,7 +274,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 42,
+        "allocations": 40,
         "reallocations": 2,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -288,6 +297,7 @@
         "atoms/theme_provider",
         "hooks/use_close_on_scroll",
         "hooks/use_focus_within",
+        "hooks/use_hide_outside",
         "hooks/use_interact_outside",
         "hooks/use_keyboard",
         "hooks/use_overlay",
@@ -298,7 +308,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 54,
+        "allocations": 43,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,

@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use crate::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator},
     utils::{default_class::with_default_class, styles::Styles},
 };
@@ -37,7 +37,7 @@ pub fn Separator(
     /// Default: horizontal.
     #[prop(into, default = Orientation::Horizontal.into())]
     orientation: Signal<Orientation>,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
@@ -62,10 +62,10 @@ pub fn Separator(
             element_type,
             id: id.clone(),
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
         })
-        .props
-        .into_attrs();
+        .separator
+        .attrs();
         let (classes, styles) = (classes.clone(), styles.clone());
         match element_type {
             SeparatorElementType::Hr => {

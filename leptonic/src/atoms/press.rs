@@ -96,7 +96,7 @@ where
         on_double_press,
         long_press,
     });
-    let (press, _) = press.props.into_inner();
+    let (press, _) = press.target.into_props().into_inner();
     let element = crate::CapturedElement::new();
     // An overlay trigger's props from a surrounding `PressResponder` (a `DialogTrigger`'s), as
     // react-aria's `usePress` merges them: the ARIA attributes, and the element to position at.
@@ -106,9 +106,18 @@ where
     }
     let focusable = use_focusable(UseFocusableInput {
         is_disabled,
-        ..UseFocusableInput::default()
+        auto_focus: false,
+        exclude_from_tab_order: Signal::stored(false),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
+        allow_shortcut_repeats: false,
     })
-    .props;
+    .target
+    .into_props();
 
     manage_child(ChildKind::Pressable, element, focusable.tabindex, false);
     let (focusable, on_keydown) =

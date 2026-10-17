@@ -56,13 +56,11 @@ pub fn PageUseTree() -> impl IntoView {
                     <ApiTable kind=ApiKind::Return of="TreeState">
                         <ApiRow name="list" ty="ListState">"The visible items, their selection and focus."</ApiRow>
                         <ApiRow name="expansion" ty="TreeExpansion">
-                            "Which items are expanded: "<Code inline=true>"is_expanded(&key)"</Code>", "<Code inline=true>"toggle_key(key)"</Code>" and "
-                            "the field "<Code inline=true>"expanded_keys"</Code>"."
+                            "Which items are expanded, from "<AnchorLink href="#use-tree-expansion">"use_tree_expansion"</AnchorLink>
+                            ": "<Code inline=true>"is_expanded(&key)"</Code>", "<Code inline=true>"toggle_key(key)"</Code>", "
+                            <Code inline=true>"set_expanded_keys(keys)"</Code>" and the field "<Code inline=true>"expanded_keys"</Code>"."
                         </ApiRow>
                     </ApiTable>
-                    <p>
-                        <Code inline=true>"TreeState::set_expanded_keys(keys)"</Code>" replaces the expanded items."
-                    </p>
                 </Section>
 
                 <Section title="Example" id="use-tree-state-example">
@@ -99,6 +97,67 @@ pub fn PageUseTree() -> impl IntoView {
                 </Section>
             </Section>
 
+            <Section title="use_tree_expansion">
+                <p>
+                    "Which items of a tree are expanded, without the items. "<Code inline=true>"use_tree_state"</Code>" and tree tables "
+                    "(a "<Link href=routes::doc::table::Hook.materialize()>"table"</Link>" with a "<Code inline=true>"TableTreeInput"</Code>
+                    ") hold one; call it yourself for a hierarchy you render another way, such as nested sections following one set of "
+                    "keys. Expanding a key that isn\u{2019}t in your tree just remembers it."
+                </p>
+
+                <Section title="Input" id="use-tree-expansion-input">
+                    <p><Code inline=true>"UseTreeExpansionInput"</Code>" implements "<Code inline=true>"Default"</Code>" (nothing expanded, no binding, no callback)."</p>
+                    <ApiTable kind=ApiKind::Input of="UseTreeExpansionInput">
+                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="empty">
+                            "The initially expanded items. Ignored when "<Code inline=true>"expanded_keys"</Code>" is bound."
+                        </ApiRow>
+                        <ApiRow name="expanded_keys" ty="Option<ValueBinding<HashSet<Key>>>" default="None">
+                            "The expanded items as app state, replacing "<Code inline=true>"default_expanded_keys"</Code>
+                            ": expanding or collapsing items writes them, and changing them changes the expansion."
+                        </ApiRow>
+                        <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">
+                            "Called with all expanded keys whenever they change (not when they are set to what they are)."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-tree-expansion-return">
+                    <p>"A "<Code inline=true>"TreeExpansion"</Code>", which is "<Code inline=true>"Copy"</Code>":"</p>
+                    <ApiTable kind=ApiKind::Return of="TreeExpansion">
+                        <ApiRow name="expanded_keys" ty="Signal<HashSet<Key>>">"The keys of the expanded items."</ApiRow>
+                    </ApiTable>
+                    <p>
+                        <Code inline=true>"is_expanded(&key)"</Code>" tells whether an item is expanded, and notifies its reader only when "
+                        "that item expands or collapses: a thousand rows reading their own item don\u{2019}t all render again. "
+                        <Code inline=true>"toggle_key(key)"</Code>" expands or collapses one item, "<Code inline=true>"set_expanded_keys(keys)"</Code>
+                        " expands exactly the given ones."
+                    </p>
+                </Section>
+
+                <Section title="Example" id="use-tree-expansion-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use std::collections::HashSet;
+
+                            use leptonic::hooks::{
+                                collections::Key,
+                                tree::{UseTreeExpansionInput, use_tree_expansion},
+                            };
+                            use leptos::prelude::*;
+
+                            let expansion = use_tree_expansion(UseTreeExpansionInput {
+                                default_expanded_keys: HashSet::from([Key::from("documents")]),
+                                ..UseTreeExpansionInput::default()
+                            });
+
+                            // Each section reads only its own key.
+                            let documents_open = move || expansion.is_expanded(&Key::from("documents"));
+                            let toggle_photos = move || expansion.toggle_key(Key::from("photos"));
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
+
             <Section title="use_tree">
                 <p>"The tree element: a grid list with the "<Code inline=true>"treegrid"</Code>" role, whose rows expand and collapse."</p>
                 <Section title="Input" id="use-tree-input">
@@ -106,10 +165,10 @@ pub fn PageUseTree() -> impl IntoView {
 
                     <ApiTable kind=ApiKind::Input of="UseTreeInput">
                         <ApiRow name="state" ty="TreeState">"From "<Code inline=true>"use_tree_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The tree element; the props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The tree element; the part captures it. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the tree."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id(s) of elements naming the tree."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The id(s) of elements naming the tree."</ApiRow>
                         <ApiRow name="options" ty="CollectionOptions" default="CollectionOptions::default()">
                             "Keyboard and focus behavior, see "<Link href=format!("{}#collectionoptions", routes::doc::CollectionState.materialize())>"CollectionOptions"</Link>"."
                         </ApiRow>
@@ -121,7 +180,7 @@ pub fn PageUseTree() -> impl IntoView {
 
                 <Section title="Return" id="use-tree-return">
                     <ApiTable kind=ApiKind::Return of="UseGridListReturn">
-                        <ApiRow name="props" ty="UseGridListProps">"For the tree element: "<Code inline=true>"role=\"treegrid\""</Code>", labelling, keyboard and focus handling."</ApiRow>
+                        <ApiRow name="grid_list" ty="Part<UseGridListProps>">"For the tree element: "<Code inline=true>"role=\"treegrid\""</Code>", labelling, keyboard and focus handling."</ApiRow>
                         <ApiRow name="data" ty="GridListData">"Hand this to "<Code inline=true>"use_tree_item"</Code>" for every visible item."</ApiRow>
                     </ApiTable>
                 </Section>
@@ -142,9 +201,9 @@ pub fn PageUseTree() -> impl IntoView {
                 <Section title="Return" id="use-tree-item-return">
                     <ApiTable kind=ApiKind::Return of="UseTreeItemReturn">
                         <ApiRow name="item" ty="UseGridListItemReturn">
-                            "The row: "<Code inline=true>"row_props"</Code>" (with "<Code inline=true>"aria-level"</Code>", "
+                            "The row: the "<Code inline=true>"row"</Code>" part (with "<Code inline=true>"aria-level"</Code>", "
                             <Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-posinset"</Code>", "
-                            <Code inline=true>"aria-setsize"</Code>"), "<Code inline=true>"grid_cell_props"</Code>" and its state, "
+                            <Code inline=true>"aria-setsize"</Code>"), the "<Code inline=true>"cell"</Code>" part and its state, "
                             "as for a "<Link href=format!("{}#use-grid-list-item", routes::doc::grid_list::Hook.materialize())>"grid list row"</Link>"."
                         </ApiRow>
                         <ApiRow name="expand_button" ty="UseButtonInput">

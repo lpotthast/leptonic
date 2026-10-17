@@ -14,7 +14,10 @@ use crate::{
         },
         focus::use_focus::{UseFocusInput, UseFocusProps, use_focus},
     },
-    utils::event_listeners::{Listener, listen},
+    utils::{
+        event_listeners::{Listener, listen},
+        part::Part,
+    },
 };
 
 // No deviations from react-aria beyond the project-wide API conventions.
@@ -41,11 +44,11 @@ pub struct UseClipboardInput {
     pub is_disabled: Signal<bool>,
 }
 
-/// Return value of [`use_clipboard`].
+/// The return value of [`use_clipboard`].
 #[derive(Debug)]
 pub struct UseClipboardReturn {
-    /// Tracks whether the element has focus (clipboard events only act on it while it has).
-    pub clipboard_props: UseFocusProps,
+    /// The element copying and pasting.
+    pub target: Part<UseFocusProps>,
 }
 
 type Handler = Rc<dyn Fn(&ClipboardEvent)>;
@@ -132,8 +135,10 @@ pub fn use_clipboard(input: UseClipboardInput) -> UseClipboardReturn {
         on_focus: None,
         on_blur: None,
         on_focus_change: Some(Callback::new(move |focused| is_focused.set_value(focused))),
+        mark: None,
     })
-    .props;
+    .target
+    .into_props();
     let focused = move || is_focused.try_get_value().unwrap_or(false);
 
     let registered: StoredValue<Vec<(&'static str, u64)>> = StoredValue::new(Vec::new());
@@ -227,5 +232,7 @@ pub fn use_clipboard(input: UseClipboardInput) -> UseClipboardReturn {
     });
     on_cleanup(unregister);
 
-    UseClipboardReturn { clipboard_props }
+    UseClipboardReturn {
+        target: Part::stored(clipboard_props),
+    }
 }

@@ -4,6 +4,7 @@
 //! - Popovers (`use_popover`)
 //! - Overlay dismiss handling (integrated into `use_overlay`)
 //! - Overlay positioning (`use_overlay_position`) and trigger attributes (`use_overlay_trigger`)
+//! - Hiding the page outside an open overlay (`use_hide_outside`)
 //!
 //! ## Hook Composition
 //!
@@ -22,6 +23,7 @@
 mod calculate_position;
 pub(crate) mod overlay_focus_contain;
 pub(crate) mod use_close_on_scroll;
+pub(crate) mod use_hide_outside;
 pub(crate) mod use_overlay;
 pub(crate) mod use_overlay_position;
 pub(crate) mod use_overlay_trigger;
@@ -32,6 +34,7 @@ mod visible_overlays;
 
 pub use overlay_focus_contain::*;
 pub use use_close_on_scroll::*;
+pub use use_hide_outside::*;
 pub use use_overlay::*;
 pub use use_overlay_position::*;
 pub use use_overlay_trigger::*;

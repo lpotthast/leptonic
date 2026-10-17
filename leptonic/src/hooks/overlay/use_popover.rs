@@ -30,12 +30,16 @@ use super::{
     },
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, IntoAttrs, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, Id, IntoAttrs, PropsWithStyles,
     hooks::overlay::{
-        OverlayState, OverlayTriggerState,
+        HideOutsideBehavior, OverlayState, OverlayTriggerState, UseHideOutsideInput,
+        use_hide_outside,
         use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
     },
-    utils::point::Point,
+    utils::{
+        part::{Part, Remount},
+        point::Point,
+    },
 };
 
 /// Input parameters for the `use_popover` hook.
@@ -99,28 +103,21 @@ impl PopoverModality {
     }
 }
 
-/// The return value of the `use_popover` hook.
+/// The return value of [`use_popover`].
 #[derive(Debug)]
 pub struct UsePopoverReturn {
-    /// Props for the popover element. Call `.into_parts()` for view spreading and styles.
-    pub props: PropsWithStyles<UsePopoverProps>,
-
-    /// Props for the trigger element. Call `.into_attrs()` for view spreading.
-    /// Spread these onto the trigger element so the hook can capture it for positioning.
-    pub trigger_props: UsePopoverTriggerProps,
-
+    /// The popover element: `let (attrs, styles) = popover.attrs();`.
+    pub popover: Part<PropsWithStyles<UsePopoverProps>>,
+    /// The trigger element (the popover's anchor).
+    pub trigger: Part<UsePopoverTriggerProps>,
     /// Unique ID for the overlay. Pass to `use_overlay_trigger` as `overlay_id`.
-    pub id: String,
-
+    pub id: Id,
     /// The popover element, once rendered.
     pub popover_element: CapturedElement,
-
-    /// Props for an arrow element inside the popover (see `use_overlay_position`).
-    pub arrow_props: PropsWithStyles<UseOverlayArrowProps>,
-
+    /// The popover's arrow element: `let (attrs, styles) = arrow.attrs();`.
+    pub arrow: Part<PropsWithStyles<UseOverlayArrowProps>>,
     /// The side of the trigger the popover is on, once positioned (after flipping).
     pub placement: Signal<Option<PlacementAxis>>,
-
     /// The point of the popover closest to the trigger, in its own coordinates, once positioned.
     pub trigger_anchor_point: Signal<Option<Point>>,
 }
@@ -131,6 +128,15 @@ pub struct UsePopoverReturn {
 pub struct UsePopoverProps {
     pub overlay: UseOverlayProps,
     pub position: UseOverlayPositionProps,
+}
+
+impl Remount for UsePopoverProps {
+    fn remount(&self) -> Self {
+        Self {
+            overlay: self.overlay.remount(),
+            position: self.position.remount(),
+        }
+    }
 }
 
 impl IntoAttrs for UsePopoverProps {
@@ -147,6 +153,14 @@ impl IntoAttrs for UsePopoverProps {
 #[derive(Debug)]
 pub struct UsePopoverTriggerProps {
     pub element_capture: ElementCaptureAttr,
+}
+
+impl Remount for UsePopoverTriggerProps {
+    fn remount(&self) -> Self {
+        Self {
+            element_capture: self.element_capture.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UsePopoverTriggerProps {
@@ -189,8 +203,8 @@ pub type UsePopoverAttrs = (UseOverlayAttrs, UseOverlayPositionAttrs);
 ///     is_submenu: false,
 /// });
 ///
-/// let trigger_attrs = popover.trigger_props.into_attrs();
-/// let (popover_attrs, popover_styles) = popover.props.into_parts();
+/// let trigger_attrs = popover.trigger.attrs();
+/// let (popover_attrs, popover_styles) = popover.popover.attrs();
 /// let popover_attrs = StoredValue::new(popover_attrs);
 ///
 /// view! {
@@ -239,6 +253,7 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
         should_close_on_interact_outside,
         group,
     });
+    let overlay_props = overlay.overlay.into_props();
 
     // 2. Positioning relative to the trigger (or the point the state opened at). A non-modal
     //    popover closes when the page scrolls; a modal one prevents scrolling.
@@ -261,6 +276,8 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
         is_open,
         scroll,
     });
+    let position_arrow_props = position.arrow.into_props();
+    let position_props = position.overlay.into_props();
 
     // 3. Scroll prevention (disabled when non-modal or not open).
     use_prevent_scroll(UsePreventScrollInput {
@@ -269,90 +286,34 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
 
     // 4. Hide the rest of the page from assistive technology (modal), or stay visible (non-modal).
     let popover_element = overlay.overlay_element;
-    use_hide_outside(
+    use_hide_outside(UseHideOutsideInput {
         is_open,
-        group.unwrap_or(popover_element),
-        Signal::stored(!modality.is_modal()),
-    );
+        overlay: group.unwrap_or(popover_element),
+        behavior: Signal::stored(if modality.is_modal() {
+            HideOutsideBehavior::Inert
+        } else {
+            HideOutsideBehavior::KeepVisible
+        }),
+    });
 
     // 5. Return the props.
     let id = overlay.id;
-    let (position_props, position_styles) = position.props.into_inner();
+    let (position_props, position_styles) = position_props.into_inner();
     UsePopoverReturn {
-        props: PropsWithStyles::new(
+        popover: Part::stored(PropsWithStyles::new(
             UsePopoverProps {
-                overlay: overlay.props,
+                overlay: overlay_props,
                 position: position_props,
             },
             position_styles,
-        ),
-        trigger_props: UsePopoverTriggerProps {
+        )),
+        trigger: Part::stored(UsePopoverTriggerProps {
             element_capture: trigger_element.attr(),
-        },
+        }),
         id,
         popover_element,
-        arrow_props: position.arrow_props,
+        arrow: Part::stored(position_arrow_props),
         placement: position.placement,
         trigger_anchor_point: position.trigger_anchor_point,
-    }
-}
-
-/// While the overlay is open and rendered, makes the rest of the page inert (hidden from assistive
-/// technology), or, while `keep_visible_only`, keeps the overlay visible even if another modal
-/// overlay hid the page (a non-modal popover, a modal still entering). Does nothing until the
-/// overlay element is captured, so the overlay itself is never made inert. Shared by
-/// `use_popover` and `use_modal_backdrop` (react-aria: the same layout effect in both).
-pub(crate) fn use_hide_outside(
-    is_open: Signal<bool>,
-    overlay_element: CapturedElement,
-    keep_visible_only: Signal<bool>,
-) {
-    #[cfg(feature = "ssr")]
-    {
-        let _ = (is_open, overlay_element, keep_visible_only);
-    }
-
-    #[cfg(not(feature = "ssr"))]
-    {
-        use leptos::prelude::LocalStorage;
-
-        use crate::utils::aria_hide_outside::{
-            AriaHideOutsideOptions, HideMode, aria_hide_outside, keep_visible,
-        };
-
-        let undo: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
-            StoredValue::new_local(None);
-        let restore = move || {
-            undo.update_value(|undo| {
-                if let Some(undo) = undo.take() {
-                    undo();
-                }
-            });
-        };
-
-        Effect::new(move |_| {
-            restore();
-            if !is_open.get() {
-                return;
-            }
-            let Some(overlay) = overlay_element.get() else {
-                return;
-            };
-            let overlay: web_sys::Element = (*overlay).clone();
-            let new_undo = if keep_visible_only.get() {
-                keep_visible(&overlay)
-            } else {
-                Some(aria_hide_outside(
-                    &[overlay],
-                    AriaHideOutsideOptions {
-                        mode: HideMode::Inert,
-                        ..AriaHideOutsideOptions::default()
-                    },
-                ))
-            };
-            undo.set_value(new_undo);
-        });
-
-        on_cleanup(restore);
     }
 }

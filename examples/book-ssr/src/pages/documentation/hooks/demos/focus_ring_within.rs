@@ -1,13 +1,12 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+use leptonic::hooks::focus::{
+    FocusRingTarget, UseFocusRingInput, UseFocusRingReturn, use_focus_ring,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn FocusRingWithinDemo() -> impl IntoView {
     let UseFocusRingReturn {
-        props,
+        target,
         is_focus_visible,
         ..
     } = use_focus_ring(UseFocusRingInput {
@@ -17,7 +16,7 @@ pub fn FocusRingWithinDemo() -> impl IntoView {
 
     view! {
         // One ring around the group (`[data-focus-visible]`) while its field or button has keyboard focus.
-        <div class="demo-focus-group" {..props.into_attrs()}>
+        <div class="demo-focus-group" {..target.attrs()}>
             <input type="search" aria-label="Search" placeholder="Search\u{2026}" class="demo-focus-plain"/>
             <button type="button" class="demo-focus-plain">"Go"</button>
         </div>

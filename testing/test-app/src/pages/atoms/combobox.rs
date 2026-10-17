@@ -19,7 +19,7 @@ use leptos::prelude::*;
 const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Durian", "Elderberry"];
 
 /// A combo box over fruits, filtering by "contains". "Cherry" is disabled. The value is shown in
-/// `#test-cb-value`.
+/// `#test-cb-value`. `#test-cb-toggle-popover` unmounts and mounts its `ComboBoxPopover`.
 #[component]
 pub fn PageAtomComboBox() -> impl IntoView {
     let fruits = use_list_collection(UseListCollectionInput {
@@ -28,6 +28,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
         text_value: |fruit| (*fruit).to_owned(),
     });
     let value = RwSignal::new(String::new());
+    let popover_shown = RwSignal::new(true);
 
     view! {
         <div id="test-page-atom-combobox">
@@ -43,13 +44,21 @@ pub fn PageAtomComboBox() -> impl IntoView {
                 <Label>"Fruit"</Label>
                 <Input />
                 <ComboBoxButton>"▼"</ComboBoxButton>
-                <ComboBoxPopover>
-                    <ListBox>
-                        <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
-                    </ListBox>
-                </ComboBoxPopover>
+                <Show when=move || popover_shown.get()>
+                    <ComboBoxPopover>
+                        <ListBox>
+                            <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
+                        </ListBox>
+                    </ComboBoxPopover>
+                </Show>
             </ComboBox>
             <button id="test-cb-after">"After"</button>
+            <button
+                id="test-cb-toggle-popover"
+                on:click=move |_| popover_shown.update(|shown| *shown = !*shown)
+            >
+                "Hide or show the popover"
+            </button>
             <div>"Value: " <span id="test-cb-value">{value}</span></div>
             <ModalComboBox />
             <ControlledComboBox />

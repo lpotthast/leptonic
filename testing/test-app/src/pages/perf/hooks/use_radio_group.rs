@@ -6,7 +6,7 @@
 //! and enable it, and read the selected option (`selected`, -1: none).
 
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::{
         collections::Key,
         form::{
@@ -71,7 +71,7 @@ fn Group(
     });
     let group = use_radio_group(UseRadioGroupInput {
         state: group_state,
-        id: Some("perf-group".to_owned()),
+        id: Some("perf-group".into()),
         has_label: true.into(),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
@@ -85,8 +85,8 @@ fn Group(
     });
     let data = group.data;
     view! {
-        <div {..group.props.into_attrs()}>
-            <span {..group.label_props.into_attrs()}>"Options"</span>
+        <div {..group.group.attrs()}>
+            <span {..group.label.attrs()}>"Options"</span>
             {(0..size).map(|option| view! { <GroupRadio group=data option /> }).collect_view()}
         </div>
     }
@@ -113,8 +113,16 @@ fn GroupRadio(group: RadioGroupData, option: i32) -> impl IntoView {
         on_press: None,
         on_press_change: None,
     });
-    let (label_attrs, label_styles) = radio.label_props.into_parts();
-    let (input_attrs, input_styles) = radio.input_props.into_parts();
+    let (label_attrs, label_styles) = radio
+        .label
+        .props()
+        .expect("the first label takes its props")
+        .into_parts();
+    let (input_attrs, input_styles) = radio
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <label {..label_attrs} style=label_styles>
             <input {..input_attrs} style=input_styles />

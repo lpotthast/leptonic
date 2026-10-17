@@ -3,10 +3,7 @@
 //! ([`Control`]) mount and unmount it, and set and unset its label (`aria_label`; without it,
 //! the localized "Breadcrumbs").
 
-use leptonic::{
-    IntoAttrs,
-    hooks::breadcrumbs::{UseBreadcrumbsInput, use_breadcrumbs},
-};
+use leptonic::hooks::breadcrumbs::{UseBreadcrumbsInput, use_breadcrumbs};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -18,7 +15,7 @@ fn Trail(label: RwSignal<Option<String>>) -> impl IntoView {
         aria_label: label.into(),
     });
     view! {
-        <ol {..breadcrumbs.props.into_attrs()} id="perf-breadcrumbs">
+        <ol {..breadcrumbs.breadcrumbs.attrs()} id="perf-breadcrumbs">
             <li>"Home"</li>
         </ol>
     }

@@ -7,7 +7,8 @@
 //! whether it is selected (`selected`) and pressed (`pressed`).
 
 use leptonic::hooks::form::{
-    ToggleOptions, ToggleState, UseToggleInput, UseToggleStateInput, use_toggle, use_toggle_state,
+    ToggleOptions, ToggleRole, ToggleState, UseToggleInput, UseToggleStateInput, use_toggle,
+    use_toggle_state,
 };
 use leptos::prelude::*;
 
@@ -75,20 +76,30 @@ fn Toggle(
     let toggle = use_toggle(UseToggleInput {
         state,
         options: ToggleOptions {
-            id: Some("perf-input".to_owned()),
+            id: Some("perf-input".into()),
             is_disabled: props.disabled.into(),
             is_read_only: props.read_only.into(),
             is_invalid: props.invalid.into(),
             name: Some("subscribe".to_owned()),
             ..ToggleOptions::default()
         },
+        role: ToggleRole::Checkbox,
+        validation: None,
     });
     pressed.set_value(Some(toggle.is_pressed));
     on_cleanup(move || {
         pressed.try_update_value(|pressed| *pressed = None);
     });
-    let (label_attrs, label_styles) = toggle.label_props.into_parts();
-    let (input_attrs, input_styles) = toggle.input_props.into_parts();
+    let (label_attrs, label_styles) = toggle
+        .label
+        .props()
+        .expect("the first label takes its props")
+        .into_parts();
+    let (input_attrs, input_styles) = toggle
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <label {..label_attrs} style=label_styles>
             <input {..input_attrs} style=input_styles />

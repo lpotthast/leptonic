@@ -2,14 +2,7 @@
 // Upstream: react-aria/test/select/HiddenSelect.test.tsx @ 99e6102368
 use std::collections::HashMap;
 
-use leptos::{
-    attr::{
-        self, Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 
 use super::{SelectMode, SelectState};
@@ -23,7 +16,12 @@ use crate::{
             use_form_validation_state::ValidationBehavior,
         },
     },
-    utils::{aria::AriaHidden, shadow_dom::get_event_target},
+    utils::{
+        aria::AriaHidden,
+        part::{Part, Remount},
+        shadow_dom::get_event_target,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -109,20 +107,22 @@ impl HiddenSelectOption {
     }
 }
 
-/// Return value of [`use_hidden_select`].
+/// The return value of [`use_hidden_select`].
 #[derive(Debug)]
 pub struct UseHiddenSelectReturn {
-    pub container_props: UseHiddenSelectContainerProps,
+    /// The visually hidden container element.
+    pub container: Part<UseHiddenSelectContainerProps>,
     /// Render a native `<select>` (with `select_props` and `options`), else hidden inputs (with
     /// `input_props` per entry of `input_values`, only if the select has a name).
     pub use_native_select: Signal<bool>,
-    pub select_props: UseHiddenSelectSelectProps,
+    /// The native `<select>` element.
+    pub select: Part<UseHiddenSelectSelectProps>,
     /// The `<option>`s, starting with an empty one (no value).
     pub options: Memo<Vec<HiddenSelectOption>>,
     /// The text of the `<label>` around the `<select>`.
     pub label: MaybeProp<String>,
-    /// Props for every hidden input; `first_input_capture` goes on the first one only.
-    pub input_props: UseHiddenSelectInputProps,
+    /// The hidden inputs' template (one input per value).
+    pub input: Part<UseHiddenSelectInputProps>,
     /// Captures the first hidden input (form reset and native validation work on it when there
     /// is no `<select>`).
     pub first_input_capture: ElementCaptureAttr,
@@ -136,10 +136,19 @@ pub struct UseHiddenSelectContainerProps {
     pub style: &'static str,
 }
 
+impl Remount for UseHiddenSelectContainerProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_hidden: self.aria_hidden,
+            style: self.style,
+        }
+    }
+}
+
 pub type UseHiddenSelectContainerAttrs = (
-    Attr<attr::AriaHidden, AriaHidden>,
-    CustomAttr<&'static str, &'static str>,
-    CustomAttr<&'static str, &'static str>,
+    FixedAttr,
+    FixedAttr,
+    FixedAttr,
     crate::utils::focusability::PreventFocusAttr,
 );
 
@@ -148,10 +157,10 @@ impl IntoAttrs for UseHiddenSelectContainerProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::AriaHidden, self.aria_hidden),
-            custom_attribute("style", self.style),
+            fixed_attr("aria-hidden", self.aria_hidden),
+            fixed_attr("style", self.style),
             // Tells accessibility linters that the hidden, focusable `<select>` is intended.
-            custom_attribute("data-a11y-ignore", "aria-hidden-focus"),
+            fixed_attr("data-a11y-ignore", "aria-hidden-focus"),
             // Focus walks (grid cell child focus, `FocusScope` fallbacks) skip the hidden select.
             crate::utils::focusability::prevent_focus_attr(),
         )
@@ -171,14 +180,30 @@ pub struct UseHiddenSelectSelectProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseHiddenSelectSelectProps {
+    fn remount(&self) -> Self {
+        Self {
+            tabindex: self.tabindex,
+            auto_complete: self.auto_complete.clone(),
+            disabled: self.disabled,
+            multiple: self.multiple,
+            required: self.required,
+            name: self.name.clone(),
+            form: self.form.clone(),
+            on_change: self.on_change.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseHiddenSelectSelectAttrs = (
-    Attr<attr::Tabindex, i32>,
-    Attr<attr::Autocomplete, Option<String>>,
-    Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::Multiple, bool>,
-    Attr<attr::Required, Signal<bool>>,
-    Attr<attr::Name, Option<String>>,
-    Attr<attr::Form, Option<String>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<bool>,
+    FixedAttr,
+    SignalAttr<bool>,
+    FixedAttr,
+    FixedAttr,
     OnEvent<ev::change>,
     OnEvent<ev::input>,
     ElementCaptureAttr,
@@ -189,13 +214,13 @@ impl IntoAttrs for UseHiddenSelectSelectProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::Autocomplete, self.auto_complete),
-            Attr(attr::Disabled, self.disabled),
-            Attr(attr::Multiple, self.multiple),
-            Attr(attr::Required, self.required),
-            Attr(attr::Name, self.name),
-            Attr(attr::Form, self.form),
+            fixed_attr("tabindex", self.tabindex),
+            fixed_attr("autocomplete", self.auto_complete),
+            signal_attr("disabled", self.disabled),
+            fixed_attr("multiple", self.multiple),
+            signal_attr("required", self.required),
+            fixed_attr("name", self.name),
+            fixed_attr("form", self.form),
             self.on_change.clone().into_on(ev::change),
             self.on_change.into_on(ev::input),
             self.element_capture,
@@ -215,6 +240,20 @@ pub struct UseHiddenSelectInputProps {
     pub disabled: Signal<bool>,
     /// For the first input only.
     pub required: Signal<bool>,
+}
+
+impl Remount for UseHiddenSelectInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            r#type: self.r#type,
+            style: self.style,
+            auto_complete: self.auto_complete.clone(),
+            name: self.name.clone(),
+            form: self.form.clone(),
+            disabled: self.disabled,
+            required: self.required,
+        }
+    }
 }
 
 /// Mirrors a select's value in a hidden native form element, so the select takes part in form
@@ -322,14 +361,14 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
     });
 
     UseHiddenSelectReturn {
-        container_props: UseHiddenSelectContainerProps {
+        container: Part::stored(UseHiddenSelectContainerProps {
             aria_hidden: AriaHidden::True,
             style: HIDDEN_SELECT_CONTAINER_STYLE,
-        },
+        }),
         use_native_select: Signal::derive(move || {
             collection.with(|c| c.size() <= NATIVE_SELECT_THRESHOLD)
         }),
-        select_props: UseHiddenSelectSelectProps {
+        select: Part::stored(UseHiddenSelectSelectProps {
             tabindex: -1,
             auto_complete: auto_complete.clone(),
             disabled: is_disabled,
@@ -339,12 +378,12 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
             form: form.clone(),
             on_change,
             element_capture: select_element.attr(),
-        },
+        }),
         options,
         label,
         // Only one of `<select>` and the inputs is rendered: they capture into the same element.
         first_input_capture: select_element.attr(),
-        input_props: UseHiddenSelectInputProps {
+        input: Part::stored(UseHiddenSelectInputProps {
             r#type: if validation_behavior == ValidationBehavior::Native {
                 "text"
             } else {
@@ -356,7 +395,7 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
             form,
             disabled: is_disabled,
             required,
-        },
+        }),
         input_values: Signal::derive(move || {
             let values: Vec<String> = state.value().iter().map(ToString::to_string).collect();
             if values.is_empty() {

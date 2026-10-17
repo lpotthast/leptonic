@@ -5,10 +5,7 @@
 //! `#perf-after`), mounted at first (it focuses itself). Its controls ([`Control`]) mount and
 //! unmount it, show and hide its title, and set and unset its `aria_label`.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::dialog::{DialogRole, UseDialogInput, use_dialog},
-};
+use leptonic::hooks::dialog::{DialogRole, UseDialogInput, use_dialog};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -47,11 +44,11 @@ fn Subject(titled: Signal<bool>, label: RwSignal<Option<String>>) -> impl IntoVi
         aria_label: label.into(),
         ..UseDialogInput::default()
     });
-    let title = StoredValue::new(dialog.title_props);
+    let title = dialog.title;
     view! {
-        <div {..dialog.dialog_props.into_attrs()}>
+        <div {..dialog.dialog.attrs()}>
             <Show when=move || titled.get()>
-                <h2 class="perf-title" {..title.get_value().into_attrs()}>
+                <h2 class="perf-title" {..title.attrs()}>
                     "Settings"
                 </h2>
             </Show>

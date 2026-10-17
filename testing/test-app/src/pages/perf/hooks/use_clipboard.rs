@@ -4,12 +4,9 @@
 //! to tab from, mounted at first, handling copy, cut and paste. Its controls ([`Control`])
 //! mount and unmount it, disable and enable it, and read the counts (`copies`, `cuts`, `pastes`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        clipboard::{UseClipboardInput, use_clipboard},
-        dnd::DragItem,
-    },
+use leptonic::hooks::{
+    clipboard::{UseClipboardInput, use_clipboard},
+    dnd::DragItem,
 };
 use leptos::prelude::*;
 
@@ -79,7 +76,7 @@ fn Clipboard(inputs: Inputs) -> impl IntoView {
             id="perf-clipboard"
             role="button"
             tabindex="0"
-            {..clipboard.clipboard_props.into_attrs()}
+            {..clipboard.target.attrs()}
         >
             "Copy"
         </div>

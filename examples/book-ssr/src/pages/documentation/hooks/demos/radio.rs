@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         collections::Key,
@@ -52,8 +52,8 @@ pub fn RadioDemo() -> impl IntoView {
     };
 
     view! {
-        <div {..group.props.into_attrs()} class="demo-choice-group">
-            <span {..group.label_props.into_attrs()} class="demo-choice-group-label">"Size"</span>
+        <div {..group.group.attrs()} class="demo-choice-group">
+            <span {..group.label.attrs()} class="demo-choice-group-label">"Size"</span>
             {SIZES
                 .into_iter()
                 .map(|(value, label)| view! { <SizeRadio group=data value label/> })
@@ -101,8 +101,8 @@ fn SizeRadio(group: RadioGroupData, value: &'static str, label: &'static str) ->
         on_press: None,
         on_press_change: None,
     });
-    let (label_attrs, label_styles) = radio.label_props.into_parts();
-    let (input_attrs, input_styles) = radio.input_props.into_parts();
+    let (label_attrs, label_styles) = radio.label.attrs();
+    let (input_attrs, input_styles) = radio.input.attrs();
     let is_focus_visible = radio.is_focus_visible;
 
     // The hook tracks keyboard focus; `data-focus-visible` lets the stylesheet draw a focus ring around the input.

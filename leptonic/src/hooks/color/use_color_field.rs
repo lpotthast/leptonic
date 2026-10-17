@@ -6,16 +6,18 @@ use web_sys::{CompositionEvent, FocusEvent, InputEvent, WheelEvent};
 
 use super::use_color_field_state::ColorFieldState;
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, OnEvent, SlotProps,
+    CapturedElement, EventHandler, Id, IntoAttrs, OnEvent, Part, SlotProps,
     hooks::{
         form::{
             FormattedTextFieldHandlers, InputType, TextFieldElement, UseFormResetInput,
             UseFormattedTextFieldInput, UseLabelProps, UseTextFieldInput, UseTextFieldInputAttrs,
             UseTextFieldInputProps, UseTextFieldReturn, UseTextFieldStateInput,
-            UseWheelSteppingInput, ValidityStateSnapshot, use_form_reset, use_formatted_text_field,
-            use_text_field, use_text_field_state, use_wheel_stepping,
+            ValidityStateSnapshot, use_form_reset, use_formatted_text_field, use_text_field,
+            use_text_field_state,
         },
-        interactions::KeyboardEventWrapper,
+        interactions::{
+            KeyboardEventWrapper, UseWheelSteppingInput, UseWheelSteppingReturn, use_wheel_stepping,
+        },
         spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
@@ -23,6 +25,7 @@ use crate::{
         id::use_id,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        part::Remount,
     },
 };
 
@@ -41,12 +44,12 @@ use crate::{
 pub struct UseColorFieldInput<C: ColorValue = RGB8> {
     pub state: ColorFieldState<C>,
     /// The input's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub is_required: Signal<bool>,
@@ -61,13 +64,15 @@ pub struct UseColorFieldInput<C: ColorValue = RGB8> {
     pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
 }
 
-/// Return value of [`use_color_field`].
+/// The return value of [`use_color_field`].
 #[derive(Debug)]
 pub struct UseColorFieldReturn {
-    pub label_props: UseLabelProps,
-    pub input_props: UseColorFieldInputProps,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    /// The label element.
+    pub label: Part<UseLabelProps>,
+    /// The input element.
+    pub input: Part<UseColorFieldInputProps>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     /// The input element.
     pub element: CapturedElement,
     pub is_focused: Signal<bool>,
@@ -87,6 +92,20 @@ pub struct UseColorFieldInputProps {
     pub on_wheel: EventHandler<WheelEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl Remount for UseColorFieldInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            text_field: self.text_field.remount(),
+            on_beforeinput: self.on_beforeinput.clone(),
+            on_compositionstart: self.on_compositionstart.clone(),
+            on_compositionend: self.on_compositionend.clone(),
+            on_wheel: self.on_wheel.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
 }
 
 pub type UseColorFieldInputAttrs = (
@@ -178,10 +197,10 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
         on_change: None,
     });
     let UseTextFieldReturn {
-        label_props,
-        input_props: mut text_field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        input: text_field_props,
+        description: description_props,
+        error_message: error_message_props,
         element,
         is_focused,
         is_focus_visible,
@@ -231,6 +250,7 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
         aria_haspopup: None,
         aria_controls: Signal::stored(None),
     });
+    let mut text_field_props = text_field_props.into_props();
 
     use_form_reset(UseFormResetInput {
         element,
@@ -246,7 +266,9 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
 
     // The spin button's keys (arrows, Page Up/Down, Home/End), not its role: the input stays a
     // text box without value attributes (react-aria).
-    let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
+    let UseSpinButtonReturn {
+        spin_button: spin, ..
+    } = use_spin_button(UseSpinButtonInput {
         value: Signal::derive(move || state.color_value.get().map(|c| c.to_rgb8().to_hex_int())),
         text_value: Signal::derive(move || {
             state.color_value.get().map(|c| c.to_rgb8().to_string())
@@ -262,33 +284,39 @@ pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorF
         on_decrement_to_min: Some(Callback::new(move |()| state.decrement_to_min())),
         ..UseSpinButtonInput::default()
     });
+    let spin = spin.into_props();
     let focusable = &mut text_field_props.focusable;
     focusable.on_keydown = spin.on_keydown.chain(focusable.on_keydown.clone());
     focusable.on_keyup = spin.on_keyup.chain(focusable.on_keyup.clone());
     focusable.on_focus = spin.on_focus.chain(focusable.on_focus.clone());
     focusable.on_blur = spin.on_blur.chain(focusable.on_blur.clone());
 
-    let wheel = use_wheel_stepping(UseWheelSteppingInput {
-        is_wheel_disabled,
+    let UseWheelSteppingReturn {
+        group: wheel_group,
+        input: wheel_input,
+    } = use_wheel_stepping(UseWheelSteppingInput {
         is_disabled,
         is_read_only,
-        on_increment: Callback::new(move |()| state.increment()),
-        on_decrement: Callback::new(move |()| state.decrement()),
+        is_wheel_disabled,
+        on_increment: Some(Callback::new(move |()| state.increment())),
+        on_decrement: Some(Callback::new(move |()| state.decrement())),
     });
+    // The field has no group: focus within the input lets the wheel step.
+    let wheel_group = wheel_group.into_props();
 
     UseColorFieldReturn {
-        label_props,
-        input_props: UseColorFieldInputProps {
+        label: label_props,
+        input: Part::stored(UseColorFieldInputProps {
             text_field: text_field_props,
             on_beforeinput,
             on_compositionstart,
             on_compositionend,
-            on_wheel: wheel.on_wheel,
-            on_focusin: wheel.focus_within.on_focusin,
-            on_focusout: wheel.focus_within.on_focusout,
-        },
-        description_props,
-        error_message_props,
+            on_wheel: wheel_input.into_props().on_wheel,
+            on_focusin: wheel_group.on_focusin,
+            on_focusout: wheel_group.on_focusout,
+        }),
+        description: description_props,
+        error_message: error_message_props,
         element,
         is_focused,
         is_focus_visible,

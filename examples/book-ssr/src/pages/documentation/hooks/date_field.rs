@@ -151,9 +151,9 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseDateFieldInput"</Code>" with every field named:"</p>
                     <ApiTable kind=ApiKind::Input of="datepicker::use_date_field::UseDateFieldInput">
                         <ApiRow name="state" ty="DateFieldState<V>">"From "<Code inline=true>"use_date_field_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The group of segments, captured by "<Code inline=true>"field_props"</Code>". Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The group of segments, captured by the "<Code inline=true>"field"</Code>" part. Required."</ApiRow>
                         <ApiRow name="input_element" ty="CapturedElement">
-                            "The hidden input (form reset and native validation), captured by "<Code inline=true>"input_props"</Code>". Required."
+                            "The hidden input (form reset and native validation), captured by the "<Code inline=true>"input"</Code>" part. Required."
                         </ApiRow>
                         <ApiRow name="options" ty="DateFieldOptions" default="DateFieldOptions::default()">"The other settings, below."</ApiRow>
                     </ApiTable>
@@ -162,10 +162,10 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 <Section title="DateFieldOptions">
                     <p><Code inline=true>"DateFieldOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
                     <ApiTable kind=ApiKind::Fields of="DateFieldOptions">
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with the "<Code inline=true>"label"</Code>" part."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field without a label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when rendered."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the hidden input belongs to, when outside it."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the field."</ApiRow>
@@ -180,12 +180,12 @@ pub fn PageDateFieldHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-date-field-return">
                     <ApiTable kind=ApiKind::Return of="datepicker::use_date_field::UseDateFieldReturn">
-                        <ApiRow name="label_props" ty="UseDateFieldLabelProps">"For the label element. Spread with "<Code inline=true>".into_attrs()"</Code>"."</ApiRow>
-                        <ApiRow name="field_props" ty="PropsWithStyles<UseDateFieldProps>">
-                            "For the group around the segments. Spread "<Code inline=true>".into_parts()"</Code>": attributes and styles."
+                        <ApiRow name="label" ty="Part<UseDateFieldLabelProps>">"For the label element."</ApiRow>
+                        <ApiRow name="field" ty="Part<PropsWithStyles<UseDateFieldProps>>">
+                            "For the group around the segments: "<Code inline=true>"field.attrs()"</Code>" returns the attributes and the styles."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="UseDateFieldInputProps">"For the hidden "<Code inline=true>"<input>"</Code>"."</ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                        <ApiRow name="input" ty="Part<UseDateFieldInputProps>">"For the hidden "<Code inline=true>"<input>"</Code>"."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">
                             "For the description and the error message: referenced while they are rendered."
                         </ApiRow>
                         <ApiRow name="data" ty="DateFieldData<V>">"What each segment needs, for "<AnchorLink href="#use-date-segment">"use_date_segment"</AnchorLink>"."</ApiRow>
@@ -201,8 +201,8 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     <ApiTable kind=ApiKind::Fields of="datepicker::use_date_field::DateFieldData">
                         <ApiRow name="state" ty="DateFieldState<V>">"The field\u{2019}s state."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>">"The field\u{2019}s name, added to each segment\u{2019}s."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>">"What labels the field."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>">"What describes the first segment (and every segment while invalid)."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>">"What labels the field."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>">"What describes the first segment (and every segment while invalid)."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -211,7 +211,6 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         {indoc!(r#"
                             use leptonic::{
                                 CapturedElement,
-                                IntoAttrs,
                                 hooks::datepicker::*,
                                 jiff::civil::Date,
                             };
@@ -224,14 +223,14 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                                 input_element: CapturedElement::new(),
                                 options: DateFieldOptions { has_label: true.into(), ..DateFieldOptions::default() },
                             });
-                            let (field_attrs, field_styles) = field.field_props.into_parts();
+                            let (field_attrs, field_styles) = field.field.attrs();
 
                             view! {
-                                <span {..field.label_props.into_attrs()}>"Birthday"</span>
+                                <span {..field.label.attrs()}>"Birthday"</span>
                                 <div {..field_attrs} style=field_styles>
                                     // A segment per `state.segments`, see `use_date_segment`.
                                 </div>
-                                <input {..field.input_props.into_attrs()}/>
+                                <input {..field.input.attrs()}/>
                             }
                         "#)}
                     </Code>
@@ -258,18 +257,18 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="data" ty="DateFieldData<V>">
                             "The field\u{2019}s "<AnchorLink href="#datefielddata"><Code inline=true>"DateFieldData"</Code></AnchorLink>". Required."
                         </ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The segment element, captured by the props. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The segment element, captured by the part. Required."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-date-segment-return">
                     <ApiTable kind=ApiKind::Return of="datepicker::use_date_segment::UseDateSegmentReturn">
-                        <ApiRow name="segment_props" ty="PropsWithStyles<UseDateSegmentProps>">
+                        <ApiRow name="segment" ty="Part<PropsWithStyles<UseDateSegmentProps>>">
                             <Code inline=true>"role=\"spinbutton\""</Code>", "<Code inline=true>"aria-valuenow"</Code>"/"
                             <Code inline=true>"-valuetext"</Code>"/"<Code inline=true>"-valuemin"</Code>"/"<Code inline=true>"-valuemax"</Code>
                             ", the label (\u{201c}month, Birthday\u{201d}), "<Code inline=true>"aria-invalid"</Code>", "
                             <Code inline=true>"data-placeholder"</Code>", "<Code inline=true>"tabindex"</Code>", the editing "
-                            "attributes and the handlers. Spread "<Code inline=true>".into_parts()"</Code>"."
+                            "attributes and the handlers. "<Code inline=true>"segment.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -290,7 +289,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                                     data,
                                     element: CapturedElement::new(),
                                 });
-                                let (attrs, styles) = segment.segment_props.into_parts();
+                                let (attrs, styles) = segment.segment.attrs();
                                 view! { <span {..attrs} style=styles data-type=kind.as_str()>{text}</span> }.into_any()
                             }
                         "#)}
@@ -304,7 +303,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     " and the date picker hooks include: "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" move between "
                     "the segments (by position in right-to-left languages), "<Keys keys="Alt + ArrowDown"/>" opens the "
                     "picker\u{2019}s popover, and pressing the element outside the segments focuses the segment before "
-                    "the pointer. It returns "<Code inline=true>"PropsWithStyles<UseDatePickerGroupProps>"</Code>"."
+                    "the pointer. It returns a "<Code inline=true>"Part<PropsWithStyles<UseDatePickerGroupProps>>"</Code>"."
                 </p>
                 <ApiTable kind=ApiKind::Input of="UseDatePickerGroupInput">
                     <ApiRow name="element" ty="CapturedElement">"The element holding the segments. Required."</ApiRow>
@@ -350,12 +349,12 @@ pub fn PageDateFieldHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-hidden-date-input-return">
                     <ApiTable kind=ApiKind::Return of="UseHiddenDateInputReturn">
-                        <ApiRow name="container_props" ty="UseHiddenDateContainerProps">
+                        <ApiRow name="container" ty="Part<PropsWithStyles<UseHiddenDateContainerProps>>">
                             "For a "<Code inline=true>"<div>"</Code>" around the input: "<Code inline=true>"aria-hidden"</Code>", "
                             "kept out of focus walks, and visually hidden "<Code inline=true>"styles"</Code>" (fixed at the "
                             "top left, so that the browser\u{2019}s focusing it doesn\u{2019}t scroll the page)."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="UseHiddenDateInputProps">
+                        <ApiRow name="input" ty="Part<UseHiddenDateInputProps>">
                             "For the "<Code inline=true>"<input>"</Code>": its type, "<Code inline=true>"tabindex=-1"</Code>", "
                             <Code inline=true>"autocomplete"</Code>", "<Code inline=true>"name"</Code>", "<Code inline=true>"step"</Code>
                             ", the value and the input handler."
@@ -375,12 +374,13 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                                 name: Some("birthday".to_owned()),
                                 is_disabled: state.is_disabled,
                             });
-                            let UseHiddenDateInputReturn { container_props, input_props } = autofill;
-                            let styles = container_props.styles.clone();
+                            let UseHiddenDateInputReturn { container, input } = autofill;
+                            // The container's part carries the styles hiding it.
+                            let (container, styles) = container.attrs();
 
                             view! {
-                                <div {..container_props.into_attrs()} style=styles>
-                                    <input {..input_props.into_attrs()}/>
+                                <div {..container} style=styles>
+                                    <input {..input.attrs()}/>
                                 </div>
                             }
                         "#)}

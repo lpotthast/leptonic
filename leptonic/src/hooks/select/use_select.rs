@@ -4,17 +4,13 @@
 // Upstream: @adobe/react-spectrum/test/picker/Picker.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use leptos_use::use_document;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::{SelectMode, SelectState, UseHiddenSelectInput};
 use crate::{
-    CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, Propagation, SlotProps,
+    CapturedElement, EventHandler, Id, IntoAttrs, OnEvent, Part, Presence, Propagation, SlotProps,
     hooks::{
         button::use_button::UseButtonInput,
         collections::{
@@ -40,6 +36,9 @@ use crate::{
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         orientation::Orientation,
+        part::Remount,
+        signal_attr::{FixedAttr, fixed_attr},
+        slot_id::use_slot,
     },
 };
 
@@ -55,6 +54,12 @@ use crate::{
 // - `has_label` says whether a visible label is rendered (react-aria: the `label` content).
 // - `name` and `validation_behavior` are read from the state (C8).
 //
+// ## DIFFERENT BEHAVIOR
+// - The trigger refers to the value element (`aria-labelledby`) and to the open listbox
+//   (`aria-controls`) only while they are rendered (after mount, as `use_slot`'s references):
+//   a value or popover the app renders conditionally leaves no reference to a missing element
+//   (react-aria always refers to them).
+//
 // =============================================================================
 
 /// Input of [`use_select`].
@@ -62,14 +67,14 @@ use crate::{
 pub struct UseSelectInput {
     pub state: SelectState,
     /// The trigger element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub is_disabled: Signal<bool>,
     pub is_required: Signal<bool>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Replaces the list keyboard delegate (type-ahead and arrow keys on the trigger).
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Called when focus moves to the select (trigger or popover) from outside.
@@ -81,17 +86,19 @@ pub struct UseSelectInput {
     pub form: Option<String>,
 }
 
-/// Return value of [`use_select`].
+/// The return value of [`use_select`].
 pub struct UseSelectReturn {
-    pub label_props: UseSelectLabelProps,
+    /// The label element.
+    pub label: Part<UseSelectLabelProps>,
     /// The trigger button's configuration, for `use_button`.
-    pub trigger: UseButtonInput,
-    /// Spread onto the trigger in addition to the button's props.
-    pub trigger_props: UseSelectTriggerProps,
-    /// For the element showing the selected value inside the trigger.
-    pub value_props: UseSelectValueProps,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    pub trigger_button: UseButtonInput,
+    /// The trigger element, in addition to the props of `use_button(trigger_button)`.
+    pub trigger: Part<UseSelectTriggerProps>,
+    /// The element showing the selected value inside the trigger (the trigger's label refers to
+    /// it while it is rendered).
+    pub value: Part<SlotProps>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     /// The popover's listbox, for `use_listbox`.
     pub listbox: UseListBoxInput,
     /// The native form element mirroring the value, for `use_hidden_select`.
@@ -103,18 +110,27 @@ pub struct UseSelectReturn {
 /// Props for the label element.
 #[derive(Debug)]
 pub struct UseSelectLabelProps {
-    pub id: String,
+    pub id: Id,
     /// Focuses the trigger.
     pub on_click: EventHandler<MouseEvent>,
 }
 
-pub type UseSelectLabelAttrs = (Attr<attr::Id, String>, OnEvent<ev::click>);
+impl Remount for UseSelectLabelProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            on_click: self.on_click.clone(),
+        }
+    }
+}
+
+pub type UseSelectLabelAttrs = (FixedAttr, OnEvent<ev::click>);
 
 impl IntoAttrs for UseSelectLabelProps {
     type Attrs = UseSelectLabelAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id), self.on_click.into_on(ev::click))
+        (fixed_attr("id", self.id), self.on_click.into_on(ev::click))
     }
 }
 
@@ -125,6 +141,14 @@ pub struct UseSelectTriggerProps {
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
 }
 
+impl Remount for UseSelectTriggerProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_keydown_capture: self.on_keydown_capture.clone(),
+        }
+    }
+}
+
 pub type UseSelectTriggerAttrs = (OnEvent<ev::Capture<ev::keydown>>,);
 
 impl IntoAttrs for UseSelectTriggerProps {
@@ -132,22 +156,6 @@ impl IntoAttrs for UseSelectTriggerProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (self.on_keydown_capture.into_on(ev::capture(ev::keydown)),)
-    }
-}
-
-/// Props for the value element.
-#[derive(Debug)]
-pub struct UseSelectValueProps {
-    pub id: String,
-}
-
-pub type UseSelectValueAttrs = (Attr<attr::Id, String>,);
-
-impl IntoAttrs for UseSelectValueProps {
-    type Attrs = UseSelectValueAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id),)
     }
 }
 
@@ -173,6 +181,8 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     } = input;
 
     let listbox_element = CapturedElement::new();
+    // The listbox while it is rendered: the trigger refers to it only then.
+    let listbox_presence = Presence::new();
     let delegate = keyboard_delegate.unwrap_or_else(|| {
         use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: state.list,
@@ -221,7 +231,8 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
             selection: state.list.selection,
             on_type_select: Some(Callback::new(move |key| state.set_value(vec![key]))),
         })
-        .props
+        .collection
+        .into_props()
     } else {
         UseTypeSelectProps {
             on_keydown_capture: EventHandler::empty(),
@@ -232,10 +243,10 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     // -- Labelling --
     let has_aria_label = Signal::derive(move || aria_label.with(Option::is_some));
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         ..
     } = use_field(UseFieldInput {
         id,
@@ -246,10 +257,12 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         aria_labelledby,
         aria_describedby,
     });
+    let label_props = label_props.into_props();
+    let field_props = field_props.into_props();
     let trigger_id = field_props.id.clone();
-    let value_id = crate::utils::id::use_id("select-value");
-    let join =
-        |ids: Vec<Option<String>>| ids.into_iter().flatten().collect::<IdRefs>().into_value();
+    let value = use_slot("select-value");
+    let value_id = value.referenced_id;
+    let join = |ids: &[Option<Id>]| crate::utils::id::join_ids(ids.iter().cloned());
     // Labelled by aria-label (the trigger itself), unless other labels exist. Both follow the
     // field's labels (e.g. whether its label is rendered).
     let field_labelledby = field_props.aria_labelledby;
@@ -261,17 +274,10 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         }
     };
     let trigger_labelledby = {
-        let (value_id, self_label) = (value_id.clone(), self_label.clone());
-        Signal::derive(move || {
-            join(vec![
-                Some(value_id.clone()),
-                field_labelledby.get(),
-                self_label(),
-            ])
-        })
+        let self_label = self_label.clone();
+        Signal::derive(move || join(&[value_id.get(), field_labelledby.get(), self_label()]))
     };
-    let listbox_labelledby =
-        Signal::derive(move || join(vec![field_labelledby.get(), self_label()]));
+    let listbox_labelledby = Signal::derive(move || join(&[field_labelledby.get(), self_label()]));
 
     // -- Focus --
     let trigger_on_focus = Callback::new(move |e: FocusEvent| {
@@ -330,6 +336,14 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         })),
         on_focus: Some(trigger_on_focus),
         on_blur: Some(trigger_on_blur),
+        // The open listbox, while it is rendered.
+        aria_controls: {
+            let (listbox_id, listbox_presence) =
+                (menu_trigger.menu_props.id.clone(), listbox_presence.clone());
+            Signal::derive(move || {
+                (state.is_open() && listbox_presence.is_present()).then(|| listbox_id.clone())
+            })
+        },
         ..menu_trigger.button
     };
 
@@ -367,6 +381,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         on_blur: Some(listbox_on_blur),
         state: state.list,
         element: listbox_element,
+        presence: Some(listbox_presence.clone()),
         aria_label: MaybeProp::default(),
         orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
@@ -379,15 +394,15 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     };
 
     UseSelectReturn {
-        label_props: UseSelectLabelProps {
+        label: Part::stored(UseSelectLabelProps {
             id: label_props.id,
             on_click: label_on_click,
-        },
-        trigger,
-        trigger_props: UseSelectTriggerProps { on_keydown_capture },
-        value_props: UseSelectValueProps { id: value_id },
-        description_props,
-        error_message_props,
+        }),
+        trigger_button: trigger,
+        trigger: Part::stored(UseSelectTriggerProps { on_keydown_capture }),
+        value: value.part,
+        description: description_props,
+        error_message: error_message_props,
         listbox,
         hidden_select: UseHiddenSelectInput {
             state,

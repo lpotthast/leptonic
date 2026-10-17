@@ -46,7 +46,7 @@ pub fn PageAtomForm() -> impl IntoView {
                         "Errors from the server, by field "<Code inline=true>"name"</Code>". A field shows its errors until the "
                         "user commits a changed value."
                     </ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">
+                    <ApiRow name="id" ty="Option<Id>" default="None">
                         "The form\u{2019}s id, for fields outside of it (their "<Code inline=true>"form"</Code>" prop)."
                     </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<form>"</Code>"."</ApiRow>

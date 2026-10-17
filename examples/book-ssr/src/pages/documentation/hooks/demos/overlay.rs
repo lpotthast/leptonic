@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -18,7 +17,7 @@ pub fn BasicOverlayDemo() -> impl IntoView {
     let close_on_blur = RwSignal::new(false);
     let escape_disabled = RwSignal::new(false);
 
-    let UseOverlayReturn { props, .. } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn { overlay, .. } = use_overlay(UseOverlayInput {
         is_dismissable: is_dismissable.into(),
         should_close_on_blur: close_on_blur.into(),
         is_keyboard_dismiss_disabled: escape_disabled.into(),
@@ -30,14 +29,12 @@ pub fn BasicOverlayDemo() -> impl IntoView {
         should_close_on_interact_outside: None,
         group: None,
     });
-    // The panel renders again on every opening, so its attributes are stored and cloned per render.
-    let overlay_attrs = StoredValue::new(props.into_attrs());
 
     view! {
         <Button on_press=move |_| set_is_open.set(true) classes="demo-btn">"Open panel"</Button>
 
         <Show when=move || is_open.get()>
-            <div {..overlay_attrs.get_value()} role="dialog" aria-labelledby="use-overlay-demo-title" class="demo-overlay-inline-panel">
+            <div {..overlay.attrs()} role="dialog" aria-labelledby="use-overlay-demo-title" class="demo-overlay-inline-panel">
                 // Moves focus into the panel, so that Escape reaches its key handler, and back when it closes.
                 <FocusScope restore_focus=true auto_focus=true>
                     <h4 id="use-overlay-demo-title" class="demo-overlay-title">"Panel"</h4>

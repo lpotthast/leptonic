@@ -47,7 +47,7 @@ pub fn FocusRing(
     let UseFocusRingReturn {
         is_focus_visible,
         is_focused,
-        props: focus_ring_props,
+        target: focus_ring_props,
     } = use_focus_ring(UseFocusRingInput {
         is_disabled,
         target,
@@ -56,6 +56,7 @@ pub fn FocusRing(
         on_blur,
         on_focus_change,
     });
+    let focus_ring_props = focus_ring_props.into_props();
 
     // Extract the data_focus_visible signal before consuming the props,
     // then wrap it in a plain closure using `try_get()` for the DOM binding.

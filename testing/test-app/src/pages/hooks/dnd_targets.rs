@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs, flag,
+    CapturedElement, flag,
     hooks::dnd::{
         DragEndEvent, DragItem, DropActivateEvent, DropEnterEvent, DropEvent, DropExitEvent,
         DropItem, DropOperation, DropOperationQuery, UseDragInput, UseDragReturn, UseDropInput,
@@ -138,7 +138,7 @@ fn Draggable(
 ) -> impl IntoView {
     let push = move |entry: String| log.update(|l| l.push(entry));
     let UseDragReturn {
-        drag_props,
+        draggable: drag_props,
         is_dragging,
         ..
     } = use_drag(UseDragInput {
@@ -154,7 +154,7 @@ fn Draggable(
         is_disabled: Signal::stored(is_disabled),
     });
     view! {
-        <div role="button" tabindex="0" {..drag_props.into_attrs()} data-dragging=flag(is_dragging)>
+        <div role="button" tabindex="0" {..drag_props.attrs()} data-dragging=flag(is_dragging)>
             "Drag me"
         </div>
     }
@@ -175,7 +175,7 @@ fn Droppable(
     let push = move |entry: String| log.update(|l| l.push(entry));
     let element = CapturedElement::new();
     let UseDropReturn {
-        drop_props,
+        drop_target: drop_props,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -220,7 +220,7 @@ fn Droppable(
         <div
             role="button"
             tabindex="0"
-            {..drop_props.into_attrs()}
+            {..drop_props.attrs()}
             data-drop-target=flag(is_drop_target)
         >
             {label}

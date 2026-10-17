@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, I18nProvider, IntoAttrs, Locale, ValueBinding,
+    CapturedElement, I18nProvider, Locale, ValueBinding,
     hooks::{
         button::use_button,
         collections::{
@@ -112,7 +112,7 @@ fn TestTree(
     };
 
     view! {
-        <div {..tree.props.into_attrs()}>
+        <div {..tree.grid_list.attrs()}>
             <For
                 each=move || visible.with(|c| c.items().map(|n| n.key.clone()).collect::<Vec<_>>())
                 key=Clone::clone
@@ -158,17 +158,17 @@ fn TreeItem(tree: GridListData, key: Key, with_input: bool) -> impl IntoView {
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (attrs, styles) = item.row_props.into_parts();
+    let (attrs, styles) = item.row.attrs();
     let button = move || {
         has_child_items.get().then(|| {
-            let (attrs, styles) = use_button(expand_button.clone()).props.into_parts();
+            let (attrs, styles) = use_button(expand_button.clone()).button.attrs();
             view! { <button {..attrs} {..expand_button_attrs.clone()} style=styles>"›"</button> }
         })
     };
     let input = has_input.then(|| view! { <input aria-label=format!("{text} input") /> });
     view! {
         <div {..attrs} style=styles>
-            <div {..item.grid_cell_props.into_attrs()}>{button} <span>{text.clone()}</span> {input}</div>
+            <div {..item.cell.attrs()}>{button} <span>{text.clone()}</span> {input}</div>
         </div>
     }
 }

@@ -31,7 +31,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
 
             <Section title="use_breadcrumbs">
                 <p>
-                    "Spread "<Code inline=true>"props.into_attrs()"</Code>" onto the "<Code inline=true>"<ol>"</Code>" of the trail, "
+                    "Spread "<Code inline=true>"breadcrumbs.attrs()"</Code>" onto the "<Code inline=true>"<ol>"</Code>" of the trail, "
                     "and wrap the list in a "<Code inline=true>"<nav>"</Code>" landmark."
                 </p>
 
@@ -43,7 +43,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
 
                 <Section title="Return" id="use-breadcrumbs-return">
                     <ApiTable kind=ApiKind::Return of="UseBreadcrumbsReturn">
-                        <ApiRow name="props" ty="UseBreadcrumbsProps">"The "<Code inline=true>"aria-label"</Code>"."</ApiRow>
+                        <ApiRow name="breadcrumbs" ty="Part<UseBreadcrumbsProps>">"The "<Code inline=true>"aria-label"</Code>"."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -51,7 +51,6 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                IntoAttrs,
                                 hooks::breadcrumbs::{UseBreadcrumbsInput, use_breadcrumbs},
                             };
 
@@ -59,7 +58,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
 
                             view! {
                                 <nav aria-label="Breadcrumbs">
-                                    <ol {..breadcrumbs.props.into_attrs()}>
+                                    <ol {..breadcrumbs.breadcrumbs.attrs()}>
                                         // One `<li>` per item.
                                     </ol>
                                 </nav>
@@ -72,7 +71,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
             <Section title="use_breadcrumb_item">
                 <p>
                     "An item is a "<Link href=format!("{}#use-link", routes::doc::link::Hook.materialize())>"use_link"</Link>
-                    " link: call the hook once per item and spread its props onto the link element. The current item is "
+                    " link: call the hook once per item and spread its "<Code inline=true>"link"</Code>" part onto the link element. The current item is "
                     "disabled: it keeps its element, but loses its "<Code inline=true>"href"</Code>" and gets "
                     <Code inline=true>"aria-current"</Code>" and "<Code inline=true>"aria-disabled"</Code>"."
                 </p>
@@ -113,8 +112,8 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                                 is_current: Signal::stored(true),
                                 ..UseBreadcrumbItemInput::default()
                             })
-                            .props
-                            .into_parts();
+                            .link
+                            .attrs();
 
                             view! { <li><a {..attrs} style=styles>"Docs"</a></li> }
                         "#)}

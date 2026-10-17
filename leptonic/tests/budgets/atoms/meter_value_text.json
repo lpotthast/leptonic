@@ -6,11 +6,12 @@
         "atoms/meter_value_text",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 47,
+        "allocations": 24,
         "reallocations": 1,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -32,11 +33,12 @@
         "atoms/meter_value_text",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 49,
+        "allocations": 24,
         "reallocations": 1,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -60,11 +62,12 @@
         "atoms/meter_value_text",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 59,
+        "allocations": 49,
         "reallocations": 4,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -86,11 +89,12 @@
         "atoms/meter_value_text",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -114,11 +118,12 @@
         "atoms/meter_value_text",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 65,
+        "allocations": 34,
         "reallocations": 1,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
@@ -140,11 +145,12 @@
         "atoms/meter_value_text",
         "atoms/theme_provider",
         "hooks/use_label",
-        "hooks/use_meter"
+        "hooks/use_meter",
+        "hooks/use_progress_bar"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 65,
+        "allocations": 34,
         "reallocations": 1,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,

@@ -5,25 +5,15 @@
 //! after the control `large`, in a 200px high scroll view. Between two plain buttons
 //! (`#perf-before`, `#perf-after`) to tab from and to, mounted at first.
 //!
-//! [`SelectableListFixture`] renders it for the performance tests of the hooks underneath too:
-//! with `use_selectable_collection` and a list keyboard delegate built by the fixture
-//! ([`Collection::SelectableCollection`]) or by `use_list_keyboard_delegate`
-//! ([`Collection::ListKeyboardDelegate`]); and the controls `mount` and `unmount` mount the list
-//! or only its items (`use_selectable_item`). The other controls ([`Control`]) change the items,
-//! the state (its methods: select all, clear) and the list's reactive input (orientation, disabled
-//! items).
-
-use std::{collections::HashSet, sync::Arc};
+//! Its controls ([`Control`]) mount and unmount the list, change the items, and change the list's
+//! orientation.
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::collections::{
-        CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, LinkBehavior,
-        ListKeyboardDelegate, ListLayout, ListState, SelectionMode, SelectionOptions,
-        UseListCollectionInput, UseListKeyboardDelegateInput, UseListStateInput,
-        UseSelectableCollectionInput, UseSelectableCollectionProps, UseSelectableItemInput,
-        UseSelectableItemReturn, UseSelectableListInput, keyboard_delegate_memo,
-        use_list_collection, use_list_keyboard_delegate, use_list_state, use_selectable_collection,
+        CollectionOptions, Key, LinkBehavior, ListLayout, ListState, SelectionMode,
+        SelectionOptions, UseListCollectionInput, UseListStateInput, UseSelectableItemInput,
+        UseSelectableItemReturn, UseSelectableListInput, use_list_collection, use_list_state,
         use_selectable_item, use_selectable_list,
     },
 };
@@ -32,54 +22,14 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The items at first.
-pub const SMALL: u32 = 10;
+const SMALL: u32 = 10;
 /// The items after the control `large`.
-pub const LARGE: u32 = 1_000;
-
-/// Which hooks make the list a collection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Collection {
-    /// `use_selectable_list`.
-    SelectableList,
-    /// `use_selectable_collection` with a `ListKeyboardDelegate` the fixture builds (without
-    /// type-ahead: it has no collator).
-    SelectableCollection,
-    /// `use_selectable_collection` with the delegate of `use_list_keyboard_delegate`.
-    ListKeyboardDelegate,
-}
-
-/// What the controls `mount` and `unmount` mount.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Part {
-    /// The list with its items.
-    List,
-    /// The items (in the mounted list).
-    Items,
-}
+const LARGE: u32 = 1_000;
 
 #[component]
 pub fn PagePerf() -> impl IntoView {
-    view! {
-        <SelectableListFixture
-            title="use_selectable_list performance"
-            collection=Collection::SelectableList
-            part=Part::List
-        />
-    }
-}
-
-/// The list (see the module documentation), made a collection by `collection`'s hooks, `part`
-/// mounted by the controls.
-#[component]
-pub fn SelectableListFixture(
-    title: &'static str,
-    collection: Collection,
-    part: Part,
-) -> impl IntoView {
     let mounted = RwSignal::new(true);
-    let is_mounted = move |of: Part| Signal::derive(move || of != part || mounted.get());
     let items = RwSignal::new((0..SMALL).collect::<Vec<u32>>());
-    let disabled_keys = RwSignal::new(HashSet::<Key>::new());
     let state = use_list_state(UseListStateInput {
         collection: use_list_collection(UseListCollectionInput {
             items: items.into(),
@@ -88,7 +38,6 @@ pub fn SelectableListFixture(
         }),
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
-            disabled_keys: disabled_keys.into(),
             ..SelectionOptions::default()
         },
     });
@@ -97,95 +46,44 @@ pub fn SelectableListFixture(
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),
         Control::action("large", move || items.set((0..LARGE).collect())),
-        Control::action("select-all", move || state.selection.select_all()),
-        Control::action("clear-selection", move || state.selection.clear_selection()),
-        Control::action("disable-first", move || {
-            disabled_keys.set(HashSet::from([Key::from(0_u32)]));
-        }),
-        Control::action("enable-all", move || disabled_keys.set(HashSet::new())),
         Control::action("horizontal", move || {
             orientation.set(Orientation::Horizontal);
         }),
         Control::action("vertical", move || orientation.set(Orientation::Vertical)),
     ];
-    let items_mounted = is_mounted(Part::Items);
     view! {
-        <h1>{title}</h1>
+        <h1>"use_selectable_list performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <Show when=move || is_mounted(Part::List).get()>
-            <PlainList collection state items orientation items_mounted />
+        <Show when=move || mounted.get()>
+            <PlainList state items orientation />
         </Show>
         <button id="perf-after">"After"</button>
     }
 }
 
-/// The props of the list element, from `collection`'s hooks.
-fn collection_props(
-    collection: Collection,
-    state: &ListState,
-    element: CapturedElement,
-    orientation: RwSignal<Orientation>,
-) -> UseSelectableCollectionProps {
-    let state = *state;
-    let delegate = |delegate: Signal<Arc<dyn KeyboardDelegate>>| {
-        use_selectable_collection(UseSelectableCollectionInput {
-            selection: state.selection,
-            item_elements: state.item_elements,
-            delegate,
-            element,
-            options: CollectionOptions::default(),
-        })
-        .props
-    };
-    match collection {
-        Collection::SelectableList => {
-            use_selectable_list(UseSelectableListInput {
-                state,
-                element,
-                orientation: orientation.into(),
-                layout: ListLayout::Stack,
-                keyboard_delegate: None,
-                layout_delegate: None,
-                options: CollectionOptions::default(),
-            })
-            .props
-        }
-        Collection::SelectableCollection => {
-            let layout = Arc::new(DomLayoutDelegate::new(element, state.item_elements));
-            delegate(keyboard_delegate_memo(move || {
-                Arc::new(
-                    ListKeyboardDelegate::new(state.collection, state.selection, layout.clone())
-                        .with_orientation(orientation.get()),
-                ) as Arc<dyn KeyboardDelegate>
-            }))
-        }
-        Collection::ListKeyboardDelegate => {
-            delegate(use_list_keyboard_delegate(UseListKeyboardDelegateInput {
-                state,
-                element,
-                orientation: orientation.into(),
-                layout: ListLayout::Stack,
-                layout_delegate: None,
-            }))
-        }
-    }
-}
-
-/// The list element with its items, while `items_mounted`.
+/// The list element with its items, made a collection by `use_selectable_list`.
 #[component]
 fn PlainList(
-    collection: Collection,
     state: ListState,
     items: RwSignal<Vec<u32>>,
     orientation: RwSignal<Orientation>,
-    items_mounted: Signal<bool>,
 ) -> impl IntoView {
-    let props = collection_props(collection, &state, CapturedElement::new(), orientation);
-    let collection_id = StoredValue::new(props.collection_id.clone());
+    let element = CapturedElement::new();
+    let collection_return = use_selectable_list(UseSelectableListInput {
+        state,
+        element,
+        orientation: orientation.into(),
+        layout: ListLayout::Stack,
+        keyboard_delegate: None,
+        layout_delegate: None,
+        options: CollectionOptions::default(),
+    });
+    let props = collection_return.collection;
+    let collection_id = StoredValue::new(collection_return.collection_id.clone());
     view! {
         <div
-            {..props.into_attrs()}
+            {..props.attrs()}
             id="perf-list"
             role="listbox"
             aria-label="Options"
@@ -195,20 +93,18 @@ fn PlainList(
             }
             style="max-height: 200px; overflow: auto"
         >
-            <Show when=move || items_mounted.get()>
-                <For each=move || items.get() key=|i| *i let:i>
-                    <PlainItem state collection_id=collection_id.get_value() i />
-                </For>
-            </Show>
+            <For each=move || items.get() key=|i| *i let:i>
+                <PlainItem state collection_id=collection_id.get_value() i />
+            </For>
         </div>
     }
 }
 
 /// An item (`use_selectable_item`).
 #[component]
-fn PlainItem(state: ListState, collection_id: String, i: u32) -> impl IntoView {
+fn PlainItem(state: ListState, collection_id: leptonic::Id, i: u32) -> impl IntoView {
     let UseSelectableItemReturn {
-        props,
+        item: props,
         is_selected,
         is_focused,
         is_disabled,
@@ -230,7 +126,7 @@ fn PlainItem(state: ListState, collection_id: String, i: u32) -> impl IntoView {
         should_use_virtual_focus: false,
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <div
             {..attrs}

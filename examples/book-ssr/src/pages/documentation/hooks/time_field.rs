@@ -84,7 +84,6 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                     {indoc!(r"
                         use leptonic::{
                             CapturedElement,
-                            IntoAttrs,
                             hooks::datepicker::*,
                             jiff::civil::Time,
                         };

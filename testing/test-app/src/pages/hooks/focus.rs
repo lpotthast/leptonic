@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{UseFocusInput, use_focus},
-};
+use leptonic::hooks::focus::{UseFocusInput, use_focus};
 use leptos::{html, portal::Portal, prelude::*, web_sys};
 
 #[component]
@@ -23,6 +20,7 @@ pub fn PageHookFocus() -> impl IntoView {
             set_is_focused.set(focused);
             set_focus_change_count.update(|c| *c += 1);
         })),
+        mark: None,
     });
 
     let (disabled_focus_count, set_disabled_focus_count) = signal(0u32);
@@ -34,6 +32,7 @@ pub fn PageHookFocus() -> impl IntoView {
         })),
         on_blur: None,
         on_focus_change: None,
+        mark: None,
     });
 
     view! {
@@ -44,7 +43,7 @@ pub fn PageHookFocus() -> impl IntoView {
                 <h2>"Basic Focus"</h2>
                 <button id="test-focus-before">"Before"</button>
 
-                <div id="test-focus-target" tabindex="0" {..focus.props.into_attrs()}>
+                <div id="test-focus-target" tabindex="0" {..focus.target.attrs()}>
                     "Focus Target"
                 </div>
 
@@ -64,7 +63,7 @@ pub fn PageHookFocus() -> impl IntoView {
 
             <section>
                 <h2>"Disabled Focus"</h2>
-                <div id="test-focus-disabled" tabindex="0" {..disabled_focus.props.into_attrs()}>
+                <div id="test-focus-disabled" tabindex="0" {..disabled_focus.target.attrs()}>
                     "Disabled Focus Target"
                 </div>
                 <div>
@@ -93,13 +92,14 @@ pub fn PageHookFocus() -> impl IntoView {
                             }),
                         ),
                         on_focus_change: None,
+                        mark: None,
                     });
 
                     view! {
                         <div
                             id="test-focus-parent"
                             tabindex="0"
-                            {..parent_focus.props.into_attrs()}
+                            {..parent_focus.target.attrs()}
                         >
                             "Parent"
                             <button id="test-focus-child">"Child"</button>
@@ -127,13 +127,14 @@ pub fn PageHookFocus() -> impl IntoView {
                         on_focus: None,
                         on_blur: Some(Callback::new(move |_| blur_count.update(|c| *c += 1))),
                         on_focus_change: None,
+                        mark: None,
                     });
                     view! {
                         <button
                             id="test-focus-disable-me"
                             disabled=move || disabled.get()
                             on:click=move |_| disabled.set(true)
-                            {..focus.props.into_attrs()}
+                            {..focus.target.attrs()}
                         >
                             "Disable me"
                         </button>
@@ -204,21 +205,23 @@ fn ShadowFocusTargets(
                 });
             });
         })),
+        mark: None,
     });
     let disabled = use_focus(UseFocusInput {
         is_disabled: Signal::stored(true),
         on_focus: Some(Callback::new(entry("disabled focus"))),
         on_blur: Some(Callback::new(entry("disabled blur"))),
         on_focus_change: None,
+        mark: None,
     });
     view! {
-        <div id="test-focus-shadow-target" tabindex="-1" {..focus.props.into_attrs()} node_ref=target>
+        <div id="test-focus-shadow-target" tabindex="-1" {..focus.target.attrs()} node_ref=target>
             "Shadow target"
         </div>
         <div
             id="test-focus-shadow-disabled"
             tabindex="-1"
-            {..disabled.props.into_attrs()}
+            {..disabled.target.attrs()}
             node_ref=disabled_target
         >
             "Disabled shadow target"

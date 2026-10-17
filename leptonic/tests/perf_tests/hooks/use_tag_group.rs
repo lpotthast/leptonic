@@ -4,8 +4,6 @@
 //! (`tests/budgets/hooks/use_tag_group.json`): mounting and unmounting the group, keyboard focus
 //! coming in and leaving, keyboard navigation (ArrowRight, ArrowLeft, End, Home), and removing tags
 //! (the group announces it), with 10 tags and with 1,000.
-//!
-//! `use_tag`'s performance test uses the same fixture and the helpers here.
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
@@ -23,12 +21,12 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(RemoveWithTheKeyboard))
         .with(fixture_test(RemoveWithTheKeyboardLarge))
 }
-pub(crate) const GROUP: &str = "[data-perf-group]";
-pub(crate) const TAGS: &str = "[data-perf-tag]";
+const GROUP: &str = "[data-perf-group]";
+const TAGS: &str = "[data-perf-tag]";
 
 /// Loads the fixture at `path` and creates the live announcer's regions (its first announcement
 /// waits for them, so an announcing step measured first would count them, or not).
-pub(crate) async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
+async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
     page.goto_path(path).await?;
     page.control("prepare-announcer").await?;
     page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
@@ -37,24 +35,19 @@ pub(crate) async fn goto(page: &Page<'_>, path: &str) -> Result<(), Report> {
 }
 
 /// The tag "Tag `i`".
-pub(crate) fn tag(i: u32) -> String {
+fn tag(i: u32) -> String {
     format!("[data-perf-tag='{i}']")
 }
 
-/// The remove button of the tag "Tag `i`".
-pub(crate) fn remove_button(i: u32) -> String {
-    format!("{} [data-perf-remove]", tag(i))
-}
-
 /// Switches to 1,000 tags (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.element(tag(999)).await?;
     Ok(())
 }
 
 /// Focuses the first tag with the keyboard (Tab from the plain button before the group).
-pub(crate) async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
+async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#perf-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     let first = page.element(tag(0)).await?;
@@ -63,7 +56,7 @@ pub(crate) async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
 }
 
 /// Mounting `container` (the group, or its tags) with `count` tags and unmounting it.
-pub(crate) async fn mount_and_unmount_in(
+async fn mount_and_unmount_in(
     page: &Page<'_>,
     container: &str,
     count: usize,
@@ -133,7 +126,7 @@ pub async fn keyboard_navigation_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// Delete removing the focused fourth tag (focus moves to the next) and Backspace removing that
 /// one.
-pub(crate) async fn remove_with_the_keyboard_in(page: &Page<'_>) -> Result<(), Report> {
+async fn remove_with_the_keyboard_in(page: &Page<'_>) -> Result<(), Report> {
     tab_in(page).await?;
     for i in 1..4 {
         page.send_keys(Key::Right).await?;

@@ -1,5 +1,5 @@
 use leptonic::{
-    Color, ColorValue, HSV, HsvChannel, IntoAttrs, Orientation, RGB8, ValueBinding,
+    Color, ColorValue, HSV, HsvChannel, Orientation, RGB8, ValueBinding,
     atoms::button::Button,
     hooks::{
         color::{
@@ -100,17 +100,17 @@ pub fn ColorPickerStateDemo() -> impl IntoView {
     let color = picker.color;
     let thumb_fill =
         move || BackgroundColorProperty.declare(CssColor::from(color.get().to::<RGB8>()));
-    let (area_attrs, area_styles) = area.color_area_props.into_parts();
-    let (area_thumb_attrs, area_thumb_styles) = area.thumb_props.into_parts();
-    let (x_attrs, x_styles) = area.x_input_props.into_parts();
-    let (y_attrs, y_styles) = area.y_input_props.into_parts();
-    let (hue_track_attrs, hue_track_styles) = hue.slider.track_props.into_parts();
-    let (hue_thumb_attrs, hue_thumb_styles) = hue.thumb.thumb_props.into_parts();
+    let (area_attrs, area_styles) = area.area.attrs();
+    let (area_thumb_attrs, area_thumb_styles) = area.thumb.attrs();
+    let (x_attrs, x_styles) = area.x_input.attrs();
+    let (y_attrs, y_styles) = area.y_input.attrs();
+    let (hue_track_attrs, hue_track_styles) = hue.slider.track.attrs();
+    let (hue_thumb_attrs, hue_thumb_styles) = hue.thumb.thumb.attrs();
     let hue_display = hue_state.display_color();
     let hue_thumb_styles = hue_thumb_styles.add_reactive(move || {
         BackgroundColorProperty.declare(CssColor::from(hue_display.get().to_rgb8()))
     });
-    let (swatch_attrs, swatch_styles) = swatch.color_swatch_props.into_parts();
+    let (swatch_attrs, swatch_styles) = swatch.swatch.attrs();
 
     view! {
         <div class="demo-color-picker-hooks">
@@ -118,7 +118,7 @@ pub fn ColorPickerStateDemo() -> impl IntoView {
                 <div {..area_attrs} class="demo-color-area" style=area_styles>
                     <div
                         {..area_thumb_attrs}
-                        {..area_focus.props.into_attrs()}
+                        {..area_focus.target.attrs()}
                         class="demo-color-area-thumb"
                         style=area_thumb_styles.add_reactive(thumb_fill)
                     >
@@ -128,12 +128,12 @@ pub fn ColorPickerStateDemo() -> impl IntoView {
                 </div>
                 <div
                     class="demo-color-slider-track"
-                    {..hue.slider.group_props.into_attrs()}
+                    {..hue.slider.group.attrs()}
                     {..hue_track_attrs}
                     style=hue_track_styles.merge(hue.track_styles)
                 >
-                    <div class="demo-color-slider-thumb" {..hue_thumb_attrs} {..hue_focus.props.into_attrs()} style=hue_thumb_styles>
-                        <input {..hue.thumb.input_props.into_attrs()} style=hue.input_styles/>
+                    <div class="demo-color-slider-thumb" {..hue_thumb_attrs} {..hue_focus.target.attrs()} style=hue_thumb_styles>
+                        <input {..hue.thumb.input.attrs()} style=hue.input_styles/>
                     </div>
                 </div>
             </div>

@@ -29,7 +29,7 @@ use crate::{
         },
     },
     utils::{
-        aria::AriaRole, data_attributes::flag, default_class::with_default_class, dev_warn,
+        aria::AriaRole, data_attributes::data_flags, default_class::with_default_class, dev_warn,
         styles::Styles,
     },
 };
@@ -147,7 +147,7 @@ pub fn Tabs(
     };
     // As react-aria-components' `Tabs`: focus (and keyboard focus) within.
     let UseFocusRingReturn {
-        props: focus_ring,
+        target: focus_ring,
         is_focused,
         ..
     } = use_focus_ring(UseFocusRingInput {
@@ -159,12 +159,12 @@ pub fn Tabs(
         <Provider value=state>
             <Provider value=config>
                 <div
-                    {..focus_ring.into_attrs()}
+                    {..focus_ring.attrs()}
                     class=classes
                     style=styles
-                    data-orientation=data_orientation
-                    data-focused=flag(is_focused)
-                    data-disabled=flag(is_disabled)
+                    data-orientation={data_orientation}
+                    {..data_flags([("data-focused", is_focused)])}
+                    {..data_flags([("data-disabled", is_disabled)])}
                 >
                     {children()}
                 </div>
@@ -202,17 +202,17 @@ pub fn TabList(
     let (state, config) = tabs_context("TabList")?;
     let orientation = config.orientation;
     let data_orientation = move || orientation.get().as_str();
-    let UseTabListReturn { props } = use_tab_list(UseTabListInput {
+    let UseTabListReturn { tab_list: props } = use_tab_list(UseTabListInput {
         orientation: config.orientation,
         keyboard_activation: config.keyboard_activation,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
         state,
         element: CapturedElement::new(),
     });
 
     Some(view! {
-        <div {..props.into_attrs()} class=classes style=styles data-orientation=data_orientation>
+        <div {..props.attrs()} class=classes style=styles data-orientation=data_orientation>
             {children()}
         </div>
     })
@@ -285,7 +285,7 @@ pub fn Tab(
         }
     });
     let UseTabReturn {
-        props,
+        tab: props,
         is_selected,
         is_disabled,
         is_pressed,
@@ -299,11 +299,11 @@ pub fn Tab(
         on_blur,
         on_focus_change,
     });
-    let (attrs, tab_styles) = props.into_parts();
+    let (attrs, tab_styles) = props.attrs();
     let styles = tab_styles.merge(styles);
     // As react-aria-components' `Tab`: a focus ring and hover on the tab.
     let UseFocusRingReturn {
-        props: focus_ring,
+        target: focus_ring,
         is_focused,
         ..
     } = use_focus_ring(UseFocusRingInput::default());
@@ -317,15 +317,19 @@ pub fn Tab(
     Some(view! {
         <div
             {..attrs}
-            {..focus_ring.into_attrs()}
-            {..hover.props.into_attrs()}
+            {..focus_ring.attrs()}
+            {..hover.target.attrs()}
             class=classes
-            style=styles
-            data-selected=flag(is_selected)
-            data-focused=flag(is_focused)
-            data-hovered=flag(hover.is_hovered)
-            data-disabled=flag(is_disabled)
-            data-pressed=flag(is_pressed)
+            style={styles}
+            {..data_flags([
+                ("data-focused", is_focused),
+                ("data-hovered", hover.is_hovered),
+                ("data-pressed", is_pressed),
+            ])}
+            {..data_flags([
+                ("data-selected", is_selected),
+                ("data-disabled", is_disabled),
+            ])}
         >
             {children()}
         </div>
@@ -368,7 +372,10 @@ pub fn TabPanel(
         return None;
     };
     let panel_key = key.clone();
-    let is_selected = Memo::new(move |_| state.selected_key().as_ref() == Some(&panel_key)).into();
+    // Only this panel's key's selection changes (the selection manager notifies per key,
+    // `performance.md` R1), not every selection change.
+    let selection = state.list.list.selection;
+    let is_selected = Signal::derive(move || selection.is_selected(&panel_key));
     let element = CapturedElement::new();
     let is_exiting = use_exit_animation(UseExitAnimationInput {
         element,
@@ -388,9 +395,10 @@ pub fn TabPanel(
             state,
             key: Some(key.clone()),
             aria_label,
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
-            aria_details: crate::utils::prop_signal(aria_details),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+            aria_details: crate::utils::id::id_ref_prop(aria_details),
         });
+        let panel_props = panel.tab_panel.into_props();
         let focus_ring = use_focus_ring(UseFocusRingInput::default());
         let UseEnterAnimationReturn {
             is_entering,
@@ -402,7 +410,7 @@ pub fn TabPanel(
         });
         let animates_entry = !initially_selected.get_value();
         let is_entering = Signal::derive(move || animates_entry && is_entering.get());
-        let props = panel.props;
+        let props = panel_props;
         // While its tab isn't selected (force-mounted or exiting), the panel is no tab panel.
         let selected = move |value| Signal::derive(move || is_selected.get().then_some(value));
         let (id, label, labelled_by, tabindex) = (
@@ -438,15 +446,17 @@ pub fn TabPanel(
         view! {
             <div
                 {..attrs}
-                {..focus_ring.props.into_attrs()}
+                {..focus_ring.target.attrs()}
                 {..element.attr()}
                 class=classes.clone()
                 style=hiding.merge(styles.clone())
-                inert=inert
-                data-inert=flag(Signal::derive(move || !is_selected.get()))
-                data-focused=flag(is_focused)
-                data-entering=flag(is_entering)
-                data-exiting=flag(is_exiting)
+                inert={inert}
+                {..data_flags([("data-focused", is_focused)])}
+                {..data_flags([
+                    ("data-inert", Signal::derive(move || !is_selected.get())),
+                    ("data-entering", is_entering),
+                    ("data-exiting", is_exiting),
+                ])}
             >
                 {children()}
             </div>

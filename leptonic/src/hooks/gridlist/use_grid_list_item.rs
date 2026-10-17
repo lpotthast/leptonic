@@ -1,17 +1,13 @@
 // Upstream: react-aria/src/gridlist/useGridListItem.ts @ 99e6102368
 // Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
 // Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::{GridListData, KeyboardNavigationBehavior, grid_list_row_id};
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
+    CapturedElement, EventHandler, Id, IntoAttrs, OnEvent, Part, PropsWithStyles, SlotProps,
     hooks::{
         collections::{
             FocusItem, Key, NodeKind, SelectionMode, UseSelectableItemAttrs,
@@ -29,8 +25,10 @@ use crate::{
         i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
         owner_alive::OwnerAlive,
+        part::Remount,
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
         shadow_dom::{get_active_element, get_event_target, node_contains},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -74,13 +72,15 @@ pub struct UseGridListItemInput {
     pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
-/// Return value of [`use_grid_list_item`].
+/// The return value of [`use_grid_list_item`].
 #[derive(Debug)]
 pub struct UseGridListItemReturn {
-    pub row_props: PropsWithStyles<UseGridListItemRowProps>,
-    pub grid_cell_props: UseGridListItemCellProps,
+    /// The row element: `let (attrs, styles) = row.attrs();`.
+    pub row: Part<PropsWithStyles<UseGridListItemRowProps>>,
+    /// The row's cell element (the item's content).
+    pub cell: Part<UseGridListItemCellProps>,
     /// For an element describing the row (referenced only while rendered).
-    pub description_props: SlotProps,
+    pub description: Part<SlotProps>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
     /// Whether the row element itself has keyboard focus (react-aria-components: the row's
@@ -97,7 +97,7 @@ pub struct UseGridListItemReturn {
 pub struct UseGridListItemRowProps {
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     /// Tree rows: whether expanded (rows with children), level and position among siblings.
@@ -114,17 +114,37 @@ pub struct UseGridListItemRowProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
+impl Remount for UseGridListItemRowProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_selected: self.aria_selected,
+            aria_disabled: self.aria_disabled,
+            aria_expanded: self.aria_expanded,
+            aria_level: self.aria_level,
+            aria_posinset: self.aria_posinset,
+            aria_setsize: self.aria_setsize,
+            item: self.item.remount(),
+            on_keydown_capture: self.on_keydown_capture.clone(),
+            on_focus: self.on_focus.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
 pub type UseGridListItemRowAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaSelected>>,
+    SignalAttr<Option<AriaDisabled>>,
     (
-        Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-        leptos::attr::custom::CustomAttr<&'static str, Signal<Option<usize>>>,
-        Attr<attr::AriaPosinset, Signal<Option<usize>>>,
-        Attr<attr::AriaSetsize, Signal<Option<usize>>>,
+        SignalAttr<Option<AriaExpanded>>,
+        SignalAttr<Option<usize>>,
+        SignalAttr<Option<usize>>,
+        SignalAttr<Option<usize>>,
     ),
     UseSelectableItemAttrs,
     OnEvent<ev::Capture<ev::keydown>>,
@@ -137,16 +157,16 @@ impl IntoAttrs for UseGridListItemRowProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaSelected, self.aria_selected),
-            Attr(attr::AriaDisabled, self.aria_disabled),
+            fixed_attr("role", self.role),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-selected", self.aria_selected),
+            signal_attr("aria-disabled", self.aria_disabled),
             (
-                Attr(attr::AriaExpanded, self.aria_expanded),
-                leptos::attr::custom::custom_attribute("aria-level", self.aria_level),
-                Attr(attr::AriaPosinset, self.aria_posinset),
-                Attr(attr::AriaSetsize, self.aria_setsize),
+                signal_attr("aria-expanded", self.aria_expanded),
+                signal_attr("aria-level", self.aria_level),
+                signal_attr("aria-posinset", self.aria_posinset),
+                signal_attr("aria-setsize", self.aria_setsize),
             ),
             self.item.into_attrs(),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
@@ -163,15 +183,24 @@ pub struct UseGridListItemCellProps {
     pub aria_colindex: u32,
 }
 
-pub type UseGridListItemCellAttrs = (Attr<attr::Role, AriaRole>, Attr<attr::AriaColindex, u32>);
+impl Remount for UseGridListItemCellProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_colindex: self.aria_colindex,
+        }
+    }
+}
+
+pub type UseGridListItemCellAttrs = (FixedAttr, FixedAttr);
 
 impl IntoAttrs for UseGridListItemCellProps {
     type Attrs = UseGridListItemCellAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaColindex, self.aria_colindex),
+            fixed_attr("role", self.role),
+            fixed_attr("aria-colindex", self.aria_colindex),
         )
     }
 }
@@ -301,7 +330,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
     };
 
     let UseSelectableItemReturn {
-        props: item_props,
+        item: item_props,
         is_pressed,
         is_selected,
         is_focused,
@@ -324,7 +353,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         should_use_virtual_focus: false,
         on_context_menu,
     });
-    let (mut item_props, item_styles) = item_props.into_inner();
+    let (mut item_props, item_styles) = item_props.into_props().into_inner();
     // A row whose child takes focus and is reached with arrow keys inside a Tab-navigated list is
     // no tab stop itself (react-aria).
     if focus_mode == FocusMode::Child
@@ -583,7 +612,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
     let key = StoredValue::new(key);
 
     UseGridListItemReturn {
-        row_props: PropsWithStyles::new(
+        row: Part::stored(PropsWithStyles::new(
             UseGridListItemRowProps {
                 role: AriaRole::Row,
                 aria_label: label.into(),
@@ -591,7 +620,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
                     let description = description_id.get()?;
                     label
                         .with(Option::is_some)
-                        .then(|| format!("{row_id} {description}"))
+                        .then(|| Id::derived(format_args!("{row_id} {description}")))
                 }),
                 aria_selected: Signal::derive(move || {
                     key.with_value(|k| selection.can_select_item(k))
@@ -615,12 +644,12 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
                 on_focusout: EventHandler::new(on_focusout),
             },
             item_styles,
-        ),
-        grid_cell_props: UseGridListItemCellProps {
+        )),
+        cell: Part::stored(UseGridListItemCellProps {
             role: AriaRole::Gridcell,
             aria_colindex: 1,
-        },
-        description_props: description.props,
+        }),
+        description: description.part,
         is_selected,
         is_focused,
         is_focus_visible: Signal::derive(move || row_has_focus.get() && is_focus_visible()),

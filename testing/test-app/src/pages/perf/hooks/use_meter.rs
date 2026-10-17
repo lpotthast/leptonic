@@ -5,7 +5,7 @@
 //! the format (a percentage or a decimal) and the value label.
 
 use leptonic::{
-    IntoAttrs, NumberFormatOptions, NumberStyle,
+    NumberFormatOptions, NumberStyle,
     hooks::meter::{UseMeterInput, use_meter},
 };
 use leptos::prelude::*;
@@ -33,12 +33,12 @@ fn Subject(
         max_value: max,
         format_options: format,
         value_label: value_label.into(),
-        id: Some("perf-meter".to_owned()),
+        id: Some("perf-meter".into()),
         aria_label: "Storage".into(),
         ..UseMeterInput::default()
     });
     view! {
-        <div {..meter.props.into_attrs()}>
+        <div {..meter.progress_bar.attrs()}>
             <span id="perf-meter-text">{meter.value_text}</span>
         </div>
     }

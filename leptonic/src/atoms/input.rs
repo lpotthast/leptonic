@@ -1,28 +1,26 @@
 // Upstream: react-aria-components/src/Input.tsx @ 99e6102368
 // Upstream: react-aria-components/src/TextArea.tsx @ 99e6102368
-use std::sync::Arc;
-
 use leptos::{
     attr::{
         Attribute,
         any_attribute::{AnyAttribute, IntoAnyAttribute},
     },
-    either::Either,
+    either::EitherOf3,
     ev,
     prelude::*,
 };
 use leptos_classes::Classes;
 
 use crate::{
-    IntoAttrs,
+    IntoAttrs, Part,
     hooks::{
         focus::use_focus_ring::{UseFocusRingInput, use_focus_ring},
         form::{TextFieldElement, UseTextFieldInputProps},
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class,
-        scoped_context::use_clearable_context, styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class,
+        scoped_context::use_clearable_context, signal_attr::signal_attr, styles::Styles,
     },
 };
 
@@ -65,9 +63,9 @@ pub struct InputState {
 /// field's hook, and its state.
 #[derive(Clone)]
 pub struct InputContext {
-    /// The input's attributes, for each rendered input (one at a time; an input may mount again,
-    /// e.g. in a `Show`, or a text field may switch between `Input` and `TextArea`).
-    attrs: Arc<dyn Fn() -> AnyAttribute + Send + Sync>,
+    /// The input's attributes, for one rendered input at a time (an input may mount again, e.g.
+    /// in a `Show`, or a text field may switch between `Input` and `TextArea`).
+    attrs: Part<AnyAttribute>,
     /// A text field's element kind and value, which a [`TextArea`] can render too.
     text_field: Option<TextFieldParts>,
     pub state: InputState,
@@ -93,14 +91,15 @@ impl TextFieldParts {
 }
 
 impl InputContext {
-    /// The input of a field with any attributes (e.g. a field built from hooks), cloned for each
-    /// rendered input.
-    pub fn new<A>(attrs: A, state: InputState) -> Self
+    /// The input of a field with any attributes (e.g. a field built from hooks): each rendered
+    /// input takes them from the part, e.g. `input.map(IntoAttrs::into_attrs)` for a hook's
+    /// input part.
+    pub fn new<A>(attrs: Part<A>, state: InputState) -> Self
     where
-        A: Attribute + Clone + Send + Sync + 'static,
+        A: Attribute + Send + 'static,
     {
         Self {
-            attrs: Arc::new(move || attrs.clone().into_any_attr()),
+            attrs: attrs.map(IntoAnyAttribute::into_any_attr),
             text_field: None,
             state,
         }
@@ -108,16 +107,16 @@ impl InputContext {
 
     /// The input of a [`use_text_field`](fn@crate::hooks::form::use_text_field) field, which can
     /// also be a [`TextArea`]: `element` is the hook's `element`, set by the `Input` or
-    /// `TextArea` that mounts.
+    /// `TextArea` that mounts; `value` the field's value (a textarea's initial content).
     pub fn text_field(
-        props: UseTextFieldInputProps,
+        input: Part<UseTextFieldInputProps>,
+        value: Signal<String>,
         element: RwSignal<TextFieldElement>,
         state: InputState,
     ) -> Self {
-        let value = props.value_property;
         Self {
             text_field: Some(TextFieldParts { element, value }),
-            ..Self::new(props.into_attrs(), state)
+            ..Self::new(input.map(IntoAttrs::into_attrs), state)
         }
     }
 }
@@ -149,7 +148,7 @@ pub fn Input(
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-Input", classes);
     let Some(ctx) = use_clearable_context::<InputContext>() else {
-        return Either::Right(view! {
+        return EitherOf3::B(view! {
             <input
                 {..standalone_attributes(is_disabled, is_invalid)}
                 node_ref=node_ref
@@ -158,19 +157,25 @@ pub fn Input(
             />
         });
     };
+    // One input per field (`Part`: a second one renders nothing).
+    let Some(attrs) = ctx.attrs.props() else {
+        return EitherOf3::C(());
+    };
     if let Some(text_field) = ctx.text_field {
         text_field.rendered_as(TextFieldElement::Input);
     }
     let state = ctx.state;
     let hover = use_hover(UseHoverInput {
         is_disabled: state.is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
 
-    Either::Left(view! {
+    EitherOf3::A(view! {
         <input
-            {..(ctx.attrs)()}
-            {..hover.props.into_attrs()}
+            {..attrs}
+            {..hover.target.attrs()}
             {..state_attributes(state, hover.is_hovered)}
             node_ref=node_ref
             class=classes
@@ -206,7 +211,7 @@ pub fn TextArea(
     let Some((ctx, text_field)) = use_clearable_context::<InputContext>()
         .and_then(|ctx| ctx.text_field.map(|text_field| (ctx, text_field)))
     else {
-        return Either::Right(view! {
+        return EitherOf3::B(view! {
             <textarea
                 {..standalone_attributes(is_disabled, is_invalid)}
                 node_ref=node_ref
@@ -215,6 +220,9 @@ pub fn TextArea(
             />
         });
     };
+    let Some(attrs) = ctx.attrs.props() else {
+        return EitherOf3::C(());
+    };
     // Before the attributes are built: `type`, `pattern` and the `value` attribute only exist on
     // inputs (react-aria: `inputElementType`); a textarea renders its value as its content.
     text_field.rendered_as(TextFieldElement::TextArea);
@@ -222,13 +230,15 @@ pub fn TextArea(
     let state = ctx.state;
     let hover = use_hover(UseHoverInput {
         is_disabled: state.is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
 
-    Either::Left(view! {
+    EitherOf3::A(view! {
         <textarea
-            {..(ctx.attrs)()}
-            {..hover.props.into_attrs()}
+            {..attrs}
+            {..hover.target.attrs()}
             {..state_attributes(state, hover.is_hovered)}
             node_ref=node_ref
             class=classes
@@ -248,12 +258,15 @@ fn standalone_attributes(
 ) -> impl Attribute + 'static {
     let hover = use_hover(UseHoverInput {
         is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
     let focus_ring = use_focus_ring(UseFocusRingInput {
         is_text_input: true,
         ..UseFocusRingInput::default()
     });
+    let focus_ring_props = focus_ring.target.into_props();
     let state = InputState {
         is_disabled,
         is_invalid,
@@ -261,13 +274,16 @@ fn standalone_attributes(
         is_focus_visible: focus_ring.is_focus_visible,
     };
     (
-        hover.props.into_attrs(),
+        hover.target.attrs(),
         // The focus ring's own `data-focus-visible` comes with the other data attributes.
-        focus_ring.props.on_focus.into_on(ev::focus),
-        focus_ring.props.on_blur.into_on(ev::blur),
+        focus_ring_props.on_focus.into_on(ev::focus),
+        focus_ring_props.on_blur.into_on(ev::blur),
         state_attributes(state, hover.is_hovered),
         leptos::attr::disabled(is_disabled),
-        leptos::attr::aria_invalid(flag(is_invalid)),
+        signal_attr(
+            "aria-invalid",
+            crate::utils::aria::aria_true::<crate::utils::aria::AriaInvalid>(is_invalid),
+        ),
     )
 }
 
@@ -276,20 +292,16 @@ fn state_attributes(
     state: InputState,
     is_hovered: Signal<bool>,
 ) -> impl Attribute + Clone + 'static {
+    // At most 3 signals per effect (`performance.md` R4): the interaction state, and the rest.
     (
-        data_attribute("data-focused", state.is_focused),
-        data_attribute("data-focus-visible", state.is_focus_visible),
-        data_attribute("data-hovered", is_hovered),
-        data_attribute("data-disabled", state.is_disabled),
-        data_attribute("data-invalid", state.is_invalid),
+        data_flags([
+            ("data-focused", state.is_focused),
+            ("data-focus-visible", state.is_focus_visible),
+            ("data-hovered", is_hovered),
+        ]),
+        data_flags([
+            ("data-disabled", state.is_disabled),
+            ("data-invalid", state.is_invalid),
+        ]),
     )
-}
-
-/// A `data-*` flag attribute (see [`flag`]).
-fn data_attribute(
-    name: &'static str,
-    signal: Signal<bool>,
-) -> leptos::attr::custom::CustomAttr<&'static str, impl Fn() -> Option<&'static str> + Send + Clone>
-{
-    leptos::attr::custom::custom_attribute(name, flag(signal))
 }

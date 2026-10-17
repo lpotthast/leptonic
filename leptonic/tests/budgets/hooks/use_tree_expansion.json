@@ -1,0 +1,315 @@
+{
+  "expand_all": {
+    "collapse all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 77,
+        "reallocations": 2,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 11,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 11,
+        "dom_attributes": 0,
+        "dom_text": 11,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "expand all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 100,
+        "reallocations": 2,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 11,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 11,
+        "dom_attributes": 0,
+        "dom_text": 11,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "expand_all_large": {
+    "collapse all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 7007,
+        "reallocations": 8,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1001,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 1001,
+        "dom_attributes": 0,
+        "dom_text": 1001,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "expand all": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 9010,
+        "reallocations": 998,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1001,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 1001,
+        "dom_attributes": 0,
+        "dom_text": 1001,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "mount_and_unmount": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 352,
+        "reallocations": 15,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 12,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 3,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 9,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 3,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "mount_and_unmount_large": {
+    "mount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 28079,
+        "reallocations": 2001,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1002,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 3,
+        "dom_removed_nodes": 2,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    },
+    "unmount": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 9,
+        "reallocations": 0,
+        "memo_runs": 1,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 1,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 1,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 2,
+        "dom_removed_nodes": 3,
+        "layouts": 1,
+        "style_recalcs": 1
+      }
+    }
+  },
+  "same_keys": {
+    "unchanged": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 0,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 0,
+        "immediate_effect_runs": 0,
+        "signal_notifications": 0,
+        "dom_attributes": 0,
+        "dom_text": 0,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 0,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "toggle": {
+    "collapse": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 18,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "expand": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 19,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  },
+  "toggle_large": {
+    "collapse": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 18,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    },
+    "expand": {
+      "ran": [
+        "atoms/theme_provider",
+        "hooks/use_tree_expansion"
+      ],
+      "windows": 1,
+      "totals": {
+        "allocations": 19,
+        "reallocations": 0,
+        "memo_runs": 0,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 0,
+        "render_effect_runs": 2,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 2,
+        "dom_attributes": 0,
+        "dom_text": 2,
+        "dom_added_nodes": 0,
+        "dom_removed_nodes": 0,
+        "layouts": 1,
+        "style_recalcs": 0
+      }
+    }
+  }
+}

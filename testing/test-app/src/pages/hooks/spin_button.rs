@@ -1,9 +1,6 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::{UseButtonInput, use_button},
-        spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
-    },
+use leptonic::hooks::{
+    button::{UseButtonInput, use_button},
+    spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
 };
 use leptos::prelude::*;
 
@@ -27,7 +24,7 @@ fn TestSpinButton(
         }))
     };
     let UseSpinButtonReturn {
-        props,
+        spin_button: props,
         increment_button,
         ..
     } = use_spin_button(UseSpinButtonInput {
@@ -58,10 +55,10 @@ fn TestSpinButton(
         aria_label: format!("{label} up").into(),
         ..increment_button
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
     view! {
-        <div {..props.into_attrs()} tabindex="0" aria-label=label>{move || value.get()}</div>
+        <div {..props.attrs()} tabindex="0" aria-label=label>{move || value.get()}</div>
         <button {..up_attrs} style=up_styles>"+"</button>
     }
 }
@@ -69,8 +66,10 @@ fn TestSpinButton(
 /// A spin button without a value.
 #[component]
 fn EmptySpinButton() -> impl IntoView {
-    let UseSpinButtonReturn { props, .. } = use_spin_button(UseSpinButtonInput::<f64>::default());
-    view! { <div {..props.into_attrs()} tabindex="0" aria-label="Empty"></div> }
+    let UseSpinButtonReturn {
+        spin_button: props, ..
+    } = use_spin_button(UseSpinButtonInput::<f64>::default());
+    view! { <div {..props.attrs()} tabindex="0" aria-label="Empty"></div> }
 }
 
 #[component]

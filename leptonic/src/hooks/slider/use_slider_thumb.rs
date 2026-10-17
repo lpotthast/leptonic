@@ -1,8 +1,6 @@
 // Upstream: react-aria/src/slider/useSliderThumb.ts @ 99e6102368
 // Upstream: react-aria/test/slider/useSliderThumb.test.js @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
     ev,
     prelude::*,
     tachys::html::property::{Property, prop},
@@ -12,7 +10,7 @@ use send_wrapper::SendWrapper;
 use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use crate::{
-    EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    EventHandler, Id, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         focus::{FocusableContextAttr, UseFocusableInput, UseFocusableReturn, use_focusable},
         form::{
@@ -29,11 +27,14 @@ use crate::{
         focus::focus_safely,
         fraction::Fraction,
         i18n::{WritingDirection, use_direction},
+        id::IdListBuilder,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         number_value::NumberValue,
         orientation::Orientation,
+        part::{Part, Remount},
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         styles::{Styles, css::TouchAction, property::TouchActionProperty},
     },
 };
@@ -76,25 +77,24 @@ pub struct UseSliderThumbInput<T: NumberValue> {
     pub has_label: Signal<bool>,
     /// Names this thumb (next to the slider's label), e.g. "Minimum".
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Further elements describing the thumb (next to the slider's description).
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// The element with the thumb's error message.
-    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<Id>>,
     /// Further elements with details about the thumb (next to the slider's).
-    pub aria_details: Signal<Option<String>>,
+    pub aria_details: Signal<Option<Id>>,
 }
 
-/// Return value of [`use_slider_thumb`].
+/// The return value of [`use_slider_thumb`].
 #[derive(Debug)]
 pub struct UseSliderThumbReturn {
-    /// For the thumb element, positioned on the track (`position: absolute`).
-    pub thumb_props: PropsWithStyles<UseSliderThumbProps>,
-    /// For the `<input type="range">` inside the thumb (visually hidden): focus, keyboard and
-    /// assistive technology.
-    pub input_props: UseSliderThumbInputProps,
-    /// For the thumb's own label, if it has one.
-    pub label_props: UseLabelProps,
+    /// The thumb element: `let (attrs, styles) = thumb.attrs();`.
+    pub thumb: Part<PropsWithStyles<UseSliderThumbProps>>,
+    /// The thumb's (visually hidden) range input.
+    pub input: Part<UseSliderThumbInputProps>,
+    /// The thumb's label element.
+    pub label: Part<UseLabelProps>,
     pub is_dragging: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_focused: Signal<bool>,
@@ -104,6 +104,15 @@ pub struct UseSliderThumbReturn {
 pub struct UseSliderThumbProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl Remount for UseSliderThumbProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_keydown: self.on_keydown.clone(),
+        }
+    }
 }
 
 pub type UseSliderThumbAttrs = (OnEvent<ev::pointerdown>, OnEvent<ev::keydown>);
@@ -121,7 +130,7 @@ impl IntoAttrs for UseSliderThumbProps {
 
 #[derive(Debug)]
 pub struct UseSliderThumbInputProps {
-    pub id: String,
+    pub id: Id,
     pub tabindex: Signal<Option<i32>>,
     pub min: Signal<String>,
     pub max: Signal<String>,
@@ -135,10 +144,10 @@ pub struct UseSliderThumbInputProps {
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_errormessage: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_errormessage: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
     pub element_capture: ElementCaptureAttr,
     pub on_input: EventHandler<Event>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -148,30 +157,62 @@ pub struct UseSliderThumbInputProps {
     pub context_attrs: FocusableContextAttr,
 }
 
+impl Remount for UseSliderThumbInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            tabindex: self.tabindex,
+            min: self.min,
+            max: self.max,
+            step: self.step,
+            value: self.value,
+            name: self.name.clone(),
+            form: self.form.clone(),
+            disabled: self.disabled,
+            aria_orientation: self.aria_orientation,
+            aria_valuetext: self.aria_valuetext,
+            aria_required: self.aria_required,
+            aria_invalid: self.aria_invalid,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_errormessage: self.aria_errormessage,
+            aria_details: self.aria_details,
+            element_capture: self.element_capture.clone(),
+            on_input: self.on_input.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            context_attrs: self.context_attrs.clone(),
+        }
+    }
+}
+
 pub type UseSliderThumbInputAttrs = (
     (
-        Attr<attr::Type, &'static str>,
-        Attr<attr::Id, String>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
-        Attr<attr::Min, Signal<String>>,
-        Attr<attr::Max, Signal<String>>,
-        Attr<attr::Step, Signal<String>>,
-        Attr<attr::Value, Signal<String>>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<i32>>,
+        SignalAttr<String>,
+        SignalAttr<String>,
+        SignalAttr<String>,
+        SignalAttr<String>,
         Property<&'static str, Signal<String>>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Form, Option<String>>,
-        Attr<attr::Disabled, Signal<bool>>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<bool>,
     ),
     (
-        Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
-        Attr<attr::AriaValuetext, Signal<String>>,
-        Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
-        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
-        Attr<attr::AriaDetails, Signal<Option<String>>>,
+        SignalAttr<AriaOrientation>,
+        SignalAttr<String>,
+        SignalAttr<Option<AriaRequired>>,
+        SignalAttr<Option<AriaInvalid>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
         ElementCaptureAttr,
     ),
     (
@@ -190,29 +231,29 @@ impl IntoAttrs for UseSliderThumbInputProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             (
-                Attr(attr::Type, "range"),
-                Attr(attr::Id, self.id),
-                Attr(attr::Tabindex, self.tabindex),
-                Attr(attr::Min, self.min),
-                Attr(attr::Max, self.max),
-                Attr(attr::Step, self.step),
-                Attr(attr::Value, self.value),
+                fixed_attr("type", "range"),
+                fixed_attr("id", self.id),
+                signal_attr("tabindex", self.tabindex),
+                signal_attr("min", self.min),
+                signal_attr("max", self.max),
+                signal_attr("step", self.step),
+                signal_attr("value", self.value),
                 // The attribute is the initial value only.
                 prop("value", self.value),
-                Attr(attr::Name, self.name),
-                Attr(attr::Form, self.form),
-                Attr(attr::Disabled, self.disabled),
+                fixed_attr("name", self.name),
+                fixed_attr("form", self.form),
+                signal_attr("disabled", self.disabled),
             ),
             (
-                Attr(attr::AriaOrientation, self.aria_orientation),
-                Attr(attr::AriaValuetext, self.aria_valuetext),
-                Attr(attr::AriaRequired, self.aria_required),
-                Attr(attr::AriaInvalid, self.aria_invalid),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                Attr(attr::AriaErrormessage, self.aria_errormessage),
-                Attr(attr::AriaDetails, self.aria_details),
+                signal_attr("aria-orientation", self.aria_orientation),
+                signal_attr("aria-valuetext", self.aria_valuetext),
+                signal_attr("aria-required", self.aria_required),
+                signal_attr("aria-invalid", self.aria_invalid),
+                maybe_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-describedby", self.aria_describedby),
+                signal_attr("aria-errormessage", self.aria_errormessage),
+                signal_attr("aria-details", self.aria_details),
                 self.element_capture,
             ),
             (
@@ -270,8 +311,8 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
     let reverse_x = move || direction.get_untracked() == WritingDirection::Rtl;
 
     let UseLabelReturn {
-        label_props,
-        field_props,
+        label: label_props,
+        field: field_props,
     } = use_label(UseLabelInput {
         id: Some(slider.thumb_id(index)),
         has_label,
@@ -284,6 +325,8 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         },
         ..UseLabelInput::default()
     });
+    let label_props = label_props.into_props();
+    let field_props = field_props.into_props();
     // As `use_label` with `"{slider labelled by} {aria_labelledby}"`, but following whether the
     // slider's label is rendered: the thumb's own label, the slider's, then the given ids, and
     // the thumb itself (first) next to an `aria-label`.
@@ -291,7 +334,7 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         let (thumb_label_id, thumb_id) = (label_props.id.clone(), field_props.id.clone());
         let slider_labelled_by = slider.labelled_by;
         Memo::new(move |_| {
-            let mut ids = IdRefs::default();
+            let mut ids = IdListBuilder::default();
             if aria_label.with(Option::is_some) {
                 ids.push(&thumb_id);
             }
@@ -299,8 +342,12 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
                 ids.push(&thumb_label_id);
             }
             slider_labelled_by.with(|labelled_by| ids.push(labelled_by));
-            ids.extend(aria_labelledby.get().as_deref());
-            ids.into_value()
+            aria_labelledby.with(|labelledby| {
+                if let Some(labelledby) = labelledby {
+                    ids.push(labelledby);
+                }
+            });
+            ids.finish()
         })
     };
 
@@ -391,13 +438,14 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             state.set_thumb_dragging(index, false);
         })),
     });
+    let thumb_move_props = thumb_move.target.into_props();
 
     // Register the thumb's editability with the state (react-aria: during render).
     Effect::new(move |_| state.set_thumb_editable(index, !is_disabled.get()));
     state.set_thumb_editable(index, !is_disabled.get_untracked());
 
     let UseFocusableReturn {
-        props: focusable_props,
+        target: focusable_props,
         ..
     } = use_focusable(UseFocusableInput {
         is_disabled,
@@ -405,8 +453,13 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         on_blur: Some(Callback::new(move |_| state.set_focused_thumb(None))),
         shortcuts: Some(shortcuts),
         allow_shortcut_repeats: true,
-        ..UseFocusableInput::default()
+        auto_focus: false,
+        exclude_from_tab_order: Signal::stored(false),
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
     });
+    let focusable_props = focusable_props.into_props();
 
     // A press on the thumb focuses its input and drags until the pointer is released.
     let release_listeners: StoredValue<Option<SendWrapper<Vec<Listener>>>> = StoredValue::new(None);
@@ -480,14 +533,14 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             .map_or_else(|| value.to_f64().to_string(), |decimal| decimal.to_string())
     };
     UseSliderThumbReturn {
-        thumb_props: PropsWithStyles::new(
+        thumb: Part::stored(PropsWithStyles::new(
             UseSliderThumbProps {
-                on_pointerdown: EventHandler::new(on_down).chain(thumb_move.props.on_pointerdown),
-                on_keydown: thumb_move.props.on_keydown,
+                on_pointerdown: EventHandler::new(on_down).chain(thumb_move_props.on_pointerdown),
+                on_keydown: thumb_move_props.on_keydown,
             },
             thumb_styles,
-        ),
-        input_props: UseSliderThumbInputProps {
+        )),
+        input: Part::stored(UseSliderThumbInputProps {
             id: field_props.id,
             tabindex: Signal::derive(move || (!is_disabled.get()).then_some(0)),
             min: Signal::derive(move || to_string(state.thumb_min_value(index))),
@@ -518,8 +571,8 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             on_focus: focusable_props.on_focus,
             on_blur: focusable_props.on_blur,
             context_attrs: FocusableContextAttr(focusable_props.context_attrs),
-        },
-        label_props,
+        }),
+        label: Part::stored(label_props),
         is_dragging: Signal::derive(move || state.is_thumb_dragging(index)),
         is_disabled,
         is_focused,

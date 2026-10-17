@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    KeyboardKey, KeyboardShortcuts, Shortcut,
     atoms::{button::Button, focus_manager::FocusManagerProvider},
     hooks::{
         focus::{FocusManager as Manager, FocusManagerOptions},
@@ -56,7 +56,7 @@ fn EditButtons(manager: Manager, set_action: WriteSignal<Option<&'static str>>) 
     });
 
     view! {
-        <div role="group" aria-label="Edit" class="demo-focus-row" {..keyboard.props.into_attrs()}>
+        <div role="group" aria-label="Edit" class="demo-focus-row" {..keyboard.target.attrs()}>
             <Button on_press=move |_| set_action.set(Some("cut")) classes="demo-btn">"Cut"</Button>
             <Button on_press=move |_| set_action.set(Some("copy")) classes="demo-btn">"Copy"</Button>
             <Button on_press=move |_| set_action.set(Some("paste")) classes="demo-btn">"Paste"</Button>

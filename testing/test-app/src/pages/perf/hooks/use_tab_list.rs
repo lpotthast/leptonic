@@ -7,7 +7,7 @@
 //! orientation.
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         collections::{Key, SelectOnPressUp, use_collection},
         tabs::{
@@ -41,7 +41,7 @@ fn HookTab(state: TabListState, i: usize) -> impl IntoView {
         on_blur: None,
         on_focus_change: None,
     });
-    let (attrs, styles) = tab.props.into_parts();
+    let (attrs, styles) = tab.tab.attrs();
     view! { <div {..attrs} style=styles>{format!("Tab {i}")}</div> }
 }
 
@@ -62,7 +62,7 @@ fn HookTabList(
         aria_labelledby: Signal::default(),
     });
     view! {
-        <div {..list.props.into_attrs()} class="perf-tab-list">
+        <div {..list.tab_list.attrs()} class="perf-tab-list">
             {(1..=count).map(|i| view! { <HookTab state i /> }).collect_view()}
         </div>
     }
@@ -78,7 +78,7 @@ fn HookTabPanel(state: TabListState) -> impl IntoView {
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    view! { <div {..panel.props.into_attrs()}>"Panel"</div> }
+    view! { <div {..panel.tab_panel.attrs()}>"Panel"</div> }
 }
 
 #[component]

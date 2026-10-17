@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::focus::{UseFocusInput, UseFocusReturn, use_focus},
 };
@@ -20,7 +19,7 @@ pub fn FocusDemo() -> impl IntoView {
         });
     };
 
-    let UseFocusReturn { props } = use_focus(UseFocusInput {
+    let UseFocusReturn { target } = use_focus(UseFocusInput {
         is_disabled: disabled.into(),
         on_focus: Some(Callback::new(move |_| log("on_focus".to_string()))),
         on_blur: Some(Callback::new(move |_| log("on_blur".to_string()))),
@@ -28,12 +27,13 @@ pub fn FocusDemo() -> impl IntoView {
             set_is_focused.set(focused);
             log(format!("on_focus_change: {focused}"));
         })),
+        mark: None,
     });
 
     view! {
         <label class="demo-focus-label">
             "Name "
-            <input type="text" class="demo-focus-item" {..props.into_attrs()}/>
+            <input type="text" class="demo-focus-item" {..target.attrs()}/>
         </label>
 
         <p class="demo-status">

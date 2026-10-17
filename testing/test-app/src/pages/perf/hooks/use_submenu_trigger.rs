@@ -10,7 +10,7 @@
 use std::time::Duration;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         collections::{
             CloseOnSelect, CollectionOptions, Key, SelectionOptions, UseListStateInput,
@@ -92,7 +92,7 @@ fn Subject() -> impl IntoView {
     let submenu_props = StoredValue::new(trigger.submenu);
     let is_open = submenu_state.is_open;
     view! {
-        <ul {..menu.props.into_attrs()} style="width: 200px;">
+        <ul {..menu.menu.attrs()} style="width: 200px;">
             <Item menu=data.clone() key=Key::from("share") submenu_trigger=Some(trigger.trigger) />
             <Item menu=data.clone() key=Key::from("copy") submenu_trigger=None />
         </ul>
@@ -105,7 +105,7 @@ fn Subject() -> impl IntoView {
 /// The submenu (`use_menu` with the trigger's submenu props).
 #[component]
 fn Submenu(
-    props: StoredValue<leptonic::hooks::menu::SubmenuProps>,
+    props: StoredValue<leptonic::Part<leptonic::hooks::menu::SubmenuProps>>,
     element: CapturedElement,
 ) -> impl IntoView {
     let collection = use_collection(|b| {
@@ -126,14 +126,14 @@ fn Submenu(
         keyboard_delegate: None,
         on_action: None,
         on_close: None,
-        submenu: Some(props.get_value()),
+        submenu: props.with_value(leptonic::Part::props),
     });
     let data = menu.data;
     view! {
         <ul
             class="perf-submenu"
             style="position: absolute; top: 100px; left: 260px; width: 200px;"
-            {..menu.props.into_attrs()}
+            {..menu.menu.attrs()}
         >
             <Item menu=data.clone() key=Key::from("email") submenu_trigger=None />
             <Item menu=data.clone() key=Key::from("link") submenu_trigger=None />
@@ -155,7 +155,7 @@ fn Item(menu: MenuData, key: Key, submenu_trigger: Option<SubmenuTriggerItem>) -
         should_close_on_select: CloseOnSelect::Auto,
         submenu_trigger,
     });
-    let (attrs, styles) = item.props.into_parts();
+    let (attrs, styles) = item.item.attrs();
     view! {
         <li {..attrs} style=styles>
             {text}

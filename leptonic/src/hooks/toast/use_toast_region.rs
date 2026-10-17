@@ -1,17 +1,13 @@
 // Upstream: react-aria/src/toast/useToastRegion.ts @ 99e6102368
 // Upstream: react-aria/test/toast/useToast.test.js @ 99e6102368
-use leptos::{
-    attr::custom::{CustomAttr, custom_attribute},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, PointerEvent};
 
 use super::use_toast_state::{ToastKey, ToastQueue};
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, EventHandler, Id, IntoAttrs, OnEvent,
     hooks::{
         focus::{FocusWithinEvent, Modality, UseFocusWithinInput, get_modality, use_focus_within},
         interactions::{UseHoverInput, use_hover},
@@ -19,7 +15,9 @@ use crate::{
     },
     utils::{
         intl_strings::{ToastStrings, use_localized_strings},
+        part::{Part, Remount},
         shadow_dom::get_event_target,
+        signal_attr::{FixedAttr, fixed_attr},
     },
 };
 
@@ -53,13 +51,14 @@ pub struct UseToastRegionInput<T: Clone + Send + Sync + 'static> {
     pub element: CapturedElement,
     /// Default: "1 notification." / "2 notifications.".
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 }
 
-/// Return value of [`use_toast_region`].
+/// The return value of [`use_toast_region`].
 #[derive(Debug)]
 pub struct UseToastRegionReturn {
-    pub region_props: UseToastRegionProps,
+    /// The toast region element.
+    pub region: Part<UseToastRegionProps>,
 }
 
 /// Props of a toast region.
@@ -72,10 +71,22 @@ pub struct UseToastRegionProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
+impl Remount for UseToastRegionProps {
+    fn remount(&self) -> Self {
+        Self {
+            landmark: self.landmark.remount(),
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerleave: self.on_pointerleave.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseToastRegionProps {
     type Attrs = (
         <UseLandmarkProps as IntoAttrs>::Attrs,
-        CustomAttr<&'static str, &'static str>,
+        FixedAttr,
         OnEvent<ev::pointerenter>,
         OnEvent<ev::pointerleave>,
         OnEvent<ev::focusin>,
@@ -87,7 +98,7 @@ impl IntoAttrs for UseToastRegionProps {
             self.landmark.into_attrs(),
             // Not hidden when an overlay opens, focusable outside a focus scope, not dismissing
             // overlays when pressed.
-            custom_attribute("data-leptonic-top-layer", "true"),
+            fixed_attr("data-leptonic-top-layer", "true"),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
             self.on_focusin.into_on(ev::focusin),
@@ -130,6 +141,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         role: LandmarkRole::Region,
         focus: None,
     });
+    let landmark_props = landmark.landmark.into_props();
 
     let is_hovered = StoredValue::new(false);
     let is_focused = StoredValue::new(false);
@@ -151,6 +163,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         })),
         ..UseHoverInput::default()
     });
+    let hover_props = hover.target.into_props();
 
     // Where the focus came from, to return it to. Thread-safe storage: the hook may run during
     // server-side rendering.
@@ -198,6 +211,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         })),
         ..UseFocusWithinInput::default()
     });
+    let focus_within_props = focus_within.target.into_props();
 
     // The keys of the toasts as rendered last (newest first), and the key of the focused toast
     // (`None`: none has the focus).
@@ -330,16 +344,16 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
     });
 
     UseToastRegionReturn {
-        region_props: UseToastRegionProps {
+        region: Part::stored(UseToastRegionProps {
             landmark: UseLandmarkProps {
                 // Focusable by script (landmark navigation, restoring the focus).
                 tabindex: Signal::stored(Some(-1)),
-                ..landmark.props
+                ..landmark_props
             },
-            on_pointerenter: hover.props.on_pointerenter,
-            on_pointerleave: hover.props.on_pointerleave,
-            on_focusin: focus_within.props.on_focusin.chain(on_focusin),
-            on_focusout: focus_within.props.on_focusout.chain(on_focusout),
-        },
+            on_pointerenter: hover_props.on_pointerenter,
+            on_pointerleave: hover_props.on_pointerleave,
+            on_focusin: focus_within_props.on_focusin.chain(on_focusin),
+            on_focusout: focus_within_props.on_focusout.chain(on_focusout),
+        }),
     }
 }

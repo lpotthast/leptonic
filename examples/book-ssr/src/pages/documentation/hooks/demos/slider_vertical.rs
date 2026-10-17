@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, Orientation, computed_pct, computed_size,
+    Orientation, computed_pct, computed_size,
     hooks::{
         focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
         slider::{
@@ -57,9 +57,9 @@ pub fn SliderVerticalDemo() -> impl IntoView {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
-    let (track_attrs, track_styles) = slider.track_props.into_parts();
+    let (track_attrs, track_styles) = slider.track.attrs();
     // A vertical thumb positions itself from the top; the fill grows from the bottom.
-    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
     let fill_styles = Styles::new().add_reactive(move || {
         HeightProperty.declare(computed_size(computed_pct(
             state.thumb_percent(0).as_percent(),
@@ -67,15 +67,15 @@ pub fn SliderVerticalDemo() -> impl IntoView {
     });
 
     view! {
-        <div class="demo-slider demo-slider-vertical" {..slider.group_props.into_attrs()}>
-            <span class="demo-slider-label" {..slider.label_props.into_attrs()}>"Temperature"</span>
+        <div class="demo-slider demo-slider-vertical" {..slider.group.attrs()}>
+            <span class="demo-slider-label" {..slider.label.attrs()}>"Temperature"</span>
             <div class="demo-slider-track" {..track_attrs} style=track_styles>
                 <div class="demo-slider-fill" style=fill_styles></div>
-                <div class="demo-slider-thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
-                    <input class="demo-visually-hidden-input" {..thumb.input_props.into_attrs()}/>
+                <div class="demo-slider-thumb" {..thumb_attrs} {..focus_ring.target.attrs()} style=thumb_styles>
+                    <input class="demo-visually-hidden-input" {..thumb.input.attrs()}/>
                 </div>
             </div>
-            <output class="demo-slider-output" {..slider.output_props.into_attrs()}>{move || state.formatted_values()}</output>
+            <output class="demo-slider-output" {..slider.output.attrs()}>{move || state.formatted_values()}</output>
         </div>
     }
 }

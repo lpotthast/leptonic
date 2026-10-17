@@ -1,15 +1,14 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
 //! The performance of the hook `use_hidden_select` (`/perf/hooks/use_hidden_select`, the hidden
-//! select of the plain select of `use_select`'s performance test, field `option`): what each thing
-//! it offers costs, measured (`Page::measure`) and checked against its budget
-//! (`tests/budgets/hooks/use_hidden_select.json`): mounting and unmounting it with 10 options (a
-//! native `<select>`) and with 1,000 (a hidden input, above 300), the value changing at both sizes,
-//! autofill (the native select changing), and the disabled and required states changing.
+//! select of a select on plain elements, field `option`): what each thing it offers costs, measured
+//! (`Page::measure`) and checked against its budget (`tests/budgets/hooks/use_hidden_select.json`):
+//! mounting and unmounting it with 10 options (a native `<select>`) and with 1,000 (a hidden input,
+//! above 300), the value changing at both sizes, autofill (the native select changing), and the
+//! disabled and required states changing.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test};
 use rootcause::Report;
 
-use super::use_select::{large, value};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -30,6 +29,16 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(ValueChangeLarge))
         .with(fixture_test(Autofill))
         .with(fixture_test(DisabledAndRequired))
+}
+/// The select's value: the selected option's number, `-1` for none.
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
+    page.control("value").await
+}
+
+/// Switches to [`LARGE`] options (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.settle().await
 }
 
 /// Mounting the hidden select with 10 options (a native select) and unmounting it.

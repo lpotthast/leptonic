@@ -37,8 +37,8 @@ pub fn PageUseScrollWheel() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseScrollWheelReturn">
-                    <ApiRow name="props" ty="UseScrollWheelProps">
-                        "The "<Code inline=true>"wheel"</Code>" handler. Spread it with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    <ApiRow name="target" ty="Part<UseScrollWheelProps>">
+                        "The "<Code inline=true>"wheel"</Code>" handler. Spread it with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -51,7 +51,7 @@ pub fn PageUseScrollWheel() -> impl IntoView {
 
                         let value = RwSignal::new(50.0_f64);
 
-                        let UseScrollWheelReturn { props } = use_scroll_wheel(UseScrollWheelInput {
+                        let UseScrollWheelReturn { target } = use_scroll_wheel(UseScrollWheelInput {
                             on_scroll: Some(Callback::new(move |e: ScrollEvent| {
                                 value.update(|v| *v = (*v - e.delta_y * 0.1).clamp(0.0, 100.0));
                             })),
@@ -59,7 +59,7 @@ pub fn PageUseScrollWheel() -> impl IntoView {
                         });
 
                         view! {
-                            <div {..props.into_attrs()}>{move || format!("Value: {:.0}", value.get())}</div>
+                            <div {..target.attrs()}>{move || format!("Value: {:.0}", value.get())}</div>
                         }
                     "#)}
                 </Code>
@@ -78,7 +78,10 @@ pub fn PageUseScrollWheel() -> impl IntoView {
                         "Wheel events with "<Keys keys="Control"/>" held are zoom gestures (including trackpad pinch). The hook "
                         "ignores them, so the browser can zoom."
                     </li>
-                    <li>"Deltas are passed on as the browser reports them. Their size depends on the device and the browser."</li>
+                    <li>
+                        "Deltas are in pixels, whatever unit the browser reports: a line counts 16 pixels, a page the "
+                        "viewport\u{2019}s height. Their size still depends on the device and the browser."
+                    </li>
                     <li>
                         "The element doesn\u{2019}t need focus: wheel events go to the element under the pointer. Give "
                         "keyboard users another way to change the value, as "<Link href=routes::doc::NumberField.materialize()>"Number Field"</Link>

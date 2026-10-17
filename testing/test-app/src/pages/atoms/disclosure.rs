@@ -30,7 +30,9 @@ use leptos::prelude::*;
 /// - A controlled group ("Controlled 1"/"Controlled 2", `#test-disc-expand-2` expands the second)
 ///   and nested groups ("Nested 1" holding "Nested 2").
 /// - "Remounted": its panel is rendered only while `#test-disc-remount-toggle` shows it (a remount
-///   of the panel while the disclosure stays expanded or collapsed).
+///   of the panel while the disclosure stays expanded or collapsed). "Remounted trigger": its
+///   trigger is rendered only while `#test-disc-remount-trigger-toggle` shows it (its panel holds
+///   "Remounted trigger content").
 #[component]
 pub fn PageAtomDisclosure() -> impl IntoView {
     let changes = RwSignal::new(0u32);
@@ -39,6 +41,7 @@ pub fn PageAtomDisclosure() -> impl IntoView {
     let group_keys = RwSignal::new(String::new());
     let controlled_keys = RwSignal::new(HashSet::from([Key::from("item1")]));
     let show_remounted_panel = RwSignal::new(true);
+    let show_remounted_trigger = RwSignal::new(true);
     let actions = use_collection(|b| {
         b.item("rename", "Rename");
         b.item("delete", "Delete");
@@ -169,6 +172,19 @@ pub fn PageAtomDisclosure() -> impl IntoView {
             </Disclosure>
             <button id="test-disc-remount-toggle" on:click=move |_| show_remounted_panel.update(|show| *show = !*show)>
                 "Toggle the panel"
+            </button>
+
+            <Disclosure>
+                <Show when=move || show_remounted_trigger.get()>
+                    <DisclosureTrigger><Button>"Remounted trigger"</Button></DisclosureTrigger>
+                </Show>
+                <DisclosurePanel><p>"Remounted trigger content"</p></DisclosurePanel>
+            </Disclosure>
+            <button
+                id="test-disc-remount-trigger-toggle"
+                on:click=move |_| show_remounted_trigger.update(|show| *show = !*show)
+            >
+                "Toggle the trigger"
             </button>
 
             <DisclosureGroup is_disabled=true>

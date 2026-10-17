@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     computed_pct, computed_size,
     hooks::{
@@ -32,7 +32,7 @@ pub fn SliderBasicDemo() -> impl IntoView {
         on_change_end: None,
     });
     let slider = use_slider(UseSliderInput {
-        // A visible label names the slider: spread `label_props` on it.
+        // A visible label names the slider: spread its `label` part on it.
         has_label: Signal::stored(true),
         state,
         id: None,
@@ -64,9 +64,9 @@ pub fn SliderBasicDemo() -> impl IntoView {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
-    let (track_attrs, track_styles) = slider.track_props.into_parts();
+    let (track_attrs, track_styles) = slider.track.attrs();
     // The thumb positions itself on the track.
-    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
     // The fill covers the track up to the thumb.
     let fill_styles = Styles::new().add_reactive(move || {
         WidthProperty.declare(computed_size(computed_pct(
@@ -75,15 +75,15 @@ pub fn SliderBasicDemo() -> impl IntoView {
     });
 
     view! {
-        <div class="demo-slider" {..slider.group_props.into_attrs()}>
-            <span class="demo-slider-label" {..slider.label_props.into_attrs()}>"Volume"</span>
+        <div class="demo-slider" {..slider.group.attrs()}>
+            <span class="demo-slider-label" {..slider.label.attrs()}>"Volume"</span>
             <div class="demo-slider-track" {..track_attrs} style=track_styles>
                 <div class="demo-slider-fill" style=fill_styles></div>
-                <div class="demo-slider-thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
-                    <input class="demo-visually-hidden-input" {..thumb.input_props.into_attrs()}/>
+                <div class="demo-slider-thumb" {..thumb_attrs} {..focus_ring.target.attrs()} style=thumb_styles>
+                    <input class="demo-visually-hidden-input" {..thumb.input.attrs()}/>
                 </div>
             </div>
-            <output class="demo-slider-output" {..slider.output_props.into_attrs()}>{move || state.formatted_values()}</output>
+            <output class="demo-slider-output" {..slider.output.attrs()}>{move || state.formatted_values()}</output>
         </div>
 
         <div class="demo-controls">

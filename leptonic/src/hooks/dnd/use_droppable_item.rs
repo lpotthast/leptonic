@@ -2,10 +2,7 @@
 // Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
 use std::rc::Rc;
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::{
     drag_manager::{self, DroppableItemOptions, use_drag_session},
@@ -13,7 +10,14 @@ use super::{
     use_droppable_collection::DroppableCollectionData,
     use_virtual_drop::use_virtual_drop,
 };
-use crate::{CapturedElement, IntoAttrs, utils::aria::AriaHidden};
+use crate::{
+    CapturedElement, Id, IntoAttrs,
+    utils::{
+        aria::AriaHidden,
+        part::{Part, Remount},
+        signal_attr::{SignalAttr, signal_attr},
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -40,10 +44,11 @@ pub struct UseDroppableItemInput {
     pub activate_button: Option<CapturedElement>,
 }
 
-/// Return value of [`use_droppable_item`].
+/// The return value of [`use_droppable_item`].
 #[derive(Debug)]
 pub struct UseDroppableItemReturn {
-    pub drop_props: UseDroppableItemProps,
+    /// The droppable item element.
+    pub item: Part<UseDroppableItemProps>,
     pub is_drop_target: Signal<bool>,
 }
 
@@ -51,23 +56,29 @@ pub struct UseDroppableItemReturn {
 #[derive(Debug)]
 pub struct UseDroppableItemProps {
     /// How to drop, during keyboard drags.
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Items that can't take the dragged data are hidden during keyboard drags.
     pub aria_hidden: Signal<Option<AriaHidden>>,
 }
 
-pub type UseDroppableItemAttrs = (
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
-);
+impl Remount for UseDroppableItemProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_describedby: self.aria_describedby,
+            aria_hidden: self.aria_hidden,
+        }
+    }
+}
+
+pub type UseDroppableItemAttrs = (SignalAttr<Option<Id>>, SignalAttr<Option<AriaHidden>>);
 
 impl IntoAttrs for UseDroppableItemProps {
     type Attrs = UseDroppableItemAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaHidden, self.aria_hidden),
+            signal_attr("aria-describedby", self.aria_describedby),
+            signal_attr("aria-hidden", self.aria_hidden),
         )
     }
 }
@@ -141,13 +152,13 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
     });
 
     UseDroppableItemReturn {
-        drop_props: UseDroppableItemProps {
+        item: Part::stored(UseDroppableItemProps {
             aria_describedby: describedby,
             aria_hidden: Signal::derive(move || {
                 (session.with(Option::is_some) && !is_valid_drop_target.get())
                     .then_some(AriaHidden::True)
             }),
-        },
+        }),
         is_drop_target: is_drop_target.into(),
     }
 }

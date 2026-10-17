@@ -5,14 +5,11 @@
 //! controls ([`Control`]) mount and unmount it, disable and enable it, and read its value
 //! (`value`, -1: empty).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::use_button,
-        form::{
-            NumberFieldState, UseNumberFieldInput, UseNumberFieldStateInput, use_number_field,
-            use_number_field_state,
-        },
+use leptonic::hooks::{
+    button::use_button,
+    form::{
+        NumberFieldState, UseNumberFieldInput, UseNumberFieldStateInput, use_number_field,
+        use_number_field_state,
     },
 };
 use leptos::prelude::*;
@@ -67,7 +64,7 @@ fn Field(
     });
     let field = use_number_field(UseNumberFieldInput {
         state: number,
-        id: Some("perf-input".to_owned()),
+        id: Some("perf-input".into()),
         has_label: true.into(),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
@@ -84,13 +81,13 @@ fn Field(
         on_key_down: None,
         on_key_up: None,
     });
-    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).props.into_parts();
-    let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
+    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).button.attrs();
+    let (increment_attrs, increment_styles) = use_button(field.increment_button).button.attrs();
     view! {
-        <div {..field.group_props.into_attrs()}>
-            <label {..field.label_props.into_attrs()}>"Quantity"</label>
+        <div {..field.group.attrs()}>
+            <label {..field.label.attrs()}>"Quantity"</label>
             <button {..decrement_attrs} style=decrement_styles>"-"</button>
-            <input {..field.input_props.into_attrs()} />
+            <input {..field.input.attrs()} />
             <button {..increment_attrs} style=increment_styles>"+"</button>
         </div>
     }

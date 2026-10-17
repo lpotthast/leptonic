@@ -3,8 +3,6 @@
 // Upstream: react-aria-components/test/ColorWheel.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/color/ColorWheel.test.tsx @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
     ev,
     prelude::*,
     tachys::html::property::{Property, prop},
@@ -15,7 +13,7 @@ use web_sys::{Event, KeyboardEvent, PointerEvent};
 
 use super::use_color_wheel_state::ColorWheelState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         form::{UseFormResetInput, use_form_reset},
         interactions::{
@@ -23,7 +21,6 @@ use crate::{
             use_move,
         },
     },
-    labels,
     utils::{
         color::{ColorValue, HSL, HslChannel},
         dom_ext::EventAccessors,
@@ -34,8 +31,10 @@ use crate::{
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         number_formatter::NumberFormatter,
+        part::{Part, Remount},
         point::Point,
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         styles::{
             Styles,
             css::{ForcedColorAdjust, TouchAction, computed_px, computed_size},
@@ -70,32 +69,40 @@ pub struct UseColorWheelInput<C: ColorValue> {
     pub inner_radius: Signal<f64>,
     /// Names the wheel. Without any label, the hue channel's name does.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
     /// The element with the wheel's error message.
-    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<Id>>,
     /// The name of the input, for form submission.
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
     pub form: Option<String>,
 }
 
-/// Return value of [`use_color_wheel`].
+/// The return value of [`use_color_wheel`].
 #[derive(Debug)]
 pub struct UseColorWheelReturn {
-    /// For the track (the ring of hues).
-    pub track_props: PropsWithStyles<UseColorWheelTrackProps>,
-    /// For the thumb on the track.
-    pub thumb_props: PropsWithStyles<UseColorWheelThumbProps>,
-    /// For the visually hidden range input (inside the thumb).
-    pub input_props: PropsWithStyles<UseColorWheelInputProps>,
+    /// The wheel's track element.
+    pub track: Part<PropsWithStyles<UseColorWheelTrackProps>>,
+    /// The thumb element.
+    pub thumb: Part<PropsWithStyles<UseColorWheelThumbProps>>,
+    /// The thumb's (visually hidden) range input.
+    pub input: Part<PropsWithStyles<UseColorWheelInputProps>>,
 }
 
 /// Props of the wheel's track.
 #[derive(Debug)]
 pub struct UseColorWheelTrackProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
+}
+
+impl Remount for UseColorWheelTrackProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerdown: self.on_pointerdown.clone(),
+        }
+    }
 }
 
 pub type UseColorWheelTrackAttrs = OnEvent<ev::pointerdown>;
@@ -114,6 +121,16 @@ pub struct UseColorWheelThumbProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
+}
+
+impl Remount for UseColorWheelThumbProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+        }
+    }
 }
 
 pub type UseColorWheelThumbAttrs = (
@@ -137,7 +154,7 @@ impl IntoAttrs for UseColorWheelThumbProps {
 /// Props of the wheel's visually hidden range input.
 #[derive(Debug)]
 pub struct UseColorWheelInputProps {
-    pub id: String,
+    pub id: Id,
     pub min: f64,
     pub max: f64,
     pub step: f64,
@@ -146,36 +163,59 @@ pub struct UseColorWheelInputProps {
     pub name: Option<String>,
     pub form: Option<String>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
-    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
+    pub aria_errormessage: Signal<Option<Id>>,
     pub aria_valuetext: Signal<String>,
     /// Sets the channel from the input's value (e.g. by assistive technology).
     pub on_input: EventHandler<Event>,
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseColorWheelInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            min: self.min,
+            max: self.max,
+            step: self.step,
+            value: self.value,
+            is_disabled: self.is_disabled,
+            name: self.name.clone(),
+            form: self.form.clone(),
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_details: self.aria_details,
+            aria_errormessage: self.aria_errormessage,
+            aria_valuetext: self.aria_valuetext,
+            on_input: self.on_input.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseColorWheelInputAttrs = (
     (
-        Attr<attr::Id, String>,
-        Attr<attr::Type, &'static str>,
-        Attr<attr::Min, f64>,
-        Attr<attr::Max, f64>,
-        Attr<attr::Step, f64>,
-        Attr<attr::Value, Signal<f64>>,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<f64>,
         Property<&'static str, Signal<f64>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Form, Option<String>>,
+        SignalAttr<bool>,
+        FixedAttr,
+        FixedAttr,
     ),
     (
-        Attr<attr::AriaLabel, Signal<Option<String>>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaDetails, Signal<Option<String>>>,
-        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
-        Attr<attr::AriaValuetext, Signal<String>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<String>,
         OnEvent<ev::input>,
         ElementCaptureAttr,
     ),
@@ -187,26 +227,26 @@ impl IntoAttrs for UseColorWheelInputProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             (
-                Attr(attr::Id, self.id),
-                Attr(attr::Type, "range"),
-                Attr(attr::Min, self.min),
-                Attr(attr::Max, self.max),
-                Attr(attr::Step, self.step),
-                Attr(attr::Value, self.value),
+                fixed_attr("id", self.id),
+                fixed_attr("type", "range"),
+                fixed_attr("min", self.min),
+                fixed_attr("max", self.max),
+                fixed_attr("step", self.step),
+                signal_attr("value", self.value),
                 // The attribute is the initial value only: once changed (e.g. by assistive
                 // technology), the input follows its property.
                 prop("value", self.value),
-                Attr(attr::Disabled, self.is_disabled),
-                Attr(attr::Name, self.name),
-                Attr(attr::Form, self.form),
+                signal_attr("disabled", self.is_disabled),
+                fixed_attr("name", self.name),
+                fixed_attr("form", self.form),
             ),
             (
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                Attr(attr::AriaDetails, self.aria_details),
-                Attr(attr::AriaErrormessage, self.aria_errormessage),
-                Attr(attr::AriaValuetext, self.aria_valuetext),
+                signal_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-describedby", self.aria_describedby),
+                signal_attr("aria-details", self.aria_details),
+                signal_attr("aria-errormessage", self.aria_errormessage),
+                signal_attr("aria-valuetext", self.aria_valuetext),
                 self.on_input.into_on(ev::input),
                 self.element_capture,
             ),
@@ -279,9 +319,12 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                 }),
         ),
         allow_repeats: true,
-        ..UseKeyboardInput::default()
+        on_key_down: None,
+        on_key_up: None,
+        allow_composing: false,
     })
-    .props;
+    .target
+    .into_props();
 
     let press = StoredValue::new(None::<Press>);
     let current_position = StoredValue::new(None::<Point>);
@@ -326,7 +369,8 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         on_move: Some(on_move),
         on_move_end: Some(on_move_end),
     })
-    .props;
+    .target
+    .into_props();
     // The track forwards its moves only while a press started on it.
     let on_track = move || press.get_value().is_some_and(|press| press.on_track);
     let track_move = use_move(UseMoveInput {
@@ -347,7 +391,8 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
             }
         })),
     })
-    .props;
+    .target
+    .into_props();
 
     let pointer_up_listener = StoredValue::new(None::<SendWrapper<Listener>>);
     let release = move |pointer_id: i32| {
@@ -434,12 +479,11 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     let input_labelledby = {
         let input_id = input_id.clone();
         Signal::derive(move || {
-            labels(
+            crate::utils::labels::labelledby_ids(
                 &input_id,
-                input_label.get(),
-                aria_labelledby.get().as_deref(),
+                input_label.with(|label| label.as_deref().is_some_and(|label| !label.is_empty())),
+                aria_labelledby.get().as_ref(),
             )
-            .aria_labelledby
         })
     };
     let value = state.value;
@@ -490,21 +534,21 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     let input_styles = visually_hidden_full_size_styles();
 
     UseColorWheelReturn {
-        track_props: PropsWithStyles::new(
+        track: Part::stored(PropsWithStyles::new(
             UseColorWheelTrackProps {
                 on_pointerdown: on_track_down.chain(track_move.on_pointerdown),
             },
             track_styles,
-        ),
-        thumb_props: PropsWithStyles::new(
+        )),
+        thumb: Part::stored(PropsWithStyles::new(
             UseColorWheelThumbProps {
                 on_pointerdown: on_thumb_down.chain(thumb_move.on_pointerdown),
                 on_keydown: keyboard.on_keydown.chain(thumb_move.on_keydown),
                 on_keyup: keyboard.on_keyup,
             },
             thumb_styles,
-        ),
-        input_props: PropsWithStyles::new(
+        )),
+        input: Part::stored(PropsWithStyles::new(
             UseColorWheelInputProps {
                 id: input_id,
                 min: range.min_value,
@@ -541,6 +585,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                 element_capture: input_element.attr(),
             },
             input_styles,
-        ),
+        )),
     }
 }

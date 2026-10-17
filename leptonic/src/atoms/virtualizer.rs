@@ -9,7 +9,7 @@ use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use crate::{
-    CapturedElement, IntoAttrs, Out, ValueBinding,
+    CapturedElement, Out, ValueBinding,
     hooks::{
         collections::{Collection, Key, LayoutDelegate, Rect, use_collection},
         focus::{UseFocusRingInput, use_focus_ring},
@@ -19,7 +19,7 @@ use crate::{
             use_scroll_view, use_virtualizer_state,
         },
     },
-    utils::{data_attributes::flag, default_class::with_default_class, styles::Styles},
+    utils::{data_attributes::data_flags, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -434,16 +434,20 @@ where
     let styles = root.scroll_view_styles.get_value().merge(styles);
     let focus_ring = use_focus_ring(UseFocusRingInput {
         is_disabled: Signal::stored(!is_focusable),
-        ..UseFocusRingInput::default()
+        target: crate::hooks::focus::FocusRingTarget::Element,
+        is_text_input: false,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
     view! {
         <div
             {..element.attr()}
-            {..focus_ring.props.into_attrs()}
+            {..focus_ring.target.attrs()}
             class=with_default_class("leptonic-VirtualList", classes)
             style=styles
             tabindex=is_focusable.then_some(0)
-            data-focused=flag(focus_ring.is_focused)
+            {..data_flags([("data-focused", focus_ring.is_focused)])}
         >
             {render_visible_items(root, render)}
         </div>

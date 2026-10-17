@@ -257,7 +257,7 @@ const RELEASES: &[Release] = &[
                     "Renamed: `UseFormValidationStateReturn` \u{2192} `FormValidationState`; the color methods lose \
                  their `get_` prefix (`channel_value`, `channel_range`, `display_color`, \u{2026}); `HSV::value` \
                  \u{2192} `brightness`; `RGB8::from_hex` \u{2192} `parse::<RGB8>()`; `DateTimeFormatOptions::hour12` \
-                 \u{2192} `hour_cycle`; `tab_props` and `tab_panel_props` of the tab hooks \u{2192} `props`; the \
+                 \u{2192} `hour_cycle`; `tab_props` and `tab_panel_props` of the tab hooks \u{2192} `tab` and `tab_panel`; the \
                  `on_change` of the color area\u{2019}s and color wheel\u{2019}s input props \u{2192} `on_input`.",
                     "Removed: the `LinkButton` atom (use a `Link` with your button styles), `use_filtered_list_state` and \
                  `use_slot_id`.",
@@ -287,7 +287,33 @@ const RELEASES: &[Release] = &[
                  (`TimeBound::TimeOfDay`, into which a `civil::Time` converts) or, for fields of `civil::DateTime` and \
                  `Zoned` values, a date and time (`TimeBound::Absolute`).",
                     "`aria_labelledby` of the `Grid`, `GridList` and `Table` atoms takes an `Option<String>`, as on every \
-                 other atom; `UseMenuInput.aria_labelledby` is a `Signal<Option<String>>`.",
+                 other atom; `UseMenuInput.aria_labelledby` is a `Signal<Option<Id>>`.",
+                    "Every props value a hook returns is a `Part` (`leptonic::Part`), named after its element: \
+                 `UseButtonReturn::props` \u{2192} `button`, `label_props` \u{2192} `label`, `input_props` \u{2192} \
+                 `input`, the `props` of behavior hooks such as `use_press` and `use_hover` \u{2192} `target`, and so \
+                 on (each hook page lists its fields). Spread a part with `{..part.attrs()}`; a part with styles gives \
+                 `(attrs, styles)`. `part.props()` gives the props to change before `into_attrs()`, `Part::map` derives \
+                 a part. A part is rendered by one element at a time and is taken again whenever its element mounts \
+                 again (inside a `Show`, an overlay opening again). `use_select`\u{2019}s button input \u{2192} \
+                 `trigger_button`, `use_combobox`\u{2019}s text field input \u{2192} `text_field`. `use_rendered` was \
+                 removed: a part (or a `Presence`) knows whether its element is rendered, and references to an element \
+                 appear only while it is. See Hooks & Atoms.",
+                    "Hooks of your own hand out parts as leptonic's do: `Part::stored(props)` (each mount gets a copy \
+                 through `Remount`, implemented field-wise for the props type), `Part::new`, `Part::observed`, and \
+                 `part.into_props()` to build on another hook's props. Public too, for atoms and hooks of your own: \
+                 `fixed_attr`, `signal_attr`, `maybe_attr`, `FixedAttr`, `SignalAttr`, `ToAttrText`, `AttrText`, \
+                 `Spread`, `AttrKeys`, `EventAccessors`, `join_ids`, `IdListBuilder`, `PreventFocusAttr`, \
+                 `scoped_view` and, with the `atoms` feature, `data_flags`, `DataFlags`, `selection_mode`, \
+                 `with_default_class`, `id_ref_prop`, `clear_context`, `use_clearable_context`, `ClearContexts`, \
+                 `LabelPresence` and `LabelContext::with_presence`. Leptonic's atoms use the public hooks exactly as \
+                 an app does. See Hooks & Atoms, \u{201c}Parts\u{201d}.",
+                    "Ids are `Id`s (`leptonic::Id`, free to clone, from a `&'static str`, a `String` or an `Arc<str>`): \
+                 `use_id` returns one, element ids in hook inputs are `Option<Id>`, references (`aria_labelledby`, \
+                 `aria_describedby`, `aria_controls`, \u{2026}) are `Signal<Option<Id>>`, and the `id` props of atoms \
+                 take an `Option<Id>`. `ListBox`, `GridList`, `Grid`, `Table`, `TagGroup` (its tag list), `ComboBox` \
+                 (its input), `Select` (its trigger) and `ColorSwatch` have an `id` prop.",
+                    "The `name`, `form` and `value` of `UseToggleInputProps` and `UseRadioInputProps` are `Oco<'static, \
+                 str>`s.",
                     "`is_tabbable` treats only `tabindex=\"-1\"` as taking an element out of the tab order; other negative \
                  values count as tabbable.",
                     "`Node` no longer has `prev_key`, `next_key`, `first_child_key` and `last_child_key`: ask the \

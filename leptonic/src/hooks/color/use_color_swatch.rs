@@ -1,15 +1,17 @@
 // Upstream: react-aria/src/color/useColorSwatch.ts @ 99e6102368
 // Upstream: react-aria-components/test/ColorSwatch.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
-    IntoAttrs, PropsWithStyles, labels,
+    Id, IntoAttrs, PropsWithStyles,
     utils::{
         aria::AriaRole,
         color::Color,
         i18n::use_locale,
         id::use_id,
         intl_strings::{ColorStrings, use_localized_strings},
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         styles::{Styles, css::ForcedColorAdjust, property::ForcedColorAdjustProperty},
     },
 };
@@ -34,34 +36,45 @@ pub struct UseColorSwatchInput {
     pub color_name: MaybeProp<String>,
     /// Added to the color's name (e.g. "Background" for "vibrant red, Background").
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// The swatch's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
 }
 
-/// Return value of [`use_color_swatch`].
+/// The return value of [`use_color_swatch`].
 #[derive(Debug)]
 pub struct UseColorSwatchReturn {
-    /// For the swatch element (with its background color).
-    pub color_swatch_props: PropsWithStyles<UseColorSwatchProps>,
+    /// The swatch element: `let (attrs, styles) = swatch.attrs();`.
+    pub swatch: Part<PropsWithStyles<UseColorSwatchProps>>,
 }
 
 /// Props of a color swatch.
 #[derive(Debug)]
 pub struct UseColorSwatchProps {
-    pub id: String,
+    pub id: Id,
     /// "color swatch" (localized).
     pub aria_roledescription: Signal<String>,
     pub aria_label: Signal<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+}
+
+impl Remount for UseColorSwatchProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_roledescription: self.aria_roledescription,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+        }
+    }
 }
 
 pub type UseColorSwatchAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaRoledescription, Signal<String>>,
-    Attr<attr::AriaLabel, Signal<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<String>,
+    SignalAttr<String>,
+    SignalAttr<Option<Id>>,
 );
 
 impl IntoAttrs for UseColorSwatchProps {
@@ -69,11 +82,11 @@ impl IntoAttrs for UseColorSwatchProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, AriaRole::Img),
-            Attr(attr::AriaRoledescription, self.aria_roledescription),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("id", self.id),
+            fixed_attr("role", AriaRole::Img),
+            signal_attr("aria-roledescription", self.aria_roledescription),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
         )
     }
 }
@@ -113,12 +126,11 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
     let aria_labelledby = {
         let id = id.clone();
         Signal::derive(move || {
-            labels(
+            crate::utils::labels::labelledby_ids(
                 &id,
-                Some(aria_label.get()),
-                aria_labelledby.get().as_deref(),
+                aria_label.with(|label| !label.is_empty()),
+                aria_labelledby.get().as_ref(),
             )
-            .aria_labelledby
         })
     };
     let styles = Styles::new()
@@ -128,7 +140,7 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
         })
         .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
     UseColorSwatchReturn {
-        color_swatch_props: PropsWithStyles::new(
+        swatch: Part::stored(PropsWithStyles::new(
             UseColorSwatchProps {
                 id,
                 aria_roledescription: Signal::derive(move || strings.read().color_swatch()),
@@ -136,6 +148,6 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
                 aria_labelledby,
             },
             styles,
-        ),
+        )),
     }
 }

@@ -106,11 +106,9 @@ pub fn use_form_validation(input: UseFormValidationInput) {
         });
         // Before each commit as well: the native validity changes without the realtime
         // validation changing.
-        state
-            .native_validity_readers
-            .register(Callback::new(move |()| {
-                sync(state.realtime_validation.get_untracked());
-            }));
+        state.register_native_validity_reader(Callback::new(move |()| {
+            sync(state.realtime_validation.get_untracked());
+        }));
         // And whenever a constraint attribute changes (e.g. a checkbox group's `required`, gone
         // once it has a value): react-aria re-reads the native validity after every render, and
         // a checkbox group shows its items' native validity in realtime.

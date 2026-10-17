@@ -27,7 +27,7 @@ use leptos::prelude::*;
 //   server errors of all of them (a date range picker: its start's and end's).
 // - The commit runs in an `Effect` triggered by `commit_validation` (react-aria: a `useEffect`
 //   after the next render), and re-reads the inputs' native validity first
-//   (`NativeValidityReaders`; react-aria re-reads it after every render).
+//   (`register_native_validity_reader`; react-aria re-reads it after every render).
 // - Server errors show again whenever the `FormValidationContext`'s signal changes (react-aria:
 //   for every new errors object).
 //
@@ -210,11 +210,11 @@ impl<T: Send + Sync + 'static> std::fmt::Debug for UseFormValidationStateInput<T
     }
 }
 
-/// The readers of the native validity of the inputs validated with a state (registered by
-/// [`use_form_validation`](super::use_form_validation::use_form_validation)). A commit runs them
-/// first, so it shows the inputs' current validity.
+/// The readers of the native validity of the inputs validated with a state
+/// ([`FormValidationState::register_native_validity_reader`]). A commit runs them first, so it
+/// shows the inputs' current validity.
 #[derive(Debug, Clone, Copy)]
-pub struct NativeValidityReaders {
+struct NativeValidityReaders {
     readers: StoredValue<Vec<(u64, Callback<()>)>>,
     next_id: StoredValue<u64>,
 }
@@ -228,7 +228,7 @@ impl NativeValidityReaders {
     }
 
     /// Register `reader` until the current owner is cleaned up.
-    pub(crate) fn register(&self, reader: Callback<()>) {
+    fn register(&self, reader: Callback<()>) {
         let id = self.next_id.get_value();
         self.next_id.set_value(id + 1);
         self.readers
@@ -276,13 +276,13 @@ pub struct FormValidationState {
     commit_validation: Callback<()>,
 
     /// Readers of the native validity of the validated inputs, run before each commit.
-    pub(crate) native_validity_readers: NativeValidityReaders,
+    native_validity_readers: NativeValidityReaders,
 }
 
 impl FormValidationState {
     /// A state showing `display_validation`, whose operations are the given callbacks (a
     /// checkbox in a group: its own realtime validation, the group's commit and reset).
-    pub(crate) fn from_parts(
+    pub fn from_parts(
         realtime_validation: Signal<ValidationResult>,
         display_validation: Signal<ValidationResult>,
         update_validation: Callback<ValidationResult>,
@@ -319,6 +319,28 @@ impl FormValidationState {
     /// clears the server errors (the user changed the value).
     pub fn commit_validation(&self) {
         self.commit_validation.run(());
+    }
+
+    /// Registers `reader` until the current owner is cleaned up: every commit runs it first, so
+    /// that the committed validation is the input's current native validity, also when it
+    /// changed without the value changing (a `min` attribute, the browser's own checks of a
+    /// `type="email"`). `reader` reads the input's validity and passes it to
+    /// [`update_validation`](Self::update_validation).
+    ///
+    /// [`use_form_validation`](super::use_form_validation::use_form_validation) registers one
+    /// for its input with `ValidationBehavior::Native`; register one of your own for a field that
+    /// validates further constraints natively (`use_number_field` checks its range and step as a
+    /// native number input would).
+    ///
+    /// ```ignore
+    /// state.register_native_validity_reader(Callback::new(move |()| {
+    ///     if let Some(input) = input_element.get_untracked() {
+    ///         state.update_validation(read_validity(&input));
+    ///     }
+    /// }));
+    /// ```
+    pub fn register_native_validity_reader(&self, reader: Callback<()>) {
+        self.native_validity_readers.register(reader);
     }
 }
 
@@ -686,6 +708,30 @@ mod tests {
     }
 
     #[test]
+    fn a_native_validity_reader_runs_on_each_commit_until_its_owner_is_cleaned_up() {
+        with_owner(|| {
+            let state = use_form_validation_state(input::<String>(
+                Signal::stored(String::new()),
+                ValidationBehavior::Native,
+            ));
+            let reads = StoredValue::new(0);
+            let reader_owner = Owner::new();
+            reader_owner.with(|| {
+                state.register_native_validity_reader(Callback::new(move |()| {
+                    reads.update_value(|r| *r += 1);
+                }));
+            });
+            state.commit_validation();
+            flush_effects();
+            assert_that!(reads.get_value()).is_equal_to(1);
+            reader_owner.cleanup();
+            state.commit_validation();
+            flush_effects();
+            assert_that!(reads.get_value()).is_equal_to(1);
+        });
+    }
+
+    #[test]
     fn native_commit_reads_validity_after_the_render_turn() {
         with_owner(|| {
             let value = RwSignal::new(String::new());
@@ -695,15 +741,13 @@ mod tests {
                 ValidationBehavior::Native,
             ));
             Effect::new(move |_| rendered.set_value(value.get()));
-            state
-                .native_validity_readers
-                .register(Callback::new(move |()| {
-                    state.update_validation(if rendered.with_value(String::is_empty) {
-                        invalid(&["Required"])
-                    } else {
-                        DEFAULT_VALIDATION_RESULT
-                    });
-                }));
+            state.register_native_validity_reader(Callback::new(move |()| {
+                state.update_validation(if rendered.with_value(String::is_empty) {
+                    invalid(&["Required"])
+                } else {
+                    DEFAULT_VALIDATION_RESULT
+                });
+            }));
             flush_effects();
             state.commit_validation();
             flush_effects();

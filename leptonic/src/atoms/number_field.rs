@@ -9,7 +9,7 @@ use super::{
     input::{InputContext, InputState},
 };
 use crate::{
-    IntoAttrs, NumberValue, Out, ValueBinding,
+    IntoAttrs, NumberValue, Out, Part, ValueBinding,
     atoms::field::LabelPresence,
     hooks::{
         button::{UseButtonInput, use_button},
@@ -22,7 +22,7 @@ use crate::{
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class,
+        data_attributes::data_flags, default_class::with_default_class,
         number_formatter::NumberFormatOptions, number_value::OptionalNumberSignal,
         scoped_context::scoped_view, styles::Styles,
     },
@@ -48,8 +48,8 @@ use crate::{
 /// Context from [`NumberField`] to its group and buttons.
 #[derive(Clone)]
 struct NumberFieldContext {
-    /// The group's attributes (from `use_number_field`).
-    group: StoredValue<<UseNumberFieldGroupProps as IntoAttrs>::Attrs>,
+    /// The group (from `use_number_field`): one element at a time.
+    group: Part<UseNumberFieldGroupProps>,
     increment: StoredValue<UseButtonInput>,
     decrement: StoredValue<UseButtonInput>,
     is_disabled: Signal<bool>,
@@ -111,7 +111,7 @@ pub fn NumberField<T: NumberValue>(
     #[prop(into, optional)] decrement_aria_label: MaybeProp<String>,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     /// Labels the field when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -149,13 +149,13 @@ pub fn NumberField<T: NumberValue>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseNumberFieldReturn {
-        group_props,
-        label_props,
-        input_props,
+        group: group_props,
+        label: label_props,
+        input: input_props,
         increment_button,
         decrement_button,
-        description_props,
-        error_message_props,
+        description: description_props,
+        error_message: error_message_props,
         is_focused,
         is_focus_visible,
         is_invalid,
@@ -166,8 +166,8 @@ pub fn NumberField<T: NumberValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         is_required,
         placeholder,
         auto_focus,
@@ -181,6 +181,7 @@ pub fn NumberField<T: NumberValue>(
         on_key_down: None,
         on_key_up: None,
     });
+    let group_props = group_props.into_props();
 
     // Contexts for the children only, with the `<div>` as the root (getting attributes set on the
     // component).
@@ -194,7 +195,7 @@ pub fn NumberField<T: NumberValue>(
             validation_details,
         });
         provide_context(InputContext::new(
-            input_props.into_attrs(),
+            input_props.map(IntoAttrs::into_attrs),
             InputState {
                 is_disabled,
                 is_invalid,
@@ -203,7 +204,20 @@ pub fn NumberField<T: NumberValue>(
             },
         ));
         provide_context(NumberFieldContext {
-            group: StoredValue::new(group_props.into_attrs()),
+            group: {
+                let UseNumberFieldGroupProps {
+                    aria_disabled,
+                    aria_invalid,
+                    on_focusin,
+                    on_focusout,
+                } = group_props;
+                Part::new(move || UseNumberFieldGroupProps {
+                    aria_disabled,
+                    aria_invalid,
+                    on_focusin: on_focusin.clone(),
+                    on_focusout: on_focusout.clone(),
+                })
+            },
             increment: StoredValue::new(increment_button),
             decrement: StoredValue::new(decrement_button),
             is_disabled,
@@ -221,11 +235,13 @@ pub fn NumberField<T: NumberValue>(
         view! {
             <div
                 class=classes
-                style=styles
-                data-disabled=flag(is_disabled)
-                data-readonly=flag(is_read_only)
-                data-required=flag(is_required)
-                data-invalid=flag(is_invalid)
+                style={styles}
+                {..data_flags([
+                    ("data-disabled", is_disabled),
+                    ("data-readonly", is_read_only),
+                    ("data-required", is_required),
+                ])}
+                {..data_flags([("data-invalid", is_invalid)])}
             >
                 {children()}
                 {name.map(|name| view! {
@@ -267,20 +283,26 @@ pub fn NumberFieldGroup(
     });
     let hover = use_hover(UseHoverInput {
         is_disabled: ctx.is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
 
     Some(view! {
         <div
-            {..ctx.group.get_value()}
-            {..ring.props.into_attrs()}
-            {..hover.props.into_attrs()}
+            {..ctx.group.attrs()}
+            {..ring.target.attrs()}
+            {..hover.target.attrs()}
             class=classes
-            style=styles
-            data-hovered=flag(hover.is_hovered)
-            data-focus-within=flag(ring.is_focused)
-            data-disabled=flag(ctx.is_disabled)
-            data-invalid=flag(ctx.is_invalid)
+            style={styles}
+            {..data_flags([
+                ("data-hovered", hover.is_hovered),
+                ("data-focus-within", ring.is_focused),
+            ])}
+            {..data_flags([
+                ("data-disabled", ctx.is_disabled),
+                ("data-invalid", ctx.is_invalid),
+            ])}
         >
             {children()}
         </div>
@@ -347,17 +369,19 @@ fn stepper_button(
     children: Children,
 ) -> impl IntoView {
     let button = use_button(input);
-    let (attrs, button_styles) = button.props.into_parts();
+    let (attrs, button_styles) = button.button.attrs();
 
     view! {
         <button
             {..attrs}
             class=classes
             style=button_styles.merge(styles)
-            data-pressed=flag(button.is_pressed)
-            data-hovered=flag(button.is_hovered)
-            data-focused=flag(button.is_focused)
-            data-disabled=flag(button.is_disabled)
+            {..data_flags([
+                ("data-pressed", button.is_pressed),
+                ("data-hovered", button.is_hovered),
+                ("data-focused", button.is_focused),
+            ])}
+            {..data_flags([("data-disabled", button.is_disabled)])}
         >
             {children()}
         </button>

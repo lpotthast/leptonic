@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs, ValueBinding,
+    CapturedElement, ValueBinding,
     atoms::{
         calendar::{
             Calendar, CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody,
@@ -15,8 +15,8 @@ use leptonic::{
             DateFieldData, DateFieldOptions, DateFieldPicker, DatePickerOptions, DateSegment,
             DateSegmentType, UseDateFieldInput, UseDateFieldReturn, UseDateFieldStateInput,
             UseDatePickerInput, UseDatePickerReturn, UseDatePickerStateInput, UseDateSegmentInput,
-            UseDateSegmentReturn, use_date_field, use_date_field_state, use_date_picker,
-            use_date_picker_state, use_date_segment,
+            use_date_field, use_date_field_state, use_date_picker, use_date_picker_state,
+            use_date_segment,
         },
         overlay::Placement,
     },
@@ -29,12 +29,12 @@ use leptos::prelude::*;
 pub fn DatePickerHookDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
     let state = use_date_picker_state(UseDatePickerStateInput::<Date>::default());
-    let group = CapturedElement::new();
+    let group_element = CapturedElement::new();
     // The dialog in the popover: moving the focus into it doesn't leave the picker.
     let dialog_id = use_id("departure-dialog");
     let UseDatePickerReturn {
-        label_props,
-        group_props,
+        label,
+        group,
         field_describedby,
         labelledby,
         button,
@@ -42,7 +42,7 @@ pub fn DatePickerHookDemo() -> impl IntoView {
         ..
     } = use_date_picker(UseDatePickerInput {
         state,
-        group,
+        group: group_element,
         options: DatePickerOptions {
             has_label: true.into(),
             is_disabled: disabled.into(),
@@ -63,10 +63,7 @@ pub fn DatePickerHookDemo() -> impl IntoView {
         ..UseDateFieldStateInput::default()
     });
     let UseDateFieldReturn {
-        field_props,
-        input_props,
-        data,
-        ..
+        field, input, data, ..
     } = use_date_field(UseDateFieldInput {
         state: field_state,
         element: CapturedElement::new(),
@@ -84,19 +81,16 @@ pub fn DatePickerHookDemo() -> impl IntoView {
         },
     });
 
-    let UseButtonReturn {
-        props: button_props,
-        ..
-    } = use_button(button);
-    let (group_attrs, group_styles) = group_props.into_parts();
-    let (field_attrs, field_styles) = field_props.into_parts();
-    let (button_attrs, button_styles) = button_props.into_parts();
+    let UseButtonReturn { button, .. } = use_button(button);
+    let (group_attrs, group_styles) = group.attrs();
+    let (field_attrs, field_styles) = field.attrs();
+    let (button_attrs, button_styles) = button.attrs();
     let segments = field_state.segments;
     let dialog_labelledby = dialog_labelledby.get_untracked();
 
     view! {
         <div class="demo-date-field">
-            <span {..label_props.into_attrs()} class="demo-field-label">"Departure"</span>
+            <span {..label.attrs()} class="demo-field-label">"Departure"</span>
             <div {..group_attrs} style=group_styles class="demo-date-input">
                 <div {..field_attrs} style=field_styles class="demo-date-segments">
                     <For
@@ -122,14 +116,14 @@ pub fn DatePickerHookDemo() -> impl IntoView {
                     <span aria-hidden="true">"\u{25be}"</span>
                 </button>
             </div>
-            <input {..input_props.into_attrs()}/>
+            <input {..input.attrs()}/>
         </div>
 
         // Positioned at the group. It keeps the focus inside while open and returns it when it closes.
         <Popover
             is_open=state.overlay.is_open
             set_open={move |is_open| state.set_open(is_open)}
-            trigger=group
+            trigger=group_element
             placement=Placement::BottomStart
             classes="demo-date-picker-popover"
         >
@@ -201,12 +195,13 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl Into
         }
         .into_any();
     }
-    let UseDateSegmentReturn { segment_props } = use_date_segment(UseDateSegmentInput {
+    let (attrs, styles) = use_date_segment(UseDateSegmentInput {
         segment,
         data,
         element: CapturedElement::new(),
-    });
-    let (attrs, styles) = segment_props.into_parts();
+    })
+    .segment
+    .attrs();
     view! {
         <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>
     }

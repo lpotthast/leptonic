@@ -1,10 +1,14 @@
 // Upstream: react-aria/src/breadcrumbs/useBreadcrumbs.ts @ 99e6102368
 // Upstream: react-aria/test/breadcrumbs/useBreadcrumbs.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
     IntoAttrs,
-    utils::intl_strings::{BreadcrumbsStrings, use_localized_strings},
+    utils::{
+        intl_strings::{BreadcrumbsStrings, use_localized_strings},
+        part::{Part, Remount},
+        signal_attr::{SignalAttr, signal_attr},
+    },
 };
 
 // No deviations from react-aria beyond the project-wide API conventions.
@@ -16,13 +20,11 @@ pub struct UseBreadcrumbsInput {
     pub aria_label: MaybeProp<String>,
 }
 
-/// Return value of [`use_breadcrumbs`].
+/// The return value of [`use_breadcrumbs`].
 #[derive(Debug)]
 pub struct UseBreadcrumbsReturn {
-    /// For the breadcrumbs' navigation element: a `<nav>` around the list of items (react-aria's
-    /// `navProps`). React-aria-components (and the `Breadcrumbs` atom) spread them onto the
-    /// `<ol>` itself.
-    pub props: UseBreadcrumbsProps,
+    /// The breadcrumbs' list element.
+    pub breadcrumbs: Part<UseBreadcrumbsProps>,
 }
 
 /// The navigation element's props from [`use_breadcrumbs`]: its name.
@@ -31,16 +33,24 @@ pub struct UseBreadcrumbsProps {
     pub aria_label: Signal<String>,
 }
 
+impl Remount for UseBreadcrumbsProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_label: self.aria_label,
+        }
+    }
+}
+
 impl IntoAttrs for UseBreadcrumbsProps {
     type Attrs = UseBreadcrumbsAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        Attr(attr::AriaLabel, self.aria_label)
+        signal_attr("aria-label", self.aria_label)
     }
 }
 
 /// Spread onto the navigation element: `<nav {..attrs}>`.
-pub type UseBreadcrumbsAttrs = Attr<attr::AriaLabel, Signal<String>>;
+pub type UseBreadcrumbsAttrs = SignalAttr<String>;
 
 /// Breadcrumbs: the trail of links to the current page, a navigation landmark (named
 /// "Breadcrumbs" by default) around a list of items. Render each item with
@@ -50,12 +60,12 @@ pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
     let UseBreadcrumbsInput { aria_label } = input;
     let strings = use_localized_strings::<BreadcrumbsStrings>();
     UseBreadcrumbsReturn {
-        props: UseBreadcrumbsProps {
+        breadcrumbs: Part::stored(UseBreadcrumbsProps {
             aria_label: Signal::derive(move || {
                 aria_label
                     .get()
                     .unwrap_or_else(|| strings.read().breadcrumbs())
             }),
-        },
+        }),
     }
 }

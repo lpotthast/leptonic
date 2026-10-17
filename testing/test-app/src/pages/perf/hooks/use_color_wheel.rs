@@ -56,9 +56,9 @@ fn Wheel(
         name: None,
         form: None,
     });
-    let (track_attrs, track_styles) = wheel.track_props.into_parts();
-    let (thumb_attrs, thumb_styles) = wheel.thumb_props.into_parts();
-    let (input_attrs, input_styles) = wheel.input_props.into_parts();
+    let (track_attrs, track_styles) = wheel.track.attrs();
+    let (thumb_attrs, thumb_styles) = wheel.thumb.attrs();
+    let (input_attrs, input_styles) = wheel.input.attrs();
     view! {
         <div style="position: relative">
             <div {..track_attrs} class="perf-track" style=track_styles></div>

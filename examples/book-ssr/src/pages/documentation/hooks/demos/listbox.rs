@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         collections::{
             CollectionOptions, Key, ListLayout, SelectionMode, SelectionOptions,
@@ -28,7 +28,7 @@ const FRUITS: [(&str, &str); 5] = [
 #[component]
 fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
     let UseOptionReturn {
-        props,
+        option,
         is_selected,
         is_focus_visible,
         ..
@@ -37,7 +37,7 @@ fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> i
         key: Key::from(key),
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = option.attrs();
 
     view! {
         <div
@@ -72,7 +72,7 @@ pub fn ListboxDemo() -> impl IntoView {
         },
     });
 
-    let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+    let UseListBoxReturn { listbox, data } = use_listbox(UseListBoxInput {
         aria_label: "Fruits".into(),
         options: CollectionOptions {
             should_focus_wrap: true,
@@ -80,6 +80,7 @@ pub fn ListboxDemo() -> impl IntoView {
         },
         state,
         element: CapturedElement::new(),
+        presence: None,
         id: None,
         aria_labelledby: Signal::stored(None),
         orientation: Orientation::Vertical.into(),
@@ -111,7 +112,7 @@ pub fn ListboxDemo() -> impl IntoView {
     };
 
     view! {
-        <div {..props.into_attrs()} class="demo-listbox">
+        <div {..listbox.attrs()} class="demo-listbox">
             {FRUITS
                 .map(|(key, label)| {
                     view! { <ListboxOption list=data.clone() key=key label=label /> }

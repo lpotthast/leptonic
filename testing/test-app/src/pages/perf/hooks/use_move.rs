@@ -4,10 +4,7 @@
 //! moves' horizontal deltas. Its controls ([`Control`]) mount and unmount it, disable and enable
 //! it, and read the counts (`starts`, `moves`, `ends`) and the sum (`delta-x`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{MoveEvent, UseMoveInput, use_move},
-};
+use leptonic::hooks::interactions::{MoveEvent, UseMoveInput, use_move};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -80,7 +77,7 @@ fn Movable(inputs: Inputs) -> impl IntoView {
             id="perf-move"
             tabindex="0"
             style="width: 200px; height: 100px"
-            {..movable.props.into_attrs()}
+            {..movable.target.attrs()}
         >
             "Move me"
         </div>

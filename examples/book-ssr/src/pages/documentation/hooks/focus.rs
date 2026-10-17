@@ -35,14 +35,20 @@ pub fn PageUseFocus() -> impl IntoView {
                     <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
                         "Called with the new focus state whenever the element gains or loses focus."
                     </ApiRow>
+                    <ApiRow name="mark" ty="Option<FocusMark>" default="None">
+                        "Runs with the new focus state before the callbacks, under the same conditions: for a hook of your own "
+                        "that tracks the state and also forwards its caller\u{2019}s callbacks ("<Code inline=true>"use_focus_ring"</Code>
+                        " does), so the state is current when they run. "<Code inline=true>"FocusMark::new(|is_focused| ..)"</Code>
+                        " costs one allocation, less than wrapping the callbacks in new "<Code inline=true>"Callback"</Code>"s."
+                    </ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseFocusReturn">
-                    <ApiRow name="props" ty="UseFocusProps">
+                    <ApiRow name="target" ty="Part<UseFocusProps>">
                         "The "<Code inline=true>"focus"</Code>" and "<Code inline=true>"blur"</Code>
-                        " listeners. Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        " listeners. Spread them onto the element with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -55,13 +61,13 @@ pub fn PageUseFocus() -> impl IntoView {
 
                         let (is_focused, set_is_focused) = signal(false);
 
-                        let UseFocusReturn { props } = use_focus(UseFocusInput {
+                        let UseFocusReturn { target } = use_focus(UseFocusInput {
                             on_focus_change: Some(Callback::new(move |focused| set_is_focused.set(focused))),
                             ..Default::default()
                         });
 
                         view! {
-                            <input aria-label="Name" {..props.into_attrs()}/>
+                            <input aria-label="Name" {..target.attrs()}/>
                         }
                     "#)}
                 </Code>

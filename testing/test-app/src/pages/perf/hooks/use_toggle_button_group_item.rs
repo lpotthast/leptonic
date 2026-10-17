@@ -6,7 +6,7 @@
 //! ([`Control`]) mount and unmount the group, and disable and enable the button `b`.
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         button::{
             ToggleGroupState, UseButtonInput, UseToggleButtonGroupInput,
@@ -56,7 +56,7 @@ fn Group(b_disabled: RwSignal<bool>) -> impl IntoView {
         },
     });
     view! {
-        <div id="perf-group" {..group.props.into_attrs()}>
+        <div id="perf-group" {..group.group.attrs()}>
             <Item state key="a" disabled=Signal::stored(false) />
             <Item state key="b" disabled=b_disabled.into() />
             <Item state key="c" disabled=Signal::stored(false) />
@@ -72,13 +72,13 @@ fn Item(state: ToggleGroupState, key: &'static str, disabled: Signal<bool>) -> i
             group: state,
             key: Key::from(key),
             button: UseButtonInput {
-                id: Some(format!("perf-{key}")),
+                id: Some(format!("perf-{key}").into()),
                 is_disabled: disabled,
                 ..UseButtonInput::default()
             },
         },
     ));
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     view! {
         <button {..attrs} style=styles>
             {key}

@@ -30,11 +30,11 @@ pub fn PageUseMeter() -> impl IntoView {
                         "How the value text is formatted: a percent style formats the percentage, other styles the value."
                     </ApiRow>
                     <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the formatted value text (e.g. \u{201c}1 of 4\u{201d})."</ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                    <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
+                    <ApiRow name="id" ty="Option<Id>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with the "<Code inline=true>"label"</Code>" part)."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names it when there is no visible label."</ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of further elements naming it."</ApiRow>
-                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of elements describing it."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of further elements naming it."</ApiRow>
+                    <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of elements describing it."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -45,11 +45,11 @@ pub fn PageUseMeter() -> impl IntoView {
                     <Code inline=true>"role=\"meter\""</Code>" instead of "<Code inline=true>"progressbar"</Code>"."
                 </p>
                 <ApiTable kind=ApiKind::Return of="UseProgressBarReturn">
-                    <ApiRow name="props" ty="UseProgressBarProps">
+                    <ApiRow name="progress_bar" ty="Part<UseProgressBarProps>">
                         "Spread on the meter element: "<Code inline=true>"role"</Code>", "<Code inline=true>"aria-valuenow"</Code>", "<Code inline=true>"aria-valuemin"</Code>", "<Code inline=true>"aria-valuemax"</Code>", "
                         <Code inline=true>"aria-valuetext"</Code>", id and labelling."
                     </ApiRow>
-                    <ApiRow name="label_props" ty="UseLabelProps">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                    <ApiRow name="label" ty="Part<UseLabelProps>">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
                     <ApiRow name="percentage" ty="Signal<Option<Fraction>>">
                         "The value as a share of the range, a "<Code inline=true>"Fraction"</Code>" from 0 to 1 ("
                         <Code inline=true>"as_percent()"</Code>": 0 to 100), to size a fill with. Always "<Code inline=true>"Some"</Code>
@@ -75,7 +75,7 @@ pub fn PageUseMeter() -> impl IntoView {
                             leptos_styles::{Styles, property::WidthProperty},
                         };
 
-                        let UseProgressBarReturn { props, label_props, percentage, value_text } = use_meter(UseMeterInput {
+                        let UseProgressBarReturn { progress_bar, label, percentage, value_text } = use_meter(UseMeterInput {
                             value: Signal::stored(72.5),
                             has_label: true.into(),
                             ..UseMeterInput::default()
@@ -85,9 +85,9 @@ pub fn PageUseMeter() -> impl IntoView {
                         });
 
                         view! {
-                            <span {..label_props.into_attrs()}>"Disk Usage"</span>
+                            <span {..label.attrs()}>"Disk Usage"</span>
                             <span>{value_text}</span>
-                            <div {..props.into_attrs()} class="track">
+                            <div {..progress_bar.attrs()} class="track">
                                 <div class="fill" style=fill></div>
                             </div>
                         }

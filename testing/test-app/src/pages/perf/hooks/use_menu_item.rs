@@ -9,7 +9,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         collections::{
             CloseOnSelect, CollectionOptions, Key, SelectionBehavior, SelectionMode,
@@ -77,7 +77,7 @@ pub fn PagePerf() -> impl IntoView {
         <h1>"use_menu_item performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <ul {..menu.props.into_attrs()}>
+        <ul {..menu.menu.attrs()}>
             <Item menu=data.clone() key=Key::from(0) />
             <Show when=move || mounted.get()>
                 <Item menu=shown.clone() key=Key::from(1) />
@@ -97,7 +97,7 @@ fn Item(menu: MenuData, key: Key) -> impl IntoView {
         should_close_on_select: CloseOnSelect::Auto,
         submenu_trigger: None,
     });
-    let (attrs, styles) = item.props.into_parts();
+    let (attrs, styles) = item.item.attrs();
     let (pressed, hovered, focus_visible) =
         (item.is_pressed, item.is_hovered, item.is_focus_visible);
     view! {

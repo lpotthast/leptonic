@@ -204,7 +204,10 @@ fn DraggableGrid(log: RwSignal<Vec<String>>) -> impl IntoView {
     state_slot.set_value(Some(state));
     let element = CapturedElement::new();
     use_draggable_collection(UseDraggableCollectionInput { state, element });
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+    let UseGridListReturn {
+        grid_list: props,
+        data,
+    } = use_grid_list(UseGridListInput {
         aria_label: "Draggable list".into(),
         state: list,
         element,
@@ -221,7 +224,7 @@ fn DraggableGrid(log: RwSignal<Vec<String>>) -> impl IntoView {
     });
     view! {
         <Provider value=GridContext { list: data, state }>
-            <div {..props.into_attrs()}>
+            <div {..props.attrs()}>
                 <For
                     each=move || entries.get()
                     key=|entry| entry.id
@@ -242,8 +245,8 @@ fn GridRow(entry: Entry) -> impl IntoView {
     let GridContext { list, state } = expect_context::<GridContext>();
     let key = Key::from(entry.id);
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         ..
     } = use_grid_list_item(UseGridListItemInput {
         list,
@@ -253,7 +256,7 @@ fn GridRow(entry: Entry) -> impl IntoView {
         on_context_menu: None,
     });
     let UseDraggableItemReturn {
-        drag_props,
+        item: drag_props,
         drag_button,
         drag_button_label,
         is_dragging,
@@ -267,16 +270,16 @@ fn GridRow(entry: Entry) -> impl IntoView {
         aria_label: MaybeProp::derive(move || Some(drag_button_label.get())),
         ..drag_button
     });
-    let (button_attrs, button_styles) = button.props.into_parts();
-    let (row_attrs, row_styles) = row_props.into_parts();
+    let (button_attrs, button_styles) = button.button.attrs();
+    let (row_attrs, row_styles) = row_props.attrs();
     view! {
         <div
             {..row_attrs}
-            {..drag_props.into_attrs()}
+            {..drag_props.attrs()}
             style=row_styles
             data-dragging=flag(is_dragging)
         >
-            <div {..grid_cell_props.into_attrs()}>
+            <div {..grid_cell_props.attrs()}>
                 <span>{entry.text}</span>
                 <button {..button_attrs} style=button_styles>
                     "≡"
@@ -309,9 +312,13 @@ fn DraggableListBox(log: RwSignal<Vec<String>>, action: bool) -> impl IntoView {
     );
     let element = CapturedElement::new();
     use_draggable_collection(UseDraggableCollectionInput { state, element });
-    let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+    let UseListBoxReturn {
+        listbox: props,
+        data,
+    } = use_listbox(UseListBoxInput {
         state: list,
         element,
+        presence: None,
         id: None,
         aria_label: "Test".into(),
         aria_labelledby: Signal::stored(None),
@@ -334,7 +341,7 @@ fn DraggableListBox(log: RwSignal<Vec<String>>, action: bool) -> impl IntoView {
             state,
             action,
         }>
-            <div {..props.into_attrs()}>
+            <div {..props.attrs()}>
                 <For
                     each=move || entries.get()
                     key=|entry| entry.id
@@ -353,13 +360,13 @@ fn ListBoxOption(entry: Entry) -> impl IntoView {
         action,
     } = expect_context::<ListBoxContext>();
     let key = Key::from(entry.id);
-    let UseOptionReturn { props, .. } = use_option(UseOptionInput {
+    let UseOptionReturn { option: props, .. } = use_option(UseOptionInput {
         list,
         key: key.clone(),
         on_context_menu: None,
     });
     let UseDraggableItemReturn {
-        mut drag_props,
+        item: drag_props,
         is_dragging,
         ..
     } = use_draggable_item(UseDraggableItemInput {
@@ -368,17 +375,12 @@ fn ListBoxOption(entry: Entry) -> impl IntoView {
         has_drag_button: false,
         has_action: action,
     });
+    let mut drag_props = drag_props.props().expect("a new part's props");
     // Both describe the option: join the ids (react-aria merges them).
-    let (mut option_props, option_styles) = props.into_inner();
+    let (mut option_props, option_styles) = props.props().expect("a new part's props").into_inner();
     let option_description = option_props.aria_describedby;
     let drag_description = drag_props.aria_describedby;
-    let description = Signal::derive(move || {
-        let ids: Vec<String> = [option_description.get(), drag_description.get()]
-            .into_iter()
-            .flatten()
-            .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
-    });
+    let description = leptonic::IdRefs::derive([option_description, drag_description]);
     option_props.aria_describedby = description;
     drag_props.aria_describedby = description;
     view! {
@@ -398,7 +400,10 @@ fn ListBoxOption(entry: Entry) -> impl IntoView {
 fn Target(log: RwSignal<Vec<String>>) -> impl IntoView {
     let push = move |entry: String| log.update(|l| l.push(entry));
     let element = CapturedElement::new();
-    let UseDropReturn { drop_props, .. } = use_drop(UseDropInput {
+    let UseDropReturn {
+        drop_target: drop_props,
+        ..
+    } = use_drop(UseDropInput {
         element,
         get_drop_operation: None,
         get_drop_operation_for_point: None,
@@ -422,7 +427,7 @@ fn Target(log: RwSignal<Vec<String>>) -> impl IntoView {
         is_disabled: Signal::stored(false),
     });
     view! {
-        <div role="button" tabindex="0" {..drop_props.into_attrs()}>
+        <div role="button" tabindex="0" {..drop_props.attrs()}>
             "Drop here"
         </div>
     }

@@ -2,22 +2,19 @@
 // Upstream: react-aria/test/menu/useMenu.test.tsx @ 99e6102368
 // Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use super::{MenuData, SubmenuTriggerItem};
 use crate::{
-    CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
+    CapturedElement, EventHandler, Id, IdRefs, IntoAttrs, OnEvent, Part, PropsWithStyles,
+    SlotProps,
     hooks::{
         collections::{
-            CloseOnSelect, Key, LinkBehavior, SelectionMode, UseSelectableItemAttrs,
-            UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
-            use_node_aria_label, use_selectable_item,
+            CloseOnSelect, Key, LinkBehavior, SelectionMode, UseNodeAriaLabelInput,
+            UseSelectableItemAttrs, UseSelectableItemInput, UseSelectableItemProps,
+            UseSelectableItemReturn, use_node_aria_label, use_selectable_item,
         },
         focus::use_focus_visible::{Modality, get_modality, is_focus_visible, set_modality},
         interactions::{
@@ -32,7 +29,9 @@ use crate::{
         dom_ext::EventAccessors,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        part::Remount,
         pointer_type::PointerType,
+        signal_attr::{SignalAttr, signal_attr},
     },
 };
 
@@ -70,13 +69,16 @@ pub struct UseMenuItemInput {
     pub submenu_trigger: Option<SubmenuTriggerItem>,
 }
 
-/// Return value of [`use_menu_item`].
+/// The return value of [`use_menu_item`].
 pub struct UseMenuItemReturn {
-    pub props: PropsWithStyles<UseMenuItemProps>,
-    pub label_props: SlotProps,
-    pub description_props: SlotProps,
-    /// For an element showing the item's keyboard shortcut.
-    pub keyboard_shortcut_props: SlotProps,
+    /// The menu item element: `let (attrs, styles) = item.attrs();`.
+    pub item: Part<PropsWithStyles<UseMenuItemProps>>,
+    /// The item's label, which labels the item while it is rendered.
+    pub label: Part<SlotProps>,
+    /// The item's description, which describes the item while it is rendered.
+    pub description: Part<SlotProps>,
+    /// An element showing the item's keyboard shortcut.
+    pub keyboard_shortcut: Part<SlotProps>,
     pub is_focused: Signal<bool>,
     pub is_focus_visible: Signal<bool>,
     pub is_selected: Signal<bool>,
@@ -93,11 +95,11 @@ pub struct UseMenuItemProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_checked: Signal<Option<AriaChecked>>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     pub item: UseSelectableItemProps,
     pub press: UsePressProps,
     pub hover: UseHoverProps,
@@ -108,17 +110,39 @@ pub struct UseMenuItemProps {
     pub on_mousedown: EventHandler<MouseEvent>,
 }
 
+impl Remount for UseMenuItemProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_disabled: self.aria_disabled,
+            aria_checked: self.aria_checked,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_haspopup: self.aria_haspopup,
+            aria_expanded: self.aria_expanded,
+            aria_controls: self.aria_controls,
+            item: self.item.remount(),
+            press: self.press.remount(),
+            hover: self.hover.remount(),
+            keyboard: self.keyboard.remount(),
+            on_click: self.on_click.clone(),
+            on_mousedown: self.on_mousedown.clone(),
+        }
+    }
+}
+
 pub type UseMenuItemAttrs = (
     (
-        Attr<attr::Role, Signal<AriaRole>>,
-        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-        Attr<attr::AriaChecked, Signal<Option<AriaChecked>>>,
-        Attr<attr::AriaLabel, Signal<Option<String>>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
-        Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-        Attr<attr::AriaControls, Signal<Option<String>>>,
+        SignalAttr<AriaRole>,
+        SignalAttr<Option<AriaDisabled>>,
+        SignalAttr<Option<AriaChecked>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<AriaHasPopup>>,
+        SignalAttr<Option<AriaExpanded>>,
+        SignalAttr<Option<Id>>,
     ),
     UseSelectableItemAttrs,
     UsePressAttrs,
@@ -134,15 +158,15 @@ impl IntoAttrs for UseMenuItemProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             (
-                Attr(attr::Role, self.role),
-                Attr(attr::AriaDisabled, self.aria_disabled),
-                Attr(attr::AriaChecked, self.aria_checked),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                Attr(attr::AriaHaspopup, self.aria_haspopup),
-                Attr(attr::AriaExpanded, self.aria_expanded),
-                Attr(attr::AriaControls, self.aria_controls),
+                signal_attr("role", self.role),
+                signal_attr("aria-disabled", self.aria_disabled),
+                signal_attr("aria-checked", self.aria_checked),
+                signal_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-describedby", self.aria_describedby),
+                signal_attr("aria-haspopup", self.aria_haspopup),
+                signal_attr("aria-expanded", self.aria_expanded),
+                signal_attr("aria-controls", self.aria_controls),
             ),
             self.item.into_attrs(),
             self.press.into_attrs(),
@@ -189,7 +213,10 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     if !untrack(|| state.collection.with(|c| c.contains_key(&key))) {
         crate::utils::dev_warn!("use_menu_item: the key {key:?} is not in the menu's collection");
     }
-    let aria_label = use_node_aria_label(state.collection, key.clone());
+    let aria_label = use_node_aria_label(UseNodeAriaLabelInput {
+        selection: state.selection,
+        key: key.clone(),
+    });
 
     let label = use_slot("label");
     let description = use_slot("description");
@@ -201,7 +228,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         .as_ref()
         .map_or_else(CapturedElement::new, |trigger| trigger.element);
     let UseSelectableItemReturn {
-        props: item_props,
+        item: item_props,
         is_selected,
         is_focused,
         is_disabled,
@@ -222,7 +249,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         should_use_virtual_focus: false,
         on_context_menu: None,
     });
-    let (mut item_props, item_styles) = item_props.into_inner();
+    let (mut item_props, item_styles) = item_props.into_props().into_inner();
     if let Some(trigger) = &submenu_trigger {
         // A trigger keeps the item's focus handling only: it isn't selected by a press, and it is
         // named by its own id (the submenu's label). While its submenu is open, Shift+Tab leaves
@@ -230,9 +257,21 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         item_props.id.clone_from(&trigger.id);
         item_props.press = use_press(UsePressInput {
             is_disabled: Signal::stored(true),
-            ..UsePressInput::default()
+            propagation: crate::hooks::interactions::PressPropagation::Stop,
+            allow_text_selection_on_press: Signal::stored(false),
+            should_cancel_on_pointer_exit: Signal::stored(false),
+            prevent_focus_on_press: Signal::stored(false),
+            force_is_pressed: Signal::stored(false),
+            on_press: None,
+            on_press_up: None,
+            on_press_start: None,
+            on_press_end: None,
+            on_press_change: None,
+            on_double_press: None,
+            long_press: None,
         })
-        .props
+        .target
+        .into_props()
         .into_inner()
         .0;
         let tabindex = item_props.tabindex;
@@ -269,9 +308,16 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         on_press_change: Some(Callback::new(move |pressed| {
             is_pressed_now.set_value(pressed);
         })),
-        ..UsePressInput::default()
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        prevent_focus_on_press: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
+        on_press_end: None,
+        on_double_press: None,
+        long_press: None,
     });
-    let (press_props, press_styles) = press.props.into_inner();
+    let (press_props, press_styles) = press.target.into_props().into_inner();
 
     // Hovering moves focus, unless the keyboard is in use, or the item is the trigger of the
     // open submenu (focus stays in the submenu).
@@ -286,10 +332,11 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                 selection.set_focused_key(Some(key.get_value()), None);
             }
         })),
-        ..UseHoverInput::default()
+        on_hover_end: None,
     });
+    let hover_props = hover.target.into_props();
     let is_hovered = hover.is_hovered;
-    let hover = hover.props;
+    let hover = hover_props;
 
     // Enter and Space activate the item through a click, like a native control.
     let click_target =
@@ -332,7 +379,8 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         ),
         ..UseKeyboardInput::default()
     })
-    .props;
+    .target
+    .into_props();
     // A trigger's arrow keys open and close its submenu.
     let keyboard = match &submenu_trigger {
         Some(trigger) => {
@@ -392,7 +440,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         ),
     };
     UseMenuItemReturn {
-        props: PropsWithStyles::new(
+        item: Part::stored(PropsWithStyles::new(
             UseMenuItemProps {
                 role: Signal::derive(move || match selection.selection_mode() {
                     _ if is_trigger => AriaRole::Menuitem,
@@ -423,10 +471,10 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                 },
             },
             item_styles.merge(press_styles),
-        ),
-        label_props: label.props,
-        description_props: description.props,
-        keyboard_shortcut_props: keyboard_shortcut.props,
+        )),
+        label: label.part,
+        description: description.part,
+        keyboard_shortcut: keyboard_shortcut.part,
         is_focused,
         is_focus_visible: Memo::new(move |_| {
             is_focused.get() && is_focus_visible() && !is_trigger_expanded.get()

@@ -20,7 +20,7 @@ pub fn ToggleButtonDemo() -> impl IntoView {
         },
         state,
     }));
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
 
     // Styled through `aria-pressed` and `data-focus-visible`, which `use_button` sets.
     view! {

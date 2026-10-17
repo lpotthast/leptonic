@@ -11,7 +11,7 @@
 //! changes, and the first announcement of a page waits 100 ms for the live regions.
 
 use leptonic::{
-    Assertiveness, CapturedElement, IntoAttrs, announce,
+    Assertiveness, CapturedElement, announce,
     hooks::datepicker::{
         DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, TimeBound,
         UseDateFieldReturn, UseDateSegmentInput, UseDateSegmentReturn, UseTimeFieldInput,
@@ -45,12 +45,14 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<DateTime>) -> impl 
         }
         .into_any();
     }
-    let UseDateSegmentReturn { segment_props } = use_date_segment(UseDateSegmentInput {
+    let UseDateSegmentReturn {
+        segment: segment_props,
+    } = use_date_segment(UseDateSegmentInput {
         segment,
         data,
         element: CapturedElement::new(),
     });
-    let (attrs, styles) = segment_props.into_parts();
+    let (attrs, styles) = segment_props.attrs();
     view! {
         <span {..attrs} style=styles data-type=kind.as_str()>
             {text}
@@ -74,9 +76,9 @@ fn HookTimeField(
         ..UseTimeFieldStateInput::default()
     });
     let UseDateFieldReturn {
-        label_props,
-        field_props,
-        input_props,
+        label: label_props,
+        field: field_props,
+        input: input_props,
         data,
         ..
     } = use_time_field(UseTimeFieldInput {
@@ -84,15 +86,15 @@ fn HookTimeField(
         element: CapturedElement::new(),
         input_element: CapturedElement::new(),
         options: DateFieldOptions {
-            id: Some("perf-field".to_owned()),
+            id: Some("perf-field".into()),
             has_label: true.into(),
             ..DateFieldOptions::default()
         },
     });
-    let (field_attrs, field_styles) = field_props.into_parts();
+    let (field_attrs, field_styles) = field_props.attrs();
     let segments = state.field.segments;
     view! {
-        <span {..label_props.into_attrs()}>"Pickup"</span>
+        <span {..label_props.attrs()}>"Pickup"</span>
         <div {..field_attrs} style=field_styles>
             <For
                 each=move || {
@@ -119,7 +121,7 @@ fn HookTimeField(
                 }
             />
         </div>
-        <input {..input_props.into_attrs()} id="perf-input" />
+        <input {..input_props.attrs()} id="perf-input" />
     }
 }
 

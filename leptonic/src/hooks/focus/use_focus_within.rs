@@ -3,7 +3,10 @@
 use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
-use crate::{EventHandler, IntoAttrs, OnEvent};
+use crate::{
+    EventHandler, IntoAttrs, OnEvent,
+    utils::part::{Part, Remount},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -64,12 +67,11 @@ impl Default for UseFocusWithinInput {
     }
 }
 
-/// The return value of the `use_focus_within` hook.
+/// The return value of [`use_focus_within`].
 #[derive(Debug)]
 pub struct UseFocusWithinReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseFocusWithinProps,
-
+    /// The element within which focus is tracked.
+    pub target: Part<UseFocusWithinProps>,
     /// Whether focus is currently within the element.
     pub is_focus_within: Signal<bool>,
 }
@@ -79,6 +81,15 @@ pub struct UseFocusWithinReturn {
 pub struct UseFocusWithinProps {
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl Remount for UseFocusWithinProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseFocusWithinProps {
@@ -119,7 +130,7 @@ pub type UseFocusWithinAttrs = (OnEvent<ev::focusin>, OnEvent<ev::focusout>);
 /// });
 ///
 /// view! {
-///     <div {..focus_within.props.into_attrs()}>
+///     <div {..focus_within.target.attrs()}>
 ///         <input type="text" />
 ///         <button>"Submit"</button>
 ///     </div>
@@ -131,10 +142,10 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
     {
         let _ = input;
         UseFocusWithinReturn {
-            props: UseFocusWithinProps {
+            target: Part::stored(UseFocusWithinProps {
                 on_focusin: EventHandler::empty(),
                 on_focusout: EventHandler::empty(),
-            },
+            }),
             is_focus_within: Signal::stored(false),
         }
     }
@@ -147,6 +158,7 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             dom_ext::{EventAccessors, EventTargetExt, set_event_target},
             event_listeners::{Listener, listen_to},
             shadow_dom::{get_active_element, get_event_target, node_contains},
+            stored_field::StoredField,
             synthetic_blur::SyntheticBlurObserver,
         };
 
@@ -160,11 +172,11 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
         let (is_focus_within, set_is_focus_within) = signal(false);
 
         // The global focus listener while focus is within (removed when dropped).
-        let global_listener: StoredValue<Option<Listener>, LocalStorage> =
-            StoredValue::new_local(None);
-        // Blur events for a form element disabled while focused (Firefox fires none).
-        let blur_observer: StoredValue<Option<SyntheticBlurObserver>, LocalStorage> =
-            StoredValue::new_local(None);
+        // And the blur events for a form element disabled while focused (Firefox fires none).
+        // One store (`performance.md`, R7).
+        let hook = StoredValue::new_local((None::<Listener>, None::<SyntheticBlurObserver>));
+        let global_listener = StoredField::new(hook, |h| &h.0, |h| &mut h.0);
+        let blur_observer = StoredField::new(hook, |h| &h.1, |h| &mut h.1);
         let stop_tracking = move || {
             global_listener.try_update_value(Option::take);
             blur_observer.try_update_value(Option::take);
@@ -282,9 +294,10 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             trigger_blur_within(e);
         };
 
-        // When disabled transitions to true, clean up any active focus-within state.
-        Effect::new(move |_| {
-            if disabled.get() && is_focus_within.get_untracked() {
+        // When disabled transitions to true, clean up any active focus-within state (no effect
+        // for a flag that is never true, `performance.md` R6).
+        crate::utils::reactions::when_true(disabled, move || {
+            if is_focus_within.get_untracked() {
                 set_is_focus_within.set(false);
                 stop_tracking();
 
@@ -297,10 +310,10 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
         on_cleanup(stop_tracking);
 
         UseFocusWithinReturn {
-            props: UseFocusWithinProps {
+            target: Part::stored(UseFocusWithinProps {
                 on_focusin: EventHandler::new(handle_focus_in),
                 on_focusout: EventHandler::new(handle_focus_out),
-            },
+            }),
             is_focus_within: is_focus_within.into(),
         }
     }

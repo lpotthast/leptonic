@@ -89,7 +89,7 @@ fn Link(inputs: Inputs) -> impl IntoView {
         })),
         ..UseLinkInput::default()
     });
-    let (attrs, styles) = link.props.into_parts();
+    let (attrs, styles) = link.link.attrs();
     view! {
         <a
             id="perf-link"

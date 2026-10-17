@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::collections::{
         CollectionOptions, Key, LinkBehavior, ListLayout, ListState, Node, Selection,
         SelectionMode, SelectionOptions, UseListStateInput, UseSelectableItemInput,
@@ -30,7 +30,7 @@ pub fn CollectionStateDemo() -> impl IntoView {
         },
     });
     // Keyboard navigation, type-ahead and the single tab stop of the list element.
-    let list = use_selectable_list(UseSelectableListInput {
+    let collection_return = use_selectable_list(UseSelectableListInput {
         state,
         element: CapturedElement::new(),
         orientation: Orientation::Vertical.into(),
@@ -38,9 +38,9 @@ pub fn CollectionStateDemo() -> impl IntoView {
         layout_delegate: None,
         keyboard_delegate: None,
         options: CollectionOptions::default(),
-    })
-    .props;
-    let collection_id = list.collection_id.clone();
+    });
+    let list = collection_return.collection;
+    let collection_id = collection_return.collection_id.clone();
     let items = move || collection.with(|c| c.items().cloned().collect::<Vec<Node>>());
 
     let status = move || {
@@ -61,7 +61,7 @@ pub fn CollectionStateDemo() -> impl IntoView {
     // The hooks bring behavior, not semantics: the roles and ARIA states are up to the concept you build.
     view! {
         <div
-            {..list.into_attrs()}
+            {..list.attrs()}
             role="listbox"
             aria-label="Fruits"
             aria-multiselectable="true"
@@ -77,9 +77,9 @@ pub fn CollectionStateDemo() -> impl IntoView {
 
 /// One item: selection on press, focus handling and the roving tab index.
 #[component]
-fn FruitItem(state: ListState, collection_id: String, node: Node) -> impl IntoView {
+fn FruitItem(state: ListState, collection_id: leptonic::Id, node: Node) -> impl IntoView {
     let UseSelectableItemReturn {
-        props,
+        item,
         is_selected,
         is_disabled,
         ..
@@ -99,7 +99,7 @@ fn FruitItem(state: ListState, collection_id: String, node: Node) -> impl IntoVi
         focus: None,
         should_use_virtual_focus: false,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = item.attrs();
 
     view! {
         <div

@@ -1,5 +1,5 @@
 use leptonic::{
-    ColorValue, HSV, HsvChannel, IntoAttrs,
+    ColorValue, HSV, HsvChannel,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::use_button,
@@ -55,8 +55,8 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
     });
 
     // The stepper buttons come as `UseButtonInput`s: render them with `use_button`.
-    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).props.into_parts();
-    let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
+    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).button.attrs();
+    let (increment_attrs, increment_styles) = use_button(field.increment_button).button.attrs();
 
     let color = state.color_value;
     let preview_styles = Styles::new().add_optional(move || {
@@ -67,12 +67,12 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
 
     view! {
         <div class="demo-field">
-            <label class="demo-field-label" {..field.label_props.into_attrs()}>"Hue (0\u{2013}360)"</label>
-            <div class="demo-color-field-row" {..field.group_props.into_attrs()}>
+            <label class="demo-field-label" {..field.label.attrs()}>"Hue (0\u{2013}360)"</label>
+            <div class="demo-color-field-row" {..field.group.attrs()}>
                 <button class="demo-btn" {..decrement_attrs} style=decrement_styles>
                     <span aria-hidden="true">"\u{2212}"</span>
                 </button>
-                <input class="demo-color-channel-field-input" {..field.input_props.into_attrs()}/>
+                <input class="demo-color-channel-field-input" {..field.input.attrs()}/>
                 <button class="demo-btn" {..increment_attrs} style=increment_styles>
                     <span aria-hidden="true">"+"</span>
                 </button>

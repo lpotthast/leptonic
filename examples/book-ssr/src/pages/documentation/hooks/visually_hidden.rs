@@ -32,8 +32,8 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseVisuallyHiddenReturn">
-                    <ApiRow name="props" ty="UseVisuallyHiddenProps">
-                        "Attributes for the hidden element. Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    <ApiRow name="target" ty="Part<UseVisuallyHiddenProps>">
+                        "Attributes for the hidden element. Spread with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
 
@@ -53,7 +53,6 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            IntoAttrs,
                             hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden},
                         };
 
@@ -62,13 +61,13 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
                         view! {
                             <button>
                                 <svg aria-hidden="true">/* trash icon */</svg>
-                                <span {..hidden.props.into_attrs()}>"Delete"</span>
+                                <span {..hidden.target.attrs()}>"Delete"</span>
                             </button>
                         }
                     "#)}
                 </Code>
                 <p>
-                    "The props set the element\u{2019}s "<Code inline=true>"style"</Code>" attribute: don\u{2019}t give it a "
+                    "The part sets the element\u{2019}s "<Code inline=true>"style"</Code>" attribute: don\u{2019}t give it a "
                     <Code inline=true>"style"</Code>" of your own. Classes are fine, but rules that change its size, position "
                     "or overflow undo the hiding."
                 </p>

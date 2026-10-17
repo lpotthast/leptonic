@@ -10,7 +10,7 @@
 //! visible range, and the first announcement of a page waits 100 ms for the live regions.
 
 use leptonic::{
-    Assertiveness, CapturedElement, DateExt, DateTimeFormat, IntoAttrs, announce, flag,
+    Assertiveness, CapturedElement, DateExt, DateTimeFormat, announce, flag,
     hooks::{
         button::use_button,
         calendar::{
@@ -43,7 +43,7 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
     let month = grid.start_date;
     let data = StoredValue::new(data);
     view! {
-        <table {..grid.grid_props.into_attrs()}>
+        <table {..grid.grid.attrs()}>
             <tbody>
                 <For each=move || 0..grid.weeks_in_month.get() key=|week| *week let(week)>
                     <tr>
@@ -73,8 +73,8 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
 #[component]
 fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> impl IntoView {
     let UseCalendarCellReturn {
-        cell_props,
-        button_props,
+        cell: cell_props,
+        button: button_props,
         is_focused,
         formatted_date,
         ..
@@ -85,9 +85,9 @@ fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> im
         is_outside_month,
         element: CapturedElement::new(),
     });
-    let (attrs, styles) = button_props.into_parts();
+    let (attrs, styles) = button_props.attrs();
     view! {
-        <td {..cell_props.into_attrs()}>
+        <td {..cell_props.attrs()}>
             <div
                 {..attrs}
                 style=styles
@@ -108,22 +108,22 @@ fn HookCalendar(focused: RwSignal<Date>, grid_mounted: RwSignal<bool>) -> impl I
         ..UseCalendarStateInput::default()
     });
     let UseCalendarReturn {
-        calendar_props,
+        calendar: calendar_props,
         next_button,
         data,
         ..
     } = use_calendar(UseCalendarInput {
         state,
-        id: Some("perf-calendar".to_owned()),
+        id: Some("perf-calendar".into()),
         aria_label: "Event date".into(),
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
+    let (next_attrs, next_styles) = use_button(next_button).button.attrs();
     let data = StoredValue::new(data);
     view! {
-        <div {..calendar_props.into_attrs()}>
+        <div {..calendar_props.attrs()}>
             <button {..next_attrs} style=next_styles>
                 ">"
             </button>

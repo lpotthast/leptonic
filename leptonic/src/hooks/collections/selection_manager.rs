@@ -1,14 +1,14 @@
 // Upstream: react-stately/src/selection/SelectionManager.ts @ 99e6102368
 // Upstream: react-stately/src/selection/useMultipleSelectionState.ts @ 99e6102368
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashSet, sync::Arc};
 
-use leptos::{prelude::*, reactive::graph::Observer};
+use leptos::prelude::*;
 
 use super::{CollectionMemo, Key, NodeKind, SelectedKeys, Selection};
 use crate::{
     ValueBinding,
     hooks::collections::{DisabledBehavior, FocusStrategy, SelectionBehavior, SelectionMode},
-    utils::pointer_type::PointerType,
+    utils::{keyed_triggers::KeyedTriggers, pointer_type::PointerType},
 };
 
 // =============================================================================
@@ -78,6 +78,10 @@ impl Default for SelectionOptions {
 #[derive(Debug, Clone, Copy)]
 pub struct SelectionManager {
     collection: CollectionMemo,
+    /// Readers of single nodes (items' disabled state, links, labels), by key: notified when the
+    /// node's content or its disabled key changes, not on every change of the collection
+    /// (`performance.md` R1).
+    nodes: KeyedTriggers<Key>,
     /// The unfiltered collection, when `collection` is a filtered view (combo boxes).
     full_collection: Option<CollectionMemo>,
     state: SelectionStateSignals,
@@ -99,97 +103,16 @@ struct SelectionStateSignals {
     selection_binding: ValueBinding<Selection>,
     on_selection_change: Option<Callback<Selection>>,
     /// Readers of single keys' selection ([`SelectionManager::is_selected`]).
-    selected_subscribers: KeySubscribers,
+    selected_subscribers: KeyedTriggers<Key>,
     /// The selection those readers were last notified of.
     notified_selection: StoredValue<Selection>,
     is_empty: Memo<bool>,
     focused_key: RwSignal<Option<Key>>,
     /// Readers of single keys' focus ([`SelectionManager::is_focused_key`]).
-    focused_subscribers: KeySubscribers,
+    focused_subscribers: KeyedTriggers<Key>,
     has_focused_key: Memo<bool>,
     child_focus_strategy: RwSignal<Option<FocusStrategy>>,
     is_focused: RwSignal<bool>,
-}
-
-/// Per-key change notification: a reader of one key's state (an item asking whether it is
-/// focused or selected) subscribes to that key only, so a focus move notifies two items and a
-/// selection change the items whose selection changed, not every item (react-aria re-renders
-/// every item on each change; leptonic's items would otherwise re-run their derived state).
-///
-/// Notification is synchronous: a reader that reads again right after a change sees it (unlike a
-/// per-key `Selector`, which updates in an effect).
-#[derive(Debug, Clone, Copy)]
-struct KeySubscribers(StoredValue<HashMap<Key, KeySubscription>>);
-
-#[derive(Debug)]
-struct KeySubscription {
-    trigger: ArcTrigger,
-    /// The reactive computations currently subscribed: the entry goes when the last one re-runs
-    /// or is disposed.
-    readers: usize,
-}
-
-impl KeySubscribers {
-    fn new() -> Self {
-        Self(StoredValue::new(HashMap::new()))
-    }
-
-    /// Subscribes the running reactive computation (if any) to changes of `key`.
-    fn track(self, key: &Key) {
-        if Observer::get().is_none() {
-            return;
-        }
-        let Some(trigger) = self.0.try_update_value(|subscriptions| {
-            let subscription =
-                subscriptions
-                    .entry(key.clone())
-                    .or_insert_with(|| KeySubscription {
-                        trigger: ArcTrigger::new(),
-                        readers: 0,
-                    });
-            subscription.readers += 1;
-            subscription.trigger.clone()
-        }) else {
-            return;
-        };
-        trigger.track();
-        // Runs when the reader re-runs (and subscribes again) or is disposed.
-        let (subscribers, key) = (self.0, key.clone());
-        on_cleanup(move || {
-            subscribers.try_update_value(|subscriptions| {
-                if let Some(subscription) = subscriptions.get_mut(&key) {
-                    subscription.readers = subscription.readers.saturating_sub(1);
-                    if subscription.readers == 0 {
-                        subscriptions.remove(&key);
-                    }
-                }
-            });
-        });
-    }
-
-    /// Notifies the readers of `keys`.
-    fn notify<'a>(self, keys: impl IntoIterator<Item = &'a Key>) {
-        let triggers: Vec<ArcTrigger> = self
-            .0
-            .try_with_value(|subscriptions| {
-                keys.into_iter()
-                    .filter_map(|key| subscriptions.get(key).map(|s| s.trigger.clone()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        triggers.notify();
-    }
-
-    /// Notifies the readers of every key.
-    fn notify_all(self) {
-        let triggers: Vec<ArcTrigger> = self
-            .0
-            .try_with_value(|subscriptions| {
-                subscriptions.values().map(|s| s.trigger.clone()).collect()
-            })
-            .unwrap_or_default();
-        triggers.notify();
-    }
 }
 
 impl SelectionManager {
@@ -220,11 +143,11 @@ impl SelectionManager {
             selection: selection_binding.value,
             selection_binding,
             on_selection_change,
-            selected_subscribers: KeySubscribers::new(),
+            selected_subscribers: KeyedTriggers::new(),
             notified_selection: StoredValue::new(selection_binding.value.get_untracked()),
             is_empty: Memo::new(move |_| selection_binding.value.with(Selection::is_empty)),
             focused_key,
-            focused_subscribers: KeySubscribers::new(),
+            focused_subscribers: KeyedTriggers::new(),
             has_focused_key: Memo::new(move |_| focused_key.with(Option::is_some)),
             child_focus_strategy: RwSignal::new(None),
             is_focused: RwSignal::new(false),
@@ -258,10 +181,17 @@ impl SelectionManager {
 
         Self {
             collection,
+            nodes: node_triggers(collection, disabled_keys),
             full_collection: None,
             state,
             cell_focus: false,
         }
+    }
+
+    /// Subscribes the running reactive computation to changes of the node `key` (its content,
+    /// its disabled key): a reader of one node reads the collection untracked after this.
+    pub(crate) fn track_node(&self, key: &Key) {
+        self.nodes.track(key);
     }
 
     /// The same selection state, applied to another view of the collection (e.g. a filtered
@@ -270,6 +200,7 @@ impl SelectionManager {
     pub fn with_collection(&self, collection: CollectionMemo) -> Self {
         Self {
             collection,
+            nodes: node_triggers(collection, self.state.disabled_keys),
             full_collection: Some(self.full_collection.unwrap_or(self.collection)),
             state: self.state,
             cell_focus: self.cell_focus,
@@ -505,24 +436,35 @@ impl SelectionManager {
     }
 
     fn can_select_item_in(&self, key: &Key, collection: CollectionMemo) -> bool {
-        if self.selection_mode() == SelectionMode::None
-            || self.state.disabled_keys.with(|keys| keys.contains(key))
-        {
+        if self.selection_mode() == SelectionMode::None {
             return false;
         }
-        collection.with(|c| {
-            c.get(key)
-                .is_some_and(|node| node.kind == NodeKind::Item && !node.is_disabled)
-        })
+        let check = || {
+            !self.state.disabled_keys.with(|keys| keys.contains(key))
+                && collection.with(|c| {
+                    c.get(key)
+                        .is_some_and(|node| node.kind == NodeKind::Item && !node.is_disabled)
+                })
+        };
+        if collection == self.collection {
+            // The manager's own collection: only this node's changes reach the reader.
+            self.nodes.track(key);
+            untrack(check)
+        } else {
+            check()
+        }
     }
 
     /// Whether `key` is disabled (in `disabled_keys`, or the item itself), whatever the
     /// disabled behavior.
     pub fn is_item_disabled(&self, key: &Key) -> bool {
-        self.state.disabled_keys.with(|keys| keys.contains(key))
-            || self
-                .collection
-                .with(|c| c.get(key).is_some_and(|node| node.is_disabled))
+        self.nodes.track(key);
+        untrack(|| {
+            self.state.disabled_keys.with(|keys| keys.contains(key))
+                || self
+                    .collection
+                    .with(|c| c.get(key).is_some_and(|node| node.is_disabled))
+        })
     }
 
     /// Whether `key` is disabled for interaction: with `DisabledBehavior::All`, disabled items
@@ -533,19 +475,26 @@ impl SelectionManager {
         if self.state.disabled_behavior != DisabledBehavior::All {
             return false;
         }
-        let (item_disabled, item_behavior) = self.collection.with(|c| {
+        // Only this node's changes reach the reader.
+        self.nodes.track(key);
+        let (item_disabled, item_behavior) = self.collection.with_untracked(|c| {
             c.get(key).map_or((false, None), |node| {
                 (node.is_disabled, node.disabled_behavior)
             })
         });
-        (self.state.disabled_keys.with(|keys| keys.contains(key)) || item_disabled)
+        (self
+            .state
+            .disabled_keys
+            .with_untracked(|keys| keys.contains(key))
+            || item_disabled)
             && item_behavior != Some(DisabledBehavior::Selection)
     }
 
     /// Whether `key` is an item that navigates somewhere.
     pub fn is_link(&self, key: &Key) -> bool {
+        self.nodes.track(key);
         self.collection
-            .with(|c| c.get(key).is_some_and(|node| node.link.is_some()))
+            .with_untracked(|c| c.get(key).is_some_and(|node| node.link.is_some()))
     }
 
     // ---- Selection mutations ----
@@ -760,6 +709,47 @@ impl SelectionManager {
     }
 }
 
+/// The triggers of the nodes of `collection`: a new collection notifies the keys whose node was
+/// added, removed or changed (`Node::same_content`; positions don't count), and a change of
+/// `disabled_keys` the keys added or removed. One diff per change instead of every item reading
+/// the whole collection.
+fn node_triggers(
+    collection: CollectionMemo,
+    disabled_keys: Signal<HashSet<Key>>,
+) -> KeyedTriggers<Key> {
+    let nodes = KeyedTriggers::new();
+    let previous = StoredValue::new(collection.get_untracked());
+    ImmediateEffect::new_scoped(move || {
+        let current = collection.get();
+        let Some(previous) = previous.try_update_value(|p| std::mem::replace(p, current.clone()))
+        else {
+            return;
+        };
+        if Arc::ptr_eq(&previous, &current) {
+            return;
+        }
+        let changed: Vec<Key> = current
+            .all_nodes()
+            .filter(|node| {
+                previous
+                    .get(&node.key)
+                    .is_none_or(|before| !before.same_content(node))
+            })
+            .chain(
+                previous
+                    .iter()
+                    .filter(|node| !current.contains_key(&node.key)),
+            )
+            .map(|node| node.key.clone())
+            .collect();
+        nodes.notify(&changed);
+    });
+    if !crate::utils::probe::is_constant(disabled_keys) {
+        nodes.follow_set(disabled_keys);
+    }
+    nodes
+}
+
 /// Tells the readers of single keys' selection about the keys whose selection changed since
 /// they were last told (`All` and back: every key).
 fn notify_selection_change(state: &SelectionStateSignals) {
@@ -792,6 +782,40 @@ mod tests {
 
     use super::*;
     use crate::hooks::collections::Collection;
+
+    #[test]
+    fn node_readers_follow_their_node_only() {
+        crate::testing::with_owner(|| {
+            let label = RwSignal::new("Cat");
+            let collection: CollectionMemo = Memo::new(move |_| {
+                let label = label.get();
+                Arc::new(Collection::build(|b| {
+                    b.section("pets", |s| {
+                        let _ = s.item("cat", label).aria_label(label);
+                    });
+                    b.item("dog", "Dog");
+                }))
+            });
+            let selection = SelectionManager::new(collection, SelectionOptions::default());
+            let cat = crate::hooks::collections::use_node_aria_label(
+                crate::hooks::collections::UseNodeAriaLabelInput {
+                    selection,
+                    key: Key::from("cat"),
+                },
+            );
+            let dog_runs = RwSignal::new(0);
+            let dog = Memo::new(move |_| {
+                selection.track_node(&Key::from("dog"));
+                dog_runs.update_untracked(|runs| *runs += 1);
+            });
+            dog.get_untracked();
+            assert_that!(cat.get_untracked()).is_equal_to(Some("Cat".to_owned()));
+            label.set("Kitten");
+            assert_that!(cat.get_untracked()).is_equal_to(Some("Kitten".to_owned()));
+            dog.get_untracked();
+            assert_that!(dog_runs.get_untracked()).is_equal_to(1);
+        });
+    }
 
     fn fruits() -> CollectionMemo {
         Memo::new(|_| {

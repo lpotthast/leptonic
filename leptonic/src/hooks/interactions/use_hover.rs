@@ -5,7 +5,13 @@ use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
-use crate::{EventHandler, IntoAttrs, OnEvent, utils::pointer_type::PointerType};
+use crate::{
+    EventHandler, IntoAttrs, OnEvent,
+    utils::{
+        part::{Part, Remount},
+        pointer_type::PointerType,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -134,12 +140,11 @@ impl Default for UseHoverInput {
     }
 }
 
-/// Return value of [`use_hover`].
+/// The return value of [`use_hover`].
 #[derive(Debug)]
 pub struct UseHoverReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseHoverProps,
-
+    /// The hovered element.
+    pub target: Part<UseHoverProps>,
     /// Whether the element is currently hovered.
     pub is_hovered: Signal<bool>,
 }
@@ -152,6 +157,15 @@ pub struct UseHoverReturn {
 pub struct UseHoverProps {
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
+}
+
+impl Remount for UseHoverProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerleave: self.on_pointerleave.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseHoverProps {
@@ -187,10 +201,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     {
         let _ = input;
         UseHoverReturn {
-            props: UseHoverProps {
+            target: Part::stored(UseHoverProps {
                 on_pointerenter: EventHandler::empty(),
                 on_pointerleave: EventHandler::empty(),
-            },
+            }),
             is_hovered: Signal::stored(false),
         }
     }
@@ -202,6 +216,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             utils::{
                 dom_ext::{EventAccessors, EventTargetExt},
                 event_listeners::listen_to,
+                reactions::when_true,
                 shadow_dom::{get_event_target, node_contains},
             },
         };
@@ -338,11 +353,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             trigger_hover_end();
         };
 
-        let _cancel_hover_when_disabled = Effect::new(move |_| {
-            if disabled.get() {
-                trigger_hover_end();
-            }
-        });
+        // End the hover when the element becomes disabled.
+        when_true(disabled, trigger_hover_end);
 
         on_cleanup(move || {
             // Dropping the state removes its global listener.
@@ -350,10 +362,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         });
 
         UseHoverReturn {
-            props: UseHoverProps {
+            target: Part::stored(UseHoverProps {
                 on_pointerenter: EventHandler::new(handle_pointer_enter),
                 on_pointerleave: EventHandler::new(handle_pointer_leave),
-            },
+            }),
             is_hovered: is_hovered.into(),
         }
     }

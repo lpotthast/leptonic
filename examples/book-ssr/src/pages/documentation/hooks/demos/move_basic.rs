@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     computed_px, flag,
     hooks::interactions::{
@@ -40,7 +39,7 @@ pub fn BasicMovementExample() -> impl IntoView {
     let max_left = move || (container_bounding.width.get() - handle_bounding.width.get()).max(0.0);
     let max_top = move || (container_bounding.height.get() - handle_bounding.height.get()).max(0.0);
 
-    let UseMoveReturn { props } = use_move(UseMoveInput {
+    let UseMoveReturn { target } = use_move(UseMoveInput {
         is_disabled: disabled.into(),
         on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
             is_moving.set(true);
@@ -80,7 +79,7 @@ pub fn BasicMovementExample() -> impl IntoView {
     view! {
         <div node_ref=container class="demo-move-area">
             <div
-                {..props.into_attrs()}
+                {..target.attrs()}
                 node_ref=handle
                 tabindex="0"
                 class="demo-move-handle"

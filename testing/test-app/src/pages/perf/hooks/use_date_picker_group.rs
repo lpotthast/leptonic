@@ -29,7 +29,7 @@ fn Group(overlay: StoredValue<Option<OverlayTriggerState>>) -> impl IntoView {
         arrow_keys: GroupArrowKeys::MoveBetweenSegments,
         overlay: Some(state),
     })
-    .into_parts();
+    .attrs();
     view! {
         <div
             {..attrs}

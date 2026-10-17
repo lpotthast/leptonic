@@ -10,14 +10,7 @@ use std::{
     },
 };
 
-use leptos::{
-    attr::{
-        self, Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, KeyboardEvent, MouseEvent, PointerEvent};
@@ -35,15 +28,17 @@ use super::{
     },
 };
 use crate::{
-    EventHandler, IntoAttrs, OnEvent,
+    EventHandler, Id, IntoAttrs, OnEvent,
     hooks::{button::UseButtonInput, interactions::use_press::PressEvent},
     utils::{
         dom_ext::EventAccessors,
         event_listeners::{Listener, listen},
         intl_strings::{DndStrings, use_localized_strings},
         key::{KeyboardEventKey, KeyboardKey},
+        part::{Part, Remount},
         platform::{browser::is_webkit, device::is_ios},
         pointer_type::PointerType,
+        signal_attr::{SignalAttr, signal_attr},
         use_description::use_description,
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
@@ -94,10 +89,11 @@ pub struct UseDragInput {
     pub is_disabled: Signal<bool>,
 }
 
-/// Return value of [`use_drag`].
+/// The return value of [`use_drag`].
 #[derive(Debug)]
 pub struct UseDragReturn {
-    pub drag_props: UseDragProps,
+    /// The draggable element.
+    pub draggable: Part<UseDragProps>,
     /// For `use_button`, with `has_drag_button`.
     pub drag_button: UseButtonInput,
     pub is_dragging: Signal<bool>,
@@ -108,7 +104,7 @@ pub struct UseDragReturn {
 pub struct UseDragProps {
     pub draggable: Signal<&'static str>,
     /// How to start a drag (without a drag button).
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     pub on_keyup_capture: EventHandler<KeyboardEvent>,
@@ -118,9 +114,25 @@ pub struct UseDragProps {
     pub on_dragend: EventHandler<DragEvent>,
 }
 
+impl Remount for UseDragProps {
+    fn remount(&self) -> Self {
+        Self {
+            draggable: self.draggable,
+            aria_describedby: self.aria_describedby,
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_keydown_capture: self.on_keydown_capture.clone(),
+            on_keyup_capture: self.on_keyup_capture.clone(),
+            on_click: self.on_click.clone(),
+            on_dragstart: self.on_dragstart.clone(),
+            on_drag: self.on_drag.clone(),
+            on_dragend: self.on_dragend.clone(),
+        }
+    }
+}
+
 pub type UseDragAttrs = (
-    CustomAttr<&'static str, Signal<&'static str>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    SignalAttr<&'static str>,
+    SignalAttr<Option<Id>>,
     OnEvent<ev::pointerdown>,
     OnEvent<ev::Capture<ev::keydown>>,
     OnEvent<ev::Capture<ev::keyup>>,
@@ -135,8 +147,8 @@ impl IntoAttrs for UseDragProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            custom_attribute("draggable", self.draggable),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+            signal_attr("draggable", self.draggable),
+            signal_attr("aria-describedby", self.aria_describedby),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
             self.on_keyup_capture.into_on(ev::capture(ev::keyup)),
@@ -489,7 +501,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     });
 
     UseDragReturn {
-        drag_props: UseDragProps {
+        draggable: Part::stored(UseDragProps {
             draggable: Signal::derive(move || if is_disabled.get() { "false" } else { "true" }),
             aria_describedby: if has_drag_button {
                 Signal::stored(None)
@@ -520,12 +532,48 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
             }),
             on_drag: EventHandler::new(on_drag),
             on_dragend: EventHandler::new(on_dragend),
-        },
+        }),
         drag_button: UseButtonInput {
             aria_describedby: description,
             on_press: Some(on_press),
             is_disabled,
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: Signal::stored(None),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            prevent_focus_on_press: Signal::stored(false),
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         },
         is_dragging: Signal::derive(move || is_dragging.get() && !is_disabled.get()),
     }

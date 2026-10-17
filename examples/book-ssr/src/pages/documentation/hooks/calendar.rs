@@ -337,9 +337,9 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                     <ApiTable kind=ApiKind::Input of="UseCalendarInput">
                         <ApiRow name="state" ty="CalendarState">"From "<Code inline=true>"use_calendar_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Signal<Option<Id>>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                     </ApiTable>
@@ -347,7 +347,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-calendar-return">
                     <ApiTable kind=ApiKind::Return of="UseCalendarReturn">
-                        <ApiRow name="calendar_props" ty="UseCalendarProps">
+                        <ApiRow name="calendar" ty="Part<UseCalendarProps>">
                             "For the calendar element: its id, "<Code inline=true>"role=\"application\""</Code>" and label."
                         </ApiRow>
                         <ApiRow name="previous_button, next_button" ty="UseButtonInput">
@@ -355,7 +355,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                             ": named \u{201c}Previous\u{201d} and \u{201c}Next\u{201d}, disabled where the minimum or maximum ends "
                             "the dates. A button disabled while focused hands the focus to the grid."
                         </ApiRow>
-                        <ApiRow name="error_message_props" ty="SlotProps">
+                        <ApiRow name="error_message" ty="Part<SlotProps>">
                             "For an error message: invalid selected days refer to it with "<Code inline=true>"aria-describedby"</Code>"."
                         </ApiRow>
                         <ApiRow name="title" ty="Signal<String>">"The visible range: \u{201c}March 2026\u{201d}."</ApiRow>
@@ -388,9 +388,9 @@ pub fn PageCalendarHooks() -> impl IntoView {
                         <ApiRow name="commit_behavior" ty="CommitBehavior" default="Select">
                             "What a press outside the dates or leaving the calendar does with a range being selected."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Signal<Option<Id>>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                     </ApiTable>
@@ -424,7 +424,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-calendar-grid-return">
                     <ApiTable kind=ApiKind::Return of="calendar::use_calendar_grid::UseCalendarGridReturn">
-                        <ApiRow name="grid_props" ty="UseCalendarGridProps">
+                        <ApiRow name="grid" ty="Part<UseCalendarGridProps>">
                             "For the "<Code inline=true>"<table>"</Code>": id, role, label, "<Code inline=true>"aria-readonly"</Code>", "
                             <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"aria-multiselectable"</Code>
                             " (range calendars) and the focus and key handlers."
@@ -470,15 +470,15 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-calendar-cell-return">
                     <ApiTable kind=ApiKind::Return of="calendar::use_calendar_cell::UseCalendarCellReturn">
-                        <ApiRow name="cell_props" ty="UseCalendarCellProps">
+                        <ApiRow name="cell" ty="Part<UseCalendarCellProps>">
                             "For the "<Code inline=true>"<td>"</Code>": "<Code inline=true>"role=\"gridcell\""</Code>", "
                             <Code inline=true>"aria-selected"</Code>", "<Code inline=true>"aria-disabled"</Code>" and "
                             <Code inline=true>"aria-invalid"</Code>"."
                         </ApiRow>
-                        <ApiRow name="button_props" ty="PropsWithStyles<UseCalendarCellButtonProps>">
+                        <ApiRow name="button" ty="Part<PropsWithStyles<UseCalendarCellButtonProps>>">
                             "For the button: "<Code inline=true>"role=\"button\""</Code>", a roving "<Code inline=true>"tabindex"</Code>
                             " (0 on the focused date), a label such as \u{201c}Today, Thursday, March 12, 2026 selected\u{201d}, "
-                            "the press handlers and the element capture. Spread it with "<Code inline=true>"into_parts()"</Code>"."
+                            "the press handlers and the element capture. "<Code inline=true>"button.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_pressed, is_focused, is_selected" ty="Signal<bool>">
                             "Whether the day is pressed, the focused date while the grid has the focus, and selected (in a "

@@ -4,32 +4,19 @@
 //! shown in a plain list (`#perf-list`, one `<li>` per collection item, `data-perf-item` holding
 //! its key, the text its text value). Mounted at first.
 //!
-//! [`CollectionFixture`] renders it for `use_list_collection`'s performance test too
-//! ([`Hook::ListCollection`]). The controls ([`Control`]) mount and unmount it (building the
-//! collection) and change the data: an item appended and removed, an item renamed, the order
-//! reversed, and data the collection doesn't depend on (`touch`: the build runs again, the
-//! collection stays the same).
+//! Its controls ([`Control`]) mount and unmount it (building the collection) and change the data:
+//! an item appended and removed, an item renamed, the order reversed, and data the collection
+//! doesn't depend on (`touch`: the build runs again, the collection stays the same).
 
-use leptonic::hooks::collections::{
-    CollectionMemo, Key, UseListCollectionInput, use_collection, use_list_collection,
-};
+use leptonic::hooks::collections::use_collection;
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
 
 /// The items at first.
-pub const SMALL: u32 = 10;
+const SMALL: u32 = 10;
 /// The items after the control `large`.
-pub const LARGE: u32 = 1_000;
-
-/// The hook building the collection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Hook {
-    /// `use_collection`, from a build function.
-    Collection,
-    /// `use_list_collection`, from a list of values.
-    ListCollection,
-}
+const LARGE: u32 = 1_000;
 
 /// An item of the data.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,12 +36,6 @@ fn items(count: u32) -> Vec<Item> {
 
 #[component]
 pub fn PagePerf() -> impl IntoView {
-    view! { <CollectionFixture title="use_collection performance" hook=Hook::Collection /> }
-}
-
-/// The collection (see the module documentation), built by `hook`.
-#[component]
-pub fn CollectionFixture(title: &'static str, hook: Hook) -> impl IntoView {
     let mounted = RwSignal::new(true);
     let data = RwSignal::new(items(SMALL));
     // Read by the build, without changing the collection.
@@ -87,38 +68,25 @@ pub fn CollectionFixture(title: &'static str, hook: Hook) -> impl IntoView {
         Control::action("touch", move || touched.update(|touched| *touched += 1)),
     ];
     view! {
-        <h1>{title}</h1>
+        <h1>"use_collection performance"</h1>
         <PerfControls controls />
         <Show when=move || mounted.get()>
-            <Items hook data touched />
+            <Items data touched />
         </Show>
     }
 }
 
 /// The collection, built while mounted, shown as a list.
 #[component]
-fn Items(hook: Hook, data: RwSignal<Vec<Item>>, touched: RwSignal<u32>) -> impl IntoView {
-    let collection: CollectionMemo = match hook {
-        Hook::Collection => use_collection(move |b| {
-            touched.track();
-            data.with(|data| {
-                for item in data {
-                    b.item(item.id, item.name.clone());
-                }
-            });
-        }),
-        Hook::ListCollection => {
-            let items = Signal::derive(move || {
-                touched.track();
-                data.get()
-            });
-            use_list_collection(UseListCollectionInput {
-                items,
-                key: |item: &Item| Key::from(item.id),
-                text_value: |item: &Item| item.name.clone(),
-            })
-        }
-    };
+fn Items(data: RwSignal<Vec<Item>>, touched: RwSignal<u32>) -> impl IntoView {
+    let collection = use_collection(move |b| {
+        touched.track();
+        data.with(|data| {
+            for item in data {
+                b.item(item.id, item.name.clone());
+            }
+        });
+    });
     let entries = move || {
         collection.with(|c| {
             c.items()

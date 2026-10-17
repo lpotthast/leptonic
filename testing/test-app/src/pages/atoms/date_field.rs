@@ -601,6 +601,62 @@ fn LabellingSections() -> impl IntoView {
     }
 }
 
+/// Parts mounted again (inside a `<Show>`, hidden and shown again by
+/// `#test-df-<name>-toggle`): remount-field (the `DateInput` of an empty date field),
+/// remount-picker (the `DatePickerGroup` of an empty date picker), both with the placeholder June
+/// 1, 2024.
+#[component]
+fn RemountSections() -> impl IntoView {
+    let field = RwSignal::new(None::<Date>);
+    let field_shown = RwSignal::new(true);
+    let picked = RwSignal::new(None::<Date>);
+    let picker_shown = RwSignal::new(true);
+    view! {
+        <Section name="remount-field">
+            <section id="test-df-remount-field">
+                <button
+                    id="test-df-remount-field-toggle"
+                    on:click=move |_| field_shown.update(|shown| *shown = !*shown)
+                >
+                    "Toggle the input"
+                </button>
+                <DateField value=field set_value=field placeholder_value=date(2024, 6, 1)>
+                    <Label>"Remounted input"</Label>
+                    <Show when=move || field_shown.get()>
+                        <Segments />
+                    </Show>
+                </DateField>
+                <ValueControls name="remount-field" value=field />
+            </section>
+        </Section>
+        <Section name="remount-picker">
+            <section id="test-df-remount-picker">
+                <button
+                    id="test-df-remount-picker-toggle"
+                    on:click=move |_| picker_shown.update(|shown| *shown = !*shown)
+                >
+                    "Toggle the group"
+                </button>
+                <DatePicker value=picked set_value=picked placeholder_value=date(2024, 6, 1)>
+                    <Label>"Remounted group"</Label>
+                    <Show when=move || picker_shown.get()>
+                        <DatePickerGroup>
+                            <Segments />
+                            <DatePickerButton>"▼"</DatePickerButton>
+                        </DatePickerGroup>
+                    </Show>
+                    <Popover>
+                        <Dialog>
+                            <PickerCalendar />
+                        </Dialog>
+                    </Popover>
+                </DatePicker>
+                <ValueControls name="remount-picker" value=picked />
+            </section>
+        </Section>
+    }
+}
+
 /// Date and time fields (react-aria-components' `DateField`/`TimeField` tests), each in a section
 /// `#test-df-<name>` (the [`Section`] `<name>`) with its value in `#test-df-<name>-value`:
 /// - basic: an empty date field (placeholder June 1, 2024), named `birthday` in a form with a
@@ -628,7 +684,7 @@ fn LabellingSections() -> impl IntoView {
 /// aria-label, aria-labelledby, error, no-error, unavailable (January 1 to 8, 1980),
 /// auto-focus, focus-events (`#test-df-focus-events-log`), read-only-disabled, mouse-down (a
 /// group wider than its segments), unmount (a field of February 3, 2020 BC removed by
-/// `#test-df-unmount-remove` 500 ms later).
+/// `#test-df-unmount-remove` 500 ms later). Parts mounted again: [`RemountSections`].
 #[component]
 pub fn PageAtomDateField() -> impl IntoView {
     let basic = RwSignal::new(None::<Date>);
@@ -815,6 +871,7 @@ pub fn PageAtomDateField() -> impl IntoView {
             <EditingSections />
             <ValidationSections />
             <LabellingSections />
+            <RemountSections />
         </div>
     }
 }

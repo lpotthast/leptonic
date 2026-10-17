@@ -3,7 +3,10 @@
 use leptos::{ev, prelude::*};
 use web_sys::WheelEvent;
 
-use crate::{EventHandler, IntoAttrs, OnEvent};
+use crate::{
+    EventHandler, IntoAttrs, OnEvent,
+    utils::part::{Part, Remount},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -58,17 +61,25 @@ pub struct UseScrollWheelInput {
     pub on_scroll: Option<Callback<ScrollEvent>>,
 }
 
-/// Return value from the `use_scroll_wheel` hook.
+/// The return value of [`use_scroll_wheel`].
 #[derive(Debug)]
 pub struct UseScrollWheelReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseScrollWheelProps,
+    /// The element handling the scroll wheel.
+    pub target: Part<UseScrollWheelProps>,
 }
 
 /// Props from `use_scroll_wheel` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseScrollWheelProps {
     pub on_wheel: EventHandler<WheelEvent>,
+}
+
+impl Remount for UseScrollWheelProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_wheel: self.on_wheel.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseScrollWheelProps {
@@ -115,7 +126,7 @@ pub type UseScrollWheelAttrs = (OnEvent<ev::wheel>,);
 /// });
 ///
 /// view! {
-///     <div {..scroll_wheel.props.into_attrs()} tabindex="0">
+///     <div {..scroll_wheel.target.attrs()} tabindex="0">
 ///         "Value: " { move || value.get().round() as i32 }
 ///     </div>
 /// }
@@ -151,8 +162,8 @@ pub fn use_scroll_wheel(input: UseScrollWheelInput) -> UseScrollWheelReturn {
     };
 
     UseScrollWheelReturn {
-        props: UseScrollWheelProps {
+        target: Part::stored(UseScrollWheelProps {
             on_wheel: EventHandler::new(handle_wheel),
-        },
+        }),
     }
 }

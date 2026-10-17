@@ -4,7 +4,7 @@
 //! Its controls ([`Control`]) mount and unmount them, and rename the first one (`rename`).
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::landmark::{LandmarkRole, UseLandmarkInput, use_landmark},
 };
 use leptos::prelude::*;
@@ -55,7 +55,7 @@ fn Landmark(i: usize, label: Signal<String>) -> impl IntoView {
         focus: None,
     });
     view! {
-        <div id=format!("perf-landmark-{i}") {..landmark.props.into_attrs()} {..element.attr()}>
+        <div id=format!("perf-landmark-{i}") {..landmark.landmark.attrs()} {..element.attr()}>
             <button id=format!("perf-button-{i}")>{format!("Button {i}")}</button>
         </div>
     }

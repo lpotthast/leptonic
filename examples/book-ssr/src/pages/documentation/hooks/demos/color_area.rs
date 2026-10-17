@@ -1,5 +1,5 @@
 use leptonic::{
-    ColorValue, HSV, HsvChannel, IntoAttrs,
+    ColorValue, HSV, HsvChannel,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         color::{UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state},
@@ -48,11 +48,11 @@ pub fn ColorAreaDemo() -> impl IntoView {
         ..Default::default()
     });
 
-    // The props carry the gradient, the thumb's position and the inputs' hiding as styles.
-    let (area_attrs, area_styles) = area.color_area_props.into_parts();
-    let (thumb_attrs, thumb_styles) = area.thumb_props.into_parts();
-    let (x_attrs, x_styles) = area.x_input_props.into_parts();
-    let (y_attrs, y_styles) = area.y_input_props.into_parts();
+    // The parts carry the gradient, the thumb's position and the inputs' hiding as styles.
+    let (area_attrs, area_styles) = area.area.attrs();
+    let (thumb_attrs, thumb_styles) = area.thumb.attrs();
+    let (x_attrs, x_styles) = area.x_input.attrs();
+    let (y_attrs, y_styles) = area.y_input.attrs();
     let color = state.value;
     let thumb_styles = thumb_styles.add_reactive(move || {
         BackgroundColorProperty.declare(CssColor::from(color.get().to_rgb8()))
@@ -60,7 +60,7 @@ pub fn ColorAreaDemo() -> impl IntoView {
 
     view! {
         <div {..area_attrs} class="demo-color-area" style=area_styles>
-            <div {..thumb_attrs} {..focus_ring.props.into_attrs()} class="demo-color-area-thumb" style=thumb_styles>
+            <div {..thumb_attrs} {..focus_ring.target.attrs()} class="demo-color-area-thumb" style=thumb_styles>
                 <input {..x_attrs} style=x_styles/>
                 <input {..y_attrs} style=y_styles/>
             </div>

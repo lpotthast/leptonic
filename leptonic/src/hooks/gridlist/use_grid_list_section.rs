@@ -1,17 +1,19 @@
 // Upstream: react-aria/src/gridlist/useGridListSection.ts @ 99e6102368
 // Upstream: react-aria/src/utils/useLabels.ts @ 99e6102368
 // Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::GridListData;
 use crate::{
-    ElementCaptureAttr, IntoAttrs,
+    Id, IntoAttrs, Part,
     hooks::collections::{Key, NodeKind},
-    use_slot,
-    utils::{aria::AriaRole, id::use_id},
+    utils::{
+        aria::AriaRole,
+        id::use_id,
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+        slot_id::referenced_id,
+    },
 };
 
 // =============================================================================
@@ -32,15 +34,13 @@ pub struct UseGridListSectionInput {
     pub key: Key,
 }
 
-/// Return value of [`use_grid_list_section`].
+/// The return value of [`use_grid_list_section`].
 #[derive(Debug)]
 pub struct UseGridListSectionReturn {
-    /// For the row holding the header.
-    pub row_props: UseGridListSectionRowProps,
-    /// For the header cell: it labels the row group while rendered.
-    pub row_header_props: UseGridListSectionRowHeaderProps,
-    /// For the element containing the section's rows.
-    pub row_group_props: UseGridListSectionRowGroupProps,
+    /// The header: the row holding it and its cell, which labels the row group while rendered.
+    pub header: Part<(UseGridListSectionRowProps, UseGridListSectionRowHeaderProps)>,
+    /// The section's row group element.
+    pub row_group: Part<UseGridListSectionRowGroupProps>,
     /// The header text from the collection, if any.
     pub heading: Signal<Option<String>>,
 }
@@ -50,56 +50,56 @@ pub struct UseGridListSectionRowProps {
     pub role: AriaRole,
 }
 
-pub type UseGridListSectionRowAttrs = (Attr<attr::Role, AriaRole>,);
+pub type UseGridListSectionRowAttrs = (FixedAttr,);
 
 impl IntoAttrs for UseGridListSectionRowProps {
     type Attrs = UseGridListSectionRowAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Role, self.role),)
+        (fixed_attr("role", self.role),)
     }
 }
 
 #[derive(Debug)]
 pub struct UseGridListSectionRowHeaderProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
-    /// Detects whether the header is rendered (react-aria's `useSlotId`): the row group
-    /// references it only then.
-    pub element_capture: ElementCaptureAttr,
 }
 
-pub type UseGridListSectionRowHeaderAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    ElementCaptureAttr,
-);
+pub type UseGridListSectionRowHeaderAttrs = (FixedAttr, FixedAttr);
 
 impl IntoAttrs for UseGridListSectionRowHeaderProps {
     type Attrs = UseGridListSectionRowHeaderAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            self.element_capture,
-        )
+        (fixed_attr("id", self.id), fixed_attr("role", self.role))
     }
 }
 
 #[derive(Debug)]
 pub struct UseGridListSectionRowGroupProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+}
+
+impl Remount for UseGridListSectionRowGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+        }
+    }
 }
 
 pub type UseGridListSectionRowGroupAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
 );
 
 impl IntoAttrs for UseGridListSectionRowGroupProps {
@@ -107,10 +107,10 @@ impl IntoAttrs for UseGridListSectionRowGroupProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
         )
     }
 }
@@ -121,7 +121,22 @@ pub fn use_grid_list_section(input: UseGridListSectionInput) -> UseGridListSecti
     crate::metrics::subject!();
     let UseGridListSectionInput { list, key } = input;
     let id = use_id("grid-list-section");
-    let header = use_slot("grid-list-section-header");
+    // The row group references the header while it is rendered (react-aria's `useSlotId`).
+    let header_id = use_id("grid-list-section-header");
+    let header = Part::observed({
+        let id = header_id.clone();
+        move || {
+            (
+                UseGridListSectionRowProps {
+                    role: AriaRole::Row,
+                },
+                UseGridListSectionRowHeaderProps {
+                    id: id.clone(),
+                    role: AriaRole::Rowheader,
+                },
+            )
+        }
+    });
     let collection = list.state.collection;
     let key = StoredValue::new(key);
     let aria_label = Memo::new(move |_| {
@@ -141,32 +156,25 @@ pub fn use_grid_list_section(input: UseGridListSectionInput) -> UseGridListSecti
             })
         })
     });
-    let heading_id = header.referenced_id;
+    let heading_id = referenced_id(&header, header_id);
     let group_id = id.clone();
     let aria_labelledby = Signal::derive(move || {
         let heading_id = heading_id.get()?;
         Some(if aria_label.with(Option::is_some) {
-            format!("{group_id} {heading_id}")
+            Id::derived(format_args!("{group_id} {heading_id}"))
         } else {
             heading_id
         })
     });
 
     UseGridListSectionReturn {
-        row_props: UseGridListSectionRowProps {
-            role: AriaRole::Row,
-        },
-        row_header_props: UseGridListSectionRowHeaderProps {
-            id: header.props.id,
-            role: AriaRole::Rowheader,
-            element_capture: header.props.element_capture,
-        },
-        row_group_props: UseGridListSectionRowGroupProps {
+        header,
+        row_group: Part::stored(UseGridListSectionRowGroupProps {
             id,
             role: AriaRole::Rowgroup,
             aria_label: aria_label.into(),
             aria_labelledby,
-        },
+        }),
         heading: heading.into(),
     }
 }

@@ -3,11 +3,11 @@
 use leptos::prelude::*;
 
 use crate::{
-    IntoAttrs,
+    IntoAttrs, Part,
     hooks::overlay::{
-        OverlayState, OverlayTriggerState,
+        HideOutsideBehavior, OverlayState, OverlayTriggerState, UseHideOutsideInput,
+        use_hide_outside,
         use_overlay::{UseOverlayAttrs, UseOverlayInput, UseOverlayProps, use_overlay},
-        use_popover::use_hide_outside,
         use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
     },
 };
@@ -57,13 +57,13 @@ pub struct UseModalBackdropInput<S: OverlayState = OverlayTriggerState> {
 /// The return value of the `use_modal_backdrop` hook.
 #[derive(Debug)]
 pub struct UseModalBackdropReturn {
-    /// Props for the modal content element (overlay container).
-    /// Spread these onto the element that wraps the modal content.
-    /// Includes: id, element capture, keydown (Escape), focusin/focusout.
-    pub modal_props: UseModalBackdropModalProps,
+    /// The modal content element (overlay container), rendered again on every opening: each
+    /// mount takes its props (id, element capture, keydown for Escape, focusin/focusout), one
+    /// element at a time.
+    pub modal: Part<UseModalBackdropModalProps>,
 
     /// Unique overlay ID. Can be passed to `use_overlay_trigger` if needed.
-    pub id: String,
+    pub id: crate::Id,
 }
 
 /// Props for the modal content element, delegated from `use_overlay`.
@@ -95,7 +95,7 @@ impl IntoAttrs for UseModalBackdropModalProps {
 ///
 /// ```ignore
 /// let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
-/// let UseModalBackdropReturn { modal_props, .. } =
+/// let UseModalBackdropReturn { modal, .. } =
 ///     use_modal_backdrop(UseModalBackdropInput {
 ///         state,
 ///         is_dismissable: Signal::stored(true),
@@ -108,7 +108,7 @@ impl IntoAttrs for UseModalBackdropModalProps {
 ///     <Show when=move || state.is_open.get()>
 ///         <div class="backdrop">
 ///             <FocusScope contain=true restore_focus=true>
-///                 <div {..modal_props.into_attrs()} class="modal">"Modal content"</div>
+///                 <div {..modal.attrs()} class="modal">"Modal content"</div>
 ///             </FocusScope>
 ///         </div>
 ///     </Show>
@@ -138,6 +138,7 @@ pub fn use_modal_backdrop<S: OverlayState>(
         should_close_on_interact_outside,
         group: None,
     });
+    let overlay_props = overlay.overlay.into_props();
 
     // 2. Prevent body scroll while the modal is open.
     use_prevent_scroll(UsePreventScrollInput {
@@ -146,10 +147,35 @@ pub fn use_modal_backdrop<S: OverlayState>(
 
     // 3. Hide everything outside the modal from assistive technology (inert), except while it
     //    enters: then a parent modal must not hide it either.
-    use_hide_outside(is_open, overlay.overlay_element, is_entering);
+    use_hide_outside(UseHideOutsideInput {
+        is_open,
+        overlay: overlay.overlay_element,
+        behavior: Signal::derive(move || {
+            if is_entering.get() {
+                HideOutsideBehavior::KeepVisible
+            } else {
+                HideOutsideBehavior::Inert
+            }
+        }),
+    });
 
+    let UseOverlayProps {
+        id,
+        element_capture,
+        on_keydown,
+        on_focusin,
+        on_focusout,
+    } = overlay_props;
     UseModalBackdropReturn {
-        modal_props: UseModalBackdropModalProps(overlay.props),
+        modal: Part::new(move || {
+            UseModalBackdropModalProps(UseOverlayProps {
+                id: id.clone(),
+                element_capture: element_capture.clone(),
+                on_keydown: on_keydown.clone(),
+                on_focusin: on_focusin.clone(),
+                on_focusout: on_focusout.clone(),
+            })
+        }),
         id: overlay.id,
     }
 }

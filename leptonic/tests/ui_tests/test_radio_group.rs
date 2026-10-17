@@ -507,3 +507,25 @@ pub async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(form.form_values("size").await?).contains_exactly(["l"]);
     Ok(())
 }
+
+/// A `RadioButton` mounted again works again: its `RadioField` hands it the radio back when it
+/// unmounts (no upstream test: React passes the props on every render).
+#[browser_test]
+pub async fn button_mounts_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let toggle = page.element("#test-rg-remount-toggle").await?;
+    toggle.click().await?;
+    page.wait_for_count(css("label").text("Remounted B"), 0)
+        .await?;
+    toggle.click().await?;
+    let label = page.element(css("label").text("Remounted B")).await?;
+    let input = label.element("input").await?;
+    label.click().await?;
+    label.wait_for_attr("data-selected", Some("true")).await?;
+    page.element("#test-rg-remounted-value")
+        .await?
+        .wait_for_inner_text("b")
+        .await?;
+    assert_that!(input).selected().await.is_true();
+    Ok(())
+}

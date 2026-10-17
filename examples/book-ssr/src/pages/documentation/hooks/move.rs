@@ -42,9 +42,9 @@ pub fn PageUseMove() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseMoveReturn">
-                    <ApiRow name="props" ty="UseMoveProps">
+                    <ApiRow name="target" ty="Part<UseMoveProps>">
                         "Pointer and key handlers for the movable element. Spread them with "
-                        <Code inline=true>"{..props.into_attrs()}"</Code>". The element needs a "<Code inline=true>"tabindex"</Code>
+                        <Code inline=true>"{..target.attrs()}"</Code>". The element needs a "<Code inline=true>"tabindex"</Code>
                         " to receive arrow keys."
                     </ApiRow>
                 </ApiTable>
@@ -62,7 +62,7 @@ pub fn PageUseMove() -> impl IntoView {
                         let offset = RwSignal::new((0.0, 0.0));
                         let is_moving = RwSignal::new(false);
 
-                        let UseMoveReturn { props } = use_move(UseMoveInput {
+                        let UseMoveReturn { target } = use_move(UseMoveInput {
                             on_move_start: Some(Callback::new(move |_| is_moving.set(true))),
                             on_move: Some(Callback::new(move |e: MoveEvent| {
                                 offset.update(|(x, y)| {
@@ -75,7 +75,7 @@ pub fn PageUseMove() -> impl IntoView {
                         });
 
                         view! {
-                            <div {..props.into_attrs()} tabindex="0" data-moving=flag(is_moving.into())>"Drag me"</div>
+                            <div {..target.attrs()} tabindex="0" data-moving=flag(is_moving.into())>"Drag me"</div>
                         }
                     "#)}
                 </Code>

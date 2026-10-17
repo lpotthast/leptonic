@@ -1,5 +1,5 @@
 use leptonic::{
-    ColorValue, HSV, HsvChannel, IntoAttrs,
+    ColorValue, HSV, HsvChannel,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         color::{
@@ -48,11 +48,11 @@ pub fn ColorWheelDemo() -> impl IntoView {
         ..UseFocusRingInput::default()
     });
 
-    // The props carry the ring's size, shape and gradient, the thumb's position and the input's
+    // The parts carry the ring's size, shape and gradient, the thumb's position and the input's
     // hiding as styles. The thumb is filled with the hue at full saturation and brightness.
-    let (track_attrs, track_styles) = wheel.track_props.into_parts();
-    let (thumb_attrs, thumb_styles) = wheel.thumb_props.into_parts();
-    let (input_attrs, input_styles) = wheel.input_props.into_parts();
+    let (track_attrs, track_styles) = wheel.track.attrs();
+    let (thumb_attrs, thumb_styles) = wheel.thumb.attrs();
+    let (input_attrs, input_styles) = wheel.input.attrs();
     let display_color = state.display_color();
     let thumb_styles = thumb_styles.add_reactive(move || {
         BackgroundColorProperty.declare(CssColor::from(display_color.get().to_rgb8()))
@@ -62,7 +62,7 @@ pub fn ColorWheelDemo() -> impl IntoView {
         // The thumb is a sibling of the track: the track's clip path would cut it off.
         <div class="demo-color-wheel">
             <div class="demo-color-wheel-track" {..track_attrs} style=track_styles></div>
-            <div class="demo-color-wheel-thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
+            <div class="demo-color-wheel-thumb" {..thumb_attrs} {..focus_ring.target.attrs()} style=thumb_styles>
                 <input {..input_attrs} style=input_styles/>
             </div>
         </div>

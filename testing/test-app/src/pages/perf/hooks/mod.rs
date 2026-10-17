@@ -87,6 +87,7 @@ pub mod use_grid_state;
 pub mod use_has_tabbable_child;
 pub mod use_hidden_date_input;
 pub mod use_hidden_select;
+pub mod use_hide_outside;
 pub mod use_highlight_selection_description;
 pub mod use_hover;
 pub mod use_interact_outside;
@@ -110,6 +111,8 @@ pub mod use_menu_trigger_state;
 pub mod use_meter;
 pub mod use_modal_backdrop;
 pub mod use_move;
+pub mod use_node;
+pub mod use_node_aria_label;
 pub mod use_number_field;
 pub mod use_number_field_state;
 pub mod use_option;
@@ -182,6 +185,7 @@ pub mod use_tooltip;
 pub mod use_tooltip_trigger;
 pub mod use_tooltip_trigger_state;
 pub mod use_tree;
+pub mod use_tree_expansion;
 pub mod use_tree_item;
 pub mod use_tree_state;
 pub mod use_type_select;
@@ -189,6 +193,7 @@ pub mod use_virtual_drop;
 pub mod use_virtualizer_item;
 pub mod use_virtualizer_state;
 pub mod use_visually_hidden;
+pub mod use_wheel_stepping;
 
 use leptos::prelude::*;
 
@@ -714,6 +719,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "perf/hooks",
+        name: "use_hide_outside",
+        title: "use_hide_outside performance",
+        view: || view! { <use_hide_outside::PagePerf /> }.into_any(),
+    },
+    Fixture {
+        group: "perf/hooks",
         name: "use_highlight_selection_description",
         title: "use_highlight_selection_description performance",
         view: || view! { <use_highlight_selection_description::PagePerf /> }.into_any(),
@@ -849,6 +860,18 @@ pub const FIXTURES: &[Fixture] = &[
         name: "use_move",
         title: "use_move performance",
         view: || view! { <use_move::PagePerf /> }.into_any(),
+    },
+    Fixture {
+        group: "perf/hooks",
+        name: "use_node",
+        title: "use_node performance",
+        view: || view! { <use_node::PagePerf /> }.into_any(),
+    },
+    Fixture {
+        group: "perf/hooks",
+        name: "use_node_aria_label",
+        title: "use_node_aria_label performance",
+        view: || view! { <use_node_aria_label::PagePerf /> }.into_any(),
     },
     Fixture {
         group: "perf/hooks",
@@ -1284,6 +1307,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "perf/hooks",
+        name: "use_tree_expansion",
+        title: "use_tree_expansion performance",
+        view: || view! { <use_tree_expansion::PagePerf /> }.into_any(),
+    },
+    Fixture {
+        group: "perf/hooks",
         name: "use_tree_item",
         title: "use_tree_item performance",
         view: || view! { <use_tree_item::PagePerf /> }.into_any(),
@@ -1323,5 +1352,11 @@ pub const FIXTURES: &[Fixture] = &[
         name: "use_visually_hidden",
         title: "use_visually_hidden performance",
         view: || view! { <use_visually_hidden::PagePerf /> }.into_any(),
+    },
+    Fixture {
+        group: "perf/hooks",
+        name: "use_wheel_stepping",
+        title: "use_wheel_stepping performance",
+        view: || view! { <use_wheel_stepping::PagePerf /> }.into_any(),
     },
 ];

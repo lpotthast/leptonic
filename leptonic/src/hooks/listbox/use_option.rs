@@ -2,25 +2,26 @@
 // Upstream: react-aria/src/listbox/utils.ts @ 99e6102368
 // Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/listbox/ListBox.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::ListBoxData;
 use crate::{
-    CapturedElement, IntoAttrs, PropsWithStyles, SlotProps,
+    CapturedElement, Id, IntoAttrs, Part, PropsWithStyles, SlotProps,
     hooks::{
         collections::{
-            ItemLink, Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
-            UseSelectableItemProps, UseSelectableItemReturn, use_node_aria_label,
-            use_selectable_item,
+            ItemLink, Key, SelectionMode, UseNodeAriaLabelInput, UseSelectableItemAttrs,
+            UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
+            use_node_aria_label, use_selectable_item,
         },
         focus::use_focus_visible::{Modality, get_modality, is_focus_visible},
         interactions::use_hover::{UseHoverAttrs, UseHoverInput, UseHoverProps, use_hover},
     },
     use_slot,
-    utils::aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
+    utils::{
+        aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -56,13 +57,14 @@ pub struct UseOptionInput {
     pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
-/// Return value of [`use_option`].
+/// The return value of [`use_option`].
 pub struct UseOptionReturn {
-    pub props: PropsWithStyles<UseOptionProps>,
+    /// The option element: `let (attrs, styles) = option.attrs();`.
+    pub option: Part<PropsWithStyles<UseOptionProps>>,
     /// For the element holding the option's main text.
-    pub label_props: SlotProps,
+    pub label: Part<SlotProps>,
     /// For the element holding secondary text.
-    pub description_props: SlotProps,
+    pub description: Part<SlotProps>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
     /// Focused, and focus should be shown (keyboard navigation).
@@ -87,8 +89,8 @@ pub struct UseOptionProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// In a virtualized listbox: the option's position (from 1) ...
     pub aria_posinset: Signal<Option<usize>>,
     /// ... and the number of options.
@@ -97,15 +99,32 @@ pub struct UseOptionProps {
     pub hover: UseHoverProps,
 }
 
+impl Remount for UseOptionProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_disabled: self.aria_disabled,
+            aria_selected: self.aria_selected,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_posinset: self.aria_posinset,
+            aria_setsize: self.aria_setsize,
+            item: self.item.remount(),
+            hover: self.hover.remount(),
+        }
+    }
+}
+
 pub type UseOptionAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaPosinset, Signal<Option<usize>>>,
-    Attr<attr::AriaSetsize, Signal<Option<usize>>>,
+    FixedAttr,
+    SignalAttr<Option<AriaDisabled>>,
+    SignalAttr<Option<AriaSelected>>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
     UseSelectableItemAttrs,
     UseHoverAttrs,
 );
@@ -115,14 +134,14 @@ impl IntoAttrs for UseOptionProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaSelected, self.aria_selected),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaPosinset, self.aria_posinset),
-            Attr(attr::AriaSetsize, self.aria_setsize),
+            fixed_attr("role", self.role),
+            signal_attr("aria-disabled", self.aria_disabled),
+            signal_attr("aria-selected", self.aria_selected),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-describedby", self.aria_describedby),
+            signal_attr("aria-posinset", self.aria_posinset),
+            signal_attr("aria-setsize", self.aria_setsize),
             self.item.into_attrs(),
             self.hover.into_attrs(),
         )
@@ -130,8 +149,8 @@ impl IntoAttrs for UseOptionProps {
 }
 
 /// The element id of the option `key` in the listbox `list_id` (see [`Key::id_fragment`]).
-pub fn option_id(list_id: &str, key: &Key) -> String {
-    format!("{list_id}-option-{}", key.id_fragment())
+pub fn option_id(list_id: &str, key: &Key) -> Id {
+    Id::derived(format_args!("{list_id}-option-{}", key.id_fragment()))
 }
 
 /// An option of a listbox: selection on press (as configured by the listbox), focus handling,
@@ -160,11 +179,18 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     if !untrack(|| state.collection.with(|c| c.contains_key(&key))) {
         crate::utils::dev_warn!("use_option: the key {key:?} is not in the listbox's collection");
     }
-    let aria_label = use_node_aria_label(state.collection, key.clone());
+    let aria_label = use_node_aria_label(UseNodeAriaLabelInput {
+        selection: state.selection,
+        key: key.clone(),
+    });
     let link = {
         let key = key.clone();
         let collection = state.collection;
-        Memo::new(move |_| collection.with(|c| c.get(&key).and_then(|n| n.link.clone())))
+        // Only this option's changes reach it, not every change of the collection.
+        Memo::new(move |_| {
+            selection.track_node(&key);
+            collection.with_untracked(|c| c.get(&key).and_then(|n| n.link.clone()))
+        })
     };
 
     let position_key = StoredValue::new(key.clone());
@@ -173,7 +199,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
 
     let element = CapturedElement::new();
     let UseSelectableItemReturn {
-        props,
+        item: props,
         is_pressed,
         is_selected,
         is_focused,
@@ -199,6 +225,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         should_use_virtual_focus,
         on_context_menu,
     });
+    let props = props.into_props();
 
     let hover_key = key.clone();
     // Hovering is tracked for interactive options (react-aria-components' `ListBoxItem`
@@ -215,15 +242,17 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
                 selection.set_focused_key(Some(hover_key.clone()), None);
             }
         })),
-        ..UseHoverInput::default()
+        on_hover_end: None,
+        on_hover_change: None,
     });
+    let hover_props = hover.target.into_props();
     let is_hovered = hover.is_hovered;
-    let hover = hover.props;
+    let hover = hover_props;
 
     let (item_props, styles) = props.into_inner();
 
     UseOptionReturn {
-        props: PropsWithStyles::new(
+        option: Part::stored(PropsWithStyles::new(
             UseOptionProps {
                 role: AriaRole::Option,
                 aria_disabled: aria_true(is_disabled),
@@ -252,9 +281,9 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
                 hover,
             },
             styles,
-        ),
-        label_props: label.props,
-        description_props: description.props,
+        )),
+        label: label.part,
+        description: description.part,
         is_selected,
         is_focused,
         is_focus_visible: Memo::new(move |_| is_focused.get() && is_focus_visible()).into(),
@@ -276,7 +305,7 @@ mod tests {
     #[test]
     fn option_ids_tell_keys_apart() {
         assert_that!(option_id("lb", &Key::from("Ice cream")))
-            .is_equal_to("lb-option-Ice%20;cream".to_owned());
+            .is_equal_to(Id::from("lb-option-Ice%20;cream"));
         assert_that!(option_id("lb", &Key::from(7)))
             .is_not_equal_to(option_id("lb", &Key::from("7")));
     }

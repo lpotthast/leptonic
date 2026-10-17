@@ -9,19 +9,20 @@ use super::{
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
-    IntoAttrs, Orientation, Out,
+    Orientation, Out, Part, PropsWithStyles,
     atoms::field::LabelPresence,
     hooks::{
         collections::{Key, SelectionValue},
         form::{
             RadioGroupData, UseRadioGroupInput, UseRadioGroupReturn, UseRadioGroupStateInput,
-            UseRadioInput, UseRadioReturn, ValidateFn, ValidationBehavior, use_radio,
+            UseRadioInput, UseRadioInputAttrs, UseRadioInputProps, UseRadioReturn,
+            UseToggleLabelAttrs, UseToggleLabelProps, ValidateFn, ValidationBehavior, use_radio,
             use_radio_group, use_radio_group_state,
         },
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class, dev_warn, styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
         visually_hidden::visually_hidden_styles,
     },
 };
@@ -85,7 +86,7 @@ pub fn RadioGroup<V: SelectionValue>(
     #[prop(into, optional)]
     name: Option<String>,
     #[prop(into, optional)] form: Option<String>,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -120,10 +121,10 @@ pub fn RadioGroup<V: SelectionValue>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseRadioGroupReturn {
-        props,
-        label_props,
-        description_props,
-        error_message_props,
+        group: props,
+        label: label_props,
+        description: description_props,
+        error_message: error_message_props,
         data,
         is_invalid,
         validation_errors,
@@ -133,8 +134,8 @@ pub fn RadioGroup<V: SelectionValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         orientation,
         form,
         state,
@@ -157,14 +158,16 @@ pub fn RadioGroup<V: SelectionValue>(
         <Provider value=ctx>
             <Provider value=label><Provider value=field>
                 <div
-                    {..props.into_attrs()}
+                    {..props.attrs()}
                     class=classes
                     style=styles
                     data-orientation=move || orientation.get().as_str()
-                    data-disabled=flag(state.is_disabled)
-                    data-readonly=flag(state.is_read_only)
-                    data-required=flag(state.is_required)
-                    data-invalid=flag(is_invalid)
+                    {..data_flags([
+                        ("data-disabled", state.is_disabled),
+                        ("data-readonly", state.is_read_only),
+                        ("data-required", state.is_required),
+                    ])}
+                    {..data_flags([("data-invalid", is_invalid)])}
                 >
                     {children()}
                 </div>
@@ -189,7 +192,7 @@ pub fn RadioField(
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -226,11 +229,11 @@ pub fn RadioField(
     // The radio's description; errors are the group's (react-aria-components keeps the group's
     // `FieldErrorContext`).
     let field = FieldContext {
-        description: radio.description_props.clone(),
+        description: radio.description.clone(),
         ..group_field
     };
     let button = RadioButtonContext {
-        radio: StoredValue::new(Some(radio)),
+        radio: RadioButtonParts::of(radio),
     };
 
     Some(view! {
@@ -238,12 +241,16 @@ pub fn RadioField(
             <Provider value=field>
                 <div
                     class=classes
-                    style=styles
-                    data-selected=flag(is_selected)
-                    data-disabled=flag(is_disabled)
-                    data-readonly=flag(state.is_read_only)
-                    data-invalid=flag(group.is_invalid)
-                    data-required=flag(state.is_required)
+                    style={styles}
+                    {..data_flags([
+                        ("data-selected", is_selected),
+                        ("data-disabled", is_disabled),
+                        ("data-readonly", state.is_read_only),
+                    ])}
+                    {..data_flags([
+                        ("data-invalid", group.is_invalid),
+                        ("data-required", state.is_required),
+                    ])}
                 >
                     {children()}
                 </div>
@@ -274,25 +281,77 @@ pub fn RadioButton(
         dev_warn!("a <RadioButton> belongs in a <RadioField> in a <RadioGroup>");
         return None;
     };
-    let Some(radio) = ctx.radio.try_update_value(Option::take).flatten() else {
-        dev_warn!("a <RadioField> has one <RadioButton>");
-        return None;
-    };
+    // One button per field (`Part`: a second one renders nothing).
+    let radio = ctx.radio.props()?;
     Some(radio_button(group, radio, classes, styles, children))
 }
 
 /// What a [`RadioField`] hands its [`RadioButton`].
 #[derive(Clone)]
 struct RadioButtonContext {
-    /// The radio, taken by the button.
-    radio: StoredValue<Option<UseRadioReturn>>,
+    /// The radio, for the button rendered.
+    radio: RadioButtonParts,
+}
+
+/// The radio's label and input parts and its state, for the [`RadioButton`] rendered (again:
+/// e.g. inside a `Show`).
+#[derive(Clone)]
+struct RadioButtonParts {
+    label: Part<PropsWithStyles<UseToggleLabelProps>>,
+    input: Part<PropsWithStyles<UseRadioInputProps>>,
+    is_selected: Signal<bool>,
+    is_disabled: Signal<bool>,
+    is_pressed: Signal<bool>,
+    is_focused: Signal<bool>,
+    is_focus_visible: Signal<bool>,
+}
+
+/// The rendered button's attributes and state (see [`RadioButtonParts::props`]).
+struct RadioButton {
+    label: (UseToggleLabelAttrs, Styles),
+    input: (UseRadioInputAttrs, Styles),
+    is_selected: Signal<bool>,
+    is_disabled: Signal<bool>,
+    is_pressed: Signal<bool>,
+    is_focused: Signal<bool>,
+    is_focus_visible: Signal<bool>,
+}
+
+impl RadioButtonParts {
+    fn of(radio: UseRadioReturn) -> Self {
+        Self {
+            label: radio.label,
+            input: radio.input,
+            is_selected: radio.is_selected,
+            is_disabled: radio.is_disabled,
+            is_pressed: radio.is_pressed,
+            is_focused: radio.is_focused,
+            is_focus_visible: radio.is_focus_visible,
+        }
+    }
+
+    /// The props of the button being rendered; `None` while another button holds them.
+    #[track_caller]
+    fn props(&self) -> Option<RadioButton> {
+        let label = self.label.props()?.into_parts();
+        let input = self.input.props()?.into_parts();
+        Some(RadioButton {
+            label,
+            input,
+            is_selected: self.is_selected,
+            is_disabled: self.is_disabled,
+            is_pressed: self.is_pressed,
+            is_focused: self.is_focused,
+            is_focus_visible: self.is_focus_visible,
+        })
+    }
 }
 
 /// The settings of a [`RadioField`].
 struct RadioSetup {
     value: Key,
     is_disabled: Signal<bool>,
-    id: Option<String>,
+    id: Option<crate::Id>,
     aria_label: MaybeProp<String>,
     aria_labelledby: MaybeProp<String>,
     aria_describedby: MaybeProp<String>,
@@ -316,8 +375,8 @@ fn use_radio_atom(group: &RadioGroupContext, setup: RadioSetup) -> UseRadioRetur
         is_disabled,
         id,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         auto_focus,
         on_focus_change,
         group: group.data,
@@ -335,7 +394,7 @@ fn use_radio_atom(group: &RadioGroupContext, setup: RadioSetup) -> UseRadioRetur
 /// The `<label>` of a [`RadioButton`].
 fn radio_button(
     group: RadioGroupContext,
-    radio: UseRadioReturn,
+    radio: RadioButton,
     classes: Classes,
     styles: Styles,
     children: Option<Children>,
@@ -344,26 +403,34 @@ fn radio_button(
     let is_disabled = radio.is_disabled;
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || is_disabled.get() || state.is_read_only.get()),
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
-    let (label_attrs, label_styles) = radio.label_props.into_parts();
-    let (input_attrs, input_styles) = radio.input_props.into_parts();
+    let (label_attrs, label_styles) = radio.label;
+    let (input_attrs, input_styles) = radio.input;
 
     view! {
         <label
             {..label_attrs}
-            {..hover.props.into_attrs()}
+            {..hover.target.attrs()}
             class=classes
             style=label_styles.merge(styles)
-            data-selected=flag(radio.is_selected)
-            data-pressed=flag(radio.is_pressed)
-            data-hovered=flag(hover.is_hovered)
-            data-focused=flag(radio.is_focused)
-            data-focus-visible=flag(radio.is_focus_visible)
-            data-disabled=flag(radio.is_disabled)
-            data-readonly=flag(state.is_read_only)
-            data-invalid=flag(group.is_invalid)
-            data-required=flag(state.is_required)
+            {..data_flags([
+                ("data-pressed", radio.is_pressed),
+                ("data-hovered", hover.is_hovered),
+                ("data-focused", radio.is_focused),
+            ])}
+            {..data_flags([("data-focus-visible", radio.is_focus_visible)])}
+            {..data_flags([
+                ("data-selected", radio.is_selected),
+                ("data-disabled", radio.is_disabled),
+                ("data-readonly", state.is_read_only),
+            ])}
+            {..data_flags([
+                ("data-invalid", group.is_invalid),
+                ("data-required", state.is_required),
+            ])}
         >
             <input {..input_attrs} style=input_styles.merge(visually_hidden_styles()) />
             {children.map(|children| children())}

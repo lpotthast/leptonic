@@ -6,8 +6,6 @@
 //! unmounted (`small`, `large`: [`LARGE`] parents), expand and collapse the first parent
 //! (`toggle-first`), set the expanded items (`expand-all`, `collapse-all`), select the first
 //! parent and none, and read how many items are visible (`visible`).
-//!
-//! [`tree_collection`] also builds the trees of the fixtures of the other tree hooks.
 
 use std::collections::HashSet;
 
@@ -20,13 +18,13 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The parent items of the small tree (10 items).
-pub const SMALL: usize = 5;
+const SMALL: usize = 5;
 /// The parent items of the large tree (1,000 items).
-pub const LARGE: usize = 500;
+const LARGE: usize = 500;
 
 /// `parents` parent items ("Parent <p>", key `p<p>`), each with a child item ("Child <p>", key
 /// `c<p>`).
-pub fn tree_collection(parents: RwSignal<usize>) -> CollectionMemo {
+fn tree_collection(parents: RwSignal<usize>) -> CollectionMemo {
     use_collection(move |b| {
         for p in 0..parents.get() {
             let _ = b
@@ -39,7 +37,7 @@ pub fn tree_collection(parents: RwSignal<usize>) -> CollectionMemo {
 }
 
 /// Every parent of a tree of `parents` parents.
-pub fn all_parents(parents: usize) -> HashSet<Key> {
+fn all_parents(parents: usize) -> HashSet<Key> {
     (0..parents).map(|p| Key::from(format!("p{p}"))).collect()
 }
 
@@ -79,12 +77,12 @@ pub fn PagePerf() -> impl IntoView {
         }),
         Control::action("expand-all", move || {
             if let Some(tree) = state.get_value() {
-                tree.set_expanded_keys(all_parents(parents.get_untracked()));
+                tree.expansion.set_expanded_keys(all_parents(parents.get_untracked()));
             }
         }),
         Control::action("collapse-all", move || {
             if let Some(tree) = state.get_value() {
-                tree.set_expanded_keys(HashSet::new());
+                tree.expansion.set_expanded_keys(HashSet::new());
             }
         }),
         Control::action("select-first", move || {

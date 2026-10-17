@@ -20,6 +20,7 @@ use crate::{
         menu::use_menu_trigger_state::{UseMenuTriggerStateInput, use_menu_trigger_state},
         select::SelectMode,
     },
+    utils::stored_field::StoredField,
 };
 
 // =============================================================================
@@ -185,6 +186,19 @@ impl std::fmt::Debug for ComboBoxState {
     }
 }
 
+/// The combo box's non-reactive state, in one store (`performance.md` R7); `Inner` reaches its
+/// fields as `StoredField`s.
+struct ComboBoxStore {
+    menu_open_trigger: Option<MenuTriggerAction>,
+    closed_due_to_empty: bool,
+    last_value: String,
+    last_value_ref: Vec<Key>,
+    value_on_focus: (String, Vec<Key>),
+    default_value: Vec<Key>,
+    default_input_value: String,
+    name: Option<String>,
+}
+
 // The settings mirror `UseComboBoxStateInput`.
 #[derive(Clone, Copy)]
 struct Inner {
@@ -198,14 +212,14 @@ struct Inner {
     show_all_items: RwSignal<bool>,
     last_collection: RwSignal<Arc<Collection>>,
     menu: crate::hooks::menu::use_menu_trigger_state::MenuTriggerState,
-    menu_open_trigger: StoredValue<Option<MenuTriggerAction>>,
-    closed_due_to_empty: StoredValue<bool>,
-    last_value: StoredValue<String>,
+    menu_open_trigger: StoredField<ComboBoxStore, Option<MenuTriggerAction>, SyncStorage>,
+    closed_due_to_empty: StoredField<ComboBoxStore, bool, SyncStorage>,
+    last_value: StoredField<ComboBoxStore, String, SyncStorage>,
     /// The value the reconciliation saw last (react-aria: `lastValueRef`).
-    last_value_ref: StoredValue<Vec<Key>>,
-    value_on_focus: StoredValue<(String, Vec<Key>)>,
-    default_value: StoredValue<Vec<Key>>,
-    default_input_value: StoredValue<String>,
+    last_value_ref: StoredField<ComboBoxStore, Vec<Key>, SyncStorage>,
+    value_on_focus: StoredField<ComboBoxStore, (String, Vec<Key>), SyncStorage>,
+    default_value: StoredField<ComboBoxStore, Vec<Key>, SyncStorage>,
+    default_input_value: StoredField<ComboBoxStore, String, SyncStorage>,
     on_input_change: Option<Callback<String>>,
     on_open_change: Option<Callback<ComboBoxOpenChange>>,
     menu_trigger: Signal<ComboBoxMenuTrigger>,
@@ -213,7 +227,7 @@ struct Inner {
     allows_custom_value: Signal<bool>,
     should_close_on_blur: bool,
     is_read_only: Signal<bool>,
-    name: StoredValue<Option<String>>,
+    name: StoredField<ComboBoxStore, Option<String>, SyncStorage>,
     validation_behavior: ValidationBehavior,
     filtering: bool,
 }
@@ -705,6 +719,16 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
     });
 
     let is_focused = RwSignal::new(false);
+    let store = StoredValue::new(ComboBoxStore {
+        menu_open_trigger: None,
+        closed_due_to_empty: false,
+        last_value: initial_text.clone(),
+        last_value_ref: default_value.clone(),
+        value_on_focus: (String::new(), Vec::new()),
+        default_value,
+        default_input_value: initial_text,
+        name,
+    });
     let inner = Inner {
         original,
         filtered,
@@ -715,13 +739,25 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         show_all_items,
         last_collection,
         menu,
-        menu_open_trigger: StoredValue::new(None),
-        closed_due_to_empty: StoredValue::new(false),
-        last_value: StoredValue::new(initial_text.clone()),
-        last_value_ref: StoredValue::new(default_value.clone()),
-        value_on_focus: StoredValue::new((String::new(), Vec::new())),
-        default_value: StoredValue::new(default_value),
-        default_input_value: StoredValue::new(initial_text),
+        menu_open_trigger: StoredField::new(
+            store,
+            |s| &s.menu_open_trigger,
+            |s| &mut s.menu_open_trigger,
+        ),
+        closed_due_to_empty: StoredField::new(
+            store,
+            |s| &s.closed_due_to_empty,
+            |s| &mut s.closed_due_to_empty,
+        ),
+        last_value: StoredField::new(store, |s| &s.last_value, |s| &mut s.last_value),
+        last_value_ref: StoredField::new(store, |s| &s.last_value_ref, |s| &mut s.last_value_ref),
+        value_on_focus: StoredField::new(store, |s| &s.value_on_focus, |s| &mut s.value_on_focus),
+        default_value: StoredField::new(store, |s| &s.default_value, |s| &mut s.default_value),
+        default_input_value: StoredField::new(
+            store,
+            |s| &s.default_input_value,
+            |s| &mut s.default_input_value,
+        ),
         on_input_change,
         on_open_change,
         menu_trigger,
@@ -729,7 +765,7 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         allows_custom_value,
         should_close_on_blur,
         is_read_only,
-        name: StoredValue::new(name),
+        name: StoredField::new(store, |s| &s.name, |s| &mut s.name),
         validation_behavior,
         filtering,
     };

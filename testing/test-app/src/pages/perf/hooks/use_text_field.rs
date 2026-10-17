@@ -7,7 +7,7 @@
 //! shows a focus ring (`focus-visible`).
 
 use leptonic::{
-    IntoAttrs, ValueBinding,
+    ValueBinding,
     hooks::form::{
         InputType, TextFieldElement, UseTextFieldInput, UseTextFieldStateInput, ValidationBehavior,
         use_text_field, use_text_field_state,
@@ -97,7 +97,7 @@ fn Field(props: Props, focus: StoredValue<Option<Focus>>) -> impl IntoView {
     });
     let field = use_text_field(UseTextFieldInput {
         state,
-        id: Some("perf-input".to_owned()),
+        id: Some("perf-input".into()),
         element: Signal::stored(TextFieldElement::Input),
         input_type: Signal::stored(InputType::Text),
         is_disabled: props.disabled.into(),
@@ -146,14 +146,14 @@ fn Field(props: Props, focus: StoredValue<Option<Focus>>) -> impl IntoView {
         focus.try_update_value(|focus| *focus = None);
     });
     let is_invalid = field.is_invalid;
-    let error_message_props = field.error_message_props;
+    let error_message_props = field.error_message;
     view! {
-        <label {..field.label_props.into_attrs()}>"Name"</label>
-        <input {..field.input_props.into_attrs()} />
-        <p {..field.description_props.into_attrs()}>"Shown to others."</p>
+        <label {..field.label.attrs()}>"Name"</label>
+        <input {..field.input.attrs()} />
+        <p {..field.description.attrs()}>"Shown to others."</p>
         <div id="perf-error-slot">
             <Show when=move || is_invalid.get()>
-                <p {..error_message_props.clone().into_attrs()}>"Invalid name."</p>
+                <p {..error_message_props.attrs()}>"Invalid name."</p>
             </Show>
         </div>
     }

@@ -33,7 +33,8 @@ fn Items() -> impl IntoView {
 
 /// Listbox features, as react-aria-components' `ListBox` tests render them:
 /// - `#lbf-sections`: multiple selection; a section with the header "Veggies" (Lettuce, Tomato,
-///   Onion), a separator, a section labelled "Protein" (Ham, Tuna, Tofu).
+///   Onion), a separator, a section labelled "Protein" (Ham, Tuna, Tofu); `#lbf-toggle-heading`
+///   unmounts and mounts the "Veggies" heading.
 /// - `#lbf-replace`: multiple selection with replace behavior and an action (Cat, Dog,
 ///   Kangaroo); selection in `#lbf-replace-selection`, actions in `#lbf-replace-actions`.
 /// - `#lbf-action`: no selection, an action; actions in `#lbf-action-actions`.
@@ -43,6 +44,7 @@ fn Items() -> impl IntoView {
 /// - `#lbf-grid`: grid layout, two columns.
 /// - `#lbf-page`: 30 options ("Option 1", ...) in a scrolling listbox.
 /// - `#lbf-wrap`: `should_focus_wrap`.
+/// - `#lbf-own-id`: a listbox with its own id (`lbf-listbox-own-id`).
 /// - `#lbf-disabled-selection`: Dog disabled with `DisabledBehavior::Selection`;
 ///   `#lbf-item-disabled-behavior`: Dog disabled with its own `DisabledBehavior::Selection`,
 ///   Kangaroo disabled.
@@ -71,6 +73,7 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
             })
             .aria_label("Protein");
     });
+    let heading_shown = RwSignal::new(true);
     let replace_selection = RwSignal::new(String::new());
     let replace_actions = RwSignal::new(Vec::<String>::new());
     let actions = RwSignal::new(Vec::<String>::new());
@@ -142,7 +145,9 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
         <div id="lbf-sections">
             <ListBox collection=sections selection_mode=SelectionMode::Multiple aria_label="Sandwich contents">
                 <ListBoxSection key="veggies">
-                    <ListBoxSectionHeading />
+                    <Show when=move || heading_shown.get()>
+                        <ListBoxSectionHeading />
+                    </Show>
                     <ListBoxItem key="lettuce">"Lettuce"</ListBoxItem>
                     <ListBoxItem key="tomato">"Tomato"</ListBoxItem>
                     <ListBoxItem key="onion">"Onion"</ListBoxItem>
@@ -154,6 +159,9 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
                     <ListBoxItem key="tofu">"Tofu"</ListBoxItem>
                 </ListBoxSection>
             </ListBox>
+            <button id="lbf-toggle-heading" on:click=move |_| heading_shown.update(|shown| *shown = !*shown)>
+                "Hide or show the heading"
+            </button>
         </div>
 
         <div id="lbf-replace">
@@ -229,6 +237,12 @@ pub fn PageAtomListBoxFeatures() -> impl IntoView {
 
         <div id="lbf-wrap">
             <ListBox collection=animals() should_focus_wrap=true aria_label="Wrapping">
+                <Items />
+            </ListBox>
+        </div>
+
+        <div id="lbf-own-id">
+            <ListBox collection=animals() aria_label="Own id" id="lbf-listbox-own-id">
                 <Items />
             </ListBox>
         </div>

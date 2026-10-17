@@ -54,9 +54,9 @@ pub fn PageUseKeyboard() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseKeyboardReturn">
-                    <ApiRow name="props" ty="UseKeyboardProps">
+                    <ApiRow name="target" ty="Part<UseKeyboardProps>">
                         "The "<Code inline=true>"keydown"</Code>" and "<Code inline=true>"keyup"</Code>" handlers. Spread them onto "
-                        "a focusable element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        "a focusable element with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -72,7 +72,7 @@ pub fn PageUseKeyboard() -> impl IntoView {
 
                         let disabled = RwSignal::new(false);
 
-                        let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
+                        let UseKeyboardReturn { target } = use_keyboard(UseKeyboardInput {
                             is_disabled: disabled.into(),
                             on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
                                 log!("{} pressed", e.key_value());
@@ -82,7 +82,7 @@ pub fn PageUseKeyboard() -> impl IntoView {
                         });
 
                         view! {
-                            <div tabindex="0" {..props.into_attrs()}>"Focus me and press keys"</div>
+                            <div tabindex="0" {..target.attrs()}>"Focus me and press keys"</div>
                         }
                     "#)}
                 </Code>
@@ -128,13 +128,13 @@ pub fn PageUseKeyboard() -> impl IntoView {
                                 true
                             });
 
-                        let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
+                        let UseKeyboardReturn { target } = use_keyboard(UseKeyboardInput {
                             shortcuts: Some(shortcuts),
                             allow_repeats: true, // holding an arrow key keeps moving
                             ..Default::default()
                         });
 
-                        view! { <div tabindex="0" {..props.into_attrs()}>"Focus me"</div> }
+                        view! { <div tabindex="0" {..target.attrs()}>"Focus me"</div> }
                     "#)}
                 </Code>
 

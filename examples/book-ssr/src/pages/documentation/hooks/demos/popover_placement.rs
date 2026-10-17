@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::{
         focus_scope::FocusScope,
         toggle_button::{ToggleButton, ToggleButtonGroup},
@@ -47,8 +47,8 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
     let title_id = use_id("placement-title");
 
     let UsePopoverReturn {
-        props,
-        trigger_props,
+        popover,
+        trigger,
         id,
         placement: resolved_placement,
         ..
@@ -70,25 +70,26 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
     });
 
     let UseOverlayTriggerReturn {
-        props: overlay_trigger,
+        trigger: overlay_trigger,
     } = use_overlay_trigger(UseOverlayTriggerInput {
         is_open,
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
-    let UseButtonReturn {
-        props: button_props,
-        ..
-    } = use_button(UseButtonInput {
+    // Its signals go into the button's input: the button renders them.
+    let overlay_trigger = overlay_trigger
+        .props()
+        .expect("nothing else renders the trigger's props");
+    let UseButtonReturn { button, .. } = use_button(UseButtonInput {
         on_press: Some(Callback::new(move |_| state.toggle())),
         aria_expanded: overlay_trigger.aria_expanded,
         aria_controls: overlay_trigger.aria_controls,
         ..UseButtonInput::default()
     });
-    let (button_attrs, button_styles) = button_props.into_parts();
-    let (popover_attrs, popover_styles) = props.into_parts();
-    let popover_attrs = StoredValue::new(popover_attrs);
-    let popover_styles = StoredValue::new(popover_styles);
+    let (button_attrs, button_styles) = button.attrs();
+    // `<Show>` mounts the popover on every opening, and each mount spreads the part again. A
+    // `StoredValue` makes the part `Copy` for the nested children closures.
+    let popover = StoredValue::new(popover);
     let title_id = StoredValue::new(title_id);
 
     view! {
@@ -136,7 +137,7 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
         </div>
 
         <div class="demo-popover-stage">
-            <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles class="demo-btn">
+            <button {..button_attrs} {..trigger.attrs()} style=button_styles class="demo-btn">
                 "Open popover"
             </button>
         </div>
@@ -151,25 +152,30 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
             <Show when=move || is_open.get()>
                 <div class="demo-popover-underlay"/>
                 <FocusScope contain=true restore_focus=true auto_focus=true>
-                    <div
-                        {..popover_attrs.get_value()}
-                        style=popover_styles.get_value()
-                        class="demo-popover"
-                        role="dialog"
-                        aria-labelledby=title_id.get_value()
-                        tabindex="-1"
-                    >
-                        <h2 id=title_id.get_value() class="demo-overlay-title">"Placement"</h2>
-                        // Differs from the requested side when the popover had to flip.
-                        <p class="demo-overlay-text">
-                            {move || {
-                                format!(
-                                    "Opened on the {} side.",
-                                    resolved_placement.get().map_or("?", PlacementAxis::as_str),
-                                )
-                            }}
-                        </p>
-                    </div>
+                    {
+                        let (attrs, styles) = popover.with_value(|popover| popover.attrs());
+                        view! {
+                            <div
+                                {..attrs}
+                                style=styles
+                                class="demo-popover"
+                                role="dialog"
+                                aria-labelledby=title_id.get_value()
+                                tabindex="-1"
+                            >
+                                <h2 id=title_id.get_value() class="demo-overlay-title">"Placement"</h2>
+                                // Differs from the requested side when the popover had to flip.
+                                <p class="demo-overlay-text">
+                                    {move || {
+                                        format!(
+                                            "Opened on the {} side.",
+                                            resolved_placement.get().map_or("?", PlacementAxis::as_str),
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                        }
+                    }
                 </FocusScope>
             </Show>
         </Portal>

@@ -9,7 +9,7 @@
 //! `change-ends`).
 
 use leptonic::{
-    IntoAttrs, Orientation, RGB8, RgbChannel,
+    Orientation, RGB8, RgbChannel,
     hooks::color::{
         UseColorSliderInput, UseColorSliderReturn, UseColorSliderStateInput, use_color_slider,
         use_color_slider_state,
@@ -69,15 +69,19 @@ fn Slider(
         name: None,
         form: None,
     });
-    let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
-    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    let (track_attrs, slider_track_styles) = slider
+        .track
+        .props()
+        .expect("the first track takes the props")
+        .into_parts();
+    let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
     let formatted = state.formatted_value();
     view! {
-        <output {..slider.output_props.into_attrs()} class="perf-output">
+        <output {..slider.output.attrs()} class="perf-output">
             {formatted}
         </output>
         <div
-            {..slider.group_props.into_attrs()}
+            {..slider.group.attrs()}
             {..track_attrs}
             class="perf-track"
             style=slider_track_styles
@@ -90,7 +94,7 @@ fn Slider(
                 style=thumb_styles
                     .merge(Styles::new().add_unchecked("width", "10px").add_unchecked("height", "20px"))
             >
-                <input {..thumb.input_props.into_attrs()} style=input_styles />
+                <input {..thumb.input.attrs()} style=input_styles />
             </div>
         </div>
     }

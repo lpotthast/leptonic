@@ -121,7 +121,7 @@ pub fn PageAtomTextField() -> impl IntoView {
                         <ApiRow name="input_mode" ty="Option<InputMode>" default="None">"Which virtual keyboard to show."</ApiRow>
                         <ApiRow name="enter_key_hint" ty="Option<EnterKeyHint>" default="None">"The label of the virtual keyboard\u{2019}s Enter key."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>"."
                         </ApiRow>
@@ -258,18 +258,23 @@ pub fn PageAtomTextField() -> impl IntoView {
                     </p>
                     <DocTable headers=&["Constructor", "For"]>
                         <TableRow>
-                            <TableCell><Code inline=true>"InputContext::text_field(input_props, element, state)"</Code></TableCell>
+                            <TableCell><Code inline=true>"InputContext::text_field(input, value, element, state)"</Code></TableCell>
                             <TableCell>
                                 "A field built with "<Code inline=true>"use_text_field"</Code>", from its "
-                                <Code inline=true>"input_props"</Code>". It can render an "<Code inline=true>"Input"</Code>" or a "
+                                <Code inline=true>"input"</Code>" part. It can render an "<Code inline=true>"Input"</Code>" or a "
                                 <Code inline=true>"TextArea"</Code>"; "<Code inline=true>"element"</Code>" (an "
-                                <Code inline=true>"RwSignal<TextFieldElement>"</Code>", also the hook's "<Code inline=true>"element"</Code>
-                                ") tells the hook which of them is rendered."
+                                <Code inline=true>"RwSignal<TextFieldElement>"</Code>", also the hook\u{2019}s "<Code inline=true>"element"</Code>
+                                ") tells the hook which of them is rendered, "<Code inline=true>"value"</Code>" (the field\u{2019}s "
+                                "value) is a text area\u{2019}s initial content."
                             </TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"InputContext::new(attrs, state)"</Code></TableCell>
-                            <TableCell>"Any other input attributes, cloned for each rendered input."</TableCell>
+                            <TableCell>
+                                "Any other input attributes, as a "<Code inline=true>"Part"</Code>" of attributes (e.g. "
+                                <Code inline=true>"input.map(IntoAttrs::into_attrs)"</Code>" for a hook\u{2019}s input part): "
+                                "each rendered input takes them from the part."
+                            </TableCell>
                         </TableRow>
                     </DocTable>
                     <ApiTable kind=ApiKind::Fields of="InputContext">

@@ -49,9 +49,9 @@ pub fn PageUseFocusWithin() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseFocusWithinReturn">
-                    <ApiRow name="props" ty="UseFocusWithinProps">
+                    <ApiRow name="target" ty="Part<UseFocusWithinProps>">
                         "The "<Code inline=true>"focusin"</Code>" and "<Code inline=true>"focusout"</Code>
-                        " listeners. Spread them onto the container with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        " listeners. Spread them onto the container with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                     <ApiRow name="is_focus_within" ty="Signal<bool>">"Whether focus is currently inside the container."</ApiRow>
                 </ApiTable>
@@ -67,14 +67,14 @@ pub fn PageUseFocusWithin() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::hooks::focus::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within};
 
-                        let UseFocusWithinReturn { props, is_focus_within } =
+                        let UseFocusWithinReturn { target, is_focus_within } =
                             use_focus_within(UseFocusWithinInput::default());
 
                         view! {
                             <div
                                 class="field-group"
                                 data-focus-within=move || is_focus_within.get().then_some("true")
-                                {..props.into_attrs()}
+                                {..target.attrs()}
                             >
                                 <input aria-label="Search"/>
                                 <button>"Search"</button>

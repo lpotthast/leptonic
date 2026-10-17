@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     flag,
     hooks::interactions::{
@@ -15,7 +14,7 @@ pub fn HoverDemo() -> impl IntoView {
     let (events, set_events) = signal(VecDeque::<String>::new());
     let disabled = RwSignal::new(false);
 
-    let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput {
+    let UseHoverReturn { target, is_hovered } = use_hover(UseHoverInput {
         is_disabled: disabled.into(),
         on_hover_start: Some(Callback::new(move |e: HoverStartEvent| {
             set_events.update(|events| {
@@ -34,7 +33,7 @@ pub fn HoverDemo() -> impl IntoView {
 
     view! {
         // `data-hovered` shows the hook's `is_hovered` state to CSS.
-        <div {..props.into_attrs()} class="demo-hover-target" data-hovered=flag(is_hovered)>
+        <div {..target.attrs()} class="demo-hover-target" data-hovered=flag(is_hovered)>
             "Hover me"
         </div>
 

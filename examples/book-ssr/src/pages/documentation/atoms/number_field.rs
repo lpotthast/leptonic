@@ -136,7 +136,7 @@ pub fn PageAtomNumberField() -> impl IntoView {
                         <ApiRow name="increment_aria_label, decrement_aria_label" ty="MaybeProp<String>" default="None">
                             "Replace the stepper buttons\u{2019} names (\u{201c}Increase \u{2026}\u{201d}, \u{201c}Decrease \u{2026}\u{201d})."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>"."
                         </ApiRow>

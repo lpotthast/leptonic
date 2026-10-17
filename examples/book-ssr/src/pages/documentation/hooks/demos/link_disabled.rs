@@ -13,7 +13,7 @@ pub fn LinkDisabledDemo() -> impl IntoView {
         is_disabled: disabled.into(),
         ..UseLinkInput::default()
     });
-    let (link_attrs, link_styles) = link.props.into_parts();
+    let (link_attrs, link_styles) = link.link.attrs();
 
     view! {
         // Disabled, the link loses its `href` and gets `aria-disabled="true"`, which the styles use.

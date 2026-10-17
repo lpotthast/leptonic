@@ -6,10 +6,10 @@
 // Upstream: @adobe/react-spectrum/test/listbox/ListBox.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{attr, attr::Attr, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Id, IntoAttrs, Orientation, Presence,
     hooks::{
         collections::{
             CollectionOptions, Key, KeyboardDelegate, LayoutDelegate, LinkBehavior, ListLayout,
@@ -21,6 +21,8 @@ use crate::{
     utils::{
         aria::{AriaMultiselectable, AriaOrientation, AriaRole},
         id::use_id,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
     },
 };
 
@@ -42,13 +44,16 @@ pub struct UseListBoxInput {
     pub state: ListState,
     /// The listbox element; the hook's props capture it.
     pub element: CapturedElement,
+    /// Marked while the listbox's component is rendered: `use_select`'s and `use_combobox`'s
+    /// listbox, whose trigger refers to it only then.
+    pub presence: Option<Presence>,
     /// The element id. Generated when `None`. Set this when another element references the
     /// listbox, e.g. a select trigger's `aria-controls`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the listbox (a signal: e.g. a field's label ids follow
     /// whether its label is rendered).
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub orientation: Signal<Orientation>,
     /// Items stacked (one per row/column) or wrapping in a grid.
     pub layout: ListLayout,
@@ -97,9 +102,9 @@ impl std::fmt::Debug for UseListBoxInput {
 pub struct ListBoxData {
     pub state: ListState,
     /// The listbox element id; option ids derive from it.
-    pub id: String,
+    pub id: Id,
     /// See `UseSelectableItemInput::collection_id`.
-    pub collection_id: String,
+    pub collection_id: Id,
     pub should_select_on_press_up: bool,
     pub should_focus_on_hover: bool,
     pub link_behavior: Signal<LinkBehavior>,
@@ -110,20 +115,21 @@ pub struct ListBoxData {
     pub is_virtualized: bool,
 }
 
-/// Return value of [`use_listbox`].
+/// The return value of [`use_listbox`].
 #[derive(Debug)]
 pub struct UseListBoxReturn {
-    pub props: UseListBoxProps,
+    /// The listbox element.
+    pub listbox: Part<UseListBoxProps>,
     pub data: ListBoxData,
 }
 
 /// Props for the listbox element.
 #[derive(Debug)]
 pub struct UseListBoxProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
     pub aria_orientation: Signal<AriaOrientation>,
     /// Focus, keyboard and tab-index handling (`use_selectable_list`), including focus-within
@@ -131,13 +137,27 @@ pub struct UseListBoxProps {
     pub collection: UseSelectableCollectionProps,
 }
 
+impl Remount for UseListBoxProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_multiselectable: self.aria_multiselectable,
+            aria_orientation: self.aria_orientation,
+            collection: self.collection.remount(),
+        }
+    }
+}
+
 pub type UseListBoxAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
-    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaMultiselectable>>,
+    SignalAttr<AriaOrientation>,
     UseSelectableCollectionAttrs,
 );
 
@@ -146,12 +166,12 @@ impl IntoAttrs for UseListBoxProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
-            Attr(attr::AriaOrientation, self.aria_orientation),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-multiselectable", self.aria_multiselectable),
+            signal_attr("aria-orientation", self.aria_orientation),
             self.collection.into_attrs(),
         )
     }
@@ -193,7 +213,7 @@ impl IntoAttrs for UseListBoxProps {
 /// });
 /// let data = listbox.data.clone();
 /// view! {
-///     <ul {..listbox.props.into_attrs()}>
+///     <ul {..listbox.listbox.attrs()}>
 ///         <For each=move || fruits.get() key=|f| f.id let:fruit>
 ///             {
 ///                 let option = use_option(UseOptionInput {
@@ -201,7 +221,7 @@ impl IntoAttrs for UseListBoxProps {
 ///                     key: fruit.id.into(),
 ///                     on_context_menu: None,
 ///                 });
-///                 let (attrs, styles) = option.props.into_parts();
+///                 let (attrs, styles) = option.option.attrs();
 ///                 view! { <li {..attrs} style=styles>{fruit.name}</li> }
 ///             }
 ///         </For>
@@ -213,6 +233,7 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
     let UseListBoxInput {
         state,
         element,
+        presence,
         id,
         aria_label,
         aria_labelledby,
@@ -231,6 +252,9 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
     } = input;
 
     let id = id.unwrap_or_else(|| use_id("listbox"));
+    if let Some(presence) = &presence {
+        presence.hold();
+    }
 
     // Pressing a link in a toggle-selection list opens it; selecting it needs a checkbox. Decided
     // by the configured selection behavior: in the touch selection mode a long press enters
@@ -255,7 +279,8 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
         layout_delegate,
         options,
     })
-    .props;
+    .collection
+    .into_props();
 
     let focus_within = use_focus_within(UseFocusWithinInput {
         on_focus_within: on_focus,
@@ -263,7 +288,8 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
         on_focus_within_change: on_focus_change,
         ..UseFocusWithinInput::default()
     })
-    .props;
+    .target
+    .into_props();
     collection.on_focusin = collection.on_focusin.chain(focus_within.on_focusin);
     collection.on_focusout = collection.on_focusout.chain(focus_within.on_focusout);
 
@@ -280,7 +306,7 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
     };
 
     UseListBoxReturn {
-        props: UseListBoxProps {
+        listbox: Part::stored(UseListBoxProps {
             id,
             role: AriaRole::Listbox,
             aria_label,
@@ -291,7 +317,7 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
             }),
             aria_orientation: Signal::derive(move || orientation.get().into()),
             collection,
-        },
+        }),
         data,
     }
 }

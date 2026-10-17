@@ -88,7 +88,7 @@ pub fn ReorderDemo() -> impl IntoView {
         },
     });
     let element = CapturedElement::new();
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+    let UseGridListReturn { grid_list, data } = use_grid_list(UseGridListInput {
         aria_label: "Tasks".into(),
         // Select when the press ends, so that dragging a row doesn't select it.
         should_select_on_press_up: true,
@@ -147,12 +147,12 @@ pub fn ReorderDemo() -> impl IntoView {
         is_disabled: disabled.into(),
     });
     let UseDroppableCollectionReturn {
-        collection_props,
+        collection: drop_collection,
         data: drop,
     } = use_droppable_collection(UseDroppableCollectionInput {
         state: drop_state,
         element,
-        collection_id: props.id.clone(),
+        collection_id: data.id.clone(),
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
             element,
@@ -170,7 +170,7 @@ pub fn ReorderDemo() -> impl IntoView {
 
     let last = move || tasks.with(|tasks| tasks.last().copied());
     view! {
-        <div {..props.into_attrs()} {..collection_props.into_attrs()} class="demo-dnd-list">
+        <div {..grid_list.attrs()} {..drop_collection.attrs()} class="demo-dnd-list">
             <For
                 each=move || tasks.get()
                 key=|task| *task
@@ -211,8 +211,8 @@ fn TaskRow(
 ) -> impl IntoView {
     let key = Key::from(task);
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row,
+        cell,
         is_selected,
         is_focus_visible,
         ..
@@ -223,7 +223,9 @@ fn TaskRow(
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let UseDraggableItemReturn { mut drag_props, .. } = use_draggable_item(UseDraggableItemInput {
+    let UseDraggableItemReturn {
+        item: drag_item, ..
+    } = use_draggable_item(UseDraggableItemInput {
         state: drag_state,
         key: key.clone(),
         has_drag_button: false,
@@ -236,24 +238,27 @@ fn TaskRow(
     };
     // The row is a drop target of keyboard drags too (rows that can't take the drop are hidden from them).
     let element = CapturedElement::new();
-    let UseDroppableItemReturn { drop_props, .. } = use_droppable_item(UseDroppableItemInput {
+    let UseDroppableItemReturn {
+        item: drop_item, ..
+    } = use_droppable_item(UseDroppableItemInput {
         collection: drop.clone(),
         target: DropTarget::item(key, DropPosition::On).into(),
         element,
         activate_button: None,
     });
-    // Both hooks describe the row: join their descriptions.
+    // The row renders both items' props, and both hooks describe it: take the props to join their
+    // descriptions.
+    let mut drag_props = drag_item
+        .props()
+        .expect("only the row renders the drag item");
+    let drop_props = drop_item
+        .props()
+        .expect("only the row renders the drop item");
     let (drag_description, drop_description) =
         (drag_props.aria_describedby, drop_props.aria_describedby);
-    drag_props.aria_describedby = Signal::derive(move || {
-        let ids: Vec<String> = [drag_description.get(), drop_description.get()]
-            .into_iter()
-            .flatten()
-            .collect();
-        (!ids.is_empty()).then(|| ids.join(" "))
-    });
+    drag_props.aria_describedby = leptonic::IdRefs::derive([drag_description, drop_description]);
     let aria_hidden = drop_props.aria_hidden;
-    let (row_attrs, row_styles) = row_props.into_parts();
+    let (row_attrs, row_styles) = row.attrs();
 
     view! {
         <DropIndicator task position=DropPosition::Before drop/>
@@ -267,7 +272,7 @@ fn TaskRow(
             data-dragging=move || is_dragging.get().then_some("true")
             data-focus-visible=move || is_focus_visible.get().then_some("")
         >
-            <div {..grid_cell_props.into_attrs()} class="demo-dnd-cell">
+            <div {..cell.attrs()} class="demo-dnd-cell">
                 <span class="demo-dnd-check" aria-hidden="true">{move || if is_selected.get() { "\u{2713}" } else { "" }}</span>
                 <span class="demo-dnd-grip" aria-hidden="true">"\u{2630}"</span>
                 <span>{task}</span>
@@ -284,7 +289,7 @@ fn DropIndicator(
     drop: DroppableCollectionData,
 ) -> impl IntoView {
     let UseDropIndicatorReturn {
-        drop_indicator_props,
+        indicator,
         is_drop_target,
         is_hidden,
     } = use_drop_indicator(UseDropIndicatorInput {
@@ -294,7 +299,7 @@ fn DropIndicator(
     });
     view! {
         <div role="row" class="demo-dnd-indicator" data-drop-target=move || is_drop_target.get().then_some("true") data-hidden=move || is_hidden.get().then_some("")>
-            <div role="gridcell" {..drop_indicator_props.into_attrs()}></div>
+            <div role="gridcell" {..indicator.attrs()}></div>
         </div>
     }
 }

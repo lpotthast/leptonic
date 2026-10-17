@@ -6,17 +6,22 @@ use web_sys::FocusEvent;
 
 use super::progress_bar::ProgressBarIdContext;
 use crate::{
-    IdRefs,
+    Id,
     hooks::{
-        button::{ButtonFormAttributes, ButtonType, UseButtonInput, UseButtonReturn, use_button},
+        button::{
+            ButtonElementType, ButtonFormAttributes, ButtonType, UseButtonInput, UseButtonReturn,
+            use_button,
+        },
         interactions::{HoverEndEvent, HoverStartEvent, KeyboardEventWrapper, PressEvent},
+        link::LinkTarget,
     },
     utils::{
         aria::{AriaCurrent, AriaExpanded, AriaHasPopup, AriaPressed},
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
-        id::use_id,
+        id::{IdListBuilder, id_ref_prop, use_id},
         live_announcer::{Announcement, Assertiveness, announce},
+        probe::is_constant,
         styles::Styles,
     },
 };
@@ -74,7 +79,7 @@ pub fn Button(
     /// The button's id. Default: a generated one (inside an overlay trigger, the trigger's
     /// references follow it).
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<Id>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Whether an action the button started is in progress: the button stays focusable but
     /// can't be pressed. Default: `false`.
@@ -113,54 +118,72 @@ pub fn Button(
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-Button", classes);
     let progress_id = use_id("button-progress");
-    let generated_id = use_id("button");
     // Always an id (known while rendering): pending, it names the button; in an overlay trigger,
     // the trigger adopts it.
-    let id = id.unwrap_or(generated_id);
-    let own_id = id.clone();
-    let announced_id = id.clone();
-    let has_aria_label = Signal::derive(move || aria_label.read().is_some());
-    let label_progress = progress_id.clone();
+    let id = id.unwrap_or_else(|| use_id("button"));
+    let has_aria_label = move || aria_label.read().is_some();
+    // Only a pending state that can change needs the pending name and its announcement.
+    let pending_changes = !is_constant(is_pending);
+    let labelledby = if pending_changes || is_pending.get_untracked() {
+        // Pending, the progress bar joins the name: after the labelling elements, or after the
+        // button itself when it has an `aria-label` (`aria-labelledby` wins over `aria-label`).
+        let own_id = id.clone();
+        let label_progress = progress_id.clone();
+        let aria_labelledby = id_ref_prop(aria_labelledby);
+        Signal::derive(move || {
+            if !is_pending.get() {
+                return aria_labelledby.get();
+            }
+            aria_labelledby.with(|labelled_by| {
+                let named_by = match labelled_by {
+                    Some(ids) => ids,
+                    None if has_aria_label() => &own_id,
+                    None => return None,
+                };
+                let mut ids = IdListBuilder::default();
+                ids.push(named_by);
+                ids.push(&label_progress);
+                ids.finish()
+            })
+        })
+    } else {
+        id_ref_prop(aria_labelledby)
+    };
+    let announced = pending_changes.then(|| (id.clone(), progress_id.clone()));
 
     let UseButtonReturn {
-        props,
+        button,
         is_disabled,
         is_pressed,
         is_hovered,
         is_focused,
         ..
     } = use_button(UseButtonInput {
+        // Every field named: `..UseButtonInput::default()` would create a stored signal for each
+        // `Signal` field, also the ones set here (`performance.md` R3).
+        element_type: ButtonElementType::Button,
         id: Some(id),
         button_type,
         is_disabled,
         is_pending,
+        allow_focus_when_disabled: Signal::stored(false),
         auto_focus,
         prevent_focus_on_press,
         exclude_from_tab_order,
+        href: Signal::stored(None),
+        target: Signal::stored(LinkTarget::Same),
+        rel: Vec::new(),
         aria_haspopup,
         aria_expanded,
         aria_pressed,
+        aria_checked: Signal::stored(None),
+        role: None,
         aria_label,
-        // Pending, the progress bar joins the name: after the labelling elements, or after the
-        // button itself when it has an `aria-label` (`aria-labelledby` wins over `aria-label`).
-        aria_labelledby: Signal::derive(move || {
-            let labelled_by = aria_labelledby.get();
-            if !is_pending.get() {
-                return labelled_by;
-            }
-            let named_by = match &labelled_by {
-                Some(ids) => ids.as_str(),
-                None if has_aria_label.get() => own_id.as_str(),
-                None => return None,
-            };
-            [named_by, label_progress.as_str()]
-                .into_iter()
-                .collect::<IdRefs>()
-                .into_value()
-        }),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_controls: crate::utils::prop_signal(aria_controls),
+        aria_labelledby: labelledby,
+        aria_describedby: id_ref_prop(aria_describedby),
+        aria_controls: id_ref_prop(aria_controls),
         aria_current,
+        aria_disabled: Signal::stored(None),
         form,
         on_press,
         on_press_start,
@@ -175,47 +198,61 @@ pub fn Button(
         on_focus_change,
         on_key_down,
         on_key_up,
-        ..UseButtonInput::default()
+        long_press: None,
+        shortcuts: None,
+        on_context_menu: None,
     });
 
     // Announce the pending state to a user focusing the button when it starts or ends: the
-    // button's name (with the progress bar's while pending).
-    let progress = progress_id.clone();
-    Effect::new(move |was_pending: Option<bool>| {
-        let pending = is_pending.get();
-        let focused = is_focused.get();
-        let changed = was_pending.is_some_and(|was_pending| was_pending != pending);
-        if changed && focused {
-            let mut ids = IdRefs::default();
-            let labelledby = aria_labelledby.get_untracked();
-            match &labelledby {
-                Some(labelledby) => ids.push(labelledby),
-                None => ids.push(&announced_id),
+    // button's name (with the progress bar's while pending). Focus changes alone announce nothing,
+    // so the effect reads the focus untracked (react-aria-components compares the previous pending
+    // state on every run).
+    if let Some((announced_id, progress)) = announced {
+        Effect::new(move |was_pending: Option<bool>| {
+            let pending = is_pending.get();
+            let changed = was_pending.is_some_and(|was_pending| was_pending != pending);
+            if changed && is_focused.get_untracked() {
+                let mut ids = IdListBuilder::default();
+                let labelledby = aria_labelledby.get_untracked();
+                match &labelledby {
+                    Some(labelledby) => ids.push(labelledby),
+                    None => ids.push(announced_id.as_str()),
+                }
+                if pending && (labelledby.is_some() || untrack(has_aria_label)) {
+                    ids.push(&progress);
+                }
+                let ids = ids.finish();
+                announce(
+                    Announcement::LabelledBy(
+                        ids.iter()
+                            .flat_map(|ids| ids.split(' '))
+                            .map(str::to_owned)
+                            .collect(),
+                    ),
+                    Assertiveness::Assertive,
+                );
             }
-            if pending && (labelledby.is_some() || has_aria_label.get_untracked()) {
-                ids.push(&progress);
-            }
-            announce(
-                Announcement::LabelledBy(ids.ids().map(str::to_owned).collect()),
-                Assertiveness::Assertive,
-            );
-        }
-        pending
-    });
+            pending
+        });
+    }
 
-    let (button_attrs, button_styles) = props.into_parts();
+    let (button_attrs, button_styles) = button.attrs();
     let styles = button_styles.merge(styles);
 
     view! {
         <button
             {..button_attrs}
+            // Two groups, so that no effect tracks more than 3 signals (a 4th grows its source
+            // set on every rerun, `performance.md` R4): the interaction state, and the props
+            // (usually constants: no effect then).
+            {..data_flags([
+                ("data-pressed", is_pressed),
+                ("data-hovered", is_hovered),
+                ("data-focused", is_focused),
+            ])}
+            {..data_flags([("data-disabled", is_disabled), ("data-pending", is_pending)])}
             class=classes
             style=styles
-            data-pressed=flag(is_pressed)
-            data-hovered=flag(is_hovered)
-            data-focused=flag(is_focused)
-            data-disabled=flag(is_disabled)
-            data-pending=flag(is_pending)
         >
             <Provider value=ProgressBarIdContext(progress_id)>{children()}</Provider>
         </button>

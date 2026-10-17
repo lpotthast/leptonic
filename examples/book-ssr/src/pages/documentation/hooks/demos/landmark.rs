@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::{button::Button, input::Input, search_field::SearchField},
     hooks::{
         focus::{UseFocusWithinInput, use_focus_within},
@@ -18,7 +18,7 @@ fn MailLandmark(
     children: Children,
 ) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
+    let UseLandmarkReturn { landmark } = use_landmark(UseLandmarkInput {
         element,
         aria_label: label.into(),
         role,
@@ -37,7 +37,7 @@ fn MailLandmark(
     });
 
     view! {
-        <div {..props.into_attrs()} {..focus_within.props.into_attrs()} {..element.attr()} class="demo-landmark">
+        <div {..landmark.attrs()} {..focus_within.target.attrs()} {..element.attr()} class="demo-landmark">
             <p class="demo-landmark-title">{label}</p>
             {children()}
         </div>

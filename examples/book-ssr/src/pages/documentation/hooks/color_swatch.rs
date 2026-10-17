@@ -30,18 +30,18 @@ pub fn PageUseColorSwatch() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "Added to the color\u{2019}s name: the swatch is announced as \u{201c}vibrant red, Background\u{201d}."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">"The swatch\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
+                    <ApiRow name="id" ty="Option<Id>" default="None">"The swatch\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseColorSwatchReturn">
-                    <ApiRow name="color_swatch_props" ty="PropsWithStyles<UseColorSwatchProps>">
+                    <ApiRow name="swatch" ty="Part<PropsWithStyles<UseColorSwatchProps>>">
                         <Code inline=true>"role=\"img\""</Code>", "<Code inline=true>"aria-roledescription=\"color swatch\""</Code>
                         ", the id and the "<Code inline=true>"aria-label"</Code>", plus the swatch\u{2019}s background color as a "
-                        "style. "<Code inline=true>"into_inner()"</Code>" splits them into props and "<Code inline=true>"Styles"</Code>
-                        "; spread "<Code inline=true>"{..props.into_attrs()}"</Code>" and pass "<Code inline=true>"style=styles"</Code>"."
+                        "style. "<Code inline=true>"swatch.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>
+                        ": spread "<Code inline=true>"{..attrs}"</Code>" and pass "<Code inline=true>"style=styles"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -64,9 +64,9 @@ pub fn PageUseColorSwatch() -> impl IntoView {
                             id: None,
                         });
 
-                        let (props, styles) = swatch.color_swatch_props.into_inner();
+                        let (attrs, styles) = swatch.swatch.attrs();
 
-                        view! { <div {..props.into_attrs()} class="swatch" style=styles></div> }
+                        view! { <div {..attrs} class="swatch" style=styles></div> }
                     "#)}
                 </Code>
 

@@ -94,6 +94,7 @@ pub fn PageAtomGrid() -> impl IntoView {
                 <Section title="Props" id="grid-props">
                     <ApiTable kind=ApiKind::Props of="atoms::grid::Grid">
                         <ApiRow name="collection" ty="CollectionMemo">"The rows and their cells. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The grid\u{2019}s id (its rows\u{2019} and cells\u{2019} ids derive from it). Generated when not given."</ApiRow>
                         <ApiRow name="focus_mode" ty="GridFocusMode" default="Row">
                             <Code inline=true>"Row"</Code>": the arrow keys move between rows, and "<Keys keys="ArrowRight"/>
                             " into a row\u{2019}s cells. "<Code inline=true>"Cell"</Code>": they only move between cells."

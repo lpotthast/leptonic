@@ -20,6 +20,7 @@ use crate::{
     },
     utils::{
         intl_strings::{DndStrings, use_localized_strings},
+        part::Part,
         use_description::use_description,
     },
 };
@@ -48,10 +49,11 @@ pub struct UseDraggableItemInput {
     pub has_action: bool,
 }
 
-/// Return value of [`use_draggable_item`].
+/// The return value of [`use_draggable_item`].
 #[derive(Debug)]
 pub struct UseDraggableItemReturn {
-    pub drag_props: UseDragProps,
+    /// The draggable item element.
+    pub item: Part<UseDragProps>,
     /// For `use_button`, with `has_drag_button`.
     pub drag_button: UseButtonInput,
     /// The drag button's `aria-label` ("Drag Inbox", "Drag 3 selected items").
@@ -76,7 +78,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     .into();
 
     let UseDragReturn {
-        mut drag_props,
+        draggable,
         drag_button,
         is_dragging: _,
     } = use_drag(UseDragInput {
@@ -114,6 +116,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
             messages::drag_item_description(&strings.read(), modality, count, alt)
         })
     }));
+    let mut drag_props = draggable.into_props();
     let drag_description = drag_props.aria_describedby;
     drag_props.aria_describedby = Signal::derive(move || {
         // With an action, a long press selects the item on touch devices: no drag description.
@@ -164,7 +167,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     });
 
     UseDraggableItemReturn {
-        drag_props,
+        item: Part::stored(drag_props),
         drag_button: UseButtonInput {
             is_disabled,
             ..drag_button

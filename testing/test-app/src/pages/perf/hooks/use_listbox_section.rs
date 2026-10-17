@@ -67,9 +67,13 @@ pub fn PagePerf() -> impl IntoView {
             ..SelectionOptions::default()
         },
     });
-    let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+    let UseListBoxReturn {
+        listbox: props,
+        data,
+    } = use_listbox(UseListBoxInput {
         state,
         element: CapturedElement::new(),
+        presence: None,
         id: None,
         aria_label: "Options".into(),
         aria_labelledby: Signal::stored(None),
@@ -99,7 +103,7 @@ pub fn PagePerf() -> impl IntoView {
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
         <div
-            {..props.into_attrs()}
+            {..props.attrs()}
             style="max-height: 200px; overflow: auto"
         >
             <Show when=move || mounted.get()>
@@ -122,8 +126,8 @@ pub fn PagePerf() -> impl IntoView {
 #[component]
 fn PlainSection(list: ListBoxData, section: u32, options: Signal<Vec<u32>>) -> impl IntoView {
     let UseListBoxSectionReturn {
-        heading_props,
-        group_props,
+        header,
+        group: group_props,
         heading,
         ..
     } = use_listbox_section(UseListBoxSectionInput {
@@ -132,8 +136,9 @@ fn PlainSection(list: ListBoxData, section: u32, options: Signal<Vec<u32>>) -> i
     });
     let list = StoredValue::new(list);
     view! {
-        <div {..group_props.into_attrs()} data-perf-section=section>
-            {heading_props
+        <div {..group_props.attrs()} data-perf-section=section>
+            {header
+                .and_then(|header| header.props())
                 .map(|props| {
                     view! { <span {..props.into_attrs()}>{move || heading.get()}</span> }
                 })}
@@ -147,12 +152,12 @@ fn PlainSection(list: ListBoxData, section: u32, options: Signal<Vec<u32>>) -> i
 /// An option (`use_option`).
 #[component]
 fn PlainOption(list: ListBoxData, i: u32) -> impl IntoView {
-    let UseOptionReturn { props, .. } = use_option(UseOptionInput {
+    let UseOptionReturn { option: props, .. } = use_option(UseOptionInput {
         list,
         key: Key::from(i),
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <div {..attrs} style=styles data-perf-option=i>
             {format!("Option {i}")}

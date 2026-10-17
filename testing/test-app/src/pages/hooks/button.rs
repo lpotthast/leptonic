@@ -17,8 +17,8 @@ pub fn PageHookButton() -> impl IntoView {
         is_disabled: disabled.into(),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (div_attrs, div_styles) = use_button(UseButtonInput {
         id: Some("test-btn-div".into()),
@@ -27,8 +27,8 @@ pub fn PageHookButton() -> impl IntoView {
         is_disabled: disabled.into(),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (anchor_attrs, anchor_styles) = use_button(UseButtonInput {
         id: Some("test-btn-anchor".into()),
@@ -37,32 +37,32 @@ pub fn PageHookButton() -> impl IntoView {
         is_disabled: disabled.into(),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (excluded_attrs, excluded_styles) = use_button(UseButtonInput {
         id: Some("test-btn-excluded".into()),
         exclude_from_tab_order: Signal::stored(true),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (plain_in_form_attrs, plain_in_form_styles) = use_button(UseButtonInput {
         id: Some("test-btn-in-form".into()),
         on_press: Some(Callback::new(count)),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (submit_attrs, submit_styles) = use_button(UseButtonInput {
         id: Some("test-btn-submit".into()),
         button_type: ButtonType::Submit,
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (input_attrs, input_styles) = use_button(UseButtonInput {
         id: Some("test-btn-input".into()),
@@ -71,8 +71,8 @@ pub fn PageHookButton() -> impl IntoView {
         is_disabled: disabled.into(),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (blank_attrs, blank_styles) = use_button(UseButtonInput {
         id: Some("test-btn-blank".into()),
@@ -82,8 +82,8 @@ pub fn PageHookButton() -> impl IntoView {
         rel: vec![LinkRel::NoFollow],
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let (pending_attrs, pending_styles) = use_button(UseButtonInput {
         id: Some("test-btn-pending-anchor".into()),
@@ -92,11 +92,11 @@ pub fn PageHookButton() -> impl IntoView {
         is_pending: Signal::stored(true),
         ..Default::default()
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     let UseButtonReturn {
-        props: hover_props,
+        button: hover_props,
         is_hovered,
         is_focus_visible,
         ..
@@ -104,7 +104,7 @@ pub fn PageHookButton() -> impl IntoView {
         id: Some("test-btn-state".into()),
         ..Default::default()
     });
-    let (hover_attrs, hover_styles) = hover_props.into_parts();
+    let (hover_attrs, hover_styles) = hover_props.attrs();
 
     view! {
         <div id="test-page-hook-button">

@@ -7,17 +7,17 @@ use leptos::{context::Provider, portal::Portal, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    CapturedElement, IntoAttrs,
+    CapturedElement, IntoAttrs, Part,
     hooks::{
         button::{UseButtonInput, UseButtonReturn, use_button},
         focus::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
         toast::{
             QueuedToast, ToastQueue, UseToastContentProps, UseToastInput, UseToastRegionInput,
-            UseToastRegionReturn, UseToastReturn, use_toast, use_toast_region,
+            UseToastRegionReturn, UseToastReturn, UseToastTitleProps, use_toast, use_toast_region,
         },
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         i18n::{WritingDirection, use_direction},
         slot_id::SlotProps,
@@ -60,10 +60,9 @@ impl<T: Clone + Send + Sync + 'static> Clone for ToastRegionContext<T> {
 /// What a toast's parts need from it.
 #[derive(Clone)]
 struct ToastContext {
-    /// The content element's attributes (from `use_toast`).
-    content: <UseToastContentProps as IntoAttrs>::Attrs,
-    title_id: String,
-    description: StoredValue<Option<SlotProps>>,
+    content: Part<UseToastContentProps>,
+    title: Part<UseToastTitleProps>,
+    description: Part<SlotProps>,
     close_button: StoredValue<UseButtonInput>,
 }
 
@@ -100,26 +99,28 @@ where
     let render = move || {
         let (aria_label, aria_labelledby, classes, styles) = props.get_value();
         let element = CapturedElement::new();
-        let UseToastRegionReturn { region_props } = use_toast_region(UseToastRegionInput {
+        let UseToastRegionReturn {
+            region: region_props,
+        } = use_toast_region(UseToastRegionInput {
             queue,
             element,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
         });
         let UseFocusRingReturn {
-            props: focus_ring,
+            target: focus_ring,
             is_focused,
             ..
         } = use_focus_ring(UseFocusRingInput::default());
         view! {
             <Provider value=ToastRegionContext { queue }>
                 <div
-                    {..region_props.into_attrs()}
-                    {..focus_ring.into_attrs()}
+                    {..region_props.attrs()}
+                    {..focus_ring.attrs()}
                     {..element.attr()}
                     class=classes
-                    style=styles
-                    data-focused=flag(is_focused)
+                    style={styles}
+                    {..data_flags([("data-focused", is_focused)])}
                     // Portaled out of the locale's subtree (react-aria-components sets it too).
                     dir=move || match direction.get() {
                         WritingDirection::Ltr => "ltr",
@@ -170,10 +171,10 @@ pub fn Toast<T: Clone + Send + Sync + 'static>(
         return None;
     };
     let UseToastReturn {
-        toast_props,
-        content_props,
-        title_id,
-        description_props,
+        toast: toast_props,
+        content,
+        title,
+        description: description_props,
         close_button,
     } = use_toast(UseToastInput {
         queue: region.queue,
@@ -183,23 +184,23 @@ pub fn Toast<T: Clone + Send + Sync + 'static>(
         aria_describedby: Signal::default(),
     });
     let UseFocusRingReturn {
-        props: focus_ring,
+        target: focus_ring,
         is_focused,
         ..
     } = use_focus_ring(UseFocusRingInput::default());
     let context = ToastContext {
-        content: content_props.into_attrs(),
-        title_id,
-        description: StoredValue::new(Some(description_props)),
+        content,
+        title,
+        description: description_props,
         close_button: StoredValue::new(close_button),
     };
     Some(view! {
         <div
-            {..toast_props.into_attrs()}
-            {..focus_ring.into_attrs()}
+            {..toast_props.attrs()}
+            {..focus_ring.attrs()}
             class=classes
-            style=styles
-            data-focused=flag(is_focused)
+            style={styles}
+            {..data_flags([("data-focused", is_focused)])}
         >
             <Provider value=context>{children()}</Provider>
         </div>
@@ -225,9 +226,10 @@ pub fn ToastContent(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastContent", classes);
-    let context = expect_toast("ToastContent")?;
+    // One content element per toast (`Part`: a second one renders nothing).
+    let props = expect_toast("ToastContent")?.content.props()?;
     Some(view! {
-        <div {..context.content} class=classes style=styles>
+        <div {..props.into_attrs()} class=classes style=styles>
             {children()}
         </div>
     })
@@ -244,9 +246,10 @@ pub fn ToastTitle(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastTitle", classes);
-    let context = expect_toast("ToastTitle")?;
+    // One title per toast (`Part`: a second one gets no id).
+    let attrs = expect_toast("ToastTitle")?.title.attrs();
     Some(view! {
-        <div id=context.title_id class=classes style=styles>
+        <div {..attrs} class=classes style=styles>
             {children()}
         </div>
     })
@@ -263,8 +266,7 @@ pub fn ToastDescription(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-ToastDescription", classes);
-    let props = expect_toast("ToastDescription")
-        .and_then(|context| context.description.try_update_value(Option::take).flatten())?;
+    let props = expect_toast("ToastDescription").and_then(|context| context.description.props())?;
     Some(view! {
         <div {..props.into_attrs()} class=classes style=styles>
             {children()}
@@ -288,23 +290,25 @@ pub fn ToastCloseButton(
     let classes = with_default_class("leptonic-ToastCloseButton", classes);
     let context = expect_toast("ToastCloseButton")?;
     let UseButtonReturn {
-        props,
+        button: props,
         is_disabled,
         is_pressed,
         is_hovered,
         is_focused,
         ..
     } = use_button(context.close_button.get_value());
-    let (attrs, button_styles) = props.into_parts();
+    let (attrs, button_styles) = props.attrs();
     Some(view! {
         <button
             {..attrs}
             class=classes
             style=button_styles.merge(styles)
-            data-pressed=flag(is_pressed)
-            data-hovered=flag(is_hovered)
-            data-focused=flag(is_focused)
-            data-disabled=flag(is_disabled)
+            {..data_flags([
+                ("data-pressed", is_pressed),
+                ("data-hovered", is_hovered),
+                ("data-focused", is_focused),
+            ])}
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             {children()}
         </button>

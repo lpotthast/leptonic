@@ -3,11 +3,10 @@
 //! a grid list of 10 or 1,000 rows taking drops on itself, between its rows (drop indicators) and
 //! on them. Measured (`Page::measure`) and checked against its budget
 //! (`tests/budgets/hooks/use_droppable_collection.json`): mounting and unmounting the list; native
-//! drags from outside the page (synthesized `DragEvent`s: entering it, moving to another target
-//! and over the same point, leaving it, dropping between rows); keyboard drags (ArrowDown, End,
-//! Home and PageDown between its drop targets, Enter dropping between rows); and disabling and
-//! enabling it (a native drag entering it that it ignores). The fixture and the helpers here are
-//! also those of `use_droppable_collection_state`, `use_droppable_item` and `use_drop_indicator`.
+//! drags from outside the page (synthesized `DragEvent`s: entering it, moving to another target and
+//! over the same point, leaving it, dropping between rows); keyboard drags (ArrowDown, End, Home
+//! and PageDown between its drop targets, Enter dropping between rows); and disabling and enabling
+//! it (a native drag entering it that it ignores).
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -36,26 +35,26 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
 
 /// The cell of the row "Item `index`" (by its number: a lookup by text among 1,000 rows is
 /// slow).
-pub(crate) async fn cell(page: &Page<'_>, index: u32) -> Result<WebElement, Report> {
+async fn cell(page: &Page<'_>, index: u32) -> Result<WebElement, Report> {
     page.element(format!("#perf-list [data-row='{index}'] [role=gridcell]"))
         .await
 }
 
 /// The row "Item `index`" (by its number: a lookup by text among 1,000 rows is slow).
-pub(crate) async fn row(page: &Page<'_>, index: u32) -> Result<WebElement, Report> {
+async fn row(page: &Page<'_>, index: u32) -> Result<WebElement, Report> {
     page.element(format!("#perf-list [data-row='{index}']"))
         .await
 }
 
 /// The drop indicator `name` (`root`, `before-item-<i>`, `after-item-<i>`).
-pub(crate) async fn indicator(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
+async fn indicator(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
     page.element(format!("#perf-list [data-target='{name}']"))
         .await
 }
 
 /// The current drop target: the `data-target` of the drop indicator that is it, or `row <text>`
 /// for a row, or `none`. Read in one script.
-pub(crate) async fn drop_target(page: &Page<'_>) -> Result<String, Report> {
+async fn drop_target(page: &Page<'_>) -> Result<String, Report> {
     page.low_level()
         .eval(
             "const target = document.querySelector('#perf-list [data-drop-target]');
@@ -68,7 +67,7 @@ pub(crate) async fn drop_target(page: &Page<'_>) -> Result<String, Report> {
 
 /// Opens the droppable list fixture at `path` with `count` rows (10 or 1,000), once the live
 /// announcer exists (keyboard drags announce).
-pub(crate) async fn open(page: &Page<'_>, path: &str, count: u32) -> Result<(), Report> {
+async fn open(page: &Page<'_>, path: &str, count: u32) -> Result<(), Report> {
     page.goto_path(path).await?;
     page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
         .await?;
@@ -87,11 +86,7 @@ pub(crate) async fn open(page: &Page<'_>, path: &str, count: u32) -> Result<(), 
 
 /// Mounting and unmounting the list of `count` rows (10 or 1,000) at `path` (once the live
 /// announcer exists: it adds its first entry 100ms after the page announced).
-pub(crate) async fn mount_and_unmount(
-    page: &Page<'_>,
-    path: &str,
-    count: u32,
-) -> Result<(), Report> {
+async fn mount_and_unmount(page: &Page<'_>, path: &str, count: u32) -> Result<(), Report> {
     page.goto_path(path).await?;
     page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
         .await?;
@@ -112,7 +107,7 @@ pub(crate) async fn mount_and_unmount(
 }
 
 /// Starts a native drag of the text "hello world" from outside the page.
-pub(crate) async fn begin_external_drag(page: &Page<'_>) -> Result<(), Report> {
+async fn begin_external_drag(page: &Page<'_>) -> Result<(), Report> {
     DndActions::new(page)
         .begin_external_drag(&[ExternalData::Text {
             kind: "text/plain",
@@ -123,7 +118,7 @@ pub(crate) async fn begin_external_drag(page: &Page<'_>) -> Result<(), Report> {
 
 /// Starts a keyboard drag on the drag source ("Drag me"): the list itself becomes the drop
 /// target (its root drop indicator gets focus).
-pub(crate) async fn start_keyboard_drag(page: &Page<'_>) -> Result<(), Report> {
+async fn start_keyboard_drag(page: &Page<'_>) -> Result<(), Report> {
     page.element("#perf-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&page.element("#perf-draggable").await?)

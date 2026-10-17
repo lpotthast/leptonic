@@ -46,16 +46,16 @@ pub fn PageUseDisclosure() -> impl IntoView {
                     <ApiTable kind=ApiKind::Return of="UseDisclosureReturn">
                         <ApiRow name="button" ty="UseButtonInput">
                             "The trigger\u{2019}s configuration: its id, "<Code inline=true>"aria-expanded"</Code>", "
-                            <Code inline=true>"aria-controls"</Code>" and the toggling. Pass it to "
+                            <Code inline=true>"aria-controls"</Code>" (while the panel is rendered) and the toggling. Pass it to "
                             <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
                             " (add your own settings with struct update syntax)."
                         </ApiRow>
-                        <ApiRow name="panel_props" ty="UseDisclosurePanelProps">
+                        <ApiRow name="panel" ty="Part<UseDisclosurePanelProps>">
                             "For the panel: its id, "<Code inline=true>"role=\"group\""</Code>", "<Code inline=true>"aria-labelledby"</Code>
                             " (the trigger), "<Code inline=true>"aria-hidden"</Code>" and "<Code inline=true>"hidden=\"until-found\""</Code>
-                            " while collapsed, and its capture. Spread with "<Code inline=true>"{..panel_props.into_attrs()}"</Code>"."
+                            " while collapsed, and its capture. Spread with "<Code inline=true>"{..panel.attrs()}"</Code>"."
                         </ApiRow>
-                        <ApiRow name="trigger_id" ty="String">"The trigger\u{2019}s id (also in "<Code inline=true>"button"</Code>")."</ApiRow>
+                        <ApiRow name="trigger_id" ty="Id">"The trigger\u{2019}s id (also in "<Code inline=true>"button"</Code>")."</ApiRow>
                         <ApiRow name="panel_element" ty="CapturedElement">"The panel element, once rendered."</ApiRow>
                     </ApiTable>
                 </Section>
@@ -64,7 +64,6 @@ pub fn PageUseDisclosure() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                IntoAttrs,
                                 hooks::{
                                     button::use_button,
                                     disclosure::{
@@ -79,11 +78,11 @@ pub fn PageUseDisclosure() -> impl IntoView {
                             let state = use_disclosure_state(UseDisclosureStateInput::default());
                             let disclosure = use_disclosure(UseDisclosureInput { state, is_disabled: false.into() });
 
-                            let (button_attrs, button_styles) = use_button(disclosure.button).props.into_parts();
+                            let (button_attrs, button_styles) = use_button(disclosure.button).button.attrs();
 
                             view! {
                                 <h3><button {..button_attrs} style=button_styles>"Details"</button></h3>
-                                <div {..disclosure.panel_props.into_attrs()}>"Hidden content"</div>
+                                <div {..disclosure.panel.attrs()}>"Hidden content"</div>
                             }
                         "#)}
                     </Code>

@@ -83,20 +83,29 @@ fn Checkbox(
         state,
         is_indeterminate: props.indeterminate.into(),
         options: ToggleOptions {
-            id: Some("perf-input".to_owned()),
+            id: Some("perf-input".into()),
             is_disabled: props.disabled.into(),
             is_read_only: props.read_only.into(),
             is_invalid: props.invalid.into(),
             name: Some("subscribe".to_owned()),
             ..ToggleOptions::default()
         },
+        validation: None,
     });
     pressed.set_value(Some(checkbox.is_pressed));
     on_cleanup(move || {
         pressed.try_update_value(|pressed| *pressed = None);
     });
-    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
-    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let (label_attrs, label_styles) = checkbox
+        .label
+        .props()
+        .expect("the first label takes its props")
+        .into_parts();
+    let (input_attrs, input_styles) = checkbox
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <label {..label_attrs} style=label_styles>
             <input {..input_attrs} style=input_styles />

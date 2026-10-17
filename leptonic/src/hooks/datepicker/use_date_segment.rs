@@ -3,10 +3,6 @@
 // Upstream: @adobe/react-spectrum/test/datepicker/DateField.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/datepicker/DatePicker.test.js @ 99e6102368
 use leptos::{
-    attr::{
-        self, Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
     ev::{self},
     prelude::*,
 };
@@ -18,7 +14,7 @@ use super::{
     use_date_field::{DateFieldData, display_name},
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, HourCycle, IntoAttrs, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, HourCycle, Id, IntoAttrs, OnEvent,
     PropsWithStyles,
     hooks::{
         interactions::{UseKeyboardInput, use_keyboard},
@@ -36,7 +32,9 @@ use crate::{
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         number_formatter::NumberFormatOptions,
         number_parser::NumberParser,
+        part::{Part, Remount},
         platform::{device::is_ios, use_platform_check},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         styles::Styles,
     },
 };
@@ -66,23 +64,25 @@ pub struct UseDateSegmentInput<V: DateValue> {
     pub element: CapturedElement,
 }
 
-/// Return value of [`use_date_segment`].
+/// The return value of [`use_date_segment`].
+#[derive(Debug)]
 pub struct UseDateSegmentReturn {
-    pub segment_props: PropsWithStyles<UseDateSegmentProps>,
+    /// The segment element: `let (attrs, styles) = segment.attrs();`.
+    pub segment: Part<PropsWithStyles<UseDateSegmentProps>>,
 }
 
 /// Props of a date segment (a `div` or `span`, editable as text).
 #[derive(Debug)]
 pub struct UseDateSegmentProps {
-    pub id: String,
+    pub id: Id,
     pub role: Signal<AriaRole>,
     pub aria_valuenow: Signal<Option<String>>,
     pub aria_valuetext: Signal<Option<String>>,
     pub aria_valuemin: Signal<Option<String>>,
     pub aria_valuemax: Signal<Option<String>>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_required: Signal<Option<AriaRequired>>,
@@ -105,30 +105,66 @@ pub struct UseDateSegmentProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseDateSegmentProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_valuenow: self.aria_valuenow,
+            aria_valuetext: self.aria_valuetext,
+            aria_valuemin: self.aria_valuemin,
+            aria_valuemax: self.aria_valuemax,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_invalid: self.aria_invalid,
+            aria_readonly: self.aria_readonly,
+            aria_required: self.aria_required,
+            aria_disabled: self.aria_disabled,
+            data_placeholder: self.data_placeholder,
+            contenteditable: self.contenteditable,
+            spellcheck: self.spellcheck,
+            autocorrect: self.autocorrect,
+            enterkeyhint: self.enterkeyhint,
+            inputmode: self.inputmode,
+            tabindex: self.tabindex,
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            on_beforeinput: self.on_beforeinput.clone(),
+            on_input: self.on_input.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_mousedown: self.on_mousedown.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseDateSegmentAttrs = (
     (
-        Attr<attr::Id, String>,
-        Attr<attr::Role, Signal<AriaRole>>,
-        Attr<attr::AriaValuenow, Signal<Option<String>>>,
-        Attr<attr::AriaValuetext, Signal<Option<String>>>,
-        Attr<attr::AriaValuemin, Signal<Option<String>>>,
-        Attr<attr::AriaValuemax, Signal<Option<String>>>,
-        Attr<attr::AriaLabel, Signal<Option<String>>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        FixedAttr,
+        SignalAttr<AriaRole>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
     ),
     (
-        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-        Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-        Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
-        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-        CustomAttr<&'static str, Signal<Option<&'static str>>>,
-        Attr<attr::Contenteditable, Signal<Option<&'static str>>>,
-        Attr<attr::Spellcheck, Signal<Option<&'static str>>>,
-        CustomAttr<&'static str, Signal<Option<&'static str>>>,
-        Attr<attr::Enterkeyhint, Signal<Option<&'static str>>>,
-        Attr<attr::Inputmode, Signal<Option<&'static str>>>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
+        SignalAttr<Option<AriaInvalid>>,
+        SignalAttr<Option<AriaReadonly>>,
+        SignalAttr<Option<AriaRequired>>,
+        SignalAttr<Option<AriaDisabled>>,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<Option<i32>>,
     ),
     (
         OnEvent<ev::keydown>,
@@ -149,28 +185,28 @@ impl IntoAttrs for UseDateSegmentProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             (
-                Attr(attr::Id, self.id),
-                Attr(attr::Role, self.role),
-                Attr(attr::AriaValuenow, self.aria_valuenow),
-                Attr(attr::AriaValuetext, self.aria_valuetext),
-                Attr(attr::AriaValuemin, self.aria_valuemin),
-                Attr(attr::AriaValuemax, self.aria_valuemax),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
+                fixed_attr("id", self.id),
+                signal_attr("role", self.role),
+                signal_attr("aria-valuenow", self.aria_valuenow),
+                signal_attr("aria-valuetext", self.aria_valuetext),
+                signal_attr("aria-valuemin", self.aria_valuemin),
+                signal_attr("aria-valuemax", self.aria_valuemax),
+                signal_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-describedby", self.aria_describedby),
             ),
             (
-                Attr(attr::AriaInvalid, self.aria_invalid),
-                Attr(attr::AriaReadonly, self.aria_readonly),
-                Attr(attr::AriaRequired, self.aria_required),
-                Attr(attr::AriaDisabled, self.aria_disabled),
-                custom_attribute("data-placeholder", self.data_placeholder),
-                Attr(attr::Contenteditable, self.contenteditable),
-                Attr(attr::Spellcheck, self.spellcheck),
-                custom_attribute("autocorrect", self.autocorrect),
-                Attr(attr::Enterkeyhint, self.enterkeyhint),
-                Attr(attr::Inputmode, self.inputmode),
-                Attr(attr::Tabindex, self.tabindex),
+                signal_attr("aria-invalid", self.aria_invalid),
+                signal_attr("aria-readonly", self.aria_readonly),
+                signal_attr("aria-required", self.aria_required),
+                signal_attr("aria-disabled", self.aria_disabled),
+                signal_attr("data-placeholder", self.data_placeholder),
+                signal_attr("contenteditable", self.contenteditable),
+                signal_attr("spellcheck", self.spellcheck),
+                signal_attr("autocorrect", self.autocorrect),
+                signal_attr("enterkeyhint", self.enterkeyhint),
+                signal_attr("inputmode", self.inputmode),
+                signal_attr("tabindex", self.tabindex),
             ),
             (
                 self.on_keydown.into_on(ev::keydown),
@@ -316,7 +352,9 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     });
 
     let reset_keys = move || entered_keys.set_value(String::new());
-    let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
+    let UseSpinButtonReturn {
+        spin_button: spin, ..
+    } = use_spin_button(UseSpinButtonInput {
         value: Signal::derive(move || segment.with(|segment| segment.value)),
         text_value: Signal::derive(move || Some(text_value.get())),
         min_value: Signal::derive(move || segment.with(|segment| segment.min_value)),
@@ -351,6 +389,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
             state.decrement_to_min(kind);
         })),
     });
+    let spin = spin.into_props();
 
     let parser = Memo::new_with_compare(
         move |_| {
@@ -422,6 +461,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
         allow_repeats: true,
         ..UseKeyboardInput::default()
     });
+    let keyboard_props = keyboard.target.into_props();
 
     let filter = use_filter(CollatorOptions::default());
     let starts_with = move |name: &str, key: &str| {
@@ -701,7 +741,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
                 .unwrap_or_default(),
             if labelledby.is_some() { ", " } else { "" },
         );
-        labels(&label_id, Some(label), labelledby.as_deref())
+        labels(&label_id, Some(label), labelledby.as_ref())
     });
     let is_editable = Memo::new(move |_| {
         !state.is_disabled.get()
@@ -726,7 +766,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
         });
 
     UseDateSegmentReturn {
-        segment_props: PropsWithStyles::new(
+        segment: Part::stored(PropsWithStyles::new(
             UseDateSegmentProps {
                 id,
                 role: Signal::derive(move || {
@@ -769,8 +809,8 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
                     .then_some("numeric")
                 }),
                 tabindex: Signal::derive(move || (!state.is_disabled.get()).then_some(0)),
-                on_keydown: spin.on_keydown.chain(keyboard.props.on_keydown),
-                on_keyup: spin.on_keyup.chain(keyboard.props.on_keyup),
+                on_keydown: spin.on_keydown.chain(keyboard_props.on_keydown),
+                on_keyup: spin.on_keyup.chain(keyboard_props.on_keyup),
                 on_focus: spin.on_focus.chain(on_focus).chain(track_focus.0),
                 on_blur: spin.on_blur.chain(track_focus.1),
                 on_beforeinput,
@@ -781,7 +821,7 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
                 element_capture: element.attr(),
             },
             styles,
-        ),
+        )),
     }
 }
 

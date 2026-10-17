@@ -1,10 +1,7 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{
-        Modality, UseFocusRingInput, UseFocusVisibleInput, WindowFocusTracking,
-        add_window_focus_tracking, get_modality, get_pointer_type, use_focus_ring,
-        use_focus_visible, use_interaction_modality,
-    },
+use leptonic::hooks::focus::{
+    Modality, UseFocusRingInput, UseFocusVisibleInput, WindowFocusTracking,
+    add_window_focus_tracking, get_modality, get_pointer_type, use_focus_ring, use_focus_visible,
+    use_interaction_modality,
 };
 use leptos::{html, prelude::*, web_sys};
 
@@ -198,7 +195,7 @@ fn FrameButton(visible: RwSignal<bool>) -> impl IntoView {
     let is_focus_visible = ring.is_focus_visible;
     Effect::new(move || visible.set(is_focus_visible.get()));
     view! {
-        <button style="width: 100%; height: 100px" {..ring.props.into_attrs()}>
+        <button style="width: 100%; height: 100px" {..ring.target.attrs()}>
             "In the frame"
         </button>
     }

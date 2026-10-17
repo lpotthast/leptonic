@@ -1,10 +1,14 @@
 // Upstream: react-aria/src/overlays/useOverlayTrigger.ts @ 99e6102368
 // Upstream: react-aria/test/overlays/useOverlayTrigger.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
-    IntoAttrs,
-    utils::aria::{AriaExpanded, AriaHasPopup},
+    Id, IntoAttrs,
+    utils::{
+        aria::{AriaExpanded, AriaHasPopup},
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -54,17 +58,17 @@ pub struct UseOverlayTriggerInput {
 
     /// The overlay's id (from `use_overlay`, `use_popover`, ...): the trigger's `aria-controls`
     /// while it is open.
-    pub overlay_id: String,
+    pub overlay_id: Id,
 
     /// The type of overlay opened by this trigger.
     pub overlay_type: OverlayTriggerType,
 }
 
-/// Return value of [`use_overlay_trigger`].
+/// The return value of [`use_overlay_trigger`].
 #[derive(Debug)]
 pub struct UseOverlayTriggerReturn {
-    /// Props for the trigger. Call `.into_attrs()` for view spreading.
-    pub props: UseOverlayTriggerProps,
+    /// The trigger element.
+    pub trigger: Part<UseOverlayTriggerProps>,
 }
 
 /// Props from `use_overlay_trigger` that can be converted to spreadable attributes.
@@ -72,7 +76,17 @@ pub struct UseOverlayTriggerReturn {
 pub struct UseOverlayTriggerProps {
     pub aria_haspopup: Option<AriaHasPopup>,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
+}
+
+impl Remount for UseOverlayTriggerProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_haspopup: self.aria_haspopup,
+            aria_expanded: self.aria_expanded,
+            aria_controls: self.aria_controls,
+        }
+    }
 }
 
 impl IntoAttrs for UseOverlayTriggerProps {
@@ -80,18 +94,18 @@ impl IntoAttrs for UseOverlayTriggerProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::AriaHaspopup, self.aria_haspopup),
-            Attr(attr::AriaExpanded, self.aria_expanded),
-            Attr(attr::AriaControls, self.aria_controls),
+            fixed_attr("aria-haspopup", self.aria_haspopup),
+            signal_attr("aria-expanded", self.aria_expanded),
+            signal_attr("aria-controls", self.aria_controls),
         )
     }
 }
 
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseOverlayTriggerAttrs = (
-    Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,
-    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-    Attr<attr::AriaControls, Signal<Option<String>>>,
+    FixedAttr,
+    SignalAttr<Option<AriaExpanded>>,
+    SignalAttr<Option<Id>>,
 );
 
 /// The trigger's ARIA attributes for the overlay it opens: `aria-expanded`, `aria-controls` (while
@@ -114,10 +128,10 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
     };
 
     UseOverlayTriggerReturn {
-        props: UseOverlayTriggerProps {
+        trigger: Part::stored(UseOverlayTriggerProps {
             aria_haspopup,
             aria_expanded: Signal::derive(move || Some(AriaExpanded::from(is_open.get()))),
             aria_controls: Signal::derive(move || is_open.get().then(|| overlay_id.clone())),
-        },
+        }),
     }
 }

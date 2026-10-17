@@ -7,15 +7,12 @@
 
 use std::collections::HashSet;
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        collections::Key,
-        form::{
-            CheckboxGroupData, ToggleOptions, UseCheckboxGroupInput, UseCheckboxGroupItemInput,
-            UseCheckboxGroupStateInput, use_checkbox_group, use_checkbox_group_item,
-            use_checkbox_group_state,
-        },
+use leptonic::hooks::{
+    collections::Key,
+    form::{
+        CheckboxGroupData, ToggleOptions, UseCheckboxGroupInput, UseCheckboxGroupItemInput,
+        UseCheckboxGroupStateInput, use_checkbox_group, use_checkbox_group_item,
+        use_checkbox_group_state,
     },
 };
 use leptos::prelude::*;
@@ -46,7 +43,7 @@ pub fn PagePerf() -> impl IntoView {
     ];
     let group = use_checkbox_group(UseCheckboxGroupInput {
         state,
-        id: Some("perf-group".to_owned()),
+        id: Some("perf-group".into()),
         has_label: true.into(),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
@@ -62,8 +59,8 @@ pub fn PagePerf() -> impl IntoView {
         <h1>"use_checkbox_group_item performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <div {..group.props.into_attrs()}>
-            <span {..group.label_props.into_attrs()}>"Items"</span>
+        <div {..group.group.attrs()}>
+            <span {..group.label.attrs()}>"Items"</span>
             {(0..3)
                 .map(|item| {
                     view! {
@@ -88,13 +85,21 @@ fn GroupCheckbox(group: CheckboxGroupData, item: i32, disabled: Signal<bool>) ->
         is_indeterminate: Signal::stored(false),
         on_change: None,
         options: ToggleOptions {
-            id: (item == 3).then(|| "perf-input".to_owned()),
+            id: (item == 3).then(|| "perf-input".into()),
             is_disabled: disabled,
             ..ToggleOptions::default()
         },
     });
-    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
-    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let (label_attrs, label_styles) = checkbox
+        .label
+        .props()
+        .expect("the first label takes its props")
+        .into_parts();
+    let (input_attrs, input_styles) = checkbox
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <label {..label_attrs} style=label_styles>
             <input {..input_attrs} style=input_styles />

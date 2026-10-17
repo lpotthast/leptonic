@@ -279,7 +279,8 @@ fn TestCalendar(
 
 /// A range calendar `name` showing its value in `#test-calendar-{name}-value`. A `controlled`
 /// range calendar keeps its value and lists the ranges it reported in
-/// `#test-calendar-{name}-changes`.
+/// `#test-calendar-{name}-changes`. Its visible duration is app state (a signal), as an app's
+/// often is.
 #[component]
 fn TestRangeCalendar(
     name: &'static str,
@@ -308,6 +309,7 @@ fn TestRangeCalendar(
 ) -> impl IntoView {
     let value = RwSignal::new(default_value);
     let changes = RwSignal::new(Vec::<String>::new());
+    let visible_duration = RwSignal::new(DateDuration::months(months));
     let is_date_unavailable = if unavailable_weekends {
         Some(Callback::new(|query: DateAvailabilityQuery| {
             is_weekend(query.date)
@@ -357,7 +359,7 @@ fn TestRangeCalendar(
                 is_read_only=is_read_only
                 is_invalid=is_invalid
                 auto_focus=auto_focus
-                visible_duration=DateDuration::months(months)
+                visible_duration=visible_duration
                 selection_alignment=selection_alignment
             >
                 <Parts months=months />
@@ -386,6 +388,50 @@ fn TestRangeCalendar(
                 <button id=format!("test-calendar-{name}-clear") on:click=move |_| value.set(None)>
                     "Clear"
                 </button>
+            </section>
+        </Section>
+    }
+}
+
+/// A calendar of June 2019 (June 5 selected) whose date buttons are inside a `<Show>` in their
+/// cells, hidden and shown again by `#test-calendar-remount-toggle`.
+#[component]
+fn RemountCalendar() -> impl IntoView {
+    let shown = RwSignal::new(true);
+    let value = RwSignal::new(Some(date(2019, 6, 5)));
+    view! {
+        <Section name="remount">
+            <section id="test-calendar-remount">
+                <button
+                    id="test-calendar-remount-toggle"
+                    on:click=move |_| shown.update(|shown| *shown = !*shown)
+                >
+                    "Toggle the date buttons"
+                </button>
+                <Calendar aria_label="remount" value=value set_value=value>
+                    <CalendarGrid>
+                        <CalendarGridBody children=move |week| {
+                            view! {
+                                <CalendarWeek
+                                    week=week
+                                    children=move |date| {
+                                        view! {
+                                            <CalendarCell date=date>
+                                                <Show when=move || shown.get()>
+                                                    <CalendarCellButton />
+                                                </Show>
+                                            </CalendarCell>
+                                        }
+                                    }
+                                />
+                            }
+                        } />
+                    </CalendarGrid>
+                </Calendar>
+                <div>
+                    "Value: "
+                    <span id="test-calendar-remount-value">{move || format(value.get())}</span>
+                </div>
             </section>
         </Section>
     }
@@ -556,10 +602,10 @@ fn DurationCalendar() -> impl IntoView {
 /// unavailable weekends, disabled, read-only, invalid, two months, a week, three days, a range
 /// calendar (also for touch input) and one with unavailable weekends, one without a value
 /// (showing today), paging by single units (two months, three weeks, five days, from January
-/// 1, 2019), two weeks, six week rows, month and year pickers, a changing visible duration, and
-/// range calendars with each commit behavior (November 13 to 15, 2025). Each calendar is a
-/// [`Section`] named like the calendar (`focus`, `pickers`, `duration` and `classes` for the
-/// components of their own).
+/// 1, 2019), two weeks, six week rows, month and year pickers, a changing visible duration, date
+/// buttons mounted again, and range calendars with each commit behavior (November 13 to 15,
+/// 2025). Each calendar is a [`Section`] named like the calendar (`focus`, `pickers`,
+/// `duration`, `remount` and `classes` for the components of their own).
 ///
 /// The cases of react-spectrum's `CalendarBase.test.js`, `Calendar.test.js` and
 /// `RangeCalendar.test.js` have sections of their own: several months (`three-months`,
@@ -645,6 +691,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
             />
             <PickersCalendar />
             <DurationCalendar />
+            <RemountCalendar />
             <ClassesCalendar />
             <TestCalendar name="three-months" default_value=june5 months=3 />
             <TestRangeCalendar name="range-three-months" default_value=june_5_10 months=3 />

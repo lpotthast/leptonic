@@ -4,7 +4,6 @@
 // Upstream: @adobe/react-spectrum/test/calendar/CalendarBase.test.js @ 99e6102368
 use jiff::civil::Date;
 use leptos::{
-    attr::{self, Attr},
     ev::{self},
     prelude::*,
 };
@@ -13,7 +12,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::states::{CalendarData, CalendarStates, visible_range_description};
 use crate::{
-    EventHandler, IntoAttrs, OnEvent,
+    EventHandler, Id, IntoAttrs, OnEvent,
     hooks::interactions::{UseKeyboardInput, use_keyboard},
     labels,
     utils::{
@@ -26,6 +25,8 @@ use crate::{
         id::use_id,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -57,10 +58,11 @@ pub struct UseCalendarGridInput {
     pub weekday_style: DateTimeFormat,
 }
 
-/// Return value of [`use_calendar_grid`].
+/// The return value of [`use_calendar_grid`].
+#[derive(Debug)]
 pub struct UseCalendarGridReturn {
-    /// For the grid (a `table`).
-    pub grid_props: UseCalendarGridProps,
+    /// The grid (table) element.
+    pub grid: Part<UseCalendarGridProps>,
     /// The grid's first date (its month's first day).
     pub start_date: Signal<Date>,
     /// The names of the weekdays, for the column headers (hidden from assistive technology: each
@@ -74,10 +76,10 @@ pub struct UseCalendarGridReturn {
 #[derive(Debug)]
 pub struct UseCalendarGridProps {
     /// Part of the grid's `aria-labelledby` when the calendar is labelled by other elements.
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_multiselectable: Option<AriaMultiselectable>,
@@ -87,14 +89,32 @@ pub struct UseCalendarGridProps {
     pub on_keyup: EventHandler<KeyboardEvent>,
 }
 
+impl Remount for UseCalendarGridProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_readonly: self.aria_readonly,
+            aria_disabled: self.aria_disabled,
+            aria_multiselectable: self.aria_multiselectable,
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+        }
+    }
+}
+
 pub type UseCalendarGridAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaReadonly>>,
+    SignalAttr<Option<AriaDisabled>>,
+    FixedAttr,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
     OnEvent<ev::keydown>,
@@ -106,13 +126,13 @@ impl IntoAttrs for UseCalendarGridProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaReadonly, self.aria_readonly),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-readonly", self.aria_readonly),
+            signal_attr("aria-disabled", self.aria_disabled),
+            fixed_attr("aria-multiselectable", self.aria_multiselectable),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
             self.on_keydown.into_on(ev::keydown),
@@ -243,6 +263,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
         allow_repeats: true,
         ..UseKeyboardInput::default()
     });
+    let keyboard_props = keyboard.target.into_props();
 
     let id = use_id("calendar-grid");
     let aria_label = data.aria_label;
@@ -260,7 +281,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
             .filter(|label| !label.is_empty())
             .collect::<Vec<_>>()
             .join(", ");
-            labels(&id, Some(label), aria_labelledby.get().as_deref())
+            labels(&id, Some(label), aria_labelledby.get().as_ref())
         })
     };
 
@@ -285,7 +306,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     let weeks_in_month = Memo::new(move |_| calendar.weeks_in_month(Some(start_date.get())));
 
     UseCalendarGridReturn {
-        grid_props: UseCalendarGridProps {
+        grid: Part::stored(UseCalendarGridProps {
             id,
             role: AriaRole::Grid,
             aria_label: Signal::derive(move || labelling.with(|labels| labels.aria_label.clone())),
@@ -307,9 +328,9 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
                     calendar.set_focused(false);
                 }
             }),
-            on_keydown: keyboard.props.on_keydown,
-            on_keyup: keyboard.props.on_keyup,
-        },
+            on_keydown: keyboard_props.on_keydown,
+            on_keyup: keyboard_props.on_keyup,
+        }),
         start_date,
         week_days: week_days.into(),
         weeks_in_month: weeks_in_month.into(),

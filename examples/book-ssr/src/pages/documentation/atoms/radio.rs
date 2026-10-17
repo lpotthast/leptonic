@@ -116,7 +116,7 @@ pub fn PageAtomRadio() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The radios\u{2019} "<Code inline=true>"name"</Code>". Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the radios belong to, when they aren\u{2019}t inside it."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group element\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the group without a "<Code inline=true>"Label"</Code>"."
                         </ApiRow>
@@ -157,7 +157,7 @@ pub fn PageAtomRadio() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="RadioField">
                         <ApiRow name="value" ty="Key">"The value the radio selects, e.g. "<Code inline=true>"value=\"pro\""</Code>". Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio. It is also disabled while the group is."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without label text."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Further labelling or describing elements."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the radio when it mounts."</ApiRow>

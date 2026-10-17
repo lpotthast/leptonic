@@ -60,7 +60,7 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="arrow_size" ty="Signal<Option<f64>>" default="None">
                             "The arrow\u{2019}s size across the main axis. "<Code inline=true>"None"</Code>": the width of the element "
-                            "captured by "<Code inline=true>"arrow_props"</Code>" (0 without one)."
+                            "captured by the "<Code inline=true>"arrow"</Code>" part (0 without one)."
                         </ApiRow>
                         <ApiRow name="arrow_boundary_offset" ty="Signal<f64>" default="0.0">
                             "The minimum distance between the arrow and the overlay\u{2019}s edges."
@@ -74,11 +74,11 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseOverlayPositionReturn">
-                    <ApiRow name="props" ty="PropsWithStyles<UseOverlayPositionProps>">
-                        "The overlay\u{2019}s element capture and its position styles. "<Code inline=true>"props.into_parts()"</Code>
+                    <ApiRow name="overlay" ty="Part<PropsWithStyles<UseOverlayPositionProps>>">
+                        "The overlay\u{2019}s element capture and its position styles. "<Code inline=true>"overlay.attrs()"</Code>
                         " gives "<Code inline=true>"(attrs, styles)"</Code>"."
                     </ApiRow>
-                    <ApiRow name="arrow_props" ty="PropsWithStyles<UseOverlayArrowProps>">
+                    <ApiRow name="arrow" ty="Part<PropsWithStyles<UseOverlayArrowProps>>">
                         "For an arrow inside the overlay, see "<AnchorLink href="#arrow">"Arrow"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="placement" ty="Signal<Option<PlacementAxis>>">
@@ -108,7 +108,7 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                         let target = CapturedElement::new();
                         let (is_open, set_is_open) = signal(false);
 
-                        let UseOverlayPositionReturn { props, .. } = use_overlay_position(UseOverlayPositionInput {
+                        let UseOverlayPositionReturn { overlay, .. } = use_overlay_position(UseOverlayPositionInput {
                             target,
                             is_open: is_open.into(),
                             position: OverlayPositionOptions {
@@ -121,15 +121,18 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                             on_close: None,
                         });
 
-                        // Stored, so that the portal can render them again whenever the overlay opens.
-                        let (attrs, styles) = props.into_parts();
-                        let (attrs, styles) = (StoredValue::new(attrs), StoredValue::new(styles));
+                        // `Copy` for the portal's and the show's children: each opening mounts the overlay,
+                        // which spreads the part again.
+                        let overlay = StoredValue::new(overlay);
 
                         view! {
                             <span {..target.attr()}>"Target"</span>
                             <Portal>
                                 <Show when=move || is_open.get()>
-                                    <div {..attrs.get_value()} style=styles.get_value()>"Positioned overlay"</div>
+                                    {
+                                        let (attrs, styles) = overlay.with_value(|overlay| overlay.attrs());
+                                        view! { <div {..attrs} style=styles>"Positioned overlay"</div> }
+                                    }
                                 </Show>
                             </Portal>
                         }
@@ -199,7 +202,7 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
 
             <Section title="Arrow">
                 <p>
-                    "Spread "<Code inline=true>"arrow_props"</Code>" onto an arrow element inside the overlay. It is hidden from "
+                    "Spread the "<Code inline=true>"arrow"</Code>" part onto an arrow element inside the overlay. It is hidden from "
                     "assistive technology and placed along the edge facing the target, pointing at the target\u{2019}s center as "
                     "far as "<Code inline=true>"arrow_boundary_offset"</Code>" allows. Pin it to that edge yourself (e.g. "
                     <Code inline=true>"top: 100%"</Code>" for an overlay above the target, using the returned "

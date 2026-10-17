@@ -1408,6 +1408,11 @@ pub mod routes {
                 page!(crate::pages::documentation::hooks::scroll_wheel::PageUseScrollWheel);
             }
 
+            #[route("/use-wheel-stepping")]
+            mod use_wheel_stepping {
+                page!(crate::pages::documentation::hooks::wheel_stepping::PageUseWheelStepping);
+            }
+
             #[route("/use-prevent-scroll")]
             mod moved_use_prevent_scroll {
                 page!(
@@ -1542,6 +1547,11 @@ pub mod routes {
             #[route("/use-prevent-scroll")]
             mod use_prevent_scroll {
                 page!(crate::pages::documentation::hooks::prevent_scroll::PageUsePreventScroll);
+            }
+
+            #[route("/use-hide-outside")]
+            mod use_hide_outside {
+                page!(crate::pages::documentation::hooks::hide_outside::PageUseHideOutside);
             }
 
             #[route("/aria-hide-outside")]

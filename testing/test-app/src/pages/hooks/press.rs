@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use leptonic::{
-    IntoAttrs, Propagation,
+    Propagation,
     hooks::interactions::{
         PressEvent, PressEventKind, PressPropagation, UseHoverInput, UseKeyboardInput,
         UsePressInput, UsePressReturn, use_hover, use_keyboard, use_press,
@@ -79,8 +79,11 @@ fn BasicPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
     let disabled = RwSignal::new(false);
     let parent_clicks = RwSignal::new(0u32);
-    let UsePressReturn { props, is_pressed } = use_press(press_input(log, disabled.into()));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn {
+        target: props,
+        is_pressed,
+    } = use_press(press_input(log, disabled.into()));
+    let (attrs, styles) = props.attrs();
 
     view! {
         <section>
@@ -114,8 +117,11 @@ fn DisableOnPressStart() -> impl IntoView {
         log.push(format!("start:{}", e.pointer_type));
         disabled.set(true);
     }));
-    let UsePressReturn { props, is_pressed } = use_press(input);
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn {
+        target: props,
+        is_pressed,
+    } = use_press(input);
+    let (attrs, styles) = props.attrs();
 
     view! {
         <section>
@@ -139,8 +145,8 @@ fn DisableOnPressStart() -> impl IntoView {
 fn CheckboxInForm() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
     let submits = RwSignal::new(0u32);
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
 
     view! {
         <section>
@@ -186,8 +192,8 @@ fn NestedPress(id: &'static str, continue_inner: bool) -> impl IntoView {
         on_press_end: Some(entry("end")),
         ..UsePressInput::default()
     });
-    let (outer_attrs, outer_styles) = outer.props.into_parts();
-    let (inner_attrs, inner_styles) = inner.props.into_parts();
+    let (outer_attrs, outer_styles) = outer.target.attrs();
+    let (inner_attrs, inner_styles) = inner.target.attrs();
     view! {
         <section id=id>
             <div role="button" tabindex="0" {..outer_attrs} style=outer_styles>
@@ -214,12 +220,12 @@ fn NestedPress(id: &'static str, continue_inner: bool) -> impl IntoView {
 fn PreventFocusPress() -> impl IntoView {
     let presses = RwSignal::new(0);
     let blurs = RwSignal::new(0);
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn { target: props, .. } = use_press(UsePressInput {
         prevent_focus_on_press: Signal::stored(true),
         on_press: Some(Callback::new(move |_| presses.update(|p| *p += 1))),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <input id="test-press-keep-input" on:blur=move |_| blurs.update(|b| *b += 1) />
@@ -240,7 +246,9 @@ fn KeyUpStoppingPress() -> impl IntoView {
     let presses = RwSignal::new(0);
     let key_ups = RwSignal::new(0);
     let UsePressReturn {
-        props, is_pressed, ..
+        target: props,
+        is_pressed,
+        ..
     } = use_press(UsePressInput {
         on_press: Some(Callback::new(move |_| presses.update(|p| *p += 1))),
         ..UsePressInput::default()
@@ -249,7 +257,7 @@ fn KeyUpStoppingPress() -> impl IntoView {
         on_key_up: Some(Callback::new(move |_| key_ups.update(|k| *k += 1))),
         ..UseKeyboardInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div
@@ -257,7 +265,7 @@ fn KeyUpStoppingPress() -> impl IntoView {
                 role="button"
                 tabindex="0"
                 {..attrs}
-                {..keyboard.props.into_attrs()}
+                {..keyboard.target.attrs()}
                 style=styles
             >
                 "Key up stops"
@@ -277,13 +285,13 @@ fn KeyUpStoppingPress() -> impl IntoView {
 #[component]
 fn DragInPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn { target: props, .. } = use_press(UsePressInput {
         on_press: Some(Callback::new(move |_| log.push("press"))),
         on_press_start: Some(Callback::new(move |_| log.push("start"))),
         on_press_end: Some(Callback::new(move |_| log.push("end"))),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-drag" role="button" tabindex="0" {..attrs} style=styles>
@@ -306,8 +314,8 @@ fn DragInPress() -> impl IntoView {
 #[component]
 fn ClickStoppingChild() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-click-stop" role="button" tabindex="0" {..attrs} style=styles>
@@ -337,8 +345,8 @@ fn FocusMovingPress() -> impl IntoView {
             let _ = other.focus();
         }
     }));
-    let UsePressReturn { props, .. } = use_press(input);
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(input);
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-focus-move" role="button" tabindex="0" {..attrs} style=styles>
@@ -357,8 +365,8 @@ fn FocusMovingPress() -> impl IntoView {
 #[component]
 fn ContentsPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <style>"#test-press-contents { display: contents }"</style>
@@ -376,11 +384,11 @@ fn ContentsPress() -> impl IntoView {
 #[component]
 fn CancelOnExitPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn { target: props, .. } = use_press(UsePressInput {
         should_cancel_on_pointer_exit: Signal::stored(true),
         ..press_input(log, Signal::stored(false))
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-cancel-exit" role="button" tabindex="0" {..attrs} style=styles>
@@ -396,8 +404,8 @@ fn CancelOnExitPress() -> impl IntoView {
 #[component]
 fn LinkPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <a
@@ -425,17 +433,17 @@ fn DoublePress() -> impl IntoView {
         ..UsePressInput::default()
     });
     let hover = use_hover(UseHoverInput::default());
-    let (double_attrs, double_styles) = press.props.into_parts();
-    let hover_attrs = hover.props.into_attrs();
+    let (double_attrs, double_styles) = press.target.attrs();
+    let hover_attrs = hover.target.attrs();
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn { target: props, .. } = use_press(UsePressInput {
         on_press: Some(Callback::new(move |_| log.push("press"))),
         on_double_press: Some(Callback::new(move |e: PressEvent| {
             log.push(format!("double:{}", e.pointer_type));
         })),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-double" role="button" tabindex="0" {..attrs} style=styles>
@@ -471,8 +479,8 @@ fn ContinuingPress() -> impl IntoView {
         on_press: Some(Callback::new(move |_| inner_log.push("press"))),
         ..UsePressInput::default()
     });
-    let (outer_attrs, outer_styles) = outer.props.into_parts();
-    let (inner_attrs, inner_styles) = inner.props.into_parts();
+    let (outer_attrs, outer_styles) = outer.target.attrs();
+    let (inner_attrs, inner_styles) = inner.target.attrs();
     view! {
         <section>
             <div role="button" tabindex="0" {..outer_attrs} style=outer_styles>
@@ -516,8 +524,8 @@ fn RemovedWhilePressed() -> impl IntoView {
                             set_timeout(move || shown.set(false), Duration::from_millis(100));
                         }),
                     );
-                    let UsePressReturn { props, .. } = use_press(input);
-                    let (attrs, styles) = props.into_parts();
+                    let UsePressReturn { target: props, .. } = use_press(input);
+                    let (attrs, styles) = props.attrs();
                     view! {
                         <div
                             id="test-press-removed"
@@ -572,14 +580,14 @@ fn DetailPress() -> impl IntoView {
             e.point.y.round()
         ));
     }));
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn { target: props, .. } = use_press(UsePressInput {
         on_press: entry,
         on_press_up: entry,
         on_press_start: entry,
         on_press_end: entry,
         ..UsePressInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <style>
@@ -598,8 +606,8 @@ fn DetailPress() -> impl IntoView {
 #[component]
 fn TextInputPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <input id="test-press-text-input" aria-label="Text input" {..attrs} style=styles />
@@ -616,8 +624,8 @@ fn TwoPressLink() -> impl IntoView {
     let clicks = RwSignal::new(0);
     let first = use_press(UsePressInput::default());
     let second = use_press(UsePressInput::default());
-    let (first_attrs, styles) = first.props.into_parts();
-    let (second_attrs, _) = second.props.into_parts();
+    let (first_attrs, styles) = first.target.attrs();
+    let (second_attrs, _) = second.target.attrs();
     view! {
         <section>
             <a
@@ -651,8 +659,8 @@ fn ReentrantPress() -> impl IntoView {
             target.click();
         }
     }));
-    let UsePressReturn { props, .. } = use_press(input);
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(input);
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-reentrant" role="button" tabindex="0" {..attrs} style=styles>
@@ -667,7 +675,7 @@ fn ReentrantPress() -> impl IntoView {
 /// red background, and with `user_select` `user-select: text` too (react-aria's `TestStyleChange`).
 #[component]
 fn StyleChangingPress(id: &'static str, user_select: bool) -> impl IntoView {
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn { target: props, .. } = use_press(UsePressInput {
         on_press_start: Some(Callback::new(move |e: PressEvent| {
             if let Some(target) = e.target.dyn_ref::<web_sys::HtmlElement>() {
                 let style = target.style();
@@ -679,7 +687,7 @@ fn StyleChangingPress(id: &'static str, user_select: bool) -> impl IntoView {
         })),
         ..UsePressInput::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
     view! {
         <div id=id role="button" tabindex="0" {..attrs} style=styles>
             "Changes its style on press start"
@@ -693,8 +701,8 @@ fn StyleChangingPress(id: &'static str, user_select: bool) -> impl IntoView {
 fn PlainLinkPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
     let clicks = RwSignal::new(0);
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <a
@@ -719,8 +727,8 @@ fn PlainLinkPress() -> impl IntoView {
 #[component]
 fn RoleLinkPress() -> impl IntoView {
     let log = EventLog(RwSignal::new(Vec::new()));
-    let UsePressReturn { props, .. } = use_press(press_input(log, Signal::stored(false)));
-    let (attrs, styles) = props.into_parts();
+    let UsePressReturn { target: props, .. } = use_press(press_input(log, Signal::stored(false)));
+    let (attrs, styles) = props.attrs();
     view! {
         <section>
             <div id="test-press-role-link" role="link" tabindex="0" {..attrs} style=styles>

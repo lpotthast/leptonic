@@ -10,12 +10,12 @@ pub fn InteractionsQuickStartDemo() -> impl IntoView {
     let count = RwSignal::new(0);
     let disabled = RwSignal::new(false);
 
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn { target, is_pressed } = use_press(UsePressInput {
         is_disabled: disabled.into(),
         on_press: Some(Callback::new(move |_| count.update(|c| *c += 1))),
         ..Default::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = target.attrs();
 
     view! {
         // `data-pressed` shows the hook's `is_pressed` state to CSS.

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         collections::{
             CollectionOptions, DisabledBehavior, Key, NodeKind, SelectionMode, SelectionOptions,
@@ -95,7 +95,7 @@ pub fn TableHookDemo() -> impl IntoView {
 
     // Columns and rows, rebuilt whenever the order of the books changes. The first column holds the selection
     // checkboxes, so the data cells of a row are cells 1 to 4.
-    let table = Memo::new(move |_| {
+    let collection = Memo::new(move |_| {
         Arc::new(TableCollection::build(|t| {
             t.column("title", "Title").row_header().allows_sorting();
             t.column("author", "Author").allows_sorting();
@@ -128,11 +128,11 @@ pub fn TableHookDemo() -> impl IntoView {
         },
         default_sort_descriptor: sort.get_untracked(),
         on_sort_change: Some(Callback::new(move |descriptor| sort.set(Some(descriptor)))),
-        table,
+        table: collection,
         focus_mode: GridFocusMode::Row,
         sort_descriptor: None,
     });
-    let UseTableReturn { props, data } = use_table(UseTableInput {
+    let UseTableReturn { table, data } = use_table(UseTableInput {
         aria_label: "Books".into(),
         state,
         element: CapturedElement::new(),
@@ -148,7 +148,7 @@ pub fn TableHookDemo() -> impl IntoView {
 
     // The header rows: a row for the "Inventory" group (with placeholders above the other columns), then the
     // column headers. The columns don't change, so they are read once.
-    let header_rows: Vec<Vec<(Key, NodeKind)>> = table.with_untracked(|t| {
+    let header_rows: Vec<Vec<(Key, NodeKind)>> = collection.with_untracked(|t| {
         t.header_rows()
             .iter()
             .map(|row| {
@@ -168,13 +168,13 @@ pub fn TableHookDemo() -> impl IntoView {
                     .into_iter()
                     .map(|(key, kind)| {
                         if kind == NodeKind::Placeholder {
-                            view! { <th {..use_table_header_placeholder(UseTableHeaderPlaceholderInput { table: data.clone(), key: key.clone() }).into_attrs()}></th> }.into_any()
+                            view! { <th {..use_table_header_placeholder(UseTableHeaderPlaceholderInput { table: data.clone(), key: key.clone() }).attrs()}></th> }.into_any()
                         } else {
                             view! { <ColumnHeader table=data.clone() column=key/> }.into_any()
                         }
                     })
                     .collect_view();
-                view! { <tr {..use_table_header_row().into_attrs()}>{cells}</tr> }
+                view! { <tr {..use_table_header_row().attrs()}>{cells}</tr> }
             })
             .collect_view()
     };
@@ -210,9 +210,9 @@ pub fn TableHookDemo() -> impl IntoView {
 
     view! {
         <div class="demo-table-scroll">
-            <table {..props.into_attrs()} class="demo-table demo-hook-table">
-                <thead {..use_grid_row_group().row_group_props.into_attrs()}>{header}</thead>
-                <tbody {..use_grid_row_group().row_group_props.into_attrs()}>
+            <table {..table.attrs()} class="demo-table demo-hook-table">
+                <thead {..use_grid_row_group().row_group.attrs()}>{header}</thead>
+                <tbody {..use_grid_row_group().row_group.attrs()}>
                     <For each=move || books.get() key=|book| book.title let:book>
                         <BookRow table=data.clone() book/>
                     </For>
@@ -242,7 +242,7 @@ fn ColumnHeader(table: TableData, column: Key) -> impl IntoView {
                 table: table.clone(),
             },
         ));
-        let (attrs, styles) = checkbox.input_props.into_parts();
+        let (attrs, styles) = checkbox.input.attrs();
         view! { <input {..attrs} style=styles/> }.into_any()
     } else {
         text.into_any()
@@ -252,7 +252,7 @@ fn ColumnHeader(table: TableData, column: Key) -> impl IntoView {
         key: column,
         allows_arrow_navigation: false,
     });
-    let (attrs, styles) = header.column_header_props.into_parts();
+    let (attrs, styles) = header.column_header.attrs();
 
     view! { <th {..attrs} style=styles>{content}</th> }
 }
@@ -266,14 +266,14 @@ fn BookRow(table: TableData, book: Book) -> impl IntoView {
         on_context_menu: None,
     });
     let allows_selection = row.allows_selection;
-    let (attrs, styles) = row.row_props.into_parts();
+    let (attrs, styles) = row.row.attrs();
     let checkbox = use_checkbox(use_table_selection_checkbox(
         UseTableSelectionCheckboxInput {
             table: table.clone(),
             key: key.clone(),
         },
     ));
-    let (checkbox_attrs, checkbox_styles) = checkbox.input_props.into_parts();
+    let (checkbox_attrs, checkbox_styles) = checkbox.input.attrs();
 
     view! {
         <tr {..attrs} style=styles data-disabled=move || (!allows_selection.get()).then_some("")>
@@ -303,7 +303,7 @@ fn Cell(
         allows_arrow_navigation: false,
         should_select_on_press_up: false,
     });
-    let (attrs, styles) = cell.grid_cell_props.into_parts();
+    let (attrs, styles) = cell.cell.attrs();
 
     view! {
         <td {..attrs} style=styles class=number.then_some("demo-table-number")>

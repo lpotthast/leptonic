@@ -1,13 +1,15 @@
 //! `use_highlight_selection_description` alone, for its performance test
 //! (`leptonic/tests/perf_tests/hooks/use_highlight_selection_description.rs`): the hook on the
-//! selection of a grid state with row actions (the rows of the `use_grid` fixture,
-//! [`super::use_grid`]), with multiple selection, called by a mounted component (mounted at
-//! first) that describes `#perf-described` with it, after a plain button (`#perf-before`). Its
-//! controls ([`Control`]) mount and unmount it and change the selection behavior (`replace`,
-//! `toggle`). The description only exists on touch devices.
+//! selection of a grid state with row actions ([`SMALL`] rows "Row <i>" of three cells), with
+//! multiple selection, called by a mounted component (mounted at first) that describes
+//! `#perf-described` with it, after a plain button (`#perf-before`). Its controls ([`Control`])
+//! mount and unmount it and change the selection behavior (`replace`, `toggle`). The description
+//! only exists on touch devices.
+
+use std::sync::Arc;
 
 use leptonic::hooks::{
-    collections::{SelectionBehavior, SelectionMode, SelectionOptions},
+    collections::{Collection, CollectionMemo, SelectionBehavior, SelectionMode, SelectionOptions},
     grid::{
         GridFocusMode, GridState, UseGridStateInput, UseHighlightSelectionDescriptionInput,
         use_grid_state, use_highlight_selection_description,
@@ -15,8 +17,27 @@ use leptonic::hooks::{
 };
 use leptos::prelude::*;
 
-use super::use_grid::{SMALL, grid_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small grid.
+const SMALL: usize = 10;
+
+
+/// `rows` rows ("Row <i>", key `i`), each with the cells "Row <i>", "Value <i>" and
+/// "Group <i % 3>".
+fn grid_collection(rows: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..rows.get() {
+                b.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
 
 /// Calls the hook, describing `#perf-described`.
 #[component]

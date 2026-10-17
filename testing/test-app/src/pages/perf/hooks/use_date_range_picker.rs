@@ -13,7 +13,7 @@
 //! changes, and the first announcement of a page waits 100 ms for the live regions.
 
 use leptonic::{
-    Assertiveness, CapturedElement, DateRange, IntoAttrs, ValueBinding, announce,
+    Assertiveness, CapturedElement, DateRange, ValueBinding, announce,
     hooks::{
         button::use_button,
         datepicker::{
@@ -51,12 +51,14 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl Into
         }
         .into_any();
     }
-    let UseDateSegmentReturn { segment_props } = use_date_segment(UseDateSegmentInput {
+    let UseDateSegmentReturn {
+        segment: segment_props,
+    } = use_date_segment(UseDateSegmentInput {
         segment,
         data,
         element: CapturedElement::new(),
     });
-    let (attrs, styles) = segment_props.into_parts();
+    let (attrs, styles) = segment_props.attrs();
     view! {
         <span {..attrs} style=styles data-type=kind.as_str()>
             {text}
@@ -113,8 +115,8 @@ fn HookDateRangePicker(
     on_cleanup(move || state.set_value(None));
     let group = CapturedElement::new();
     let UseDatePickerReturn {
-        label_props,
-        group_props,
+        label: label_props,
+        group: group_props,
         field_describedby,
         labelledby,
         button,
@@ -125,10 +127,10 @@ fn HookDateRangePicker(
         state: picker,
         group,
         options: DatePickerOptions {
-            id: Some("perf-group".to_owned()),
+            id: Some("perf-group".into()),
             has_label: true.into(),
             is_disabled: disabled.into(),
-            dialog_id: Signal::stored(Some("perf-dialog".to_owned())),
+            dialog_id: Signal::stored(Some("perf-dialog".into())),
             ..DatePickerOptions::default()
         },
     });
@@ -150,7 +152,9 @@ fn HookDateRangePicker(
             ..UseDateFieldStateInput::default()
         });
         let UseDateFieldReturn {
-            field_props, data, ..
+            field: field_props,
+            data,
+            ..
         } = use_date_field(UseDateFieldInput {
             state: field_state,
             element: CapturedElement::new(),
@@ -170,7 +174,7 @@ fn HookDateRangePicker(
                 ..DateFieldOptions::default()
             },
         });
-        let (attrs, styles) = field_props.into_parts();
+        let (attrs, styles) = field_props.attrs();
         view! {
             <div id=id>
                 <div {..attrs} style=styles>
@@ -181,11 +185,11 @@ fn HookDateRangePicker(
     };
     let start = field(RangePart::Start, "perf-start");
     let end = field(RangePart::End, "perf-end");
-    let (button_attrs, button_styles) = use_button(button).props.into_parts();
-    let (group_attrs, group_styles) = group_props.into_parts();
+    let (button_attrs, button_styles) = use_button(button).button.attrs();
+    let (group_attrs, group_styles) = group_props.attrs();
     let open = picker.overlay.is_open;
     view! {
-        <span {..label_props.into_attrs()}>"Trip"</span>
+        <span {..label_props.attrs()}>"Trip"</span>
         <div {..group_attrs} style=group_styles>
             {start}
             <span aria-hidden="true">" – "</span>

@@ -4,7 +4,7 @@
 //! (`tests/budgets/atoms/range_calendar.json`): mounting and unmounting it with one month and
 //! with twelve, selecting a range with clicks, by dragging and with the keyboard, cancelling and
 //! committing a range being selected, moving the focused date, paging, hovering a date,
-//! keyboard focus, the dates it ignores (disabled, read-only), and changes of its
+//! keyboard focus, the dates it ignores (unavailable, disabled, read-only), and changes of its
 //! reactive props (range, focused date, limits, states, visible duration, page behavior, first
 //! day of the week, selection alignment, weeks per month, label). The calendar shows June 2024
 //! (fixed dates: the counts don't depend on the day the tests run).
@@ -37,6 +37,7 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(PageWithTheButtonsInTwelveMonths))
         .with(fixture_test(HoverAndLeave))
         .with(fixture_test(KeyboardFocusAndBlur))
+        .with(fixture_test(UnavailableDate))
         .with(fixture_test(DisableAndEnable))
         .with(fixture_test(ReadOnly))
         .with(fixture_test(Invalid))
@@ -358,6 +359,20 @@ pub async fn keyboard_focus_and_blur(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     page.measure("blur", page.send_keys(Key::Tab)).await?;
     june_12.wait_for_attr("data-focus-visible", None).await?;
+    Ok(())
+}
+
+/// A click on the unavailable date, which it ignores.
+#[browser_test]
+pub async fn unavailable_date(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
+    let june_20 = date(page, "Thursday, June 20, 2024").await?;
+    assert_that!(june_20.attr("data-unavailable").await?).is_equal_to(Some("true".to_owned()));
+    page.measure("ignored click", june_20.click()).await?;
+    june_20
+        .attr_stays("data-selected", None, std::time::Duration::from_millis(100))
+        .await?;
+    assert_that!(range(page).await?).is_equal_to((0.0, 0.0));
     Ok(())
 }
 

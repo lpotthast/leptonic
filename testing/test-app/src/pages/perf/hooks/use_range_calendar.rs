@@ -14,7 +14,7 @@
 //! regions.
 
 use leptonic::{
-    Assertiveness, CapturedElement, DateExt, DateRange, DateTimeFormat, IntoAttrs, announce, flag,
+    Assertiveness, CapturedElement, DateExt, DateRange, DateTimeFormat, announce, flag,
     hooks::{
         button::use_button,
         calendar::{
@@ -50,7 +50,7 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
     let month = grid.start_date;
     let data = StoredValue::new(data);
     view! {
-        <table {..grid.grid_props.into_attrs()}>
+        <table {..grid.grid.attrs()}>
             <tbody>
                 <For each=move || 0..grid.weeks_in_month.get() key=|week| *week let(week)>
                     <tr>
@@ -80,8 +80,8 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
 #[component]
 fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> impl IntoView {
     let UseCalendarCellReturn {
-        cell_props,
-        button_props,
+        cell: cell_props,
+        button: button_props,
         is_selected,
         formatted_date,
         ..
@@ -92,9 +92,9 @@ fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> im
         is_outside_month,
         element: CapturedElement::new(),
     });
-    let (attrs, styles) = button_props.into_parts();
+    let (attrs, styles) = button_props.attrs();
     view! {
-        <td {..cell_props.into_attrs()}>
+        <td {..cell_props.attrs()}>
             <div
                 {..attrs}
                 style=styles
@@ -121,7 +121,7 @@ fn HookRangeCalendar(
         ..UseRangeCalendarStateInput::default()
     });
     let UseCalendarReturn {
-        calendar_props,
+        calendar: calendar_props,
         previous_button,
         next_button,
         title,
@@ -130,16 +130,16 @@ fn HookRangeCalendar(
     } = use_range_calendar(UseRangeCalendarInput {
         state,
         commit_behavior: CommitBehavior::Select,
-        id: Some("perf-calendar".to_owned()),
+        id: Some("perf-calendar".into()),
         aria_label: label.into(),
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
-    let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
+    let (previous_attrs, previous_styles) = use_button(previous_button).button.attrs();
+    let (next_attrs, next_styles) = use_button(next_button).button.attrs();
     view! {
-        <div {..calendar_props.into_attrs()}>
+        <div {..calendar_props.attrs()}>
             <button {..previous_attrs} style=previous_styles>
                 "<"
             </button>

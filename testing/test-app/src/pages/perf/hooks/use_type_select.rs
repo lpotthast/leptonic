@@ -72,7 +72,9 @@ fn TypeSelectList(state: ListState) -> impl IntoView {
         selection: state.selection,
         on_type_select: None,
     })
-    .props;
+    .collection
+    .props()
+    .expect("a new part's props");
     let handlers = (
         props.on_keydown_capture.into_on(ev::capture(ev::keydown)),
         props.on_keydown.into_on(ev::keydown),

@@ -25,6 +25,8 @@ use crate::{
 //   a `virtualizer` back reference).
 //
 // ## DIFFERENT BEHAVIOR
+// - Layout options appearing (none before) invalidate the layout: react-stately compares options
+//   only with earlier options, so the first ones took effect only with the next invalidation.
 // - The views stay in layout order while scrolling (react-stately keeps their order and puts new
 //   ones last until the scrolling ends, sparing DOM moves): the renderer mounts each new row
 //   before its successor and leaves mounted rows in place, so a scroll needs no reordering pass.
@@ -333,7 +335,10 @@ impl<L: Layout> Virtualizer<L> {
                 &self.invalidation.layout_options,
             ) {
                 (Some(new), Some(old)) => self.layout.should_invalidate_layout_options(new, old),
-                _ => false,
+                // The first options replace the layout's own (see "DIFFERENT BEHAVIOR").
+                (Some(_), None) => true,
+                // None after options: the layout keeps the last ones (as upstream).
+                (None, _) => false,
             };
             needs_layout |=
                 item_size_changed || size_changed || offset_changed || layout_options_changed;

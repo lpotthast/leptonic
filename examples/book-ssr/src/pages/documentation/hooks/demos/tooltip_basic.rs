@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         overlay::{
@@ -53,15 +53,16 @@ pub fn TooltipDemo() -> impl IntoView {
     });
 
     let is_open = state.overlay.is_open;
-    let tooltip_id = StoredValue::new(trigger.tooltip_props.id);
-    let (position_attrs, position_styles) = position.props.into_parts();
-    let position_attrs = StoredValue::new(position_attrs);
-    let position_styles = StoredValue::new(position_styles);
-    let tooltip_attrs = StoredValue::new(tooltip.props.into_attrs());
+    // `<Show>` mounts the tooltip on every opening, and each mount spreads the parts again: the
+    // trigger's (the id it references), the tooltip's own and the position's. A `StoredValue` makes
+    // a part `Copy` for the nested children closures.
+    let trigger_tooltip = StoredValue::new(trigger.tooltip);
+    let tooltip = StoredValue::new(tooltip.tooltip);
+    let position = StoredValue::new(position.overlay);
 
     view! {
         <div class="demo-tooltip-stage">
-            <button {..trigger_element.attr()} {..trigger.trigger_props.into_attrs()} class="demo-btn">
+            <button {..trigger_element.attr()} {..trigger.trigger.attrs()} class="demo-btn">
                 "Publish"
             </button>
         </div>
@@ -85,15 +86,20 @@ pub fn TooltipDemo() -> impl IntoView {
 
         <Portal>
             <Show when=move || is_open.get()>
-                <div
-                    {..position_attrs.get_value()}
-                    {..tooltip_attrs.get_value()}
-                    style=position_styles.get_value()
-                    id=tooltip_id.get_value()
-                    class="demo-tooltip"
-                >
-                    "Make the post visible to everyone"
-                </div>
+                {
+                    let (position_attrs, position_styles) = position.with_value(|position| position.attrs());
+                    view! {
+                        <div
+                            {..position_attrs}
+                            {..tooltip.with_value(|tooltip| tooltip.attrs())}
+                            {..trigger_tooltip.with_value(|tooltip| tooltip.attrs())}
+                            style=position_styles
+                            class="demo-tooltip"
+                        >
+                            "Make the post visible to everyone"
+                        </div>
+                    }
+                }
             </Show>
         </Portal>
     }

@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::{
@@ -37,7 +36,7 @@ pub fn ToggleButtonGroupDemo() -> impl IntoView {
     });
 
     view! {
-        <div {..group.props.into_attrs()} class="demo-toggle-group">
+        <div {..group.group.attrs()} class="demo-toggle-group">
             {ALIGNMENTS.into_iter().map(|alignment| view! { <AlignmentButton group=state alignment/> }).collect_view()}
         </div>
         <p class="demo-status">
@@ -66,7 +65,7 @@ fn AlignmentButton(group: ToggleGroupState, alignment: &'static str) -> impl Int
             button: UseButtonInput::default(),
         },
     ));
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     // Styled through `aria-checked` (`aria-pressed` in a multiple-selection group) and `data-focus-visible`.
     view! { <button {..attrs} style=styles class="demo-toggle-button">{alignment}</button> }
 }

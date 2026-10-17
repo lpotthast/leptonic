@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::button::Button,
     computed_pct, computed_size,
     hooks::{
@@ -15,8 +14,8 @@ pub fn MeterDiskDemo() -> impl IntoView {
     let disk_usage = RwSignal::new(72.5_f64);
 
     let UseProgressBarReturn {
-        props,
-        label_props,
+        progress_bar,
+        label,
         percentage,
         value_text,
     } = use_meter(UseMeterInput::<f64> {
@@ -39,10 +38,10 @@ pub fn MeterDiskDemo() -> impl IntoView {
     view! {
         <div class="demo-value-bar-container">
             <div class="demo-value-bar-header">
-                <span {..label_props.into_attrs()}>"Disk Usage"</span>
+                <span {..label.attrs()}>"Disk Usage"</span>
                 <span>{value_text}</span>
             </div>
-            <div {..props.into_attrs()} class="demo-value-bar demo-value-bar-thick">
+            <div {..progress_bar.attrs()} class="demo-value-bar demo-value-bar-thick">
                 <div class="demo-value-bar-fill" data-level=level style=fill_styles></div>
             </div>
         </div>

@@ -3,10 +3,7 @@
 //! (`#perf-before`) to tab from, mounted at first, counting context menu requests. Its controls
 //! ([`Control`]) mount and unmount it, and read the count (`requests`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{UseContextMenuInput, use_context_menu},
-};
+use leptonic::hooks::interactions::{UseContextMenuInput, use_context_menu};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -39,7 +36,7 @@ fn WithContextMenu(request_count: StoredValue<u32>) -> impl IntoView {
         })),
     });
     view! {
-        <div id="perf-context-menu" tabindex="0" {..context_menu.props.into_attrs()}>
+        <div id="perf-context-menu" tabindex="0" {..context_menu.target.attrs()}>
             "Right-click me"
         </div>
     }

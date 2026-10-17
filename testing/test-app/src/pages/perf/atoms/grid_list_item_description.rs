@@ -5,14 +5,31 @@
 //! ([`Control`]) mount and unmount the list and set its size while unmounted (`small`, `large`:
 //! [`LARGE`] items).
 
+use std::sync::Arc;
+
 use leptonic::{
     atoms::grid_list::{GridList, GridListItem, GridListItemDescription},
-    hooks::collections::SelectionMode,
+    hooks::collections::{Collection, CollectionMemo, SelectionMode},
 };
 use leptos::prelude::*;
 
-use super::grid_list::{LARGE, SMALL, list_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The items of the small list.
+const SMALL: usize = 10;
+/// The items of the large list.
+const LARGE: usize = 1_000;
+
+/// `items` items ("Item <i>", key `i`).
+fn list_collection(items: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..items.get() {
+                b.item(i, format!("Item {i}"));
+            }
+        }))
+    })
+}
 
 #[component]
 pub fn PagePerf() -> impl IntoView {

@@ -12,7 +12,7 @@ pub fn BasicButtonDemo() -> impl IntoView {
 
     // A `<div>` that looks, behaves and is announced like a button.
     let UseButtonReturn {
-        props,
+        button,
         is_pressed,
         is_hovered,
         ..
@@ -22,7 +22,7 @@ pub fn BasicButtonDemo() -> impl IntoView {
         on_press: Some(Callback::new(move |_| presses.update(|n| *n += 1))),
         ..Default::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = button.attrs();
 
     // The hook sets `role`, `tabindex`, `aria-disabled` and `data-focus-visible`; the pressed and hovered states
     // are its return values, rendered as data attributes for the stylesheet.

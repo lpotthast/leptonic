@@ -7,6 +7,7 @@ use web_sys::KeyboardEvent;
 
 use super::use_menu_trigger_state::MenuTriggerStateApi;
 use crate::{
+    Id,
     hooks::{
         button::UseButtonInput,
         collections::{AutoFocus, FocusStrategy},
@@ -88,10 +89,10 @@ pub struct UseMenuTriggerReturn {
 pub struct UseMenuTriggerMenuProps {
     /// The unique ID for the menu element.
     /// This must be set on the menu so that `aria-controls` on the trigger points to it.
-    pub id: String,
+    pub id: Id,
 
     /// The id that labels this menu.
-    pub aria_labelledby: Signal<String>,
+    pub aria_labelledby: Signal<Id>,
 
     /// Where focus goes when the menu opens: the first or last item when opened by keyboard,
     /// else the menu itself (react-aria: `autoFocus: focusStrategy || true`). For
@@ -119,7 +120,7 @@ pub struct UseMenuTriggerMenuProps {
 ///     trigger: MenuTriggerType::Press,
 ///     state,
 /// });
-/// let (button_attrs, button_styles) = use_button(menu_trigger.button).props.into_parts();
+/// let (button_attrs, button_styles) = use_button(menu_trigger.button).button.attrs();
 /// let menu_props = menu_trigger.menu_props;
 ///
 /// view! {
@@ -150,6 +151,7 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
         overlay_id: menu_id.clone(),
         overlay_type: menu_type,
     });
+    let overlay_trigger_props = overlay_trigger.trigger.into_props();
 
     // Open (toggle) the menu, unless this key combination is not meant to open it in the current
     // trigger mode, or something else (e.g. type-ahead consuming Space) already handled the event.
@@ -213,7 +215,43 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
                     state.toggle(None);
                 }
             })),
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: Signal::stored(None),
+            is_disabled: Signal::stored(false),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_describedby: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         },
         MenuTriggerType::ContextMenu => UseButtonInput {
             on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
@@ -244,7 +282,7 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
         },
     };
 
-    let aria_haspopup = overlay_trigger.props.aria_haspopup;
+    let aria_haspopup = overlay_trigger_props.aria_haspopup;
     let button = if trigger == MenuTriggerType::ContextMenu {
         // A context menu trigger isn't announced as opening a menu (it doesn't on activation), and
         // the keyboard opens it with the context menu shortcuts only.
@@ -258,8 +296,8 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
             id: Some(menu_trigger_id.clone()),
             is_disabled: disabled,
             aria_haspopup: Signal::stored(aria_haspopup),
-            aria_expanded: overlay_trigger.props.aria_expanded,
-            aria_controls: overlay_trigger.props.aria_controls,
+            aria_expanded: overlay_trigger_props.aria_expanded,
+            aria_controls: overlay_trigger_props.aria_controls,
             shortcuts: Some(shortcuts),
             ..button
         }

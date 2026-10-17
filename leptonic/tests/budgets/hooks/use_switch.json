@@ -12,11 +12,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 12,
+        "allocations": 11,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -44,11 +45,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 13,
+        "allocations": 11,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -76,11 +78,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 7,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -110,11 +113,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 11,
+        "allocations": 9,
         "reallocations": 1,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -142,11 +146,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 44,
+        "allocations": 29,
         "reallocations": 1,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
@@ -176,11 +181,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 46,
+        "allocations": 22,
         "reallocations": 0,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
@@ -208,11 +214,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 49,
+        "allocations": 23,
         "reallocations": 1,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
@@ -242,11 +249,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 14,
+        "allocations": 12,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -274,11 +282,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 10,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -308,18 +317,19 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 708,
-        "reallocations": 28,
-        "memo_runs": 9,
-        "memo_runs_unchanged": 1,
-        "effect_runs": 8,
-        "render_effect_runs": 14,
+        "allocations": 508,
+        "reallocations": 22,
+        "memo_runs": 8,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 6,
+        "render_effect_runs": 8,
         "immediate_effect_runs": 0,
-        "signal_notifications": 4,
+        "signal_notifications": 2,
         "dom_attributes": 0,
         "dom_text": 0,
         "dom_added_nodes": 1,
@@ -340,11 +350,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -374,11 +385,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 49,
+        "allocations": 36,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
@@ -406,11 +418,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 49,
+        "allocations": 36,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
@@ -440,11 +453,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 55,
+        "allocations": 38,
         "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
@@ -474,11 +488,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 7,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -506,11 +521,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 6,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -538,11 +554,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 6,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -572,11 +589,12 @@
         "hooks/use_keyboard",
         "hooks/use_press",
         "hooks/use_switch",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

@@ -9,15 +9,15 @@
 //! [`LARGE`] items; `empty`: none), change the selection mode, prepare the live announcer
 //! (`prepare-announcer`: its first announcement waits for its live regions) and read how many
 //! items are selected (`selected`, -1 for all).
-//!
-//! [`HookGridListItem`] also builds the lists of the fixtures of the other grid list hooks.
+
+use std::sync::Arc;
 
 use leptonic::{
-    Assertiveness, CapturedElement, IntoAttrs, Orientation, announce, flag,
+    Assertiveness, CapturedElement, Orientation, announce, flag,
     hooks::{
         collections::{
-            CollectionOptions, Key, ListLayout, ListState, SelectionMode, SelectionOptions,
-            UseListStateInput, use_list_state,
+            Collection, CollectionMemo, CollectionOptions, Key, ListLayout, ListState, Selection,
+            SelectionMode, SelectionOptions, UseListStateInput, use_list_state,
         },
         gridlist::{
             FocusMode, GridListData, KeyboardNavigationBehavior, UseGridListInput,
@@ -28,16 +28,39 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-pub use crate::pages::perf::atoms::grid_list::{LARGE, SMALL, list_collection, selected_count};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The items of the small list.
+const SMALL: usize = 10;
+/// The items of the large list.
+const LARGE: usize = 1_000;
+
+/// How many items of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
+
+/// `items` items ("Item <i>", key `i`).
+fn list_collection(items: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..items.get() {
+                b.item(i, format!("Item {i}"));
+            }
+        }))
+    })
+}
 
 /// An item: `use_grid_list_item` on a `div` (its cell a `div` inside), its pressed state in
 /// `data-pressed`.
 #[component]
-pub fn HookGridListItem(list: GridListData, key: Key, children: Children) -> impl IntoView {
+fn HookGridListItem(list: GridListData, key: Key, children: Children) -> impl IntoView {
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         is_pressed,
         ..
     } = use_grid_list_item(UseGridListItemInput {
@@ -47,22 +70,21 @@ pub fn HookGridListItem(list: GridListData, key: Key, children: Children) -> imp
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (attrs, styles) = row_props.into_parts();
+    let (attrs, styles) = row_props.attrs();
     view! {
         <div {..attrs} style=styles data-pressed=flag(is_pressed)>
-            <div {..grid_cell_props.into_attrs()}>{children()}</div>
+            <div {..grid_cell_props.attrs()}>{children()}</div>
         </div>
     }
 }
 
-/// The list: `use_grid_list` on a `div`, with its items; `on_action` counts actions.
+/// The list: `use_grid_list` on a `div`, with its items.
 #[component]
-pub fn HookGridList(
-    state: ListState,
-    items: RwSignal<usize>,
-    on_action: Option<Callback<Key>>,
-) -> impl IntoView {
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+fn HookGridList(state: ListState, items: RwSignal<usize>) -> impl IntoView {
+    let UseGridListReturn {
+        grid_list: props,
+        data,
+    } = use_grid_list(UseGridListInput {
         state,
         element: CapturedElement::new(),
         id: None,
@@ -74,11 +96,11 @@ pub fn HookGridList(
         options: CollectionOptions::default(),
         keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
         should_select_on_press_up: false,
-        on_action,
+        on_action: None,
         tree: None,
     });
     view! {
-        <div {..props.into_attrs()}>
+        <div {..props.attrs()}>
             <For each=move || 0..items.get() key=|i| *i let:i>
                 <HookGridListItem list=data.clone() key=Key::from(i)>
                     {format!("Item {i}")}
@@ -123,7 +145,7 @@ pub fn PagePerf() -> impl IntoView {
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
         <Show when=move || mounted.get()>
-            <HookGridList state items on_action=None />
+            <HookGridList state items />
         </Show>
         <button id="perf-after">"After"</button>
     }

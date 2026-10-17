@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{button::Button, dismiss_button::DismissButton, focus_scope::FocusScope},
     hooks::overlay::{UseOverlayInput, UseOverlayReturn, use_overlay},
 };
@@ -11,7 +10,7 @@ pub fn DismissButtonDemo() -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
     let (closed_by, set_closed_by) = signal(None::<&'static str>);
 
-    let UseOverlayReturn { props, .. } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn { overlay, .. } = use_overlay(UseOverlayInput {
         is_dismissable: Signal::stored(true),
         is_open: is_open.into(),
         on_close: Callback::new(move |()| {
@@ -23,7 +22,6 @@ pub fn DismissButtonDemo() -> impl IntoView {
         should_close_on_interact_outside: None,
         group: None,
     });
-    let overlay_attrs = StoredValue::new(props.into_attrs());
     let dismiss = Callback::new(move |()| {
         set_closed_by.set(Some("a dismiss button"));
         set_is_open.set(false);
@@ -33,7 +31,7 @@ pub fn DismissButtonDemo() -> impl IntoView {
         <Button on_press=move |_| set_is_open.set(true) classes="demo-btn">"Open notifications"</Button>
 
         <Show when=move || is_open.get()>
-            <div {..overlay_attrs.get_value()} role="dialog" aria-label="Notifications" class="demo-overlay-inline-panel">
+            <div {..overlay.attrs()} role="dialog" aria-label="Notifications" class="demo-overlay-inline-panel">
                 <FocusScope restore_focus=true auto_focus=true>
                     <DismissButton on_dismiss=dismiss/>
                     <p class="demo-overlay-text">"Your export is ready."</p>

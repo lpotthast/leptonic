@@ -9,7 +9,6 @@ use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use super::use_listbox::{OPTIONS, large, option, tab_in};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -31,6 +30,30 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(Disabled))
         .with(fixture_test(StateSelection))
         .with(fixture_test(StateSelectionLarge))
+}
+const OPTIONS: &str = "[data-perf-option]";
+/// The fixture's options after the control `large`.
+const LARGE: u32 = 1_000;
+
+/// The option "Option `i`".
+fn option(i: u32) -> String {
+    format!("[data-perf-option='{i}']")
+}
+
+/// Switches to [`LARGE`] options (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.element(option(LARGE - 1)).await?;
+    Ok(())
+}
+
+/// Focuses the first option with the keyboard (Tab from the plain button before the listbox).
+async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
+    page.element("#perf-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    let first = page.element(option(0)).await?;
+    page.wait_for_focus(&first).await?;
+    Ok(first)
 }
 
 /// Mounting `count` options in the listbox and unmounting them.

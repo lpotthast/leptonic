@@ -5,8 +5,6 @@
 //! dismissing it, changing the value on the closed trigger, the trigger's pressed, hovered and
 //! focused states, and changes of its reactive props (value, open state, disabled, invalid,
 //! required, disabled options), with 10 options and with 1,000.
-//!
-//! The performance tests of its parts use the same fixture and the helpers here.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -42,31 +40,31 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(Required))
         .with(fixture_test(DisabledOption))
 }
-pub(crate) const SELECT: &str = ".leptonic-Select";
-pub(crate) const TRIGGER: &str = ".leptonic-SelectTrigger";
-pub(crate) const VALUE: &str = ".leptonic-SelectValue";
-pub(crate) const POPOVER: &str = ".leptonic-SelectPopover";
+const SELECT: &str = ".leptonic-Select";
+const TRIGGER: &str = ".leptonic-SelectTrigger";
+const VALUE: &str = ".leptonic-SelectValue";
+const POPOVER: &str = ".leptonic-SelectPopover";
 /// The fixture's options after the control `large`.
-pub(crate) const LARGE: u32 = 1_000;
+const LARGE: u32 = 1_000;
 
 /// The option "Option `i`".
-pub(crate) fn option(i: u32) -> String {
+fn option(i: u32) -> String {
     format!("[data-perf-option='{i}']")
 }
 
 /// The select's value: the selected option's number, `-1` for none.
-pub(crate) async fn value(page: &Page<'_>) -> Result<f64, Report> {
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
     page.control("value").await
 }
 
 /// Switches to [`LARGE`] options (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.settle().await
 }
 
 /// Focuses the trigger with the keyboard (Tab from the plain button before it).
-pub(crate) async fn focus_trigger(page: &Page<'_>) -> Result<WebElement, Report> {
+async fn focus_trigger(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#perf-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     let trigger = page.element(TRIGGER).await?;
@@ -200,7 +198,7 @@ pub async fn open_and_select_with_the_keyboard_large(page: &Page<'_>) -> Result<
 /// ArrowRight and ArrowLeft on the closed trigger selecting the next and the previous option,
 /// and type-ahead ("o", matching the selected option). (Type-ahead last: the search resets a second
 /// later.)
-pub(crate) async fn change_on_the_trigger_in(page: &Page<'_>) -> Result<(), Report> {
+async fn change_on_the_trigger_in(page: &Page<'_>) -> Result<(), Report> {
     focus_trigger(page).await?;
     page.measure("arrow right", page.send_keys(Key::Right))
         .await?;
@@ -279,7 +277,7 @@ pub async fn disable_and_enable(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The controlled value changing: the first option, the last of `last + 1`, none.
-pub(crate) async fn controlled_value_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn controlled_value_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     let shown = page.element(VALUE).await?;
     page.measure("select first", page.control("select-first"))
         .await?;
@@ -310,7 +308,7 @@ pub async fn controlled_value_large(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The controlled open state opening the popover of `last + 1` options and closing it.
-pub(crate) async fn controlled_open_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn controlled_open_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     page.measure("open", page.control("open")).await?;
     page.element(option(last)).await?;
     page.measure("close", page.control("close")).await?;

@@ -1,8 +1,5 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{
-        ContextMenuEvent, UseContextMenuInput, UseContextMenuReturn, use_context_menu,
-    },
+use leptonic::hooks::interactions::{
+    ContextMenuEvent, UseContextMenuInput, UseContextMenuReturn, use_context_menu,
 };
 use leptos::prelude::*;
 
@@ -11,7 +8,7 @@ pub fn ContextMenuDemo() -> impl IntoView {
     let last = RwSignal::new(None::<(f64, f64)>);
     let count = RwSignal::new(0_u32);
 
-    let UseContextMenuReturn { props, .. } = use_context_menu(UseContextMenuInput {
+    let UseContextMenuReturn { target, .. } = use_context_menu(UseContextMenuInput {
         on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
             last.set(Some((e.point.x, e.point.y)));
             count.update(|count| *count += 1);
@@ -20,7 +17,7 @@ pub fn ContextMenuDemo() -> impl IntoView {
 
     view! {
         // Right click the area, or focus it and press Shift+F10 (or the context menu key).
-        <div class="demo-context-target" tabindex="0" {..props.into_attrs()}>
+        <div class="demo-context-target" tabindex="0" {..target.attrs()}>
             "Request a context menu here"
         </div>
         <p class="demo-status">

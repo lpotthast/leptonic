@@ -91,7 +91,7 @@ pub fn PageFieldOverview() -> impl IntoView {
                 <p>
                     "For a control you render yourself, call "
                     <Link href=format!("{}#use-field", routes::doc::field::Hook.materialize())>"use_field"</Link>
-                    " and spread its props onto the label, the control, the description and the error message."
+                    " and spread its parts onto the label, the control, the description and the error message."
                 </p>
             </Section>
 

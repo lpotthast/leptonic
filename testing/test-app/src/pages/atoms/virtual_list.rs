@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::virtualizer::{VirtualList, VirtualListOptions},
     hooks::{
         collections::Key,
@@ -15,6 +14,7 @@ use leptos::prelude::*;
 ///   rows (estimated 20px), 200px high, following its end (`#test-vl-follow` shows and toggles
 ///   it).
 /// - `#test-vl-append` appends 50 lines.
+/// - `#test-vl-remove` removes the last 50 lines.
 /// - `#test-vl-source` switches the source of `#test-vl-rebuilt`, a view rebuilt in place (same
 ///   type): a focusable `VirtualList` (`#test-vl-rebuilt-list`), an element with `use_focus_ring`'s
 ///   props (`#test-vl-rebuilt-plain`), and a component with them spread onto it
@@ -61,6 +61,17 @@ pub fn PageAtomVirtualList() -> impl IntoView {
             }
         >
             "Append"
+        </button>
+        <button
+            id="test-vl-remove"
+            on:click=move |_| {
+                lines
+                    .update(|lines| {
+                        lines.truncate(lines.len().saturating_sub(50));
+                    });
+            }
+        >
+            "Remove"
         </button>
         <VirtualList
             items=lines
@@ -219,9 +230,9 @@ fn RebuiltLogs(source: usize) -> impl IntoView {
         <PlainWrapper
             attr:id="test-vl-rebuilt-wrapper"
             attr:tabindex="0"
-            {..wrapper_ring.props.into_attrs()}
+            {..wrapper_ring.target.attrs()}
         />
-        <div id="test-vl-rebuilt-plain" tabindex="0" {..plain_ring.props.into_attrs()}>
+        <div id="test-vl-rebuilt-plain" tabindex="0" {..plain_ring.target.attrs()}>
             {format!("Plain {source}")}
         </div>
     }

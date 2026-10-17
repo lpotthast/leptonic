@@ -8,7 +8,7 @@
 //! child takes it out of the tab order).
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         collections::{Key, SelectOnPressUp, use_collection},
         tabs::{
@@ -33,7 +33,7 @@ fn HookTab(state: TabListState, key: &'static str, children: Children) -> impl I
         on_blur: None,
         on_focus_change: None,
     });
-    let (attrs, styles) = tab.props.into_parts();
+    let (attrs, styles) = tab.tab.attrs();
     view! {
         <div {..attrs} style=styles>
             {children()}
@@ -56,7 +56,7 @@ fn HookTabPanel(
         aria_details: Signal::default(),
     });
     view! {
-        <div {..panel.props.into_attrs()} class="perf-panel">
+        <div {..panel.tab_panel.attrs()} class="perf-panel">
             {move || {
                 state.selected_key().map(|key| format!("Panel of {key}")).unwrap_or_default()
             }}
@@ -110,7 +110,7 @@ pub fn PagePerf() -> impl IntoView {
         <h1>"use_tab_panel performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <div {..list.props.into_attrs()}>
+        <div {..list.tab_list.attrs()}>
             <HookTab state key="tab-1">
                 "Tab 1"
             </HookTab>

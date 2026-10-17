@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
-};
+use leptonic::hooks::focus::{FocusWithinEvent, UseFocusWithinInput, use_focus_within};
 use leptos::{prelude::*, web_sys};
 use wasm_bindgen::JsCast;
 
@@ -81,7 +78,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
                 <h2>"Basic Focus Within"</h2>
                 <button id="test-fw-before">"Before"</button>
 
-                <div id="test-fw-container" {..focus_within.props.into_attrs()}>
+                <div id="test-fw-container" {..focus_within.target.attrs()}>
                     <input id="test-fw-input-a" type="text" placeholder="Input A" />
                     <input id="test-fw-input-b" type="text" placeholder="Input B" />
                 </div>
@@ -106,7 +103,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
 
             <section>
                 <h2>"Disabled Focus Within"</h2>
-                <div id="test-fw-disabled-container" {..disabled_fw.props.into_attrs()}>
+                <div id="test-fw-disabled-container" {..disabled_fw.target.attrs()}>
                     <input id="test-fw-disabled-input" type="text" placeholder="Disabled Input" />
                 </div>
 
@@ -124,7 +121,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
 
             <section>
                 <h2>"Change Callback"</h2>
-                <div id="test-fw-change-container" {..change_fw.props.into_attrs()}>
+                <div id="test-fw-change-container" {..change_fw.target.attrs()}>
                     <input id="test-fw-change-input" type="text" placeholder="Change Input" />
                 </div>
 
@@ -139,7 +136,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
 
             <section>
                 <h2>"Removal and Disabling"</h2>
-                <div id="test-fw-removal-container" {..removal_fw.props.into_attrs()}>
+                <div id="test-fw-removal-container" {..removal_fw.target.attrs()}>
                     <Show when=move || removal_shown.get()>
                         <button id="test-fw-removal-hide" on:click=move |_| removal_shown.set(false)>
                             "Hide"
@@ -190,8 +187,8 @@ pub fn PageHookFocusWithin() -> impl IntoView {
                     let nested_inner_is_fw = nested_inner_fw.is_focus_within;
 
                     view! {
-                        <div id="test-fw-nested-outer" {..nested_outer_fw.props.into_attrs()}>
-                            <div id="test-fw-nested-inner" {..nested_inner_fw.props.into_attrs()}>
+                        <div id="test-fw-nested-outer" {..nested_outer_fw.target.attrs()}>
+                            <div id="test-fw-nested-inner" {..nested_inner_fw.target.attrs()}>
                                 <input
                                     id="test-fw-nested-input"
                                     type="text"

@@ -11,7 +11,7 @@
 //! cancel, 1 move, 2 copy, 3 link).
 
 use leptonic::{
-    CapturedElement, IntoAttrs, announce_polite, flag,
+    CapturedElement, announce_polite, flag,
     hooks::dnd::{
         DragEndEvent, DragItem, DropOperation, UseDragInput, UseDragReturn, UseDropInput,
         UseDropReturn, use_drag, use_drop,
@@ -55,7 +55,7 @@ pub fn PagePerf() -> impl IntoView {
 
     let element = CapturedElement::new();
     let UseDropReturn {
-        drop_props,
+        drop_target: drop_props,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -83,7 +83,7 @@ pub fn PagePerf() -> impl IntoView {
             id="perf-drop"
             role="button"
             tabindex="0"
-            {..drop_props.into_attrs()}
+            {..drop_props.attrs()}
             data-drop-target=flag(is_drop_target)
         >
             "Drop here"
@@ -102,7 +102,7 @@ fn Draggable(
     last_operation: StoredValue<f64>,
 ) -> impl IntoView {
     let UseDragReturn {
-        drag_props,
+        draggable: drag_props,
         is_dragging,
         ..
     } = use_drag(UseDragInput {
@@ -127,7 +127,7 @@ fn Draggable(
             id="perf-draggable"
             role="button"
             tabindex="0"
-            {..drag_props.into_attrs()}
+            {..drag_props.attrs()}
             data-dragging=flag(is_dragging)
         >
             "Drag me"

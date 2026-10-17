@@ -4,7 +4,13 @@
 use leptos::{ev, prelude::*};
 use web_sys::{KeyboardEvent, PointerEvent};
 
-use crate::{EventHandler, IntoAttrs, Modifiers, OnEvent, utils::pointer_type::PointerType};
+use crate::{
+    EventHandler, IntoAttrs, Modifiers, OnEvent,
+    utils::{
+        part::{Part, Remount},
+        pointer_type::PointerType,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -86,10 +92,11 @@ impl Default for UseMoveInput {
     }
 }
 
-/// Return value of [`use_move`].
+/// The return value of [`use_move`].
 #[derive(Debug)]
 pub struct UseMoveReturn {
-    pub props: UseMoveProps,
+    /// The element moved with the pointer or the keyboard.
+    pub target: Part<UseMoveProps>,
 }
 
 /// Props for the movable element.
@@ -97,6 +104,15 @@ pub struct UseMoveReturn {
 pub struct UseMoveProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl Remount for UseMoveProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_keydown: self.on_keydown.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseMoveProps {
@@ -123,10 +139,10 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     {
         let _ = input;
         UseMoveReturn {
-            props: UseMoveProps {
+            target: Part::stored(UseMoveProps {
                 on_pointerdown: EventHandler::empty(),
                 on_keydown: EventHandler::empty(),
-            },
+            }),
         }
     }
 
@@ -138,6 +154,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 dom_ext::{EventAccessors, EventTargetExt},
                 event_listeners::{Listener, listen_to},
                 key::{KeyboardEventKey, KeyboardKey},
+                stored_field::StoredField,
                 text_selection::{disable_text_selection, restore_text_selection},
             },
         };
@@ -155,9 +172,11 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             on_move,
             on_move_end,
         } = input;
-        let state = StoredValue::new_local(None::<MoveState>);
-        // Whether the current move (pointer or keyboard) reported a movement yet.
-        let did_move = StoredValue::new(false);
+        // The pointer move in progress, and whether the current move (pointer or keyboard)
+        // reported a movement yet: one store (`performance.md`, R7).
+        let hook = StoredValue::new_local((None::<MoveState>, false));
+        let state = StoredField::new(hook, |h| &h.0, |h| &mut h.0);
+        let did_move = StoredField::new(hook, |h| &h.1, |h| &mut h.1);
 
         let start = move || {
             disable_text_selection(None);
@@ -280,10 +299,10 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         });
 
         UseMoveReturn {
-            props: UseMoveProps {
+            target: Part::stored(UseMoveProps {
                 on_pointerdown: EventHandler::new(handle_pointer_down),
                 on_keydown: EventHandler::new(handle_keydown),
-            },
+            }),
         }
     }
 }

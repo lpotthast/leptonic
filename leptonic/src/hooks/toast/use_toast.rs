@@ -1,18 +1,17 @@
 // Upstream: react-aria/src/toast/useToast.ts @ 99e6102368
 // Upstream: react-aria/test/toast/useToast.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::use_toast_state::{QueuedToast, ToastQueue};
 use crate::{
-    IntoAttrs,
+    Id, IntoAttrs, Part,
     hooks::button::UseButtonInput,
     utils::{
         aria::{AriaAtomic, AriaHidden, AriaModal, AriaRole},
         id::use_id,
         intl_strings::{ToastStrings, use_localized_strings},
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         slot_id::{SlotProps, use_slot},
     },
 };
@@ -36,22 +35,22 @@ pub struct UseToastInput<T: Clone + Send + Sync + 'static> {
     pub toast: QueuedToast<T>,
     pub aria_label: MaybeProp<String>,
     /// Default: the toast's title.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Default: the toast's description.
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
 }
 
-/// Return value of [`use_toast`].
+/// The return value of [`use_toast`].
 #[derive(Debug)]
 pub struct UseToastReturn {
-    /// For the toast (a non-modal alert dialog).
-    pub toast_props: UseToastProps,
-    /// For its content (an alert, announced when it appears).
-    pub content_props: UseToastContentProps,
-    /// The id of the title.
-    pub title_id: String,
+    /// The toast element.
+    pub toast: Part<UseToastProps>,
+    /// Its content (an alert, announced when it appears).
+    pub content: Part<UseToastContentProps>,
+    /// Its title, which labels it.
+    pub title: Part<UseToastTitleProps>,
     /// For the description (referenced while rendered).
-    pub description_props: SlotProps,
+    pub description: Part<SlotProps>,
     /// For the button closing it.
     pub close_button: UseButtonInput,
 }
@@ -61,28 +60,39 @@ pub struct UseToastReturn {
 pub struct UseToastProps {
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<String>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Id>,
+    pub aria_describedby: Signal<Option<Id>>,
+}
+
+impl Remount for UseToastProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+        }
+    }
 }
 
 impl IntoAttrs for UseToastProps {
     type Attrs = (
-        Attr<attr::Role, AriaRole>,
-        Attr<attr::AriaModal, AriaModal>,
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Signal<String>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::Tabindex, i32>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<String>>,
+        SignalAttr<Id>,
+        SignalAttr<Option<Id>>,
+        FixedAttr,
     );
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaModal, AriaModal::False),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::Tabindex, 0),
+            fixed_attr("role", self.role),
+            fixed_attr("aria-modal", AriaModal::False),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-describedby", self.aria_describedby),
+            fixed_attr("tabindex", 0),
         )
     }
 }
@@ -95,18 +105,28 @@ pub struct UseToastContentProps {
 }
 
 impl IntoAttrs for UseToastContentProps {
-    type Attrs = (
-        Attr<attr::Role, AriaRole>,
-        Attr<attr::AriaAtomic, AriaAtomic>,
-        Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
-    );
+    type Attrs = (FixedAttr, FixedAttr, SignalAttr<Option<AriaHidden>>);
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, AriaRole::Alert),
-            Attr(attr::AriaAtomic, AriaAtomic::True),
-            Attr(attr::AriaHidden, self.aria_hidden),
+            fixed_attr("role", AriaRole::Alert),
+            fixed_attr("aria-atomic", AriaAtomic::True),
+            signal_attr("aria-hidden", self.aria_hidden),
         )
+    }
+}
+
+/// Props of a toast's title.
+#[derive(Debug)]
+pub struct UseToastTitleProps {
+    pub id: Id,
+}
+
+impl IntoAttrs for UseToastTitleProps {
+    type Attrs = FixedAttr;
+
+    fn into_attrs(self) -> Self::Attrs {
+        fixed_attr("id", self.id)
     }
 }
 
@@ -137,7 +157,7 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> U
     let key = toast.key;
     let referenced_description = description.referenced_id;
     UseToastReturn {
-        toast_props: UseToastProps {
+        toast: Part::stored(UseToastProps {
             role: AriaRole::Alertdialog,
             aria_label,
             aria_labelledby: {
@@ -149,12 +169,16 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> U
                     .get()
                     .or_else(|| referenced_description.get())
             }),
+        }),
+        content: {
+            let aria_hidden =
+                Signal::derive(move || (!is_visible.get()).then_some(AriaHidden::True));
+            Part::new(move || UseToastContentProps { aria_hidden })
         },
-        content_props: UseToastContentProps {
-            aria_hidden: Signal::derive(move || (!is_visible.get()).then_some(AriaHidden::True)),
-        },
-        title_id,
-        description_props: description.props,
+        title: Part::new(move || UseToastTitleProps {
+            id: title_id.clone(),
+        }),
+        description: description.part,
         close_button: UseButtonInput {
             aria_label: {
                 let strings = use_localized_strings::<ToastStrings>();

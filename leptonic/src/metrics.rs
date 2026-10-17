@@ -11,7 +11,8 @@
 ///
 /// The subject is named after the function the macro is placed in, so the name can't be wrong:
 /// `use_press`, or the snake-cased name of an atom (`#[component]` puts an atom's body into a
-/// function `__component_<name in snake case>`: `button`, `virtual_list`).
+/// function `__component_<name in snake case>`: `button`, `virtual_list`). Hooks and atoms built
+/// on other hooks call the public hooks, so those report themselves too.
 macro_rules! subject {
     () => {
         #[cfg(feature = "metrics")]

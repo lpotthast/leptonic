@@ -1,26 +1,76 @@
-//! `TableRow`s in a `Table` (`[role=grid]`), for the performance tests of `TableRow` and
-//! `TableCell` (`leptonic/tests/perf_tests/atoms/table_row.rs`, `.../table_cell.rs`, whose
-//! fixture this is too): the table of the `Table` fixture ([`super::table`]: [`SMALL`] rows "Row
-//! <i>" in the columns Name, Value and Group), with multiple selection and selection checkboxes,
-//! between two plain buttons (`#perf-before`, `#perf-after`) to tab from and to, mounted at
-//! first. Its controls ([`Control`]) mount and unmount the table (`mount`, `mount-with-actions`:
-//! with a row and a cell action; `unmount`), set its size while unmounted (`small`, `large`:
-//! [`LARGE`] rows), add and remove a row (mounting and unmounting a `TableRow` and its cells),
-//! disable the second row, prepare the live announcer (`prepare-announcer`: its first
-//! announcement waits for its live regions) and read how many rows are selected (`selected`) and
-//! how often a row or cell action ran (`row-actions`, `cell-actions`).
+//! `TableRow`s in a `Table` (`[role=grid]`), for the performance test of `TableRow`
+//! (`leptonic/tests/perf_tests/atoms/table_row.rs`): [`SMALL`] rows "Row <i>" in the columns Name,
+//! Value and Group, with multiple selection and selection checkboxes, between two plain buttons
+//! (`#perf-before`, `#perf-after`) to tab from and to, mounted at first. Its controls ([`Control`])
+//! mount and unmount the table (`mount`, `mount-with-actions`: with a row and a cell action;
+//! `unmount`), set its size while unmounted (`small`, `large`: [`LARGE`] rows), add and remove a
+//! row (mounting and unmounting a `TableRow` and its cells), disable the second row, prepare the
+//! live announcer (`prepare-announcer`: its first announcement waits for its live regions) and read
+//! how many rows are selected (`selected`) and how often a row or cell action ran (`row-actions`,
+//! `cell-actions`).
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
     Assertiveness, announce,
-    atoms::table::{Table, TableBody, TableHeader},
-    hooks::collections::{Key, Selection, SelectionMode},
+    atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
+    hooks::{
+        collections::{Key, Selection, SelectionMode},
+        table::TableCollection,
+    },
 };
 use leptos::prelude::*;
 
-use super::table::{LARGE, SMALL, TableRows, selected_count, table_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small table.
+const SMALL: usize = 10;
+/// The rows of the large table.
+const LARGE: usize = 1_000;
+
+/// How many rows of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
+
+/// `rows` rows ("Row <i>", key `i`) in the sortable columns `name` (the row header), `value` and
+/// `group`.
+fn table_collection(rows: RwSignal<usize>) -> Memo<Arc<TableCollection>> {
+    Memo::new(move |_| {
+        Arc::new(TableCollection::build(|t| {
+            for (key, text) in [("name", "Name"), ("value", "Value"), ("group", "Group")] {
+                let column = t.column(key, text).allows_sorting();
+                if key == "name" {
+                    let _ = column.row_header();
+                }
+            }
+            for i in 0..rows.get() {
+                t.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
+
+/// The table's `rows` rows (`TableRow`s of three `TableCell`s).
+#[component]
+fn TableRows(rows: RwSignal<usize>) -> impl IntoView {
+    view! {
+        <For each=move || 0..rows.get() key=|i| *i let:i>
+            <TableRow key=i>
+                <TableCell column="name">{format!("Row {i}")}</TableCell>
+                <TableCell column="value">{format!("Value {i}")}</TableCell>
+                <TableCell column="group">{format!("Group {}", i % 3)}</TableCell>
+            </TableRow>
+        </For>
+    }
+}
 
 #[component]
 pub fn PagePerf() -> impl IntoView {
@@ -31,7 +81,7 @@ pub fn PagePerf() -> impl IntoView {
     let disabled = RwSignal::new(HashSet::<Key>::new());
     let row_actions = StoredValue::new(0_u32);
     let cell_actions = StoredValue::new(0_u32);
-    let table = table_collection(rows, false);
+    let table = table_collection(rows);
     let controls = vec![
         Control::action("mount", move || {
             with_actions.set(false);

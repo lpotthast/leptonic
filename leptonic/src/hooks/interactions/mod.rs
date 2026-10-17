@@ -6,6 +6,7 @@ pub(crate) mod use_keyboard;
 pub(crate) mod use_move;
 pub(crate) mod use_press;
 pub(crate) mod use_scroll_wheel;
+pub(crate) mod use_wheel_stepping;
 
 pub use use_context_menu::*;
 pub use use_global_shortcuts::*;
@@ -15,3 +16,4 @@ pub use use_keyboard::*;
 pub use use_move::*;
 pub use use_press::*;
 pub use use_scroll_wheel::*;
+pub use use_wheel_stepping::*;

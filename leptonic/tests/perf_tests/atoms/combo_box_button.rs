@@ -1,14 +1,13 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! The performance of the atom `ComboBoxButton` (`/perf/atoms/combo_box_button`, the fixture of
-//! `ComboBox`'s performance test): what each thing it offers costs, measured (`Page::measure`) and
-//! checked against its budget (`tests/budgets/atoms/combo_box_button.json`): mounting and
-//! unmounting it in its combo box, clicks opening the popover (10 and 1,000 options) and closing
-//! it, its pressed and hovered states, and the combo box's disabled state changing.
+//! The performance of the atom `ComboBoxButton` (`/perf/atoms/combo_box_button`, in a `ComboBox`):
+//! what each thing it offers costs, measured (`Page::measure`) and checked against its budget
+//! (`tests/budgets/atoms/combo_box_button.json`): mounting and unmounting it in its combo box,
+//! clicks opening the popover (10 and 1,000 options) and closing it, its pressed and hovered
+//! states, and the combo box's disabled state changing.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test};
 use rootcause::Report;
 
-use super::combo_box::{BUTTON, OPTIONS, POPOVER, goto, large};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -26,11 +25,30 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(HoverAndLeave))
         .with(fixture_test(DisableAndEnable))
 }
+const BUTTON: &str = ".leptonic-ComboBoxButton";
+const POPOVER: &str = ".leptonic-ComboBoxPopover";
+const OPTIONS: &str = "[role=option]";
+
+/// Loads the fixture and creates the live announcer's regions (its first announcement waits for
+/// them, so an announcing step measured first would count them, or not).
+async fn load(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.control("prepare-announcer").await?;
+    page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
+        .await?;
+    Ok(())
+}
+
+/// Switches to 1,000 options (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.settle().await
+}
 
 /// Mounting the button in its combo box and unmounting it.
 #[browser_test]
 pub async fn mount_and_unmount(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     page.control("unmount").await?;
     page.wait_for_count(BUTTON, 0).await?;
     page.measure("mount", page.control("mount")).await?;
@@ -55,14 +73,14 @@ async fn open_and_close_in(page: &Page<'_>, count: usize) -> Result<(), Report> 
 /// Opening and closing the popover of 10 options with clicks.
 #[browser_test]
 pub async fn open_and_close(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     open_and_close_in(page, 10).await
 }
 
 /// Opening and closing the popover of 1,000 options with clicks.
 #[browser_test]
 pub async fn open_and_close_large(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     large(page).await?;
     open_and_close_in(page, 1_000).await
 }
@@ -71,7 +89,7 @@ pub async fn open_and_close_large(page: &Page<'_>) -> Result<(), Report> {
 /// it.
 #[browser_test]
 pub async fn hold_and_release(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     let button = page.element(BUTTON).await?;
     let held = page.measure("hold", button.press_and_hold()).await?;
     button.wait_for_attr("data-pressed", Some("true")).await?;
@@ -83,7 +101,7 @@ pub async fn hold_and_release(page: &Page<'_>) -> Result<(), Report> {
 /// The pointer entering and leaving the button.
 #[browser_test]
 pub async fn hover_and_leave(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     let button = page.element(BUTTON).await?;
     let after = page.element("#perf-after").await?;
     page.measure("hover", button.hover()).await?;
@@ -96,7 +114,7 @@ pub async fn hover_and_leave(page: &Page<'_>) -> Result<(), Report> {
 /// The combo box disabled (the button too), a click it ignores, and enabled again.
 #[browser_test]
 pub async fn disable_and_enable(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     let button = page.element(BUTTON).await?;
     page.measure("disable", page.control("disable")).await?;
     button.wait_for_attr("data-disabled", Some("true")).await?;

@@ -7,10 +7,7 @@
 //! app's state), make it dismissable or not, disable and enable dismissing it with Escape, and stop
 //! and start closing it on blur.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::overlay::{UseOverlayInput, use_overlay},
-};
+use leptonic::hooks::overlay::{UseOverlayInput, use_overlay};
 use leptos::{html, prelude::*};
 
 use crate::pages::perf::{Control, PerfControls};
@@ -71,7 +68,7 @@ fn Subject(
         should_close_on_interact_outside: None,
         group: None,
     });
-    let attrs = StoredValue::new(overlay.props.into_attrs());
+    let attrs = StoredValue::new(overlay.overlay.attrs());
     view! {
         <Show when=move || open.get()>
             {

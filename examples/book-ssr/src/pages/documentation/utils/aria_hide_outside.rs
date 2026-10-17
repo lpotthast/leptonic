@@ -40,7 +40,7 @@ pub fn PageAriaHideOutside() -> impl IntoView {
                         };
 
                         let (is_open, set_is_open) = signal(false);
-                        let UseOverlayReturn { props, overlay_element, .. } = use_overlay(UseOverlayInput {
+                        let UseOverlayReturn { overlay, overlay_element, .. } = use_overlay(UseOverlayInput {
                             is_open: is_open.into(),
                             on_close: Callback::new(move |()| set_is_open.set(false)),
                             is_dismissable: Signal::stored(false),
@@ -110,10 +110,11 @@ pub fn PageAriaHideOutside() -> impl IntoView {
 
             <Section title="Used By">
                 <p>
+                    <Link href=routes::doc::overlay_behavior::UseHideOutside.materialize()>"use_hide_outside"</Link>
+                    " calls them for an overlay while it is open: "
                     <Link href=format!("{}#use-modal-backdrop", routes::doc::modal::Hook.materialize())>"use_modal_backdrop"</Link>
                     " and modal popovers ("<Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link>
-                    ") make the rest of the page inert; non-modal popovers call "<Code inline=true>"keep_visible"</Code>
-                    ". The combo box hides the page with "<Code inline=true>"aria-hidden"</Code>" while its list is open, and "
+                    ") make the rest of the page inert with it; non-modal popovers keep themselves visible. The combo box hides the page with "<Code inline=true>"aria-hidden"</Code>" while its list is open, and "
                     "keyboard drag and drop hides everything but the drop targets."
                 </p>
             </Section>

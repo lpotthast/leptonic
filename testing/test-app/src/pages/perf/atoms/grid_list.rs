@@ -19,12 +19,12 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The items of the small list.
-pub const SMALL: usize = 10;
+const SMALL: usize = 10;
 /// The items of the large list.
-pub const LARGE: usize = 1_000;
+const LARGE: usize = 1_000;
 
 /// How many items of `selection` are selected (-1: all).
-pub fn selected_count(selection: &Selection) -> f64 {
+fn selected_count(selection: &Selection) -> f64 {
     match selection {
         Selection::All => -1.0,
         Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
@@ -32,7 +32,7 @@ pub fn selected_count(selection: &Selection) -> f64 {
 }
 
 /// `items` items ("Item <i>", key `i`).
-pub fn list_collection(items: RwSignal<usize>) -> CollectionMemo {
+fn list_collection(items: RwSignal<usize>) -> CollectionMemo {
     Memo::new(move |_| {
         Arc::new(Collection::build(|b| {
             for i in 0..items.get() {

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         button::use_button,
         collections::{CollectionOptions, Key, SelectionOptions, use_collection},
@@ -56,7 +56,7 @@ pub fn PageHookTree() -> impl IntoView {
         <div id="test-page-hook-tree">
             <h1>"Tree"</h1>
             <button id="test-tree-before">"Before"</button>
-            <div {..tree.props.into_attrs()}>
+            <div {..tree.grid_list.attrs()}>
                 <For
                     each=move || {
                         visible.with(|c| c.items().map(|n| n.key.clone()).collect::<Vec<_>>())
@@ -92,11 +92,11 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (attrs, styles) = item.row_props.into_parts();
+    let (attrs, styles) = item.row.attrs();
     // Only items with children have one (an item can get children later).
     let button = move || {
         has_child_items.get().then(|| {
-            let (attrs, styles) = use_button(expand_button.clone()).props.into_parts();
+            let (attrs, styles) = use_button(expand_button.clone()).button.attrs();
             view! {
                 <button {..attrs} {..expand_button_attrs.clone()} style=styles>
                     "›"
@@ -107,7 +107,7 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
 
     view! {
         <div {..attrs} style=styles>
-            <div {..item.grid_cell_props.into_attrs()}>{button} <span>{text}</span></div>
+            <div {..item.cell.attrs()}>{button} <span>{text}</span></div>
         </div>
     }
 }

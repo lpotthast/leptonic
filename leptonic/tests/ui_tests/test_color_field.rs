@@ -235,3 +235,19 @@ pub async fn channel(page: &Page<'_>) -> Result<(), Report> {
         .is_equal_to("50%");
     Ok(())
 }
+
+/// Scrolling the wheel over a focused channel field steps the channel: down increments, up
+/// decrements (react-spectrum `ColorField.test.js` "increment with mouse wheel", "decrement with
+/// mouse wheel", for a channel field).
+#[browser_test]
+pub async fn channel_mouse_wheel(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let hue = input(page, "test-cf-hue").await?;
+    hue.focus().await?;
+    hue.dispatch(SyntheticEvent::wheel().delta_y(10.0)).await?;
+    log(page).await?.wait_for_inner_text("hue:11").await?;
+    hue.wait_for_prop("value", "11°").await?;
+    hue.dispatch(SyntheticEvent::wheel().delta_y(-10.0)).await?;
+    hue.wait_for_prop("value", "10°").await?;
+    Ok(())
+}

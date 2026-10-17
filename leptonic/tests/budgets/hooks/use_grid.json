@@ -21,14 +21,14 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 3868,
-        "reallocations": 0,
-        "memo_runs": 172,
-        "memo_runs_unchanged": 100,
+        "allocations": 1414,
+        "reallocations": 2,
+        "memo_runs": 142,
+        "memo_runs_unchanged": 70,
         "effect_runs": 53,
         "render_effect_runs": 53,
-        "immediate_effect_runs": 0,
-        "signal_notifications": 82,
+        "immediate_effect_runs": 1,
+        "signal_notifications": 92,
         "dom_attributes": 50,
         "dom_text": 0,
         "dom_added_nodes": 0,
@@ -58,13 +58,13 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17210,
-        "reallocations": 518,
+        "allocations": 14858,
+        "reallocations": 442,
         "memo_runs": 272,
         "memo_runs_unchanged": 0,
         "effect_runs": 163,
-        "render_effect_runs": 262,
-        "immediate_effect_runs": 0,
+        "render_effect_runs": 232,
+        "immediate_effect_runs": 1,
         "signal_notifications": 82,
         "dom_attributes": 0,
         "dom_text": 0,
@@ -97,7 +97,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 71,
+        "allocations": 61,
         "reallocations": 4,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -134,7 +134,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 91,
+        "allocations": 58,
         "reallocations": 0,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
@@ -173,12 +173,12 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17407,
-        "reallocations": 538,
+        "allocations": 15031,
+        "reallocations": 455,
         "memo_runs": 272,
         "memo_runs_unchanged": 0,
         "effect_runs": 165,
-        "render_effect_runs": 268,
+        "render_effect_runs": 235,
         "immediate_effect_runs": 0,
         "signal_notifications": 84,
         "dom_attributes": 0,
@@ -210,7 +210,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -249,12 +249,12 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1703385,
-        "reallocations": 55048,
+        "allocations": 1470339,
+        "reallocations": 43044,
         "memo_runs": 27002,
         "memo_runs_unchanged": 0,
         "effect_runs": 16005,
-        "render_effect_runs": 26008,
+        "render_effect_runs": 23005,
         "immediate_effect_runs": 0,
         "signal_notifications": 8004,
         "dom_attributes": 0,
@@ -286,7 +286,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 17,
+        "allocations": 9,
         "reallocations": 0,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -325,7 +325,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1,
+        "allocations": 0,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -362,7 +362,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1,
+        "allocations": 0,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -399,7 +399,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 9,
+        "allocations": 7,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -438,7 +438,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 140,
+        "allocations": 98,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -475,7 +475,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 152,
+        "allocations": 104,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -512,7 +512,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 150,
+        "allocations": 109,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -549,7 +549,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 134,
+        "allocations": 92,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -586,7 +586,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 134,
+        "allocations": 94,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -623,7 +623,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 136,
+        "allocations": 96,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -660,7 +660,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 6110,
+        "allocations": 80,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -697,7 +697,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 6106,
+        "allocations": 76,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -736,7 +736,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 140,
+        "allocations": 98,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -773,7 +773,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 152,
+        "allocations": 104,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -810,7 +810,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 150,
+        "allocations": 109,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -847,7 +847,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 134,
+        "allocations": 92,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -884,7 +884,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 134,
+        "allocations": 94,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -921,7 +921,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 136,
+        "allocations": 96,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -958,7 +958,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 170,
+        "allocations": 80,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -995,7 +995,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 166,
+        "allocations": 76,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -1034,7 +1034,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 21070,
+        "allocations": 12063,
         "reallocations": 6,
         "memo_runs": 1001,
         "memo_runs_unchanged": 0,
@@ -1071,8 +1071,8 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 25094,
-        "reallocations": 8,
+        "allocations": 14090,
+        "reallocations": 1008,
         "memo_runs": 1001,
         "memo_runs_unchanged": 0,
         "effect_runs": 2,
@@ -1110,7 +1110,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 279,
+        "allocations": 182,
         "reallocations": 6,
         "memo_runs": 11,
         "memo_runs_unchanged": 0,
@@ -1147,8 +1147,8 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 344,
-        "reallocations": 2,
+        "allocations": 230,
+        "reallocations": 12,
         "memo_runs": 11,
         "memo_runs_unchanged": 0,
         "effect_runs": 2,
@@ -1186,7 +1186,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 105004,
+        "allocations": 50003,
         "reallocations": 1000,
         "memo_runs": 6000,
         "memo_runs_unchanged": 4000,
@@ -1223,7 +1223,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 90004,
+        "allocations": 38003,
         "reallocations": 0,
         "memo_runs": 6000,
         "memo_runs_unchanged": 3000,
@@ -1262,7 +1262,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 1054,
+        "allocations": 503,
         "reallocations": 10,
         "memo_runs": 60,
         "memo_runs_unchanged": 40,
@@ -1299,7 +1299,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 904,
+        "allocations": 383,
         "reallocations": 0,
         "memo_runs": 60,
         "memo_runs_unchanged": 30,
@@ -1338,7 +1338,7 @@
       ],
       "windows": 7,
       "totals": {
-        "allocations": 7653,
+        "allocations": 1505,
         "reallocations": 0,
         "memo_runs": 6,
         "memo_runs_unchanged": 0,
@@ -1377,7 +1377,7 @@
       ],
       "windows": 5,
       "totals": {
-        "allocations": 443,
+        "allocations": 311,
         "reallocations": 0,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,

@@ -2,22 +2,19 @@
 // Upstream: react-aria-components/test/HiddenDateInput.test.js @ 99e6102368
 // Upstream: react-aria-components/test/DateField.test.js @ 99e6102368
 use leptos::{
-    attr::{
-        self, Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
     ev::{self},
     prelude::*,
 };
 
 use super::types::{DateValue, Granularity};
 use crate::{
-    EventHandler, IntoAttrs, OnEvent,
+    EventHandler, IntoAttrs, OnEvent, PropsWithStyles,
     utils::{
         aria::AriaHidden,
         dom_ext::EventAccessors,
         focusability::{PreventFocusAttr, prevent_focus_attr},
-        styles::Styles,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         visually_hidden::visually_hidden_fixed_styles,
     },
 };
@@ -55,12 +52,14 @@ pub struct UseHiddenDateInputInput<V: DateValue> {
     pub is_disabled: Signal<bool>,
 }
 
-/// Return value of [`use_hidden_date_input`].
+/// The return value of [`use_hidden_date_input`].
+#[derive(Debug)]
 pub struct UseHiddenDateInputReturn {
-    /// For the visually hidden container (a `div`).
-    pub container_props: UseHiddenDateContainerProps,
-    /// For the `<input>`.
-    pub input_props: UseHiddenDateInputProps,
+    /// The visually hidden container element (its styles hide it: merge them into the element's
+    /// `style`).
+    pub container: Part<PropsWithStyles<UseHiddenDateContainerProps>>,
+    /// The hidden input element.
+    pub input: Part<UseHiddenDateInputProps>,
 }
 
 /// Props of the hidden input's container.
@@ -68,21 +67,25 @@ pub struct UseHiddenDateInputReturn {
 pub struct UseHiddenDateContainerProps {
     pub aria_hidden: AriaHidden,
     pub prevent_focus: PreventFocusAttr,
-    pub styles: Styles,
+}
+
+impl Remount for UseHiddenDateContainerProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_hidden: self.aria_hidden,
+            prevent_focus: self.prevent_focus.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseHiddenDateContainerProps {
-    type Attrs = (
-        Attr<attr::AriaHidden, AriaHidden>,
-        PreventFocusAttr,
-        CustomAttr<&'static str, &'static str>,
-    );
+    type Attrs = (FixedAttr, PreventFocusAttr, FixedAttr);
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::AriaHidden, self.aria_hidden),
+            fixed_attr("aria-hidden", self.aria_hidden),
             self.prevent_focus,
-            custom_attribute("data-a11y-ignore", "aria-hidden-focus"),
+            fixed_attr("data-a11y-ignore", "aria-hidden-focus"),
         )
     }
 }
@@ -102,29 +105,45 @@ pub struct UseHiddenDateInputProps {
     pub on_input: EventHandler<web_sys::Event>,
 }
 
+impl Remount for UseHiddenDateInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            input_type: self.input_type,
+            tabindex: self.tabindex,
+            autocomplete: self.autocomplete.clone(),
+            disabled: self.disabled,
+            form: self.form,
+            name: self.name.clone(),
+            step: self.step,
+            value: self.value,
+            on_input: self.on_input.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseHiddenDateInputProps {
     type Attrs = (
-        Attr<attr::Type, Signal<&'static str>>,
-        Attr<attr::Tabindex, i32>,
-        Attr<attr::Autocomplete, Option<String>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Form, &'static str>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Step, Signal<u32>>,
-        Attr<attr::Value, Signal<String>>,
+        SignalAttr<&'static str>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<bool>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<u32>,
+        SignalAttr<String>,
         OnEvent<ev::input>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Type, self.input_type),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::Autocomplete, self.autocomplete),
-            Attr(attr::Disabled, self.disabled),
-            Attr(attr::Form, self.form),
-            Attr(attr::Name, self.name),
-            Attr(attr::Step, self.step),
-            Attr(attr::Value, self.value),
+            signal_attr("type", self.input_type),
+            fixed_attr("tabindex", self.tabindex),
+            fixed_attr("autocomplete", self.autocomplete),
+            signal_attr("disabled", self.disabled),
+            fixed_attr("form", self.form),
+            fixed_attr("name", self.name),
+            signal_attr("step", self.step),
+            signal_attr("value", self.value),
             self.on_input.into_on(ev::input),
         )
     }
@@ -166,13 +185,15 @@ pub fn use_hidden_date_input<V: DateValue>(
         is_disabled,
     } = input;
     UseHiddenDateInputReturn {
-        container_props: UseHiddenDateContainerProps {
-            aria_hidden: AriaHidden::True,
-            prevent_focus: prevent_focus_attr(),
+        container: Part::stored(PropsWithStyles::new(
+            UseHiddenDateContainerProps {
+                aria_hidden: AriaHidden::True,
+                prevent_focus: prevent_focus_attr(),
+            },
             // Fixed at the top left, so that focusing it doesn't scroll the page.
-            styles: visually_hidden_fixed_styles(),
-        },
-        input_props: UseHiddenDateInputProps {
+            visually_hidden_fixed_styles(),
+        )),
+        input: Part::stored(UseHiddenDateInputProps {
             input_type: Signal::derive(move || {
                 if granularity.get() == Granularity::Day {
                     "date"
@@ -216,7 +237,7 @@ pub fn use_hidden_date_input<V: DateValue>(
                 };
                 set_value.run(Some(base.with_fields(date_time.date(), time, None)));
             }),
-        },
+        }),
     }
 }
 

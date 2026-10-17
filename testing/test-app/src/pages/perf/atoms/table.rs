@@ -8,9 +8,6 @@
 //! reactive props (selection mode, selection checkboxes, disabled rows), prepare the live
 //! announcer (`prepare-announcer`: its first announcement waits for its live regions) and read
 //! how many rows are selected (`selected`, -1 for all).
-//!
-//! [`table_collection`] and [`TableRows`] also build the tables of the fixtures of the other
-//! table atoms.
 
 use std::{collections::HashSet, sync::Arc};
 
@@ -27,12 +24,12 @@ use leptos::prelude::*;
 use crate::pages::perf::{Control, PerfControls};
 
 /// The rows of the small table.
-pub const SMALL: usize = 10;
+const SMALL: usize = 10;
 /// The rows of the large table.
-pub const LARGE: usize = 1_000;
+const LARGE: usize = 1_000;
 
 /// How many rows of `selection` are selected (-1: all).
-pub fn selected_count(selection: &Selection) -> f64 {
+fn selected_count(selection: &Selection) -> f64 {
     match selection {
         Selection::All => -1.0,
         Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
@@ -40,17 +37,14 @@ pub fn selected_count(selection: &Selection) -> f64 {
 }
 
 /// `rows` rows ("Row <i>", key `i`) in the sortable columns `name` (the row header), `value` and
-/// `group`, all resizable if `resizable`.
-pub fn table_collection(rows: RwSignal<usize>, resizable: bool) -> Memo<Arc<TableCollection>> {
+/// `group`.
+fn table_collection(rows: RwSignal<usize>) -> Memo<Arc<TableCollection>> {
     Memo::new(move |_| {
         Arc::new(TableCollection::build(|t| {
             for (key, text) in [("name", "Name"), ("value", "Value"), ("group", "Group")] {
-                let mut column = t.column(key, text).allows_sorting();
+                let column = t.column(key, text).allows_sorting();
                 if key == "name" {
-                    column = column.row_header();
-                }
-                if resizable {
-                    let _ = column.allows_resizing();
+                    let _ = column.row_header();
                 }
             }
             for i in 0..rows.get() {
@@ -66,7 +60,7 @@ pub fn table_collection(rows: RwSignal<usize>, resizable: bool) -> Memo<Arc<Tabl
 
 /// The table's `rows` rows (`TableRow`s of three `TableCell`s).
 #[component]
-pub fn TableRows(rows: RwSignal<usize>) -> impl IntoView {
+fn TableRows(rows: RwSignal<usize>) -> impl IntoView {
     view! {
         <For each=move || 0..rows.get() key=|i| *i let:i>
             <TableRow key=i>
@@ -87,7 +81,7 @@ pub fn PagePerf() -> impl IntoView {
     let checkboxes = RwSignal::new(true);
     let disabled = RwSignal::new(HashSet::<Key>::new());
     let sort = RwSignal::new(None::<SortDescriptor>);
-    let table = table_collection(rows, false);
+    let table = table_collection(rows);
     let controls = vec![
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),

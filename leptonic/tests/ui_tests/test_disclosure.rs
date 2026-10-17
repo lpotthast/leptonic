@@ -447,3 +447,55 @@ pub async fn remounted_panel(page: &Page<'_>) -> Result<(), Report> {
     expect_expanded(page, &trigger, false).await?;
     Ok(())
 }
+
+/// The trigger's `aria-controls` and the panel's `aria-labelledby` refer to the other part only
+/// while it is rendered (react-aria ties optional elements' ids to their rendering, `useSlotId`):
+/// a panel or trigger that unmounts leaves no reference to a missing element.
+#[browser_test]
+pub async fn references_only_rendered_parts(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let trigger = page
+        .element(role(AriaRole::Button).text("Remounted"))
+        .await?;
+    let panel_id = panel_of(page, &trigger)
+        .await?
+        .id()
+        .await?
+        .unwrap_or_default();
+    let toggle_panel = page.element("#test-disc-remount-toggle").await?;
+    toggle_panel.click().await?;
+    page.wait_for_count(css("p").text("Remounted content"), 0)
+        .await?;
+    trigger.wait_for_attr("aria-controls", None).await?;
+    toggle_panel.click().await?;
+    page.element(css("p").text("Remounted content")).await?;
+    trigger
+        .wait_for_attr("aria-controls", Some(panel_id.as_str()))
+        .await?;
+
+    let panel = page
+        .element(css(".leptonic-DisclosurePanel").has(css("p").text("Remounted trigger content")))
+        .await?;
+    let trigger = page
+        .element(role(AriaRole::Button).text("Remounted trigger"))
+        .await?;
+    let trigger_id = trigger.id().await?.unwrap_or_default();
+    assert_that!(panel)
+        .has_attribute("aria-labelledby")
+        .await
+        .is_equal_to(trigger_id.as_str());
+    let toggle_trigger = page.element("#test-disc-remount-trigger-toggle").await?;
+    toggle_trigger.click().await?;
+    page.wait_for_count(role(AriaRole::Button).text("Remounted trigger"), 0)
+        .await?;
+    panel.wait_for_attr("aria-labelledby", None).await?;
+    toggle_trigger.click().await?;
+    let trigger = page
+        .element(role(AriaRole::Button).text("Remounted trigger"))
+        .await?;
+    let trigger_id = trigger.id().await?.unwrap_or_default();
+    panel
+        .wait_for_attr("aria-labelledby", Some(trigger_id.as_str()))
+        .await?;
+    Ok(())
+}

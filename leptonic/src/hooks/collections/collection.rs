@@ -166,6 +166,11 @@ impl Collection {
         self.node_at(self.links(self.position(key)?).last_child)
     }
 
+    /// Every node (sections, headers, items, cells, ...), in storage order.
+    pub(crate) fn all_nodes(&self) -> impl Iterator<Item = &Node> {
+        self.nodes.iter()
+    }
+
     /// The top-level nodes.
     pub fn iter(&self) -> impl Iterator<Item = &Node> {
         self.siblings(self.first)

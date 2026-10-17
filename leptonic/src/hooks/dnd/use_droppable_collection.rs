@@ -24,7 +24,7 @@ use super::{
     },
 };
 use crate::{
-    CapturedElement,
+    CapturedElement, Id,
     hooks::{
         collections::{Collection, Key, KeyboardDelegate, Node, NodeKind, SelectionMode},
         focus::use_focus_visible::{Modality, set_modality},
@@ -32,6 +32,7 @@ use crate::{
     utils::{
         i18n::{WritingDirection, use_direction},
         key::{KeyboardEventKey, KeyboardKey},
+        part::Part,
     },
 };
 
@@ -63,7 +64,7 @@ use crate::{
 pub struct DroppableCollectionData {
     pub state: DroppableCollectionState,
     /// The collection element's id.
-    pub id: String,
+    pub id: Id,
     pub element: CapturedElement,
 }
 
@@ -74,7 +75,7 @@ pub struct UseDroppableCollectionInput {
     /// The collection element (captured by the collection hook's props).
     pub element: CapturedElement,
     /// The collection element's id.
-    pub collection_id: String,
+    pub collection_id: Id,
     /// Navigation between drop targets during keyboard drags.
     pub keyboard_delegate: Signal<Arc<dyn KeyboardDelegate>>,
     /// The drop target at a point (native drags).
@@ -83,12 +84,11 @@ pub struct UseDroppableCollectionInput {
     pub on_key_down: Option<Callback<DropTargetKeyDownEvent>>,
 }
 
-/// Return value of [`use_droppable_collection`].
+/// The return value of [`use_droppable_collection`].
 #[derive(Debug)]
 pub struct UseDroppableCollectionReturn {
-    /// Props for the collection element (native drop handling; it isn't described as a drop
-    /// target itself).
-    pub collection_props: UseDropProps,
+    /// The droppable collection element.
+    pub collection: Part<UseDropProps>,
     pub data: DroppableCollectionData,
 }
 
@@ -360,7 +360,7 @@ pub fn use_droppable_collection(
     // Native drags.
     let auto_scroll = use_auto_scroll(element);
     let point_delegate = drop_target_delegate.clone();
-    let UseDropReturn { mut drop_props, .. } = use_drop(UseDropInput {
+    let UseDropReturn { drop_target, .. } = use_drop(UseDropInput {
         on_drop_enter: Some(Callback::new(move |_| {
             if let Some(target) = next_target.get_value() {
                 state.set_target(Some(target));
@@ -433,6 +433,7 @@ pub fn use_droppable_collection(
         has_drop_button: false,
         is_disabled: Signal::stored(false),
     });
+    let mut drop_props = drop_target.into_props();
     // The collection isn't described as a drop target itself (its items and indicators are).
     drop_props.aria_describedby = Signal::stored(None);
 
@@ -463,7 +464,7 @@ pub fn use_droppable_collection(
     on_cleanup(unregister);
 
     UseDroppableCollectionReturn {
-        collection_props: drop_props,
+        collection: Part::stored(drop_props),
         data: DroppableCollectionData {
             state,
             id: collection_id,

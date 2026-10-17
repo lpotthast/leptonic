@@ -7,7 +7,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 693,
+        "allocations": 691,
         "reallocations": 55,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -30,7 +30,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -55,7 +55,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 159,
+        "allocations": 157,
         "reallocations": 11,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -78,7 +78,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -103,7 +103,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 353,
+        "allocations": 345,
         "reallocations": 32,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -126,7 +126,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 354,
+        "allocations": 346,
         "reallocations": 34,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -151,7 +151,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 50,
+        "allocations": 42,
         "reallocations": 8,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -174,7 +174,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 353,
+        "allocations": 345,
         "reallocations": 32,
         "memo_runs": 1,
         "memo_runs_unchanged": 0,
@@ -199,7 +199,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 45,
+        "allocations": 44,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -222,7 +222,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 45,
+        "allocations": 44,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

@@ -162,7 +162,51 @@ pub fn PageFormHooks() -> impl IntoView {
                             <TableCell><Code inline=true>"reset_validation()"</Code></TableCell>
                             <TableCell>"Shows the field as valid again, e.g. when its form is reset."</TableCell>
                         </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"register_native_validity_reader(reader)"</Code></TableCell>
+                            <TableCell>
+                                "Runs "<Code inline=true>"reader"</Code>" before every commit, until the calling owner is cleaned up "
+                                "(see "<AnchorLink href="#native-validity-readers">"Native Validity Readers"</AnchorLink>")."
+                            </TableCell>
+                        </TableRow>
                     </DocTable>
+                </Section>
+
+                <Section title="Native Validity Readers">
+                    <p>
+                        "The browser\u{2019}s validity of an input changes without its value changing: a "<Code inline=true>"min"</Code>
+                        " attribute moves, a "<Code inline=true>"type=\"email\""</Code>" input checks what was typed. So that a "
+                        "commit shows the input\u{2019}s current validity, "<Code inline=true>"commit_validation"</Code>" first runs "
+                        "every reader registered with "<Code inline=true>"register_native_validity_reader"</Code>"; a reader reads "
+                        "the validity and reports it with "<Code inline=true>"update_validation"</Code>". "
+                        <AnchorLink href="#use-form-validation">"use_form_validation"</AnchorLink>" registers one for its element "
+                        "with "<Code inline=true>"Native"</Code>" validation. Register one yourself for constraints the input "
+                        "doesn\u{2019}t check on its own, as "<Link href=routes::doc::number_field::Hook.materialize()>"use_number_field"</Link>
+                        " does for its range and step."
+                    </p>
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptonic::hooks::form::{
+                                DEFAULT_VALIDATION_RESULT, VALID_VALIDITY_STATE, ValidationResult, ValidityStateSnapshot,
+                            };
+                            use leptos::prelude::*;
+
+                            // `state` from `use_form_validation_state`, `minimum` the smallest allowed length.
+                            state.register_native_validity_reader(Callback::new(move |()| {
+                                let too_short = value.with_untracked(|v: &String| v.len() < minimum);
+                                state.update_validation(if too_short {
+                                    ValidationResult {
+                                        is_invalid: true,
+                                        validation_errors: vec![format!("At least {minimum} characters.")],
+                                        validation_details: ValidityStateSnapshot { too_short: true, valid: false, ..VALID_VALIDITY_STATE },
+                                    }
+                                } else {
+                                    DEFAULT_VALIDATION_RESULT
+                                });
+                            }));
+                        "#)}
+                    </Code>
+                    <p>"The reader runs after the render turn, outside any reactive tracking: read signals with "<Code inline=true>"with_untracked"</Code>" or "<Code inline=true>"get_untracked"</Code>"."</p>
                 </Section>
 
                 <Section title="ValidationResult">

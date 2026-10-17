@@ -4,9 +4,6 @@
 //! budget (`tests/budgets/hooks/use_selectable_list.json`): mounting and unmounting the list,
 //! keyboard focus coming in and leaving, keyboard navigation, select all and Escape, type-ahead,
 //! and an orientation change, with 10 items and with 1,000.
-//!
-//! The performance tests of `use_selectable_collection`, `use_list_keyboard_delegate` and
-//! `use_selectable_item` use the same fixture and the helpers here.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -32,25 +29,25 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(TypeAheadLarge))
         .with(fixture_test(Orientation))
 }
-pub(crate) const LIST: &str = "#perf-list";
-pub(crate) const ITEMS: &str = "[data-perf-option]";
+const LIST: &str = "#perf-list";
+const ITEMS: &str = "[data-perf-option]";
 /// The fixture's items after the control `large`.
-pub(crate) const LARGE: u32 = 1_000;
+const LARGE: u32 = 1_000;
 
 /// The item "Option `i`".
-pub(crate) fn item(i: u32) -> String {
+fn item(i: u32) -> String {
     format!("[data-perf-option='{i}']")
 }
 
 /// Switches to [`LARGE`] items (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.element(item(LARGE - 1)).await?;
     Ok(())
 }
 
 /// Focuses the first item with the keyboard (Tab from the plain button before the list).
-pub(crate) async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
+async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#perf-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     let first = page.element(item(0)).await?;
@@ -59,7 +56,7 @@ pub(crate) async fn tab_in(page: &Page<'_>) -> Result<WebElement, Report> {
 }
 
 /// The `data-perf-option` of the focused element.
-pub(crate) async fn focused_item(page: &Page<'_>) -> Result<Option<String>, Report> {
+async fn focused_item(page: &Page<'_>) -> Result<Option<String>, Report> {
     Ok(page
         .focused_element()
         .await?
@@ -68,7 +65,7 @@ pub(crate) async fn focused_item(page: &Page<'_>) -> Result<Option<String>, Repo
 }
 
 /// Mounting the list with `count` items and unmounting it.
-pub(crate) async fn mount_and_unmount_in(
+async fn mount_and_unmount_in(
     page: &Page<'_>,
     container: &str,
     count: usize,
@@ -98,7 +95,7 @@ pub async fn mount_and_unmount_large(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab moving focus into the list (its first item) and on.
-pub(crate) async fn keyboard_focus_and_blur_in(page: &Page<'_>) -> Result<(), Report> {
+async fn keyboard_focus_and_blur_in(page: &Page<'_>) -> Result<(), Report> {
     page.element("#perf-before").await?.click().await?;
     let first = page.element(item(0)).await?;
     page.measure("focus", page.send_keys(Key::Tab)).await?;
@@ -119,7 +116,7 @@ pub async fn keyboard_focus_and_blur(page: &Page<'_>) -> Result<(), Report> {
 
 /// ArrowDown, ArrowUp, End, Home, PageDown and PageUp moving the focus, from the first item of
 /// `last + 1`.
-pub(crate) async fn keyboard_navigation_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn keyboard_navigation_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     tab_in(page).await?;
     page.measure("arrow down", page.send_keys(Key::Down))
         .await?;
@@ -156,7 +153,7 @@ pub async fn keyboard_navigation_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// Ctrl+A selecting every item and Escape clearing the selection, from the first item of
 /// `last + 1`.
-pub(crate) async fn select_all_and_clear_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
+async fn select_all_and_clear_in(page: &Page<'_>, last: u32) -> Result<(), Report> {
     tab_in(page).await?;
     let last = page.element(item(last)).await?;
     let select_all = page.primary_modifier().await? + "a";
@@ -185,7 +182,7 @@ pub async fn select_all_and_clear_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// Type-ahead from the first item: "x" matches no item (a search through all of them), "o"
 /// matches the focused item (the search starts at it). (Measured last: the search resets a second later.)
-pub(crate) async fn type_ahead_in(page: &Page<'_>) -> Result<(), Report> {
+async fn type_ahead_in(page: &Page<'_>) -> Result<(), Report> {
     tab_in(page).await?;
     page.measure("no match", page.send_keys("x")).await?;
     assert_that!(focused_item(page).await?).is_equal_to(Some("0".to_owned()));
@@ -211,7 +208,7 @@ pub async fn type_ahead_large(page: &Page<'_>) -> Result<(), Report> {
 
 /// Switching to a horizontal orientation (ArrowRight then moves the focus) and back (ArrowDown
 /// moves it again).
-pub(crate) async fn orientation_in(page: &Page<'_>) -> Result<(), Report> {
+async fn orientation_in(page: &Page<'_>) -> Result<(), Report> {
     page.measure("horizontal", page.control("horizontal"))
         .await?;
     page.element(LIST)

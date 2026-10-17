@@ -2,7 +2,7 @@
 // Upstream: react-aria/test/spinbutton/useSpinButton.test.js @ 99e6102368
 use std::time::Duration;
 
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use leptos_use::use_window;
 use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, KeyboardEvent};
@@ -23,7 +23,9 @@ use crate::{
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         live_announcer::{Assertiveness, announce, clear_announcer},
+        part::{Part, Remount},
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -110,11 +112,11 @@ fn is_number<T: NumberValue>(value: &T) -> bool {
     value.partial_cmp(value).is_some()
 }
 
-/// Return value of [`use_spin_button`].
+/// The return value of [`use_spin_button`].
 #[derive(Debug)]
 pub struct UseSpinButtonReturn {
-    /// Props for the element with `role="spinbutton"`.
-    pub props: UseSpinButtonProps,
+    /// The spin button element.
+    pub spin_button: Part<UseSpinButtonProps>,
     /// Configuration for the increment button; pass it to `use_button`.
     pub increment_button: UseButtonInput,
     /// Configuration for the decrement button; pass it to `use_button`.
@@ -138,15 +140,34 @@ pub struct UseSpinButtonProps {
     pub on_blur: EventHandler<FocusEvent>,
 }
 
+impl Remount for UseSpinButtonProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_valuenow: self.aria_valuenow,
+            aria_valuetext: self.aria_valuetext,
+            aria_valuemin: self.aria_valuemin,
+            aria_valuemax: self.aria_valuemax,
+            aria_disabled: self.aria_disabled,
+            aria_readonly: self.aria_readonly,
+            aria_required: self.aria_required,
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+        }
+    }
+}
+
 pub type UseSpinButtonAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaValuenow, Signal<Option<String>>>,
-    Attr<attr::AriaValuetext, Signal<String>>,
-    Attr<attr::AriaValuemin, Signal<Option<String>>>,
-    Attr<attr::AriaValuemax, Signal<Option<String>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-    Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<String>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<AriaDisabled>>,
+    SignalAttr<Option<AriaReadonly>>,
+    SignalAttr<Option<AriaRequired>>,
     OnEvent<ev::keydown>,
     OnEvent<ev::keyup>,
     OnEvent<ev::focus>,
@@ -158,14 +179,14 @@ impl IntoAttrs for UseSpinButtonProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaValuenow, self.aria_valuenow),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
-            Attr(attr::AriaValuemin, self.aria_valuemin),
-            Attr(attr::AriaValuemax, self.aria_valuemax),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaReadonly, self.aria_readonly),
-            Attr(attr::AriaRequired, self.aria_required),
+            fixed_attr("role", self.role),
+            signal_attr("aria-valuenow", self.aria_valuenow),
+            signal_attr("aria-valuetext", self.aria_valuetext),
+            signal_attr("aria-valuemin", self.aria_valuemin),
+            signal_attr("aria-valuemax", self.aria_valuemax),
+            signal_attr("aria-disabled", self.aria_disabled),
+            signal_attr("aria-readonly", self.aria_readonly),
+            signal_attr("aria-required", self.aria_required),
             self.on_keydown.into_on(ev::keydown),
             self.on_keyup.into_on(ev::keyup),
             self.on_focus.into_on(ev::focus),
@@ -310,13 +331,16 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
             run_first([on_increment_to_max, None]),
         );
     let UseKeyboardReturn {
-        props: keyboard_props,
+        target: keyboard_props,
     } = use_keyboard(UseKeyboardInput {
         is_disabled: is_inactive,
         shortcuts: Some(shortcuts),
         allow_repeats: true,
-        ..UseKeyboardInput::default()
+        on_key_down: None,
+        on_key_up: None,
+        allow_composing: false,
     });
+    let keyboard_props = keyboard_props.into_props();
 
     // -- Focus tracking and announcements --
     let is_focused = StoredValue::new(false);
@@ -412,7 +436,40 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
             on_focus: Some(on_focus),
             on_blur: Some(on_blur),
             is_disabled: is_inactive,
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: Signal::stored(None),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            prevent_focus_on_press: Signal::stored(false),
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_describedby: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         }
     };
 
@@ -421,7 +478,7 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
     };
 
     UseSpinButtonReturn {
-        props: UseSpinButtonProps {
+        spin_button: Part::stored(UseSpinButtonProps {
             role: AriaRole::Spinbutton,
             aria_valuenow: format_number(value),
             aria_valuetext: aria_text_value.into(),
@@ -436,7 +493,7 @@ pub fn use_spin_button<T: NumberValue>(input: UseSpinButtonInput<T>) -> UseSpinB
             on_blur: EventHandler::new(move |e: FocusEvent| {
                 on_blur.try_run(e);
             }),
-        },
+        }),
         increment_button: stepper(Direction::Up),
         decrement_button: stepper(Direction::Down),
     }

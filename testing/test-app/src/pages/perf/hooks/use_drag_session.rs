@@ -8,7 +8,7 @@
 //! test measures. Its controls ([`Control`]) mount and unmount it.
 
 use leptonic::{
-    CapturedElement, IntoAttrs, announce_polite, flag,
+    CapturedElement, announce_polite, flag,
     hooks::dnd::{
         DragItem, UseDragInput, UseDragReturn, UseDropInput, UseDropReturn, use_drag,
         use_drag_session, use_drop,
@@ -27,7 +27,7 @@ pub fn PagePerf() -> impl IntoView {
     ];
     Effect::new(|| announce_polite(""));
     let UseDragReturn {
-        drag_props,
+        draggable: drag_props,
         is_dragging,
         ..
     } = use_drag(UseDragInput {
@@ -41,7 +41,10 @@ pub fn PagePerf() -> impl IntoView {
         is_disabled: Signal::stored(false),
     });
     let element = CapturedElement::new();
-    let UseDropReturn { drop_props, .. } = use_drop(UseDropInput {
+    let UseDropReturn {
+        drop_target: drop_props,
+        ..
+    } = use_drop(UseDropInput {
         element,
         get_drop_operation: None,
         get_drop_operation_for_point: None,
@@ -61,12 +64,12 @@ pub fn PagePerf() -> impl IntoView {
             id="perf-draggable"
             role="button"
             tabindex="0"
-            {..drag_props.into_attrs()}
+            {..drag_props.attrs()}
             data-dragging=flag(is_dragging)
         >
             "Drag me"
         </div>
-        <div id="perf-drop" role="button" tabindex="0" {..drop_props.into_attrs()}>
+        <div id="perf-drop" role="button" tabindex="0" {..drop_props.attrs()}>
             "Drop here"
         </div>
         <Show when=move || mounted.get()>

@@ -1,9 +1,6 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        clipboard::{ClipboardAction, UseClipboardInput, use_clipboard},
-        dnd::{DragItem, DropItem},
-    },
+use leptonic::hooks::{
+    clipboard::{ClipboardAction, UseClipboardInput, use_clipboard},
+    dnd::{DragItem, DropItem},
 };
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
@@ -96,7 +93,7 @@ pub fn PageHookClipboard() -> impl IntoView {
         <div id="test-page-hook-clipboard">
             <h1>"Clipboard"</h1>
             <button>"Before"</button>
-            <div role="button" tabindex="0" {..clipboard.clipboard_props.into_attrs()}>
+            <div role="button" tabindex="0" {..clipboard.target.attrs()}>
                 "Copy"
             </div>
             <ol id="test-clipboard-log">

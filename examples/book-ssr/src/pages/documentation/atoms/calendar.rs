@@ -169,7 +169,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <ApiRow name="weeks_in_month" ty="MaybeProp<u8>" default="None">
                             "A fixed number of week rows, e.g. 6, so that the calendar keeps its height."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="MaybeProp<String>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."
@@ -225,7 +225,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                             "start if the range wouldn\u{2019}t fit then."
                         </ApiRow>
                         <ApiRow name="weeks_in_month" ty="MaybeProp<u8>" default="None">"A fixed number of week rows."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible months."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="MaybeProp<String>" default="None">
                             "Ids of elements labelling, describing or detailing the calendar."

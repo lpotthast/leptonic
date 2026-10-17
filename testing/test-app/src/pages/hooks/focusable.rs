@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::focus::{UseFocusableInput, use_focusable},
-};
+use leptonic::hooks::focus::{UseFocusableInput, use_focusable};
 use leptos::prelude::*;
 
 use crate::pages::prevent_focus_steal;
@@ -49,21 +46,21 @@ pub fn PageHookFocusable() -> impl IntoView {
 
             <section>
                 <h2>"Focusable Elements"</h2>
-                <div id="test-fcbl-normal" {..normal.props.into_attrs()}>
+                <div id="test-fcbl-normal" {..normal.target.attrs()}>
                     "Normal Focusable"
                 </div>
 
-                <div id="test-fcbl-disabled" {..disabled.props.into_attrs()}>
+                <div id="test-fcbl-disabled" {..disabled.target.attrs()}>
                     "Disabled Focusable"
                 </div>
 
-                <div id="test-fcbl-excluded" {..excluded.props.into_attrs()}>
+                <div id="test-fcbl-excluded" {..excluded.target.attrs()}>
                     "Excluded Focusable"
                 </div>
 
                 <button id="test-fcbl-tab-target">"Tab Target"</button>
 
-                <div id="test-fcbl-autofocus" {..autofocus.props.into_attrs()}>
+                <div id="test-fcbl-autofocus" {..autofocus.target.attrs()}>
                     "Auto-focus Focusable"
                 </div>
             </section>
@@ -94,7 +91,7 @@ pub fn PageHookFocusable() -> impl IntoView {
                     });
 
                     view! {
-                        <div id="test-fcbl-dynamic" {..dynamic.props.into_attrs()}>
+                        <div id="test-fcbl-dynamic" {..dynamic.target.attrs()}>
                             "Dynamic Focusable"
                         </div>
                         <button

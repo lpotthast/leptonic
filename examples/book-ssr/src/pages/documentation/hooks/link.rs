@@ -22,7 +22,7 @@ pub fn PageUseLink() -> impl IntoView {
             <ReactAria hook="useLink"/>
 
             <Section title="use_link">
-                <p>"Spread the returned props onto the link element: a native "<Code inline=true>"<a>"</Code>" or any other element."</p>
+                <p>"Spread the returned "<Code inline=true>"link"</Code>" part onto the link element: a native "<Code inline=true>"<a>"</Code>" or any other element."</p>
 
                 <Section title="Input" id="use-link-input">
                     <p>"Start from "<Code inline=true>"UseLinkInput::default()"</Code>" and set what you need."</p>
@@ -41,7 +41,7 @@ pub fn PageUseLink() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link is disabled."</ApiRow>
                         <ApiRow name="element_type" ty="Signal<LinkElementType>" default="Anchor">
-                            "The element you spread the props onto, see "<AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
+                            "The element you spread the part onto, see "<AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the link when its content doesn\u{2019}t."</ApiRow>
                         <ApiRow name="aria_current" ty="Signal<Option<AriaCurrent>>" default="None">
@@ -69,9 +69,9 @@ pub fn PageUseLink() -> impl IntoView {
 
                 <Section title="Return" id="use-link-return">
                     <ApiTable kind=ApiKind::Return of="UseLinkReturn">
-                        <ApiRow name="props" ty="PropsWithStyles<UseLinkProps>">
+                        <ApiRow name="link" ty="Part<PropsWithStyles<UseLinkProps>>">
                             "Attributes, event handlers and styles for the link element. Call "
-                            <Code inline=true>"props.into_parts()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
+                            <Code inline=true>"link.attrs()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
                             ", then spread "<Code inline=true>"{..attrs}"</Code>" and set "<Code inline=true>"style=styles"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the link is disabled."</ApiRow>
@@ -98,7 +98,7 @@ pub fn PageUseLink() -> impl IntoView {
                                 target: LinkTarget::Blank,
                                 ..UseLinkInput::default()
                             });
-                            let (attrs, styles) = link.props.into_parts();
+                            let (attrs, styles) = link.link.attrs();
 
                             view! {
                                 <a {..attrs} style=styles>"Leptos"</a>
@@ -226,7 +226,7 @@ pub fn PageUseLink() -> impl IntoView {
                                 link: UseLinkInput::default(),
                             });
 
-                            let (attrs, styles) = link.props.into_parts();
+                            let (attrs, styles) = link.link.attrs();
 
                             view! { <a {..attrs} style=styles>"Returns"</a> }
                         "##)}

@@ -13,7 +13,7 @@ use leptos::{prelude::*, tachys::reactive_graph::OwnedView};
 /// A component body has no owner of its own: `provide_context` there also reaches the
 /// component's siblings, so of two sibling fields, the second one's context would win for both.
 /// The returned view forwards attributes set on the component to its root element.
-pub(crate) fn scoped_view<V>(provide: impl FnOnce(), view: impl FnOnce() -> V) -> OwnedView<V> {
+pub fn scoped_view<V>(provide: impl FnOnce(), view: impl FnOnce() -> V) -> OwnedView<V> {
     let owner = Owner::current()
         .expect("a component renders inside a reactive owner")
         .child();
@@ -34,7 +34,7 @@ pub(crate) fn scoped_view<V>(provide: impl FnOnce(), view: impl FnOnce() -> V) -
 /// remembers which provided value it hides: values in an owner's context map are boxed and stay
 /// in place while their owner lives, which outlives every descendant of the clearing owner.
 #[cfg(any(feature = "atoms", test))]
-pub(crate) fn clear_context<T: 'static>() {
+pub fn clear_context<T: 'static>() {
     // Values of zero-sized types share one address: a clearing would hide them all.
     const {
         assert!(
@@ -50,7 +50,8 @@ pub(crate) fn clear_context<T: 'static>() {
 
 /// The context `T`, unless [`clear_context`] hid it from this part of the tree.
 #[cfg(any(feature = "atoms", test))]
-pub(crate) fn use_clearable_context<T: Clone + 'static>() -> Option<T> {
+#[must_use]
+pub fn use_clearable_context<T: Clone + 'static>() -> Option<T> {
     let hidden = use_context::<Cleared<T>>().and_then(|cleared| cleared.hidden);
     if hidden.is_some() && provided_value_address::<T>() == hidden {
         return None;
@@ -62,12 +63,12 @@ pub(crate) fn use_clearable_context<T: Clone + 'static>() -> Option<T> {
 /// `ClearContexts(&[clear_context::<LabelContext>, clear_context::<InputContext>])`.
 #[cfg(feature = "atoms")]
 #[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct ClearContexts(pub &'static [fn()]);
+pub struct ClearContexts(pub &'static [fn()]);
 
 #[cfg(feature = "atoms")]
 impl ClearContexts {
     /// Clears the contexts on the current owner.
-    pub(crate) fn clear(self) {
+    pub fn clear(self) {
         for clear in self.0 {
             clear();
         }

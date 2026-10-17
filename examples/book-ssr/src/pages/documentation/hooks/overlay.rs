@@ -47,13 +47,13 @@ pub fn PageUseOverlay() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseOverlayReturn">
-                    <ApiRow name="props" ty="UseOverlayProps">
+                    <ApiRow name="overlay" ty="Part<UseOverlayProps>">
                         "The overlay\u{2019}s "<Code inline=true>"id"</Code>", its element capture and its "
                         <Code inline=true>"keydown"</Code>", "<Code inline=true>"focusin"</Code>" and "
-                        <Code inline=true>"focusout"</Code>" handlers. Spread "<Code inline=true>"{..props.into_attrs()}"</Code>
+                        <Code inline=true>"focusout"</Code>" handlers. Spread "<Code inline=true>"{..overlay.attrs()}"</Code>
                         " onto the overlay element."
                     </ApiRow>
-                    <ApiRow name="id" ty="String">
+                    <ApiRow name="id" ty="Id">
                         "The overlay\u{2019}s id. Pass it to "
                         <Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>
                         " as "<Code inline=true>"overlay_id"</Code>"."
@@ -75,7 +75,7 @@ pub fn PageUseOverlay() -> impl IntoView {
 
                         let (is_open, set_is_open) = signal(false);
 
-                        let UseOverlayReturn { props, .. } = use_overlay(UseOverlayInput {
+                        let UseOverlayReturn { overlay, .. } = use_overlay(UseOverlayInput {
                             is_open: is_open.into(),
                             on_close: Callback::new(move |()| set_is_open.set(false)),
                             is_dismissable: Signal::stored(true),
@@ -85,12 +85,10 @@ pub fn PageUseOverlay() -> impl IntoView {
                             group: None,
                         });
 
-                        // The overlay renders again on every opening, so its attributes are cloned per render.
-                        let attrs = StoredValue::new(props.into_attrs());
-
                         view! {
+                            // Mounts the overlay on every opening: each mount spreads the part again.
                             <Show when=move || is_open.get()>
-                                <div {..attrs.get_value()} role="dialog" aria-label="Filters">
+                                <div {..overlay.attrs()} role="dialog" aria-label="Filters">
                                     <FocusScope restore_focus=true auto_focus=true>"…"</FocusScope>
                                 </div>
                             </Show>

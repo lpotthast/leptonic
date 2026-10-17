@@ -5,10 +5,7 @@
 //! (`#perf-before`, `#perf-after`). Its controls ([`Control`]) mount and unmount it, show and
 //! hide the description and the error message, and describe the input with the hint too.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::form::{UseFieldInput, use_field},
-};
+use leptonic::hooks::form::{UseFieldInput, use_field};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -18,7 +15,7 @@ pub fn PagePerf() -> impl IntoView {
     let mounted = RwSignal::new(true);
     let description = RwSignal::new(true);
     let error = RwSignal::new(false);
-    let described_by = RwSignal::new(None::<String>);
+    let described_by = RwSignal::new(None::<leptonic::Id>);
     let controls = vec![
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),
@@ -27,7 +24,7 @@ pub fn PagePerf() -> impl IntoView {
         Control::action("show-error", move || error.set(true)),
         Control::action("hide-error", move || error.set(false)),
         Control::action("add-hint", move || {
-            described_by.set(Some("perf-hint".to_owned()));
+            described_by.set(Some("perf-hint".into()));
         }),
         Control::action("remove-hint", move || described_by.set(None)),
     ];
@@ -48,27 +45,27 @@ pub fn PagePerf() -> impl IntoView {
 fn Field(
     description: RwSignal<bool>,
     error: RwSignal<bool>,
-    described_by: RwSignal<Option<String>>,
+    described_by: RwSignal<Option<leptonic::Id>>,
 ) -> impl IntoView {
     let field = use_field(UseFieldInput {
-        id: Some("perf-input".to_owned()),
+        id: Some("perf-input".into()),
         has_label: true.into(),
         aria_describedby: described_by.into(),
         ..UseFieldInput::default()
     });
-    let description_props = field.description_props;
-    let error_message_props = field.error_message_props;
+    let description_props = field.description;
+    let error_message_props = field.error_message;
     view! {
-        <label {..field.label_props.into_attrs()}>"Name"</label>
-        <input {..field.field_props.into_attrs()} />
+        <label {..field.label.attrs()}>"Name"</label>
+        <input {..field.field.attrs()} />
         <div id="perf-description-slot">
             <Show when=move || description.get()>
-                <p {..description_props.clone().into_attrs()}>"Shown to others."</p>
+                <p {..description_props.attrs()}>"Shown to others."</p>
             </Show>
         </div>
         <div id="perf-error-slot">
             <Show when=move || error.get()>
-                <p {..error_message_props.clone().into_attrs()}>"Name taken."</p>
+                <p {..error_message_props.attrs()}>"Name taken."</p>
             </Show>
         </div>
     }

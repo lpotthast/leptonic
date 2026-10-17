@@ -1,10 +1,7 @@
 // Upstream: react-aria/src/table/useTableColumnHeader.ts @ 99e6102368
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/table/TableTests.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::{ColumnKind, SortDirection, TableData};
 use crate::{
@@ -23,7 +20,9 @@ use crate::{
     utils::{
         aria::{AriaRole, AriaSort},
         intl_strings::{TableStrings, use_localized_strings},
+        part::{Part, Remount},
         platform::device::is_android,
+        signal_attr::{SignalAttr, signal_attr},
         use_description::use_description,
     },
 };
@@ -56,10 +55,11 @@ pub struct UseTableColumnHeaderInput {
     pub allows_arrow_navigation: bool,
 }
 
-/// Return value of [`use_table_column_header`].
+/// The return value of [`use_table_column_header`].
 #[derive(Debug)]
 pub struct UseTableColumnHeaderReturn {
-    pub column_header_props: PropsWithStyles<UseTableColumnHeaderProps>,
+    /// The column header element: `let (attrs, styles) = column_header.attrs();`.
+    pub column_header: Part<PropsWithStyles<UseTableColumnHeaderProps>>,
     pub is_pressed: Signal<bool>,
 }
 
@@ -75,10 +75,21 @@ pub struct UseTableColumnHeaderProps {
     pub focusable: UseFocusableItemProps,
 }
 
+impl Remount for UseTableColumnHeaderProps {
+    fn remount(&self) -> Self {
+        Self {
+            cell: self.cell.remount(),
+            press: self.press.remount(),
+            aria_sort: self.aria_sort,
+            focusable: self.focusable.remount(),
+        }
+    }
+}
+
 pub type UseTableColumnHeaderAttrs = (
     UseGridCellAttrs,
     UsePressAttrs,
-    Attr<attr::AriaSort, Signal<Option<AriaSort>>>,
+    SignalAttr<Option<AriaSort>>,
     UseFocusableItemAttrs,
 );
 
@@ -89,7 +100,7 @@ impl IntoAttrs for UseTableColumnHeaderProps {
         (
             self.cell.into_attrs(),
             self.press.into_attrs(),
-            Attr(attr::AriaSort, self.aria_sort),
+            signal_attr("aria-sort", self.aria_sort),
             self.focusable.into_attrs(),
         )
     }
@@ -124,7 +135,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     let is_selection_column = Signal::derive(move || column.get().1);
 
     let UseGridCellReturn {
-        grid_cell_props,
+        cell: grid_cell_props,
         is_pressed: cell_pressed,
     } = use_grid_cell(UseGridCellInput {
         id: Some(table.column_header_id(&key)),
@@ -134,7 +145,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         key: key.clone(),
         should_select_on_press_up: false,
     });
-    let (mut cell, cell_styles) = grid_cell_props.into_inner();
+    let (mut cell, cell_styles) = grid_cell_props.into_props().into_inner();
     cell.role = Signal::stored(AriaRole::Columnheader);
 
     // Without rows, the headers aren't focusable (and lose focus).
@@ -162,9 +173,19 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
                     && selection.selection_mode() == SelectionMode::Single)
         }),
         on_press: Some(Callback::new(move |_| state.sort(&sort_key, None))),
-        ..UsePressInput::default()
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        prevent_focus_on_press: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
+        on_press_up: None,
+        on_press_start: None,
+        on_press_end: None,
+        on_press_change: None,
+        on_double_press: None,
+        long_press: None,
     });
-    let (press_props, press_styles) = press.props.into_inner();
+    let (press_props, press_styles) = press.target.into_props().into_inner();
 
     let sorted_key = key;
     let aria_sort = Memo::new(move |_| {
@@ -183,8 +204,10 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     });
     let is_pressed = press.is_pressed;
     // Picks up a `FocusableContext` (e.g. a tooltip on the header).
-    let mut focusable: UseFocusableItemProps =
-        use_focusable(UseFocusableInput::default()).props.into();
+    let mut focusable: UseFocusableItemProps = use_focusable(UseFocusableInput::default())
+        .target
+        .into_props()
+        .into();
 
     // Sortable columns are described as such (on Android also with their sort direction).
     let strings = use_localized_strings::<TableStrings>();
@@ -210,7 +233,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     focusable.aria_describedby = IdRefs::derive([context_describedby, sort_description]);
 
     UseTableColumnHeaderReturn {
-        column_header_props: PropsWithStyles::new(
+        column_header: Part::stored(PropsWithStyles::new(
             UseTableColumnHeaderProps {
                 cell,
                 press: press_props,
@@ -218,7 +241,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
                 focusable,
             },
             cell_styles.merge(press_styles),
-        ),
+        )),
         is_pressed: Signal::derive(move || cell_pressed.get() || is_pressed.get()),
     }
 }

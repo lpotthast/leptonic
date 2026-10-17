@@ -2876,3 +2876,47 @@ pub async fn removing_the_focused_field(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     Ok(())
 }
+
+/// Types June 15, 2024 into the field in `#test-df-<section>`, from its month segment.
+async fn type_june_15(page: &Page<'_>, section: &str) -> Result<(), Report> {
+    let month = segment(page, section, "month").await?;
+    month.focus().await?;
+    page.wait_for_focus(&month).await?;
+    page.type_text("6").await?;
+    page.wait_for_focus(&segment(page, section, "day").await?)
+        .await?;
+    page.type_text("15").await?;
+    page.wait_for_focus(&segment(page, section, "year").await?)
+        .await?;
+    page.type_text("2024").await?;
+    wait_for_value(page, section, "2024-06-15").await
+}
+
+/// A field's `DateInput` and a picker's `DatePickerGroup` mounted again (inside a `<Show>`)
+/// take their field's props again: the group is labelled by the field's label and its segments
+/// edit the value. (No upstream: React renders a part again with its props.)
+#[browser_test]
+pub async fn parts_mounted_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_sections(PATH, &["remount-field", "remount-picker"])
+        .await?;
+    for (section, label) in [
+        ("remount-field", "Remounted input"),
+        ("remount-picker", "Remounted group"),
+    ] {
+        let group = format!("#test-df-{section} [role=group]");
+        let toggle = page.element(format!("#test-df-{section}-toggle")).await?;
+        toggle.click().await?;
+        page.wait_for_count(&group, 0).await?;
+        toggle.click().await?;
+        let label_id = label_id(page, section, label).await?;
+        let labelledby = page
+            .element(&group)
+            .await?
+            .attr("aria-labelledby")
+            .await?
+            .unwrap_or_default();
+        assert_that!(ids(&labelledby)).contains(label_id.as_str());
+        type_june_15(page, section).await?;
+    }
+    Ok(())
+}

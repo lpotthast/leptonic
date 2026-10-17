@@ -8,12 +8,9 @@
 
 use std::time::Duration;
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::use_button,
-        toast::{QueuedToast, ToastOptions, ToastQueue, UseToastInput, UseToastReturn, use_toast},
-    },
+use leptonic::hooks::{
+    button::use_button,
+    toast::{QueuedToast, ToastOptions, ToastQueue, UseToastInput, UseToastReturn, use_toast},
 };
 use leptos::prelude::*;
 
@@ -32,10 +29,10 @@ fn HookToast(
 ) -> impl IntoView {
     let title = toast.content.clone();
     let UseToastReturn {
-        toast_props,
-        content_props,
-        title_id,
-        description_props,
+        toast: toast_props,
+        content,
+        title: title_part,
+        description: description_props,
         close_button,
     } = use_toast(UseToastInput {
         queue,
@@ -44,12 +41,12 @@ fn HookToast(
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
     });
-    let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
+    let (close_attrs, close_styles) = use_button(close_button).button.attrs();
     view! {
-        <div {..toast_props.into_attrs()} class="perf-toast">
-            <div {..content_props.into_attrs()} class="perf-toast-content">
-                <div id=title_id>{title}</div>
-                <div {..description_props.into_attrs()}>"Description"</div>
+        <div {..toast_props.attrs()} class="perf-toast">
+            <div {..content.attrs()} class="perf-toast-content">
+                <div {..title_part.attrs()}>{title}</div>
+                <div {..description_props.attrs()}>"Description"</div>
             </div>
             <button {..close_attrs} style=close_styles class="perf-toast-close">
                 "Close"

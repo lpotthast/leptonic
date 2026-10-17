@@ -1,13 +1,10 @@
 // Upstream: react-aria/src/progress/useProgressBar.ts @ 99e6102368
 // Upstream: react-aria/test/progress/useProgressBar.test.js @ 99e6102368
 // Upstream: react-aria-components/test/ProgressBar.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use crate::{
-    IntoAttrs,
+    Id, IntoAttrs,
     hooks::form::{LabelElementType, UseLabelFieldAttrs, UseLabelInput, UseLabelProps, use_label},
     utils::{
         aria::AriaRole,
@@ -15,6 +12,8 @@ use crate::{
         math::percentage_in_range,
         number_formatter::{NumberFormatOptions, NumberStyle, use_number_formatter},
         number_value::NumberValue,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -30,10 +29,32 @@ use crate::{
 // - `value_label` is a string (react-aria: any `ReactNode`, used as `aria-valuetext`).
 // - Of the DOM props react-aria passes through (`filterDOMProps` with labelable props), only `id`,
 //   `aria-label`, `aria-labelledby` and `aria-describedby` are offered.
+// - `role: ProgressRole`: the element's role, a progress bar or a meter (`use_meter` sets
+//   `Meter`). React-aria's `useMeter` replaces the role in `useProgressBar`'s returned props.
 // - Also returns the `percentage` (a `Fraction`, C13) and the `value_text`, which react-aria-components
 //   computes in its `ProgressBar` for render props.
 //
 // =============================================================================
+
+/// The role of a [`use_progress_bar`] element.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ProgressRole {
+    /// `role="progressbar"`: the progress of an operation.
+    #[default]
+    Progressbar,
+    /// `role="meter"`: a value within a known range (see
+    /// [`use_meter`](fn@crate::hooks::meter::use_meter), which sets it).
+    Meter,
+}
+
+impl ProgressRole {
+    fn aria_role(self) -> AriaRole {
+        match self {
+            Self::Progressbar => AriaRole::Progressbar,
+            Self::Meter => AriaRole::Meter,
+        }
+    }
+}
 
 /// Input of [`use_progress_bar`] (and, with its own value type, [`use_meter`](fn@crate::hooks::meter::use_meter)).
 #[derive(Debug, Clone)]
@@ -50,13 +71,15 @@ pub struct UseProgressBarInput<T: NumberValue> {
     /// Replaces the formatted value text (e.g. "1 of 4").
     pub value_label: MaybeProp<String>,
     /// The element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     /// Names the progress bar when there is no visible label.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    /// The element's role. Default: `Progressbar`.
+    pub role: ProgressRole,
 }
 
 impl<T: NumberValue> Default for UseProgressBarInput<T> {
@@ -76,17 +99,18 @@ impl<T: NumberValue> Default for UseProgressBarInput<T> {
             aria_label: MaybeProp::default(),
             aria_labelledby: Signal::default(),
             aria_describedby: Signal::default(),
+            role: ProgressRole::Progressbar,
         }
     }
 }
 
-/// Return value of [`use_progress_bar`].
+/// The return value of [`use_progress_bar`].
 #[derive(Debug)]
 pub struct UseProgressBarReturn {
-    /// For the progress bar element.
-    pub props: UseProgressBarProps,
-    /// For the visible label, a `<span>` (a progress bar isn't labelable by a `<label>`).
-    pub label_props: UseLabelProps,
+    /// The progress bar element.
+    pub progress_bar: Part<UseProgressBarProps>,
+    /// The label element.
+    pub label: Part<UseLabelProps>,
     /// The progress as a share of the range (`.as_percent()`: 0 to 100); `None` while
     /// indeterminate.
     pub percentage: Signal<Option<Fraction>>,
@@ -98,7 +122,7 @@ pub struct UseProgressBarReturn {
 #[derive(Debug)]
 pub struct UseProgressBarProps {
     pub field_props: crate::hooks::form::UseLabelFieldProps,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub role: AriaRole,
     pub aria_valuenow: Signal<Option<String>>,
     pub aria_valuemin: Signal<String>,
@@ -106,14 +130,28 @@ pub struct UseProgressBarProps {
     pub aria_valuetext: Signal<Option<String>>,
 }
 
+impl Remount for UseProgressBarProps {
+    fn remount(&self) -> Self {
+        Self {
+            field_props: self.field_props.remount(),
+            aria_describedby: self.aria_describedby,
+            role: self.role,
+            aria_valuenow: self.aria_valuenow,
+            aria_valuemin: self.aria_valuemin,
+            aria_valuemax: self.aria_valuemax,
+            aria_valuetext: self.aria_valuetext,
+        }
+    }
+}
+
 pub type UseProgressBarAttrs = (
     UseLabelFieldAttrs,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaValuenow, Signal<Option<String>>>,
-    Attr<attr::AriaValuemin, Signal<String>>,
-    Attr<attr::AriaValuemax, Signal<String>>,
-    Attr<attr::AriaValuetext, Signal<Option<String>>>,
+    SignalAttr<Option<Id>>,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<String>,
+    SignalAttr<String>,
+    SignalAttr<Option<String>>,
 );
 
 impl IntoAttrs for UseProgressBarProps {
@@ -122,12 +160,12 @@ impl IntoAttrs for UseProgressBarProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             self.field_props.into_attrs(),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaValuenow, self.aria_valuenow),
-            Attr(attr::AriaValuemin, self.aria_valuemin),
-            Attr(attr::AriaValuemax, self.aria_valuemax),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
+            signal_attr("aria-describedby", self.aria_describedby),
+            fixed_attr("role", self.role),
+            signal_attr("aria-valuenow", self.aria_valuenow),
+            signal_attr("aria-valuemin", self.aria_valuemin),
+            signal_attr("aria-valuemax", self.aria_valuemax),
+            signal_attr("aria-valuetext", self.aria_valuetext),
         )
     }
 }
@@ -143,22 +181,14 @@ impl IntoAttrs for UseProgressBarProps {
 ///     ..UseProgressBarInput::default()
 /// });
 /// view! {
-///     <div {..progress.props.into_attrs()}>
-///         <span {..progress.label_props.into_attrs()}>"Uploading"</span>
+///     <div {..progress.progress_bar.attrs()}>
+///         <span {..progress.label.attrs()}>"Uploading"</span>
 ///         <span>{progress.value_text}</span>
 ///     </div>
 /// }
 /// ```
 pub fn use_progress_bar<T: NumberValue>(input: UseProgressBarInput<T>) -> UseProgressBarReturn {
     crate::metrics::subject!();
-    progress(input, AriaRole::Progressbar)
-}
-
-/// The progress bar with the given role (also the meter's).
-pub(crate) fn progress<T: NumberValue>(
-    input: UseProgressBarInput<T>,
-    role: AriaRole,
-) -> UseProgressBarReturn {
     let UseProgressBarInput {
         value,
         min_value,
@@ -170,7 +200,9 @@ pub(crate) fn progress<T: NumberValue>(
         aria_label,
         aria_labelledby,
         aria_describedby,
+        role,
     } = input;
+    let role = role.aria_role();
 
     let label = use_label(UseLabelInput {
         id,
@@ -180,6 +212,8 @@ pub(crate) fn progress<T: NumberValue>(
         aria_labelledby,
         ..UseLabelInput::default()
     });
+    let label_field_props = label.field.into_props();
+    let label_label_props = label.label.into_props();
 
     // Memos: each is read by several of the attributes and the returned signals.
     let clamped = Memo::new(move |_| {
@@ -217,16 +251,16 @@ pub(crate) fn progress<T: NumberValue>(
     });
 
     UseProgressBarReturn {
-        props: UseProgressBarProps {
-            field_props: label.field_props,
+        progress_bar: Part::stored(UseProgressBarProps {
+            field_props: label_field_props,
             aria_describedby,
             role,
             aria_valuenow: Signal::derive(move || clamped.get().map(|value| value.to_string())),
             aria_valuemin: Signal::derive(move || min_value.get().to_string()),
             aria_valuemax: Signal::derive(move || max_value.get().to_string()),
             aria_valuetext: value_text.into(),
-        },
-        label_props: label.label_props,
+        }),
+        label: Part::stored(label_label_props),
         percentage: Signal::derive(move || fraction.get().map(Fraction::new)),
         value_text: value_text.into(),
     }
@@ -250,12 +284,11 @@ mod tests {
     fn defaults_to_zero_of_a_hundred() {
         crate::testing::with_owner(|| {
             let progress = progress_of(UseProgressBarInput::default());
-            assert_that!(progress.props.role).is_equal_to(AriaRole::Progressbar);
-            assert_that!(progress.props.aria_valuenow.get_untracked())
-                .is_equal_to(Some("0".to_owned()));
-            assert_that!(progress.props.aria_valuemin.get_untracked()).is_equal_to("0".to_owned());
-            assert_that!(progress.props.aria_valuemax.get_untracked())
-                .is_equal_to("100".to_owned());
+            let props = progress.progress_bar.into_props();
+            assert_that!(props.role).is_equal_to(AriaRole::Progressbar);
+            assert_that!(props.aria_valuenow.get_untracked()).is_equal_to(Some("0".to_owned()));
+            assert_that!(props.aria_valuemin.get_untracked()).is_equal_to("0".to_owned());
+            assert_that!(props.aria_valuemax.get_untracked()).is_equal_to("100".to_owned());
             assert_that!(progress.value_text.get_untracked()).is_equal_to(Some("0%".to_owned()));
         });
     }
@@ -269,8 +302,8 @@ mod tests {
                 max_value: Signal::stored(6.0),
                 ..UseProgressBarInput::default()
             });
-            assert_that!(progress.props.aria_valuenow.get_untracked())
-                .is_equal_to(Some("3".to_owned()));
+            let props = progress.progress_bar.into_props();
+            assert_that!(props.aria_valuenow.get_untracked()).is_equal_to(Some("3".to_owned()));
             assert_that!(progress.value_text.get_untracked()).is_equal_to(Some("50%".to_owned()));
             assert_that!(
                 progress
@@ -289,8 +322,8 @@ mod tests {
                 value: Signal::stored(Some(150.0)),
                 ..UseProgressBarInput::default()
             });
-            assert_that!(progress.props.aria_valuenow.get_untracked())
-                .is_equal_to(Some("100".to_owned()));
+            let props = progress.progress_bar.into_props();
+            assert_that!(props.aria_valuenow.get_untracked()).is_equal_to(Some("100".to_owned()));
             assert_that!(
                 progress
                     .percentage
@@ -330,9 +363,10 @@ mod tests {
                 value: Signal::stored(None),
                 ..UseProgressBarInput::default()
             });
-            assert_that!(progress.props.aria_valuenow.get_untracked()).is_none();
-            assert_that!(progress.props.aria_valuetext.get_untracked()).is_none();
-            assert_that!(progress.props.aria_valuemin.get_untracked()).is_equal_to("0".to_owned());
+            let props = progress.progress_bar.into_props();
+            assert_that!(props.aria_valuenow.get_untracked()).is_none();
+            assert_that!(props.aria_valuetext.get_untracked()).is_none();
+            assert_that!(props.aria_valuemin.get_untracked()).is_equal_to("0".to_owned());
             assert_that!(progress.percentage.get_untracked()).is_none();
         });
     }
@@ -346,7 +380,8 @@ mod tests {
                 value_label: "Loading 1 of 4".into(),
                 ..UseProgressBarInput::default()
             });
-            assert_that!(progress.props.aria_valuetext.get_untracked())
+            let props = progress.progress_bar.into_props();
+            assert_that!(props.aria_valuetext.get_untracked())
                 .is_equal_to(Some("Loading 1 of 4".to_owned()));
         });
     }
@@ -374,9 +409,11 @@ mod tests {
                 has_label: Signal::stored(true),
                 ..UseProgressBarInput::default()
             });
-            let label_id = progress.label_props.id.clone();
-            assert_that!(progress.label_props.html_for).is_none();
-            assert_that!(progress.props.field_props.aria_labelledby.get_untracked())
+            let progress_label_props = progress.label.into_props();
+            let progress_props = progress.progress_bar.into_props();
+            let label_id = progress_label_props.id.clone();
+            assert_that!(progress_label_props.html_for).is_none();
+            assert_that!(progress_props.field_props.aria_labelledby.get_untracked())
                 .is_equal_to(Some(label_id));
         });
     }

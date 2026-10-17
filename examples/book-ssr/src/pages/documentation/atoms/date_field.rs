@@ -36,7 +36,7 @@ pub fn PageAtomDateField() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell><Code inline=true>"DateInput"</Code></TableCell>
-                        <TableCell>"The field\u{2019}s props (with "<Link href=hooks_section("use-date-picker-group")>"use_date_picker_group"</Link>"\u{2019}s arrow keys)."</TableCell>
+                        <TableCell>"The field\u{2019}s part (with "<Link href=hooks_section("use-date-picker-group")>"use_date_picker_group"</Link>"\u{2019}s arrow keys)."</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell><Code inline=true>"DateSegment"</Code></TableCell>
@@ -167,7 +167,7 @@ pub fn PageAtomDateField() -> impl IntoView {
                             "What the browser may autofill ("<Code inline=true>"autocomplete"</Code>", e.g. "<Code inline=true>"\"bday\""</Code>"), through a visually hidden date input."
                         </ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when the field is rendered."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Ids of further elements labelling or describing the field."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the field."</ApiRow>

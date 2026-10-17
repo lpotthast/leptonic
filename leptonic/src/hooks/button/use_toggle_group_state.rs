@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use crate::{ValueBinding, hooks::collections::Key};
+use crate::{ValueBinding, hooks::collections::Key, utils::keyed_triggers::KeyedTriggers};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -70,12 +70,16 @@ pub struct ToggleGroupState {
     disallow_empty_selection: Signal<bool>,
     set_keys: ValueBinding<HashSet<Key>>,
     on_selection_change: Option<Callback<HashSet<Key>>>,
+    /// Readers of single buttons' selection, by key (`performance.md` R1).
+    buttons: KeyedTriggers<Key>,
 }
 
 impl ToggleGroupState {
-    /// Whether the button `key` is selected.
+    /// Whether the button `key` is selected. Tracks only this key's selection: a reader reruns
+    /// when the button is selected or deselected, not on every change of the selection.
     pub fn is_selected(&self, key: &Key) -> bool {
-        self.selected_keys.with(|keys| keys.contains(key))
+        self.buttons.track(key);
+        self.selected_keys.with_untracked(|keys| keys.contains(key))
     }
 
     /// Replace the selected buttons.
@@ -139,13 +143,17 @@ pub fn use_toggle_group_state(input: UseToggleGroupStateInput) -> ToggleGroupSta
     } = input;
     let set_keys =
         selected_keys.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_selected_keys)));
+    let selected = set_keys.value;
     ToggleGroupState {
         selection_mode,
         is_disabled,
-        selected_keys: set_keys.value,
+        selected_keys: selected,
         disallow_empty_selection,
         set_keys,
         on_selection_change,
+        // Every change of the selection (through the state or by the app) reaches the readers
+        // of the keys that changed, right away.
+        buttons: KeyedTriggers::following(selected),
     }
 }
 

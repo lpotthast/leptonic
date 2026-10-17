@@ -8,17 +8,40 @@
 //! announcer (`prepare-announcer`: its first announcement waits for its live regions) and read
 //! how many items are selected (`selected`) and how often an action ran (`actions`).
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
     Assertiveness, announce,
     atoms::grid_list::{GridList, GridListItem},
-    hooks::collections::{Key, Selection, SelectionMode},
+    hooks::collections::{Collection, CollectionMemo, Key, Selection, SelectionMode},
 };
 use leptos::prelude::*;
 
-use super::grid_list::{LARGE, SMALL, list_collection, selected_count};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The items of the small list.
+const SMALL: usize = 10;
+/// The items of the large list.
+const LARGE: usize = 1_000;
+
+/// How many items of `selection` are selected (-1: all).
+fn selected_count(selection: &Selection) -> f64 {
+    match selection {
+        Selection::All => -1.0,
+        Selection::Keys(keys) => f64::from(u32::try_from(keys.len()).unwrap_or(u32::MAX)),
+    }
+}
+
+/// `items` items ("Item <i>", key `i`).
+fn list_collection(items: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..items.get() {
+                b.item(i, format!("Item {i}"));
+            }
+        }))
+    })
+}
 
 #[component]
 pub fn PagePerf() -> impl IntoView {

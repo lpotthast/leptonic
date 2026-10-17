@@ -1,11 +1,18 @@
 // Upstream: react-aria/src/label/useLabel.ts @ 99e6102368
 // Upstream: react-aria/test/label/useLabel.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
-use crate::{IdRefs, IntoAttrs, labels, utils::id::use_id};
+use crate::{
+    Id, IntoAttrs,
+    utils::{
+        id::{IdListBuilder, use_id},
+        labels::labelledby_ids,
+        part::{Part, Remount},
+        probe::probe_sources,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        spread::Spread,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -35,9 +42,9 @@ pub enum LabelElementType {
 #[derive(Debug, Clone, Default)]
 pub struct UseLabelInput {
     /// The field element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// The label element's id. Generated when `None`.
-    pub label_id: Option<String>,
+    pub label_id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`). A signal, so atoms can follow
     /// whether their `Label` part is actually rendered.
     pub has_label: Signal<bool>,
@@ -46,59 +53,78 @@ pub struct UseLabelInput {
     /// field's name.
     pub aria_label: MaybeProp<String>,
     /// Further elements labelling the field.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 }
 
-/// Return value of [`use_label`].
+/// The return value of [`use_label`].
 #[derive(Debug)]
 pub struct UseLabelReturn {
-    /// For the label element.
-    pub label_props: UseLabelProps,
-    /// For the field element.
-    pub field_props: UseLabelFieldProps,
+    /// The label element.
+    pub label: Part<UseLabelProps>,
+    /// The labelled field element.
+    pub field: Part<UseLabelFieldProps>,
 }
 
 /// Props for a label element.
 #[derive(Debug)]
 pub struct UseLabelProps {
-    pub id: String,
+    pub id: Id,
     /// The field's id, for `<label>` elements.
-    pub html_for: Option<String>,
+    pub html_for: Option<Id>,
 }
 
-pub type UseLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, Option<String>>);
+impl Remount for UseLabelProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            html_for: self.html_for.clone(),
+        }
+    }
+}
+
+pub type UseLabelAttrs = Spread<(FixedAttr, FixedAttr)>;
 
 impl IntoAttrs for UseLabelProps {
     type Attrs = UseLabelAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
+        Spread((fixed_attr("id", self.id), fixed_attr("for", self.html_for)))
     }
 }
 
 /// Props for the labelled field element.
 #[derive(Debug)]
 pub struct UseLabelFieldProps {
-    pub id: String,
+    pub id: Id,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 }
 
-pub type UseLabelFieldAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-);
+impl Remount for UseLabelFieldProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+        }
+    }
+}
+
+pub type UseLabelFieldAttrs = Spread<(
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+)>;
 
 impl IntoAttrs for UseLabelFieldProps {
     type Attrs = UseLabelFieldAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-        )
+        Spread((
+            fixed_attr("id", self.id),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+        ))
     }
 }
 
@@ -109,8 +135,8 @@ impl IntoAttrs for UseLabelFieldProps {
 /// ```ignore
 /// let label = use_label(UseLabelInput { has_label: true.into(), ..UseLabelInput::default() });
 /// view! {
-///     <label {..label.label_props.into_attrs()}>"Email"</label>
-///     <input type="email" {..label.field_props.into_attrs()} />
+///     <label {..label.label.attrs()}>"Email"</label>
+///     <input type="email" {..label.field.attrs()} />
 /// }
 /// ```
 pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
@@ -143,32 +169,42 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
         });
     }
     // A memo: it allocates, and fields pass it on to further readers.
-    let labelled_by: Signal<Option<String>> = {
+    let labelled_by = {
         let (id, label_id) = (id.clone(), label_id.clone());
-        Memo::new(move |_| {
-            let mut labelled_by = IdRefs::default();
-            if has_label.get() {
-                labelled_by.push(&label_id);
-            }
-            labelled_by.extend(aria_labelledby.get().as_deref());
-            // With an `aria-label` next to other labels, the field labels itself too (first), so
-            // that both make up its name.
-            labels(&id, aria_label.get(), labelled_by.into_value().as_deref()).aria_labelledby
-        })
-        .into()
+        let compute = move || {
+            let has_aria_label =
+                aria_label.with(|label| label.as_deref().is_some_and(|label| !label.is_empty()));
+            aria_labelledby.with(|labelledby| {
+                if has_label.get() {
+                    let mut ids = IdListBuilder::default();
+                    ids.push(&label_id);
+                    if let Some(labelledby) = labelledby {
+                        ids.push(labelledby);
+                    }
+                    labelledby_ids(&id, has_aria_label, ids.finish().as_ref())
+                } else {
+                    labelledby_ids(&id, has_aria_label, labelledby.as_ref())
+                }
+            })
+        };
+        // Fixed inputs (no label that may come and go, fixed labels): computed once.
+        match probe_sources(compute.clone()) {
+            (value, false) => Signal::stored(value),
+            _ => Memo::new(move |_| compute()).into(),
+        }
     };
 
     UseLabelReturn {
-        label_props: UseLabelProps {
+        label: Part::stored(UseLabelProps {
             id: label_id,
             // Only a rendered `<label>` uses it.
             html_for: (label_element_type == LabelElementType::Label).then(|| id.clone()),
-        },
-        field_props: UseLabelFieldProps {
+        }),
+        field: Part::stored(UseLabelFieldProps {
             id,
             aria_labelledby: labelled_by,
             aria_label,
-        },
+        }),
     }
 }
 
@@ -183,14 +219,16 @@ mod tests {
     fn a_visible_label_labels_the_field() {
         with_owner(|| {
             let label = use_label(UseLabelInput {
-                id: Some("f".to_owned()),
+                id: Some(Id::from("f")),
                 has_label: Signal::stored(true),
                 ..UseLabelInput::default()
             });
-            let label_id = label.label_props.id.clone();
-            assert_that!(label.field_props.aria_labelledby.get_untracked())
+            let label_field_props = label.field.into_props();
+            let label_label_props = label.label.into_props();
+            let label_id = label_label_props.id.clone();
+            assert_that!(label_field_props.aria_labelledby.get_untracked())
                 .is_equal_to(Some(label_id));
-            assert_that!(label.label_props.html_for).is_equal_to(Some("f".to_owned()));
+            assert_that!(label_label_props.html_for).is_equal_to(Some(Id::from("f")));
         });
     }
 
@@ -198,13 +236,14 @@ mod tests {
     fn labelled_by_lists_the_visible_label_first() {
         with_owner(|| {
             let label = use_label(UseLabelInput {
-                label_id: Some("l".to_owned()),
+                label_id: Some(Id::from("l")),
                 has_label: Signal::stored(true),
-                aria_labelledby: Signal::stored(Some("other".to_owned())),
+                aria_labelledby: Signal::stored(Some(Id::from("other"))),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby.get_untracked())
-                .is_equal_to(Some("l other".to_owned()));
+            let label_field_props = label.field.into_props();
+            assert_that!(label_field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some(Id::from("l other")));
         });
     }
 
@@ -212,13 +251,14 @@ mod tests {
     fn aria_label_next_to_other_labels_adds_the_field_itself() {
         with_owner(|| {
             let label = use_label(UseLabelInput {
-                id: Some("f".to_owned()),
+                id: Some(Id::from("f")),
                 aria_label: "Name".into(),
-                aria_labelledby: Signal::stored(Some("other".to_owned())),
+                aria_labelledby: Signal::stored(Some(Id::from("other"))),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby.get_untracked())
-                .is_equal_to(Some("f other".to_owned()));
+            let label_field_props = label.field.into_props();
+            assert_that!(label_field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some(Id::from("f other")));
         });
     }
 
@@ -228,15 +268,16 @@ mod tests {
     fn aria_label_visible_label_and_labelled_by_combine_field_first() {
         with_owner(|| {
             let label = use_label(UseLabelInput {
-                id: Some("f".to_owned()),
-                label_id: Some("l".to_owned()),
+                id: Some(Id::from("f")),
+                label_id: Some(Id::from("l")),
                 has_label: Signal::stored(true),
                 aria_label: "aria".into(),
-                aria_labelledby: Signal::stored(Some("foo f".to_owned())),
+                aria_labelledby: Signal::stored(Some(Id::from("foo f"))),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby.get_untracked())
-                .is_equal_to(Some("f l foo".to_owned()));
+            let label_field_props = label.field.into_props();
+            assert_that!(label_field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some(Id::from("f l foo")));
         });
     }
 
@@ -247,7 +288,8 @@ mod tests {
                 aria_label: "Name".into(),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby.get_untracked()).is_none();
+            let label_field_props = label.field.into_props();
+            assert_that!(label_field_props.aria_labelledby.get_untracked()).is_none();
         });
     }
 
@@ -259,9 +301,11 @@ mod tests {
                 label_element_type: LabelElementType::Span,
                 ..UseLabelInput::default()
             });
-            assert_that!(label.label_props.html_for).is_none();
-            assert_that!(label.field_props.aria_labelledby.get_untracked())
-                .is_equal_to(Some(label.label_props.id.clone()));
+            let label_field_props = label.field.into_props();
+            let label_label_props = label.label.into_props();
+            assert_that!(label_label_props.html_for).is_none();
+            assert_that!(label_field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some(label_label_props.id.clone()));
         });
     }
 }

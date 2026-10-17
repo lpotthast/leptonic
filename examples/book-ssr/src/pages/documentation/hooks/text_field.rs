@@ -22,7 +22,7 @@ pub fn PageUseTextField() -> impl IntoView {
             <ReactAria hook="useTextField"/>
 
             <Section title="Example">
-                <p>"Create the state, pass it to the hook and spread the returned props onto your elements:"</p>
+                <p>"Create the state, pass it to the hook and spread the returned parts onto your elements:"</p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::hooks::form::{InputType, TextFieldElement, UseTextFieldInput, UseTextFieldStateInput, ValidationBehavior, use_text_field, use_text_field_state};
@@ -74,8 +74,8 @@ pub fn PageUseTextField() -> impl IntoView {
                         });
 
                         view! {
-                            <label {..field.label_props.into_attrs()}>"Name"</label>
-                            <input {..field.input_props.into_attrs()}/>
+                            <label {..field.label.attrs()}>"Name"</label>
+                            <input {..field.input.attrs()}/>
                             <p>{move || format!("Hello, {}!", name.value.get())}</p>
                         }
                     "#)}
@@ -155,11 +155,11 @@ pub fn PageUseTextField() -> impl IntoView {
                             <Code inline=true>"Tel"</Code>", "<Code inline=true>"Email"</Code>" or "<Code inline=true>"Password"</Code>
                             ". Only for "<Code inline=true>"<input>"</Code>"; reactive, e.g. for a \u{201c}show password\u{201d} toggle."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="label_id" ty="Option<String>" default="None">"The label\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="label_id" ty="Option<Id>" default="None">"The label\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
-                            "Whether you render a visible label with "<Code inline=true>"label_props"</Code>
-                            ". The input is then labelled by it."
+                            "Whether you render a visible label with the "<Code inline=true>"label"</Code>
+                            " part. The input is then labelled by it."
                         </ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Disables the field or makes it read-only."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">
@@ -196,11 +196,11 @@ pub fn PageUseTextField() -> impl IntoView {
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="exclude_from_tab_order" ty="bool" default="false">"Sets "<Code inline=true>"tabindex=\"-1\""</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when there is no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"Further elements labelling the field."</ApiRow>
-                        <ApiRow name="aria_describedby, aria_errormessage" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"Further elements labelling the field."</ApiRow>
+                        <ApiRow name="aria_describedby, aria_errormessage" ty="Signal<Option<Id>>" default="None">
                             "Further description or error message ids, merged with the generated ones."
                         </ApiRow>
-                        <ApiRow name="aria_activedescendant, aria_controls" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_activedescendant, aria_controls" ty="Signal<Option<Id>>" default="None">
                             "For inputs that control a popup, like a combobox."
                         </ApiRow>
                         <ApiRow name="aria_autocomplete" ty="Option<AriaAutocomplete>" default="None">"The "<Code inline=true>"aria-autocomplete"</Code>" attribute."</ApiRow>
@@ -219,16 +219,16 @@ pub fn PageUseTextField() -> impl IntoView {
 
                 <Section title="Return" id="use-text-field-return">
                     <ApiTable kind=ApiKind::Return of="UseTextFieldReturn">
-                        <ApiRow name="input_props" ty="UseTextFieldInputProps">
+                        <ApiRow name="input" ty="Part<UseTextFieldInputProps>">
                             "Attributes and event handlers for the "<Code inline=true>"<input>"</Code>" or "
-                            <Code inline=true>"<textarea>"</Code>". Spread with "<Code inline=true>"{..input_props.into_attrs()}"</Code>
+                            <Code inline=true>"<textarea>"</Code>". Spread with "<Code inline=true>"{..input.attrs()}"</Code>
                             ". Keeps the element\u{2019}s value in sync with the state."
                         </ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"Id and "<Code inline=true>"for"</Code>" of the label."</ApiRow>
-                        <ApiRow name="description_props" ty="SlotProps">
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"Id and "<Code inline=true>"for"</Code>" of the label."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">
                             "For the description. The input references it only while it is rendered."
                         </ApiRow>
-                        <ApiRow name="error_message_props" ty="SlotProps">
+                        <ApiRow name="error_message" ty="Part<SlotProps>">
                             "For the error message. Render it only while "<Code inline=true>"is_invalid"</Code>
                             "; the input references it while it is rendered."
                         </ApiRow>
@@ -250,7 +250,7 @@ pub fn PageUseTextField() -> impl IntoView {
                     <Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link>" and "
                     <Link href=routes::doc::color_field::Hook.materialize()>"Color Field Hooks"</Link>
                     " use it. Attach the returned handlers to the input next to "<Code inline=true>"use_text_field"</Code>
-                    "\u{2019}s props."
+                    "\u{2019}s "<Code inline=true>"input"</Code>" part."
                 </p>
                 <Section title="Input" id="use-formatted-text-field-input">
                     <p>"The input has no defaults: set every field."</p>

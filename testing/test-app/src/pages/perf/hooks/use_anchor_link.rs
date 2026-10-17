@@ -48,7 +48,7 @@ fn AnchorLink(press_count: StoredValue<u32>) -> impl IntoView {
             ..UseLinkInput::default()
         },
     });
-    let (attrs, styles) = link.props.into_parts();
+    let (attrs, styles) = link.link.attrs();
     view! {
         <a
             id="perf-anchor-link"

@@ -12,7 +12,9 @@ use leptos::prelude::*;
 
 const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Durian", "Elderberry"];
 
-/// A single select with a default value. "Cherry" is disabled.
+/// A single select with a default value. "Cherry" is disabled. In `#test-sel-bound` ("Page
+/// size"), `#test-sel-bound-toggle-value` and `#test-sel-bound-toggle-popover` unmount and mount
+/// its `SelectValue` and its `SelectPopover`.
 #[component]
 pub fn PageAtomSelect() -> impl IntoView {
     let fruits = use_list_collection(UseListCollectionInput {
@@ -25,6 +27,8 @@ pub fn PageAtomSelect() -> impl IntoView {
     // As crudkit's page size select: options from a memo, a derived value with its setter, `<For>` items.
     let page_size = RwSignal::new(10_u32);
     let bound_changes = RwSignal::new(0_u32);
+    let bound_value_shown = RwSignal::new(true);
+    let bound_popover_shown = RwSignal::new(true);
     let options = Memo::new(|_| vec![10_u32, 25, 50]);
     // Typed: the options' keys are the sizes' (`SelectionValue for u32`).
     let sizes = use_collection(move |b| {
@@ -78,8 +82,11 @@ pub fn PageAtomSelect() -> impl IntoView {
                 >
                     <Label>"Page size"</Label>
                     <SelectTrigger>
-                        <SelectValue />
+                        <Show when=move || bound_value_shown.get()>
+                            <SelectValue />
+                        </Show>
                     </SelectTrigger>
+                    <Show when=move || bound_popover_shown.get()>
                     <SelectPopover>
                         <ListBox>
                             <For
@@ -91,8 +98,21 @@ pub fn PageAtomSelect() -> impl IntoView {
                             />
                         </ListBox>
                     </SelectPopover>
+                    </Show>
                 </Select>
             </div>
+            <button
+                id="test-sel-bound-toggle-value"
+                on:click=move |_| bound_value_shown.update(|shown| *shown = !*shown)
+            >
+                "Hide or show the page size value"
+            </button>
+            <button
+                id="test-sel-bound-toggle-popover"
+                on:click=move |_| bound_popover_shown.update(|shown| *shown = !*shown)
+            >
+                "Hide or show the page size popover"
+            </button>
             <div>
                 "Bound: "
                 <span id="test-sel-bound-value">

@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, KeyboardKey, Propagation,
+    KeyboardKey, Propagation,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         form::{
@@ -81,9 +81,9 @@ pub fn EventPropagationDemo() -> impl IntoView {
     });
 
     view! {
-        <div {..panel.props.into_attrs()} class="demo-propagation-panel">
-            <label {..field.label_props.into_attrs()}>"Search"</label>
-            <input {..field.input_props.into_attrs()} class="demo-text-input"/>
+        <div {..panel.target.attrs()} class="demo-propagation-panel">
+            <label {..field.label.attrs()}>"Search"</label>
+            <input {..field.input.attrs()} class="demo-text-input"/>
         </div>
         <p class="demo-status">{last_handled}</p>
         <div class="demo-controls">

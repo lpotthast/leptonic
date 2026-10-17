@@ -7,17 +7,17 @@ use leptos_classes::Classes;
 
 use super::{
     color_picker::ColorPickerContext,
-    color_thumb::{ColorThumbContext, ThumbParts, WheelThumbParts},
+    color_thumb::{ColorThumbContext, ThumbParts},
 };
 use crate::{
-    Out, ValueBinding,
+    Out, Part, PropsWithStyles, ValueBinding,
     hooks::color::{
-        UseColorWheelInput, UseColorWheelStateInput, UseColorWheelTrackAttrs, use_color_wheel,
+        UseColorWheelInput, UseColorWheelStateInput, UseColorWheelTrackProps, use_color_wheel,
         use_color_wheel_state,
     },
     utils::{
         color::{Color, ColorValue, HSL},
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         styles::Styles,
     },
@@ -36,11 +36,11 @@ use crate::{
 // =============================================================================
 
 /// What a [`ColorWheelTrack`] gets from its [`ColorWheel`].
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct ColorWheelTrackContext {
     is_disabled: Signal<bool>,
-    /// Cloned per render.
-    track: StoredValue<(UseColorWheelTrackAttrs, Styles)>,
+    /// The track: one element at a time.
+    track: Part<PropsWithStyles<UseColorWheelTrackProps>>,
 }
 
 /// A color wheel: a [`ColorWheelTrack`] (the ring of hues) and a
@@ -119,34 +119,33 @@ pub fn ColorWheel<C: ColorValue>(
         outer_radius,
         inner_radius,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_details: crate::utils::prop_signal(aria_details),
-        aria_errormessage: crate::utils::prop_signal(aria_errormessage),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        aria_details: crate::utils::id::id_ref_prop(aria_details),
+        aria_errormessage: crate::utils::id::id_ref_prop(aria_errormessage),
         name,
         form,
     });
-    let (track_attrs, track_styles) = wheel.track_props.into_parts();
     let track = ColorWheelTrackContext {
         is_disabled,
-        track: StoredValue::new((track_attrs, track_styles)),
+        track: wheel.track,
     };
     let color = state.display_color();
     let thumb = ColorThumbContext::new(
         Signal::derive(move || color.get().to_css_string()),
         state.is_dragging,
         is_disabled,
-        ThumbParts::Wheel(Box::new(WheelThumbParts {
-            thumb: wheel.thumb_props,
-            input: wheel.input_props,
-        })),
+        ThumbParts::Wheel {
+            thumb: wheel.thumb,
+            input: wheel.input,
+        },
     );
     let styles = Styles::new()
         .add_unchecked("position", "relative")
         .merge(styles);
 
     view! {
-        <div class=classes style=styles data-disabled=flag(is_disabled)>
+        <div class=classes style={styles} {..data_flags([("data-disabled", is_disabled)])}>
             <Provider value=track>
                 <Provider value=thumb>{children()}</Provider>
             </Provider>
@@ -172,8 +171,9 @@ pub fn ColorWheelTrack(
         crate::utils::dev_warn!("A <ColorWheelTrack> must be inside a <ColorWheel>.");
         return None;
     };
-    let (attrs, track_styles) = track.get_value();
+    // One track per wheel (`Part`: a second one renders nothing).
+    let (attrs, track_styles) = track.props()?.into_parts();
     Some(view! {
-        <div {..attrs} class=classes style=track_styles.merge(styles) data-disabled=flag(is_disabled) />
+        <div {..attrs} class=classes style=track_styles.merge(styles) {..data_flags([("data-disabled", is_disabled)])} />
     })
 }

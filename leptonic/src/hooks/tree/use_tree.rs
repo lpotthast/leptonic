@@ -5,7 +5,7 @@ use leptos::prelude::*;
 
 use super::TreeState;
 use crate::{
-    CapturedElement,
+    CapturedElement, Id, Part,
     hooks::{
         collections::{CollectionOptions, Key, ListLayout},
         gridlist::{
@@ -35,10 +35,10 @@ pub struct UseTreeInput {
     /// The tree element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
     /// Ids of elements labelling the tree.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub options: CollectionOptions,
     /// Called with the key of an activated item. Without it (and without selection), pressing a
     /// parent item toggles it.
@@ -65,7 +65,7 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
         keyboard_navigation_behavior,
         should_select_on_press_up,
     } = input;
-    let mut tree = use_grid_list(UseGridListInput {
+    let UseGridListReturn { grid_list, data } = use_grid_list(UseGridListInput {
         id,
         aria_label,
         aria_labelledby,
@@ -80,6 +80,10 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
         keyboard_navigation_behavior,
         should_select_on_press_up,
     });
-    tree.props.role = Signal::stored(AriaRole::Treegrid);
-    tree
+    let mut grid_list = grid_list.into_props();
+    grid_list.role = Signal::stored(AriaRole::Treegrid);
+    UseGridListReturn {
+        grid_list: Part::stored(grid_list),
+        data,
+    }
 }

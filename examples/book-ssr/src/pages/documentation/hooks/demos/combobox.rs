@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::use_button,
@@ -69,8 +69,8 @@ pub fn ComboboxDemo() -> impl IntoView {
     let popover = CapturedElement::new();
     let button_element = CapturedElement::new();
     let UseComboBoxReturn {
-        input,
-        input_props,
+        text_field,
+        input: combobox_input,
         button,
         listbox,
         ..
@@ -94,22 +94,18 @@ pub fn ComboboxDemo() -> impl IntoView {
         on_blur: None,
     });
 
-    // The input is a text field with the combobox's configuration.
-    let UseTextFieldReturn {
-        label_props,
-        input_props: field_props,
-        ..
-    } = use_text_field(input);
-    let (button_attrs, button_styles) = use_button(button).props.into_parts();
+    // The input is a text field with the combobox's configuration: it takes the parts of both hooks.
+    let UseTextFieldReturn { label, input, .. } = use_text_field(text_field);
+    let (button_attrs, button_styles) = use_button(button).button.attrs();
     let listbox = StoredValue::new(listbox);
 
     view! {
         <div class="demo-combo">
-            <label {..label_props.into_attrs()} class="demo-combo-label">
+            <label {..label.attrs()} class="demo-combo-label">
                 "Fruit"
             </label>
             <div class="demo-combo-field">
-                <input {..field_props.into_attrs()} {..input_props.into_attrs()} class="demo-combo-input"/>
+                <input {..input.attrs()} {..combobox_input.attrs()} class="demo-combo-input"/>
                 <button {..button_attrs} {..button_element.attr()} style=button_styles class="demo-combo-button">
                     <span aria-hidden="true">"\u{25bc}"</span>
                 </button>
@@ -137,12 +133,12 @@ pub fn ComboboxDemo() -> impl IntoView {
 /// The options of the popover: the items of the listbox's collection, which the combobox filters by the input text.
 #[component]
 fn FruitListBox(listbox: UseListBoxInput) -> impl IntoView {
-    let UseListBoxReturn { props, data } = use_listbox(listbox);
+    let UseListBoxReturn { listbox, data } = use_listbox(listbox);
     let collection = data.state.collection;
     let items = move || collection.with(|c| c.items().cloned().collect::<Vec<Node>>());
 
     view! {
-        <div {..props.into_attrs()} class="demo-combo-listbox">
+        <div {..listbox.attrs()} class="demo-combo-listbox">
             <For each=items key=|node| node.key.clone() let:node>
                 <FruitOption list=data.clone() node/>
             </For>
@@ -156,7 +152,7 @@ fn FruitListBox(listbox: UseListBoxInput) -> impl IntoView {
 #[component]
 fn FruitOption(list: ListBoxData, node: Node) -> impl IntoView {
     let UseOptionReturn {
-        props,
+        option,
         is_selected,
         is_focused,
         ..
@@ -165,7 +161,7 @@ fn FruitOption(list: ListBoxData, node: Node) -> impl IntoView {
         key: node.key.clone(),
         on_context_menu: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = option.attrs();
 
     view! {
         <div {..attrs} style=styles data-focused=move || is_focused.get().then_some("") class="demo-combo-option">

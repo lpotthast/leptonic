@@ -7,7 +7,7 @@
 //! and read the value (`value`) and how often a change ended (`change-ends`).
 
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::slider::{
         SliderState, UseSliderInput, UseSliderStateInput, UseSliderThumbInput, use_slider,
         use_slider_state, use_slider_thumb,
@@ -51,7 +51,7 @@ fn Subject(
     on_cleanup(move || state.set_value(None));
     let slider = use_slider(UseSliderInput {
         state: slider_state,
-        id: Some("perf-slider".to_owned()),
+        id: Some("perf-slider".into()),
         has_label: Signal::stored(true),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
@@ -75,17 +75,21 @@ fn Subject(
         aria_errormessage: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (track_attrs, track_styles) = slider.track_props.into_parts();
-    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    let (track_attrs, track_styles) = slider
+        .track
+        .props()
+        .expect("the first track takes the props")
+        .into_parts();
+    let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
     view! {
-        <div {..slider.group_props.into_attrs()}>
-            <span {..slider.label_props.into_attrs()}>"Volume"</span>
+        <div {..slider.group.attrs()}>
+            <span {..slider.label.attrs()}>"Volume"</span>
             <div id="perf-slider-track" {..track_attrs} style=track_styles>
                 <div class="perf-thumb" {..thumb_attrs} style=thumb_styles>
-                    <input {..thumb.input_props.into_attrs()} />
+                    <input {..thumb.input.attrs()} />
                 </div>
             </div>
-            <output id="perf-slider-output" {..slider.output_props.into_attrs()}>
+            <output id="perf-slider-output" {..slider.output.attrs()}>
                 {move || slider_state.formatted_values()}
             </output>
         </div>

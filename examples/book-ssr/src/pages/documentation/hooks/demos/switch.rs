@@ -25,8 +25,8 @@ pub fn SwitchDemo() -> impl IntoView {
         },
         state,
     });
-    let (label_attrs, label_styles) = switch.label_props.into_parts();
-    let (input_attrs, input_styles) = switch.input_props.into_parts();
+    let (label_attrs, label_styles) = switch.label.attrs();
+    let (input_attrs, input_styles) = switch.input.attrs();
 
     // The hook renders no state: the demo exposes it as data attributes for its stylesheet.
     let flag = |signal: Signal<bool>| move || signal.get().then_some("");

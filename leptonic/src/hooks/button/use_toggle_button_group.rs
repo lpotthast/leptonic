@@ -1,6 +1,6 @@
 // Upstream: react-aria/src/button/useToggleButtonGroup.ts @ 99e6102368
 // Upstream: react-aria-components/test/ToggleButtonGroup.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, prelude::*};
+use leptos::prelude::*;
 
 use super::{
     use_button::UseButtonInput,
@@ -14,7 +14,12 @@ use crate::{
         form::{UseToggleStateInput, use_toggle_state},
         toolbar::{UseToolbarAttrs, UseToolbarInput, UseToolbarProps, use_toolbar},
     },
-    utils::aria::{AriaChecked, AriaDisabled, AriaRole, aria_true},
+    utils::{
+        aria::{AriaChecked, AriaDisabled, AriaRole, aria_true},
+        part::{Part, Remount},
+        probe::either,
+        signal_attr::{SignalAttr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -35,11 +40,11 @@ pub struct UseToggleButtonGroupInput {
     pub toolbar: UseToolbarInput,
 }
 
-/// Output of [`use_toggle_button_group`].
+/// The return value of [`use_toggle_button_group`].
 #[derive(Debug)]
 pub struct UseToggleButtonGroupReturn {
-    /// Props for the group element.
-    pub props: UseToggleButtonGroupProps,
+    /// The group element.
+    pub group: Part<UseToggleButtonGroupProps>,
 }
 
 /// Props for the toggle button group element.
@@ -49,10 +54,16 @@ pub struct UseToggleButtonGroupProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
 }
 
-pub type UseToggleButtonGroupAttrs = (
-    UseToolbarAttrs,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-);
+impl Remount for UseToggleButtonGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            toolbar: self.toolbar.remount(),
+            aria_disabled: self.aria_disabled,
+        }
+    }
+}
+
+pub type UseToggleButtonGroupAttrs = (UseToolbarAttrs, SignalAttr<Option<AriaDisabled>>);
 
 impl IntoAttrs for UseToggleButtonGroupProps {
     type Attrs = UseToggleButtonGroupAttrs;
@@ -60,7 +71,7 @@ impl IntoAttrs for UseToggleButtonGroupProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             self.toolbar.into_attrs(),
-            Attr(attr::AriaDisabled, self.aria_disabled),
+            signal_attr("aria-disabled", self.aria_disabled),
         )
     }
 }
@@ -71,16 +82,16 @@ impl IntoAttrs for UseToggleButtonGroupProps {
 pub fn use_toggle_button_group(input: UseToggleButtonGroupInput) -> UseToggleButtonGroupReturn {
     crate::metrics::subject!();
     let UseToggleButtonGroupInput { state, toolbar } = input;
-    let mut toolbar = use_toolbar(toolbar).props;
+    let mut toolbar = use_toolbar(toolbar).toolbar.into_props();
     if state.selection_mode == ToggleGroupSelectionMode::Single {
         toolbar.role = Signal::stored(AriaRole::Radiogroup);
     }
     let is_disabled = state.is_disabled;
     UseToggleButtonGroupReturn {
-        props: UseToggleButtonGroupProps {
+        group: Part::stored(UseToggleButtonGroupProps {
             toolbar,
             aria_disabled: aria_true(is_disabled),
-        },
+        }),
     }
 }
 
@@ -104,10 +115,10 @@ pub fn use_toggle_button_group_item(input: UseToggleButtonGroupItemInput) -> Use
         key,
         mut button,
     } = input;
-    let selected_key = key.clone();
     // Read by the toggle state and the ARIA attributes; notifies only when this key's selection
-    // changes.
-    let is_selected = Signal::from(Memo::new(move |_| group.is_selected(&selected_key)));
+    // changes (`performance.md` R1).
+    let selected_key = key.clone();
+    let is_selected = Signal::derive(move || group.is_selected(&selected_key));
     let state = use_toggle_state(UseToggleStateInput {
         value: Some(ValueBinding::new(
             is_selected,
@@ -115,8 +126,7 @@ pub fn use_toggle_button_group_item(input: UseToggleButtonGroupItemInput) -> Use
         )),
         ..UseToggleStateInput::default()
     });
-    let is_disabled = button.is_disabled;
-    button.is_disabled = Signal::derive(move || is_disabled.get() || group.is_disabled.get());
+    button.is_disabled = either(button.is_disabled, group.is_disabled);
     let mut button = use_toggle_button(UseToggleButtonInput { state, button });
     if group.selection_mode == ToggleGroupSelectionMode::Single {
         button.role = Some(AriaRole::Radio);

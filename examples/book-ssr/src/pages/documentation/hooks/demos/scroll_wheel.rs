@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::interactions::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel},
 };
@@ -23,7 +22,7 @@ pub fn ScrollWheelDemo() -> impl IntoView {
     });
 
     view! {
-        <div {..scroll_wheel.props.into_attrs()} class="demo-scroll-wheel-target">
+        <div {..scroll_wheel.target.attrs()} class="demo-scroll-wheel-target">
             <div class="demo-scroll-wheel-value">{move || format!("{:.0}", value.get())}</div>
             <p class="demo-muted-text">"Scroll here with a mouse wheel or trackpad"</p>
         </div>

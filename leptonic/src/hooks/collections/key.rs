@@ -143,6 +143,13 @@ impl From<&String> for Key {
     }
 }
 
+impl From<crate::Id> for Key {
+    /// A generated id as a key (sharing its string).
+    fn from(id: crate::Id) -> Self {
+        Self(Repr::Str(id.into_arc()))
+    }
+}
+
 impl From<Arc<str>> for Key {
     fn from(s: Arc<str>) -> Self {
         Self(Repr::Str(s))

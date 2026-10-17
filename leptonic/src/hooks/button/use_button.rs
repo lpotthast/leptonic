@@ -1,25 +1,16 @@
 // Upstream: react-aria/src/button/useButton.ts @ 99e6102368
 // Upstream: react-aria/test/button/useButton.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Button.test.js @ 99e6102368
-use leptos::{
-    attr,
-    attr::{
-        Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
-    ev,
-    oco::Oco,
-    prelude::*,
-};
+use leptos::{ev, oco::Oco, prelude::*};
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
-    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    ElementCaptureAttr, EventHandler, Id, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         focus::{
             FocusHandle, FocusableContextAttr, FocusableContextAttrs, UseFocusRingReturn,
             UseFocusableReturn,
-            use_focus_ring::{UseFocusRingInput, use_focus_ring},
+            use_focus_ring::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
             use_focusable::{UseFocusableInput, use_focusable},
         },
         interactions::{
@@ -38,6 +29,11 @@ use crate::{
             AriaRole,
         },
         keyboard_shortcut::KeyboardShortcuts,
+        part::{Part, Remount},
+        probe::{either, probe_sources},
+        reactions::sharing_one_effect,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        spread::Spread,
     },
 };
 
@@ -204,14 +200,14 @@ pub struct UseButtonInput {
 
     /// The element's id. Inside an overlay trigger (`PressResponder` with a trigger) the button
     /// gets the trigger's id without one, and its own becomes the trigger's.
-    pub id: Option<String>,
+    pub id: Option<Id>,
 
     /// An accessible name, for buttons without visible text (e.g. icon buttons).
     pub aria_label: MaybeProp<String>,
 
     /// The id(s) of the element(s) naming the button. A signal: e.g. a field's label ids follow
     /// whether its label is rendered.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 
     /// Whether the button is disabled.
     pub is_disabled: Signal<bool>,
@@ -252,9 +248,9 @@ pub struct UseButtonInput {
     /// Whether the element the button controls is expanded.
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// The id(s) of the element(s) the button controls.
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     /// The id(s) of the element(s) describing the button.
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// The pressed state of a toggle button.
     pub aria_pressed: Signal<Option<AriaPressed>>,
     /// `aria-checked`, for buttons acting as checkable items (e.g. `role="radio"`).
@@ -296,11 +292,12 @@ pub struct UseButtonInput {
     pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
-/// Return value of [`use_button`].
+/// The return value of [`use_button`].
 #[derive(Debug)]
 pub struct UseButtonReturn {
-    /// Props for the button element. Call `.into_parts()` for view spreading and styles.
-    pub props: PropsWithStyles<UseButtonProps>,
+    /// The button element: `let (attrs, styles) = button.attrs();`, the styles merged with the
+    /// element's own.
+    pub button: Part<PropsWithStyles<UseButtonProps>>,
     /// Whether the button is disabled: by its input, or by a surrounding `PressResponder`.
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
@@ -316,9 +313,9 @@ pub struct UseButtonReturn {
 /// Props from [`use_button`], to be spread onto the button element.
 #[derive(Debug)]
 pub struct UseButtonProps {
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub role: Option<AriaRole>,
     pub button_type: Signal<Option<&'static str>>,
     pub disabled: Signal<bool>,
@@ -330,11 +327,11 @@ pub struct UseButtonProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     pub aria_pressed: Signal<Option<AriaPressed>>,
     pub aria_checked: Signal<Option<AriaChecked>>,
     pub aria_current: Signal<Option<AriaCurrent>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub data_focus_visible: Signal<Option<&'static str>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -354,40 +351,82 @@ pub struct UseButtonProps {
     pub context_attrs: Option<FocusableContextAttrs>,
 }
 
+impl Remount for UseButtonProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            role: self.role,
+            button_type: self.button_type,
+            disabled: self.disabled,
+            tabindex: self.tabindex,
+            href: self.href,
+            target: self.target,
+            rel: self.rel,
+            form: self.form.clone(),
+            aria_disabled: self.aria_disabled,
+            aria_haspopup: self.aria_haspopup,
+            aria_expanded: self.aria_expanded,
+            aria_controls: self.aria_controls,
+            aria_pressed: self.aria_pressed,
+            aria_checked: self.aria_checked,
+            aria_current: self.aria_current,
+            aria_describedby: self.aria_describedby,
+            data_focus_visible: self.data_focus_visible,
+            element_capture: self.element_capture.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            on_click: self.on_click.clone(),
+            on_dblclick: self.on_dblclick.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_contextmenu: self.on_contextmenu.clone(),
+            on_pointerup: self.on_pointerup.clone(),
+            on_mousedown: self.on_mousedown.clone(),
+            on_dragstart: self.on_dragstart.clone(),
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerleave: self.on_pointerleave.clone(),
+            context_attrs: self.context_attrs.clone(),
+        }
+    }
+}
+
 /// Attributes of [`UseButtonProps`], spreadable with `{..attrs}`.
-pub type UseButtonAttrs = (
+pub type UseButtonAttrs = Spread<(
     (
-        Attr<attr::Id, Option<String>>,
-        Attr<attr::Role, Option<AriaRole>>,
-        Attr<attr::Type, Signal<Option<&'static str>>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
-        Attr<attr::Href, Signal<Option<String>>>,
-        Attr<attr::Target, Signal<Option<Oco<'static, str>>>>,
-        Attr<attr::Rel, Signal<Option<String>>>,
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<&'static str>>,
+        SignalAttr<bool>,
+        SignalAttr<Option<i32>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Oco<'static, str>>>,
+        SignalAttr<Option<String>>,
     ),
     (
-        Attr<attr::Form, Option<String>>,
-        Attr<attr::Formaction, Option<String>>,
-        Attr<attr::Formenctype, Option<&'static str>>,
-        Attr<attr::Formmethod, Option<&'static str>>,
-        Attr<attr::Formnovalidate, bool>,
-        Attr<attr::Formtarget, Option<Oco<'static, str>>>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Value, Option<String>>,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
+        FixedAttr,
     ),
     (
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-        Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
-        Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-        Attr<attr::AriaControls, Signal<Option<String>>>,
-        Attr<attr::AriaPressed, Signal<Option<AriaPressed>>>,
-        Attr<attr::AriaChecked, Signal<Option<AriaChecked>>>,
-        Attr<attr::AriaCurrent, Signal<Option<AriaCurrent>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        CustomAttr<&'static str, Signal<Option<&'static str>>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<AriaDisabled>>,
+        SignalAttr<Option<AriaHasPopup>>,
+        SignalAttr<Option<AriaExpanded>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<AriaPressed>>,
+        SignalAttr<Option<AriaChecked>>,
+        SignalAttr<Option<AriaCurrent>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<&'static str>>,
         ElementCaptureAttr,
     ),
     (
@@ -406,7 +445,7 @@ pub type UseButtonAttrs = (
         OnEvent<ev::pointerleave>,
     ),
     FocusableContextAttr,
-);
+)>;
 
 impl IntoAttrs for UseButtonProps {
     type Attrs = UseButtonAttrs;
@@ -422,39 +461,39 @@ impl IntoAttrs for UseButtonProps {
             name,
             value,
         } = self.form;
-        (
+        Spread((
             (
-                Attr(attr::Id, self.id),
-                Attr(attr::Role, self.role),
-                Attr(attr::Type, self.button_type),
-                Attr(attr::Disabled, self.disabled),
-                Attr(attr::Tabindex, self.tabindex),
-                Attr(attr::Href, self.href),
-                Attr(attr::Target, self.target),
-                Attr(attr::Rel, self.rel),
+                fixed_attr("id", self.id),
+                fixed_attr("role", self.role),
+                signal_attr("type", self.button_type),
+                signal_attr("disabled", self.disabled),
+                signal_attr("tabindex", self.tabindex),
+                signal_attr("href", self.href),
+                signal_attr("target", self.target),
+                signal_attr("rel", self.rel),
             ),
             (
-                Attr(attr::Form, form),
-                Attr(attr::Formaction, form_action),
-                Attr(attr::Formenctype, form_enc_type.map(FormEncType::as_str)),
-                Attr(attr::Formmethod, form_method.map(FormMethod::as_str)),
-                Attr(attr::Formnovalidate, form_no_validate),
-                Attr(attr::Formtarget, form_target.map(|target| target.to_oco())),
-                Attr(attr::Name, name),
-                Attr(attr::Value, value),
+                fixed_attr("form", form),
+                fixed_attr("formaction", form_action),
+                fixed_attr("formenctype", form_enc_type.map(FormEncType::as_str)),
+                fixed_attr("formmethod", form_method.map(FormMethod::as_str)),
+                fixed_attr("formnovalidate", form_no_validate),
+                fixed_attr("formtarget", form_target.map(|target| target.to_oco())),
+                fixed_attr("name", name),
+                fixed_attr("value", value),
             ),
             (
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDisabled, self.aria_disabled),
-                Attr(attr::AriaHaspopup, self.aria_haspopup),
-                Attr(attr::AriaExpanded, self.aria_expanded),
-                Attr(attr::AriaControls, self.aria_controls),
-                Attr(attr::AriaPressed, self.aria_pressed),
-                Attr(attr::AriaChecked, self.aria_checked),
-                Attr(attr::AriaCurrent, self.aria_current),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                custom_attribute("data-focus-visible", self.data_focus_visible),
+                maybe_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-disabled", self.aria_disabled),
+                signal_attr("aria-haspopup", self.aria_haspopup),
+                signal_attr("aria-expanded", self.aria_expanded),
+                signal_attr("aria-controls", self.aria_controls),
+                signal_attr("aria-pressed", self.aria_pressed),
+                signal_attr("aria-checked", self.aria_checked),
+                signal_attr("aria-current", self.aria_current),
+                signal_attr("aria-describedby", self.aria_describedby),
+                signal_attr("data-focus-visible", self.data_focus_visible),
                 self.element_capture,
             ),
             (
@@ -473,7 +512,7 @@ impl IntoAttrs for UseButtonProps {
                 self.on_pointerleave.into_on(ev::pointerleave),
             ),
             FocusableContextAttr(self.context_attrs),
-        )
+        ))
     }
 }
 
@@ -482,15 +521,21 @@ impl IntoAttrs for UseButtonProps {
 /// right attributes for the chosen [`ButtonElementType`].
 ///
 /// ```ignore
-/// let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+/// let UseButtonReturn { button: props, .. } = use_button(UseButtonInput {
 ///     on_press: Some(Callback::new(|_| log!("pressed"))),
 ///     ..Default::default()
 /// });
-/// let (attrs, styles) = props.into_parts();
+/// let (attrs, styles) = props.attrs();
 /// view! { <button {..attrs} style=styles>"Press me"</button> }
 /// ```
 pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     crate::metrics::subject!();
+    // `use_press`, `use_hover` and `use_focus_ring` react to the disabled state in one effect.
+    sharing_one_effect(|| button(input))
+}
+
+/// The body of [`use_button`].
+fn button(input: UseButtonInput) -> UseButtonReturn {
     let UseButtonInput {
         element_type,
         button_type,
@@ -541,9 +586,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     // A disabled responder (a disabled `MenuTrigger` or `Disclosure`) disables the button itself:
     // its `disabled` attribute, focus, hover and shortcuts, not only its presses.
     let disabled = match responder.as_ref().and_then(|ctx| ctx.is_disabled) {
-        Some(responder_disabled) => {
-            Signal::derive(move || disabled.get() || responder_disabled.get())
-        }
+        Some(responder_disabled) => either(disabled, responder_disabled),
         None => disabled,
     };
     // The responder's shortcuts (a menu trigger's) after the button's own.
@@ -564,6 +607,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             on_context_menu,
         ),
     });
+    let context_menu_props = context_menu.target.into_props();
     let long_press = merge_long_press(context_menu.long_press, long_press);
     // Inside a trigger, the button has an id while rendering: its own, else the trigger's.
     let id = match trigger {
@@ -581,10 +625,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
 
     // Pending, the button keeps its focus but takes no interactions (react-aria-components'
     // `useDisableInteractions`).
-    let interactions_disabled = Signal::derive(move || disabled.get() || is_pending.get());
+    let interactions_disabled = either(disabled, is_pending);
 
     let UsePressReturn {
-        props: press_props,
+        target: press_props,
         is_pressed,
     } = use_press(UsePressInput {
         is_disabled: interactions_disabled,
@@ -601,12 +645,18 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         on_press_end,
         on_press_up,
         on_press_change,
+        on_double_press: None,
         long_press,
-        ..UsePressInput::default()
+        // Named, not `..UsePressInput::default()`, which would create a stored signal for every
+        // `Signal` field, also the ones set above (`performance.md` R3).
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
     });
+    let press_props = press_props.into_props();
 
     let UseFocusableReturn {
-        props: focusable_props,
+        target: focusable_props,
         focus_handle,
         ..
     } = use_focusable(UseFocusableInput {
@@ -621,10 +671,11 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         shortcuts,
         allow_shortcut_repeats: false,
     });
+    let focusable_props = focusable_props.into_props();
     let context_attrs = focusable_props.context_attrs.clone();
 
     let UseHoverReturn {
-        props: hover_props,
+        target: hover_props,
         is_hovered,
     } = use_hover(UseHoverInput {
         is_disabled: interactions_disabled,
@@ -632,15 +683,21 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         on_hover_end,
         on_hover_change,
     });
+    let hover_props = hover_props.into_props();
 
     let UseFocusRingReturn {
-        props: focus_ring_props,
+        target: focus_ring_props,
         is_focused,
         is_focus_visible,
     } = use_focus_ring(UseFocusRingInput {
         is_disabled: disabled,
-        ..UseFocusRingInput::default()
+        target: FocusRingTarget::Element,
+        is_text_input: false,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
+    let focus_ring_props = focus_ring_props.into_props();
 
     let (press_props, styles) = press_props.into_inner();
 
@@ -650,13 +707,22 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         ButtonElementType::Button | ButtonElementType::Input
     );
     let focusable_tabindex = focusable_props.tabindex;
-    let tabindex = Signal::derive(move || {
-        if allow_focus_when_disabled.get() && disabled.get() {
-            Some(-1)
-        } else {
-            focusable_tabindex.get()
-        }
-    });
+    let tabindex = match probe_sources(|| allow_focus_when_disabled.get()) {
+        (false, false) => focusable_tabindex,
+        _ => Signal::derive(move || {
+            if allow_focus_when_disabled.get() && disabled.get() {
+                Some(-1)
+            } else {
+                focusable_tabindex.get()
+            }
+        }),
+    };
+
+    // `None` if the button is never pending: its handlers need no pending check then.
+    let may_be_pending = match probe_sources(|| is_pending.get()) {
+        (false, false) => None,
+        _ => Some(is_pending),
+    };
 
     let is_anchor = element_type == ButtonElementType::Anchor;
     // The anchor's link, while it can be followed.
@@ -744,19 +810,19 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         // `mergeProps(focusableProps, pressProps)`. Press handling prevents the default action of
         // Enter/Space, which shortcuts check to see whether something else handled the key.
         on_keydown: unless_pending(
-            is_pending,
+            may_be_pending,
             focusable_props
                 .on_keydown
                 .chain(press_props.on_keydown)
-                .chain(context_menu.props.on_keydown),
+                .chain(context_menu_props.on_keydown),
         ),
-        on_keyup: unless_pending(is_pending, focusable_props.on_keyup),
+        on_keyup: unless_pending(may_be_pending, focusable_props.on_keyup),
         on_focus: focusable_props.on_focus.chain(focus_ring_props.on_focus),
         on_blur: focusable_props.on_blur.chain(focus_ring_props.on_blur),
         on_click: press_props.on_click,
         on_dblclick: press_props.on_dblclick,
         on_pointerdown: press_props.on_pointerdown,
-        on_contextmenu: unless_pending(is_pending, context_menu.props.on_contextmenu),
+        on_contextmenu: unless_pending(may_be_pending, context_menu_props.on_contextmenu),
         on_pointerup: press_props.on_pointerup,
         on_mousedown: press_props.on_mousedown,
         on_dragstart: press_props.on_dragstart,
@@ -766,7 +832,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     };
 
     UseButtonReturn {
-        props: PropsWithStyles::new(props, styles),
+        button: Part::stored(PropsWithStyles::new(props, styles)),
         is_disabled: disabled,
         is_pressed,
         is_hovered,
@@ -776,14 +842,14 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     }
 }
 
-/// `handler`, skipped while the button is pending.
+/// `handler`, skipped while the button is pending (`is_pending` is `None` when it never is).
 fn unless_pending<E: Clone + 'static>(
-    is_pending: Signal<bool>,
+    is_pending: Option<Signal<bool>>,
     handler: EventHandler<E>,
 ) -> EventHandler<E> {
-    if handler.is_empty() {
+    let Some(is_pending) = is_pending.filter(|_| !handler.is_empty()) else {
         return handler;
-    }
+    };
     EventHandler::new(move |e: E| {
         if !is_pending.get_untracked() {
             handler.call(e);

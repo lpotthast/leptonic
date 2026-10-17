@@ -1,16 +1,16 @@
 // Upstream: react-aria/src/visually-hidden/VisuallyHidden.tsx @ 99e6102368
 // Upstream: react-aria/test/visually-hidden/VisuallyHidden.test.tsx @ 99e6102368
-use leptos::{
-    attr::custom::{CustomAttr, custom_attribute},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use web_sys::FocusEvent;
 
 use crate::{
     EventHandler, IntoAttrs, OnEvent,
     hooks::focus::use_focus_within::{UseFocusWithinInput, use_focus_within},
-    utils::visually_hidden::VISUALLY_HIDDEN_STYLE,
+    utils::{
+        part::{Part, Remount},
+        signal_attr::{SignalAttr, signal_attr},
+        visually_hidden::VISUALLY_HIDDEN_STYLE,
+    },
 };
 
 // =============================================================================
@@ -31,10 +31,11 @@ pub struct UseVisuallyHiddenInput {
     pub is_focusable: Signal<bool>,
 }
 
-/// Return value of [`use_visually_hidden`].
+/// The return value of [`use_visually_hidden`].
 #[derive(Debug)]
 pub struct UseVisuallyHiddenReturn {
-    pub props: UseVisuallyHiddenProps,
+    /// The visually hidden element.
+    pub target: Part<UseVisuallyHiddenProps>,
 }
 
 /// Props for the hidden element.
@@ -45,8 +46,18 @@ pub struct UseVisuallyHiddenProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
+impl Remount for UseVisuallyHiddenProps {
+    fn remount(&self) -> Self {
+        Self {
+            style: self.style,
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
 pub type UseVisuallyHiddenAttrs = (
-    CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    SignalAttr<Option<&'static str>>,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
 );
@@ -56,7 +67,7 @@ impl IntoAttrs for UseVisuallyHiddenProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            custom_attribute("style", self.style),
+            signal_attr("style", self.style),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
         )
@@ -70,14 +81,17 @@ pub fn use_visually_hidden(input: UseVisuallyHiddenInput) -> UseVisuallyHiddenRe
     let UseVisuallyHiddenInput { is_focusable } = input;
     let focus_within = use_focus_within(UseFocusWithinInput {
         is_disabled: Signal::derive(move || !is_focusable.get()),
-        ..UseFocusWithinInput::default()
+        on_focus_within: None,
+        on_blur_within: None,
+        on_focus_within_change: None,
     });
+    let focus_within_props = focus_within.target.into_props();
     let is_focused = focus_within.is_focus_within;
     UseVisuallyHiddenReturn {
-        props: UseVisuallyHiddenProps {
+        target: Part::stored(UseVisuallyHiddenProps {
             style: Signal::derive(move || (!is_focused.get()).then_some(VISUALLY_HIDDEN_STYLE)),
-            on_focusin: focus_within.props.on_focusin,
-            on_focusout: focus_within.props.on_focusout,
-        },
+            on_focusin: focus_within_props.on_focusin,
+            on_focusout: focus_within_props.on_focusout,
+        }),
     }
 }

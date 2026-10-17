@@ -152,7 +152,7 @@ fn UseDragSection() -> impl IntoView {
         <Section title="use_drag">
             <ReactAria hook="useDrag"/>
             <p>
-                "Makes an element draggable. Spread "<Code inline=true>"drag_props"</Code>" on a focusable element: it "
+                "Makes an element draggable. Spread the "<Code inline=true>"draggable"</Code>" part on a focusable element: it "
                 "sets "<Code inline=true>"draggable"</Code>", describes how to start a drag, and starts keyboard drags on "
                 <Keys keys="Enter"/>" and screen reader drags on a click. With "<Code inline=true>"has_drag_button"</Code>
                 ", the element only handles pointer drags, and a separate button (built with "
@@ -191,7 +191,7 @@ fn UseDragSection() -> impl IntoView {
 
             <Section title="Return" id="use-drag-return">
                 <ApiTable kind=ApiKind::Return of="UseDragReturn">
-                    <ApiRow name="drag_props" ty="UseDragProps">
+                    <ApiRow name="draggable" ty="Part<UseDragProps>">
                         "For the draggable element: "<Code inline=true>"draggable"</Code>" (\u{201c}false\u{201d} while disabled), "
                         <Code inline=true>"aria-describedby"</Code>" (\u{201c}Press Enter to start dragging.\u{201d}), the native "
                         "drag events, and the key and click handlers starting keyboard and screen reader drags (the latter two "
@@ -210,7 +210,7 @@ fn UseDragSection() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::hooks::dnd::{DragEndEvent, DragItem, DropOperation, UseDragInput, UseDragReturn, use_drag};
 
-                        let UseDragReturn { drag_props, is_dragging, .. } = use_drag(UseDragInput {
+                        let UseDragReturn { draggable, is_dragging, .. } = use_drag(UseDragInput {
                             items: Signal::derive(|| vec![DragItem::text("Hello")]),
                             allowed_drop_operations: None,
                             preview: None,
@@ -226,7 +226,7 @@ fn UseDragSection() -> impl IntoView {
                         });
 
                         view! {
-                            <div {..drag_props.into_attrs()} role="button" tabindex="0"
+                            <div {..draggable.attrs()} role="button" tabindex="0"
                                 data-dragging=move || is_dragging.get().then_some("true")>
                                 "Drag me"
                             </div>
@@ -244,7 +244,7 @@ fn UseDropSection() -> impl IntoView {
         <Section title="use_drop">
             <ReactAria hook="useDrop"/>
             <p>
-                "Makes an element a drop target. Spread "<Code inline=true>"drop_props"</Code>" on it; they capture the "
+                "Makes an element a drop target. Spread the "<Code inline=true>"drop_target"</Code>" part on it; it captures the "
                 "element, which keyboard drags focus, so make it focusable. By default the target accepts any data with "
                 "the first operation the drag allows; "<Code inline=true>"get_drop_operation"</Code>" decides per drag, "
                 "and a target returning "<Code inline=true>"Cancel"</Code>" is skipped by keyboard drags."
@@ -253,7 +253,7 @@ fn UseDropSection() -> impl IntoView {
             <Section title="Input" id="use-drop-input">
                 <p>"Pass a "<Code inline=true>"UseDropInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseDropInput">
-                    <ApiRow name="element" ty="CapturedElement">"The drop target element. The props capture it. Required."</ApiRow>
+                    <ApiRow name="element" ty="CapturedElement">"The drop target element. The part captures it. Required."</ApiRow>
                     <ApiRow name="get_drop_operation" ty="Option<Callback<DropOperationQuery, DropOperation>>" default="None">
                         "The operation for a drag, from its "<Code inline=true>"types"</Code>" and "
                         <Code inline=true>"allowed_operations"</Code>". Return one of the allowed operations, or "
@@ -286,7 +286,7 @@ fn UseDropSection() -> impl IntoView {
 
             <Section title="Return" id="use-drop-return">
                 <ApiTable kind=ApiKind::Return of="UseDropReturn">
-                    <ApiRow name="drop_props" ty="UseDropProps">
+                    <ApiRow name="drop_target" ty="Part<UseDropProps>">
                         "For the drop target: the element capture, the native drag events, and during keyboard drags "
                         <Code inline=true>"aria-describedby"</Code>" (\u{201c}Press Enter to drop. Press Escape to cancel drag.\u{201d})."
                     </ApiRow>
@@ -303,7 +303,7 @@ fn UseDropSection() -> impl IntoView {
                             hooks::dnd::{DragType, DropEvent, DropItem, DropOperation, DropOperationQuery, UseDropInput, UseDropReturn, use_drop},
                         };
 
-                        let UseDropReturn { drop_props, is_drop_target, .. } = use_drop(UseDropInput {
+                        let UseDropReturn { drop_target, is_drop_target, .. } = use_drop(UseDropInput {
                             element: CapturedElement::new(),
                             // Accept images only, as copies.
                             get_drop_operation: Some(Callback::new(|q: DropOperationQuery| {
@@ -330,7 +330,7 @@ fn UseDropSection() -> impl IntoView {
                         });
 
                         view! {
-                            <div {..drop_props.into_attrs()} role="button" tabindex="0"
+                            <div {..drop_target.attrs()} role="button" tabindex="0"
                                 data-drop-target=move || is_drop_target.get().then_some("true")>
                                 "Drop images here"
                             </div>
@@ -474,7 +474,7 @@ fn CollectionsExample() -> impl IntoView {
                         },
                     };
 
-                    // Once, for the collection (`list` from `use_list_state`, `element` captured by the grid list's props):
+                    // Once, for the collection (`list` from `use_list_state`; `data` from `use_grid_list`, whose part captures `element`):
                     let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput {
                         list,
                         get_items: Callback::new(|keys: HashSet<Key>| keys.iter().map(|k| DragItem::text(k.to_string())).collect()),
@@ -491,11 +491,11 @@ fn CollectionsExample() -> impl IntoView {
                         options: DroppableCollectionOptions { on_reorder: Some(on_reorder), ..Default::default() },
                         is_disabled: Signal::stored(false),
                     });
-                    let UseDroppableCollectionReturn { collection_props, data: drop } =
+                    let UseDroppableCollectionReturn { collection, data: drop } =
                         use_droppable_collection(UseDroppableCollectionInput {
                             state: drop_state,
                             element,
-                            collection_id: props.id.clone(),
+                            collection_id: data.id.clone(),
                             keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
                                 state: list,
                                 element,
@@ -506,7 +506,7 @@ fn CollectionsExample() -> impl IntoView {
                             drop_target_delegate: Arc::new(ListDropTargetDelegate::new(list.collection, list.item_elements, element)),
                             on_key_down: None,
                         });
-                    // <div {..props.into_attrs()} {..collection_props.into_attrs()}>
+                    // <div {..grid_list.attrs()} {..collection.attrs()}>: the grid list's part and the collection's
 
                     // Per item, on the row element:
                     let drag = use_draggable_item(UseDraggableItemInput { state: drag_state, key: key.clone(), has_drag_button: false, has_action: false });
@@ -524,13 +524,15 @@ fn CollectionsExample() -> impl IntoView {
                         target: Signal::stored(DropTarget::item(key, DropPosition::Before)),
                         activate_button: None,
                     });
-                    // <div role="row"><div role="gridcell" {..indicator.drop_indicator_props.into_attrs()}></div></div>
+                    // <div role="row"><div role="gridcell" {..indicator.indicator.attrs()}></div></div>
                 "#)}
             </Code>
             <p>
                 "Both "<Code inline=true>"use_draggable_item"</Code>" and "<Code inline=true>"use_droppable_item"</Code>
-                " describe the row: join their "<Code inline=true>"aria_describedby"</Code>" ids into one attribute, as "
-                "the demo does. Set the grid list\u{2019}s "<Code inline=true>"should_select_on_press_up"</Code>
+                " describe the row: take the props of both parts ("<Code inline=true>"props()"</Code>"), join their "
+                <Code inline=true>"aria_describedby"</Code>" with "<Code inline=true>"IdRefs::derive"</Code>
+                " into the drag item\u{2019}s, spread those, and set the drop item\u{2019}s "<Code inline=true>"aria_hidden"</Code>
+                " on the row, as the demo does. Set the grid list\u{2019}s "<Code inline=true>"should_select_on_press_up"</Code>
                 " too, so that dragging a row doesn\u{2019}t select it."
             </p>
         </Section>
@@ -631,7 +633,7 @@ fn DraggableCollectionHooks() -> impl IntoView {
 
             <Section title="Return" id="use-draggable-item-return">
                 <ApiTable kind=ApiKind::Return of="UseDraggableItemReturn">
-                    <ApiRow name="drag_props" ty="UseDragProps">
+                    <ApiRow name="item" ty="Part<UseDragProps>">
                         "For the item, as for "<Code inline=true>"use_drag"</Code>". In collections with selection (and "
                         "without drag button) it describes the drag: \u{201c}Press Enter to drag 2 selected items.\u{201d}"
                     </ApiRow>
@@ -751,8 +753,8 @@ fn DroppableCollectionHooks() -> impl IntoView {
                 <p>"The input has no defaults: set every field."</p>
                 <ApiTable kind=ApiKind::Input of="UseDroppableCollectionInput">
                     <ApiRow name="state" ty="DroppableCollectionState">"From "<Code inline=true>"use_droppable_collection_state"</Code>". Required."</ApiRow>
-                    <ApiRow name="element" ty="CapturedElement">"The collection element, captured by the collection hook\u{2019}s props. Required."</ApiRow>
-                    <ApiRow name="collection_id" ty="String">"The collection element\u{2019}s id; drop indicators on the collection itself reference it. Required."</ApiRow>
+                    <ApiRow name="element" ty="CapturedElement">"The collection element, captured by the collection hook\u{2019}s part. Required."</ApiRow>
+                    <ApiRow name="collection_id" ty="Id">"The collection element\u{2019}s id; drop indicators on the collection itself reference it. Required."</ApiRow>
                     <ApiRow name="keyboard_delegate" ty="Signal<Arc<dyn KeyboardDelegate>>">
                         "Navigation between items during keyboard drags, e.g. "<Code inline=true>"use_list_keyboard_delegate"</Code>". Required."
                     </ApiRow>
@@ -772,7 +774,7 @@ fn DroppableCollectionHooks() -> impl IntoView {
 
             <Section title="Return" id="use-droppable-collection-return">
                 <ApiTable kind=ApiKind::Return of="UseDroppableCollectionReturn">
-                    <ApiRow name="collection_props" ty="UseDropProps">
+                    <ApiRow name="collection" ty="Part<UseDropProps>">
                         "For the collection element: native drops, and "<AnchorLink href="#use-auto-scroll">"auto-scrolling"</AnchorLink>
                         " when a drag nears the edges. The collection itself isn\u{2019}t described as a drop target; its items "
                         "and indicators are."
@@ -801,7 +803,7 @@ fn DroppableCollectionHooks() -> impl IntoView {
 
             <Section title="Return" id="use-droppable-item-return">
                 <ApiTable kind=ApiKind::Return of="UseDroppableItemReturn">
-                    <ApiRow name="drop_props" ty="UseDroppableItemProps">
+                    <ApiRow name="item" ty="Part<UseDroppableItemProps>">
                         <Code inline=true>"aria-describedby"</Code>" (how to drop) and, during keyboard drags, "
                         <Code inline=true>"aria-hidden"</Code>" on items that can\u{2019}t take the drop."
                     </ApiRow>
@@ -827,7 +829,7 @@ fn DroppableCollectionHooks() -> impl IntoView {
 
             <Section title="Return" id="use-drop-indicator-return">
                 <ApiTable kind=ApiKind::Return of="UseDropIndicatorReturn">
-                    <ApiRow name="drop_indicator_props" ty="UseDropIndicatorProps">
+                    <ApiRow name="indicator" ty="Part<UseDropIndicatorProps>">
                         "An id, "<Code inline=true>"aria-roledescription=\"drop indicator\""</Code>", an "
                         <Code inline=true>"aria-label"</Code>" (\u{201c}Insert between Plan and Design\u{201d}, \u{201c}Insert "
                         "before Plan\u{201d}, \u{201c}Insert after Release\u{201d}, \u{201c}Drop on Plan\u{201d}), "
@@ -975,7 +977,7 @@ fn UseAutoScrollSection() -> impl IntoView {
 
                     let element = CapturedElement::new();
                     let auto_scroll = use_auto_scroll(element);
-                    let UseDropReturn { drop_props, .. } = use_drop(UseDropInput {
+                    let UseDropReturn { drop_target, .. } = use_drop(UseDropInput {
                         element,
                         get_drop_operation: None,
                         get_drop_operation_for_point: None,

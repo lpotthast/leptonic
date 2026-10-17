@@ -7,11 +7,8 @@
 
 use std::time::Duration;
 
-use leptonic::{
-    IntoAttrs,
-    hooks::tooltip::{
-        UseTooltipInput, UseTooltipTriggerStateInput, use_tooltip, use_tooltip_trigger_state,
-    },
+use leptonic::hooks::tooltip::{
+    UseTooltipInput, UseTooltipTriggerStateInput, use_tooltip, use_tooltip_trigger_state,
 };
 use leptos::prelude::*;
 
@@ -52,7 +49,7 @@ fn Subject(disabled: Signal<bool>) -> impl IntoView {
     });
     let is_open = state.overlay.is_open;
     view! {
-        <div id="perf-tooltip" {..tooltip.props.into_attrs()}>
+        <div id="perf-tooltip" {..tooltip.tooltip.attrs()}>
             "Edit the entry"
         </div>
         <span id="perf-open">{move || is_open.get().to_string()}</span>

@@ -1,15 +1,14 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! The performance of the hook `use_select_state` (`/perf/hooks/use_select_state`, the state of the
-//! plain select of `use_select`'s performance test): what each thing it offers costs, measured
-//! (`Page::measure`) and checked against its budget (`tests/budgets/hooks/use_select_state.json`):
-//! creating the state with the select (mounting) and dropping it, and its methods: opening, closing
-//! and toggling (the listbox renders while open), and setting the value (the first option, the
-//! last, none), with 10 options and with 1,000.
+//! The performance of the hook `use_select_state` (`/perf/hooks/use_select_state`, the state of a
+//! select on plain elements): what each thing it offers costs, measured (`Page::measure`) and
+//! checked against its budget (`tests/budgets/hooks/use_select_state.json`): creating the state
+//! with the select (mounting) and dropping it, and its methods: opening, closing and toggling (the
+//! listbox renders while open), and setting the value (the first option, the last, none), with 10
+//! options and with 1,000.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test};
 use rootcause::Report;
 
-use super::use_select::{LISTBOX, TRIGGER, VALUE, large, mount_and_unmount_in, option, value};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -26,6 +25,38 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(OpenAndCloseLarge))
         .with(fixture_test(SetValue))
         .with(fixture_test(SetValueLarge))
+}
+const TRIGGER: &str = "[data-perf-trigger]";
+
+const VALUE: &str = "[data-perf-value]";
+
+const LISTBOX: &str = "[role=listbox]";
+
+/// The option "Option `i`".
+fn option(i: u32) -> String {
+    format!("[data-perf-option='{i}']")
+}
+
+/// The select's value: the selected option's number, `-1` for none.
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
+    page.control("value").await
+}
+
+/// Switches to 1,000 options (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.settle().await
+}
+
+/// Mounting everything (creating the state), `container` among it, and unmounting it.
+async fn mount_and_unmount_in(page: &Page<'_>, container: &str) -> Result<(), Report> {
+    page.control("unmount").await?;
+    page.wait_for_count(container, 0).await?;
+    page.measure("mount", page.control("mount")).await?;
+    page.element(container).await?;
+    page.measure("unmount", page.control("unmount")).await?;
+    page.wait_for_count(container, 0).await?;
+    Ok(())
 }
 
 /// Creating the state of 10 options with the select and dropping it.

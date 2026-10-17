@@ -86,7 +86,7 @@ pub fn PageUseListbox() -> impl IntoView {
 
             <Section title="use_listbox">
                 <p>
-                    "Turns an element into the listbox for a list state. Besides the element\u{2019}s props, it returns "
+                    "Turns an element into the listbox for a list state. Besides the element\u{2019}s part, it returns "
                     <Code inline=true>"ListBoxData"</Code>": everything the options need to know about their listbox. Hand it "
                     "to each option and section."
                 </p>
@@ -99,13 +99,19 @@ pub fn PageUseListbox() -> impl IntoView {
 
                     <ApiTable kind=ApiKind::Input of="UseListBoxInput">
                         <ApiRow name="state" ty="ListState">"The list state from "<Code inline=true>"use_list_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The listbox element; the hook\u{2019}s props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">
+                        <ApiRow name="element" ty="CapturedElement">"The listbox element; the hook\u{2019}s part captures it. Required."</ApiRow>
+                        <ApiRow name="presence" ty="Option<Presence>" default="None">
+                            "Whether the listbox is rendered, for an element referencing it: "<Code inline=true>"use_select"</Code>
+                            " and "<Code inline=true>"use_combobox"</Code>" set it in the "<Code inline=true>"listbox"</Code>
+                            " input they return, so that their trigger names the listbox only while it is rendered. "
+                            <Code inline=true>"None"</Code>" for a listbox of its own."
+                        </ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">
                             "The element id, generated when "<Code inline=true>"None"</Code>". Set it when another element references "
                             "the listbox, e.g. a select trigger\u{2019}s "<Code inline=true>"aria-controls"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name for the listbox."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">
                             "The id of a visible label. The hook renders no label itself."
                         </ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
@@ -153,10 +159,10 @@ pub fn PageUseListbox() -> impl IntoView {
 
                 <Section title="Return" id="use-listbox-return">
                     <ApiTable kind=ApiKind::Return of="UseListBoxReturn">
-                        <ApiRow name="props" ty="UseListBoxProps">
+                        <ApiRow name="listbox" ty="Part<UseListBoxProps>">
                             "Role, labels, "<Code inline=true>"aria-multiselectable"</Code>" (in multiple selection mode), "
                             <Code inline=true>"aria-orientation"</Code>", and the keyboard and focus handlers. Spread "
-                            <Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            <Code inline=true>"{..listbox.attrs()}"</Code>"."
                         </ApiRow>
                         <ApiRow name="data" ty="ListBoxData">
                             "What options and sections need to know about the listbox. Pass a clone to each of them."
@@ -167,9 +173,10 @@ pub fn PageUseListbox() -> impl IntoView {
                 <Section title="Example" id="use-listbox-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+                            let UseListBoxReturn { listbox, data } = use_listbox(UseListBoxInput {
                                 state,
                                 element: CapturedElement::new(),
+                                presence: None,
                                 id: None,
                                 aria_label: "Fruits".into(),
                                 aria_labelledby: Signal::stored(None),
@@ -191,7 +198,7 @@ pub fn PageUseListbox() -> impl IntoView {
                             });
 
                             view! {
-                                <div {..props.into_attrs()}>
+                                <div {..listbox.attrs()}>
                                     // One option per collection item, in collection order.
                                 </div>
                             }
@@ -220,13 +227,13 @@ pub fn PageUseListbox() -> impl IntoView {
 
                 <Section title="Return" id="use-option-return">
                     <ApiTable kind=ApiKind::Return of="UseOptionReturn">
-                        <ApiRow name="props" ty="PropsWithStyles<UseOptionProps>">
+                        <ApiRow name="option" ty="Part<PropsWithStyles<UseOptionProps>>">
                             <Code inline=true>"role=\"option\""</Code>", "<Code inline=true>"aria-selected"</Code>" (unless the "
                             "selection mode is "<Code inline=true>"None"</Code>"), "<Code inline=true>"aria-disabled"</Code>
-                            ", press, focus and hover handling. Call "<Code inline=true>"props.into_parts()"</Code>" to get "
+                            ", press, focus and hover handling. Call "<Code inline=true>"option.attrs()"</Code>" to get "
                             <Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="label_props, description_props" ty="SlotProps">
+                        <ApiRow name="label, description" ty="Part<SlotProps>">
                             "For optional elements holding the option\u{2019}s main and secondary text. The option only references "
                             "them ("<Code inline=true>"aria-labelledby"</Code>", "<Code inline=true>"aria-describedby"</Code>
                             ") while you render them."
@@ -255,10 +262,10 @@ pub fn PageUseListbox() -> impl IntoView {
                 <Section title="Example" id="use-option-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            let UseOptionReturn { props, is_selected, is_focus_visible, .. } =
+                            let UseOptionReturn { option, is_selected, is_focus_visible, .. } =
                                 use_option(UseOptionInput { list: data.clone(), key: Key::from("apple"), on_context_menu: None });
 
-                            let (attrs, styles) = props.into_parts();
+                            let (attrs, styles) = option.attrs();
 
                             view! {
                                 <div {..attrs} style=styles>"Apple"</div>
@@ -283,15 +290,15 @@ pub fn PageUseListbox() -> impl IntoView {
 
                 <Section title="Return" id="use-listbox-section-return">
                     <ApiTable kind=ApiKind::Return of="UseListBoxSectionReturn">
-                        <ApiRow name="item_props" ty="UseListBoxSectionItemProps">
+                        <ApiRow name="section" ty="Part<UseListBoxSectionItemProps>">
                             "For the element wrapping heading and group (e.g. an "<Code inline=true>"<li>"</Code>" in a "
                             <Code inline=true>"<ul>"</Code>" listbox): "<Code inline=true>"role=\"presentation\""</Code>"."
                         </ApiRow>
-                        <ApiRow name="heading_props" ty="Option<UseListBoxSectionHeadingProps>">
+                        <ApiRow name="header" ty="Option<Part<UseListBoxSectionHeadingProps>>">
                             "For the heading element; "<Code inline=true>"None"</Code>" when the section has no header. Clicking "
                             "the heading keeps focus in the listbox."
                         </ApiRow>
-                        <ApiRow name="group_props" ty="UseListBoxSectionGroupProps">
+                        <ApiRow name="group" ty="Part<UseListBoxSectionGroupProps>">
                             "For the element containing the section\u{2019}s options: "<Code inline=true>"role=\"group\""</Code>
                             ", labelled by the heading or the section\u{2019}s "<Code inline=true>"aria_label"</Code>"."
                         </ApiRow>
@@ -311,7 +318,7 @@ pub fn PageUseListbox() -> impl IntoView {
                             });
 
                             // Later, when rendering the section:
-                            let UseListBoxSectionReturn { item_props, heading_props, group_props, heading } =
+                            let UseListBoxSectionReturn { section, header, group, heading } =
                                 use_listbox_section(UseListBoxSectionInput {
                                     list: data.clone(),
                                     key: Key::from("citrus"),

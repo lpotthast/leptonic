@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::use_button,
@@ -17,16 +16,12 @@ pub fn DisclosureDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let state = use_disclosure_state(UseDisclosureStateInput::default());
-    let UseDisclosureReturn {
-        button,
-        panel_props,
-        ..
-    } = use_disclosure(UseDisclosureInput {
+    let UseDisclosureReturn { button, panel, .. } = use_disclosure(UseDisclosureInput {
         is_disabled: disabled.into(),
         state,
     });
     // The trigger is a button: `use_button` with the disclosure's configuration.
-    let (button_attrs, button_styles) = use_button(button).props.into_parts();
+    let (button_attrs, button_styles) = use_button(button).button.attrs();
 
     view! {
         <div class="demo-disclosure">
@@ -39,7 +34,7 @@ pub fn DisclosureDemo() -> impl IntoView {
             </h4>
 
             // Collapsed, the panel is `hidden="until-found"`: find in page still finds (and expands) it.
-            <div {..panel_props.into_attrs()} class="demo-disclosure-panel">
+            <div {..panel.attrs()} class="demo-disclosure-panel">
                 <p>
                     "A button that shows and hides a panel of content. You find it in FAQs, accordions and "
                     "collapsible sections."

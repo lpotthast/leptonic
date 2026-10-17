@@ -37,6 +37,13 @@ pub fn PageCollectionState() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>
+                            <AnchorLink href="#use-node">"use_node"</AnchorLink>", "
+                            <AnchorLink href="#use-node-aria-label">"use_node_aria_label"</AnchorLink>
+                        </TableCell>
+                        <TableCell>"One item\u{2019}s node or label, for rendering the item without rendering the others again."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>
                             <AnchorLink href="#use-list-state">"use_list_state"</AnchorLink>", "
                             <AnchorLink href="#use-single-select-list-state">"use_single_select_list_state"</AnchorLink>", "
                             <AnchorLink href="#use-list-state-view">"use_list_state_view"</AnchorLink>
@@ -501,6 +508,76 @@ pub fn PageCollectionState() -> impl IntoView {
                 </Code>
             </Section>
 
+            <Section title="use_node">
+                <p>
+                    "One node of a collection, for the renderer of its content: a "<Code inline=true>"Memo<Option<Node>>"</Code>
+                    " that notifies when the node\u{2019}s content changes (its text, its value, ...), not when other nodes come, "
+                    "go or move, and is "<Code inline=true>"None"</Code>" while the collection has no such node. Render the items "
+                    "with a keyed "<Code inline=true>"<For>"</Code>" over the collection\u{2019}s keys and each item\u{2019}s content "
+                    "from its node: adding, removing or filtering items then renders no other item again. The list box, menu "
+                    "and tag group atoms render their items this way."
+                </p>
+                <Section title="Input" id="use-node-input">
+                    <ApiTable kind=ApiKind::Input of="UseNodeInput">
+                        <ApiRow name="selection" ty="SelectionManager">
+                            "The collection\u{2019}s selection manager ("<Code inline=true>"ListState::selection"</Code>"). Required."
+                        </ApiRow>
+                        <ApiRow name="key" ty="Key">"The node\u{2019}s key. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+                <Section title="Example" id="use-node-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            use leptonic::hooks::collections::{Key, UseNodeInput, use_node};
+                            use leptos::prelude::*;
+
+                            let collection = state.collection;
+                            let selection = state.selection;
+                            view! {
+                                <For
+                                    each=move || collection.with(|c| c.keys().cloned().collect::<Vec<_>>())
+                                    key=Clone::clone
+                                    children=move |key: Key| {
+                                        let node = use_node(UseNodeInput { selection, key });
+                                        view! { <li>{move || node.with(|n| n.as_ref().map(|n| n.text_value.to_string()))}</li> }
+                                    }
+                                />
+                            }
+                        ")}
+                    </Code>
+                </Section>
+            </Section>
+
+            <Section title="use_node_aria_label">
+                <p>
+                    "The "<Code inline=true>"aria_label"</Code>" of one node ("<AnchorLink href="#itembuilder">"ItemBuilder"</AnchorLink>
+                    "), as a "<Code inline=true>"Memo<Option<String>>"</Code>" following the collection: an item keeps its "
+                    "element when its label changes, and the memo notifies only when this node changes. The item and section "
+                    "hooks ("<Link href=routes::doc::listbox::Hook.materialize()>"use_option"</Link>", "
+                    <Link href=routes::doc::menu::Hook.materialize()>"use_menu_item"</Link>", ...) label their elements with it; "
+                    "use it in an item hook of your own."
+                </p>
+                <Section title="Input" id="use-node-aria-label-input">
+                    <ApiTable kind=ApiKind::Input of="UseNodeAriaLabelInput">
+                        <ApiRow name="selection" ty="SelectionManager">
+                            "The collection\u{2019}s selection manager ("<Code inline=true>"ListState::selection"</Code>"). Required."
+                        </ApiRow>
+                        <ApiRow name="key" ty="Key">"The node\u{2019}s key. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+                <Section title="Example" id="use-node-aria-label-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptonic::hooks::collections::{UseNodeAriaLabelInput, use_node_aria_label};
+                            use leptos::prelude::*;
+
+                            let aria_label = use_node_aria_label(UseNodeAriaLabelInput { selection: state.selection, key });
+                            view! { <li aria-label=move || aria_label.get()>"…"</li> }
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
+
             <Section title="CollectionOptions">
                 <p>
                     "Configures the keyboard and focus behavior of the element showing a collection. "
@@ -561,7 +638,7 @@ pub fn PageCollectionState() -> impl IntoView {
                             "Keyboard navigation. A signal, as delegates depend on the locale (reading direction, collation). Required."
                         </ApiRow>
                         <ApiRow name="element" ty="CapturedElement">
-                            "The collection element; the returned props capture it. Required."
+                            "The collection element; the returned part captures it. Required."
                         </ApiRow>
                         <ApiRow name="options" ty="CollectionOptions">
                             "See "<AnchorLink href="#collectionoptions">"CollectionOptions"</AnchorLink>". Required."
@@ -570,12 +647,15 @@ pub fn PageCollectionState() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-selectable-collection-return">
                     <ApiTable kind=ApiKind::Return of="UseSelectableCollectionReturn">
-                        <ApiRow name="props" ty="UseSelectableCollectionProps">
-                            "Spread onto the collection element with "<Code inline=true>"{..props.into_attrs()}"</Code>": the "
+                        <ApiRow name="collection" ty="Part<UseSelectableCollectionProps>">
+                            "Spread onto the collection element with "<Code inline=true>"{..collection.attrs()}"</Code>": the "
                             "tab index ("<Code inline=true>"0"</Code>" while no item is focused, so "<Keys keys="Tab"/>
                             " reaches the collection), the key, focus, mouse and scroll handlers, and "
-                            <Code inline=true>"data-collection"</Code>". Its "<Code inline=true>"collection_id"</Code>
-                            " goes to "<Code inline=true>"use_selectable_item"</Code>"."
+                            <Code inline=true>"data-collection"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="collection_id" ty="Id">
+                            "The collection\u{2019}s id (its "<Code inline=true>"data-collection"</Code>"), for the "
+                            <Code inline=true>"collection_id"</Code>" of "<Code inline=true>"use_selectable_item"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -612,12 +692,12 @@ pub fn PageCollectionState() -> impl IntoView {
                     <Code inline=true>"use_selectable_collection"</Code>" for lists: it creates the list keyboard delegate "
                     "("<AnchorLink href="#use-list-keyboard-delegate">"use_list_keyboard_delegate"</AnchorLink>") for the "
                     "list\u{2019}s orientation and layout, with the current locale\u{2019}s reading direction and collation. "
-                    "It returns the props of "<Code inline=true>"use_selectable_collection"</Code>"."
+                    "It returns what "<Code inline=true>"use_selectable_collection"</Code>" returns."
                 </p>
                 <Section title="Input" id="use-selectable-list-input">
                     <ApiTable kind=ApiKind::Input of="UseSelectableListInput">
                         <ApiRow name="state" ty="ListState">"From "<Code inline=true>"use_list_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The list element; the returned props capture it. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The list element; the returned part captures it. Required."</ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>">
                             "Whether the items are stacked vertically (up and down arrows) or horizontally (left and right). Required."
                         </ApiRow>
@@ -653,10 +733,10 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="selection" ty="SelectionManager">"The state\u{2019}s selection. Required."</ApiRow>
                         <ApiRow name="item_elements" ty="ItemElements">"The state\u{2019}s item elements, where the item registers. Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The item\u{2019}s key in the collection. Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The item element; the returned props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>">"The element id. Required; "<Code inline=true>"None"</Code>" generates one."</ApiRow>
-                        <ApiRow name="collection_id" ty="String">
-                            "The "<Code inline=true>"collection_id"</Code>" of the collection\u{2019}s props. Required."
+                        <ApiRow name="element" ty="CapturedElement">"The item element; the returned part captures it. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>">"The element id. Required; "<Code inline=true>"None"</Code>" generates one."</ApiRow>
+                        <ApiRow name="collection_id" ty="Id">
+                            "The "<Code inline=true>"collection_id"</Code>" that "<Code inline=true>"use_selectable_collection"</Code>" returns. Required."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">
                             "Disables the item, in addition to the selection\u{2019}s disabled keys. Required."
@@ -691,8 +771,8 @@ pub fn PageCollectionState() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-selectable-item-return">
                     <ApiTable kind=ApiKind::Return of="UseSelectableItemReturn">
-                        <ApiRow name="props" ty="PropsWithStyles<UseSelectableItemProps>">
-                            "Spread onto the item: "<Code inline=true>"let (attrs, styles) = props.into_parts();"</Code>
+                        <ApiRow name="item" ty="Part<PropsWithStyles<UseSelectableItemProps>>">
+                            "Spread onto the item: "<Code inline=true>"let (attrs, styles) = item.attrs();"</Code>
                             " The id, the tab index ("<Code inline=true>"0"</Code>" for the focused item), the press and focus "
                             "handlers. No role or ARIA states: those are up to the concept."
                         </ApiRow>
@@ -727,7 +807,7 @@ pub fn PageCollectionState() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-type-select-return">
                     <ApiTable kind=ApiKind::Return of="UseTypeSelectReturn">
-                        <ApiRow name="props" ty="UseTypeSelectProps">
+                        <ApiRow name="collection" ty="Part<UseTypeSelectProps>">
                             "Two key handlers for the element: attach "<Code inline=true>"on_keydown_capture"</Code>" with "
                             <Code inline=true>"into_on(ev::capture(ev::keydown))"</Code>" and "<Code inline=true>"on_keydown"</Code>
                             " with "<Code inline=true>"into_on(ev::keydown)"</Code>"."

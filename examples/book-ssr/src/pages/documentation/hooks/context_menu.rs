@@ -50,9 +50,9 @@ pub fn PageUseContextMenu() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseContextMenuReturn">
-                    <ApiRow name="props" ty="UseContextMenuProps">
+                    <ApiRow name="target" ty="Part<UseContextMenuProps>">
                         "The "<Code inline=true>"contextmenu"</Code>" and "<Code inline=true>"keydown"</Code>" handlers. Spread "
-                        "them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        "them onto the element with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                     <ApiRow name="long_press" ty="Option<LongPress>">"Long-press handlers and options, including the threshold and accessible description."</ApiRow>
                 </ApiTable>
@@ -64,14 +64,14 @@ pub fn PageUseContextMenu() -> impl IntoView {
                         use leptonic::hooks::interactions::{ContextMenuEvent, UseContextMenuInput, UseContextMenuReturn, use_context_menu};
                         use leptos::prelude::*;
 
-                        let UseContextMenuReturn { props, .. } = use_context_menu(UseContextMenuInput {
+                        let UseContextMenuReturn { target, .. } = use_context_menu(UseContextMenuInput {
                             on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
                                 open_menu_at(e.point.x, e.point.y);
                             })),
                         });
 
                         view! {
-                            <div tabindex="0" {..props.into_attrs()}>"Right click me"</div>
+                            <div tabindex="0" {..target.attrs()}>"Right click me"</div>
                         }
                     "#)}
                 </Code>

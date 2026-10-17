@@ -46,8 +46,8 @@ pub fn PageUseHover() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseHoverReturn">
-                    <ApiRow name="props" ty="UseHoverProps">
-                        "Pointer event handlers. Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    <ApiRow name="target" ty="Part<UseHoverProps>">
+                        "Pointer event handlers. Spread them onto the element with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                     <ApiRow name="is_hovered" ty="Signal<bool>">"Whether the element is currently hovered."</ApiRow>
                 </ApiTable>
@@ -62,11 +62,11 @@ pub fn PageUseHover() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput::default());
+                        let UseHoverReturn { target, is_hovered } = use_hover(UseHoverInput::default());
 
                         // Style the hovered state with `[data-hovered]`.
                         view! {
-                            <div {..props.into_attrs()} data-hovered=flag(is_hovered)>"Hover me"</div>
+                            <div {..target.attrs()} data-hovered=flag(is_hovered)>"Hover me"</div>
                         }
                     "#)}
                 </Code>

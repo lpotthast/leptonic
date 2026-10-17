@@ -287,6 +287,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "hooks",
+        name: "hide-outside",
+        title: "use_hide_outside",
+        view: || view! { <hooks::hide_outside::PageHookHideOutside /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
         name: "scroll",
         title: "Scroll utilities",
         view: || view! { <hooks::scroll::PageHookScroll /> }.into_any(),
@@ -296,6 +302,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "scroll-wheel",
         title: "Scroll wheel",
         view: || view! { <hooks::scroll_wheel::PageHookScrollWheel /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "wheel-stepping",
+        title: "use_wheel_stepping",
+        view: || view! { <hooks::wheel_stepping::PageHookWheelStepping /> }.into_any(),
     },
     Fixture {
         group: "hooks",
@@ -521,9 +533,21 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "own-ids",
+        title: "Own ids",
+        view: || view! { <atoms::own_ids::PageAtomOwnIds /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "orphan-parts",
         title: "Atom parts without a parent",
         view: || view! { <atoms::orphan_parts::PageAtomOrphanParts /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "remounted-parts",
+        title: "Remounted parts",
+        view: || view! { <atoms::remounted_parts::PageAtomRemountedParts /> }.into_any(),
     },
     Fixture {
         group: "atoms",

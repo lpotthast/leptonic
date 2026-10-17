@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::button::Button,
     hooks::{
         button::use_button,
@@ -25,12 +25,12 @@ struct Notice {
 /// One toast: an alert dialog named by its title, with a close button.
 #[component]
 fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl IntoView {
-    let Notice { title, description } = toast.content.clone();
+    let notice = toast.content.clone();
     let UseToastReturn {
-        toast_props,
-        content_props,
-        title_id,
-        description_props,
+        toast,
+        content,
+        title,
+        description,
         close_button,
     } = use_toast(UseToastInput {
         queue,
@@ -39,13 +39,13 @@ fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl In
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
     });
-    let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
+    let (close_attrs, close_styles) = use_button(close_button).button.attrs();
 
     view! {
-        <div {..toast_props.into_attrs()} class="demo-hook-toast">
-            <div {..content_props.into_attrs()}>
-                <div id=title_id class="demo-hook-toast-title">{title}</div>
-                <div {..description_props.into_attrs()}>{description}</div>
+        <div {..toast.attrs()} class="demo-hook-toast">
+            <div {..content.attrs()}>
+                <div {..title.attrs()} class="demo-hook-toast-title">{notice.title}</div>
+                <div {..description.attrs()}>{notice.description}</div>
             </div>
             <button {..close_attrs} style=close_styles class="demo-hook-toast-close">
                 <Icon icon=icondata::BsX/>
@@ -58,7 +58,7 @@ fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl In
 #[component]
 fn NoticeRegion(queue: ToastQueue<Notice>) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseToastRegionReturn { region_props } = use_toast_region(UseToastRegionInput {
+    let UseToastRegionReturn { region } = use_toast_region(UseToastRegionInput {
         queue,
         element,
         aria_label: MaybeProp::default(),
@@ -66,7 +66,7 @@ fn NoticeRegion(queue: ToastQueue<Notice>) -> impl IntoView {
     });
 
     view! {
-        <div {..region_props.into_attrs()} {..element.attr()} class="demo-hook-toast-region">
+        <div {..region.attrs()} {..element.attr()} class="demo-hook-toast-region">
             <For
                 each=move || queue.visible_toasts.get()
                 key=|toast| toast.key

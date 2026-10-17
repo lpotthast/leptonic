@@ -2,10 +2,7 @@
 // Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
@@ -15,7 +12,7 @@ use super::{
     use_highlight_selection_description,
 };
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs,
+    CapturedElement, EventHandler, Id, IntoAttrs,
     hooks::{
         collections::{
             CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, SelectionMode,
@@ -34,7 +31,9 @@ use crate::{
         filter::{CollatorOptions, use_collator},
         i18n::use_direction,
         id::use_id,
+        part::{Part, Remount},
         shadow_dom::{get_event_target, node_contains},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
     },
 };
 
@@ -73,10 +72,10 @@ pub struct UseGridInput {
     /// The grid element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
     /// Ids of elements labelling the grid.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Replaces the grid keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Keyboard and focus behavior.
@@ -97,7 +96,7 @@ pub struct GridData {
     pub state: GridState,
     pub delegate: Signal<Arc<dyn KeyboardDelegate>>,
     /// See `UseSelectableItemInput::collection_id`.
-    pub collection_id: String,
+    pub collection_id: Id,
     pub on_row_action: Option<Callback<Key>>,
     pub on_cell_action: Option<Callback<Key>>,
     pub should_select_on_press_up: bool,
@@ -116,35 +115,51 @@ impl std::fmt::Debug for GridData {
     }
 }
 
-/// Return value of [`use_grid`].
+/// The return value of [`use_grid`].
 #[derive(Debug)]
 pub struct UseGridReturn {
-    pub props: UseGridProps,
+    /// The grid element.
+    pub grid: Part<UseGridProps>,
     pub data: GridData,
 }
 
 /// Props for the grid element.
 #[derive(Debug)]
 pub struct UseGridProps {
-    pub id: String,
+    pub id: Id,
     pub role: Signal<AriaRole>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
     /// E.g. a table's sort description.
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_collection`).
     pub collection: UseSelectableCollectionProps,
     pub tabbable_child: UseHasTabbableChildProps,
 }
 
+impl Remount for UseGridProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_multiselectable: self.aria_multiselectable,
+            aria_describedby: self.aria_describedby,
+            collection: self.collection.remount(),
+            tabbable_child: self.tabbable_child.remount(),
+        }
+    }
+}
+
 pub type UseGridAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, Signal<AriaRole>>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    FixedAttr,
+    SignalAttr<AriaRole>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaMultiselectable>>,
+    SignalAttr<Option<Id>>,
     UseSelectableCollectionAttrs,
     UseHasTabbableChildAttrs,
 );
@@ -154,12 +169,12 @@ impl IntoAttrs for UseGridProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+            fixed_attr("id", self.id),
+            signal_attr("role", self.role),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-multiselectable", self.aria_multiselectable),
+            signal_attr("aria-describedby", self.aria_describedby),
             self.collection.into_attrs(),
             self.tabbable_child.into_attrs(),
         )
@@ -235,7 +250,8 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
         element,
         options,
     })
-    .props;
+    .collection
+    .into_props();
 
     // While keyboard navigation is disabled (e.g. while a column is resized with the arrow keys),
     // the grid only tracks whether it is focused.
@@ -285,6 +301,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
         is_disabled: Signal::derive(move || !is_empty.get()),
     });
+    let tabbable_child_props = tabbable_child.target.into_props();
     let has_tabbable_child = tabbable_child.has_tabbable_child;
     let list_tabindex = collection.tabindex;
     collection.tabindex = Signal::derive(move || {
@@ -305,7 +322,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
             should_select_on_press_up,
             keyboard_navigation_behavior,
         },
-        props: UseGridProps {
+        grid: Part::stored(UseGridProps {
             id,
             role: Signal::stored(AriaRole::Grid),
             aria_label,
@@ -316,7 +333,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
             }),
             aria_describedby: description,
             collection,
-            tabbable_child: tabbable_child.props,
-        },
+            tabbable_child: tabbable_child_props,
+        }),
     }
 }

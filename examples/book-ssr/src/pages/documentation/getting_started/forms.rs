@@ -39,8 +39,8 @@ pub fn PageForms() -> impl IntoView {
                     <Code inline=true>"is_required"</Code>", "<Code inline=true>"min_length"</Code>", "<Code inline=true>"pattern"</Code>
                     ", the input type, \u{2026}) are checked by the browser. The hooks return the result as "
                     <Code inline=true>"is_invalid"</Code>" and "<Code inline=true>"validation_errors"</Code>", set "
-                    <Code inline=true>"aria-invalid"</Code>", and reference the error message element ("
-                    <Code inline=true>"error_message_props"</Code>") while you render it. Field atoms show the errors with a "
+                    <Code inline=true>"aria-invalid"</Code>", and reference the error message element (its "
+                    <Code inline=true>"error_message"</Code>" part) while you render it. Field atoms show the errors with a "
                     <Link href=routes::doc::field::Atom.materialize()>"FieldError"</Link>"."
                 </p>
                 <Code language=Language::Rust>

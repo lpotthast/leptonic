@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::landmark::{
         LandmarkController, LandmarkRole, UseLandmarkInput, UseLandmarkReturn, use_landmark,
     },
@@ -15,7 +15,7 @@ fn Landmark(
     children: Children,
 ) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
+    let UseLandmarkReturn { landmark: props } = use_landmark(UseLandmarkInput {
         element,
         role,
         aria_label: (!label.is_empty()).then_some(label).into(),
@@ -23,7 +23,7 @@ fn Landmark(
         focus: None,
     });
     view! {
-        <div {..props.into_attrs()} {..element.attr()} id=id>
+        <div {..props.attrs()} {..element.attr()} id=id>
             {children()}
         </div>
     }

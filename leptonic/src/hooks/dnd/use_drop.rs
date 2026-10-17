@@ -3,11 +3,7 @@
 // Upstream: react-aria/test/dnd/dnd.ssr.test.js @ 99e6102368
 use std::{cell::OnceCell, rc::Rc};
 
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::DragEvent;
@@ -25,12 +21,14 @@ use super::{
     },
 };
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, EventHandler, Id, IntoAttrs, OnEvent,
     hooks::button::UseButtonInput,
     utils::{
         dom_ext::EventAccessors,
+        part::{Part, Remount},
         platform::device::{is_ipad, is_mac},
         shadow_dom::node_contains,
+        signal_attr::{SignalAttr, signal_attr},
     },
 };
 
@@ -85,10 +83,11 @@ pub struct UseDropInput {
     pub is_disabled: Signal<bool>,
 }
 
-/// Return value of [`use_drop`].
+/// The return value of [`use_drop`].
 #[derive(Debug)]
 pub struct UseDropReturn {
-    pub drop_props: UseDropProps,
+    /// The drop target element.
+    pub drop_target: Part<UseDropProps>,
     /// For `use_button`, with `has_drop_button`.
     pub drop_button: UseButtonInput,
     pub is_drop_target: Signal<bool>,
@@ -98,7 +97,7 @@ pub struct UseDropReturn {
 #[derive(Debug)]
 pub struct UseDropProps {
     /// How to drop during keyboard drags (without a drop button).
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub element: CapturedElement,
     pub on_dragenter: EventHandler<DragEvent>,
     pub on_dragover: EventHandler<DragEvent>,
@@ -106,8 +105,21 @@ pub struct UseDropProps {
     pub on_drop: EventHandler<DragEvent>,
 }
 
+impl Remount for UseDropProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_describedby: self.aria_describedby,
+            element: self.element,
+            on_dragenter: self.on_dragenter.clone(),
+            on_dragover: self.on_dragover.clone(),
+            on_dragleave: self.on_dragleave.clone(),
+            on_drop: self.on_drop.clone(),
+        }
+    }
+}
+
 pub type UseDropAttrs = (
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    SignalAttr<Option<Id>>,
     crate::ElementCaptureAttr,
     OnEvent<ev::dragenter>,
     OnEvent<ev::dragover>,
@@ -120,7 +132,7 @@ impl IntoAttrs for UseDropProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+            signal_attr("aria-describedby", self.aria_describedby),
             self.element.attr(),
             self.on_dragenter.into_on(ev::dragenter),
             self.on_dragover.into_on(ev::dragover),
@@ -519,7 +531,7 @@ pub fn use_drop(input: UseDropInput) -> UseDropReturn {
     };
 
     UseDropReturn {
-        drop_props: UseDropProps {
+        drop_target: Part::stored(UseDropProps {
             aria_describedby: if has_drop_button {
                 Signal::stored(None)
             } else {
@@ -530,7 +542,7 @@ pub fn use_drop(input: UseDropInput) -> UseDropReturn {
             on_dragover: enabled(EventHandler::new(on_dragover)),
             on_dragleave: enabled(EventHandler::new(on_dragleave)),
             on_drop: enabled(EventHandler::new(handle_drop)),
-        },
+        }),
         drop_button: UseButtonInput {
             aria_describedby: if has_drop_button {
                 description
@@ -538,7 +550,44 @@ pub fn use_drop(input: UseDropInput) -> UseDropReturn {
                 Signal::stored(None)
             },
             is_disabled,
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: Signal::stored(None),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            prevent_focus_on_press: Signal::stored(false),
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press: None,
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         },
         is_drop_target: Signal::derive(move || is_drop_target.get() && !is_disabled.get()),
     }

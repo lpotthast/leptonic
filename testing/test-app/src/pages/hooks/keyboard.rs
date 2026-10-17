@@ -179,10 +179,10 @@ pub fn PageHookKeyboard() -> impl IntoView {
             {examples
                 .into_iter()
                 .map(|(name, first, second)| {
-                    let first = use_keyboard(first).props;
+                    let first = use_keyboard(first).target.props().expect("a new part's props");
                     let props = match second {
                         Some(second) => {
-                            let second = use_keyboard(second).props;
+                            let second = use_keyboard(second).target.props().expect("a new part's props");
                             leptonic::hooks::interactions::UseKeyboardProps {
                                 on_keydown: first.on_keydown.chain(second.on_keydown),
                                 on_keyup: first.on_keyup.chain(second.on_keyup),

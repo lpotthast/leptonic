@@ -2,7 +2,6 @@
 // Upstream: react-aria/test/textfield/useTextField.test.js @ 99e6102368
 // Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
 use leptos::{
-    attr::{self, Attr},
     ev,
     prelude::*,
     tachys::html::property::{Property, prop},
@@ -22,7 +21,7 @@ use super::{
     use_text_field_state::TextFieldState,
 };
 use crate::{
-    CapturedElement, EventHandler, IdRefs, IntoAttrs, OnEvent, SlotProps,
+    CapturedElement, EventHandler, Id, IdRefs, IntoAttrs, OnEvent, Part, SlotProps,
     hooks::{
         focus::{
             FocusRingTarget, UseFocusRingInput, UseFocusableAttrs, UseFocusableInput,
@@ -34,6 +33,9 @@ use crate::{
         aria::{AriaAutocomplete, AriaHasPopup, AriaInvalid, AriaRequired, aria_true},
         dom_ext::EventAccessors,
         keyboard_shortcut::KeyboardShortcuts,
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        spread::Spread,
     },
 };
 
@@ -165,7 +167,7 @@ impl AutoCapitalize {
 pub struct UseTextFieldInput {
     pub state: TextFieldState,
     /// The input element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// The element rendering the field (react-aria's `inputElementType`): `type`, `pattern` and
     /// the `value` attribute exist only on an `<input>`. Reactive: a field whose element is
     /// chosen when it mounts (the `TextField` atom's `Input` or `TextArea`) sets it then.
@@ -201,17 +203,17 @@ pub struct UseTextFieldInput {
     pub auto_focus: bool,
     pub exclude_from_tab_order: bool,
     /// The label element's id. Generated when `None`.
-    pub label_id: Option<String>,
+    pub label_id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_errormessage: Signal<Option<String>>,
-    pub aria_activedescendant: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_errormessage: Signal<Option<Id>>,
+    pub aria_activedescendant: Signal<Option<Id>>,
     pub aria_autocomplete: Option<AriaAutocomplete>,
     pub aria_haspopup: Option<AriaHasPopup>,
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
     pub on_focus_change: Option<Callback<bool>>,
@@ -221,14 +223,16 @@ pub struct UseTextFieldInput {
     pub shortcuts: Option<KeyboardShortcuts>,
 }
 
-/// Return value of [`use_text_field`].
+/// The return value of [`use_text_field`].
 #[derive(Debug)]
 pub struct UseTextFieldReturn {
-    pub label_props: UseLabelProps,
-    pub input_props: UseTextFieldInputProps,
-    pub description_props: SlotProps,
+    /// The label element.
+    pub label: Part<UseLabelProps>,
+    /// The input (or text area) element.
+    pub input: Part<UseTextFieldInputProps>,
+    pub description: Part<SlotProps>,
     /// For the error message element. Render it only while the field is invalid.
-    pub error_message_props: SlotProps,
+    pub error_message: Part<SlotProps>,
     /// The `<input>` or `<textarea>`, once rendered.
     pub element: CapturedElement,
     pub is_focused: Signal<bool>,
@@ -241,7 +245,7 @@ pub struct UseTextFieldReturn {
 /// Props for the `<input>` or `<textarea>` element.
 #[derive(Debug)]
 pub struct UseTextFieldInputProps {
-    pub id: String,
+    pub id: Id,
     pub r#type: Signal<Option<&'static str>>,
     pub pattern: Signal<Option<String>>,
     /// The `value` attribute when rendered (server-side rendering); `value_property` keeps it in
@@ -263,54 +267,96 @@ pub struct UseTextFieldInputProps {
     pub inputmode: Signal<Option<&'static str>>,
     pub enterkeyhint: Option<&'static str>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub aria_errormessage: Signal<Option<String>>,
-    pub aria_activedescendant: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<Id>>,
+    pub aria_activedescendant: Signal<Option<Id>>,
     pub aria_autocomplete: Option<AriaAutocomplete>,
     pub aria_haspopup: Option<AriaHasPopup>,
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     /// Focus, keyboard and tab order (`use_focusable`); captures the element.
     pub focusable: UseFocusableProps,
     pub on_input: EventHandler<Event>,
 }
 
+impl Remount for UseTextFieldInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            r#type: self.r#type,
+            pattern: self.pattern,
+            value: self.value,
+            value_property: self.value_property,
+            disabled: self.disabled,
+            readonly: self.readonly,
+            required: self.required,
+            name: self.name.clone(),
+            form: self.form.clone(),
+            placeholder: self.placeholder,
+            minlength: self.minlength,
+            maxlength: self.maxlength,
+            autocomplete: self.autocomplete.clone(),
+            autocapitalize: self.autocapitalize,
+            autocorrect: self.autocorrect,
+            spellcheck: self.spellcheck,
+            inputmode: self.inputmode,
+            enterkeyhint: self.enterkeyhint,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_required: self.aria_required,
+            aria_invalid: self.aria_invalid,
+            aria_errormessage: self.aria_errormessage,
+            aria_activedescendant: self.aria_activedescendant,
+            aria_autocomplete: self.aria_autocomplete,
+            aria_haspopup: self.aria_haspopup,
+            aria_controls: self.aria_controls,
+            focusable: self.focusable.remount(),
+            on_input: self.on_input.clone(),
+        }
+    }
+}
+
 pub type UseTextFieldInputAttrs = (
-    (
-        Attr<attr::Id, String>,
-        Attr<attr::Type, Signal<Option<&'static str>>>,
-        Attr<attr::Pattern, Signal<Option<String>>>,
-        Attr<attr::Value, Signal<Option<String>>>,
-        Property<&'static str, Signal<String>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Readonly, Signal<bool>>,
-        Attr<attr::Required, Signal<bool>>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Form, Option<String>>,
-        Attr<attr::Placeholder, MaybeProp<String>>,
-        Attr<attr::Minlength, Option<u32>>,
-        Attr<attr::Maxlength, Option<u32>>,
-        Attr<attr::Autocomplete, Option<String>>,
-        Attr<attr::Autocapitalize, Option<&'static str>>,
-        leptos::attr::custom::CustomAttr<&'static str, Option<&'static str>>,
-        Attr<attr::Spellcheck, Option<&'static str>>,
-        Attr<attr::Inputmode, Signal<Option<&'static str>>>,
-        Attr<attr::Enterkeyhint, Option<&'static str>>,
-    ),
-    (
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
-        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
-        Attr<attr::AriaActivedescendant, Signal<Option<String>>>,
-        Attr<attr::AriaAutocomplete, Option<AriaAutocomplete>>,
-        Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,
-        Attr<attr::AriaControls, Signal<Option<String>>>,
-    ),
+    Spread<(
+        (
+            FixedAttr,
+            SignalAttr<Option<&'static str>>,
+            SignalAttr<Option<String>>,
+            SignalAttr<Option<String>>,
+            SignalAttr<bool>,
+            SignalAttr<bool>,
+            SignalAttr<bool>,
+            FixedAttr,
+            FixedAttr,
+            SignalAttr<Option<String>>,
+        ),
+        (
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            SignalAttr<Option<&'static str>>,
+            FixedAttr,
+        ),
+        (
+            SignalAttr<Option<String>>,
+            SignalAttr<Option<Id>>,
+            SignalAttr<Option<Id>>,
+            SignalAttr<Option<AriaRequired>>,
+            SignalAttr<Option<AriaInvalid>>,
+            SignalAttr<Option<Id>>,
+            SignalAttr<Option<Id>>,
+            FixedAttr,
+            FixedAttr,
+            SignalAttr<Option<Id>>,
+        ),
+    )>,
+    Property<&'static str, Signal<String>>,
     UseFocusableAttrs,
     OnEvent<ev::input>,
 );
@@ -320,39 +366,43 @@ impl IntoAttrs for UseTextFieldInputProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            (
-                Attr(attr::Id, self.id),
-                Attr(attr::Type, self.r#type),
-                Attr(attr::Pattern, self.pattern),
-                Attr(attr::Value, self.value),
-                prop("value", self.value_property),
-                Attr(attr::Disabled, self.disabled),
-                Attr(attr::Readonly, self.readonly),
-                Attr(attr::Required, self.required),
-                Attr(attr::Name, self.name),
-                Attr(attr::Form, self.form),
-                Attr(attr::Placeholder, self.placeholder),
-                Attr(attr::Minlength, self.minlength),
-                Attr(attr::Maxlength, self.maxlength),
-                Attr(attr::Autocomplete, self.autocomplete),
-                Attr(attr::Autocapitalize, self.autocapitalize),
-                leptos::attr::custom::custom_attribute("autocorrect", self.autocorrect),
-                Attr(attr::Spellcheck, self.spellcheck),
-                Attr(attr::Inputmode, self.inputmode),
-                Attr(attr::Enterkeyhint, self.enterkeyhint),
-            ),
-            (
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                Attr(attr::AriaRequired, self.aria_required),
-                Attr(attr::AriaInvalid, self.aria_invalid),
-                Attr(attr::AriaErrormessage, self.aria_errormessage),
-                Attr(attr::AriaActivedescendant, self.aria_activedescendant),
-                Attr(attr::AriaAutocomplete, self.aria_autocomplete),
-                Attr(attr::AriaHaspopup, self.aria_haspopup),
-                Attr(attr::AriaControls, self.aria_controls),
-            ),
+            Spread((
+                (
+                    fixed_attr("id", self.id),
+                    signal_attr("type", self.r#type),
+                    signal_attr("pattern", self.pattern),
+                    signal_attr("value", self.value),
+                    signal_attr("disabled", self.disabled),
+                    signal_attr("readonly", self.readonly),
+                    signal_attr("required", self.required),
+                    fixed_attr("name", self.name),
+                    fixed_attr("form", self.form),
+                    maybe_attr("placeholder", self.placeholder),
+                ),
+                (
+                    fixed_attr("minlength", self.minlength),
+                    fixed_attr("maxlength", self.maxlength),
+                    fixed_attr("autocomplete", self.autocomplete),
+                    fixed_attr("autocapitalize", self.autocapitalize),
+                    fixed_attr("autocorrect", self.autocorrect),
+                    fixed_attr("spellcheck", self.spellcheck),
+                    signal_attr("inputmode", self.inputmode),
+                    fixed_attr("enterkeyhint", self.enterkeyhint),
+                ),
+                (
+                    maybe_attr("aria-label", self.aria_label),
+                    signal_attr("aria-labelledby", self.aria_labelledby),
+                    signal_attr("aria-describedby", self.aria_describedby),
+                    signal_attr("aria-required", self.aria_required),
+                    signal_attr("aria-invalid", self.aria_invalid),
+                    signal_attr("aria-errormessage", self.aria_errormessage),
+                    signal_attr("aria-activedescendant", self.aria_activedescendant),
+                    fixed_attr("aria-autocomplete", self.aria_autocomplete),
+                    fixed_attr("aria-haspopup", self.aria_haspopup),
+                    signal_attr("aria-controls", self.aria_controls),
+                ),
+            )),
+            prop("value", self.value_property),
             self.focusable.into_attrs(),
             self.on_input.into_on(ev::input),
         )
@@ -369,8 +419,8 @@ impl IntoAttrs for UseTextFieldInputProps {
 /// // `input_type: Signal::stored(InputType::Text)`, ...).
 /// let field = use_text_field(input);
 /// view! {
-///     <label {..field.label_props.into_attrs()}>"Name"</label>
-///     <input {..field.input_props.into_attrs()} />
+///     <label {..field.label.attrs()}>"Name"</label>
+///     <input {..field.input.attrs()} />
 /// }
 /// ```
 ///
@@ -432,10 +482,10 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         on_key_down,
         on_key_up,
         shortcuts,
-        ..UseFocusableInput::default()
+        allow_shortcut_repeats: false,
     });
+    let mut focusable_props = focusable.target.into_props();
     let element = focusable.focus_handle.element();
-    let mut focusable_props = focusable.props;
 
     // Focus ring state (keyboard focus), as react-aria-components adds it.
     let focus_ring = use_focus_ring(UseFocusRingInput {
@@ -446,8 +496,9 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    focusable_props.on_focus = focusable_props.on_focus.chain(focus_ring.props.on_focus);
-    focusable_props.on_blur = focusable_props.on_blur.chain(focus_ring.props.on_blur);
+    let focus_ring_props = focus_ring.target.into_props();
+    focusable_props.on_focus = focusable_props.on_focus.chain(focus_ring_props.on_focus);
+    focusable_props.on_blur = focusable_props.on_blur.chain(focus_ring_props.on_blur);
 
     let validation = validation.unwrap_or_else(|| {
         use_form_validation_state(UseFormValidationStateInput {
@@ -473,10 +524,10 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     });
 
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         ..
     } = use_field(UseFieldInput {
         id,
@@ -487,6 +538,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         aria_labelledby,
         aria_describedby,
     });
+    let field_props = field_props.into_props();
 
     let on_input = EventHandler::new(move |e: Event| {
         let target = e.expect_target();
@@ -516,8 +568,8 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     let on_off = |on: bool| if on { "on" } else { "off" };
 
     UseTextFieldReturn {
-        label_props,
-        input_props: UseTextFieldInputProps {
+        label: label_props,
+        input: Part::stored(UseTextFieldInputProps {
             id: field_props.id,
             r#type: Signal::derive(move || is_input().then(|| input_type.get().as_str())),
             pattern: Signal::derive(move || pattern.get_value().filter(|_| is_input())),
@@ -558,9 +610,9 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
             aria_controls,
             focusable: focusable_props,
             on_input,
-        },
-        description_props,
-        error_message_props,
+        }),
+        description: description_props,
+        error_message: error_message_props,
         element,
         is_focused: focus_ring.is_focused,
         is_focus_visible: focus_ring.is_focus_visible,

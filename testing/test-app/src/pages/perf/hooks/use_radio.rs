@@ -6,7 +6,7 @@
 //! (`selected`, -1: none) and whether it is pressed (`pressed`).
 
 use leptonic::{
-    IntoAttrs, Orientation,
+    Orientation,
     hooks::{
         collections::Key,
         form::{
@@ -50,7 +50,7 @@ pub fn PagePerf() -> impl IntoView {
     ];
     let group = use_radio_group(UseRadioGroupInput {
         state,
-        id: Some("perf-group".to_owned()),
+        id: Some("perf-group".into()),
         has_label: true.into(),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
@@ -67,8 +67,8 @@ pub fn PagePerf() -> impl IntoView {
         <h1>"use_radio performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <div {..group.props.into_attrs()}>
-            <span {..group.label_props.into_attrs()}>"Options"</span>
+        <div {..group.group.attrs()}>
+            <span {..group.label.attrs()}>"Options"</span>
             {(0..3)
                 .map(|option| {
                     view! {
@@ -97,7 +97,7 @@ fn GroupRadio(
         group,
         value: Key::from(option),
         is_disabled: disabled,
-        id: (option == 3).then(|| "perf-input".to_owned()),
+        id: (option == 3).then(|| "perf-input".into()),
         aria_label: MaybeProp::default(),
         aria_labelledby: Signal::default(),
         aria_describedby: Signal::default(),
@@ -117,8 +117,16 @@ fn GroupRadio(
             pressed.try_update_value(|pressed| *pressed = None);
         });
     }
-    let (label_attrs, label_styles) = radio.label_props.into_parts();
-    let (input_attrs, input_styles) = radio.input_props.into_parts();
+    let (label_attrs, label_styles) = radio
+        .label
+        .props()
+        .expect("the first label takes its props")
+        .into_parts();
+    let (input_attrs, input_styles) = radio
+        .input
+        .props()
+        .expect("the first input takes its props")
+        .into_parts();
     view! {
         <label {..label_attrs} style=label_styles>
             <input {..input_attrs} style=input_styles />

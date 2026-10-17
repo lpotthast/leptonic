@@ -28,7 +28,7 @@ pub struct UseHighlightSelectionDescriptionInput {
 /// mode." Returns the id for the collection's `aria-describedby` while there is a description.
 pub fn use_highlight_selection_description(
     input: UseHighlightSelectionDescriptionInput,
-) -> Signal<Option<String>> {
+) -> Signal<Option<crate::Id>> {
     crate::metrics::subject!();
     let UseHighlightSelectionDescriptionInput {
         selection,

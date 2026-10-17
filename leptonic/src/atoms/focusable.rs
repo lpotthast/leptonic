@@ -1,6 +1,6 @@
 // Upstream: react-aria/src/interactions/useFocusable.tsx @ 99e6102368
 // Upstream: react-aria/test/interactions/Focusable.test.js @ 99e6102368
-use leptos::{attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::FocusEvent;
 
@@ -10,6 +10,7 @@ use crate::{
         focus::{FocusableContextAttr, UseFocusableInput, UseFocusableProps, use_focusable},
         interactions::KeyboardEventWrapper,
     },
+    utils::signal_attr::signal_attr,
 };
 
 // =============================================================================
@@ -74,9 +75,12 @@ where
         on_focus_change,
         on_key_down,
         on_key_up,
-        ..UseFocusableInput::default()
+        auto_focus: false,
+        shortcuts: None,
+        allow_shortcut_repeats: false,
     })
-    .props;
+    .target
+    .into_props();
     let element = CapturedElement::new();
     manage_child(
         ChildKind::Focusable,
@@ -206,7 +210,7 @@ fn check_role(kind: ChildKind, el: &web_sys::Element) {
 pub(crate) fn focusable_child_attrs(
     focusable: UseFocusableProps,
     element: CapturedElement,
-    press_describedby: Option<Signal<Option<String>>>,
+    press_describedby: Option<Signal<Option<crate::Id>>>,
 ) -> (
     impl leptos::tachys::html::attribute::Attribute,
     crate::EventHandler<web_sys::KeyboardEvent>,
@@ -218,8 +222,8 @@ pub(crate) fn focusable_child_attrs(
             focusable.on_focus.into_on(ev::focus),
             focusable.on_blur.into_on(ev::blur),
             // The press' long-press description and the context's, as `use_button` merges them.
-            Attr(
-                leptos::attr::AriaDescribedby,
+            signal_attr(
+                "aria-describedby",
                 IdRefs::derive(
                     press_describedby
                         .into_iter()

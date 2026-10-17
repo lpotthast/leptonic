@@ -4,13 +4,10 @@
 // Upstream: react-aria-components/test/GridList.browser.test.tsx @ 99e6102368
 use std::{collections::HashMap, sync::Arc};
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use crate::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Id, IntoAttrs, Orientation,
     hooks::{
         collections::{
             Collection, CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout,
@@ -30,6 +27,8 @@ use crate::{
     utils::{
         aria::{AriaMultiselectable, AriaRole},
         id::use_id,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
     },
 };
 
@@ -68,9 +67,9 @@ pub struct UseGridListInput {
     /// The grid element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id (rows' ids derive from it). Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Rows stacked, or wrapping in a grid of cards.
     pub layout: ListLayout,
     /// The primary orientation of the rows, usually the direction the list scrolls
@@ -98,9 +97,9 @@ pub struct UseGridListInput {
 pub struct GridListData {
     pub state: ListState,
     /// The grid element id; row ids derive from it.
-    pub id: String,
+    pub id: Id,
     /// See `UseSelectableItemInput::collection_id`.
-    pub collection_id: String,
+    pub collection_id: Id,
     pub on_action: Option<Callback<Key>>,
     pub link_behavior: Signal<LinkBehavior>,
     pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
@@ -153,27 +152,28 @@ pub fn tree_row_positions(collection: &Collection) -> HashMap<Key, TreeRowPositi
 }
 
 /// The element id of the row `key` in the grid list `list_id` (see [`Key::id_fragment`]).
-pub fn grid_list_row_id(list_id: &str, key: &Key) -> String {
-    format!("{list_id}-{}", key.id_fragment())
+pub fn grid_list_row_id(list_id: &str, key: &Key) -> Id {
+    Id::derived(format_args!("{list_id}-{}", key.id_fragment()))
 }
 
-/// Return value of [`use_grid_list`].
+/// The return value of [`use_grid_list`].
 #[derive(Debug)]
 pub struct UseGridListReturn {
-    pub props: UseGridListProps,
+    /// The grid list element.
+    pub grid_list: Part<UseGridListProps>,
     pub data: GridListData,
 }
 
 /// Props for the grid element.
 #[derive(Debug)]
 pub struct UseGridListProps {
-    pub id: String,
+    pub id: Id,
     pub role: Signal<AriaRole>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
     /// How touch users select rows that have actions ("highlight selection").
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_list`).
     pub collection: UseSelectableCollectionProps,
     /// Detects tabbable children of an empty grid (e.g. an "add item" button), which then take
@@ -181,13 +181,28 @@ pub struct UseGridListProps {
     pub tabbable_child: UseHasTabbableChildProps,
 }
 
+impl Remount for UseGridListProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_multiselectable: self.aria_multiselectable,
+            aria_describedby: self.aria_describedby,
+            collection: self.collection.remount(),
+            tabbable_child: self.tabbable_child.remount(),
+        }
+    }
+}
+
 pub type UseGridListAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, Signal<AriaRole>>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    FixedAttr,
+    SignalAttr<AriaRole>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<AriaMultiselectable>>,
+    SignalAttr<Option<Id>>,
     UseSelectableCollectionAttrs,
     UseHasTabbableChildAttrs,
 );
@@ -197,12 +212,12 @@ impl IntoAttrs for UseGridListProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+            fixed_attr("id", self.id),
+            signal_attr("role", self.role),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-multiselectable", self.aria_multiselectable),
+            signal_attr("aria-describedby", self.aria_describedby),
             self.collection.into_attrs(),
             self.tabbable_child.into_attrs(),
         )
@@ -248,7 +263,8 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
         keyboard_delegate,
         options,
     })
-    .props;
+    .collection
+    .into_props();
 
     // Touch users learn how to select rows that have actions; selection changes are announced.
     let description = use_highlight_selection_description(UseHighlightSelectionDescriptionInput {
@@ -266,6 +282,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
         is_disabled: Signal::derive(move || !is_empty.get()),
     });
+    let tabbable_child_props = tabbable_child.target.into_props();
     let has_tabbable_child = tabbable_child.has_tabbable_child;
     let list_tabindex = collection.tabindex;
     collection.tabindex = Signal::derive(move || {
@@ -294,7 +311,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
                 )
             }),
         },
-        props: UseGridListProps {
+        grid_list: Part::stored(UseGridListProps {
             id,
             role: Signal::stored(AriaRole::Grid),
             aria_label,
@@ -305,7 +322,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
             }),
             aria_describedby: description,
             collection,
-            tabbable_child: tabbable_child.props,
-        },
+            tabbable_child: tabbable_child_props,
+        }),
     }
 }

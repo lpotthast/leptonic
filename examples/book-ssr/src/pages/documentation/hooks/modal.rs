@@ -45,7 +45,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <ReactAria hook="useModalOverlay"/>
 
                 <p>
-                    "Makes the element you spread "<Code inline=true>"modal_props"</Code>" onto a modal, through "
+                    "Makes the element you spread the "<Code inline=true>"modal"</Code>" part onto a modal, through "
                     <Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>". It closes the modal "
                     "on "<Keys keys="Escape"/>" and, when "<Code inline=true>"is_dismissable"</Code>" is set, on a click "
                     "outside of it; with modals stacked, only the topmost one closes. A modal doesn\u{2019}t close when focus "
@@ -55,7 +55,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                     "assistive technology ignores it."
                 </p>
                 <p>
-                    "The backdrop element behind the modal needs no props: a click on it counts as a click outside."
+                    "The backdrop element behind the modal needs no part: a click on it counts as a click outside."
                 </p>
 
                 <Section title="Input" id="use-modal-backdrop-input">
@@ -90,11 +90,11 @@ pub fn PageUseModalHook() -> impl IntoView {
 
                 <Section title="Return" id="use-modal-backdrop-return">
                     <ApiTable kind=ApiKind::Return of="UseModalBackdropReturn">
-                        <ApiRow name="modal_props" ty="UseModalBackdropModalProps">
-                            "Spread "<Code inline=true>"{..modal_props.into_attrs()}"</Code>" onto the modal element: its id, "
+                        <ApiRow name="modal" ty="Part<UseModalBackdropModalProps>">
+                            "Spread "<Code inline=true>"{..modal.attrs()}"</Code>" onto the modal element: its id, "
                             "the element capture, the "<Keys keys="Escape"/>" handler and focus tracking."
                         </ApiRow>
-                        <ApiRow name="id" ty="String">
+                        <ApiRow name="id" ty="Id">
                             "The id of the modal element, e.g. for the "<Code inline=true>"aria-controls"</Code>" of a trigger."
                         </ApiRow>
                     </ApiTable>
@@ -118,7 +118,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                             };
 
                             let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
-                            let UseModalBackdropReturn { modal_props, .. } =
+                            let UseModalBackdropReturn { modal, .. } =
                                 use_modal_backdrop(UseModalBackdropInput {
                                     state,
                                     is_dismissable: true.into(),
@@ -127,14 +127,12 @@ pub fn PageUseModalHook() -> impl IntoView {
                                     is_entering: false.into(),
                                 });
 
-                            // `<Show>` renders the modal on every opening: keep the attributes.
-                            let modal_attrs = StoredValue::new(modal_props.into_attrs());
-
                             view! {
+                                // Mounts the modal on every opening: each mount spreads the part again.
                                 <Show when=move || state.is_open.get()>
                                     // A click on the backdrop counts as a click outside the modal.
                                     <div class="backdrop">
-                                        <div {..modal_attrs.get_value()}>"Modal content"</div>
+                                        <div {..modal.attrs()}>"Modal content"</div>
                                     </div>
                                 </Show>
                             }

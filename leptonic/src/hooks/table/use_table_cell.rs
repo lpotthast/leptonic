@@ -11,7 +11,7 @@ use crate::{
             CellFocusMode, UseGridCellInput, UseGridCellProps, UseGridCellReturn, use_grid_cell,
         },
     },
-    utils::aria::AriaRole,
+    utils::{aria::AriaRole, part::Part},
 };
 
 // =============================================================================
@@ -39,10 +39,11 @@ pub struct UseTableCellInput {
     pub should_select_on_press_up: bool,
 }
 
-/// Return value of [`use_table_cell`].
+/// The return value of [`use_table_cell`].
 #[derive(Debug)]
 pub struct UseTableCellReturn {
-    pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
+    /// The cell element: `let (attrs, styles) = cell.attrs();`.
+    pub cell: Part<PropsWithStyles<UseGridCellProps>>,
     pub is_pressed: Signal<bool>,
 }
 
@@ -81,7 +82,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         })
     };
     let UseGridCellReturn {
-        grid_cell_props,
+        cell: grid_cell_props,
         is_pressed,
     } = use_grid_cell(UseGridCellInput {
         id,
@@ -91,7 +92,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         grid: table.grid,
         key,
     });
-    let (mut cell, styles) = grid_cell_props.into_inner();
+    let (mut cell, styles) = grid_cell_props.into_props().into_inner();
     cell.role = Signal::derive(move || {
         if is_row_header.get() {
             AriaRole::Rowheader
@@ -100,7 +101,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         }
     });
     UseTableCellReturn {
-        grid_cell_props: PropsWithStyles::new(cell, styles),
+        cell: Part::stored(PropsWithStyles::new(cell, styles)),
         is_pressed,
     }
 }

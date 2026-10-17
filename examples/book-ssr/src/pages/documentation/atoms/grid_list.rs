@@ -83,6 +83,7 @@ pub fn PageAtomGridList() -> impl IntoView {
                 <Section title="Props" id="gridlist-props">
                     <ApiTable kind=ApiKind::Props of="GridList">
                         <ApiRow name="collection" ty="CollectionMemo">"The rows. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The grid list\u{2019}s id (its rows\u{2019} ids derive from it). Generated when not given."</ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>" rows."
                         </ApiRow>

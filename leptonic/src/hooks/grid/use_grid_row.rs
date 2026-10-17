@@ -1,9 +1,6 @@
 // Upstream: react-aria/src/grid/useGridRow.ts @ 99e6102368
 // Upstream: react-aria/test/grid/useGrid.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::GridData;
 use crate::{
@@ -12,7 +9,11 @@ use crate::{
         Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput, UseSelectableItemProps,
         UseSelectableItemReturn, use_selectable_item,
     },
-    utils::aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
+    utils::{
+        aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+    },
 };
 
 // =============================================================================
@@ -36,10 +37,11 @@ pub struct UseGridRowInput {
     pub on_context_menu: Option<Callback<crate::hooks::interactions::ContextMenuEvent>>,
 }
 
-/// Return value of [`use_grid_row`].
+/// The return value of [`use_grid_row`].
 #[derive(Debug)]
 pub struct UseGridRowReturn {
-    pub row_props: PropsWithStyles<UseGridRowProps>,
+    /// The row element: `let (attrs, styles) = row.attrs();`.
+    pub row: Part<PropsWithStyles<UseGridRowProps>>,
     pub is_selected: Signal<bool>,
     pub is_focused: Signal<bool>,
     pub is_disabled: Signal<bool>,
@@ -57,10 +59,21 @@ pub struct UseGridRowProps {
     pub item: UseSelectableItemProps,
 }
 
+impl Remount for UseGridRowProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_selected: self.aria_selected,
+            aria_disabled: self.aria_disabled,
+            item: self.item.remount(),
+        }
+    }
+}
+
 pub type UseGridRowAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    FixedAttr,
+    SignalAttr<Option<AriaSelected>>,
+    SignalAttr<Option<AriaDisabled>>,
     UseSelectableItemAttrs,
 );
 
@@ -69,9 +82,9 @@ impl IntoAttrs for UseGridRowProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaSelected, self.aria_selected),
-            Attr(attr::AriaDisabled, self.aria_disabled),
+            fixed_attr("role", self.role),
+            signal_attr("aria-selected", self.aria_selected),
+            signal_attr("aria-disabled", self.aria_disabled),
             self.item.into_attrs(),
         )
     }
@@ -99,7 +112,7 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
     }
 
     let UseSelectableItemReturn {
-        props,
+        item: props,
         is_pressed,
         is_selected,
         is_focused,
@@ -125,10 +138,10 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
         should_use_virtual_focus: false,
         on_context_menu,
     });
-    let (item, styles) = props.into_inner();
+    let (item, styles) = props.into_props().into_inner();
 
     UseGridRowReturn {
-        row_props: PropsWithStyles::new(
+        row: Part::stored(PropsWithStyles::new(
             UseGridRowProps {
                 role: AriaRole::Row,
                 aria_selected: Signal::derive(move || {
@@ -139,7 +152,7 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
                 item,
             },
             styles,
-        ),
+        )),
         is_selected,
         is_focused,
         is_disabled,

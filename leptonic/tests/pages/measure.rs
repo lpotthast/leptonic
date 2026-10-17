@@ -196,6 +196,7 @@ pub(crate) async fn measure<T>(
             Metric::Allocations
             | Metric::Reallocations
             | Metric::AllocatedBytes
+            | Metric::LargestAllocation
             | Metric::RetainedBytes
             | Metric::MemoRuns
             | Metric::MemoRunsUnchanged

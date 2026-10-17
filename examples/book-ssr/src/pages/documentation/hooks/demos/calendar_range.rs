@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, DateExt, DateRange, DateTimeFormat, IntoAttrs,
+    CapturedElement, DateExt, DateRange, DateTimeFormat,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     flag,
     hooks::{
@@ -28,7 +28,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
         ..Default::default()
     });
     let UseCalendarReturn {
-        calendar_props,
+        calendar,
         previous_button,
         next_button,
         title,
@@ -43,8 +43,8 @@ pub fn CalendarRangeDemo() -> impl IntoView {
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
-    let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
+    let (previous_attrs, previous_styles) = use_button(previous_button).button.attrs();
+    let (next_attrs, next_styles) = use_button(next_button).button.attrs();
 
     let status = move || match (state.anchor_date.get(), state.value.get()) {
         (Some(anchor), _) => format!("Selecting from {} \u{2026}", anchor.strftime("%b %-d")),
@@ -63,7 +63,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
     };
 
     view! {
-        <div {..calendar_props.into_attrs()} class="demo-calendar demo-calendar-range">
+        <div {..calendar.attrs()} class="demo-calendar demo-calendar-range">
             <header class="demo-calendar-header">
                 <button {..previous_attrs} style=previous_styles class="demo-calendar-nav">
                     <span aria-hidden="true">"\u{2039}"</span>
@@ -103,7 +103,7 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
     let data = StoredValue::new(data);
 
     view! {
-        <table {..grid.grid_props.into_attrs()} class="demo-calendar-grid">
+        <table {..grid.grid.attrs()} class="demo-calendar-grid">
             <thead aria-hidden="true">
                 <tr>{move || grid.week_days.get().into_iter().map(|day| view! { <th>{day}</th> }).collect_view()}</tr>
             </thead>
@@ -134,8 +134,8 @@ fn MonthGrid(data: CalendarData) -> impl IntoView {
 fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> impl IntoView {
     let range = data.state.range();
     let UseCalendarCellReturn {
-        cell_props,
-        button_props,
+        cell,
+        button,
         is_selected,
         is_today,
         formatted_date,
@@ -147,11 +147,11 @@ fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> im
         is_disabled: Signal::stored(false),
         element: CapturedElement::new(),
     });
-    let (button_attrs, button_styles) = button_props.into_parts();
+    let (button_attrs, button_styles) = button.attrs();
     let highlighted = move || range.and_then(|range| range.highlighted_range.get());
 
     view! {
-        <td {..cell_props.into_attrs()}>
+        <td {..cell.attrs()}>
             <div
                 {..button_attrs}
                 style=button_styles

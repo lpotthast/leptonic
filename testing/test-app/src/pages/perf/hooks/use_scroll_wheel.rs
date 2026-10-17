@@ -3,10 +3,7 @@
 //! and adding up their vertical deltas. Its controls ([`Control`]) mount and unmount it,
 //! disable and enable it, and read the count (`scrolls`) and the sum (`delta-y`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel},
-};
+use leptonic::hooks::interactions::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -49,7 +46,7 @@ fn Wheeled(
         })),
     });
     view! {
-        <div id="perf-wheel" style="width: 200px; height: 100px" {..wheel.props.into_attrs()}>
+        <div id="perf-wheel" style="width: 200px; height: 100px" {..wheel.target.attrs()}>
             "Scroll here"
         </div>
     }

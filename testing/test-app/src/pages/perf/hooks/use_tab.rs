@@ -8,7 +8,7 @@
 //! changed (`changes`).
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation, flag,
+    CapturedElement, Orientation, flag,
     hooks::{
         collections::{Key, SelectOnPressUp, use_collection},
         tabs::{
@@ -39,7 +39,7 @@ fn HookTab(
         on_blur: None,
         on_focus_change: None,
     });
-    let (attrs, styles) = tab.props.into_parts();
+    let (attrs, styles) = tab.tab.attrs();
     view! {
         <div
             {..attrs}
@@ -63,7 +63,7 @@ fn HookTabPanel(state: TabListState) -> impl IntoView {
         aria_describedby: Signal::default(),
         aria_details: Signal::default(),
     });
-    view! { <div {..panel.props.into_attrs()}>"Panel"</div> }
+    view! { <div {..panel.tab_panel.attrs()}>"Panel"</div> }
 }
 
 #[component]
@@ -104,7 +104,7 @@ pub fn PagePerf() -> impl IntoView {
         <h1>"use_tab performance"</h1>
         <PerfControls controls />
         <button id="perf-before">"Before"</button>
-        <div {..list.props.into_attrs()}>
+        <div {..list.tab_list.attrs()}>
             <HookTab state class_name="perf-first" key="tab-1" is_disabled=Signal::stored(false)>
                 "Tab 1"
             </HookTab>

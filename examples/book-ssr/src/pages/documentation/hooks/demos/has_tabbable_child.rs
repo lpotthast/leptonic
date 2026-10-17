@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::focus::{UseHasTabbableChildInput, UseHasTabbableChildReturn, use_has_tabbable_child},
 };
@@ -13,7 +12,7 @@ pub fn HasTabbableChildDemo() -> impl IntoView {
 
     let UseHasTabbableChildReturn {
         has_tabbable_child,
-        props,
+        target,
     } = use_has_tabbable_child(UseHasTabbableChildInput {
         is_disabled: disabled.into(),
     });
@@ -22,7 +21,7 @@ pub fn HasTabbableChildDemo() -> impl IntoView {
     let container_tabindex = move || if has_tabbable_child.get() { -1 } else { 0 };
 
     view! {
-        <div role="group" aria-label="Attachments" class="demo-focus-scope" tabindex={container_tabindex} {..props.into_attrs()}>
+        <div role="group" aria-label="Attachments" class="demo-focus-scope" tabindex={container_tabindex} {..target.attrs()}>
             <Show when=move || show_button.get() fallback=|| view! { <p class="demo-focus-hint">"No actions."</p> }>
                 <button type="button" class="demo-focus-item">"Add file"</button>
             </Show>

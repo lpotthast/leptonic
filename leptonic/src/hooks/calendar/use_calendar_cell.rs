@@ -9,7 +9,6 @@ use std::time::Duration;
 
 use jiff::civil::Date;
 use leptos::{
-    attr::{self, Attr},
     ev::{self},
     prelude::*,
 };
@@ -17,12 +16,15 @@ use web_sys::{FocusEvent, MouseEvent, PointerEvent};
 
 use super::states::CalendarData;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IdRefs, IntoAttrs, OnEvent,
+    PropsWithStyles,
     hooks::interactions::{PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press},
     utils::{
         aria::{AriaDisabled, AriaInvalid, AriaRole, AriaSelected, aria_true},
         dom_ext::EventAccessors,
+        part::{Part, Remount},
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         use_description::use_description,
     },
 };
@@ -56,12 +58,13 @@ pub struct UseCalendarCellInput {
     pub element: CapturedElement,
 }
 
-/// Return value of [`use_calendar_cell`].
+/// The return value of [`use_calendar_cell`].
+#[derive(Debug)]
 pub struct UseCalendarCellReturn {
-    /// For the cell (a `td`).
-    pub cell_props: UseCalendarCellProps,
-    /// For the button inside the cell (it has the focus and the date's label).
-    pub button_props: PropsWithStyles<UseCalendarCellButtonProps>,
+    /// The cell (`<td>`) element.
+    pub cell: Part<UseCalendarCellProps>,
+    /// The cell's button element: `let (attrs, styles) = button.attrs();`.
+    pub button: Part<PropsWithStyles<UseCalendarCellButtonProps>>,
     pub is_pressed: Signal<bool>,
     /// Whether the cell has the focus (the calendar's focused date).
     pub is_focused: Signal<bool>,
@@ -88,11 +91,22 @@ pub struct UseCalendarCellProps {
     pub aria_invalid: Signal<Option<AriaInvalid>>,
 }
 
+impl Remount for UseCalendarCellProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_disabled: self.aria_disabled,
+            aria_selected: self.aria_selected,
+            aria_invalid: self.aria_invalid,
+        }
+    }
+}
+
 pub type UseCalendarCellAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
-    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
+    FixedAttr,
+    SignalAttr<Option<AriaDisabled>>,
+    SignalAttr<Option<AriaSelected>>,
+    SignalAttr<Option<AriaInvalid>>,
 );
 
 impl IntoAttrs for UseCalendarCellProps {
@@ -100,10 +114,10 @@ impl IntoAttrs for UseCalendarCellProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaSelected, self.aria_selected),
-            Attr(attr::AriaInvalid, self.aria_invalid),
+            fixed_attr("role", self.role),
+            signal_attr("aria-disabled", self.aria_disabled),
+            signal_attr("aria-selected", self.aria_selected),
+            signal_attr("aria-invalid", self.aria_invalid),
         )
     }
 }
@@ -117,7 +131,7 @@ pub struct UseCalendarCellButtonProps {
     pub aria_label: Signal<String>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
@@ -125,15 +139,34 @@ pub struct UseCalendarCellButtonProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseCalendarCellButtonProps {
+    fn remount(&self) -> Self {
+        Self {
+            press: self.press.remount(),
+            role: self.role,
+            tabindex: self.tabindex,
+            aria_label: self.aria_label,
+            aria_disabled: self.aria_disabled,
+            aria_invalid: self.aria_invalid,
+            aria_describedby: self.aria_describedby,
+            on_focus: self.on_focus.clone(),
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_contextmenu: self.on_contextmenu.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseCalendarCellButtonAttrs = (
     UsePressAttrs,
     (
-        Attr<attr::Role, AriaRole>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
-        Attr<attr::AriaLabel, Signal<String>>,
-        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        FixedAttr,
+        SignalAttr<Option<i32>>,
+        SignalAttr<String>,
+        SignalAttr<Option<AriaDisabled>>,
+        SignalAttr<Option<AriaInvalid>>,
+        SignalAttr<Option<Id>>,
     ),
     (
         OnEvent<ev::focus>,
@@ -151,12 +184,12 @@ impl IntoAttrs for UseCalendarCellButtonProps {
         (
             self.press.into_attrs(),
             (
-                Attr(attr::Role, self.role),
-                Attr(attr::Tabindex, self.tabindex),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaDisabled, self.aria_disabled),
-                Attr(attr::AriaInvalid, self.aria_invalid),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
+                fixed_attr("role", self.role),
+                signal_attr("tabindex", self.tabindex),
+                signal_attr("aria-label", self.aria_label),
+                signal_attr("aria-disabled", self.aria_disabled),
+                signal_attr("aria-invalid", self.aria_invalid),
+                signal_attr("aria-describedby", self.aria_describedby),
             ),
             (
                 self.on_focus.into_on(ev::focus),
@@ -419,9 +452,14 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         on_press_end: Some(on_press_end),
         on_press: Some(on_press),
         on_press_up: Some(on_press_up),
-        ..UsePressInput::default()
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        allow_text_selection_on_press: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
+        on_press_change: None,
+        on_double_press: None,
+        long_press: None,
     });
-    let (press_props, press_styles) = press.props.into_inner();
+    let (press_props, press_styles) = press.target.into_props().into_inner();
 
     let tabindex = Signal::derive(move || {
         (!is_disabled.get()).then(|| {
@@ -468,13 +506,13 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
 
     let not_selectable = memo(move || !is_selectable.get());
     UseCalendarCellReturn {
-        cell_props: UseCalendarCellProps {
+        cell: Part::stored(UseCalendarCellProps {
             role: AriaRole::Gridcell,
             aria_disabled: aria_true(not_selectable),
             aria_selected: aria_true(is_selected),
             aria_invalid: aria_true(is_invalid),
-        },
-        button_props: PropsWithStyles::new(
+        }),
+        button: Part::stored(PropsWithStyles::new(
             UseCalendarCellButtonProps {
                 press: press_props,
                 role: AriaRole::Button,
@@ -513,7 +551,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
                 element_capture: element.attr(),
             },
             press_styles,
-        ),
+        )),
         is_pressed: press.is_pressed,
         is_focused,
         is_selected,

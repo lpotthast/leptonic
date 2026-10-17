@@ -14,6 +14,7 @@ use crate::{
     utils::{
         dom_ext::EventAccessors,
         key::{KeyboardEventKey, KeyboardKey},
+        part::{Part, Remount},
         platform::device::{is_ios, is_mac},
     },
 };
@@ -47,10 +48,11 @@ pub struct UseContextMenuInput {
     pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
-/// Return value of [`use_context_menu`].
+/// The return value of [`use_context_menu`].
 #[derive(Debug)]
 pub struct UseContextMenuReturn {
-    pub props: UseContextMenuProps,
+    /// The element whose context menu is requested.
+    pub target: Part<UseContextMenuProps>,
     /// For the element's `use_press` (on iOS): a long press requests the context menu.
     pub long_press: Option<LongPress>,
 }
@@ -60,6 +62,15 @@ pub struct UseContextMenuReturn {
 pub struct UseContextMenuProps {
     pub on_contextmenu: EventHandler<MouseEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl Remount for UseContextMenuProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_contextmenu: self.on_contextmenu.clone(),
+            on_keydown: self.on_keydown.clone(),
+        }
+    }
 }
 
 pub type UseContextMenuAttrs = (OnEvent<ev::contextmenu>, OnEvent<ev::keydown>);
@@ -83,10 +94,10 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
     let UseContextMenuInput { on_context_menu } = input;
     let Some(on_context_menu) = on_context_menu else {
         return UseContextMenuReturn {
-            props: UseContextMenuProps {
+            target: Part::stored(UseContextMenuProps {
                 on_contextmenu: EventHandler::empty(),
                 on_keydown: EventHandler::empty(),
-            },
+            }),
             long_press: None,
         };
     };
@@ -145,10 +156,10 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
     // iOS fires no `contextmenu` event: a long press requests the menu.
     let ios = is_ios();
     UseContextMenuReturn {
-        props: UseContextMenuProps {
+        target: Part::stored(UseContextMenuProps {
             on_contextmenu,
             on_keydown,
-        },
+        }),
         long_press: ios.then(|| LongPress {
             on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
                 fired.set_value(false);

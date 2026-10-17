@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{button::Button, focus_scope::FocusScope},
     hooks::{
         dialog::{DialogRole, UseDialogInput, UseDialogReturn, use_dialog},
@@ -16,7 +15,7 @@ pub fn AlertDialogDemo() -> impl IntoView {
     let (deleted, set_deleted) = signal(false);
 
     let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
-    let UseModalBackdropReturn { modal_props, .. } = use_modal_backdrop(UseModalBackdropInput {
+    let UseModalBackdropReturn { modal, .. } = use_modal_backdrop(UseModalBackdropInput {
         state,
         is_dismissable: Signal::stored(false),
         is_keyboard_dismiss_disabled: Signal::stored(false),
@@ -24,18 +23,20 @@ pub fn AlertDialogDemo() -> impl IntoView {
         is_entering: Signal::stored(false),
     });
     let UseDialogReturn {
-        dialog_props,
-        title_props,
-        content_props,
+        dialog,
+        title,
+        content,
     } = use_dialog(UseDialogInput {
         role: DialogRole::AlertDialog,
         ..UseDialogInput::default()
     });
 
-    let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
-    let title_attrs = StoredValue::new(title_props.into_attrs());
-    let content_attrs = StoredValue::new(content_props.into_attrs());
+    // `<Show>` mounts the modal on every opening, and each mount spreads the parts again. A
+    // `StoredValue` makes a part `Copy` for the nested children closures.
+    let modal = StoredValue::new(modal);
+    let dialog = StoredValue::new(dialog);
+    let title = StoredValue::new(title);
+    let content = StoredValue::new(content);
 
     let delete = move || {
         set_deleted.set(true);
@@ -56,14 +57,14 @@ pub fn AlertDialogDemo() -> impl IntoView {
                 <div class="demo-backdrop">
                     <FocusScope contain=true restore_focus=true auto_focus=true>
                         <div
-                            {..modal_attrs.get_value()}
-                            {..dialog_attrs.get_value()}
+                            {..modal.with_value(|modal| modal.attrs())}
+                            {..dialog.with_value(|dialog| dialog.attrs())}
                             class="demo-dialog"
                         >
                             // Names the dialog.
-                            <h2 {..title_attrs.get_value()} class="demo-dialog-title">"Delete draft.txt?"</h2>
+                            <h2 {..title.with_value(|title| title.attrs())} class="demo-dialog-title">"Delete draft.txt?"</h2>
                             // Describes the alert dialog: screen readers read it when the dialog opens.
-                            <p {..content_attrs.get_value()} class="demo-dialog-description">
+                            <p {..content.with_value(|content| content.attrs())} class="demo-dialog-description">
                                 "The file is deleted permanently. This can\u{2019}t be undone."
                             </p>
                             <div class="demo-dialog-actions">

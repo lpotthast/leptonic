@@ -3,6 +3,7 @@
     "check": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -17,18 +18,19 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 318,
+        "allocations": 149,
         "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
         "effect_runs": 0,
-        "render_effect_runs": 10,
+        "render_effect_runs": 1,
         "immediate_effect_runs": 0,
-        "signal_notifications": 10,
+        "signal_notifications": 11,
         "dom_attributes": 2,
         "dom_text": 0,
         "dom_added_nodes": 0,
@@ -40,6 +42,7 @@
     "uncheck": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -54,18 +57,19 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 304,
+        "allocations": 139,
         "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
         "effect_runs": 0,
-        "render_effect_runs": 10,
+        "render_effect_runs": 1,
         "immediate_effect_runs": 0,
-        "signal_notifications": 7,
+        "signal_notifications": 8,
         "dom_attributes": 2,
         "dom_text": 0,
         "dom_added_nodes": 0,
@@ -79,6 +83,7 @@
     "check": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -93,18 +98,19 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 26058,
+        "allocations": 10049,
         "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
         "effect_runs": 0,
-        "render_effect_runs": 1000,
+        "render_effect_runs": 1,
         "immediate_effect_runs": 0,
-        "signal_notifications": 10,
+        "signal_notifications": 11,
         "dom_attributes": 2,
         "dom_text": 0,
         "dom_added_nodes": 0,
@@ -116,6 +122,7 @@
     "uncheck": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -130,18 +137,19 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 26044,
+        "allocations": 10039,
         "reallocations": 2,
         "memo_runs": 1,
         "memo_runs_unchanged": 1,
         "effect_runs": 0,
-        "render_effect_runs": 1000,
+        "render_effect_runs": 1,
         "immediate_effect_runs": 0,
-        "signal_notifications": 7,
+        "signal_notifications": 8,
         "dom_attributes": 2,
         "dom_text": 0,
         "dom_added_nodes": 0,
@@ -155,6 +163,7 @@
     "disable": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -169,11 +178,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 104,
+        "allocations": 103,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -192,6 +202,7 @@
     "enable": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -206,11 +217,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 114,
+        "allocations": 103,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -229,6 +241,7 @@
     "ignored click": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -243,11 +256,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 7,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -268,6 +282,7 @@
     "disable": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -282,11 +297,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 10004,
+        "allocations": 10003,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -305,6 +321,7 @@
     "enable": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -319,11 +336,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 11004,
+        "allocations": 10003,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -342,6 +360,7 @@
     "ignored click": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -356,11 +375,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 7,
+        "allocations": 5,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -381,6 +401,7 @@
     "blur": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -395,11 +416,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 22,
+        "allocations": 20,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -418,6 +440,7 @@
     "focus": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -432,11 +455,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 22,
+        "allocations": 15,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -457,6 +481,7 @@
     "mount": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -471,18 +496,19 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 8113,
-        "reallocations": 193,
-        "memo_runs": 120,
-        "memo_runs_unchanged": 21,
-        "effect_runs": 95,
-        "render_effect_runs": 135,
+        "allocations": 5815,
+        "reallocations": 134,
+        "memo_runs": 98,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 72,
+        "render_effect_runs": 63,
         "immediate_effect_runs": 0,
-        "signal_notifications": 33,
+        "signal_notifications": 11,
         "dom_attributes": 0,
         "dom_text": 0,
         "dom_added_nodes": 1,
@@ -494,6 +520,7 @@
     "unmount": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -508,11 +535,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
@@ -533,6 +561,7 @@
     "mount": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -547,18 +576,19 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 770447,
-        "reallocations": 15117,
-        "memo_runs": 11010,
-        "memo_runs_unchanged": 2001,
-        "effect_runs": 9005,
-        "render_effect_runs": 13005,
+        "allocations": 551339,
+        "reallocations": 10098,
+        "memo_runs": 9008,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 7002,
+        "render_effect_runs": 6003,
         "immediate_effect_runs": 0,
-        "signal_notifications": 3003,
+        "signal_notifications": 1001,
         "dom_attributes": 0,
         "dom_text": 0,
         "dom_added_nodes": 1,
@@ -570,6 +600,7 @@
     "unmount": {
       "ran": [
         "atoms/theme_provider",
+        "hooks/use_checkbox",
         "hooks/use_checkbox_group",
         "hooks/use_checkbox_group_item",
         "hooks/use_checkbox_group_state",
@@ -584,11 +615,12 @@
         "hooks/use_keyboard",
         "hooks/use_label",
         "hooks/use_press",
+        "hooks/use_toggle",
         "hooks/use_toggle_state"
       ],
       "windows": 1,
       "totals": {
-        "allocations": 4,
+        "allocations": 3,
         "reallocations": 0,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,

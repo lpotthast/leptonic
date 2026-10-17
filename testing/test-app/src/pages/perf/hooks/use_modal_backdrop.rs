@@ -7,12 +7,9 @@
 //! (the app's state), make it dismissable or not, and disable and enable dismissing it with
 //! Escape.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        modal::{UseModalBackdropInput, use_modal_backdrop},
-        overlay::{UseOverlayTriggerStateInput, use_overlay_trigger_state},
-    },
+use leptonic::hooks::{
+    modal::{UseModalBackdropInput, use_modal_backdrop},
+    overlay::{UseOverlayTriggerStateInput, use_overlay_trigger_state},
 };
 use leptos::{html, prelude::*};
 
@@ -70,7 +67,7 @@ fn Subject(
         should_close_on_interact_outside: None,
         is_entering: Signal::stored(false),
     });
-    let modal_attrs = StoredValue::new(backdrop.modal_props.into_attrs());
+    let modal = backdrop.modal;
     let is_open = state.is_open;
     view! {
         <Show when=move || is_open.get()>
@@ -86,7 +83,7 @@ fn Subject(
                     <div
                         class="perf-modal"
                         style="position: fixed; top: 100px; left: 100px; width: 300px; background: white;"
-                        {..modal_attrs.get_value()}
+                        {..modal.attrs()}
                     >
                         <button id="perf-modal-button" node_ref=button>
                             "Apply"

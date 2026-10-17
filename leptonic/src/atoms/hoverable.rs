@@ -1,11 +1,8 @@
 // No upstream: an atom applying `use_hover` to its child (react-aria-components has no `Hoverable`).
 use leptos::{attr::custom::custom_attribute, prelude::*};
 
-use crate::{
-    IntoAttrs,
-    hooks::interactions::{
-        HoverEndEvent, HoverStartEvent, UseHoverInput, UseHoverReturn, use_hover,
-    },
+use crate::hooks::interactions::{
+    HoverEndEvent, HoverStartEvent, UseHoverInput, UseHoverReturn, use_hover,
 };
 
 /// Applies hover handling to its child, which gets `data-hovered` while hovered.
@@ -25,7 +22,7 @@ where
 {
     crate::metrics::subject!();
     let UseHoverReturn {
-        props: hover_props,
+        target: hover_props,
         is_hovered,
     } = use_hover(UseHoverInput {
         is_disabled,
@@ -35,7 +32,7 @@ where
     });
 
     children.into_inner()().add_any_attr((
-        hover_props.into_attrs(),
+        hover_props.attrs(),
         custom_attribute("data-hovered", move || {
             is_hovered.try_get().unwrap_or_default().then_some("true")
         }),

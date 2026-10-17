@@ -20,7 +20,7 @@ pub fn AnchorLinkDemo() -> impl IntoView {
         href: "#use-anchor-link-demo-target".into(),
         scroll_behavior: Some(ScrollBehavior::default()),
     });
-    let (link_attrs, link_styles) = link.props.into_parts();
+    let (link_attrs, link_styles) = link.link.attrs();
 
     view! {
         <p>

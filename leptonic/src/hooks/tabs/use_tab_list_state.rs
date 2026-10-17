@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use leptos::prelude::*;
 
 use crate::{
-    ValueBinding,
+    Id, ValueBinding,
     hooks::collections::{
         Collection, CollectionMemo, Key, SingleSelectListState, UseSingleSelectListStateInput,
         use_single_select_list_state,
@@ -60,9 +60,9 @@ pub struct TabListState {
     /// All tabs are disabled.
     pub is_disabled: Signal<bool>,
     /// The base of the tab and panel ids.
-    id: StoredValue<String>,
+    id: StoredValue<Id>,
     /// The id of the tab list's collection, once `use_tab_list` created it.
-    collection_id: StoredValue<Option<String>>,
+    collection_id: StoredValue<Option<Id>>,
 }
 
 impl TabListState {
@@ -72,29 +72,29 @@ impl TabListState {
     }
 
     /// The id of the tab `key`.
-    pub fn tab_id(&self, key: &Key) -> String {
+    pub fn tab_id(&self, key: &Key) -> Id {
         self.id
-            .with_value(|id| format!("{id}-tab-{}", key.id_fragment()))
+            .with_value(|id| Id::derived(format_args!("{id}-tab-{}", key.id_fragment())))
     }
 
     /// The id of the panel of the tab `key`.
-    pub fn tab_panel_id(&self, key: &Key) -> String {
+    pub fn tab_panel_id(&self, key: &Key) -> Id {
         self.id
-            .with_value(|id| format!("{id}-tabpanel-{}", key.id_fragment()))
+            .with_value(|id| Id::derived(format_args!("{id}-tabpanel-{}", key.id_fragment())))
     }
 
     /// The tab list's collection id (`data-collection` on the list and its tabs), set by
     /// `use_tab_list`.
-    pub(crate) fn collection_id(&self) -> Option<String> {
+    pub(crate) fn collection_id(&self) -> Option<Id> {
         self.collection_id.get_value()
     }
 
-    pub(crate) fn set_collection_id(&self, collection_id: String) {
+    pub(crate) fn set_collection_id(&self, collection_id: Id) {
         self.collection_id.set_value(Some(collection_id));
     }
 
     /// The base of the tab and panel ids (the tab list's id).
-    pub(crate) fn id(&self) -> String {
+    pub(crate) fn id(&self) -> Id {
         self.id.get_value()
     }
 }

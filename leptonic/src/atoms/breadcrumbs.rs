@@ -6,15 +6,14 @@ use leptos_classes::Classes;
 
 use super::link::{CurrentMatch, LinkContext};
 use crate::{
-    IntoAttrs,
     hooks::{
         breadcrumbs::{UseBreadcrumbsInput, use_breadcrumbs},
         collections::Key,
         interactions::PressEvent,
     },
     utils::{
-        aria::AriaCurrent, data_attributes::flag, default_class::with_default_class, id::use_id,
-        styles::Styles,
+        aria::AriaCurrent, data_attributes::data_flags, default_class::with_default_class,
+        id::use_id, styles::Styles,
     },
 };
 
@@ -81,10 +80,10 @@ pub fn Breadcrumbs(
     };
     view! {
         <ol
-            {..breadcrumbs.props.into_attrs()}
+            {..breadcrumbs.breadcrumbs.attrs()}
             class=classes
-            style=styles
-            data-disabled=flag(is_disabled)
+            style={styles}
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             <Provider value=context>{children()}</Provider>
         </ol>
@@ -131,9 +130,11 @@ pub fn Breadcrumb(
     view! {
         <li
             class=classes
-            style=styles
-            data-current=flag(is_current)
-            data-disabled=flag(is_disabled)
+            style={styles}
+            {..data_flags([
+                ("data-current", is_current),
+                ("data-disabled", is_disabled),
+            ])}
         >
             <Provider value=link>{children()}</Provider>
         </li>

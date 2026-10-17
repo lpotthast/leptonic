@@ -4,7 +4,6 @@
 use leptos::prelude::*;
 
 use crate::{
-    IdRefs,
     hooks::{
         button::use_button::UseButtonInput,
         collections::Key,
@@ -48,7 +47,7 @@ pub struct UseTreeItemInput {
     pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
-/// Return value of [`use_tree_item`].
+/// The return value of [`use_tree_item`].
 pub struct UseTreeItemReturn {
     pub item: UseGridListItemReturn,
     /// The expand/collapse button's configuration, for `use_button` (render it for items with
@@ -109,12 +108,10 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
                 strings.expand()
             })
         }),
-        aria_labelledby: Signal::stored(
-            [&button_id, &row_id]
-                .into_iter()
-                .collect::<IdRefs>()
-                .into_value(),
-        ),
+        aria_labelledby: Signal::stored(crate::utils::id::join_ids([
+            Some(button_id.clone()),
+            Some(row_id.clone()),
+        ])),
         exclude_from_tab_order: Signal::stored(true),
         prevent_focus_on_press: true.into(),
         on_press: Some(Callback::new(move |_: PressEvent| {
@@ -127,7 +124,40 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
             selection.set_focused(true);
             selection.set_focused_key(Some(key.get_value()), None);
         })),
-        ..UseButtonInput::default()
+        element_type: crate::hooks::button::ButtonElementType::Button,
+        button_type: crate::hooks::button::ButtonType::Button,
+        is_disabled: Signal::stored(false),
+        is_pending: Signal::stored(false),
+        allow_focus_when_disabled: Signal::stored(false),
+        auto_focus: false,
+        href: Signal::stored(None),
+        target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+        rel: Vec::new(),
+        form: crate::hooks::button::ButtonFormAttributes::default(),
+        aria_haspopup: Signal::stored(None),
+        aria_expanded: Signal::stored(None),
+        aria_controls: Signal::stored(None),
+        aria_describedby: Signal::stored(None),
+        aria_pressed: Signal::stored(None),
+        aria_checked: Signal::stored(None),
+        role: None,
+        aria_current: Signal::stored(None),
+        aria_disabled: Signal::stored(None),
+        on_press_start: None,
+        on_press_end: None,
+        on_press_up: None,
+        on_press_change: None,
+        long_press: None,
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
+        on_context_menu: None,
     };
 
     UseTreeItemReturn {

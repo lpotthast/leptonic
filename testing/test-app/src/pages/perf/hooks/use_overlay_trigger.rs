@@ -4,10 +4,7 @@
 //! the hook only describes the trigger), mounted at first, closed. The open state is the app's. Its
 //! controls ([`Control`]) mount and unmount it, and open and close the overlay.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::overlay::{OverlayTriggerType, UseOverlayTriggerInput, use_overlay_trigger},
-};
+use leptonic::hooks::overlay::{OverlayTriggerType, UseOverlayTriggerInput, use_overlay_trigger};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -36,11 +33,11 @@ pub fn PagePerf() -> impl IntoView {
 fn Subject(open: Signal<bool>) -> impl IntoView {
     let trigger = use_overlay_trigger(UseOverlayTriggerInput {
         is_open: open,
-        overlay_id: "perf-overlay".to_owned(),
+        overlay_id: "perf-overlay".into(),
         overlay_type: OverlayTriggerType::Menu,
     });
     view! {
-        <button id="perf-trigger" {..trigger.props.into_attrs()}>
+        <button id="perf-trigger" {..trigger.trigger.attrs()}>
             "Menu"
         </button>
     }

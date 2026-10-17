@@ -4,10 +4,7 @@
 //! outside that start and complete. Its controls ([`Control`]) mount and unmount it, disable and
 //! enable it, and read the counts (`starts`, `interactions`).
 
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{UseInteractOutsideInput, use_interact_outside},
-};
+use leptonic::hooks::interactions::{UseInteractOutsideInput, use_interact_outside};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -67,7 +64,7 @@ fn Inside(inputs: Inputs) -> impl IntoView {
         element: None,
     });
     view! {
-        <div id="perf-inside" {..outside.props.into_attrs()}>
+        <div id="perf-inside" {..outside.target.attrs()}>
             <button id="perf-inner">"Inside"</button>
         </div>
     }

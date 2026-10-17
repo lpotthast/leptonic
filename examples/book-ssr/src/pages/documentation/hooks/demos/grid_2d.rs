@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         collections::{
             CollectionOptions, Key, Selection, SelectionMode, SelectionOptions, use_collection,
@@ -76,7 +76,7 @@ pub fn Grid2dDemo() -> impl IntoView {
         focus_mode: GridFocusMode::Row,
     });
     // The cells have an action, so presses on a cell run it; palettes are selected on the row.
-    let UseGridReturn { props, data } = use_grid(UseGridInput {
+    let UseGridReturn { grid, data } = use_grid(UseGridInput {
         aria_label: "Color palettes".into(),
         on_cell_action: Some(Callback::new(move |key: Key| {
             activated.set(collection.with(|c| c.get(&key).map(|node| node.text_value.to_string())));
@@ -108,8 +108,8 @@ pub fn Grid2dDemo() -> impl IntoView {
     };
 
     view! {
-        <div {..props.into_attrs()}>
-            <div {..row_group.row_group_props.into_attrs()} class="demo-palette-grid">
+        <div {..grid.attrs()}>
+            <div {..row_group.row_group.attrs()} class="demo-palette-grid">
                 {PALETTES.map(|(palette, colors)| view! { <PaletteRow grid=data.clone() palette colors/> }).collect_view()}
             </div>
         </div>
@@ -126,7 +126,7 @@ fn PaletteRow(grid: GridData, palette: &'static str, colors: [Color; 3]) -> impl
         key: row_key.clone(),
         on_context_menu: None,
     });
-    let (row_attrs, row_styles) = row.row_props.into_parts();
+    let (row_attrs, row_styles) = row.row.attrs();
     let name = use_grid_cell(UseGridCellInput {
         grid: grid.clone(),
         key: Key::cell(&row_key, 0),
@@ -135,7 +135,7 @@ fn PaletteRow(grid: GridData, palette: &'static str, colors: [Color; 3]) -> impl
         allows_arrow_navigation: false,
         should_select_on_press_up: false,
     });
-    let (name_attrs, name_styles) = name.grid_cell_props.into_parts();
+    let (name_attrs, name_styles) = name.cell.attrs();
 
     view! {
         <div {..row_attrs} class="demo-palette-row" style=row_styles>
@@ -162,7 +162,7 @@ fn Swatch(grid: GridData, key: Key, name: &'static str, color: CssColor) -> impl
         allows_arrow_navigation: false,
         should_select_on_press_up: false,
     });
-    let (attrs, styles) = cell.grid_cell_props.into_parts();
+    let (attrs, styles) = cell.cell.attrs();
     // The color is per-cell data; everything else lives in `.demo-palette-cell`.
     let styles = styles.add(BackgroundColorProperty.declare(color));
 

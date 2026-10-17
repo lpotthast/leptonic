@@ -1,9 +1,8 @@
 // Upstream: react-aria/src/toggle/useToggle.ts @ 99e6102368
 // Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
     ev,
+    oco::Oco,
     prelude::*,
     tachys::html::property::{Property, prop},
 };
@@ -20,7 +19,8 @@ use super::{
     use_toggle_state::ToggleState,
 };
 use crate::{
-    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
+    ElementCaptureAttr, EventHandler, Id, IdRefs, IntoAttrs, OnEvent, Part, PropsWithStyles,
+    SlotProps,
     hooks::{
         focus::{
             FocusRingTarget, FocusableContextAttr, FocusableContextAttrs, UseFocusRingInput,
@@ -33,7 +33,10 @@ use crate::{
         aria::{AriaInvalid, AriaReadonly, AriaRequired, AriaRole, aria_true},
         dom_ext::EventAccessors,
         pointer_type::PointerType,
+        probe::either,
         propagation_control::Propagation,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        spread::Spread,
     },
 };
 
@@ -42,6 +45,10 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
+// - `role: ToggleRole` (the input's role: checkbox or switch). React-aria's `useToggle` has none:
+//   `useSwitch` adds `role: 'switch'` to its returned `inputProps`.
+// - `validation: Option<FormValidationState>`, the validation of a checkbox group's item, is an
+//   input field (react-aria: the private `privateValidationStateProp` prop).
 // - The settings shared by all toggles (checkbox, switch, group items) are one
 //   `ToggleOptions` struct, so they aren't repeated per hook.
 // - `checked` is set as a DOM property (and re-synced after a rejected change, e.g. while
@@ -66,7 +73,7 @@ use crate::{
 #[derive(Clone)]
 pub struct ToggleOptions {
     /// The input's id.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub is_disabled: Signal<bool>,
     /// While `true`, the toggle can be focused but not changed.
     pub is_read_only: Signal<bool>,
@@ -82,11 +89,11 @@ pub struct ToggleOptions {
     /// The value submitted with the form while selected (the browser submits `on` otherwise).
     pub value: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_errormessage: Signal<Option<Id>>,
     /// The element the toggle controls.
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     pub auto_focus: bool,
     pub exclude_from_tab_order: Signal<bool>,
     pub on_focus: Option<Callback<FocusEvent>>,
@@ -141,10 +148,39 @@ impl std::fmt::Debug for ToggleOptions {
     }
 }
 
+/// The role of a toggle's `<input type="checkbox">`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ToggleRole {
+    /// A checkbox: the input's native role (no `role` attribute).
+    #[default]
+    Checkbox,
+    /// A switch (`role="switch"`): on or off, like a light switch.
+    Switch,
+}
+
+impl ToggleRole {
+    /// The `role` attribute: none for the native checkbox role.
+    fn aria_role(self) -> Option<AriaRole> {
+        match self {
+            Self::Checkbox => None,
+            Self::Switch => Some(AriaRole::Switch),
+        }
+    }
+}
+
 /// Input of [`use_toggle`].
 #[derive(Debug, Clone)]
 pub struct UseToggleInput {
     pub state: ToggleState,
+    /// The input's role. [`use_switch`](fn@super::use_switch) sets `Switch`. Default:
+    /// `Checkbox`.
+    pub role: ToggleRole,
+    /// A validation managed by someone else, used instead of the toggle's own (which
+    /// `options.is_invalid`, `options.validate` and the toggle's name feed): a checkbox group
+    /// item's, which shows the group's errors (see
+    /// [`use_checkbox_group_item`](fn@super::use_checkbox_group_item)). `None`: the toggle
+    /// validates itself.
+    pub validation: Option<FormValidationState>,
     pub options: ToggleOptions,
 }
 
@@ -152,14 +188,14 @@ pub struct UseToggleInput {
 /// [`use_switch`](fn@super::use_switch)).
 #[derive(Debug)]
 pub struct UseToggleReturn {
-    /// Props for the `<label>` wrapping the input: pressing it toggles the input.
-    pub label_props: PropsWithStyles<UseToggleLabelProps>,
-    /// Props for the `<input type="checkbox">`.
-    pub input_props: PropsWithStyles<UseToggleInputProps>,
+    /// The `<label>` wrapping the input: pressing it toggles the input.
+    pub label: Part<PropsWithStyles<UseToggleLabelProps>>,
+    /// The `<input type="checkbox">`.
+    pub input: Part<PropsWithStyles<UseToggleInputProps>>,
     /// Props for the description element.
-    pub description_props: SlotProps,
+    pub description: Part<SlotProps>,
     /// Props for the error message element (render it only while invalid).
-    pub error_message_props: SlotProps,
+    pub error_message: Part<SlotProps>,
     pub is_selected: Signal<bool>,
     /// Whether the input or its label is pressed.
     pub is_pressed: Signal<bool>,
@@ -214,10 +250,10 @@ impl IntoAttrs for UseToggleLabelProps {
 #[derive(Debug)]
 pub struct UseToggleInputProps {
     pub role: Option<AriaRole>,
-    pub id: Option<String>,
-    pub name: Option<String>,
-    pub form: Option<String>,
-    pub value: Option<String>,
+    pub id: Option<Id>,
+    pub name: Option<Oco<'static, str>>,
+    pub form: Option<Oco<'static, str>>,
+    pub value: Option<Oco<'static, str>>,
     pub checked: Signal<bool>,
     /// The `checked` attribute: the initial selection, which a form reset restores.
     pub default_checked: bool,
@@ -229,11 +265,11 @@ pub struct UseToggleInputProps {
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
-    pub aria_errormessage: Signal<Option<String>>,
-    pub aria_controls: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<Id>>,
+    pub aria_controls: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     pub element_capture: ElementCaptureAttr,
     pub on_change: EventHandler<Event>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -253,29 +289,33 @@ pub struct UseToggleInputProps {
 }
 
 pub type UseToggleInputAttrs = (
-    (
-        Attr<attr::Type, &'static str>,
-        Attr<attr::Role, Option<AriaRole>>,
-        Attr<attr::Id, Option<String>>,
-        Attr<attr::Name, Option<String>>,
-        Attr<attr::Form, Option<String>>,
-        Attr<attr::Value, Option<String>>,
-        Property<&'static str, Signal<bool>>,
-        Attr<attr::Checked, bool>,
-        Property<&'static str, Signal<bool>>,
-        Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::Required, Signal<bool>>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
-        Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
-        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-        Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-        Attr<attr::AriaErrormessage, Signal<Option<String>>>,
-        Attr<attr::AriaControls, Signal<Option<String>>>,
-        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-        ElementCaptureAttr,
-    ),
+    Spread<(
+        (
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            FixedAttr,
+            SignalAttr<bool>,
+            SignalAttr<bool>,
+            SignalAttr<Option<i32>>,
+        ),
+        (
+            SignalAttr<Option<AriaRequired>>,
+            SignalAttr<Option<AriaInvalid>>,
+            SignalAttr<Option<AriaReadonly>>,
+            SignalAttr<Option<Id>>,
+            SignalAttr<Option<Id>>,
+            SignalAttr<Option<Id>>,
+            SignalAttr<Option<String>>,
+            SignalAttr<Option<Id>>,
+            ElementCaptureAttr,
+        ),
+    )>,
+    Property<&'static str, Signal<bool>>,
+    Property<&'static str, Signal<bool>>,
     (
         OnEvent<ev::change>,
         OnEvent<ev::focus>,
@@ -299,29 +339,33 @@ impl IntoAttrs for UseToggleInputProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            (
-                Attr(attr::Type, "checkbox"),
-                Attr(attr::Role, self.role),
-                Attr(attr::Id, self.id),
-                Attr(attr::Name, self.name),
-                Attr(attr::Form, self.form),
-                Attr(attr::Value, self.value),
-                prop("checked", self.checked),
-                Attr(attr::Checked, self.default_checked),
-                prop("indeterminate", self.indeterminate),
-                Attr(attr::Disabled, self.disabled),
-                Attr(attr::Required, self.required),
-                Attr(attr::Tabindex, self.tabindex),
-                Attr(attr::AriaRequired, self.aria_required),
-                Attr(attr::AriaInvalid, self.aria_invalid),
-                Attr(attr::AriaReadonly, self.aria_readonly),
-                Attr(attr::AriaErrormessage, self.aria_errormessage),
-                Attr(attr::AriaControls, self.aria_controls),
-                Attr(attr::AriaDescribedby, self.aria_describedby),
-                Attr(attr::AriaLabel, self.aria_label),
-                Attr(attr::AriaLabelledby, self.aria_labelledby),
-                self.element_capture,
-            ),
+            Spread((
+                (
+                    fixed_attr("type", "checkbox"),
+                    fixed_attr("role", self.role),
+                    fixed_attr("id", self.id),
+                    fixed_attr("name", self.name),
+                    fixed_attr("form", self.form),
+                    fixed_attr("value", self.value),
+                    fixed_attr("checked", self.default_checked),
+                    signal_attr("disabled", self.disabled),
+                    signal_attr("required", self.required),
+                    signal_attr("tabindex", self.tabindex),
+                ),
+                (
+                    signal_attr("aria-required", self.aria_required),
+                    signal_attr("aria-invalid", self.aria_invalid),
+                    signal_attr("aria-readonly", self.aria_readonly),
+                    signal_attr("aria-errormessage", self.aria_errormessage),
+                    signal_attr("aria-controls", self.aria_controls),
+                    signal_attr("aria-describedby", self.aria_describedby),
+                    maybe_attr("aria-label", self.aria_label),
+                    signal_attr("aria-labelledby", self.aria_labelledby),
+                    self.element_capture,
+                ),
+            )),
+            prop("checked", self.checked),
+            prop("indeterminate", self.indeterminate),
             (
                 self.on_change.into_on(ev::change),
                 self.on_focus.into_on(ev::focus),
@@ -342,21 +386,22 @@ impl IntoAttrs for UseToggleInputProps {
     }
 }
 
+/// A text attribute value shared by every rendering (cloned without copying).
+fn shared_text(text: String) -> Oco<'static, str> {
+    Oco::Counted(std::sync::Arc::from(text))
+}
+
 /// Provides the behavior and accessibility of a toggle on an `<input type="checkbox">` (the
 /// base of [`use_checkbox`](fn@super::use_checkbox) and [`use_switch`](fn@super::use_switch)).
 pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
     crate::metrics::subject!();
-    use_toggle_with(input, None, None)
-}
-
-/// [`use_toggle`] with an input `role` and, for checkbox group items, the validation to use
-/// instead of the toggle's own (react-aria's `privateValidationStateProp`).
-pub(crate) fn use_toggle_with(
-    input: UseToggleInput,
-    role: Option<AriaRole>,
-    group_validation: Option<FormValidationState>,
-) -> UseToggleReturn {
-    let UseToggleInput { state, options } = input;
+    let UseToggleInput {
+        state,
+        role,
+        validation: group_validation,
+        options,
+    } = input;
+    let role = role.aria_role();
     let ToggleOptions {
         id,
         is_disabled,
@@ -392,11 +437,15 @@ pub(crate) fn use_toggle_with(
         on_focus,
         on_blur,
         on_focus_change,
-        ..UseFocusableInput::default()
+        // Every field named (`performance.md` R14).
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
+        allow_shortcut_repeats: false,
     });
+    let mut focusable_props = focusable.target.into_props();
     let element = focusable.focus_handle.element();
     let focus_handle = focusable.focus_handle;
-    let mut focusable_props = focusable.props;
     let focus_ring = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Element,
         is_disabled,
@@ -405,8 +454,9 @@ pub(crate) fn use_toggle_with(
         on_blur: None,
         on_focus_change: None,
     });
-    focusable_props.on_focus = focusable_props.on_focus.chain(focus_ring.props.on_focus);
-    focusable_props.on_blur = focusable_props.on_blur.chain(focus_ring.props.on_blur);
+    let focus_ring_props = focus_ring.target.into_props();
+    focusable_props.on_focus = focusable_props.on_focus.chain(focus_ring_props.on_focus);
+    focusable_props.on_blur = focusable_props.on_blur.chain(focus_ring_props.on_blur);
 
     let validation_behavior = validation_behavior.unwrap_or_default();
     let validation = group_validation.unwrap_or_else(|| {
@@ -439,9 +489,16 @@ pub(crate) fn use_toggle_with(
         on_press_start,
         on_press_end,
         on_press_change,
-        ..UsePressInput::default()
+        // Every field named (`performance.md` R14).
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        on_double_press: None,
+        long_press: None,
+        prevent_focus_on_press: Signal::stored(false),
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
     });
-    let (press_props, press_styles) = press.props.into_inner();
+    let (press_props, press_styles) = press.target.into_props().into_inner();
 
     // The label: mouse, touch and virtual presses (`label.click()`, assistive technology)
     // toggle the input and focus it; its click must not reach the input as well. Keyboard
@@ -449,7 +506,7 @@ pub(crate) fn use_toggle_with(
     let (is_label_pressed, set_label_pressed) = signal(false);
     let is_native_press = |e: &PressEvent| e.pointer_type == PointerType::Keyboard;
     let label_press = use_press(UsePressInput {
-        is_disabled: Signal::derive(move || is_disabled.get() || is_read_only.get()),
+        is_disabled: either(is_disabled, is_read_only),
         on_press_start: Some(Callback::new(move |e: PressEvent| {
             if is_native_press(&e) {
                 e.continue_propagation();
@@ -497,9 +554,16 @@ pub(crate) fn use_toggle_with(
             focus_handle.focus();
             validation.commit_validation();
         })),
-        ..UsePressInput::default()
+        propagation: crate::hooks::interactions::PressPropagation::Stop,
+        allow_text_selection_on_press: Signal::stored(false),
+        should_cancel_on_pointer_exit: Signal::stored(false),
+        prevent_focus_on_press: Signal::stored(false),
+        force_is_pressed: Signal::stored(false),
+        on_press_change: None,
+        on_double_press: None,
+        long_press: None,
     });
-    let (label_press_props, label_press_styles) = label_press.props.into_inner();
+    let (label_press_props, label_press_styles) = label_press.target.into_props().into_inner();
 
     let on_change = EventHandler::new(move |e: Event| {
         e.stop_propagation();
@@ -532,65 +596,110 @@ pub(crate) fn use_toggle_with(
         Signal::derive(move || validation.display_validation.get().validation_details);
     let native_required = validation_behavior == ValidationBehavior::Native;
 
+    // The label and the input are parts: an atom renders them in its button, which may mount
+    // again (each mount builds fresh props, one element at a time).
+    let label = {
+        let on_keydown = label_press_props.on_keydown;
+        // The label must not forward its click (the press toggled already).
+        let on_click = label_press_props
+            .on_click
+            .chain(EventHandler::new(|e: MouseEvent| e.prevent_default()));
+        let on_pointerdown = label_press_props.on_pointerdown;
+        let on_pointerup = label_press_props.on_pointerup;
+        let on_mousedown = label_press_props.on_mousedown;
+        let on_dragstart = label_press_props.on_dragstart;
+        let on_dblclick = label_press_props.on_dblclick;
+        Part::new(move || {
+            PropsWithStyles::new(
+                UseToggleLabelProps {
+                    on_keydown: on_keydown.clone(),
+                    on_click: on_click.clone(),
+                    on_pointerdown: on_pointerdown.clone(),
+                    on_pointerup: on_pointerup.clone(),
+                    on_mousedown: on_mousedown.clone(),
+                    on_dragstart: on_dragstart.clone(),
+                    on_dblclick: on_dblclick.clone(),
+                },
+                label_press_styles.clone(),
+            )
+        })
+    };
+    let input = {
+        let (checked, default_checked) = (state.is_selected, state.default_selected);
+        let required = Signal::derive(move || native_required && is_required.get());
+        let aria_required = Signal::derive(move || {
+            (!native_required && is_required.get()).then_some(AriaRequired::True)
+        });
+        let aria_invalid = aria_true(is_validation_invalid);
+        let aria_readonly = aria_true(is_read_only);
+        let tabindex = focusable_props.tabindex;
+        let element_capture = focusable_props.element_capture;
+        let on_focus = focusable_props.on_focus;
+        let on_blur = focusable_props.on_blur;
+        let on_focusin = focus_ring_props.on_focusin;
+        let on_focusout = focus_ring_props.on_focusout;
+        let on_keydown = press_props.on_keydown.chain(focusable_props.on_keydown);
+        let on_keyup = focusable_props.on_keyup;
+        let on_click = press_props.on_click;
+        let on_pointerdown = press_props.on_pointerdown;
+        let on_pointerup = press_props.on_pointerup;
+        let on_mousedown = press_props.on_mousedown;
+        let on_dragstart = press_props.on_dragstart;
+        let on_dblclick = press_props.on_dblclick;
+        let context_attrs = focusable_props.context_attrs;
+        // Shared by every mount: one copy of the texts, one stored flag.
+        let name = name.map(shared_text);
+        let form = form.map(shared_text);
+        let value = value.map(shared_text);
+        let indeterminate = Signal::stored(false);
+        Part::new(move || {
+            PropsWithStyles::new(
+                UseToggleInputProps {
+                    role,
+                    id: id.clone(),
+                    name: name.clone(),
+                    form: form.clone(),
+                    value: value.clone(),
+                    checked,
+                    default_checked,
+                    indeterminate,
+                    disabled: is_disabled,
+                    required,
+                    tabindex,
+                    aria_required,
+                    aria_invalid,
+                    aria_readonly,
+                    aria_errormessage,
+                    aria_controls,
+                    aria_describedby,
+                    aria_label,
+                    aria_labelledby,
+                    element_capture: element_capture.clone(),
+                    on_change: on_change.clone(),
+                    on_focus: on_focus.clone(),
+                    on_blur: on_blur.clone(),
+                    on_focusin: on_focusin.clone(),
+                    on_focusout: on_focusout.clone(),
+                    on_keydown: on_keydown.clone(),
+                    on_keyup: on_keyup.clone(),
+                    on_click: on_click.clone(),
+                    on_pointerdown: on_pointerdown.clone(),
+                    on_pointerup: on_pointerup.clone(),
+                    on_mousedown: on_mousedown.clone(),
+                    on_dragstart: on_dragstart.clone(),
+                    on_dblclick: on_dblclick.clone(),
+                    context_attrs: context_attrs.clone(),
+                },
+                press_styles.clone(),
+            )
+        })
+    };
+
     UseToggleReturn {
-        label_props: PropsWithStyles::new(
-            UseToggleLabelProps {
-                on_keydown: label_press_props.on_keydown,
-                // The label must not forward its click (the press toggled already).
-                on_click: label_press_props
-                    .on_click
-                    .chain(EventHandler::new(|e: MouseEvent| e.prevent_default())),
-                on_pointerdown: label_press_props.on_pointerdown,
-                on_pointerup: label_press_props.on_pointerup,
-                on_mousedown: label_press_props.on_mousedown,
-                on_dragstart: label_press_props.on_dragstart,
-                on_dblclick: label_press_props.on_dblclick,
-            },
-            label_press_styles,
-        ),
-        input_props: PropsWithStyles::new(
-            UseToggleInputProps {
-                role,
-                id,
-                name,
-                form,
-                value,
-                checked: state.is_selected,
-                default_checked: state.default_selected,
-                indeterminate: Signal::stored(false),
-                disabled: is_disabled,
-                required: Signal::derive(move || native_required && is_required.get()),
-                tabindex: focusable_props.tabindex,
-                aria_required: Signal::derive(move || {
-                    (!native_required && is_required.get()).then_some(AriaRequired::True)
-                }),
-                aria_invalid: aria_true(is_validation_invalid),
-                aria_readonly: aria_true(is_read_only),
-                aria_errormessage,
-                aria_controls,
-                aria_describedby,
-                aria_label,
-                aria_labelledby,
-                element_capture: focusable_props.element_capture,
-                on_change,
-                on_focus: focusable_props.on_focus,
-                on_blur: focusable_props.on_blur,
-                on_focusin: focus_ring.props.on_focusin,
-                on_focusout: focus_ring.props.on_focusout,
-                on_keydown: press_props.on_keydown.chain(focusable_props.on_keydown),
-                on_keyup: focusable_props.on_keyup,
-                on_click: press_props.on_click,
-                on_pointerdown: press_props.on_pointerdown,
-                on_pointerup: press_props.on_pointerup,
-                on_mousedown: press_props.on_mousedown,
-                on_dragstart: press_props.on_dragstart,
-                on_dblclick: press_props.on_dblclick,
-                context_attrs: focusable_props.context_attrs,
-            },
-            press_styles,
-        ),
-        description_props: description.props,
-        error_message_props: error_message.props,
+        label,
+        input,
+        description: description.part,
+        error_message: error_message.part,
         is_selected: state.is_selected,
         is_pressed: Signal::derive(move || press.is_pressed.get() || is_label_pressed.get()),
         is_disabled,

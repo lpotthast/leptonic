@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -16,8 +15,8 @@ pub fn ProgressBarHookDemo() -> impl IntoView {
     let duration_unknown = RwSignal::new(false);
 
     let UseProgressBarReturn {
-        props,
-        label_props,
+        progress_bar,
+        label,
         percentage,
         value_text,
     } = use_progress_bar(UseProgressBarInput {
@@ -37,10 +36,10 @@ pub fn ProgressBarHookDemo() -> impl IntoView {
     view! {
         <div class="demo-value-bar-container">
             <div class="demo-value-bar-header">
-                <span {..label_props.into_attrs()}>"Loading"</span>
+                <span {..label.attrs()}>"Loading"</span>
                 <span>{value_text}</span>
             </div>
-            <div {..props.into_attrs()} class="demo-value-bar">
+            <div {..progress_bar.attrs()} class="demo-value-bar">
                 <div class="demo-value-bar-fill" style=fill_styles></div>
             </div>
         </div>

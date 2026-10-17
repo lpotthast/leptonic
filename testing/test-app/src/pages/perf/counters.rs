@@ -24,6 +24,8 @@ static ALLOCATOR: Counting = Counting;
 static ALLOCATIONS: AtomicU64 = AtomicU64::new(0);
 static REALLOCATIONS: AtomicU64 = AtomicU64::new(0);
 static ALLOCATED_BYTES: AtomicU64 = AtomicU64::new(0);
+/// The largest allocation since the measurement started (`leptonicCounters.start()`).
+static LARGEST_ALLOCATION: AtomicU64 = AtomicU64::new(0);
 static LIVE_BYTES: AtomicI64 = AtomicI64::new(0);
 
 /// The system allocator, counting allocations, reallocations and bytes.
@@ -67,6 +69,7 @@ unsafe impl GlobalAlloc for Counting {
         let new_pointer = unsafe { System.realloc(pointer, layout, new_size) };
         if !new_pointer.is_null() {
             REALLOCATIONS.fetch_add(1, Ordering::Relaxed);
+            LARGEST_ALLOCATION.fetch_max(new_size as u64, Ordering::Relaxed);
             ALLOCATED_BYTES.fetch_add(
                 new_size.saturating_sub(layout.size()) as u64,
                 Ordering::Relaxed,
@@ -80,6 +83,7 @@ unsafe impl GlobalAlloc for Counting {
 fn counted_allocation(size: usize) {
     ALLOCATIONS.fetch_add(1, Ordering::Relaxed);
     ALLOCATED_BYTES.fetch_add(size as u64, Ordering::Relaxed);
+    LARGEST_ALLOCATION.fetch_max(size as u64, Ordering::Relaxed);
     LIVE_BYTES.fetch_add(bytes(size), Ordering::Relaxed);
 }
 
@@ -92,6 +96,8 @@ pub struct Counters {
     reallocations: u64,
     /// Bytes requested by allocations, plus what reallocations grew by.
     allocated_bytes: u64,
+    /// The largest allocation since the measurement started.
+    largest_allocation: u64,
     /// Bytes allocated and not freed.
     live_bytes: i64,
     reactive: Metrics,
@@ -104,6 +110,7 @@ impl Counters {
             allocations: ALLOCATIONS.load(Ordering::Relaxed),
             reallocations: REALLOCATIONS.load(Ordering::Relaxed),
             allocated_bytes: ALLOCATED_BYTES.load(Ordering::Relaxed),
+            largest_allocation: LARGEST_ALLOCATION.load(Ordering::Relaxed),
             live_bytes: LIVE_BYTES.load(Ordering::Relaxed),
             reactive: metrics::snapshot(),
         }
@@ -139,6 +146,7 @@ impl Counters {
             Metric::Allocations => count(self.allocations - start.allocations),
             Metric::Reallocations => count(self.reallocations - start.reallocations),
             Metric::AllocatedBytes => count(self.allocated_bytes - start.allocated_bytes),
+            Metric::LargestAllocation => count(self.largest_allocation),
             Metric::RetainedBytes => Some(self.live_bytes - start.live_bytes),
             Metric::MemoRuns => count(reactive.memo_runs),
             Metric::MemoRunsUnchanged => count(reactive.memo_runs_unchanged),
@@ -175,7 +183,8 @@ thread_local! {
 
 /// Registers `window.leptonicCounters` for the browser tests' measurements (`Page::measure` in
 /// `leptonic/tests`), for as long as the page lives:
-/// - `start()`: a measurement starts; remembers the counters. Allocates nothing.
+/// - `start()`: a measurement starts; remembers the counters (and resets the largest
+///   allocation). Allocates nothing.
 /// - `activity()`: a number that grows whenever the app works ([`Counters::activity`]), to tell
 ///   when the page is idle. Allocates nothing.
 /// - `since()`: the app's metrics since `start()` as JSON, `{<metric name>: value}`
@@ -184,7 +193,10 @@ thread_local! {
 ///   (`leptonic::metrics::ran`), by id: `hooks/use_press`, `atoms/button`.
 pub fn register() {
     let counters = js_sys::Object::new();
-    let start = Closure::<dyn Fn()>::new(|| START.set(Some(Counters::now())));
+    let start = Closure::<dyn Fn()>::new(|| {
+        LARGEST_ALLOCATION.store(0, Ordering::Relaxed);
+        START.set(Some(Counters::now()));
+    });
     let activity = Closure::<dyn Fn() -> f64>::new(|| Counters::now().activity());
     let since = Closure::<dyn Fn() -> String>::new(|| {
         let end = Counters::now();

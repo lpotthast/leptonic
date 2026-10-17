@@ -4,16 +4,12 @@
 // Upstream: react-aria-components/test/FieldError.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    either::{Either, EitherOf3},
-    ev,
-    prelude::*,
-};
+use leptos::{either::Either, ev, prelude::*};
 use leptos_classes::Classes;
 use web_sys::MouseEvent;
 
 use crate::{
-    CapturedElement, EventHandler, IntoAttrs, SlotProps,
+    CapturedElement, EventHandler, IntoAttrs, Part, SlotProps,
     hooks::form::{LabelElementType, UseLabelProps, ValidationResult, ValidityStateSnapshot},
     use_slot,
     utils::{
@@ -43,10 +39,10 @@ use crate::{
 /// provide it to use these parts.
 #[derive(Debug, Clone)]
 pub struct FieldContext {
-    /// `description_props` of the field's hook.
-    pub description: SlotProps,
-    /// `error_message_props` of the field's hook.
-    pub error_message: SlotProps,
+    /// The `description` of the field's hook.
+    pub description: Part<SlotProps>,
+    /// The `error_message` of the field's hook.
+    pub error_message: Part<SlotProps>,
     pub is_invalid: Signal<bool>,
     pub validation_errors: Signal<Vec<String>>,
     pub validation_details: Signal<ValidityStateSnapshot>,
@@ -59,8 +55,8 @@ pub type FieldErrorMessage = Arc<dyn Fn(&ValidationResult) -> Option<String> + S
 /// the label is rendered.
 #[derive(Debug, Clone)]
 pub struct LabelContext {
-    /// The attributes of the field hook's `label_props`.
-    attrs: <UseLabelProps as IntoAttrs>::Attrs,
+    /// The field hook's `label_props`, for the one rendered label.
+    label: Part<UseLabelProps>,
     /// The element the label is rendered as (`Span` for fields a `<label>` can't label: groups,
     /// select triggers).
     pub element_type: LabelElementType,
@@ -74,10 +70,10 @@ pub struct LabelContext {
 }
 
 impl LabelContext {
-    /// A `<label>` labelling its field natively.
-    pub fn label(props: UseLabelProps) -> Self {
+    /// A `<label>` labelling its field natively (`label`: the field hook's label part).
+    pub fn label(label: Part<UseLabelProps>) -> Self {
         Self {
-            attrs: props.into_attrs(),
+            label,
             element_type: LabelElementType::Label,
             on_click: EventHandler::empty(),
             element: CapturedElement::new(),
@@ -86,9 +82,9 @@ impl LabelContext {
     }
 
     /// A `<span>`, for fields a `<label>` can't label.
-    pub fn span(props: UseLabelProps) -> Self {
+    pub fn span(label: Part<UseLabelProps>) -> Self {
         Self {
-            attrs: props.into_attrs(),
+            label,
             element_type: LabelElementType::Span,
             on_click: EventHandler::empty(),
             element: CapturedElement::new(),
@@ -98,7 +94,7 @@ impl LabelContext {
 
     /// Reports the rendered label to `presence`.
     #[must_use]
-    pub(crate) fn with_presence(self, presence: LabelPresence) -> Self {
+    pub fn with_presence(self, presence: LabelPresence) -> Self {
         Self {
             element: presence.element,
             ..self
@@ -125,14 +121,23 @@ impl LabelContext {
 /// `useSlot`). Until mounted, it guesses from the atom's ARIA props (a label is expected without
 /// `aria-label` and `aria-labelledby`), so server-rendered HTML references a likely label; then it
 /// follows the rendered label.
+///
+/// ```ignore
+/// let label_presence = LabelPresence::new(aria_label, aria_labelledby);
+/// let field = use_text_field(UseTextFieldInput { has_label: label_presence.has_label, .. });
+/// provide_context(LabelContext::label(field.label).with_presence(label_presence));
+/// ```
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct LabelPresence {
+pub struct LabelPresence {
+    /// Whether the atom has a visible label: its hook's `has_label`.
     pub has_label: Signal<bool>,
     element: CapturedElement,
 }
 
 impl LabelPresence {
-    pub(crate) fn new(aria_label: MaybeProp<String>, aria_labelledby: MaybeProp<String>) -> Self {
+    /// Follows the label of an atom with these ARIA props.
+    #[must_use]
+    pub fn new(aria_label: MaybeProp<String>, aria_labelledby: MaybeProp<String>) -> Self {
         let guess = aria_label.with_untracked(Option::is_none)
             && aria_labelledby.with_untracked(Option::is_none);
         let element = CapturedElement::new();
@@ -180,30 +185,38 @@ pub fn Label(
         Some(children) => Either::Left(children()),
         None => Either::Right(default_text),
     };
-    match context {
+    // A second label of one field gets no props (`Part`): a plain element.
+    let (element_type, attrs) = match context {
         Some(LabelContext {
-            attrs,
-            element_type: LabelElementType::Span,
+            label,
+            element_type,
             on_click,
             element,
             ..
-        }) => EitherOf3::A(view! {
-            <span {..attrs} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
+        }) => (
+            element_type,
+            label.props().map(|props| {
+                (
+                    props.into_attrs(),
+                    on_click.into_on(ev::click),
+                    element.attr(),
+                )
+            }),
+        ),
+        None => (LabelElementType::Label, None),
+    };
+    let attrs = attrs.map_or(Either::Right(()), Either::Left);
+    match element_type {
+        LabelElementType::Span => Either::Left(view! {
+            <span {..attrs} class=classes style=styles>
                 {children()}
             </span>
         }),
-        Some(LabelContext {
-            attrs,
-            element_type: LabelElementType::Label,
-            on_click,
-            element,
-            ..
-        }) => EitherOf3::B(view! {
-            <label {..attrs} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
+        LabelElementType::Label => Either::Right(view! {
+            <label {..attrs} class=classes style=styles>
                 {children()}
             </label>
         }),
-        None => EitherOf3::C(view! { <label class=classes style=styles>{children()}</label> }),
     }
 }
 
@@ -226,9 +239,10 @@ pub fn Description(
             dev_warn!(
                 "A <Description> describes nothing outside a field (TextField, Checkbox, ...)."
             );
-            use_slot("description").props
+            use_slot("description").part.props()
         },
-        |ctx| ctx.description,
+        // A second description of one field gets no props (`Part`).
+        |ctx| ctx.description.props(),
     );
     text(element, props, classes, styles, children())
 }
@@ -291,7 +305,7 @@ pub fn FieldError(
             };
             text(
                 element,
-                error_message.clone(),
+                error_message.props(),
                 classes.clone(),
                 styles.clone(),
                 content,
@@ -302,12 +316,14 @@ pub fn FieldError(
 
 fn text(
     element: TextElement,
-    props: SlotProps,
+    props: Option<SlotProps>,
     classes: Classes,
     styles: Styles,
     children: AnyView,
 ) -> impl IntoView {
-    let attrs = props.into_attrs();
+    let attrs = props
+        .map(IntoAttrs::into_attrs)
+        .map_or(Either::Right(()), Either::Left);
     match element {
         TextElement::Span => Either::Left(view! {
             <span {..attrs} class=classes style=styles>{children}</span>

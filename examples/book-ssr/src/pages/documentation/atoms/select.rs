@@ -189,6 +189,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                             "The options, from "<Code inline=true>"use_collection"</Code>" or "
                             <Code inline=true>"use_list_collection"</Code>". Required."
                         </ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The trigger\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="default_value" ty="S" default="S::default()">
                             "The initially selected value: "<Code inline=true>"None"</Code>" or an empty "<Code inline=true>"Vec"</Code>
                             " by default. Resetting the form restores it."

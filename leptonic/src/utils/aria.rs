@@ -81,6 +81,14 @@ macro_rules! impl_attribute_value_via_str {
                 std::future::ready(self)
             }
         }
+
+        impl crate::utils::signal_attr::ToAttrText for $name {
+            fn to_attr_text(&self) -> crate::utils::signal_attr::AttrText {
+                crate::utils::signal_attr::AttrText::Text(leptos::oco::Oco::Borrowed(
+                    self.into_str(),
+                ))
+            }
+        }
     };
 }
 

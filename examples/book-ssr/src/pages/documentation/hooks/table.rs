@@ -371,11 +371,11 @@ fn TableStateSections() -> impl IntoView {
                 <p>"Pass a "<Code inline=true>"UseTableInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseTableInput">
                     <ApiRow name="state" ty="TableState">"From "<Code inline=true>"use_table_state"</Code>"."</ApiRow>
-                    <ApiRow name="element" ty="CapturedElement">"The table element. The props capture it."</ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">
+                    <ApiRow name="element" ty="CapturedElement">"The table element. The part captures it."</ApiRow>
+                    <ApiRow name="id" ty="Option<Id>" default="None">
                         "The element id; cell and column header ids derive from it. Generated when "<Code inline=true>"None"</Code>"."
                     </ApiRow>
-                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<String>>" default="None">"Names the table."</ApiRow>
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Signal<Option<Id>>" default="None">"Names the table."</ApiRow>
                     <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                         "Replaces the table navigation ("
                         <Link href=format!("{}#use-table-keyboard-delegate", routes::doc::CollectionState.materialize())>"use_table_keyboard_delegate"</Link>")."
@@ -396,7 +396,7 @@ fn TableStateSections() -> impl IntoView {
 
             <Section title="Return" id="use-table-return">
                 <ApiTable kind=ApiKind::Return of="UseTableReturn">
-                    <ApiRow name="props" ty="UseGridProps">
+                    <ApiRow name="table" ty="Part<UseGridProps>">
                         "For the "<Code inline=true>"<table>"</Code>": id, "<Code inline=true>"role=\"grid\""</Code>", label, "
                         <Code inline=true>"aria-multiselectable"</Code>", the "<Code inline=true>"aria-describedby"</Code>" of the sort "
                         "description (\u{201c}sorted by column Type in ascending order\u{201d}), keyboard and focus handling. "
@@ -412,7 +412,7 @@ fn TableStateSections() -> impl IntoView {
             <Section title="Example" id="use-table-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        let UseTableReturn { props, data } = use_table(UseTableInput {
+                        let UseTableReturn { table, data } = use_table(UseTableInput {
                             state,
                             element: CapturedElement::new(),
                             id: None,
@@ -427,9 +427,9 @@ fn TableStateSections() -> impl IntoView {
                         });
 
                         view! {
-                            <table {..props.into_attrs()}>
-                                <thead {..use_grid_row_group().row_group_props.into_attrs()}>/* header rows */</thead>
-                                <tbody {..use_grid_row_group().row_group_props.into_attrs()}>/* body rows */</tbody>
+                            <table {..table.attrs()}>
+                                <thead {..use_grid_row_group().row_group.attrs()}>/* header rows */</thead>
+                                <tbody {..use_grid_row_group().row_group.attrs()}>/* body rows */</tbody>
                             </table>
                         }
                     "#)}
@@ -444,7 +444,7 @@ fn TableHeaderSections() -> impl IntoView {
     view! {
         <Section title="use_table_header_row">
             <p>
-                "Returns the props of a header row ("<Code inline=true>"role=\"row\""</Code>"). Render one per key in "
+                "Returns the part of a header row ("<Code inline=true>"role=\"row\""</Code>"). Render one per key in "
                 <Code inline=true>"table.header_rows()"</Code>"; its children in the collection are the column headers "
                 "and placeholders of that row. A table without column groups has one header row."
             </p>
@@ -454,13 +454,13 @@ fn TableHeaderSections() -> impl IntoView {
                         t.collection().children(&row).map(|cell| (cell.key.clone(), cell.kind)).collect()
                     });
                     view! {
-                        <tr {..use_table_header_row().into_attrs()}>
+                        <tr {..use_table_header_row().attrs()}>
                             {cells.into_iter().map(|(key, kind)| match kind {
                                 NodeKind::Placeholder => view! {
                                     <th {..use_table_header_placeholder(UseTableHeaderPlaceholderInput {
                                         table: data.clone(),
                                         key,
-                                    }).into_attrs()}></th>
+                                    }).attrs()}></th>
                                 }.into_any(),
                                 _ => view! { <ColumnHeader table=data.clone() column=key/> }.into_any(),
                             }).collect_view()}
@@ -475,7 +475,7 @@ fn TableHeaderSections() -> impl IntoView {
                 "With column groups, a header row has empty cells above the columns that aren\u{2019}t in a group of that "
                 "level (adjacent ones are merged). "<Code inline=true>"use_table_header_placeholder"</Code>" takes a "
                 <Code inline=true>"UseTableHeaderPlaceholderInput { table, key }"</Code>" (the table data and the "
-                "placeholder\u{2019}s key) and returns their props: "<Code inline=true>"role=\"gridcell\""</Code>", "<Code inline=true>"aria-colindex"</Code>
+                "placeholder\u{2019}s key) and returns their part: "<Code inline=true>"role=\"gridcell\""</Code>", "<Code inline=true>"aria-colindex"</Code>
                 ", and "<Code inline=true>"aria-colspan"</Code>" with "<Code inline=true>"colspan"</Code>" when they span "
                 "several columns. Placeholders can\u{2019}t be focused."
             </p>
@@ -502,7 +502,7 @@ fn TableHeaderSections() -> impl IntoView {
 
             <Section title="Return" id="use-table-column-header-return">
                 <ApiTable kind=ApiKind::Return of="UseTableColumnHeaderReturn">
-                    <ApiRow name="column_header_props" ty="PropsWithStyles<UseTableColumnHeaderProps>">
+                    <ApiRow name="column_header" ty="Part<PropsWithStyles<UseTableColumnHeaderProps>>">
                         "For the "<Code inline=true>"<th>"</Code>": "<Code inline=true>"role=\"columnheader\""</Code>", "
                         <Code inline=true>"aria-colindex"</Code>", "<Code inline=true>"colspan"</Code>" for groups, "
                         <Code inline=true>"aria-sort"</Code>" ("<Code inline=true>"none"</Code>", "
@@ -521,7 +521,7 @@ fn TableHeaderSections() -> impl IntoView {
                             key: column,
                             allows_arrow_navigation: false,
                         });
-                        let (attrs, styles) = header.column_header_props.into_parts();
+                        let (attrs, styles) = header.column_header.attrs();
                         view! { <th {..attrs} style=styles>{text}</th> }
                     ")}
                 </Code>
@@ -551,7 +551,7 @@ fn TableBodySections() -> impl IntoView {
 
             <Section title="Return" id="use-table-row-return">
                 <ApiTable kind=ApiKind::Return of="UseTableRowReturn">
-                    <ApiRow name="row_props" ty="PropsWithStyles<UseTableRowProps>">
+                    <ApiRow name="row" ty="Part<PropsWithStyles<UseTableRowProps>>">
                         "For the "<Code inline=true>"<tr>"</Code>": "<Code inline=true>"role=\"row\""</Code>", "
                         <Code inline=true>"aria-selected"</Code>" (when the table allows selection), "
                         <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"aria-labelledby"</Code>
@@ -579,7 +579,7 @@ fn TableBodySections() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r"
                         let row = use_table_row(UseTableRowInput { table: data.clone(), key: key.clone(), on_context_menu: None });
-                        let (attrs, styles) = row.row_props.into_parts();
+                        let (attrs, styles) = row.row.attrs();
                         view! {
                             <tr {..attrs} style=styles>
                                 <Cell table=data.clone() key=Key::cell(&key, 0)>{person.name}</Cell>
@@ -595,7 +595,7 @@ fn TableBodySections() -> impl IntoView {
                     "With "<Code inline=true>"UseTableStateInput.tree"</Code>" set, the state\u{2019}s "
                     <Code inline=true>"table"</Code>" holds every row and "<Code inline=true>"grid.list.collection"</Code>
                     " the visible ones: render the visible rows, or all of them with the others "<Code inline=true>"hidden"</Code>
-                    ". The row props then carry "<Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-level"</Code>
+                    ". The rows\u{2019} parts then carry "<Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-level"</Code>
                     ", "<Code inline=true>"aria-posinset"</Code>" and "<Code inline=true>"aria-setsize"</Code>", and handle "
                     <Keys keys="ArrowRight"/>" and "<Keys keys="ArrowLeft"/>" on a focused row (expand, collapse, to the parent). "
                     "In the tree column\u{2019}s cell ("<Code inline=true>"state.tree"</Code>"\u{2019}s "
@@ -633,7 +633,7 @@ fn TableBodySections() -> impl IntoView {
 
             <Section title="Return" id="use-table-cell-return">
                 <ApiTable kind=ApiKind::Return of="UseTableCellReturn">
-                    <ApiRow name="grid_cell_props" ty="PropsWithStyles<UseGridCellProps>">
+                    <ApiRow name="cell" ty="Part<PropsWithStyles<UseGridCellProps>>">
                         "For the "<Code inline=true>"<td>"</Code>": "<Code inline=true>"role=\"gridcell\""</Code>" or "
                         <Code inline=true>"\"rowheader\""</Code>", the id of a row header cell, focus and press handling."
                     </ApiRow>
@@ -653,7 +653,7 @@ fn TableBodySections() -> impl IntoView {
                                 allows_arrow_navigation: false,
                                 should_select_on_press_up: false,
                             });
-                            let (attrs, styles) = cell.grid_cell_props.into_parts();
+                            let (attrs, styles) = cell.cell.attrs();
                             view! { <td {..attrs} style=styles>{children()}</td> }
                         }
                     ")}
@@ -676,7 +676,7 @@ fn TableBodySections() -> impl IntoView {
                         table: data.clone(),
                         key: key.clone(),
                     }));
-                    let (attrs, styles) = checkbox.input_props.into_parts();
+                    let (attrs, styles) = checkbox.input.attrs();
                     view! {
                         <Cell table=data.clone() key=Key::cell(&key, 0)>
                             <input {..attrs} style=styles/>
@@ -863,7 +863,7 @@ fn TableResizingSections() -> impl IntoView {
                             key: column.clone(),
                             allows_arrow_navigation: false,
                         });
-                        let (attrs, styles) = header.column_header_props.into_parts();
+                        let (attrs, styles) = header.column_header.attrs();
                         let width = move || WidthProperty.declare(pixels(resize.column_width(&column)));
                         view! { <th {..attrs} style=styles.add_reactive(width)>{text}</th> }
                     ")}
@@ -899,7 +899,7 @@ fn TableResizingSections() -> impl IntoView {
                         "The input\u{2019}s label, e.g. \u{201c}Resizer\u{201d}. Its "<Code inline=true>"aria-labelledby"</Code>" adds the column "
                         "header: \u{201c}Resizer Name\u{201d}."
                     </ApiRow>
-                    <ApiRow name="element" ty="CapturedElement">"The range input. The input props capture it."</ApiRow>
+                    <ApiRow name="element" ty="CapturedElement">"The range input. The "<Code inline=true>"input"</Code>" part captures it."</ApiRow>
                     <ApiRow name="trigger" ty="Option<CapturedElement>" default="None">
                         "The element resizing starts from, e.g. the column header. It gets the focus back when resizing "
                         "ends, unless the input had it when resizing started. Without a trigger, keyboard and screen reader "
@@ -918,11 +918,11 @@ fn TableResizingSections() -> impl IntoView {
 
             <Section title="Return" id="use-table-column-resize-return">
                 <ApiTable kind=ApiKind::Return of="UseTableColumnResizeReturn">
-                    <ApiRow name="resizer_props" ty="PropsWithStyles<UseTableColumnResizerProps>">
+                    <ApiRow name="resizer" ty="Part<PropsWithStyles<UseTableColumnResizerProps>>">
                         "For the resizer element (give it "<Code inline=true>"role=\"presentation\""</Code>"): pointer, "
                         "press and keyboard handling, and "<Code inline=true>"touch-action: none"</Code>"."
                     </ApiRow>
-                    <ApiRow name="input_props" ty="PropsWithStyles<UseTableColumnResizeInputProps>">
+                    <ApiRow name="input" ty="Part<PropsWithStyles<UseTableColumnResizeInputProps>>">
                         "For the "<Code inline=true>"<input>"</Code>": "<Code inline=true>"type=\"range\""</Code>" with the "
                         "column\u{2019}s width as "<Code inline=true>"value"</Code>" and its bounds as "
                         <Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>" (whole pixels), "
@@ -952,8 +952,8 @@ fn TableResizingSections() -> impl IntoView {
                             on_resize_end: None,
                         });
 
-                        let (attrs, styles) = resizer.resizer_props.into_parts();
-                        let (input_attrs, input_styles) = resizer.input_props.into_parts();
+                        let (attrs, styles) = resizer.resizer.attrs();
+                        let (input_attrs, input_styles) = resizer.input.attrs();
                         view! {
                             <div role="presentation" {..attrs} style=styles class="resizer">
                                 <input {..input_attrs} style=input_styles/>

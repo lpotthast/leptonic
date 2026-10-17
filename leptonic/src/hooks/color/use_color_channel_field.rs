@@ -6,6 +6,7 @@ use web_sys::FocusEvent;
 
 use super::use_color_channel_field_state::ColorChannelFieldState;
 use crate::{
+    Id,
     hooks::{
         form::{UseNumberFieldInput, UseNumberFieldReturn, use_number_field},
         interactions::KeyboardEventWrapper,
@@ -28,13 +29,13 @@ use crate::{
 pub struct UseColorChannelFieldInput<C: ColorValue> {
     pub state: ColorChannelFieldState<C>,
     /// The input's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     /// Names the field. Without any label, the channel's name does.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub is_required: Signal<bool>,
     pub placeholder: MaybeProp<String>,
     pub auto_focus: bool,

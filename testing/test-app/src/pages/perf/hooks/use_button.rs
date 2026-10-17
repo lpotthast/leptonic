@@ -74,7 +74,7 @@ pub fn PagePerf() -> impl IntoView {
 #[component]
 fn PlainButton(inputs: Inputs) -> impl IntoView {
     let button = use_button(UseButtonInput {
-        id: Some("perf-button".to_owned()),
+        id: Some("perf-button".into()),
         is_disabled: inputs.disabled.into(),
         is_pending: inputs.pending.into(),
         exclude_from_tab_order: inputs.excluded.into(),
@@ -85,7 +85,7 @@ fn PlainButton(inputs: Inputs) -> impl IntoView {
         })),
         ..UseButtonInput::default()
     });
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     view! {
         <button
             {..attrs}

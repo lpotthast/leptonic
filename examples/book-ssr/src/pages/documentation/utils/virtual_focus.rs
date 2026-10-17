@@ -91,6 +91,7 @@ pub fn PageVirtualFocus() -> impl IntoView {
                         let listbox = use_listbox(UseListBoxInput {
                             state,
                             element: listbox_element,
+                            presence: None,
                             options: CollectionOptions {
                                 should_use_virtual_focus: true,
                                 ..CollectionOptions::default()

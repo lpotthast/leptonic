@@ -129,7 +129,7 @@ pub fn PageAtomColorField() -> impl IntoView {
                         <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="is_wheel_disabled" ty="bool" default="false">"Leave the color alone on scroll (it steps while the field has focus)."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the field when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="MaybeProp<String>" default="None">"Further labelling and describing elements."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the input gains or loses focus."</ApiRow>
@@ -182,7 +182,7 @@ pub fn PageAtomColorField() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form, if the field isn\u{2019}t inside it."</ApiRow>
                         <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the field when it has no "<Code inline=true>"Label"</Code>". Without either, the channel\u{2019}s name does."
                         </ApiRow>

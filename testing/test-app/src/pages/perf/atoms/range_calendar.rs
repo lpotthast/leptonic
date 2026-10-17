@@ -1,15 +1,15 @@
 //! The `RangeCalendar` alone (`#perf-calendar`), for its performance test
 //! (`leptonic/tests/perf_tests/atoms/range_calendar.rs`): June 2024 (June 12 focused, no range
-//! selected) with its heading, previous and next buttons, a grid per
+//! selected, June 20 unavailable) with its heading, previous and next buttons, a grid per
 //! visible month and its error message, between two plain buttons (`#perf-before`,
 //! `#perf-after`) to tab from and to, mounted at first. Its range and focused date are app state
 //! (controlled). Its controls ([`Control`]) mount and unmount it, show one month, twelve or a
 //! week, change its reactive props, and read its range and focused date (`start`, `end`,
 //! `focused`: `yyyymmdd`, 0 without).
 //!
-//! The page creates the live announcer on load (`announce("")`): the calendar announces its
-//! visible range and selection, and the first announcement of a page waits 100 ms for the live
-//! regions, after a measurement would have ended.
+//! The page creates the live announcer on load (`announce("")`): the calendar announces its visible
+//! range and selection, and the first announcement of a page waits 100 ms for the live regions,
+//! after a measurement would have ended.
 
 use leptonic::{
     Assertiveness, DateDuration, DateRange, announce,
@@ -18,7 +18,7 @@ use leptonic::{
         CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
         CalendarNextButton, CalendarPreviousButton, CalendarWeek, RangeCalendar,
     },
-    hooks::calendar::{PageBehavior, SelectionAlignment},
+    hooks::calendar::{DateAvailabilityQuery, PageBehavior, SelectionAlignment},
     jiff::civil::{Date, Weekday, date},
 };
 use leptos::prelude::*;
@@ -27,6 +27,8 @@ use crate::pages::perf::{Control, PerfControls};
 
 /// The date focused at first.
 const FOCUSED: Date = date(2024, 6, 12);
+/// The calendar's one unavailable date.
+const UNAVAILABLE: Date = date(2024, 6, 20);
 
 /// `date` as `yyyymmdd`, for the read controls (0: none).
 fn number(date: Option<Date>) -> f64 {
@@ -155,6 +157,9 @@ pub fn PagePerf() -> impl IntoView {
                 set_value=value
                 focused_value=focused
                 set_focused_value=focused
+                is_date_unavailable=Callback::new(|query: DateAvailabilityQuery| {
+                    query.date == UNAVAILABLE
+                })
                 min_value=min_value
                 max_value=max_value
                 is_disabled=disabled

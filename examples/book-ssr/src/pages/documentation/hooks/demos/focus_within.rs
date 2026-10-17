@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::focus::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
 };
@@ -20,7 +19,7 @@ pub fn FocusWithinDemo() -> impl IntoView {
     let (left, set_left) = signal(0_u32);
 
     let UseFocusWithinReturn {
-        props,
+        target,
         is_focus_within,
     } = use_focus_within(UseFocusWithinInput {
         is_disabled: disabled.into(),
@@ -34,7 +33,7 @@ pub fn FocusWithinDemo() -> impl IntoView {
         <div
             class="demo-focus-within-box"
             data-focus-within=move || is_focus_within.get().then_some("true")
-            {..props.into_attrs()}
+            {..target.attrs()}
         >
             <label class="demo-focus-label">
                 "Search "

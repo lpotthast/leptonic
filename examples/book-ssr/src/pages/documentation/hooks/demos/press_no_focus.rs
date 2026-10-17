@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, flag,
+    flag,
     hooks::{
         focus::{UseFocusInput, UseFocusReturn, use_focus},
         interactions::{UsePressInput, UsePressReturn, use_press},
@@ -11,14 +11,16 @@ use leptos::prelude::*;
 pub fn PressNoFocusDemo() -> impl IntoView {
     let focused = RwSignal::new(false);
 
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn { target, is_pressed } = use_press(UsePressInput {
         prevent_focus_on_press: true.into(),
         ..Default::default()
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = target.attrs();
 
     // Only to show whether the button has focus.
-    let UseFocusReturn { props: focus_props } = use_focus(UseFocusInput {
+    let UseFocusReturn {
+        target: focus_target,
+    } = use_focus(UseFocusInput {
         on_focus_change: Some(Callback::new(move |is_focused| focused.set(is_focused))),
         ..Default::default()
     });
@@ -26,7 +28,7 @@ pub fn PressNoFocusDemo() -> impl IntoView {
     view! {
         <button
             {..attrs}
-            {..focus_props.into_attrs()}
+            {..focus_target.attrs()}
             style=styles
             class="demo-press-button"
             data-pressed=flag(is_pressed)

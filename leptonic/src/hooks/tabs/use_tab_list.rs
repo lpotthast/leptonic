@@ -2,14 +2,11 @@
 // Upstream: react-aria-components/test/Tabs.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::{TabListState, TabsKeyboardDelegate};
 use crate::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Id, IntoAttrs, Orientation,
     hooks::collections::{
         CollectionOptions, KeyboardDelegate, LinkBehavior, UseSelectableCollectionAttrs,
         UseSelectableCollectionInput, UseSelectableCollectionProps, keyboard_delegate_memo,
@@ -19,6 +16,8 @@ use crate::{
     utils::{
         aria::{AriaOrientation, AriaRole},
         i18n::use_direction,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
     },
 };
 
@@ -56,33 +55,47 @@ pub struct UseTabListInput {
     /// Names the tab list. Next to `aria_labelledby`, the list labels itself too.
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the tab list.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 }
 
-/// Return value of [`use_tab_list`].
+/// The return value of [`use_tab_list`].
 #[derive(Debug)]
 pub struct UseTabListReturn {
-    pub props: UseTabListProps,
+    /// The tab list element.
+    pub tab_list: Part<UseTabListProps>,
 }
 
 /// Props for the tab list element.
 #[derive(Debug)]
 pub struct UseTabListProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_orientation: Signal<AriaOrientation>,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Keyboard navigation and focus handling (`use_selectable_collection`).
     pub collection: UseSelectableCollectionProps,
 }
 
+impl Remount for UseTabListProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_orientation: self.aria_orientation,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            collection: self.collection.remount(),
+        }
+    }
+}
+
 pub type UseTabListAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<AriaOrientation>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
     UseSelectableCollectionAttrs,
 );
 
@@ -91,11 +104,11 @@ impl IntoAttrs for UseTabListProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            signal_attr("aria-orientation", self.aria_orientation),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
             self.collection.into_attrs(),
         )
     }
@@ -136,18 +149,19 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
             ..CollectionOptions::default()
         },
     })
-    .props;
+    .collection
+    .into_props();
     // The tabs are the tab stops, not the list.
     collection.tabindex = Signal::stored(None);
     state.set_collection_id(collection.collection_id.clone());
     let id = state.id();
     let labelling = {
         let id = id.clone();
-        Memo::new(move |_| labels(&id, aria_label.get(), aria_labelledby.get().as_deref()))
+        Memo::new(move |_| labels(&id, aria_label.get(), aria_labelledby.get().as_ref()))
     };
 
     UseTabListReturn {
-        props: UseTabListProps {
+        tab_list: Part::stored(UseTabListProps {
             id,
             role: AriaRole::Tablist,
             aria_orientation: Signal::derive(move || match orientation.get() {
@@ -157,6 +171,6 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
             aria_label: Signal::derive(move || labelling.with(|l| l.aria_label.clone())),
             aria_labelledby: Signal::derive(move || labelling.with(|l| l.aria_labelledby.clone())),
             collection,
-        },
+        }),
     }
 }

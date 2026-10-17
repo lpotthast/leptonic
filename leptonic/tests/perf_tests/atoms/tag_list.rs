@@ -1,13 +1,12 @@
 // No upstream: performance measurements (`documentation/testing.md`, "Performance measurements").
-//! The performance of the atom `TagList` (`/perf/atoms/tag_list`, the fixture of `TagGroup`'s
-//! performance test): what each thing it offers costs, measured (`Page::measure`) and checked
-//! against its budget (`tests/budgets/atoms/tag_list.json`): mounting and unmounting it with 10
-//! tags and with 1,000, keyboard focus coming into it and leaving (its focus state), and its empty
-//! state (every tag removed, and tags again).
+//! The performance of the atom `TagList` (`/perf/atoms/tag_list`, in a `TagGroup`): what each thing
+//! it offers costs, measured (`Page::measure`) and checked against its budget
+//! (`tests/budgets/atoms/tag_list.json`): mounting and unmounting it with 10 tags and with 1,000,
+//! keyboard focus coming into it and leaving (its focus state), and its empty state (every tag
+//! removed, and tags again).
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use super::tag_group::{LIST, TAGS, goto, large, tag};
 use crate::{
     harness::fixture_test,
     pages::{ElementActions, Page},
@@ -22,6 +21,33 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(MountAndUnmountLarge))
         .with(fixture_test(KeyboardFocusAndBlur))
         .with(fixture_test(Empty))
+}
+const LIST: &str = ".leptonic-TagList";
+const TAGS: &str = ".leptonic-Tag";
+
+/// Loads the fixture and creates the live announcer's regions (its first announcement waits for
+/// them, so an announcing step measured first would count them, or not).
+async fn load(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.control("prepare-announcer").await?;
+    page.wait_for_count("[data-live-announcer] [aria-live=polite] > div", 1)
+        .await?;
+    Ok(())
+}
+
+/// The fixture's tags after the control `large`.
+const LARGE: u32 = 1_000;
+
+/// The tag "Tag `i`".
+fn tag(i: u32) -> String {
+    format!(".leptonic-Tag:has([data-perf-tag='{i}'])")
+}
+
+/// Switches to [`LARGE`] tags (unmeasured).
+async fn large(page: &Page<'_>) -> Result<(), Report> {
+    page.control("large").await?;
+    page.element(tag(LARGE - 1)).await?;
+    Ok(())
 }
 
 /// Mounting the list with `count` tags and unmounting it.
@@ -38,14 +64,14 @@ async fn mount_and_unmount_in(page: &Page<'_>, count: usize) -> Result<(), Repor
 /// Mounting the list with 10 tags and unmounting it.
 #[browser_test]
 pub async fn mount_and_unmount(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     mount_and_unmount_in(page, 10).await
 }
 
 /// Mounting the list with 1,000 tags and unmounting it.
 #[browser_test]
 pub async fn mount_and_unmount_large(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     large(page).await?;
     mount_and_unmount_in(page, 1_000).await
 }
@@ -53,7 +79,7 @@ pub async fn mount_and_unmount_large(page: &Page<'_>) -> Result<(), Report> {
 /// Tab moving focus into the list (its first tag) and Shift+Tab out of it.
 #[browser_test]
 pub async fn keyboard_focus_and_blur(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     page.element("#perf-before").await?.click().await?;
     page.element(LIST).await?;
     page.measure("focus", page.send_keys(Key::Tab)).await?;
@@ -68,7 +94,7 @@ pub async fn keyboard_focus_and_blur(page: &Page<'_>) -> Result<(), Report> {
 /// Every tag removed (the list shows its empty state) and 10 tags again.
 #[browser_test]
 pub async fn empty(page: &Page<'_>) -> Result<(), Report> {
-    goto(page, PATH).await?;
+    load(page).await?;
     let list = page.element(LIST).await?;
     page.measure("remove all", page.control("remove-all"))
         .await?;

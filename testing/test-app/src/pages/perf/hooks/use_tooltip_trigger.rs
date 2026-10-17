@@ -8,12 +8,9 @@
 
 use std::time::Duration;
 
-use leptonic::{
-    IntoAttrs,
-    hooks::tooltip::{
-        TooltipTriggerMode, UseTooltipTriggerInput, UseTooltipTriggerStateInput,
-        use_tooltip_trigger, use_tooltip_trigger_state,
-    },
+use leptonic::hooks::tooltip::{
+    TooltipTriggerMode, UseTooltipTriggerInput, UseTooltipTriggerStateInput, use_tooltip_trigger,
+    use_tooltip_trigger_state,
 };
 use leptos::prelude::*;
 
@@ -54,14 +51,14 @@ fn Subject(disabled: Signal<bool>) -> impl IntoView {
         trigger: TooltipTriggerMode::Hover,
         should_close_on_press: Signal::stored(true),
     });
-    let tooltip_id = trigger.tooltip_props.id;
+    let tooltip_part = trigger.tooltip;
     let is_open = state.overlay.is_open;
     view! {
-        <button id="perf-trigger" {..trigger.trigger_props.into_attrs()}>
+        <button id="perf-trigger" {..trigger.trigger.attrs()}>
             "Edit"
         </button>
         <Show when=move || is_open.get()>
-            <span id=tooltip_id.clone() class="perf-tooltip" role="tooltip">
+            <span {..tooltip_part.attrs()} class="perf-tooltip" role="tooltip">
                 "Edit the entry"
             </span>
         </Show>

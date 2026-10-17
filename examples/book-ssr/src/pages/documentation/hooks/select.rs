@@ -213,17 +213,17 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                     <ApiTable kind=ApiKind::Input of="UseSelectInput">
                         <ApiRow name="state" ty="SelectState">"The state from "<Code inline=true>"use_select_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The trigger\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The trigger\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the select is disabled."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">
                             "Whether a value is required. Enforced by the hidden select with native validation."
                         </ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
-                            "Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."
+                            "Whether you render a visible label with the "<Code inline=true>"label"</Code>" part."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id(s) of other elements labelling the select."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The id(s) of elements describing the select."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The id(s) of other elements labelling the select."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"The id(s) of elements describing the select."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the list keyboard navigation used by type-ahead and the arrow keys on the trigger."
                         </ApiRow>
@@ -237,21 +237,21 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                 <Section title="Return" id="use-select-return">
                     <ApiTable kind=ApiKind::Return of="UseSelectReturn">
-                        <ApiRow name="label_props" ty="UseSelectLabelProps">
+                        <ApiRow name="label" ty="Part<UseSelectLabelProps>">
                             "For the visible label. Clicking it focuses the trigger."
                         </ApiRow>
-                        <ApiRow name="trigger" ty="UseButtonInput">
+                        <ApiRow name="trigger_button" ty="UseButtonInput">
                             "The trigger button\u{2019}s configuration, for "<Code inline=true>"use_button"</Code>
                             ". Extend it with struct update syntax."
                         </ApiRow>
-                        <ApiRow name="trigger_props" ty="UseSelectTriggerProps">
-                            "Spread onto the trigger next to the button\u{2019}s props: lets a space continue a type-ahead search "
+                        <ApiRow name="trigger" ty="Part<UseSelectTriggerProps>">
+                            "Spread onto the trigger next to the button\u{2019}s part: lets a space continue a type-ahead search "
                             "instead of opening the popover."
                         </ApiRow>
-                        <ApiRow name="value_props" ty="UseSelectValueProps">
+                        <ApiRow name="value" ty="Part<SlotProps>">
                             "For the element showing the selected option inside the trigger. The trigger is labelled by it."
                         </ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">
                             "For optional description and error message elements, referenced by "
                             <Code inline=true>"aria-describedby"</Code>" while rendered."
                         </ApiRow>
@@ -278,10 +278,10 @@ pub fn PageUseSelectHook() -> impl IntoView {
                             };
 
                             let UseSelectReturn {
-                                label_props,
+                                label,
+                                trigger_button,
                                 trigger,
-                                trigger_props,
-                                value_props,
+                                value,
                                 listbox,
                                 hidden_select,
                                 ..
@@ -301,7 +301,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 form: None,
                             });
 
-                            let button = use_button(trigger);
+                            let button = use_button(trigger_button);
                         ")}
                     </Code>
 
@@ -357,13 +357,13 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                 <Section title="Return" id="use-hidden-select-return">
                     <ApiTable kind=ApiKind::Return of="UseHiddenSelectReturn">
-                        <ApiRow name="container_props" ty="UseHiddenSelectContainerProps">
+                        <ApiRow name="container" ty="Part<UseHiddenSelectContainerProps>">
                             "For a wrapper element: visually hidden and "<Code inline=true>"aria-hidden"</Code>"."
                         </ApiRow>
                         <ApiRow name="use_native_select" ty="Signal<bool>">
                             "Whether to render a native "<Code inline=true>"<select>"</Code>" (up to 300 options) or hidden inputs."
                         </ApiRow>
-                        <ApiRow name="select_props" ty="UseHiddenSelectSelectProps">
+                        <ApiRow name="select" ty="Part<UseHiddenSelectSelectProps>">
                             "For the "<Code inline=true>"<select>"</Code>". Changes made by autofill update the select\u{2019}s value."
                         </ApiRow>
                         <ApiRow name="options" ty="Memo<Vec<HiddenSelectOption>>">
@@ -374,7 +374,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         <ApiRow name="label" ty="MaybeProp<String>">
                             "The text of a "<Code inline=true>"<label>"</Code>" around the "<Code inline=true>"<select>"</Code>"."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="UseHiddenSelectInputProps">
+                        <ApiRow name="input" ty="Part<UseHiddenSelectInputProps>">
                             "For every hidden input used instead of the "<Code inline=true>"<select>"</Code>"."
                         </ApiRow>
                         <ApiRow name="first_input_capture" ty="ElementCaptureAttr">
@@ -392,19 +392,18 @@ pub fn PageUseSelectHook() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r"
                             use leptonic::{
-                                IntoAttrs,
                                 hooks::select::{UseHiddenSelectReturn, use_hidden_select},
                             };
 
                             let state = hidden_select.state;
-                            let UseHiddenSelectReturn { container_props, select_props, options, label, .. } =
+                            let UseHiddenSelectReturn { container, select, options, label, .. } =
                                 use_hidden_select(hidden_select);
 
                             view! {
-                                <div {..container_props.into_attrs()}>
+                                <div {..container.attrs()}>
                                     <label>
                                         {move || label.get()}
-                                        <select {..select_props.into_attrs()}>
+                                        <select {..select.attrs()}>
                                             <For each=move || options.get() key=|o| o.key.clone() let:o>
                                                 {
                                                     let value = o.value.clone();

@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use crate::{ValueBinding, hooks::collections::Key};
+use crate::{ValueBinding, hooks::collections::Key, utils::keyed_triggers::KeyedTriggers};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -58,6 +58,8 @@ pub struct DisclosureGroupState {
     pub is_disabled: Signal<bool>,
     pub expanded_keys: Signal<HashSet<Key>>,
     set_expanded_keys: Callback<HashSet<Key>>,
+    /// The disclosures, by key: notified when their expansion changes (`performance.md` R1).
+    disclosures: KeyedTriggers<Key>,
 }
 
 impl DisclosureGroupState {
@@ -66,9 +68,11 @@ impl DisclosureGroupState {
         self.set_expanded_keys.run(keys);
     }
 
-    /// Whether the disclosure `key` is expanded (tracked).
+    /// Whether the disclosure `key` is expanded. Tracks only this key's expansion: a reader
+    /// reruns when it expands or collapses, not on every change of the expanded keys.
     pub fn is_expanded(&self, key: &Key) -> bool {
-        self.expanded_keys.with(|keys| keys.contains(key))
+        self.disclosures.track(key);
+        self.expanded_keys.with_untracked(|keys| keys.contains(key))
     }
 
     /// Expands or collapses the disclosure `key`; in a single-expansion group, expanding it
@@ -138,11 +142,15 @@ pub fn use_disclosure_group_state(input: UseDisclosureGroupStateInput) -> Disclo
         expansion.track();
         reduce();
     });
+    // Every change of the expanded keys (through the state or by the app) reaches the readers
+    // of the keys that changed, right away.
+    let disclosures = KeyedTriggers::following(expanded_keys);
     DisclosureGroupState {
         expansion,
         is_disabled,
         expanded_keys,
         set_expanded_keys,
+        disclosures,
     }
 }
 

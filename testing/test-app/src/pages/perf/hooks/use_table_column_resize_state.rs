@@ -1,25 +1,54 @@
-//! The column resize state of a table (`use_table_column_resize_state`) alone, for its
-//! performance test (`leptonic/tests/perf_tests/hooks/use_table_column_resize_state.rs`): on the
-//! state of the `use_table` fixture's table ([`super::use_table`]: [`SMALL`] rows "Row <i>" in the
-//! columns Name, Value and Group, here resizable) with a table width of [`WIDE`] pixels, created
-//! by a mounted component (mounted at first) that shows the column widths (`#perf-widths`, in
-//! pixels, in column order) and the column being resized (`#perf-resizing`). Its controls
-//! ([`Control`]) mount and unmount it, set the size while unmounted (`small`, `large`: [`LARGE`]
-//! rows), change the table width (`narrow`: [`NARROW`] pixels, `wide`), resize the column Name to
-//! 350 pixels (`resize-name`) and start and end a resize of it (`start-resize`, `end-resize`).
+//! The column resize state of a table (`use_table_column_resize_state`) alone, for its performance
+//! test (`leptonic/tests/perf_tests/hooks/use_table_column_resize_state.rs`): on the state of a
+//! table of [`SMALL`] rows "Row <i>" in the resizable columns Name, Value and Group, with a table
+//! width of [`WIDE`] pixels, created by a mounted component (mounted at first) that shows the
+//! column widths (`#perf-widths`, in pixels, in column order) and the column being resized
+//! (`#perf-resizing`). Its controls ([`Control`]) mount and unmount it, set the size while
+//! unmounted (`small`, `large`: [`LARGE`] rows), change the table width (`narrow`: [`NARROW`]
+//! pixels, `wide`), resize the column Name to 350 pixels (`resize-name`) and start and end a resize
+//! of it (`start-resize`, `end-resize`).
+
+use std::sync::Arc;
 
 use leptonic::hooks::{
     collections::{Key, SelectionMode, SelectionOptions},
     grid::GridFocusMode,
     table::{
-        TableColumnResizeState, TableState, UseTableColumnResizeStateInput, UseTableStateInput,
-        use_table_column_resize_state, use_table_state,
+        TableCollection, TableColumnResizeState, TableState, UseTableColumnResizeStateInput,
+        UseTableStateInput, use_table_column_resize_state, use_table_state,
     },
 };
 use leptos::prelude::*;
 
-use super::use_table::{LARGE, SMALL, table_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small table.
+const SMALL: usize = 10;
+/// The rows of the large table.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`) in the sortable and resizable columns `name` (the row
+/// header), `value` and `group`.
+fn table_collection(rows: RwSignal<usize>) -> Memo<Arc<TableCollection>> {
+    Memo::new(move |_| {
+        Arc::new(TableCollection::build(|t| {
+            for (key, text) in [("name", "Name"), ("value", "Value"), ("group", "Group")] {
+                let mut column = t.column(key, text).allows_sorting();
+                if key == "name" {
+                    column = column.row_header();
+                }
+                let _ = column.allows_resizing();
+            }
+            for i in 0..rows.get() {
+                t.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
 
 /// The table width, in pixels.
 pub const WIDE: f64 = 900.0;
@@ -68,7 +97,7 @@ pub fn PagePerf() -> impl IntoView {
     let rows = RwSignal::new(SMALL);
     let width = RwSignal::new(WIDE);
     let table = use_table_state(UseTableStateInput {
-        table: table_collection(rows, true),
+        table: table_collection(rows),
         show_selection_checkboxes: Signal::stored(false),
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),

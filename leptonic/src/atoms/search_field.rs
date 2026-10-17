@@ -16,8 +16,8 @@ use crate::{
         },
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class, scoped_context::scoped_view,
-        styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class,
+        scoped_context::scoped_view, styles::Styles,
     },
 };
 
@@ -95,7 +95,7 @@ pub fn SearchField(
     #[prop(optional)] auto_focus: bool,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     /// Labels the field when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -147,8 +147,8 @@ pub fn SearchField(
             auto_focus,
             has_label,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             on_focus_change,
             state,
             element: Signal::stored(TextFieldElement::Input),
@@ -183,12 +183,16 @@ pub fn SearchField(
             view! {
                 <div
                     class=classes
-                    style=styles
-                    data-empty=flag(is_empty)
-                    data-disabled=flag(is_disabled)
-                    data-invalid=flag(is_invalid)
-                    data-readonly=flag(is_read_only)
-                    data-required=flag(is_required)
+                    style={styles}
+                    {..data_flags([
+                        ("data-empty", is_empty),
+                        ("data-disabled", is_disabled),
+                        ("data-invalid", is_invalid),
+                    ])}
+                    {..data_flags([
+                        ("data-readonly", is_read_only),
+                        ("data-required", is_required),
+                    ])}
                 >
                     {children()}
                 </div>
@@ -219,17 +223,19 @@ pub fn SearchFieldClearButton(
     };
     let input = ctx.clear_button.get_value();
     let button = use_button(input);
-    let (attrs, button_styles) = button.props.into_parts();
+    let (attrs, button_styles) = button.button.attrs();
 
     Some(view! {
         <button
             {..attrs}
             class=classes
             style=button_styles.merge(styles)
-            data-pressed=flag(button.is_pressed)
-            data-hovered=flag(button.is_hovered)
-            data-focused=flag(button.is_focused)
-            data-disabled=flag(button.is_disabled)
+            {..data_flags([
+                ("data-pressed", button.is_pressed),
+                ("data-hovered", button.is_hovered),
+                ("data-focused", button.is_focused),
+            ])}
+            {..data_flags([("data-disabled", button.is_disabled)])}
         >
             {children()}
         </button>

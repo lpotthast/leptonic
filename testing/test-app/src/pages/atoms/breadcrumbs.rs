@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         breadcrumbs::{Breadcrumb, Breadcrumbs},
         link::Link,
@@ -39,8 +38,8 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
             is_current: Signal::stored(is_current),
             ..UseBreadcrumbItemInput::default()
         })
-        .props
-        .into_parts();
+        .link
+        .attrs();
         (attrs, styles)
     };
     let (home, home_styles) = item(Some("/atoms"), LinkElementType::Anchor, false, false);
@@ -51,7 +50,7 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
         false,
         true,
     );
-    let nav = use_breadcrumbs(UseBreadcrumbsInput::default()).props;
+    let nav = use_breadcrumbs(UseBreadcrumbsInput::default()).breadcrumbs;
 
     view! {
         <div id="test-page-atom-breadcrumbs">
@@ -81,7 +80,7 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
             </nav>
             <div>"Action: " <span id="test-bc-action">{action}</span></div>
 
-            <nav {..nav.into_attrs()} id="test-bc-hook">
+            <nav {..nav.attrs()} id="test-bc-hook">
                 <ol>
                     <li><a {..home} style=home_styles>"Hook home"</a></li>
                     <li><span {..section} style=section_styles>"Hook section"</span></li>

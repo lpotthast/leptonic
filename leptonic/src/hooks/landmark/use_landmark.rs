@@ -1,12 +1,16 @@
 // Upstream: react-aria/src/landmark/useLandmark.ts @ 99e6102368
 // Upstream: react-aria/test/landmark/useLandmark.test.tsx @ 99e6102368
 // Upstream: react-aria/test/landmark/useLandmark.ssr.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
-use crate::{CapturedElement, IntoAttrs, utils::aria::AriaRole};
+use crate::{
+    CapturedElement, Id, IntoAttrs,
+    utils::{
+        aria::AriaRole,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -582,15 +586,16 @@ pub struct UseLandmarkInput {
     pub element: CapturedElement,
     pub role: LandmarkRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// How the landmark takes the focus when navigated to. Default: it focuses itself.
     pub focus: Option<Callback<LandmarkDirection>>,
 }
 
-/// Return value of [`use_landmark`].
+/// The return value of [`use_landmark`].
 #[derive(Debug)]
 pub struct UseLandmarkReturn {
-    pub props: UseLandmarkProps,
+    /// The landmark element.
+    pub landmark: Part<UseLandmarkProps>,
 }
 
 /// Props of a landmark.
@@ -600,23 +605,34 @@ pub struct UseLandmarkProps {
     /// While navigated to: focusable, to take the focus.
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+}
+
+impl Remount for UseLandmarkProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            tabindex: self.tabindex,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+        }
+    }
 }
 
 impl IntoAttrs for UseLandmarkProps {
     type Attrs = (
-        Attr<attr::Role, AriaRole>,
-        Attr<attr::Tabindex, Signal<Option<i32>>>,
-        Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+        FixedAttr,
+        SignalAttr<Option<i32>>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("role", self.role),
+            signal_attr("tabindex", self.tabindex),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
         )
     }
 }
@@ -643,7 +659,11 @@ pub fn use_landmark(input: UseLandmarkInput) -> UseLandmarkReturn {
         // The registered landmark: its id and element (react-aria registers the ref, so it follows
         // `ref.current`; here a re-created element registers again).
         let registration = StoredValue::new_local(None::<(u64, web_sys::Element)>);
-        let label = move || aria_label.get().or_else(|| aria_labelledby.get());
+        let label = move || {
+            aria_label
+                .get()
+                .or_else(|| aria_labelledby.get().map(|ids| ids.to_string()))
+        };
         Effect::new(move |_| {
             let label = label();
             let Some(landmark_element) = element.get() else {
@@ -697,11 +717,11 @@ pub fn use_landmark(input: UseLandmarkInput) -> UseLandmarkReturn {
     }
 
     UseLandmarkReturn {
-        props: UseLandmarkProps {
+        landmark: Part::stored(UseLandmarkProps {
             role: role.aria_role(),
             tabindex: Signal::derive(move || is_focused.get().then_some(-1)),
             aria_label,
             aria_labelledby,
-        },
+        }),
     }
 }

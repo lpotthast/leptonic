@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::focus_scope::FocusScope,
     hooks::{
         button::use_button,
@@ -97,10 +97,10 @@ fn MenuButton(
     let menu_props = menu_trigger.menu_props;
     let menu_id = StoredValue::new(menu_props.id.clone());
     let (labelled_by, auto_focus) = (menu_props.aria_labelledby, menu_props.auto_focus);
-    let (trigger_attrs, trigger_styles) = use_button(menu_trigger.button).props.into_parts();
+    let (trigger_attrs, trigger_styles) = use_button(menu_trigger.button).button.attrs();
     let UsePopoverReturn {
-        props: popover_props,
-        trigger_props: popover_trigger_props,
+        popover: popover_props,
+        trigger: popover_trigger_props,
         ..
     } = use_popover(UsePopoverInput {
         position: OverlayPositionOptions {
@@ -118,11 +118,11 @@ fn MenuButton(
         is_submenu: false,
         scroll: None,
     });
-    let (popover_attrs, popover_styles) = popover_props.into_parts();
+    let (popover_attrs, popover_styles) = popover_props.attrs();
     let contents = StoredValue::new(contents);
 
     view! {
-        <button {..trigger_attrs} {..popover_trigger_props.into_attrs()} style=trigger_styles>
+        <button {..trigger_attrs} {..popover_trigger_props.attrs()} style=trigger_styles>
             {label}
         </button>
         <Show when=move || state.is_open()>
@@ -154,8 +154,8 @@ fn MenuButton(
 /// so its auto focus applies on every opening.
 #[component]
 fn Menu(
-    id: String,
-    labelled_by: Signal<String>,
+    id: leptonic::Id,
+    labelled_by: Signal<leptonic::Id>,
     auto_focus: Signal<Option<AutoFocus>>,
     selection_mode: SelectionMode,
     contents: Build,
@@ -172,9 +172,9 @@ fn Menu(
             ..SelectionOptions::default()
         },
     });
-    let UseMenuReturn { props, data } = use_menu(UseMenuInput {
+    let UseMenuReturn { menu: props, data } = use_menu(UseMenuInput {
         id: Some(id),
-        aria_labelledby: labelled_by.into(),
+        aria_labelledby: Signal::derive(move || Some(labelled_by.get())),
         options: CollectionOptions {
             auto_focus,
             should_focus_wrap: true,
@@ -204,7 +204,7 @@ fn Menu(
     });
 
     view! {
-        <ul {..props.into_attrs()}>
+        <ul {..props.attrs()}>
             {entries
                 .into_iter()
                 .map(|(key, kind, children)| match kind {
@@ -222,18 +222,18 @@ fn Menu(
 #[component]
 fn MenuSection(menu: MenuData, key: Key, items: Vec<Key>) -> impl IntoView {
     let UseMenuSectionReturn {
-        item_props,
-        heading_props,
-        group_props,
+        section: item_props,
+        header: heading_props,
+        group: group_props,
         heading,
     } = use_menu_section(UseMenuSectionInput {
         menu: menu.clone(),
         key,
     });
     view! {
-        <li {..item_props.into_attrs()}>
-            <span {..heading_props.into_attrs()}>{heading}</span>
-            <ul {..group_props.into_attrs()}>
+        <li {..item_props.attrs()}>
+            <span {..heading_props.attrs()}>{heading}</span>
+            <ul {..group_props.attrs()}>
                 {items
                     .into_iter()
                     .map(|key| view! { <MenuItem menu=menu.clone() key=key /> })
@@ -247,18 +247,18 @@ fn MenuSection(menu: MenuData, key: Key, items: Vec<Key>) -> impl IntoView {
 fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
     let text = key.to_string();
     let UseMenuItemReturn {
-        props, label_props, ..
+        item: props, label, ..
     } = use_menu_item(UseMenuItemInput {
         menu,
         key,
         should_close_on_select: leptonic::hooks::collections::CloseOnSelect::Auto,
         submenu_trigger: None,
     });
-    let (attrs, styles) = props.into_parts();
+    let (attrs, styles) = props.attrs();
 
     view! {
         <li {..attrs} style=styles>
-            <span {..label_props.into_attrs()}>{text}</span>
+            <span {..label.attrs()}>{text}</span>
         </li>
     }
 }

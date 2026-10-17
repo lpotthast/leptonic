@@ -1,13 +1,19 @@
 // Upstream: react-aria/src/tooltip/useTooltipTrigger.ts @ 99e6102368
 // Upstream: react-aria/test/tooltip/useTooltip.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use web_sys::KeyboardEvent;
 
 use super::use_tooltip_trigger_state::{TooltipTiming, TooltipTriggerState};
 use crate::{
-    EventHandler, IntoAttrs, OnEvent,
+    EventHandler, Id, IntoAttrs, OnEvent, Part,
     hooks::focus::use_focus_visible::{Modality, get_modality},
-    utils::{id::use_id, pointer_type::PointerType},
+    utils::{
+        id::use_id,
+        part::Remount,
+        pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+        slot_id::referenced_id,
+    },
 };
 
 // =============================================================================
@@ -22,6 +28,9 @@ use crate::{
 // ## DIFFERENT BEHAVIOR
 // - Focus opens the tooltip unless the modality is the pointer's (react-aria: `isFocusVisible()`,
 //   the same test).
+// - The tooltip describes the trigger (`aria-describedby`) while it is open and its element is
+//   rendered (after mount, as `use_slot`'s references; react-aria: while open), so an open
+//   tooltip without its element leaves no reference to a missing element.
 // - Blurring the trigger leaves the tooltip open while the pointer is on it (react-aria closes it
 //   right away): Pressing into the tooltip, e.g. to select its text, takes the focus from the
 //   trigger. It closes once the pointer leaves it (`use_tooltip`).
@@ -54,20 +63,20 @@ pub enum TooltipTriggerMode {
     Focus,
 }
 
-/// The return value of the `use_tooltip_trigger` hook.
+/// The return value of [`use_tooltip_trigger`].
 #[derive(Debug)]
 pub struct UseTooltipTriggerReturn {
-    /// Props for the trigger element.
-    pub trigger_props: UseTooltipTriggerProps,
-
-    /// Props for the tooltip element (its id; `use_tooltip` adds the rest).
-    pub tooltip_props: UseTooltipTriggerTooltipProps,
+    /// The trigger element.
+    pub trigger: Part<UseTooltipTriggerProps>,
+    /// The tooltip element (its id; `use_tooltip` adds the rest): it describes the trigger while
+    /// it is rendered.
+    pub tooltip: Part<UseTooltipTriggerTooltipProps>,
 }
 
 /// Props from `use_tooltip_trigger` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTooltipTriggerProps {
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub on_pointerenter: EventHandler<web_sys::PointerEvent>,
     pub on_pointerleave: EventHandler<web_sys::PointerEvent>,
     pub on_focus: EventHandler<web_sys::FocusEvent>,
@@ -76,12 +85,26 @@ pub struct UseTooltipTriggerProps {
     pub on_pointerdown: EventHandler<web_sys::PointerEvent>,
 }
 
+impl Remount for UseTooltipTriggerProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_describedby: self.aria_describedby,
+            on_pointerenter: self.on_pointerenter.clone(),
+            on_pointerleave: self.on_pointerleave.clone(),
+            on_focus: self.on_focus.clone(),
+            on_blur: self.on_blur.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseTooltipTriggerProps {
     type Attrs = UseTooltipTriggerAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+            signal_attr("aria-describedby", self.aria_describedby),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
             self.on_focus.into_on(ev::focus),
@@ -94,7 +117,7 @@ impl IntoAttrs for UseTooltipTriggerProps {
 
 /// Attributes for the tooltip trigger element.
 pub type UseTooltipTriggerAttrs = (
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    SignalAttr<Option<Id>>,
     OnEvent<ev::pointerenter>,
     OnEvent<ev::pointerleave>,
     OnEvent<ev::focus>,
@@ -103,11 +126,21 @@ pub type UseTooltipTriggerAttrs = (
     OnEvent<ev::pointerdown>,
 );
 
-/// Props for the tooltip element.
+/// Props for the tooltip element: it describes the trigger while it is open and rendered.
 #[derive(Debug)]
 pub struct UseTooltipTriggerTooltipProps {
-    /// The id of the tooltip element, which describes the trigger while it is open.
-    pub id: String,
+    /// The id of the tooltip element.
+    pub id: Id,
+}
+
+pub type UseTooltipTriggerTooltipAttrs = FixedAttr;
+
+impl IntoAttrs for UseTooltipTriggerTooltipProps {
+    type Attrs = UseTooltipTriggerTooltipAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        fixed_attr("id", self.id)
+    }
 }
 
 /// Provides the behavior and accessibility for a tooltip trigger: the tooltip opens when the
@@ -130,10 +163,12 @@ pub struct UseTooltipTriggerTooltipProps {
 ///     ..UseTooltipInput::default()
 /// });
 ///
+/// // Parts: the tooltip renders again each time it opens.
+/// let (trigger_tooltip, tooltip) = (trigger.tooltip, tooltip.tooltip);
 /// view! {
-///     <button {..trigger.trigger_props.into_attrs()}>"Hover me"</button>
+///     <button {..trigger.trigger.attrs()}>"Hover me"</button>
 ///     <Show when=move || state.is_open()>
-///         <div id=trigger.tooltip_props.id.clone() {..tooltip.props.into_attrs()}>
+///         <div {..trigger_tooltip.attrs()} {..tooltip.attrs()}>
 ///             "Helpful tooltip text"
 ///         </div>
 ///     </Show>
@@ -271,13 +306,17 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
         });
     }
 
-    // The tooltip describes the trigger while it is open.
-    let tooltip_id_for_aria = tooltip_id.clone();
+    // The tooltip describes the trigger while it is open, and rendered.
+    let tooltip = Part::observed({
+        let id = tooltip_id.clone();
+        move || UseTooltipTriggerTooltipProps { id: id.clone() }
+    });
+    let tooltip_rendered = referenced_id(&tooltip, tooltip_id);
     let aria_describedby =
-        Signal::derive(move || is_open.get().then(|| tooltip_id_for_aria.clone()));
+        Signal::derive(move || is_open.get().then(|| tooltip_rendered.get()).flatten());
 
     UseTooltipTriggerReturn {
-        trigger_props: UseTooltipTriggerProps {
+        trigger: Part::stored(UseTooltipTriggerProps {
             aria_describedby,
             on_pointerenter: EventHandler::new(handle_pointer_enter),
             on_pointerleave: EventHandler::new(handle_pointer_leave),
@@ -285,7 +324,7 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
             on_blur: EventHandler::new(handle_blur),
             on_keydown: EventHandler::new(handle_keydown),
             on_pointerdown: EventHandler::new(handle_pointer_down),
-        },
-        tooltip_props: UseTooltipTriggerTooltipProps { id: tooltip_id },
+        }),
+        tooltip,
     }
 }

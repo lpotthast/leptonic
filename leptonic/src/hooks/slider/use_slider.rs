@@ -2,13 +2,13 @@
 // Upstream: react-aria/src/slider/utils.ts @ 99e6102368
 // Upstream: react-aria/test/slider/useSlider.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Slider.test.js @ 99e6102368
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 use send_wrapper::SendWrapper;
 use web_sys::{MouseEvent, PointerEvent};
 
 use crate::{
-    EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles, SlotProps,
+    EventHandler, Id, IntoAttrs, OnEvent, Part, PropsWithStyles, SlotProps,
     hooks::{
         focus::{Modality, set_modality},
         form::{LabelElementType, UseFieldInput, UseFieldReturn, use_field},
@@ -23,7 +23,9 @@ use crate::{
         i18n::{WritingDirection, use_direction},
         number_value::NumberValue,
         orientation::Orientation,
+        part::Remount,
         pointer_type::PointerType,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         styles::{Styles, css::TouchAction, property::TouchActionProperty},
     },
 };
@@ -57,16 +59,16 @@ use crate::{
 pub struct UseSliderInput<T: NumberValue> {
     pub state: SliderState<T>,
     /// The group's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     /// Names the slider when there is no visible label.
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Further elements describing every thumb (next to a rendered description).
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// Elements with details about every thumb (`aria-details`).
-    pub aria_details: Signal<Option<String>>,
+    pub aria_details: Signal<Option<Id>>,
 }
 
 /// What the thumbs need from their slider.
@@ -74,38 +76,38 @@ pub struct UseSliderInput<T: NumberValue> {
 pub struct SliderData {
     /// The slider group's id. Thumb ids derive from it (stable, unlike react-aria's, which derive
     /// from the label's id when there is one).
-    pub id: String,
+    pub id: Id,
     /// The ids the thumbs are labelled by: the group's `aria-labelledby` (its label, its
     /// `aria_labelledby`, and its own id next to an `aria_label`), else the group's id.
-    pub labelled_by: Signal<String>,
+    pub labelled_by: Signal<Id>,
     /// What describes every thumb: the description while rendered, and `aria_describedby`.
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
     /// What details every thumb (`aria_details`).
-    pub aria_details: Signal<Option<String>>,
+    pub aria_details: Signal<Option<Id>>,
 }
 
 impl SliderData {
     /// The id of thumb `index`'s input.
-    pub fn thumb_id(&self, index: usize) -> String {
-        format!("{}-{index}", self.id)
+    pub fn thumb_id(&self, index: usize) -> Id {
+        Id::derived(format_args!("{}-{index}", self.id))
     }
 }
 
-/// Return value of [`use_slider`].
+/// The return value of [`use_slider`].
 #[derive(Debug)]
 pub struct UseSliderReturn {
-    /// For the label element.
-    pub label_props: UseSliderLabelProps,
+    /// The slider's label element (a `<span>`, focusing the thumb when clicked).
+    pub label: Part<UseSliderLabelProps>,
     /// For a description of the slider (describes every thumb while rendered).
-    pub description_props: SlotProps,
+    pub description: Part<SlotProps>,
     /// For an error message. Render it only while the slider is invalid.
-    pub error_message_props: SlotProps,
-    /// For the element around label, track and output (`role="group"`).
-    pub group_props: UseSliderGroupProps,
-    /// For the track: pressing it moves the closest thumb there.
-    pub track_props: PropsWithStyles<UseSliderTrackProps>,
-    /// For an `<output>` showing the values.
-    pub output_props: UseSliderOutputProps,
+    pub error_message: Part<SlotProps>,
+    /// The slider's group element.
+    pub group: Part<UseSliderGroupProps>,
+    /// The track: pressing it moves the closest thumb there.
+    pub track: Part<PropsWithStyles<UseSliderTrackProps>>,
+    /// An `<output>` showing the values.
+    pub output: Part<UseSliderOutputProps>,
     /// For [`use_slider_thumb`](fn@super::use_slider_thumb).
     pub data: SliderData,
     /// The track element, for the thumbs.
@@ -116,32 +118,51 @@ pub struct UseSliderReturn {
 /// would announce only the label for the first thumb).
 #[derive(Debug)]
 pub struct UseSliderLabelProps {
-    pub id: String,
+    pub id: Id,
     pub on_click: EventHandler<MouseEvent>,
 }
 
-pub type UseSliderLabelAttrs = (Attr<attr::Id, String>, OnEvent<ev::click>);
+impl Remount for UseSliderLabelProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            on_click: self.on_click.clone(),
+        }
+    }
+}
+
+pub type UseSliderLabelAttrs = (FixedAttr, OnEvent<ev::click>);
 
 impl IntoAttrs for UseSliderLabelProps {
     type Attrs = UseSliderLabelAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id), self.on_click.into_on(ev::click))
+        (fixed_attr("id", self.id), self.on_click.into_on(ev::click))
     }
 }
 
 #[derive(Debug)]
 pub struct UseSliderGroupProps {
-    pub id: String,
+    pub id: Id,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+}
+
+impl Remount for UseSliderGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+        }
+    }
 }
 
 pub type UseSliderGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Id, String>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
 );
 
 impl IntoAttrs for UseSliderGroupProps {
@@ -149,10 +170,10 @@ impl IntoAttrs for UseSliderGroupProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, AriaRole::Group),
-            Attr(attr::Id, self.id),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            fixed_attr("role", AriaRole::Group),
+            fixed_attr("id", self.id),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
         )
     }
 }
@@ -161,6 +182,15 @@ impl IntoAttrs for UseSliderGroupProps {
 pub struct UseSliderTrackProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub element_capture: ElementCaptureAttr,
+}
+
+impl Remount for UseSliderTrackProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_pointerdown: self.on_pointerdown.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
 }
 
 pub type UseSliderTrackAttrs = (OnEvent<ev::pointerdown>, ElementCaptureAttr);
@@ -179,21 +209,18 @@ impl IntoAttrs for UseSliderTrackProps {
 /// The output's props: `for` all thumbs, not announced while dragging (`aria-live="off"`).
 #[derive(Debug)]
 pub struct UseSliderOutputProps {
-    pub html_for: Signal<Option<String>>,
+    pub html_for: Signal<Option<Id>>,
 }
 
-pub type UseSliderOutputAttrs = (
-    Attr<attr::For, Signal<Option<String>>>,
-    Attr<attr::AriaLive, AriaLive>,
-);
+pub type UseSliderOutputAttrs = (SignalAttr<Option<Id>>, FixedAttr);
 
 impl IntoAttrs for UseSliderOutputProps {
     type Attrs = UseSliderOutputAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::For, self.html_for),
-            Attr(attr::AriaLive, AriaLive::Off),
+            signal_attr("for", self.html_for),
+            fixed_attr("aria-live", AriaLive::Off),
         )
     }
 }
@@ -232,10 +259,10 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     } = input;
 
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         ..
     } = use_field(UseFieldInput {
         id,
@@ -246,6 +273,8 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
         aria_describedby,
         ..UseFieldInput::default()
     });
+    let label_props = label_props.into_props();
+    let field_props = field_props.into_props();
     let data = SliderData {
         id: field_props.id.clone(),
         labelled_by: {
@@ -363,6 +392,7 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
         })),
         on_move_end: Some(Callback::new(move |_: MoveEndEvent| end_drag())),
     });
+    let track_move_props = track_move.target.into_props();
     on_cleanup(move || {
         release_listeners.try_update_value(Option::take);
     });
@@ -383,34 +413,42 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
 
     let thumb_data = data.clone();
     UseSliderReturn {
-        label_props: UseSliderLabelProps {
+        label: Part::stored(UseSliderLabelProps {
             id: label_props.id,
             on_click: on_label_click,
-        },
-        description_props,
-        error_message_props,
-        group_props: UseSliderGroupProps {
+        }),
+        description: description_props,
+        error_message: error_message_props,
+        group: Part::stored(UseSliderGroupProps {
             id: field_props.id,
             aria_label: field_props.aria_label,
             aria_labelledby: field_props.aria_labelledby,
+        }),
+        track: {
+            let on_pointerdown =
+                EventHandler::new(on_track_down).chain(track_move_props.on_pointerdown);
+            let element_capture = track.attr();
+            Part::new(move || {
+                PropsWithStyles::new(
+                    UseSliderTrackProps {
+                        on_pointerdown: on_pointerdown.clone(),
+                        element_capture: element_capture.clone(),
+                    },
+                    Styles::new()
+                        .add_unchecked("position", "relative")
+                        .add(TouchActionProperty.declare(TouchAction::None)),
+                )
+            })
         },
-        track_props: PropsWithStyles::new(
-            UseSliderTrackProps {
-                on_pointerdown: EventHandler::new(on_track_down)
-                    .chain(track_move.props.on_pointerdown),
-                element_capture: track.attr(),
-            },
-            Styles::new()
-                .add_unchecked("position", "relative")
-                .add(TouchActionProperty.declare(TouchAction::None)),
-        ),
-        output_props: UseSliderOutputProps {
-            html_for: Signal::derive(move || {
-                (0..state.thumb_count())
-                    .map(|index| thumb_data.thumb_id(index))
-                    .collect::<IdRefs>()
-                    .into_value()
-            }),
+        output: {
+            let html_for = Signal::derive(move || {
+                let mut ids = crate::utils::id::IdListBuilder::default();
+                for index in 0..state.thumb_count() {
+                    ids.push(&thumb_data.thumb_id(index));
+                }
+                ids.finish()
+            });
+            Part::new(move || UseSliderOutputProps { html_for })
         },
         data,
         track_element: track,

@@ -12,7 +12,7 @@ pub fn LinkProgrammaticFocusDemo() -> impl IntoView {
     });
     let focus_handle = link.focus_handle;
     let is_focused = link.is_focused;
-    let (link_attrs, link_styles) = link.props.into_parts();
+    let (link_attrs, link_styles) = link.link.attrs();
 
     view! {
         <p><a {..link_attrs} class="demo-link" style=link_styles>"Link overview"</a></p>

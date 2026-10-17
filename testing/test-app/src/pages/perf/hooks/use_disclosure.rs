@@ -5,14 +5,11 @@
 //! (`#perf-before`, `#perf-after`), mounted at first. Its controls ([`Control`]) mount and unmount
 //! it, expand and collapse its state, and disable and enable it.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::{
-        button::use_button,
-        disclosure::{
-            DisclosureState, UseDisclosureInput, UseDisclosureStateInput, use_disclosure,
-            use_disclosure_state,
-        },
+use leptonic::hooks::{
+    button::use_button,
+    disclosure::{
+        DisclosureState, UseDisclosureInput, UseDisclosureStateInput, use_disclosure,
+        use_disclosure_state,
     },
 };
 use leptos::prelude::*;
@@ -58,8 +55,8 @@ fn Subject(state: StoredValue<Option<DisclosureState>>, disabled: Signal<bool>) 
         state: disclosure_state,
         is_disabled: disabled,
     });
-    let (button_attrs, button_styles) = use_button(disclosure.button).props.into_parts();
-    let panel_attrs = disclosure.panel_props.into_attrs();
+    let (button_attrs, button_styles) = use_button(disclosure.button).button.attrs();
+    let panel_attrs = disclosure.panel.attrs();
     view! {
         <div id="perf-disclosure">
             <button {..button_attrs} style=button_styles>

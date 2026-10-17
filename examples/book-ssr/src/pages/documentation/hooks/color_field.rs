@@ -22,7 +22,7 @@ pub fn PageUseColorField() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "A hex field: create the state, pass it to "<Code inline=true>"use_color_field"</Code>" and spread the "
-                    "returned props onto a label and an input. The input props carry the text, "<Code inline=true>"disabled"</Code>
+                    "returned parts onto a label and an input. The input\u{2019}s part carries the text, "<Code inline=true>"disabled"</Code>
                     " and "<Code inline=true>"readonly"</Code>", as in a "<Link href=routes::doc::TextField.materialize()>"text field"</Link>":"
                 </p>
                 <Code language=Language::Rust>
@@ -58,8 +58,8 @@ pub fn PageUseColorField() -> impl IntoView {
                         });
 
                         view! {
-                            <label {..field.label_props.into_attrs()}>"Accent color"</label>
-                            <input {..field.input_props.into_attrs()}/>
+                            <label {..field.label.attrs()}>"Accent color"</label>
+                            <input {..field.input.attrs()}/>
                         }
                     "#)}
                 </Code>
@@ -117,13 +117,13 @@ pub fn PageUseColorField() -> impl IntoView {
                             on_key_down: None,
                             on_key_up: None,
                         });
-                        let (decrement, decrement_styles) = use_button(field.decrement_button).props.into_parts();
-                        let (increment, increment_styles) = use_button(field.increment_button).props.into_parts();
+                        let (decrement, decrement_styles) = use_button(field.decrement_button).button.attrs();
+                        let (increment, increment_styles) = use_button(field.increment_button).button.attrs();
 
                         view! {
-                            <div {..field.group_props.into_attrs()}>
+                            <div {..field.group.attrs()}>
                                 <button {..decrement} style=decrement_styles>"\u{2212}"</button>
-                                <input {..field.input_props.into_attrs()}/>
+                                <input {..field.input.attrs()}/>
                                 <button {..increment} style=increment_styles>"+"</button>
                             </div>
                         }
@@ -239,11 +239,11 @@ pub fn PageUseColorField() -> impl IntoView {
                         <ApiRow name="state" ty="ColorFieldState<C>">
                             "The state from "<Code inline=true>"use_color_field_state"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id; generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id; generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with the "<Code inline=true>"label"</Code>" part."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the input when it has no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the input."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the input."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The ids of the elements naming the input."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"The ids of the elements describing the input."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the field is disabled."</ApiRow>
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Whether the field is read-only: focusable, but neither typing nor stepping changes it."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"Whether a color is required."</ApiRow>
@@ -258,13 +258,13 @@ pub fn PageUseColorField() -> impl IntoView {
 
                 <Section title="Return" id="use-color-field-return">
                     <ApiTable kind=ApiKind::Return of="UseColorFieldReturn">
-                        <ApiRow name="label_props" ty="UseLabelProps">"For a visible label."</ApiRow>
-                        <ApiRow name="input_props" ty="UseColorFieldInputProps">
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"For a visible label."</ApiRow>
+                        <ApiRow name="input" ty="Part<UseColorFieldInputProps>">
                             "For the "<Code inline=true>"<input>"</Code>": the text, "<Code inline=true>"disabled"</Code>", "
                             <Code inline=true>"readonly"</Code>", the ARIA attributes of a text field, and the input, keyboard, "
                             "focus and wheel handlers."
                         </ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">"For a description and an error message."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">"For a description and an error message."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The input, once rendered."</ApiRow>
                         <ApiRow name="is_focused, is_focus_visible" ty="Signal<bool>">"Whether the input has focus, and whether to show a focus ring."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation result is invalid."</ApiRow>
@@ -331,7 +331,7 @@ pub fn PageUseColorField() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>">
                             "Names the field. Without any label, the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="id, has_label, aria_labelledby, aria_describedby, is_required, placeholder, auto_focus, is_wheel_disabled, increment_aria_label, decrement_aria_label, on_focus, on_blur, on_focus_change, on_key_down, on_key_up" ty="Option<String>, Signal<bool>, Signal<Option<String>>, Signal<Option<String>>, Signal<bool>, MaybeProp<String>, bool, bool, MaybeProp<String>, MaybeProp<String>, Option<Callback<FocusEvent>>, Option<Callback<FocusEvent>>, Option<Callback<bool>>, Option<Callback<KeyboardEventWrapper>>, Option<Callback<KeyboardEventWrapper>>">
+                        <ApiRow name="id, has_label, aria_labelledby, aria_describedby, is_required, placeholder, auto_focus, is_wheel_disabled, increment_aria_label, decrement_aria_label, on_focus, on_blur, on_focus_change, on_key_down, on_key_up" ty="Option<Id>, Signal<bool>, Signal<Option<Id>>, Signal<Option<Id>>, Signal<bool>, MaybeProp<String>, bool, bool, MaybeProp<String>, MaybeProp<String>, Option<Callback<FocusEvent>>, Option<Callback<FocusEvent>>, Option<Callback<bool>>, Option<Callback<KeyboardEventWrapper>>, Option<Callback<KeyboardEventWrapper>>">
                             "The number field\u{2019}s settings, as in "<Code inline=true>"use_number_field"</Code>". Required."
                         </ApiRow>
                     </ApiTable>
@@ -345,14 +345,14 @@ pub fn PageUseColorField() -> impl IntoView {
                     </p>
 
                     <ApiTable kind=ApiKind::Return of="UseNumberFieldReturn">
-                        <ApiRow name="group_props" ty="UseNumberFieldGroupProps">"For the element wrapping the input and the buttons."</ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"For a visible label."</ApiRow>
-                        <ApiRow name="input_props" ty="UseNumberFieldInputProps">"For the text input, including its value."</ApiRow>
+                        <ApiRow name="group" ty="Part<UseNumberFieldGroupProps>">"For the element wrapping the input and the buttons."</ApiRow>
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"For a visible label."</ApiRow>
+                        <ApiRow name="input" ty="Part<UseNumberFieldInputProps>">"For the text input, including its value."</ApiRow>
                         <ApiRow name="increment_button, decrement_button" ty="UseButtonInput">
                             "The stepper buttons\u{2019} configuration. Pass them to "
                             <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
                         </ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">"For a description and an error message."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">"For a description and an error message."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The input, once rendered."</ApiRow>
                         <ApiRow name="is_focused, is_focus_visible" ty="Signal<bool>">"Whether the input has focus, and whether to show a focus ring."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation result is invalid."</ApiRow>

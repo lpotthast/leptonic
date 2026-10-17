@@ -8,7 +8,6 @@
 // Upstream: @adobe/react-spectrum/test/calendar/Calendar.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
 use leptos::{
-    attr::{self, Attr},
     ev::{self},
     prelude::*,
 };
@@ -24,7 +23,7 @@ use super::{
     use_range_calendar_state::RangeCalendarState,
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent, Part,
     hooks::button::UseButtonInput,
     labels,
     utils::{
@@ -35,6 +34,8 @@ use crate::{
         id::use_id,
         intl_strings::{CalendarStrings, use_localized_strings},
         live_announcer::{Assertiveness, announce, announce_with_timeout},
+        part::Remount,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         slot_id::{SlotProps, use_slot},
     },
 };
@@ -63,11 +64,11 @@ use crate::{
 pub struct UseCalendarInput {
     pub state: CalendarState,
     /// The calendar's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
 }
 
 /// Input of [`use_range_calendar`].
@@ -77,20 +78,20 @@ pub struct UseRangeCalendarInput {
     /// What a press outside the dates or leaving the calendar does with a range being selected.
     pub commit_behavior: CommitBehavior,
     /// The calendar's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
 }
 
 /// What `use_calendar_base` takes from either input.
 struct CalendarAria {
-    id: Option<String>,
+    id: Option<Id>,
     aria_label: MaybeProp<String>,
-    aria_labelledby: Signal<Option<String>>,
-    aria_describedby: Signal<Option<String>>,
-    aria_details: Signal<Option<String>>,
+    aria_labelledby: Signal<Option<Id>>,
+    aria_describedby: Signal<Option<Id>>,
+    aria_details: Signal<Option<Id>>,
 }
 
 /// What a range calendar does with a range being selected when the user presses outside its
@@ -106,16 +107,16 @@ pub enum CommitBehavior {
     Select,
 }
 
-/// Return value of [`use_calendar`] and [`use_range_calendar`].
+/// The return value of [`use_calendar`].
 pub struct UseCalendarReturn {
-    /// For the calendar's element (a group of its heading, buttons and grids).
-    pub calendar_props: UseCalendarProps,
+    /// The calendar element.
+    pub calendar: Part<UseCalendarProps>,
     /// For the previous page button (`use_button`).
     pub previous_button: UseButtonInput,
     /// For the next page button (`use_button`).
     pub next_button: UseButtonInput,
     /// For the error message element, if there is one.
-    pub error_message_props: SlotProps,
+    pub error_message: Part<SlotProps>,
     /// The visible range, for a heading: "May 2024".
     pub title: Signal<String>,
     /// What the calendar's grids and cells need (`use_calendar_grid`, `use_calendar_cell`).
@@ -125,23 +126,38 @@ pub struct UseCalendarReturn {
 /// Props of the calendar's element.
 #[derive(Debug)]
 pub struct UseCalendarProps {
-    pub id: String,
+    pub id: Id,
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_details: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_details: Signal<Option<Id>>,
     pub on_focusout: EventHandler<FocusEvent>,
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseCalendarProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            aria_details: self.aria_details,
+            on_focusout: self.on_focusout.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseCalendarAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Signal<Option<String>>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaDetails, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<Id>>,
+    SignalAttr<Option<Id>>,
     OnEvent<ev::focusout>,
     ElementCaptureAttr,
 );
@@ -151,12 +167,12 @@ impl IntoAttrs for UseCalendarProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaDetails, self.aria_details),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
+            signal_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-describedby", self.aria_describedby),
+            signal_attr("aria-details", self.aria_details),
             self.on_focusout.into_on(ev::focusout),
             self.element_capture,
         )
@@ -252,12 +268,12 @@ fn use_calendar_base(
                 .filter(|label| !label.is_empty())
                 .collect::<Vec<_>>()
                 .join(", ");
-            labels(&id, Some(label), aria_labelledby.get().as_deref())
+            labels(&id, Some(label), aria_labelledby.get().as_ref())
         })
     };
 
     UseCalendarReturn {
-        calendar_props: UseCalendarProps {
+        calendar: Part::stored(UseCalendarProps {
             id,
             role: AriaRole::Application,
             aria_label: Signal::derive(move || labelling.with(|labels| labels.aria_label.clone())),
@@ -268,7 +284,7 @@ fn use_calendar_base(
             aria_details,
             on_focusout: EventHandler::empty(),
             element_capture: element.attr(),
-        },
+        }),
         previous_button: UseButtonInput {
             on_press: Some(Callback::new(move |_| calendar.focus_previous_page())),
             aria_label: Signal::derive(move || Some(strings.read().previous())).into(),
@@ -282,7 +298,42 @@ fn use_calendar_base(
                     calendar.set_focused(true);
                 }
             })),
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_labelledby: Signal::stored(None),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            prevent_focus_on_press: Signal::stored(false),
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_describedby: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         },
         next_button: UseButtonInput {
             on_press: Some(Callback::new(move |_| calendar.focus_next_page())),
@@ -297,9 +348,44 @@ fn use_calendar_base(
                     calendar.set_focused(true);
                 }
             })),
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            id: None,
+            aria_labelledby: Signal::stored(None),
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            prevent_focus_on_press: Signal::stored(false),
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            aria_describedby: Signal::stored(None),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         },
-        error_message_props: error.props,
+        error_message: error.part,
         title: title.into(),
         data,
     }
@@ -441,7 +527,8 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
     }
 
     // Leaving the calendar finishes the range being selected too.
-    calendar.calendar_props.on_focusout = EventHandler::new(move |e: FocusEvent| {
+    let mut calendar_props = calendar.calendar.into_props();
+    calendar_props.on_focusout = EventHandler::new(move |e: FocusEvent| {
         // A removed focused cell blurs after the calendar's disposal ("Blur After Disposal"):
         // the anchor, of the same owner, tells.
         let Some(anchor) = state.anchor_date.try_get_untracked() else {
@@ -471,5 +558,6 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
             commit();
         }
     });
+    calendar.calendar = Part::stored(calendar_props);
     calendar
 }

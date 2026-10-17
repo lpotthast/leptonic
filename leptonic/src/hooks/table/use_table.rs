@@ -9,7 +9,7 @@ use leptos::prelude::*;
 
 use super::{SortDirection, TableKeyboardDelegate, TableState};
 use crate::{
-    CapturedElement, IdRefs,
+    CapturedElement, Id, IdRefs,
     hooks::{
         collections::{
             CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, keyboard_delegate_memo,
@@ -26,6 +26,7 @@ use crate::{
         id::use_id,
         intl_strings::{TableStrings, use_localized_strings},
         live_announcer::{Assertiveness, announce_with_timeout},
+        part::Part,
         use_description::use_description,
     },
 };
@@ -51,10 +52,10 @@ pub struct UseTableInput {
     /// The table element; the hook's props capture it.
     pub element: CapturedElement,
     /// The element id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub aria_label: MaybeProp<String>,
     /// Ids of elements labelling the table.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
     /// Replaces the table keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
     /// Keyboard and focus behavior.
@@ -75,43 +76,44 @@ pub struct TableData {
     pub state: TableState,
     pub grid: GridData,
     /// The table element's id; cell and column header ids derive from it.
-    pub id: String,
+    pub id: Id,
 }
 
 impl TableData {
     /// The id of the column header of `column`.
-    pub fn column_header_id(&self, column: &Key) -> String {
-        format!("{}-{}", self.id, column.id_fragment())
+    pub fn column_header_id(&self, column: &Key) -> Id {
+        Id::derived(format_args!("{}-{}", self.id, column.id_fragment()))
     }
 
     /// The id of the cell of `row` in `column`.
-    pub fn cell_id(&self, row: &Key, column: &Key) -> String {
+    pub fn cell_id(&self, row: &Key, column: &Key) -> Id {
         // `%_` occurs in no id fragment: it separates them unambiguously.
-        format!(
+        Id::derived(format_args!(
             "{}-{}%_{}",
             self.id,
             row.id_fragment(),
             column.id_fragment()
-        )
+        ))
     }
 
     /// The ids of the row header cells of `row`: the row's label. Tracks the table (the row
     /// header columns can change).
-    pub fn row_labelledby(&self, row: &Key) -> IdRefs {
+    pub fn row_labelledby(&self, row: &Key) -> Option<Id> {
         self.state.table.with(|t| {
-            t.row_header_columns()
-                .iter()
-                .map(|column| self.cell_id(row, column))
-                .collect()
+            crate::utils::id::join_ids(
+                t.row_header_columns()
+                    .iter()
+                    .map(|column| Some(self.cell_id(row, column))),
+            )
         })
     }
 }
 
-/// Return value of [`use_table`].
+/// The return value of [`use_table`].
 #[derive(Debug)]
 pub struct UseTableReturn {
-    /// Props for the table element (a grid).
-    pub props: UseGridProps,
+    /// The table (grid) element.
+    pub table: Part<UseGridProps>,
     pub data: TableData,
 }
 
@@ -178,7 +180,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         use_table_keyboard_delegate(UseTableKeyboardDelegateInput { state, element })
     });
 
-    let UseGridReturn { props, data } = use_grid(UseGridInput {
+    let UseGridReturn { grid: props, data } = use_grid(UseGridInput {
         state: state.grid,
         element,
         id: Some(id.clone()),
@@ -191,6 +193,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         on_row_action,
         on_cell_action,
     });
+    let props = props.into_props();
 
     // The sort, described to the table and announced when it changes (not initially: focusing
     // the table describes it).
@@ -240,7 +243,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
     };
 
     UseTableReturn {
-        props,
+        table: Part::stored(props),
         data: TableData {
             state,
             grid: data,

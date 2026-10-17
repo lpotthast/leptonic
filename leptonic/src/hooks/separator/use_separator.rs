@@ -5,10 +5,12 @@ use leptos::{
 };
 
 use crate::{
-    IntoAttrs,
+    Id, IntoAttrs, MaybeSignal,
     utils::{
         aria::{AriaOrientation, AriaRole},
         orientation::Orientation,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
     },
 };
 
@@ -45,11 +47,11 @@ pub struct UseSeparatorInput {
     /// The element the separator is rendered as.
     pub element_type: SeparatorElementType,
     /// The element's id.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Names the separator.
     pub aria_label: MaybeProp<String>,
     /// The ids of the elements naming the separator.
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
 }
 
 impl Default for UseSeparatorInput {
@@ -65,21 +67,33 @@ impl Default for UseSeparatorInput {
     }
 }
 
-/// The return value of the `use_separator` hook.
+/// The return value of [`use_separator`].
 #[derive(Debug)]
 pub struct UseSeparatorReturn {
-    /// Props for the separator element.
-    pub props: UseSeparatorProps,
+    /// The separator element.
+    pub separator: Part<UseSeparatorProps>,
 }
 
 /// Props for the separator element.
 #[derive(Debug)]
 pub struct UseSeparatorProps {
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub role: Option<AriaRole>,
-    pub aria_orientation: Signal<Option<AriaOrientation>>,
+    pub aria_orientation: MaybeSignal<Option<AriaOrientation>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+}
+
+impl Remount for UseSeparatorProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            role: self.role,
+            aria_orientation: self.aria_orientation,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+        }
+    }
 }
 
 impl IntoAttrs for UseSeparatorProps {
@@ -87,22 +101,22 @@ impl IntoAttrs for UseSeparatorProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
+            fixed_attr("id", self.id),
+            fixed_attr("role", self.role),
             Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            maybe_attr("aria-label", self.aria_label),
+            signal_attr("aria-labelledby", self.aria_labelledby),
         )
     }
 }
 
 /// Attributes for the separator element.
 pub type UseSeparatorAttrs = (
-    Attr<attr::Id, Option<String>>,
-    Attr<attr::Role, Option<AriaRole>>,
-    Attr<attr::AriaOrientation, Signal<Option<AriaOrientation>>>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    FixedAttr,
+    FixedAttr,
+    Attr<attr::AriaOrientation, MaybeSignal<Option<AriaOrientation>>>,
+    SignalAttr<Option<String>>,
+    SignalAttr<Option<Id>>,
 );
 
 /// Provides the accessibility of a separator, which divides content visually and semantically.
@@ -115,7 +129,7 @@ pub type UseSeparatorAttrs = (
 /// ```ignore
 /// let separator = use_separator(UseSeparatorInput::default());
 ///
-/// view! { <hr {..separator.props.into_attrs()} /> }
+/// view! { <hr {..separator.separator.attrs()} /> }
 /// ```
 pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
     crate::metrics::subject!();
@@ -131,18 +145,23 @@ pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
     // default `aria-orientation`; only vertical needs to be stated.
     let is_hr = element_type == SeparatorElementType::Hr;
     let role = (!is_hr).then_some(AriaRole::Separator);
-    let aria_orientation = Signal::derive(move || {
-        (!is_hr && orientation.get() == Orientation::Vertical).then_some(AriaOrientation::Vertical)
-    });
+    let aria_orientation = if is_hr {
+        MaybeSignal::default()
+    } else {
+        Signal::derive(move || {
+            (orientation.get() == Orientation::Vertical).then_some(AriaOrientation::Vertical)
+        })
+        .into()
+    };
 
     UseSeparatorReturn {
-        props: UseSeparatorProps {
+        separator: Part::stored(UseSeparatorProps {
             id,
             role,
             aria_orientation,
             aria_label,
             aria_labelledby,
-        },
+        }),
     }
 }
 
@@ -158,7 +177,8 @@ mod tests {
             element_type,
             ..UseSeparatorInput::default()
         })
-        .props
+        .separator
+        .into_props()
     }
 
     #[test]

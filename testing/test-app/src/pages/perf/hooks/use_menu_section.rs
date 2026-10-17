@@ -6,7 +6,7 @@
 //! (in the collection) and back.
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         collections::{
             CloseOnSelect, CollectionOptions, Key, SelectionOptions, UseListStateInput,
@@ -67,7 +67,7 @@ pub fn PagePerf() -> impl IntoView {
     view! {
         <h1>"use_menu_section performance"</h1>
         <PerfControls controls />
-        <ul {..menu.props.into_attrs()}>
+        <ul {..menu.menu.attrs()}>
             <Section menu=data.clone() key=Key::from("file") items=vec!["Open"] />
             <Show when=move || mounted.get()>
                 <Section menu=shown.clone() key=Key::from("edit") items=vec!["Cut", "Copy"] />
@@ -84,11 +84,11 @@ fn Section(menu: MenuData, key: Key, items: Vec<&'static str>) -> impl IntoView 
         key,
     });
     view! {
-        <li {..section.item_props.into_attrs()}>
-            <span class="perf-heading" {..section.heading_props.into_attrs()}>
+        <li {..section.section.attrs()}>
+            <span class="perf-heading" {..section.header.attrs()}>
                 {section.heading}
             </span>
-            <ul {..section.group_props.into_attrs()}>
+            <ul {..section.group.attrs()}>
                 {items
                     .into_iter()
                     .map(|item| view! { <Item menu=menu.clone() key=Key::from(item) /> })
@@ -108,7 +108,7 @@ fn Item(menu: MenuData, key: Key) -> impl IntoView {
         should_close_on_select: CloseOnSelect::Auto,
         submenu_trigger: None,
     });
-    let (attrs, styles) = item.props.into_parts();
+    let (attrs, styles) = item.item.attrs();
     view! {
         <li {..attrs} style=styles>
             {text}

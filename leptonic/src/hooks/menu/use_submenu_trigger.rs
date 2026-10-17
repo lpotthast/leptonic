@@ -8,7 +8,7 @@ use web_sys::KeyboardEvent;
 
 use super::{SubmenuTriggerState, UseSafelyMouseToSubmenuInput, use_safely_mouse_to_submenu};
 use crate::{
-    CapturedElement, EventHandler,
+    CapturedElement, EventHandler, Id, Part,
     hooks::{
         collections::FocusStrategy,
         interactions::{
@@ -84,10 +84,10 @@ pub struct UseSubmenuTriggerInput {
 /// What the trigger item needs (pass it to `use_menu_item`).
 #[derive(Debug, Clone)]
 pub struct SubmenuTriggerItem {
-    pub id: String,
+    pub id: Id,
     /// The trigger item's element: the item captures it.
     pub element: CapturedElement,
-    pub aria_controls: Signal<Option<String>>,
+    pub aria_controls: Signal<Option<Id>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
     pub is_open: Signal<bool>,
     /// ArrowRight (ArrowLeft in right-to-left text) opens the submenu and moves focus into it;
@@ -99,12 +99,13 @@ pub struct SubmenuTriggerItem {
     pub on_hover_change: Callback<bool>,
 }
 
-/// What the submenu needs (pass it to `use_menu`).
-#[derive(Debug, Clone)]
+/// What the submenu needs (pass it to `use_menu`). Single-use: one menu at a time is the submenu
+/// (see `UseSubmenuTriggerReturn::submenu`).
+#[derive(Debug)]
 pub struct SubmenuProps {
-    pub id: String,
+    pub id: Id,
     /// The trigger item names the submenu.
-    pub aria_labelledby: String,
+    pub aria_labelledby: Id,
     /// The submenu's level in the menu tree.
     pub level: usize,
     /// Closes the whole menu tree (after an item's action).
@@ -120,7 +121,9 @@ pub struct SubmenuProps {
 #[derive(Debug)]
 pub struct UseSubmenuTriggerReturn {
     pub trigger: SubmenuTriggerItem,
-    pub submenu: SubmenuProps,
+    /// The submenu, rendered again on every opening: each menu mounted takes its props, one at a
+    /// time.
+    pub submenu: Part<SubmenuProps>,
     /// For the submenu's popover: an interaction outside it, except on the trigger, closes it.
     pub should_close_on_interact_outside: InteractOutsideFilter,
 }
@@ -212,7 +215,8 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
             ),
             ..UseKeyboardInput::default()
         })
-        .props
+        .target
+        .into_props()
         .on_keydown
     });
 
@@ -259,7 +263,8 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
         ),
         ..UseKeyboardInput::default()
     })
-    .props;
+    .target
+    .into_props();
     let UseKeyboardProps {
         on_keydown: trigger_keydown,
         on_keyup: trigger_keyup,
@@ -358,13 +363,17 @@ pub fn use_submenu_trigger(input: UseSubmenuTriggerInput) -> UseSubmenuTriggerRe
             on_press,
             on_hover_change,
         },
-        submenu: SubmenuProps {
-            id: overlay_id,
-            aria_labelledby: trigger_id,
-            level: state.level,
-            on_close: Callback::new(move |()| state.close_all()),
-            auto_focus: state.focus_strategy,
-            on_keydown: submenu_keyboard,
+        submenu: {
+            let (level, auto_focus) = (state.level, state.focus_strategy);
+            let on_close = Callback::new(move |()| state.close_all());
+            Part::new(move || SubmenuProps {
+                id: overlay_id.clone(),
+                aria_labelledby: trigger_id.clone(),
+                level,
+                on_close,
+                auto_focus,
+                on_keydown: submenu_keyboard.clone(),
+            })
         },
         should_close_on_interact_outside: InteractOutsideFilter::new(move |target| {
             trigger

@@ -9,7 +9,7 @@
 //! `mount-non-modal`) and unmount it, open and close it, and move it above the trigger and back.
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::overlay::{
         OverlayPositionOptions, Placement, PlacementAxis, PopoverModality,
         UseOverlayTriggerStateInput, UsePopoverInput, use_overlay_trigger_state, use_popover,
@@ -83,12 +83,12 @@ fn Subject(
         is_submenu: false,
     });
     let resolved = popover.placement;
-    let (attrs, styles) = popover.props.into_parts();
+    let (attrs, styles) = popover.popover.attrs();
     let attrs = StoredValue::new(attrs);
     let styles = StoredValue::new(styles);
     let is_open = state.is_open;
     view! {
-        <button id="perf-trigger" {..popover.trigger_props.into_attrs()}>
+        <button id="perf-trigger" {..popover.trigger.attrs()}>
             "Settings"
         </button>
         <Show when=move || is_open.get()>

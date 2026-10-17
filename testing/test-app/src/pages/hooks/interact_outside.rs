@@ -1,6 +1,5 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{InteractOutsideEvent, UseInteractOutsideInput, use_interact_outside},
+use leptonic::hooks::interactions::{
+    InteractOutsideEvent, UseInteractOutsideInput, use_interact_outside,
 };
 use leptos::prelude::*;
 
@@ -27,7 +26,7 @@ pub fn PageHookInteractOutside() -> impl IntoView {
             <div
                 id="test-interact-outside-target"
                 style="display: inline-block; padding: 16px; border: 1px solid"
-                {..outside.props.into_attrs()}
+                {..outside.target.attrs()}
             >
                 "Target"
             </div>

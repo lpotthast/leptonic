@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    IntoAttrs, Propagation,
+    Propagation,
     atoms::{
         checkbox::{CheckboxButton, CheckboxField},
         focus_ring::FocusRing,
@@ -18,7 +18,7 @@ pub fn KeyboardDemo() -> impl IntoView {
     let (events, set_events) = signal(VecDeque::<String>::new());
     let (disabled, set_disabled) = signal(false);
 
-    let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
+    let UseKeyboardReturn { target } = use_keyboard(UseKeyboardInput {
         is_disabled: disabled.into(),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
             set_events.update(|events| {
@@ -47,7 +47,7 @@ pub fn KeyboardDemo() -> impl IntoView {
 
     view! {
         <FocusRing is_disabled=disabled target=FocusRingTarget::Within>
-            <div {..props.into_attrs()} tabindex="0" class="demo-keyboard-target">
+            <div {..target.attrs()} tabindex="0" class="demo-keyboard-target">
                 "Focus me and press keys"
             </div>
         </FocusRing>

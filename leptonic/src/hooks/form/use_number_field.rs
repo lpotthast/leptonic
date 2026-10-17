@@ -1,11 +1,7 @@
 // Upstream: react-aria/src/numberfield/useNumberField.ts @ 99e6102368
 // Upstream: react-aria/test/numberfield/useNumberField.test.ts @ 99e6102368
 // Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use leptos_use::use_document;
 use wasm_bindgen::JsCast;
 use web_sys::{ClipboardEvent, CompositionEvent, FocusEvent, InputEvent, WheelEvent};
@@ -25,13 +21,12 @@ use super::{
     use_text_field_state::{UseTextFieldStateInput, use_text_field_state},
 };
 use crate::{
-    CapturedElement, EventHandler, IdRefs, IntoAttrs, NumberValue, OnEvent, SlotProps,
+    CapturedElement, EventHandler, Id, IntoAttrs, NumberValue, OnEvent, Part, SlotProps,
     hooks::{
         button::UseButtonInput,
-        focus::{UseFocusWithinInput, UseFocusWithinProps, UseFocusWithinReturn, use_focus_within},
         interactions::{
-            KeyboardEventWrapper, PressEvent, ScrollEvent, UseScrollWheelInput,
-            chain_optional_callbacks, use_scroll_wheel,
+            KeyboardEventWrapper, PressEvent, UseWheelSteppingInput, UseWheelSteppingReturn,
+            chain_optional_callbacks, use_wheel_stepping,
         },
         spinbutton::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
@@ -39,15 +34,18 @@ use crate::{
         aria::{AriaDisabled, AriaInvalid, AriaRole, aria_true},
         dom_ext::EventAccessors,
         focus::focus_event_target,
-        id::use_id,
+        id::{IdListBuilder, use_id},
         intl_strings::{NumberFieldStrings, use_localized_strings},
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         live_announcer::announce_assertive,
         number_formatter::{CurrencySign, NumberFormatOptions, use_number_formatter},
+        part::Remount,
         platform::{device, use_platform_check},
         pointer_type::PointerType,
         shadow_dom::get_active_element,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+        spread::Spread,
     },
 };
 
@@ -79,12 +77,12 @@ use crate::{
 pub struct UseNumberFieldInput<T: NumberValue> {
     pub state: NumberFieldState<T>,
     /// The input's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub is_required: Signal<bool>,
     pub placeholder: MaybeProp<String>,
     pub auto_focus: bool,
@@ -101,20 +99,22 @@ pub struct UseNumberFieldInput<T: NumberValue> {
     pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
 }
 
-/// Return value of [`use_number_field`].
+/// The return value of [`use_number_field`].
 #[derive(Debug)]
 pub struct UseNumberFieldReturn {
-    /// For the element around the input and the stepper buttons.
-    pub group_props: UseNumberFieldGroupProps,
-    pub label_props: UseLabelProps,
-    pub input_props: UseNumberFieldInputProps,
+    /// The group element around the input and the buttons.
+    pub group: Part<UseNumberFieldGroupProps>,
+    /// The label element.
+    pub label: Part<UseLabelProps>,
+    /// The input element.
+    pub input: Part<UseNumberFieldInputProps>,
     /// The increment button's configuration, for `use_button`.
     pub increment_button: UseButtonInput,
     /// The decrement button's configuration, for `use_button`.
     pub decrement_button: UseButtonInput,
-    pub description_props: SlotProps,
+    pub description: Part<SlotProps>,
     /// For the error message element. Render it only while the field is invalid.
-    pub error_message_props: SlotProps,
+    pub error_message: Part<SlotProps>,
     /// The input, once rendered.
     pub element: CapturedElement,
     pub is_focused: Signal<bool>,
@@ -133,25 +133,36 @@ pub struct UseNumberFieldGroupProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-pub type UseNumberFieldGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
+impl Remount for UseNumberFieldGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            aria_disabled: self.aria_disabled,
+            aria_invalid: self.aria_invalid,
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
+pub type UseNumberFieldGroupAttrs = Spread<(
+    FixedAttr,
+    SignalAttr<Option<AriaDisabled>>,
+    SignalAttr<Option<AriaInvalid>>,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
-);
+)>;
 
 impl IntoAttrs for UseNumberFieldGroupProps {
     type Attrs = UseNumberFieldGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Role, AriaRole::Group),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaInvalid, self.aria_invalid),
+        Spread((
+            fixed_attr("role", AriaRole::Group),
+            signal_attr("aria-disabled", self.aria_disabled),
+            signal_attr("aria-invalid", self.aria_invalid),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-        )
+        ))
     }
 }
 
@@ -168,10 +179,24 @@ pub struct UseNumberFieldInputProps {
     pub on_wheel: EventHandler<WheelEvent>,
 }
 
+impl Remount for UseNumberFieldInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            text_field: self.text_field.remount(),
+            aria_roledescription: self.aria_roledescription,
+            on_beforeinput: self.on_beforeinput.clone(),
+            on_compositionstart: self.on_compositionstart.clone(),
+            on_compositionend: self.on_compositionend.clone(),
+            on_paste: self.on_paste.clone(),
+            on_wheel: self.on_wheel.clone(),
+        }
+    }
+}
+
 pub type UseNumberFieldInputAttrs = (
     UseTextFieldInputAttrs,
     (
-        Attr<attr::AriaRoledescription, Signal<Option<String>>>,
+        SignalAttr<Option<String>>,
         OnEvent<ev::beforeinput>,
         OnEvent<ev::compositionstart>,
         OnEvent<ev::compositionend>,
@@ -187,7 +212,7 @@ impl IntoAttrs for UseNumberFieldInputProps {
         (
             self.text_field.into_attrs(),
             (
-                Attr(attr::AriaRoledescription, self.aria_roledescription),
+                signal_attr("aria-roledescription", self.aria_roledescription),
                 self.on_beforeinput.into_on(ev::beforeinput),
                 self.on_compositionstart.into_on(ev::compositionstart),
                 self.on_compositionend.into_on(ev::compositionend),
@@ -225,10 +250,10 @@ impl IntoAttrs for UseNumberFieldInputProps {
 /// });
 /// let increment = use_button(field.increment_button);
 /// view! {
-///     <label {..field.label_props.into_attrs()}>"Quantity"</label>
-///     <div {..field.group_props.into_attrs()}>
-///         <input {..field.input_props.into_attrs()} />
-///         <button {..increment.props.into_attrs()}>"+"</button>
+///     <label {..field.label.attrs()}>"Quantity"</label>
+///     <div {..field.group.attrs()}>
+///         <input {..field.input.attrs()} />
+///         <button {..increment.button.attrs()}>"+"</button>
 ///     </div>
 /// }
 /// ```
@@ -331,10 +356,10 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         on_change: None,
     });
     let UseTextFieldReturn {
-        label_props,
-        input_props: mut text_field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        input: text_field_props,
+        description: description_props,
+        error_message: error_message_props,
         element,
         is_focused,
         is_focus_visible,
@@ -384,6 +409,8 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         aria_haspopup: None,
         aria_controls: Signal::stored(None),
     });
+    let label_props = label_props.into_props();
+    let mut text_field_props = text_field_props.into_props();
 
     use_form_reset(UseFormResetInput {
         element,
@@ -402,7 +429,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     }));
     // The spin button's keyboard handling (arrows, Page Up/Down, Home/End), not its role.
     let UseSpinButtonReturn {
-        props: spin,
+        spin_button: spin,
         increment_button: spin_increment_button,
         decrement_button: spin_decrement_button,
     } = use_spin_button(UseSpinButtonInput {
@@ -423,19 +450,24 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         on_decrement_to_min: Some(Callback::new(move |()| state.decrement_to_min())),
         ..UseSpinButtonInput::default()
     });
+    let spin = spin.into_props();
     let focusable = &mut text_field_props.focusable;
     focusable.on_keydown = spin.on_keydown.chain(focusable.on_keydown.clone());
     focusable.on_keyup = spin.on_keyup.chain(focusable.on_keyup.clone());
     focusable.on_focus = spin.on_focus.chain(focusable.on_focus.clone());
     focusable.on_blur = spin.on_blur.chain(focusable.on_blur.clone());
 
-    let wheel = use_wheel_stepping(UseWheelSteppingInput {
-        is_wheel_disabled,
+    let UseWheelSteppingReturn {
+        group: wheel_group,
+        input: wheel_input,
+    } = use_wheel_stepping(UseWheelSteppingInput {
         is_disabled,
         is_read_only,
-        on_increment: Callback::new(move |()| state.increment()),
-        on_decrement: Callback::new(move |()| state.decrement()),
+        is_wheel_disabled,
+        on_increment: Some(Callback::new(move |()| state.increment())),
+        on_decrement: Some(Callback::new(move |()| state.decrement())),
     });
+    let wheel_group = wheel_group.into_props();
 
     let FormattedTextFieldHandlers {
         on_beforeinput,
@@ -516,11 +548,12 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
                 if custom_label.get().is_some() {
                     return None;
                 }
-                labelled_by.get().and_then(|labelled_by| {
-                    [button_id.as_str(), labelled_by.as_str()]
-                        .into_iter()
-                        .collect::<IdRefs>()
-                        .into_value()
+                labelled_by.with(|labelled_by| {
+                    let labelled_by = labelled_by.as_ref()?;
+                    let mut ids = IdListBuilder::default();
+                    ids.push(&button_id);
+                    ids.push(labelled_by);
+                    ids.finish()
                 })
             }),
             aria_controls: Signal::stored(Some(input_id.clone())),
@@ -549,14 +582,14 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     );
 
     UseNumberFieldReturn {
-        group_props: UseNumberFieldGroupProps {
+        group: Part::stored(UseNumberFieldGroupProps {
             aria_disabled: aria_true(is_disabled),
             aria_invalid: aria_true(is_invalid),
-            on_focusin: wheel.focus_within.on_focusin,
-            on_focusout: wheel.focus_within.on_focusout,
-        },
-        label_props,
-        input_props: UseNumberFieldInputProps {
+            on_focusin: wheel_group.on_focusin,
+            on_focusout: wheel_group.on_focusout,
+        }),
+        label: Part::stored(label_props),
+        input: Part::stored(UseNumberFieldInputProps {
             text_field: text_field_props,
             // Not on iOS, so that VoiceOver announces the required state.
             aria_roledescription: Signal::derive(move || {
@@ -566,75 +599,18 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             on_compositionstart,
             on_compositionend,
             on_paste,
-            on_wheel: wheel.on_wheel,
-        },
+            on_wheel: wheel_input.into_props().on_wheel,
+        }),
         increment_button,
         decrement_button,
-        description_props,
-        error_message_props,
+        description: description_props,
+        error_message: error_message_props,
         element,
         is_focused,
         is_focus_visible,
         is_invalid,
         validation_errors,
         validation_details,
-    }
-}
-
-/// Input of [`use_wheel_stepping`].
-pub(crate) struct UseWheelSteppingInput {
-    /// Whether the scroll wheel leaves the value alone.
-    pub(crate) is_wheel_disabled: bool,
-    pub(crate) is_disabled: Signal<bool>,
-    pub(crate) is_read_only: Signal<bool>,
-    pub(crate) on_increment: Callback<()>,
-    pub(crate) on_decrement: Callback<()>,
-}
-
-/// The handlers of [`use_wheel_stepping`].
-pub(crate) struct WheelStepping {
-    /// For the element around the input: the wheel steps while focus is within it.
-    pub(crate) focus_within: UseFocusWithinProps,
-    /// For the input.
-    pub(crate) on_wheel: EventHandler<WheelEvent>,
-}
-
-/// The scroll wheel stepping a field (number and color fields) while it has focus: scrolling
-/// down increments, up decrements.
-pub(crate) fn use_wheel_stepping(input: UseWheelSteppingInput) -> WheelStepping {
-    let UseWheelSteppingInput {
-        is_wheel_disabled,
-        is_disabled,
-        is_read_only,
-        on_increment,
-        on_decrement,
-    } = input;
-    let UseFocusWithinReturn {
-        props: focus_within,
-        is_focus_within,
-    } = use_focus_within(UseFocusWithinInput {
-        is_disabled,
-        ..UseFocusWithinInput::default()
-    });
-    let wheel = use_scroll_wheel(UseScrollWheelInput {
-        is_disabled: Signal::derive(move || {
-            is_wheel_disabled || is_disabled.get() || is_read_only.get() || !is_focus_within.get()
-        }),
-        on_scroll: Some(Callback::new(move |e: ScrollEvent| {
-            // Mostly horizontal (a trackpad): probably not meant to step.
-            if e.delta_y.abs() <= e.delta_x.abs() {
-                return;
-            }
-            if e.delta_y > 0.0 {
-                on_increment.run(());
-            } else if e.delta_y < 0.0 {
-                on_decrement.run(());
-            }
-        })),
-    });
-    WheelStepping {
-        focus_within,
-        on_wheel: wheel.props.on_wheel,
     }
 }
 
@@ -719,8 +695,7 @@ fn use_native_range_validation<T: NumberValue>(
     });
     state
         .validation
-        .native_validity_readers
-        .register(Callback::new(move |()| sync()));
+        .register_native_validity_reader(Callback::new(move |()| sync()));
 }
 
 thread_local! {

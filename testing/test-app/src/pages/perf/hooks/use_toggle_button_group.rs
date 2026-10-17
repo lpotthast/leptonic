@@ -6,7 +6,7 @@
 //! ([`Control`]) mount and unmount it, disable and enable it, and change its orientation.
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     hooks::{
         button::{
             ToggleGroupState, UseButtonInput, UseToggleButtonGroupInput,
@@ -64,7 +64,7 @@ fn Group(disabled: RwSignal<bool>, orientation: RwSignal<Orientation>) -> impl I
         },
     });
     view! {
-        <div id="perf-group" {..group.props.into_attrs()}>
+        <div id="perf-group" {..group.group.attrs()}>
             <Item state key="a" />
             <Item state key="b" />
             <Item state key="c" />
@@ -80,12 +80,12 @@ fn Item(state: ToggleGroupState, key: &'static str) -> impl IntoView {
             group: state,
             key: Key::from(key),
             button: UseButtonInput {
-                id: Some(format!("perf-{key}")),
+                id: Some(format!("perf-{key}").into()),
                 ..UseButtonInput::default()
             },
         },
     ));
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     view! {
         <button {..attrs} style=styles>
             {key}

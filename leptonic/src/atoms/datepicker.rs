@@ -20,7 +20,7 @@ use super::{
     popover::PopoverDefaults,
 };
 use crate::{
-    CapturedElement, HourCycle, IntoAttrs, Out, PropsWithStyles, ValueBinding,
+    CapturedElement, HourCycle, IntoAttrs, Out, Part, PropsWithStyles, ValueBinding,
     hooks::{
         button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::DateAvailabilityQuery,
@@ -43,7 +43,7 @@ use crate::{
         overlay::Placement,
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::{data_flags, flag},
         default_class::with_default_class,
         intl_strings::{DatePickerStrings, use_localized_strings},
         scoped_context::{ClearContexts, clear_context, scoped_view},
@@ -75,7 +75,8 @@ use crate::{
 #[derive(Clone)]
 struct DateInputContext {
     segments: Signal<Vec<DateSegment>>,
-    field_props: StoredValue<Option<PropsWithStyles<UseDateFieldProps>>>,
+    /// The group's attributes, for one `DateInput` at a time.
+    field_props: Part<PropsWithStyles<UseDateFieldProps>>,
     segment:
         Arc<dyn Fn(Signal<DateSegment>, CapturedElement) -> UseDateSegmentReturn + Send + Sync>,
     is_disabled: Signal<bool>,
@@ -88,14 +89,14 @@ impl DateInputContext {
     /// segments' hook. `is_invalid`: the field's, or its picker's.
     fn new<V: DateValue>(
         field: &DateFieldState<V>,
-        field_props: PropsWithStyles<UseDateFieldProps>,
+        field_props: Part<PropsWithStyles<UseDateFieldProps>>,
         data: &DateFieldData<V>,
         is_invalid: Signal<bool>,
     ) -> Self {
         let data = *data;
         Self {
             segments: field.segments,
-            field_props: StoredValue::new(Some(field_props)),
+            field_props,
             segment: Arc::new(move |segment, element| {
                 use_date_segment(UseDateSegmentInput {
                     segment,
@@ -112,17 +113,18 @@ impl DateInputContext {
 
 /// Provides the label's and the field parts' contexts of a field or picker.
 fn provide_field_contexts(
-    label_props: UseDateFieldLabelProps,
+    label: Part<UseDateFieldLabelProps>,
     label_presence: LabelPresence,
-    description: SlotProps,
-    error_message: SlotProps,
+    description: Part<SlotProps>,
+    error_message: Part<SlotProps>,
     is_invalid: Signal<bool>,
     validation: FormValidationState,
 ) {
+    let UseDateFieldLabelProps { label, on_click } = label.into_props();
     provide_context(
-        LabelContext::span(label_props.label)
+        LabelContext::span(Part::stored(label))
             .with_presence(label_presence)
-            .with_on_click(label_props.on_click),
+            .with_on_click(on_click),
     );
     provide_context(FieldContext {
         description,
@@ -163,11 +165,13 @@ fn group_state(
 ) {
     let hover = use_hover(UseHoverInput {
         is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
     // The focus ring renders `data-focus-visible` itself.
     let UseFocusRingReturn {
-        props: focus_ring,
+        target: focus_ring,
         is_focused,
         ..
     } = use_focus_ring(UseFocusRingInput {
@@ -175,7 +179,10 @@ fn group_state(
         ..UseFocusRingInput::default()
     });
     (
-        (hover.props.into_attrs(), focus_ring.into_attrs()),
+        (
+            hover.target.into_props().into_attrs(),
+            focus_ring.into_props().into_attrs(),
+        ),
         flag(hover.is_hovered),
         flag(is_focused),
     )
@@ -200,11 +207,11 @@ fn render_field<V: DateValue>(
     let element = CapturedElement::new();
     let input_element = CapturedElement::new();
     let UseDateFieldReturn {
-        label_props,
-        field_props,
-        input_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        input: input_props,
+        description: description_props,
+        error_message: error_message_props,
         data,
     } = use_field(options, element, input_element);
     let is_invalid = state.is_invalid;
@@ -229,14 +236,16 @@ fn render_field<V: DateValue>(
         view! {
             <div
                 class=classes
-                style=styles
-                data-disabled=flag(state.is_disabled)
-                data-readonly=flag(state.is_read_only)
-                data-required=flag(state.is_required)
-                data-invalid=flag(is_invalid)
+                style={styles}
+                {..data_flags([
+                    ("data-disabled", state.is_disabled),
+                    ("data-readonly", state.is_read_only),
+                    ("data-required", state.is_required),
+                ])}
+                {..data_flags([("data-invalid", is_invalid)])}
             >
                 {children()}
-                <input {..input_props.into_attrs()} />
+                <input {..input_props.attrs()} />
                 {autofill.map(hidden_date_input)}
             </div>
         }
@@ -246,14 +255,11 @@ fn render_field<V: DateValue>(
 
 /// The visually hidden date input for autofill.
 fn hidden_date_input(autofill: UseHiddenDateInputReturn) -> impl IntoView {
-    let UseHiddenDateInputReturn {
-        container_props,
-        input_props,
-    } = autofill;
-    let styles = container_props.styles.clone();
+    let UseHiddenDateInputReturn { container, input } = autofill;
+    let (container_attrs, styles) = container.attrs();
     view! {
-        <div {..container_props.into_attrs()} style=styles>
-            <input {..input_props.into_attrs()} />
+        <div {..container_attrs} style=styles>
+            <input {..input.attrs()} />
         </div>
     }
 }
@@ -303,7 +309,7 @@ pub fn DateField<V: DateValue>(
     #[prop(into, optional)]
     auto_complete: Option<String>,
     #[prop(optional)] auto_focus: bool,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -352,8 +358,8 @@ pub fn DateField<V: DateValue>(
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             auto_focus,
             on_focus_change,
             form,
@@ -411,7 +417,7 @@ pub fn TimeField<T: TimeValue>(
     #[prop(into, optional)] name: Option<String>,
     #[prop(into, optional)] form: Option<String>,
     #[prop(optional)] auto_focus: bool,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -449,8 +455,8 @@ pub fn TimeField<T: TimeValue>(
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             auto_focus,
             on_focus_change,
             form,
@@ -508,11 +514,8 @@ where
         );
         return None;
     };
-    let Some(field_props) = context.field_props.try_update_value(Option::take).flatten() else {
-        crate::utils::dev_warn!("DateInput: used twice in one field");
-        return None;
-    };
-    let (attrs, field_styles) = field_props.into_parts();
+    // One input per field (`Part`: a second one renders nothing).
+    let (attrs, field_styles) = context.field_props.props()?.into_parts();
     let segments = context.segments;
     let children = Arc::new(children);
     let (is_disabled, is_read_only, is_invalid) = (
@@ -527,9 +530,11 @@ where
             {..group_attrs}
             class=classes
             style=field_styles.merge(styles)
-            data-disabled=flag(is_disabled)
-            data-readonly=flag(is_read_only)
-            data-invalid=flag(is_invalid)
+            {..data_flags([
+                ("data-disabled", is_disabled),
+                ("data-readonly", is_read_only),
+                ("data-invalid", is_invalid),
+            ])}
             data-hovered=hovered
             data-focus-within=focus_within
         >
@@ -598,39 +603,49 @@ pub fn DateSegment(
                 style=styles
                 aria-hidden="true"
                 data-type="literal"
-                data-disabled=flag(context.is_disabled)
-                data-readonly=flag(context.is_read_only)
-                data-invalid=flag(context.is_invalid)
+                {..data_flags([
+                    ("data-disabled", context.is_disabled),
+                    ("data-readonly", context.is_read_only),
+                    ("data-invalid", context.is_invalid),
+                ])}
             >
                 {text}
             </span>
         }));
     }
     let element = CapturedElement::new();
-    let UseDateSegmentReturn { segment_props } = (context.segment)(segment, element);
+    let UseDateSegmentReturn {
+        segment: segment_part,
+    } = (context.segment)(segment, element);
     let hover = use_hover(UseHoverInput {
         is_disabled: context.is_disabled,
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
     let UseFocusRingReturn {
-        props: focus_ring,
+        target: focus_ring,
         is_focused,
         ..
     } = use_focus_ring(UseFocusRingInput::default());
-    let (attrs, segment_styles) = segment_props.into_parts();
+    let (attrs, segment_styles) = segment_part.attrs();
     Some(Either::Right(view! {
         <span
             {..attrs}
-            {..focus_ring.into_attrs()}
-            {..hover.props.into_attrs()}
+            {..focus_ring.attrs()}
+            {..hover.target.attrs()}
             class=classes
             style=segment_styles.merge(styles)
             data-type=kind.as_str()
-            data-readonly=flag(context.is_read_only)
-            data-disabled=flag(context.is_disabled)
-            data-invalid=flag(context.is_invalid)
-            data-hovered=flag(hover.is_hovered)
-            data-focused=flag(is_focused)
+            {..data_flags([
+                ("data-hovered", hover.is_hovered),
+                ("data-focused", is_focused),
+            ])}
+            {..data_flags([
+                ("data-readonly", context.is_read_only),
+                ("data-disabled", context.is_disabled),
+                ("data-invalid", context.is_invalid),
+            ])}
         >
             {text}
         </span>
@@ -640,7 +655,8 @@ pub fn DateSegment(
 /// What a date picker's group and button need from it.
 #[derive(Clone)]
 struct DatePickerContext {
-    group_props: StoredValue<Option<PropsWithStyles<UseDateFieldProps>>>,
+    /// The group's attributes, for one `DatePickerGroup` at a time.
+    group_props: Part<PropsWithStyles<UseDateFieldProps>>,
     button: StoredValue<UseButtonInput>,
     is_open: Signal<bool>,
     is_disabled: Signal<bool>,
@@ -707,7 +723,7 @@ pub fn DatePicker<V: DateValue>(
     #[prop(into, optional)]
     auto_complete: Option<String>,
     #[prop(optional)] auto_focus: bool,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -751,12 +767,12 @@ pub fn DatePicker<V: DateValue>(
     let group = CapturedElement::new();
     let trigger = DialogTriggerContext::new(state.overlay, group);
     let UseDatePickerReturn {
-        label_props,
-        group_props,
+        label: label_props,
+        group: group_props,
         field_describedby,
         button,
-        description_props,
-        error_message_props,
+        description: description_props,
+        error_message: error_message_props,
         labelledby,
         dialog_labelledby,
         ..
@@ -767,8 +783,8 @@ pub fn DatePicker<V: DateValue>(
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             is_disabled,
             is_read_only,
             on_focus_change,
@@ -807,8 +823,8 @@ pub fn DatePicker<V: DateValue>(
     let field_element = CapturedElement::new();
     let input_element = CapturedElement::new();
     let UseDateFieldReturn {
-        field_props,
-        input_props,
+        field: field_props,
+        input: input_props,
         data,
         ..
     } = use_date_field(UseDateFieldInput {
@@ -853,7 +869,7 @@ pub fn DatePicker<V: DateValue>(
             is_invalid,
         ));
         provide_context(DatePickerContext {
-            group_props: StoredValue::new(Some(group_props)),
+            group_props,
             button: StoredValue::new(button),
             is_open: open,
             is_disabled: is_disabled_state,
@@ -880,15 +896,19 @@ pub fn DatePicker<V: DateValue>(
         view! {
             <div
                 class=classes
-                style=styles
-                data-disabled=flag(is_disabled_state)
-                data-readonly=flag(field_state.is_read_only)
-                data-required=flag(field_state.is_required)
-                data-invalid=flag(is_invalid)
-                data-open=flag(open)
+                style={styles}
+                {..data_flags([
+                    ("data-disabled", is_disabled_state),
+                    ("data-readonly", field_state.is_read_only),
+                    ("data-required", field_state.is_required),
+                ])}
+                {..data_flags([
+                    ("data-invalid", is_invalid),
+                    ("data-open", open),
+                ])}
             >
                 {children()}
-                <input {..input_props.into_attrs()} />
+                <input {..input_props.attrs()} />
                 {hidden_date_input(autofill)}
             </div>
         }
@@ -913,11 +933,7 @@ pub fn DatePickerGroup(
         crate::utils::dev_warn!("DatePickerGroup: not inside a DatePicker");
         return None;
     };
-    let Some(props) = context.group_props.try_update_value(Option::take).flatten() else {
-        crate::utils::dev_warn!("DatePickerGroup: used twice in one DatePicker");
-        return None;
-    };
-    let (attrs, group_styles) = props.into_parts();
+    let (attrs, group_styles) = context.group_props.attrs();
     let (group_attrs, hovered, focus_within) = group_state(context.is_disabled);
     Some(view! {
         <div
@@ -926,10 +942,12 @@ pub fn DatePickerGroup(
             class=classes
             style=group_styles.merge(styles)
             data-hovered=hovered
-            data-focus-within=focus_within
-            data-disabled=flag(context.is_disabled)
-            data-invalid=flag(context.is_invalid)
-            data-open=flag(context.is_open)
+            data-focus-within={focus_within}
+            {..data_flags([
+                ("data-disabled", context.is_disabled),
+                ("data-invalid", context.is_invalid),
+                ("data-open", context.is_open),
+            ])}
         >
             {children()}
         </div>
@@ -955,7 +973,7 @@ pub fn DatePickerButton(
         return None;
     };
     let UseButtonReturn {
-        props,
+        button: props,
         is_disabled,
         is_pressed,
         is_hovered,
@@ -965,16 +983,18 @@ pub fn DatePickerButton(
     // Pressed while the popover is open (react-aria-components: `isPressed: state.isOpen`).
     let is_open = context.is_open;
     let is_pressed = Signal::derive(move || is_pressed.get() || is_open.get());
-    let (attrs, button_styles) = props.into_parts();
+    let (attrs, button_styles) = props.attrs();
     Some(view! {
         <button
             {..attrs}
             class=classes
             style=button_styles.merge(styles)
-            data-pressed=flag(is_pressed)
-            data-hovered=flag(is_hovered)
-            data-focused=flag(is_focused)
-            data-disabled=flag(is_disabled)
+            {..data_flags([
+                ("data-pressed", is_pressed),
+                ("data-hovered", is_hovered),
+                ("data-focused", is_focused),
+            ])}
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             {children()}
         </button>
@@ -1032,7 +1052,7 @@ pub fn DateRangePicker<V: DateValue>(
     #[prop(into, optional)] end_name: Option<String>,
     #[prop(into, optional)] form: Option<String>,
     #[prop(optional)] auto_focus: bool,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -1077,12 +1097,12 @@ pub fn DateRangePicker<V: DateValue>(
     let group = CapturedElement::new();
     let trigger = DialogTriggerContext::new(state.overlay, group);
     let UseDatePickerReturn {
-        label_props,
-        group_props,
+        label: label_props,
+        group: group_props,
         field_describedby,
         button,
-        description_props,
-        error_message_props,
+        description: description_props,
+        error_message: error_message_props,
         labelledby,
         focus_manager,
         dialog_labelledby,
@@ -1094,8 +1114,8 @@ pub fn DateRangePicker<V: DateValue>(
             id,
             has_label: label_presence.has_label,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             is_disabled,
             is_read_only,
             on_focus_change,
@@ -1132,8 +1152,8 @@ pub fn DateRangePicker<V: DateValue>(
         });
         let input_element = CapturedElement::new();
         let UseDateFieldReturn {
-            field_props,
-            input_props,
+            field: field_props,
+            input: input_props,
             data,
             ..
         } = use_date_field(UseDateFieldInput {
@@ -1195,7 +1215,7 @@ pub fn DateRangePicker<V: DateValue>(
             end: end_context,
         });
         provide_context(DatePickerContext {
-            group_props: StoredValue::new(Some(group_props)),
+            group_props,
             button: StoredValue::new(button),
             is_open: open,
             is_disabled: is_disabled_state,
@@ -1221,16 +1241,20 @@ pub fn DateRangePicker<V: DateValue>(
         view! {
             <div
                 class=classes
-                style=styles
-                data-disabled=flag(is_disabled_state)
-                data-readonly=flag(is_read_only_state)
-                data-required=flag(is_required)
-                data-invalid=flag(is_invalid)
-                data-open=flag(open)
+                style={styles}
+                {..data_flags([
+                    ("data-disabled", is_disabled_state),
+                    ("data-readonly", is_read_only_state),
+                    ("data-required", is_required),
+                ])}
+                {..data_flags([
+                    ("data-invalid", is_invalid),
+                    ("data-open", open),
+                ])}
             >
                 {children()}
-                <input {..start_input.into_attrs()} />
-                <input {..end_input.into_attrs()} />
+                <input {..start_input.attrs()} />
+                <input {..end_input.attrs()} />
             </div>
         }
     })

@@ -25,9 +25,10 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
             ..ToggleOptions::default()
         },
         state,
+        validation: None,
     });
-    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
-    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let (label_attrs, label_styles) = checkbox.label.attrs();
+    let (input_attrs, input_styles) = checkbox.input.attrs();
     let is_focus_visible = checkbox.is_focus_visible;
 
     // The hook tracks keyboard focus; `data-focus-visible` lets the stylesheet draw a focus ring around the input.

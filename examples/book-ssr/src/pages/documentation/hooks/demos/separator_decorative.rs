@@ -1,7 +1,4 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator},
-};
+use leptonic::hooks::separator::{SeparatorElementType, UseSeparatorInput, use_separator};
 use leptos::prelude::*;
 
 #[component]
@@ -13,7 +10,7 @@ pub fn SeparatorDecorativeDemo() -> impl IntoView {
 
     view! {
         <p>"The separator below is a div with role=\"separator\", drawn as a fading line."</p>
-        <div {..separator.props.into_attrs()} class="demo-separator-fade"></div>
+        <div {..separator.separator.attrs()} class="demo-separator-fade"></div>
         <p>"Content continues below it."</p>
     }
 }

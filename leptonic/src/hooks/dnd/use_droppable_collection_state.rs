@@ -14,7 +14,10 @@ use super::{
     },
     utils::{dragging_keys, is_internal_drop_operation},
 };
-use crate::hooks::collections::{Collection, Key, ListState};
+use crate::{
+    hooks::collections::{Collection, Key, ListState},
+    utils::keyed_triggers::KeyedTriggers,
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -102,6 +105,10 @@ pub struct DroppableCollectionState {
     pub is_disabled: Signal<bool>,
     set_target_signal: WriteSignal<Option<DropTarget>>,
     pub(crate) options: StoredValue<DroppableCollectionOptions>,
+    /// Readers of single targets (`is_drop_target`), by the target's item key (`None`: the
+    /// root): a target change notifies the old and the new target's keys and their equivalents'
+    /// (`performance.md` R1).
+    targets: KeyedTriggers<Option<Key>>,
 }
 
 impl std::fmt::Debug for DroppableCollectionState {
@@ -139,13 +146,32 @@ impl DroppableCollectionState {
                 target: new.clone(),
             });
         }
+        let mut changed = Vec::new();
+        self.list.collection.with_untracked(|c| {
+            for target in [self.target.get_untracked(), target.clone()]
+                .iter()
+                .flatten()
+            {
+                changed.push(target_key(target));
+                if let DropTarget::Item(item) = target
+                    && let Some(opposite) = opposite_target(c, item)
+                {
+                    changed.push(Some(opposite.key));
+                }
+            }
+        });
         self.set_target_signal.set(target);
+        self.targets.notify(&changed);
     }
 
     /// Whether `target` is (equivalent to) the current drop target: "after A" is the same
     /// position as "before B" when B follows A.
     pub fn is_drop_target(&self, target: Option<&DropTarget>) -> bool {
-        let (Some(target), Some(current)) = (target, self.target.get()) else {
+        // Only changes of this target (or an equivalent one) reach the reader.
+        if let Some(target) = target {
+            self.targets.track(&target_key(target));
+        }
+        let (Some(target), Some(current)) = (target, self.target.get_untracked()) else {
             return false;
         };
         if *target == current {
@@ -284,6 +310,14 @@ impl DroppableCollectionState {
 }
 
 /// The same position seen from the neighboring item: "before B" is "after A" when A precedes B.
+/// The item key of `target` (`None`: the root), the key of its readers' triggers.
+fn target_key(target: &DropTarget) -> Option<Key> {
+    match target {
+        DropTarget::Root => None,
+        DropTarget::Item(item) => Some(item.key.clone()),
+    }
+}
+
 fn opposite_target(collection: &Collection, target: &ItemDropTarget) -> Option<ItemDropTarget> {
     match target.drop_position {
         DropPosition::Before => {
@@ -333,6 +367,7 @@ pub fn use_droppable_collection_state(
         is_disabled,
         set_target_signal,
         options: StoredValue::new(options),
+        targets: KeyedTriggers::new(),
     }
 }
 

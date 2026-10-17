@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, KeyboardKey, KeyboardShortcuts, Shortcut,
+    KeyboardKey, KeyboardShortcuts, Shortcut,
     hooks::{
         focus::{UseFocusInput, UseFocusReturn, use_focus},
         interactions::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
@@ -14,7 +14,7 @@ const FRUITS: [&str; 4] = ["Apple", "Banana", "Cherry", "Mango"];
 /// as it would to real ones. (`use_focus` only reports the element that has DOM focus, so the
 /// option listens to the events directly.)
 #[component]
-fn FruitOption(id: String, name: &'static str, log: RwSignal<Vec<String>>) -> impl IntoView {
+fn FruitOption(id: leptonic::Id, name: &'static str, log: RwSignal<Vec<String>>) -> impl IntoView {
     let (is_focused, set_focused) = signal(false);
 
     view! {
@@ -41,7 +41,7 @@ fn FruitOption(id: String, name: &'static str, log: RwSignal<Vec<String>>) -> im
 pub fn VirtualFocusDemo() -> impl IntoView {
     let input_id = use_id("fruit-input");
     let list_id = use_id("fruit-list");
-    let option_ids: Vec<String> = FRUITS.iter().map(|_| use_id("fruit")).collect();
+    let option_ids: Vec<leptonic::Id> = FRUITS.iter().map(|_| use_id("fruit")).collect();
 
     let input = NodeRef::<html::Input>::new();
     let list = NodeRef::<html::Ul>::new();
@@ -84,7 +84,7 @@ pub fn VirtualFocusDemo() -> impl IntoView {
             move_to(None);
             true
         });
-    let UseKeyboardReturn { props: keyboard } = use_keyboard(UseKeyboardInput {
+    let UseKeyboardReturn { target: keyboard } = use_keyboard(UseKeyboardInput {
         shortcuts: Some(shortcuts),
         allow_repeats: true,
         ..Default::default()
@@ -92,7 +92,7 @@ pub fn VirtualFocusDemo() -> impl IntoView {
 
     // The input has DOM focus throughout, but loses its ring while an option is focused virtually.
     let (is_input_focused, set_input_focused) = signal(false);
-    let UseFocusReturn { props: focus } = use_focus(UseFocusInput {
+    let UseFocusReturn { target: focus } = use_focus(UseFocusInput {
         on_focus: Some(Callback::new(move |_| {
             log.update(|log| log.push("the input got focus".to_owned()));
         })),
@@ -114,8 +114,8 @@ pub fn VirtualFocusDemo() -> impl IntoView {
         <div class="demo-virtual-focus">
             <label for=input_id.clone()>"Fruit"</label>
             <input
-                {..keyboard.into_attrs()}
-                {..focus.into_attrs()}
+                {..keyboard.attrs()}
+                {..focus.attrs()}
                 node_ref=input
                 id=input_id
                 class="demo-virtual-input"

@@ -418,7 +418,7 @@ mod tests {
             // The first render takes its options.
             assert_that!(state.content_size().get_untracked().height).is_equal_to(4800.0);
 
-            // Options replacing options (as upstream: not the first ones replacing none).
+            // Options replacing options.
             layout_options.set(Some(rows_of(20.0)));
             flush_effects();
             assert_that!(state.content_size().get_untracked().height).is_equal_to(2000.0);
@@ -428,6 +428,62 @@ mod tests {
                     .map(|info| info.rect.y)
             )
             .is_equal_to(Some(20.0));
+        });
+    }
+
+    #[test]
+    fn first_layout_options_invalidate_the_layout() {
+        with_owner(|| {
+            let Fixture {
+                state,
+                layout_options,
+                ..
+            } = list(100, rows_of(32.0), 0.0);
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(3200.0);
+
+            // Options replacing none (the layout's own): upstream ignores them until something
+            // else invalidates the layout.
+            layout_options.set(Some(rows_of(48.0)));
+            flush_effects();
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(4800.0);
+            assert_that!(
+                state
+                    .layout_info(&Key::from("row-1"))
+                    .map(|info| info.rect.y)
+            )
+            .is_equal_to(Some(48.0));
+        });
+    }
+
+    #[test]
+    fn a_new_estimate_replaces_the_estimated_sizes() {
+        with_owner(|| {
+            let estimated = |size| ListLayoutOptions {
+                row_size: ItemSize::Estimated(size),
+                ..ListLayoutOptions::default()
+            };
+            let Fixture {
+                state,
+                layout_options,
+                ..
+            } = list_with(100, estimated(10.0), Some(estimated(20.0)), 0.0);
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(2000.0);
+            state.update_item_size(&Key::from("row-0"), Size::new(400.0, 50.0));
+            flush_effects();
+            assert_that!(state.content_size().get_untracked().height).is_equal_to(2030.0);
+
+            // The rows laid out at the old estimate (the visible ones) take the new one, as the
+            // rest does; the measured row keeps its size.
+            layout_options.set(Some(estimated(40.0)));
+            flush_effects();
+            assert_that!(state.content_size().get_untracked().height)
+                .is_equal_to(50.0 + 99.0 * 40.0);
+            assert_that!(
+                state
+                    .layout_info(&Key::from("row-2"))
+                    .map(|info| info.rect.y)
+            )
+            .is_equal_to(Some(90.0));
         });
     }
 

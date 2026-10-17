@@ -1,11 +1,16 @@
 // Upstream: react-aria/src/table/useTableHeaderRow.ts @ 99e6102368
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::TableData;
-use crate::{IntoAttrs, hooks::collections::Key, utils::aria::AriaRole};
+use crate::{
+    IntoAttrs,
+    hooks::collections::Key,
+    utils::{
+        aria::AriaRole,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -26,22 +31,28 @@ pub struct UseTableHeaderRowProps {
     pub role: AriaRole,
 }
 
-pub type UseTableHeaderRowAttrs = (Attr<attr::Role, AriaRole>,);
+impl Remount for UseTableHeaderRowProps {
+    fn remount(&self) -> Self {
+        Self { role: self.role }
+    }
+}
+
+pub type UseTableHeaderRowAttrs = (FixedAttr,);
 
 impl IntoAttrs for UseTableHeaderRowProps {
     type Attrs = UseTableHeaderRowAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Role, self.role),)
+        (fixed_attr("role", self.role),)
     }
 }
 
 /// A row of column headers (see `TableCollection::header_rows`).
-pub fn use_table_header_row() -> UseTableHeaderRowProps {
+pub fn use_table_header_row() -> Part<UseTableHeaderRowProps> {
     crate::metrics::subject!();
-    UseTableHeaderRowProps {
+    Part::stored(UseTableHeaderRowProps {
         role: AriaRole::Row,
-    }
+    })
 }
 
 /// Input of [`use_table_header_placeholder`].
@@ -63,11 +74,22 @@ pub struct UseTableHeaderPlaceholderProps {
     pub colspan: Signal<Option<usize>>,
 }
 
+impl Remount for UseTableHeaderPlaceholderProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_colindex: self.aria_colindex,
+            aria_colspan: self.aria_colspan,
+            colspan: self.colspan,
+        }
+    }
+}
+
 pub type UseTableHeaderPlaceholderAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaColindex, Signal<Option<usize>>>,
-    Attr<attr::AriaColspan, Signal<Option<usize>>>,
-    Attr<attr::Colspan, Signal<Option<usize>>>,
+    FixedAttr,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
+    SignalAttr<Option<usize>>,
 );
 
 impl IntoAttrs for UseTableHeaderPlaceholderProps {
@@ -75,10 +97,10 @@ impl IntoAttrs for UseTableHeaderPlaceholderProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaColindex, self.aria_colindex),
-            Attr(attr::AriaColspan, self.aria_colspan),
-            Attr(attr::Colspan, self.colspan),
+            fixed_attr("role", self.role),
+            signal_attr("aria-colindex", self.aria_colindex),
+            signal_attr("aria-colspan", self.aria_colspan),
+            signal_attr("colspan", self.colspan),
         )
     }
 }
@@ -87,7 +109,7 @@ impl IntoAttrs for UseTableHeaderPlaceholderProps {
 /// columns that aren't in a column group. Not focusable. Its position follows the table.
 pub fn use_table_header_placeholder(
     input: UseTableHeaderPlaceholderInput,
-) -> UseTableHeaderPlaceholderProps {
+) -> Part<UseTableHeaderPlaceholderProps> {
     crate::metrics::subject!();
     let UseTableHeaderPlaceholderInput { table, key } = input;
     let table = table.state.table;
@@ -99,10 +121,10 @@ pub fn use_table_header_placeholder(
                 .unwrap_or_default()
         })
     });
-    UseTableHeaderPlaceholderProps {
+    Part::stored(UseTableHeaderPlaceholderProps {
         role: AriaRole::Gridcell,
         aria_colindex: Signal::derive(move || position.get().0.map(|i| i + 1)),
         aria_colspan: Signal::derive(move || position.get().1),
         colspan: Signal::derive(move || position.get().1),
-    }
+    })
 }

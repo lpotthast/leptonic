@@ -37,7 +37,7 @@ fn Item(
         is_current: is_current.into(),
         ..UseBreadcrumbItemInput::default()
     });
-    let (attrs, styles) = item.props.into_parts();
+    let (attrs, styles) = item.link.attrs();
     view! {
         <a
             {..attrs}

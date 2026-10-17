@@ -5,8 +5,8 @@ use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use crate::{
-    PropsWithStyles,
-    hooks::overlay::{PlacementAxis, UseOverlayArrowAttrs, UseOverlayArrowProps},
+    IntoAttrs, Part, PropsWithStyles,
+    hooks::overlay::{PlacementAxis, UseOverlayArrowProps},
     utils::{default_class::with_default_class, styles::Styles},
 };
 
@@ -23,9 +23,8 @@ use crate::{
 /// [`Tooltip`](super::tooltip::Tooltip)) for their [`OverlayArrow`].
 #[derive(Clone)]
 pub(crate) struct OverlayArrowContext {
-    attrs: StoredValue<UseOverlayArrowAttrs>,
-    /// Whether an arrow is mounted: the overlay positions one arrow.
-    mounted: StoredValue<bool>,
+    /// The arrow element: the overlay positions one arrow at a time.
+    arrow: Part<UseOverlayArrowProps>,
     styles: Styles,
     placement: Signal<Option<PlacementAxis>>,
 }
@@ -35,10 +34,11 @@ impl OverlayArrowContext {
         props: PropsWithStyles<UseOverlayArrowProps>,
         placement: Signal<Option<PlacementAxis>>,
     ) -> Self {
-        let (attrs, styles) = props.into_parts();
+        let (UseOverlayArrowProps { element_capture }, styles) = props.into_inner();
         Self {
-            attrs: StoredValue::new(attrs),
-            mounted: StoredValue::new(false),
+            arrow: Part::new(move || UseOverlayArrowProps {
+                element_capture: element_capture.clone(),
+            }),
             styles,
             placement,
         }
@@ -71,15 +71,9 @@ pub fn OverlayArrow(
         crate::utils::dev_warn!("An <OverlayArrow> must be inside a <Popover> or <Tooltip>.");
         return None;
     };
-    if ctx.mounted.get_value() {
-        crate::utils::dev_warn!("Only one <OverlayArrow> per overlay is supported.");
-        return None;
-    }
-    // Rendered again each time the overlay opens.
-    ctx.mounted.set_value(true);
-    let mounted = ctx.mounted;
-    on_cleanup(move || mounted.set_value(false));
-    let attrs = ctx.attrs.get_value();
+    // One arrow per overlay (`Part`: a second one renders nothing). Rendered again each time the
+    // overlay opens.
+    let attrs = ctx.arrow.props()?.into_attrs();
     let placement = ctx.placement;
     // At the overlay's edge facing the trigger, centered on the offset the overlay computed.
     let edge = move |side: PlacementAxis| move || (placement.get() == Some(side)).then_some("100%");

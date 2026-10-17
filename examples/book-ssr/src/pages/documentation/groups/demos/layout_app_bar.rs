@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::button::Button,
     hooks::landmark::{LandmarkRole, UseLandmarkInput, UseLandmarkReturn, use_landmark},
 };
@@ -12,7 +12,7 @@ pub fn LayoutAppBarDemo() -> impl IntoView {
 
     // The page's banner landmark. This page has a second one, the book's own app bar, so it gets a name.
     let header = CapturedElement::new();
-    let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
+    let UseLandmarkReturn { landmark } = use_landmark(UseLandmarkInput {
         element: header,
         role: LandmarkRole::Banner,
         aria_label: "My App".into(),
@@ -23,7 +23,7 @@ pub fn LayoutAppBarDemo() -> impl IntoView {
     view! {
         // A scrolling frame standing in for the page: the bar sticks to its top.
         <div class="demo-app-bar-frame" role="region" aria-label="Scrolling page" tabindex="0">
-            <header {..props.into_attrs()} {..header.attr()} class="demo-app-bar">
+            <header {..landmark.attrs()} {..header.attr()} class="demo-app-bar">
                 <span class="demo-app-bar-title">"My App"</span>
                 <div class="demo-app-bar-actions">
                     // Icon-only buttons are named with `aria_label`; the icons themselves are decorative.

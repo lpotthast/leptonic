@@ -48,12 +48,12 @@ fn Toggle(disabled: RwSignal<bool>, state: StoredValue<Option<ToggleState>>) -> 
     let button = use_button(use_toggle_button(UseToggleButtonInput {
         state: toggle_state,
         button: UseButtonInput {
-            id: Some("perf-toggle".to_owned()),
+            id: Some("perf-toggle".into()),
             is_disabled: disabled.into(),
             ..UseButtonInput::default()
         },
     }));
-    let (attrs, styles) = button.props.into_parts();
+    let (attrs, styles) = button.button.attrs();
     view! {
         <button {..attrs} style=styles>
             "Toggle me"

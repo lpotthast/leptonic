@@ -1,19 +1,24 @@
-//! A hook grid whose keyboard delegate comes from `use_grid_keyboard_delegate`, for its
-//! performance test (`leptonic/tests/perf_tests/hooks/use_grid_keyboard_delegate.rs`): the grid
-//! of the `use_grid` fixture ([`super::use_grid`]: [`SMALL`] rows "Row <i>" of three cells, in row
-//! focus mode with multiple selection) with the delegate handed to `use_grid`, in an
-//! `I18nProvider`, between two plain buttons (`#perf-before`, `#perf-after`) to tab from and to,
-//! mounted at first. Its controls ([`Control`]) mount and unmount the grid, set its size while
-//! unmounted (`small`, `large`: [`LARGE`] rows) and switch the locale to a right-to-left one
-//! (`rtl`: ar-AE; `ltr`: en-US), which the delegate reads.
+//! A hook grid whose keyboard delegate comes from `use_grid_keyboard_delegate`, for its performance
+//! test (`leptonic/tests/perf_tests/hooks/use_grid_keyboard_delegate.rs`): a grid of [`SMALL`] rows
+//! "Row <i>" of three cells, in row focus mode with multiple selection, with the delegate handed to
+//! `use_grid`, in an `I18nProvider`, between two plain buttons (`#perf-before`, `#perf-after`) to
+//! tab from and to, mounted at first. Its controls ([`Control`]) mount and unmount the grid, set
+//! its size while unmounted (`small`, `large`: [`LARGE`] rows) and switch the locale to a
+//! right-to-left one (`rtl`: ar-AE; `ltr`: en-US), which the delegate reads.
+
+use std::sync::Arc;
 
 use leptonic::{
-    CapturedElement, I18nProvider, IntoAttrs, Locale,
+    CapturedElement, I18nProvider, Locale, flag,
     hooks::{
-        collections::{CollectionOptions, SelectionMode, SelectionOptions},
+        collections::{
+            Collection, CollectionMemo, CollectionOptions, Key, SelectionMode, SelectionOptions,
+        },
         grid::{
-            GridFocusMode, GridState, UseGridInput, UseGridKeyboardDelegateInput, UseGridReturn,
-            UseGridStateInput, use_grid, use_grid_keyboard_delegate, use_grid_state,
+            CellFocusMode, GridData, GridFocusMode, GridState, UseGridCellInput, UseGridCellReturn,
+            UseGridInput, UseGridKeyboardDelegateInput, UseGridReturn, UseGridRowInput,
+            UseGridRowReturn, UseGridStateInput, use_grid, use_grid_cell,
+            use_grid_keyboard_delegate, use_grid_row, use_grid_state,
         },
         gridlist::KeyboardNavigationBehavior,
     },
@@ -21,15 +26,102 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-use super::use_grid::{HookGridRowWithCells, LARGE, SMALL, grid_collection};
 use crate::pages::perf::{Control, PerfControls};
+
+/// The rows of the small grid.
+const SMALL: usize = 10;
+
+/// The rows of the large grid.
+const LARGE: usize = 1_000;
+
+/// `rows` rows ("Row <i>", key `i`), each with the cells "Row <i>", "Value <i>" and
+/// "Group <i % 3>".
+fn grid_collection(rows: RwSignal<usize>) -> CollectionMemo {
+    Memo::new(move |_| {
+        Arc::new(Collection::build(|b| {
+            for i in 0..rows.get() {
+                b.row(i, format!("Row {i}"), |r| {
+                    r.cell(format!("Row {i}"));
+                    r.cell(format!("Value {i}"));
+                    r.cell(format!("Group {}", i % 3));
+                });
+            }
+        }))
+    })
+}
+
+/// A row: `use_grid_row` on a `div`, its pressed state in `data-pressed`.
+#[component]
+fn HookGridRow(grid: GridData, key: Key, children: Children) -> impl IntoView {
+    let UseGridRowReturn {
+        row: row_props,
+        is_pressed,
+        ..
+    } = use_grid_row(UseGridRowInput {
+        grid,
+        key,
+        on_context_menu: None,
+    });
+    let (attrs, styles) = row_props.attrs();
+    view! {
+        <div {..attrs} style=styles data-pressed=flag(is_pressed)>
+            {children()}
+        </div>
+    }
+}
+
+/// A cell: `use_grid_cell` on a `div`, its pressed state in `data-pressed`.
+#[component]
+fn HookGridCell(
+    grid: GridData,
+    key: Key,
+    #[prop(optional)] focus_mode: Option<CellFocusMode>,
+    children: Children,
+) -> impl IntoView {
+    let UseGridCellReturn {
+        cell: grid_cell_props,
+        is_pressed,
+    } = use_grid_cell(UseGridCellInput {
+        should_select_on_press_up: grid.should_select_on_press_up,
+        grid,
+        key,
+        id: None,
+        focus_mode,
+        allows_arrow_navigation: false,
+    });
+    let (attrs, styles) = grid_cell_props.attrs();
+    view! {
+        <div {..attrs} style=styles data-pressed=flag(is_pressed)>
+            {children()}
+        </div>
+    }
+}
+
+/// Row `i` with its three cells.
+#[component]
+fn HookGridRowWithCells(grid: GridData, i: usize) -> impl IntoView {
+    let row = Key::from(i);
+    view! {
+        <HookGridRow grid=grid.clone() key=row.clone()>
+            <HookGridCell grid=grid.clone() key=Key::cell(&row, 0)>
+                {format!("Row {i}")}
+            </HookGridCell>
+            <HookGridCell grid=grid.clone() key=Key::cell(&row, 1)>
+                {format!("Value {i}")}
+            </HookGridCell>
+            <HookGridCell grid=grid key=Key::cell(&row, 2)>
+                {format!("Group {}", i % 3)}
+            </HookGridCell>
+        </HookGridRow>
+    }
+}
 
 /// The grid: `use_grid` with the delegate of `use_grid_keyboard_delegate`, on a `div`.
 #[component]
 fn PerfGrid(state: GridState, rows: RwSignal<usize>) -> impl IntoView {
     let element = CapturedElement::new();
     let delegate = use_grid_keyboard_delegate(UseGridKeyboardDelegateInput { state, element });
-    let UseGridReturn { props, data } = use_grid(UseGridInput {
+    let UseGridReturn { grid: props, data } = use_grid(UseGridInput {
         state,
         element,
         id: None,
@@ -43,7 +135,7 @@ fn PerfGrid(state: GridState, rows: RwSignal<usize>) -> impl IntoView {
         on_cell_action: None,
     });
     view! {
-        <div {..props.into_attrs()}>
+        <div {..props.attrs()}>
             <For each=move || 0..rows.get() key=|i| *i let:i>
                 <HookGridRowWithCells grid=data.clone() i=i />
             </For>

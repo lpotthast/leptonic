@@ -349,3 +349,31 @@ pub async fn stays_open_when_pressed_into(page: &Page<'_>) -> Result<(), Report>
         .await;
     Ok(())
 }
+
+/// The trigger is described by its open tooltip only while the tooltip is rendered (react-aria
+/// ties optional elements' ids to their rendering, `useSlotId`): an open tooltip without its
+/// element leaves no reference to a missing element.
+#[browser_test]
+pub async fn describes_only_while_rendered(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let trigger = page.element("#test-tooltip-unmounted").await?;
+    let toggle = page.element("#test-tooltip-toggle").await?;
+    toggle.click().await?;
+    trigger.hover().await?;
+    // Open (no delay), without its element.
+    trigger
+        .attr_stays("aria-describedby", None, Duration::from_millis(300))
+        .await?;
+    // A script click: the pointer stays on the trigger, the tooltip open.
+    toggle.virtual_click().await?;
+    let tooltip = page.element(TOOLTIP).await?;
+    tooltip.wait_for_inner_text("Sometimes rendered").await?;
+    let tooltip_id = tooltip.id().await?.unwrap_or_default();
+    trigger
+        .wait_for_attr("aria-describedby", Some(tooltip_id.as_str()))
+        .await?;
+    toggle.virtual_click().await?;
+    page.wait_for_count(TOOLTIP, 0).await?;
+    trigger.wait_for_attr("aria-describedby", None).await?;
+    Ok(())
+}

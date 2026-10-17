@@ -4,7 +4,6 @@ use leptos::{either::Either, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    IntoAttrs,
     atoms::field::TextElement,
     hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden},
     utils::default_class::with_default_class,
@@ -37,13 +36,13 @@ pub fn VisuallyHidden(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-VisuallyHidden", classes);
-    let props = use_visually_hidden(UseVisuallyHiddenInput { is_focusable }).props;
+    let hidden = use_visually_hidden(UseVisuallyHiddenInput { is_focusable }).target;
     match element {
         TextElement::Div => Either::Left(view! {
-            <div {..props.into_attrs()} class=classes>{children()}</div>
+            <div {..hidden.attrs()} class=classes>{children()}</div>
         }),
         TextElement::Span => Either::Right(view! {
-            <span {..props.into_attrs()} class=classes>{children()}</span>
+            <span {..hidden.attrs()} class=classes>{children()}</span>
         }),
     }
 }

@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         breadcrumbs::{
@@ -28,8 +27,8 @@ fn Crumb(
         is_current: Signal::stored(is_current),
         ..UseBreadcrumbItemInput::default()
     })
-    .props
-    .into_parts();
+    .link
+    .attrs();
 
     view! {
         <li class="demo-breadcrumb">
@@ -46,7 +45,7 @@ pub fn BreadcrumbsDemo() -> impl IntoView {
     view! {
         // The separators are drawn in CSS, hidden from assistive technology.
         <nav aria-label="Breadcrumbs">
-            <ol {..breadcrumbs.props.into_attrs()} class="demo-breadcrumbs">
+            <ol {..breadcrumbs.breadcrumbs.attrs()} class="demo-breadcrumbs">
                 <Crumb href="/doc/overview" is_current=false is_disabled=disabled.into()>"Docs"</Crumb>
                 <Crumb href="/doc/navigation" is_current=false is_disabled=disabled.into()>"Navigation"</Crumb>
                 <Crumb href="/doc/breadcrumbs" is_current=false is_disabled=disabled.into()>"Breadcrumbs"</Crumb>

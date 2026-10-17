@@ -86,6 +86,7 @@ pub mod use_grid_state;
 pub mod use_has_tabbable_child;
 pub mod use_hidden_date_input;
 pub mod use_hidden_select;
+pub mod use_hide_outside;
 pub mod use_highlight_selection_description;
 pub mod use_hover;
 pub mod use_interact_outside;
@@ -109,6 +110,8 @@ pub mod use_menu_trigger_state;
 pub mod use_meter;
 pub mod use_modal_backdrop;
 pub mod use_move;
+pub mod use_node;
+pub mod use_node_aria_label;
 pub mod use_number_field;
 pub mod use_number_field_state;
 pub mod use_option;
@@ -181,6 +184,7 @@ pub mod use_tooltip;
 pub mod use_tooltip_trigger;
 pub mod use_tooltip_trigger_state;
 pub mod use_tree;
+pub mod use_tree_expansion;
 pub mod use_tree_item;
 pub mod use_tree_state;
 pub mod use_type_select;
@@ -188,6 +192,7 @@ pub mod use_virtual_drop;
 pub mod use_virtualizer_item;
 pub mod use_virtualizer_state;
 pub mod use_visually_hidden;
+pub mod use_wheel_stepping;
 
 use browser_test::TestGroup;
 
@@ -279,6 +284,7 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
     let group = use_has_tabbable_child::register(group);
     let group = use_hidden_date_input::register(group);
     let group = use_hidden_select::register(group);
+    let group = use_hide_outside::register(group);
     let group = use_highlight_selection_description::register(group);
     let group = use_hover::register(group);
     let group = use_interact_outside::register(group);
@@ -302,6 +308,8 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
     let group = use_meter::register(group);
     let group = use_modal_backdrop::register(group);
     let group = use_move::register(group);
+    let group = use_node::register(group);
+    let group = use_node_aria_label::register(group);
     let group = use_number_field::register(group);
     let group = use_number_field_state::register(group);
     let group = use_option::register(group);
@@ -374,11 +382,13 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
     let group = use_tooltip_trigger::register(group);
     let group = use_tooltip_trigger_state::register(group);
     let group = use_tree::register(group);
+    let group = use_tree_expansion::register(group);
     let group = use_tree_item::register(group);
     let group = use_tree_state::register(group);
     let group = use_type_select::register(group);
     let group = use_virtual_drop::register(group);
     let group = use_virtualizer_item::register(group);
     let group = use_virtualizer_state::register(group);
-    use_visually_hidden::register(group)
+    let group = use_visually_hidden::register(group);
+    use_wheel_stepping::register(group)
 }

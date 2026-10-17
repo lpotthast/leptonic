@@ -56,7 +56,7 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                             state,
                             button: UseButtonInput::default(),
                         }));
-                        let (attrs, styles) = button.props.into_parts();
+                        let (attrs, styles) = button.button.attrs();
 
                         view! { <button {..attrs} style=styles>"Pin"</button> }
                     "#)}
@@ -182,9 +182,9 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
 
                 <Section title="Return" id="use-toggle-button-group-return">
                     <ApiTable kind=ApiKind::Return of="UseToggleButtonGroupReturn">
-                        <ApiRow name="props" ty="UseToggleButtonGroupProps">
+                        <ApiRow name="group" ty="Part<UseToggleButtonGroupProps>">
                             "The toolbar\u{2019}s role, orientation, name and key handling, plus "<Code inline=true>"aria-disabled"</Code>
-                            ". Spread them with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            ". Spread them with "<Code inline=true>"{..group.attrs()}"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>

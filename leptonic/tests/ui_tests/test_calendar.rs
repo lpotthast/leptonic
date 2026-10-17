@@ -4042,7 +4042,9 @@ pub async fn range_unavailable_dates_after_paging(page: &Page<'_>) -> Result<(),
 
 /// Enter on the last available date before an unavailable interval starts a range going backwards:
 /// the focus moves to the day before (RangeCalendar.test.js "advances selection backwards when
-/// starting a selection at the end of an available range").
+/// starting a selection at the end of an available range"). The calendar's visible duration is a
+/// signal: finding the available dates around the anchor reads it, outside a tracking context
+/// here, without a warning.
 #[browser_test]
 pub async fn range_started_at_the_end_of_available_dates(page: &Page<'_>) -> Result<(), Report> {
     let name = "range-intervals";
@@ -4267,5 +4269,23 @@ pub async fn commit_clear_without_a_range(page: &Page<'_>) -> Result<(), Report>
         .await?
         .inner_text_stays("none", Duration::from_millis(100))
         .await?;
+    Ok(())
+}
+
+/// Date buttons mounted again inside their cells (in a `<Show>`) take their cells' props again:
+/// labelled with their dates, they select them. (No upstream: React renders a cell's button
+/// again with its props.)
+#[browser_test]
+pub async fn cell_buttons_mounted_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_sections(PATH, &["remount"]).await?;
+    let buttons = "#test-calendar-remount [role=gridcell] > [role=button]";
+    let toggle = page.element("#test-calendar-remount-toggle").await?;
+    toggle.click().await?;
+    page.wait_for_count(buttons, 0).await?;
+    toggle.click().await?;
+    let june12 = date(page, "remount", "Wednesday, June 12, 2019").await?;
+    june12.click().await?;
+    wait_for_value(page, "remount", "2019-06-12").await?;
+    june12.wait_for_attr("data-selected", Some("true")).await?;
     Ok(())
 }

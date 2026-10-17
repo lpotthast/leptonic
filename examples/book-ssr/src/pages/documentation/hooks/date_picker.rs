@@ -43,7 +43,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                 <DocTable headers=&["Part", "From"]>
                     <TableRow>
                         <TableCell>"The label and the group around the field and the button"</TableCell>
-                        <TableCell><Code inline=true>"use_date_picker"</Code>": "<Code inline=true>"label_props"</Code>", "<Code inline=true>"group_props"</Code></TableCell>
+                        <TableCell><Code inline=true>"use_date_picker"</Code>": "<Code inline=true>"label"</Code>", "<Code inline=true>"group"</Code></TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"The field"</TableCell>
@@ -145,7 +145,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="datepicker::use_date_picker::UseDatePickerInput">
                         <ApiRow name="state" ty="DatePickerState<V>">"From "<Code inline=true>"use_date_picker_state"</Code>". Required."</ApiRow>
                         <ApiRow name="group" ty="CapturedElement">
-                            "The group of the field and the button, captured by "<Code inline=true>"group_props"</Code>". Required."
+                            "The group of the field and the button, captured by the "<Code inline=true>"group"</Code>" part. Required."
                         </ApiRow>
                         <ApiRow name="options" ty="DatePickerOptions" default="DatePickerOptions::default()">"The other settings, below."</ApiRow>
                     </ApiTable>
@@ -157,10 +157,10 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <Code inline=true>"use_date_range_picker"</Code>" takes them too."
                     </p>
                     <ApiTable kind=ApiKind::Fields of="DatePickerOptions">
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with the "<Code inline=true>"label"</Code>" part."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker without a label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<Id>>" default="None">"Ids of further elements labelling or describing the picker."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">
                             "Disable the button; "<Code inline=true>"is_disabled"</Code>" also sets "
                             <Code inline=true>"aria-disabled"</Code>" on the group."
@@ -169,7 +169,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                             "Called when the focus enters or leaves the picker; moving into the popover doesn\u{2019}t leave it."
                         </ApiRow>
                         <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEvent>>" default="None">"Called with the keys in the group while the popover is closed."</ApiRow>
-                        <ApiRow name="dialog_id" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="dialog_id" ty="Signal<Option<Id>>" default="None">
                             "The id of the dialog in the popover: moving the focus into it doesn\u{2019}t leave the picker."
                         </ApiRow>
                     </ApiTable>
@@ -177,17 +177,17 @@ pub fn PageDatePickerHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-date-picker-return">
                     <ApiTable kind=ApiKind::Return of="datepicker::use_date_picker::UseDatePickerReturn">
-                        <ApiRow name="label_props" ty="UseDateFieldLabelProps">"For the label; pressing it focuses the first segment."</ApiRow>
-                        <ApiRow name="group_props" ty="PropsWithStyles<UseDateFieldProps>">"For the group of the field and the button ("<Code inline=true>"role=\"group\""</Code>")."</ApiRow>
-                        <ApiRow name="field_describedby" ty="Signal<Option<String>>">"What describes the segments: the picker\u{2019}s value and description."</ApiRow>
+                        <ApiRow name="label" ty="Part<UseDateFieldLabelProps>">"For the label; pressing it focuses the first segment."</ApiRow>
+                        <ApiRow name="group" ty="Part<PropsWithStyles<UseDateFieldProps>>">"For the group of the field and the button ("<Code inline=true>"role=\"group\""</Code>")."</ApiRow>
+                        <ApiRow name="field_describedby" ty="Signal<Option<Id>>">"What describes the segments: the picker\u{2019}s value and description."</ApiRow>
                         <ApiRow name="button" ty="UseButtonInput">
                             "The button\u{2019}s input for "<Code inline=true>"use_button"</Code>": named \u{201c}Calendar\u{201d} with "
                             "the label, "<Code inline=true>"aria-haspopup=\"dialog\""</Code>", "<Code inline=true>"aria-expanded"</Code>
                             ", opening the popover."
                         </ApiRow>
-                        <ApiRow name="dialog_labelledby" ty="Signal<Option<String>>">"What names the dialog: the button and the label."</ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">"For the description and the error message."</ApiRow>
-                        <ApiRow name="labelledby" ty="Signal<Option<String>>">"What labels the picker, for its fields."</ApiRow>
+                        <ApiRow name="dialog_labelledby" ty="Signal<Option<Id>>">"What names the dialog: the button and the label."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">"For the description and the error message."</ApiRow>
+                        <ApiRow name="labelledby" ty="Signal<Option<Id>>">"What labels the picker, for its fields."</ApiRow>
                         <ApiRow name="focus_manager" ty="FocusManager">"Moves through the segments of the picker\u{2019}s fields, without the button."</ApiRow>
                     </ApiTable>
                 </Section>

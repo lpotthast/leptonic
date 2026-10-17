@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation,
+    CapturedElement, Orientation,
     atoms::button::Button,
     hooks::{
         collections::{
@@ -45,7 +45,7 @@ pub fn GridListDemo() -> impl IntoView {
             ..SelectionOptions::default()
         },
     });
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+    let UseGridListReturn { grid_list, data } = use_grid_list(UseGridListInput {
         aria_label: "Files".into(),
         on_action: Some(Callback::new(move |key| opened.set(Some(key)))),
         state,
@@ -81,7 +81,7 @@ pub fn GridListDemo() -> impl IntoView {
     };
 
     view! {
-        <div {..props.into_attrs()} class="demo-grid-list">
+        <div {..grid_list.attrs()} class="demo-grid-list">
             <For each=move || files.get() key=|(key, _)| *key let:file>
                 <FileRow list=data.clone() key=file.0 name=file.1 remove/>
             </For>
@@ -109,11 +109,11 @@ fn FileRow(
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (row_attrs, row_styles) = row.row_props.into_parts();
+    let (row_attrs, row_styles) = row.row.attrs();
 
     view! {
         <div {..row_attrs} class="demo-grid-list-row" style=row_styles>
-            <div {..row.grid_cell_props.into_attrs()} class="demo-grid-list-cell">
+            <div {..row.cell.attrs()} class="demo-grid-list-cell">
                 <span class="demo-grid-list-name">{name}</span>
                 <Button
                     on_press=move |_| remove.run(key)

@@ -1,8 +1,5 @@
-use leptonic::{
-    IntoAttrs,
-    hooks::interactions::{
-        ContextMenuEvent, UseContextMenuInput, UsePressInput, use_context_menu, use_press,
-    },
+use leptonic::hooks::interactions::{
+    ContextMenuEvent, UseContextMenuInput, UsePressInput, use_context_menu, use_press,
 };
 use leptos::{prelude::*, web_sys};
 
@@ -35,7 +32,7 @@ pub fn PageHookContextMenu() -> impl IntoView {
         long_press: with_long_press.long_press,
         ..UsePressInput::default()
     });
-    let (long_press_attrs, long_press_styles) = long_press.props.into_parts();
+    let (long_press_attrs, long_press_styles) = long_press.target.attrs();
     let wrapper = move |name: &'static str| {
         move |e: web_sys::MouseEvent| {
             let prevented = if e.default_prevented() {
@@ -58,7 +55,7 @@ pub fn PageHookContextMenu() -> impl IntoView {
                     id="test-context-menu-handler"
                     class="test-context-menu-target"
                     tabindex="0"
-                    {..with_handler.props.into_attrs()}
+                    {..with_handler.target.attrs()}
                 >
                     "With handler"
                 </div>
@@ -68,7 +65,7 @@ pub fn PageHookContextMenu() -> impl IntoView {
                     id="test-context-menu-none"
                     class="test-context-menu-target"
                     tabindex="0"
-                    {..without_handler.props.into_attrs()}
+                    {..without_handler.target.attrs()}
                 >
                     "Without handler"
                 </div>
@@ -78,7 +75,7 @@ pub fn PageHookContextMenu() -> impl IntoView {
                     id="test-context-menu-long-press"
                     class="test-context-menu-target"
                     tabindex="0"
-                    {..with_long_press.props.into_attrs()}
+                    {..with_long_press.target.attrs()}
                     {..long_press_attrs}
                     style=long_press_styles
                 >

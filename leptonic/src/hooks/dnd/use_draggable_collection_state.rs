@@ -9,7 +9,10 @@ use super::types::{
     DraggableCollectionEndEvent, DraggableCollectionMoveEvent, DraggableCollectionStartEvent,
     DropOperation,
 };
-use crate::hooks::collections::{Key, ListState};
+use crate::{
+    hooks::collections::{Key, ListState},
+    utils::keyed_triggers::KeyedTriggers,
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -59,6 +62,8 @@ pub struct DraggableCollectionState {
     on_drag_start: Option<Callback<DraggableCollectionStartEvent>>,
     on_drag_move: Option<Callback<DraggableCollectionMoveEvent>>,
     on_drag_end: Option<Callback<DraggableCollectionEndEvent>>,
+    /// Readers of single items' drag state, by key (`performance.md` R1).
+    dragging_items: KeyedTriggers<Key>,
 }
 
 impl std::fmt::Debug for DraggableCollectionState {
@@ -71,8 +76,11 @@ impl std::fmt::Debug for DraggableCollectionState {
 
 impl DraggableCollectionState {
     /// Whether `key` is being dragged.
+    /// Tracks only this key: a reader reruns when the item starts or stops being dragged, not
+    /// when other items do.
     pub fn is_dragging(&self, key: &Key) -> bool {
-        self.dragging_keys.with(|keys| keys.contains(key))
+        self.dragging_items.track(key);
+        self.dragging_keys.with_untracked(|keys| keys.contains(key))
     }
 
     /// The items a drag starting at `key` drags: all selected items if `key` is selected (but
@@ -195,6 +203,7 @@ pub fn use_draggable_collection_state(
         on_drag_start,
         on_drag_move,
         on_drag_end,
+        dragging_items: KeyedTriggers::following(dragging_keys.into()),
     }
 }
 

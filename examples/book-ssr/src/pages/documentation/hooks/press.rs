@@ -75,8 +75,8 @@ pub fn PageUsePress() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UsePressReturn">
-                    <ApiRow name="props" ty="PropsWithStyles<UsePressProps>">
-                        "Event handlers and styles for the pressable element. Call "<Code inline=true>"props.into_parts()"</Code>
+                    <ApiRow name="target" ty="Part<PropsWithStyles<UsePressProps>>">
+                        "Event handlers and styles for the pressable element. Call "<Code inline=true>"target.attrs()"</Code>
                         " to get "<Code inline=true>"(attrs, styles)"</Code>", then spread "<Code inline=true>"{..attrs}"</Code>
                         " and set "<Code inline=true>"style=styles"</Code>"."
                     </ApiRow>
@@ -119,13 +119,13 @@ pub fn PageUsePress() -> impl IntoView {
 
                         let disabled = RwSignal::new(false);
 
-                        let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
+                        let UsePressReturn { target, is_pressed } = use_press(UsePressInput {
                             is_disabled: disabled.into(),
                             on_press: Some(Callback::new(move |e: PressEvent| log!("pressed with {:?}", e.pointer_type))),
                             ..Default::default()
                         });
-                        // `props` carries styles too (`touch-action`), which go on the element's `style`.
-                        let (attrs, styles) = props.into_parts();
+                        // `target` carries styles too (`touch-action`), which go on the element's `style`.
+                        let (attrs, styles) = target.attrs();
 
                         view! {
                             <button {..attrs} style=styles data-pressed=flag(is_pressed)>"Press me"</button>
@@ -194,7 +194,7 @@ pub fn PageUsePress() -> impl IntoView {
 
                         let threshold = RwSignal::new(Duration::from_millis(800));
 
-                        let UsePressReturn { props, .. } = use_press(UsePressInput {
+                        let UsePressReturn { target, .. } = use_press(UsePressInput {
                             long_press: Some(LongPress {
                                 on_long_press: Some(Callback::new(move |_: LongPressEvent| open_menu())),
                                 threshold: threshold.into(),
@@ -236,6 +236,70 @@ pub fn PageUsePress() -> impl IntoView {
                     <Code inline=true>"LongPressEnd"</Code>"), "<Code inline=true>"pointer_type"</Code>", "
                     <Code inline=true>"target"</Code>", "<Code inline=true>"modifiers"</Code>" and "<Code inline=true>"point"</Code>"."
                 </p>
+
+                <Section title="merge_long_press">
+                    <p>
+                        "An element has one "<Code inline=true>"LongPress"</Code>" group. When two parties configure long presses "
+                        "for one element (a "<Link href=routes::doc::interactions::PressResponder.materialize()>"PressResponder"</Link>
+                        " and the atom inside it, or a context menu\u{2019}s long press from "
+                        <Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>
+                        " and a button\u{2019}s own), "<Code inline=true>"merge_long_press(first, second)"</Code>
+                        " merges their groups, so that both act on the element\u{2019}s long presses:"
+                    </p>
+                    <ul>
+                        <li>
+                            "Each group\u{2019}s callbacks run only while the group is enabled, "<Code inline=true>"first"</Code>
+                            "\u{2019}s before "<Code inline=true>"second"</Code>"\u{2019}s. Pass the outer party as "
+                            <Code inline=true>"first"</Code>"."
+                        </li>
+                        <li>"The merged group is disabled while both groups are."</li>
+                        <li>
+                            "The threshold is "<Code inline=true>"second"</Code>"\u{2019}s unless that group is disabled; the "
+                            "description is that of an enabled group with an "<Code inline=true>"on_long_press"</Code>" handler, "
+                            <Code inline=true>"second"</Code>"\u{2019}s first."
+                        </li>
+                        <li><Code inline=true>"None"</Code>" stands for no group: merging with it gives the other group unchanged."</li>
+                    </ul>
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            use leptonic::hooks::interactions::{
+                                LongPress, LongPressEvent, UsePressInput, UsePressReturn, merge_long_press, use_press,
+                            };
+                            use leptos::prelude::*;
+
+                            // `context_menu` from `use_context_menu`; this element starts a drag on long press, too.
+                            let long_press = merge_long_press(
+                                context_menu.long_press,
+                                Some(LongPress {
+                                    on_long_press: Some(Callback::new(move |_: LongPressEvent| start_drag())),
+                                    ..Default::default()
+                                }),
+                            );
+                            let UsePressReturn { target, .. } = use_press(UsePressInput { long_press, ..Default::default() });
+                        ")}
+                    </Code>
+                </Section>
+
+                <Section title="chain_optional_callbacks">
+                    <p>
+                        "Two parties handling one element\u{2019}s press events (a "
+                        <Link href=routes::doc::interactions::PressResponder.materialize()>"PressResponder"</Link>
+                        " and the atom inside it) chain their handlers with "
+                        <Code inline=true>"chain_optional_callbacks(first, second)"</Code>": the result runs "
+                        <Code inline=true>"first"</Code>", then "<Code inline=true>"second"</Code>"; one handler alone is "
+                        "returned unchanged, and "<Code inline=true>"None"</Code>" only if both are missing. Pass the outer "
+                        "party as "<Code inline=true>"first"</Code>"."
+                    </p>
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            use leptonic::hooks::interactions::{UsePressInput, chain_optional_callbacks, use_press};
+
+                            // `responder_on_press` from the surrounding PressResponder, `on_press` the atom's own prop.
+                            let on_press = chain_optional_callbacks(responder_on_press, on_press);
+                            let press = use_press(UsePressInput { on_press, ..Default::default() });
+                        ")}
+                    </Code>
+                </Section>
             </Section>
 
             <Section title="Keyboard">

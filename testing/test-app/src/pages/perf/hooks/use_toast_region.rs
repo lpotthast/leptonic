@@ -10,7 +10,7 @@
 use std::time::Duration;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::toast::{
         ToastOptions, ToastQueue, UseToastRegionInput, UseToastRegionReturn, use_toast_region,
     },
@@ -26,14 +26,16 @@ const MANY: usize = 50;
 #[component]
 fn HookRegion(queue: ToastQueue<String>, label: RwSignal<Option<String>>) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseToastRegionReturn { region_props } = use_toast_region(UseToastRegionInput {
+    let UseToastRegionReturn {
+        region: region_props,
+    } = use_toast_region(UseToastRegionInput {
         queue,
         element,
         aria_label: label.into(),
         aria_labelledby: Signal::default(),
     });
     view! {
-        <div {..region_props.into_attrs()} {..element.attr()} class="perf-region">
+        <div {..region_props.attrs()} {..element.attr()} class="perf-region">
             <For
                 each=move || queue.visible_toasts.get()
                 key=|toast| toast.key

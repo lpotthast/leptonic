@@ -9,6 +9,7 @@ use crate::{
     utils::{
         key::{KeyboardEventKey, KeyboardKey},
         keyboard_shortcut::KeyboardShortcuts,
+        part::{Part, Remount},
         propagation_control::{PropagationControl, Sealed},
     },
 };
@@ -151,11 +152,11 @@ pub struct UseKeyboardInput {
     pub allow_composing: bool,
 }
 
-/// The return value of the `use_keyboard` hook.
+/// The return value of [`use_keyboard`].
 #[derive(Debug)]
 pub struct UseKeyboardReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseKeyboardProps,
+    /// The element handling the keyboard events.
+    pub target: Part<UseKeyboardProps>,
 }
 
 /// Props from `use_keyboard` that can be extracted and merged programmatically.
@@ -163,6 +164,15 @@ pub struct UseKeyboardReturn {
 pub struct UseKeyboardProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
+}
+
+impl Remount for UseKeyboardProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseKeyboardProps {
@@ -200,7 +210,7 @@ pub type UseKeyboardAttrs = (OnEvent<ev::keydown>, OnEvent<ev::keyup>);
 /// });
 ///
 /// view! {
-///     <div tabindex="0" {..keyboard.props.into_attrs()}>
+///     <div tabindex="0" {..keyboard.target.attrs()}>
 ///         "Press a key"
 ///     </div>
 /// }
@@ -215,6 +225,10 @@ pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
         allow_repeats,
         allow_composing,
     } = input;
+    // Without a handler (or shortcuts), no listener (react-aria): it would let every event bubble
+    // untouched.
+    let has_key_down = on_key_down.is_some() || shortcuts.is_some();
+    let has_key_up = on_key_up.is_some();
 
     let handle_key_down = move |e: KeyboardEvent| {
         if disabled.get_untracked() {
@@ -261,9 +275,17 @@ pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
     };
 
     UseKeyboardReturn {
-        props: UseKeyboardProps {
-            on_keydown: EventHandler::new(handle_key_down),
-            on_keyup: EventHandler::new(handle_key_up),
-        },
+        target: Part::stored(UseKeyboardProps {
+            on_keydown: if has_key_down {
+                EventHandler::new(handle_key_down)
+            } else {
+                EventHandler::empty()
+            },
+            on_keyup: if has_key_up {
+                EventHandler::new(handle_key_up)
+            } else {
+                EventHandler::empty()
+            },
+        }),
     }
 }

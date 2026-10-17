@@ -5,39 +5,11 @@ use std::sync::Arc;
 
 use leptos::prelude::*;
 
-#[cfg(feature = "atoms")]
-use super::Node;
 use super::{Collection, CollectionBuilder, Key};
 
 /// A reactive collection. Cheap to copy; dependents are only notified when the collection
 /// actually changes (structural equality).
 pub type CollectionMemo = Memo<Arc<Collection>>;
-
-/// The node `key` of `collection`, for a renderer of the node's content: it notifies when the
-/// node's content changes (e.g. its text), not when other nodes come, go or move
-/// ([`Node::same_content`]).
-#[cfg(feature = "atoms")]
-pub(crate) fn use_node(collection: CollectionMemo, key: Key) -> Memo<Option<Node>> {
-    Memo::new_with_compare(
-        move |_| collection.with(|c| c.get(&key).cloned()),
-        |previous: Option<&Option<Node>>, current: Option<&Option<Node>>| match (previous, current)
-        {
-            (Some(Some(previous)), Some(Some(current))) => !previous.same_content(current),
-            (previous, current) => previous != current,
-        },
-    )
-}
-
-/// The `aria_label` of the node `key` in `collection`, following changes of the collection (an item
-/// keeps its rendered element when its label changes).
-pub(crate) fn use_node_aria_label(collection: CollectionMemo, key: Key) -> Memo<Option<String>> {
-    Memo::new(move |_| {
-        collection.with(|c| {
-            c.get(&key)
-                .and_then(|n| n.aria_label.as_deref().map(str::to_owned))
-        })
-    })
-}
 
 /// Build a collection from reactive data.
 ///

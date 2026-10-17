@@ -5,9 +5,6 @@
 //! it and selecting an option with the mouse and with the keyboard, changing the value on the
 //! closed trigger (ArrowRight, ArrowLeft, type-ahead), the trigger's pressed and hovered states,
 //! and changes of its reactive input (disabled, required), with 10 options and with 1,000.
-//!
-//! The performance tests of `use_select_state` and `use_hidden_select` use the same fixture and the
-//! helpers here.
 use assertr::prelude::*;
 use browser_test::{TestGroup, browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
@@ -35,24 +32,24 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(DisableAndEnable))
         .with(fixture_test(Required))
 }
-pub(crate) const TRIGGER: &str = "[data-perf-trigger]";
-pub(crate) const VALUE: &str = "[data-perf-value]";
-pub(crate) const LISTBOX: &str = "[role=listbox]";
+const TRIGGER: &str = "[data-perf-trigger]";
+const VALUE: &str = "[data-perf-value]";
+const LISTBOX: &str = "[role=listbox]";
 /// The fixture's options after the control `large`.
-pub(crate) const LARGE: u32 = 1_000;
+const LARGE: u32 = 1_000;
 
 /// The option "Option `i`".
-pub(crate) fn option(i: u32) -> String {
+fn option(i: u32) -> String {
     format!("[data-perf-option='{i}']")
 }
 
 /// The select's value: the selected option's number, `-1` for none.
-pub(crate) async fn value(page: &Page<'_>) -> Result<f64, Report> {
+async fn value(page: &Page<'_>) -> Result<f64, Report> {
     page.control("value").await
 }
 
 /// Switches to [`LARGE`] options (unmeasured).
-pub(crate) async fn large(page: &Page<'_>) -> Result<(), Report> {
+async fn large(page: &Page<'_>) -> Result<(), Report> {
     page.control("large").await?;
     page.settle().await
 }
@@ -66,8 +63,8 @@ async fn focus_trigger(page: &Page<'_>) -> Result<WebElement, Report> {
     Ok(trigger)
 }
 
-/// Mounting `container` (the select's elements, or everything) and unmounting it.
-pub(crate) async fn mount_and_unmount_in(page: &Page<'_>, container: &str) -> Result<(), Report> {
+/// Mounting `container` (of the select's elements) and unmounting it.
+async fn mount_and_unmount_in(page: &Page<'_>, container: &str) -> Result<(), Report> {
     page.control("unmount").await?;
     page.wait_for_count(container, 0).await?;
     page.measure("mount", page.control("mount")).await?;

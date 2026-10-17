@@ -2,7 +2,7 @@
 // Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
@@ -13,7 +13,8 @@ use super::{
     use_radio_group_state::RadioGroupState,
 };
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, Focusability, IntoAttrs, OnEvent, SlotProps,
+    CapturedElement, ElementCaptureAttr, EventHandler, Focusability, Id, IntoAttrs, OnEvent, Part,
+    SlotProps,
     hooks::{
         collections::Key,
         focus::{
@@ -31,7 +32,10 @@ use crate::{
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         orientation::Orientation,
+        part::Remount,
         shadow_dom::get_event_target,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        spread::Spread,
     },
 };
 
@@ -51,13 +55,13 @@ use crate::{
 pub struct UseRadioGroupInput {
     pub state: RadioGroupState,
     /// The group element's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
-    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
+    pub aria_errormessage: Signal<Option<Id>>,
     /// The axis of the arrow keys (react-aria's default: vertical).
     pub orientation: Signal<Orientation>,
     /// The id of the form the radios belong to, when not their ancestor.
@@ -72,21 +76,21 @@ pub struct UseRadioGroupInput {
 pub struct RadioGroupData {
     pub state: RadioGroupState,
     pub(crate) form: StoredValue<Option<String>>,
-    pub(crate) description_id: Signal<Option<String>>,
-    pub(crate) error_message_id: Signal<Option<String>>,
+    pub(crate) description_id: Signal<Option<Id>>,
+    pub(crate) error_message_id: Signal<Option<Id>>,
     /// The radios' input elements, by value (for keyboard navigation).
     pub(crate) radios: StoredValue<Vec<(Key, CapturedElement)>>,
 }
 
-/// Output of [`use_radio_group`].
+/// The return value of [`use_radio_group`].
 #[derive(Debug)]
 pub struct UseRadioGroupReturn {
-    /// Props for the group element.
-    pub props: UseRadioGroupProps,
-    /// Props for the group's label (a `<span>`).
-    pub label_props: UseLabelProps,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    /// The radio group element.
+    pub group: Part<UseRadioGroupProps>,
+    /// The group's label element.
+    pub label: Part<UseLabelProps>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     /// For [`use_radio`](fn@super::use_radio).
     pub data: RadioGroupData,
     pub is_invalid: Signal<bool>,
@@ -97,61 +101,86 @@ pub struct UseRadioGroupReturn {
 /// Props for the radio group element.
 #[derive(Debug)]
 pub struct UseRadioGroupProps {
-    pub id: String,
+    pub id: Id,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub aria_errormessage: Signal<Option<String>>,
+    pub aria_errormessage: Signal<Option<Id>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_orientation: Signal<AriaOrientation>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-pub type UseRadioGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Id, String>,
-    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-    Attr<attr::AriaErrormessage, Signal<Option<String>>>,
-    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-    Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    ElementCaptureAttr,
+impl Remount for UseRadioGroupProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_invalid: self.aria_invalid,
+            aria_errormessage: self.aria_errormessage,
+            aria_readonly: self.aria_readonly,
+            aria_required: self.aria_required,
+            aria_disabled: self.aria_disabled,
+            aria_orientation: self.aria_orientation,
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby,
+            aria_describedby: self.aria_describedby,
+            element_capture: self.element_capture.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
+}
+
+pub type UseRadioGroupAttrs = Spread<(
+    (
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<AriaInvalid>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<AriaReadonly>>,
+        SignalAttr<Option<AriaRequired>>,
+        SignalAttr<Option<AriaDisabled>>,
+        SignalAttr<AriaOrientation>,
+        SignalAttr<Option<String>>,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<Id>>,
+        ElementCaptureAttr,
+    ),
     OnEvent<ev::keydown>,
     OnEvent<ev::focusin>,
     OnEvent<ev::focusout>,
-);
+)>;
 
 impl IntoAttrs for UseRadioGroupProps {
     type Attrs = UseRadioGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Role, AriaRole::Radiogroup),
-            Attr(attr::Id, self.id),
-            Attr(attr::AriaInvalid, self.aria_invalid),
-            Attr(attr::AriaErrormessage, self.aria_errormessage),
-            Attr(attr::AriaReadonly, self.aria_readonly),
-            Attr(attr::AriaRequired, self.aria_required),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            self.element_capture,
+        Spread((
+            (
+                fixed_attr("role", AriaRole::Radiogroup),
+                fixed_attr("id", self.id),
+                signal_attr("aria-invalid", self.aria_invalid),
+                signal_attr("aria-errormessage", self.aria_errormessage),
+                signal_attr("aria-readonly", self.aria_readonly),
+                signal_attr("aria-required", self.aria_required),
+                signal_attr("aria-disabled", self.aria_disabled),
+                signal_attr("aria-orientation", self.aria_orientation),
+                maybe_attr("aria-label", self.aria_label),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-describedby", self.aria_describedby),
+                self.element_capture,
+            ),
             self.on_keydown.into_on(ev::keydown),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-        )
+        ))
     }
 }
 
@@ -175,10 +204,10 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
         on_focus_change,
     } = input;
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         description_id,
         error_message_id,
     } = use_field(UseFieldInput {
@@ -190,6 +219,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
         aria_describedby,
         ..UseFieldInput::default()
     });
+    let field_props = field_props.into_props();
 
     let focus_within = use_focus_within(UseFocusWithinInput {
         on_blur_within: Some(Callback::new(move |e: FocusWithinEvent| {
@@ -205,6 +235,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
         on_focus_within_change: on_focus_change,
         ..UseFocusWithinInput::default()
     });
+    let focus_within_props = focus_within.target.into_props();
 
     let group = CapturedElement::new();
     let radios: StoredValue<Vec<(Key, CapturedElement)>> = StoredValue::new(Vec::new());
@@ -265,6 +296,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
         allow_repeats: true,
         ..UseKeyboardInput::default()
     });
+    let keyboard_props = keyboard.target.into_props();
 
     let validation = state.validation;
     let is_invalid = state.is_invalid;
@@ -272,7 +304,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     let is_required = state.is_required;
     let is_disabled = state.is_disabled;
     UseRadioGroupReturn {
-        props: UseRadioGroupProps {
+        group: Part::stored(UseRadioGroupProps {
             id: field_props.id,
             aria_invalid: aria_true(is_invalid),
             aria_errormessage,
@@ -284,13 +316,13 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
             aria_labelledby: field_props.aria_labelledby,
             aria_describedby: field_props.aria_describedby,
             element_capture: group.attr(),
-            on_keydown: keyboard.props.on_keydown,
-            on_focusin: focus_within.props.on_focusin,
-            on_focusout: focus_within.props.on_focusout,
-        },
-        label_props,
-        description_props,
-        error_message_props,
+            on_keydown: keyboard_props.on_keydown,
+            on_focusin: focus_within_props.on_focusin,
+            on_focusout: focus_within_props.on_focusout,
+        }),
+        label: label_props,
+        description: description_props,
+        error_message: error_message_props,
         data: RadioGroupData {
             state,
             form: StoredValue::new(form),

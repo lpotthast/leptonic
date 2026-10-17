@@ -8,7 +8,7 @@ use leptos_classes::Classes;
 
 use super::press::{PressResponder, PressResponderProps};
 use crate::{
-    CapturedElement, ElementCaptureAttr, IntoAttrs, Out, ValueBinding,
+    CapturedElement, IntoAttrs, Out, Part, ValueBinding,
     hooks::{
         collections::Key,
         disclosure::{
@@ -21,10 +21,7 @@ use crate::{
         interactions::{PressEvent, PressResponderTrigger},
     },
     utils::{
-        aria::{AriaHidden, AriaRole},
-        data_attributes::flag,
-        default_class::with_default_class,
-        id::use_id,
+        aria::AriaRole, data_attributes::data_flags, default_class::with_default_class, id::use_id,
         styles::Styles,
     },
 };
@@ -44,23 +41,15 @@ use crate::{
 //
 // =============================================================================
 
-/// The parts of the hook's [`UseDisclosurePanelProps`] each rendering of the panel shares.
-#[derive(Clone)]
-struct PanelParts {
-    id: String,
-    aria_labelledby: Signal<Option<String>>,
-    aria_hidden: Signal<Option<AriaHidden>>,
-    element_capture: ElementCaptureAttr,
-}
-
 /// Context from a [`Disclosure`] to its [`DisclosurePanel`].
 #[derive(Clone)]
 struct DisclosureContext {
-    /// The panel's props but its role and initial collapsed state, which a panel sets each time it
-    /// renders (it may render again, e.g. inside a `Show`).
-    panel: StoredValue<PanelParts>,
-    state: DisclosureState,
-    trigger: TriggerPress,
+    /// The panel (its role and labelling are the panel's and the trigger's).
+    panel: Part<UseDisclosurePanelProps>,
+    /// The trigger's id while it is rendered.
+    labelled_by: Signal<Option<crate::Id>>,
+    /// The trigger's press handlers and ARIA props: one trigger at a time.
+    trigger: Part<TriggerPress>,
 }
 
 /// What the [`DisclosureTrigger`] hands its button.
@@ -114,7 +103,7 @@ pub fn DisclosureGroup(
     });
     view! {
         <Provider value=state>
-            <div class=classes style=styles data-disabled=flag(is_disabled)>
+            <div class=classes style={styles} {..data_flags([("data-disabled", is_disabled)])}>
                 {children()}
             </div>
         </Provider>
@@ -166,9 +155,8 @@ pub fn Disclosure(
     let value = group.map(|group| {
         let key = StoredValue::new(key.clone());
         ValueBinding::new(
-            // A memo: every toggle of the group changes its key set, but only this disclosure's
-            // own changes may reach its panel.
-            Memo::new(move |_| key.with_value(|key| group.is_expanded(key))).into(),
+            // Only this disclosure's own changes reach it (`performance.md` R1).
+            Signal::derive(move || key.with_value(|key| group.is_expanded(key))),
             Callback::new(move |expanded: bool| {
                 key.with_value(|key| {
                     if group
@@ -195,7 +183,7 @@ pub fn Disclosure(
     });
     let UseDisclosureReturn {
         button,
-        panel_props,
+        panel,
         trigger_id,
         ..
     } = use_disclosure(UseDisclosureInput {
@@ -203,41 +191,45 @@ pub fn Disclosure(
         state: disclosure_state,
     });
 
-    // The panel is named by the trigger: the hook's id, or the trigger button's own, which it
-    // writes into `trigger_id` while rendering (react-aria-components merges both ids).
+    // The panel is named by the trigger while it is rendered: the hook's id, or the trigger
+    // button's own, which it writes into `trigger_id` while rendering (react-aria-components
+    // merges both ids).
     let trigger = CapturedElement::new();
     let trigger_id = RwSignal::new(trigger_id);
-    let labelled_by = Signal::derive(move || Some(trigger_id.get()));
+    // The trigger: one at a time, and its presence names the panel (no effect watching the
+    // trigger's element).
+    let trigger_press = TriggerPress {
+        on_press: button.on_press,
+        on_press_start: button.on_press_start,
+        is_disabled,
+        trigger: PressResponderTrigger {
+            aria_haspopup: Signal::stored(None),
+            aria_expanded: button.aria_expanded,
+            aria_controls: button.aria_controls,
+            element: trigger,
+            id: trigger_id,
+        },
+    };
+    let trigger_part = Part::observed(move || trigger_press);
+    let labelled_by = {
+        let trigger_part = trigger_part.clone();
+        Signal::derive(move || trigger_part.is_held().then(|| trigger_id.get()))
+    };
 
     let focus_ring = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
+    let focus_ring_props = focus_ring.target.into_props();
     let focus_within = (
-        focus_ring.props.on_focusin.into_on(ev::focusin),
-        focus_ring.props.on_focusout.into_on(ev::focusout),
+        focus_ring_props.on_focusin.into_on(ev::focusin),
+        focus_ring_props.on_focusout.into_on(ev::focusout),
     );
     let is_expanded = disclosure_state.is_expanded;
     let context = DisclosureContext {
-        panel: StoredValue::new(PanelParts {
-            id: panel_props.id,
-            aria_labelledby: labelled_by,
-            aria_hidden: panel_props.aria_hidden,
-            element_capture: panel_props.element_capture,
-        }),
-        state: disclosure_state,
-        trigger: TriggerPress {
-            on_press: button.on_press,
-            on_press_start: button.on_press_start,
-            is_disabled,
-            trigger: PressResponderTrigger {
-                aria_haspopup: Signal::stored(None),
-                aria_expanded: button.aria_expanded,
-                aria_controls: button.aria_controls,
-                element: trigger,
-                id: trigger_id,
-            },
-        },
+        panel,
+        labelled_by,
+        trigger: trigger_part,
     };
 
     view! {
@@ -245,10 +237,12 @@ pub fn Disclosure(
             <Provider value=disclosure_state>
             <div
                 class=classes
-                style=styles
-                data-expanded=flag(is_expanded)
-                data-disabled=flag(is_disabled)
-                data-focus-visible-within=flag(focus_ring.is_focus_visible)
+                style={styles}
+                {..data_flags([("data-focus-visible-within", focus_ring.is_focus_visible)])}
+                {..data_flags([
+                    ("data-expanded", is_expanded),
+                    ("data-disabled", is_disabled),
+                ])}
                 {..focus_within}
             >
                 {children()}
@@ -268,9 +262,11 @@ pub fn DisclosureTrigger(children: Children) -> impl IntoView {
         on_press_start,
         is_disabled,
         trigger,
-    }) = use_context::<DisclosureContext>().map(|ctx| ctx.trigger)
+    }) = use_context::<DisclosureContext>().and_then(|ctx| ctx.trigger.props())
     else {
-        crate::utils::dev_warn!("A <DisclosureTrigger> must be inside a <Disclosure>.");
+        crate::utils::dev_warn!(
+            "A <DisclosureTrigger> must be inside a <Disclosure>, one per disclosure."
+        );
         return children().into_any();
     };
     // Built from its props struct: `view!` can't pass `Option`s.
@@ -317,36 +313,26 @@ pub fn DisclosurePanel(
         crate::utils::dev_warn!("A <DisclosurePanel> must be inside a <Disclosure>.");
         return None;
     };
-    let PanelParts {
-        id,
-        aria_labelledby,
-        aria_hidden,
-        element_capture,
-    } = context.panel.get_value();
-    let attrs = UseDisclosurePanelProps {
-        id,
-        role: Signal::stored(role.as_aria_role()),
-        aria_labelledby,
-        aria_hidden,
-        // Collapsed as rendered now (the panel may render again, e.g. inside a `Show`).
-        hidden_until_found: !context.state.is_expanded.get_untracked(),
-        element_capture,
-    }
-    .into_attrs();
+    // One panel per disclosure (`Part`: a second one renders nothing).
+    let mut props = context.panel.props()?;
+    props.role = role.as_aria_role();
+    props.aria_labelledby = context.labelled_by;
+    let attrs = props.into_attrs();
     let focus_ring = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
+    let focus_ring_props = focus_ring.target.into_props();
     let focus_within = (
-        focus_ring.props.on_focusin.into_on(ev::focusin),
-        focus_ring.props.on_focusout.into_on(ev::focusout),
+        focus_ring_props.on_focusin.into_on(ev::focusin),
+        focus_ring_props.on_focusout.into_on(ev::focusout),
     );
     Some(view! {
         <div
             {..attrs}
             class=classes
-            style=styles
-            data-focus-visible-within=flag(focus_ring.is_focus_visible)
+            style={styles}
+            {..data_flags([("data-focus-visible-within", focus_ring.is_focus_visible)])}
             {..focus_within}
         >
             {children()}

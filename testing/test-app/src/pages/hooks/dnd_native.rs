@@ -1,7 +1,7 @@
 use std::{future::Future, pin::Pin};
 
 use leptonic::{
-    CapturedElement, IntoAttrs, flag,
+    CapturedElement, flag,
     hooks::dnd::{
         DragEndEvent, DragItem, DragPreview, DragType, DropActivateEvent, DropEnterEvent,
         DropEvent, DropExitEvent, DropItem, DropMoveEvent, DropOperation, DropOperationQuery,
@@ -187,7 +187,7 @@ fn Source(
     let preview_ref = NodeRef::<html::Div>::new();
     let preview_offset = config.preview_offset;
     let UseDragReturn {
-        drag_props,
+        draggable: drag_props,
         is_dragging,
         ..
     } = use_drag(UseDragInput {
@@ -216,7 +216,7 @@ fn Source(
             role="button"
             tabindex="0"
             data-name=name.to_owned()
-            {..drag_props.into_attrs()}
+            {..drag_props.attrs()}
             data-dragging=flag(is_dragging)
         >
             {label}
@@ -301,7 +301,7 @@ fn Target(
     };
     let element = CapturedElement::new();
     let UseDropReturn {
-        drop_props,
+        drop_target: drop_props,
         is_drop_target,
         ..
     } = use_drop(UseDropInput {
@@ -354,7 +354,7 @@ fn Target(
             role="button"
             tabindex="0"
             data-name=name.to_owned()
-            {..drop_props.into_attrs()}
+            {..drop_props.attrs()}
             data-drop-target=flag(is_drop_target)
         >
             {label}

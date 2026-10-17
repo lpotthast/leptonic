@@ -1,14 +1,21 @@
 // Upstream: react-aria/src/grid/useGridRowGroup.ts @ 99e6102368
-use leptos::attr::{self, Attr};
 
-use crate::{IntoAttrs, utils::aria::AriaRole};
+use crate::{
+    IntoAttrs,
+    utils::{
+        aria::AriaRole,
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, fixed_attr},
+    },
+};
 
 // No deviations from react-aria beyond the project-wide API conventions.
 
-/// Return value of [`use_grid_row_group`].
+/// The return value of [`use_grid_row_group`].
 #[derive(Debug)]
 pub struct UseGridRowGroupReturn {
-    pub row_group_props: UseGridRowGroupProps,
+    /// The row group element.
+    pub row_group: Part<UseGridRowGroupProps>,
 }
 
 /// Props for a group of rows (like `<tbody>`).
@@ -17,13 +24,19 @@ pub struct UseGridRowGroupProps {
     pub role: AriaRole,
 }
 
-pub type UseGridRowGroupAttrs = (Attr<attr::Role, AriaRole>,);
+impl Remount for UseGridRowGroupProps {
+    fn remount(&self) -> Self {
+        Self { role: self.role }
+    }
+}
+
+pub type UseGridRowGroupAttrs = (FixedAttr,);
 
 impl IntoAttrs for UseGridRowGroupProps {
     type Attrs = UseGridRowGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Role, self.role),)
+        (fixed_attr("role", self.role),)
     }
 }
 
@@ -31,8 +44,8 @@ impl IntoAttrs for UseGridRowGroupProps {
 pub fn use_grid_row_group() -> UseGridRowGroupReturn {
     crate::metrics::subject!();
     UseGridRowGroupReturn {
-        row_group_props: UseGridRowGroupProps {
+        row_group: Part::stored(UseGridRowGroupProps {
             role: AriaRole::Rowgroup,
-        },
+        }),
     }
 }

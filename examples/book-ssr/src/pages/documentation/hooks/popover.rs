@@ -36,8 +36,8 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         "states work too."
                     </ApiRow>
                     <ApiRow name="trigger" ty="CapturedElement" default="a new capture">
-                        "The trigger the popover is positioned at. Spread "<Code inline=true>"trigger_props"</Code>
-                        " onto it, or pass an element you capture already."
+                        "The trigger the popover is positioned at. Spread the "<Code inline=true>"trigger"</Code>
+                        " part onto it, or pass an element you capture already."
                     </ApiRow>
                     <ApiRow name="target_rect" ty="Signal<Option<Rect>>" default="None">
                         "Replaces the trigger\u{2019}s rectangle (viewport coordinates). "<Code inline=true>"None"</Code>
@@ -69,21 +69,21 @@ pub fn PageUsePopoverHook() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UsePopoverReturn">
-                    <ApiRow name="props" ty="PropsWithStyles<UsePopoverProps>">
+                    <ApiRow name="popover" ty="Part<PropsWithStyles<UsePopoverProps>>">
                         "Attributes, event handlers and position styles for the popover element. Call "
-                        <Code inline=true>"props.into_parts()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
+                        <Code inline=true>"popover.attrs()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
                         ", then spread "<Code inline=true>"{..attrs}"</Code>" and set "<Code inline=true>"style=styles"</Code>"."
                     </ApiRow>
-                    <ApiRow name="trigger_props" ty="UsePopoverTriggerProps">
-                        "Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>
+                    <ApiRow name="trigger" ty="Part<UsePopoverTriggerProps>">
+                        "Spread "<Code inline=true>"{..trigger.attrs()}"</Code>
                         " onto the trigger, so the hook can position the popover next to it."
                     </ApiRow>
-                    <ApiRow name="id" ty="String">
+                    <ApiRow name="id" ty="Id">
                         "The id of the popover element. Pass it to "
                         <Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>" as "<Code inline=true>"overlay_id"</Code>"."
                     </ApiRow>
                     <ApiRow name="popover_element" ty="CapturedElement">"The popover element, once rendered."</ApiRow>
-                    <ApiRow name="arrow_props" ty="PropsWithStyles<UseOverlayArrowProps>">
+                    <ApiRow name="arrow" ty="Part<PropsWithStyles<UseOverlayArrowProps>>">
                         "For an arrow element inside the popover: hidden from assistive technology and placed along the edge "
                         "facing the trigger."
                     </ApiRow>
@@ -108,7 +108,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         "The trigger is a button built with "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
                         " that toggles the state. "<Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>
                         " gives it "<Code inline=true>"aria-expanded"</Code>" and "<Code inline=true>"aria-controls"</Code>
-                        ", and "<Code inline=true>"trigger_props"</Code>" capture it for positioning."
+                        ", and the "<Code inline=true>"trigger"</Code>" part captures it for positioning."
                     </li>
                     <li>
                         "The popover renders into a "<Code inline=true>"Portal"</Code>", so the page layout doesn\u{2019}t clip "
@@ -139,7 +139,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                 <p>
                     "When "<Code inline=true>"should_flip"</Code>" is set and the popover doesn\u{2019}t fit, it moves to the "
                     "opposite side. The returned "<Code inline=true>"placement"</Code>" tells where it ended up, e.g. to "
-                    "point an arrow at the trigger ("<Code inline=true>"arrow_props"</Code>" positions one)."
+                    "point an arrow at the trigger (the "<Code inline=true>"arrow"</Code>" part positions one)."
                 </p>
 
                 <Demo description="Popover placement chosen with radio buttons" source=include_str!("demos/popover_placement.rs")>
@@ -208,7 +208,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                 <p>
                     "A modal popover gets an underlay: a "<Code inline=true>"position: fixed; inset: 0"</Code>
                     " element behind the popover that catches presses on the page, so they close the popover instead of "
-                    "reaching what\u{2019}s below. It needs no props. A non-modal popover has none."
+                    "reaching what\u{2019}s below. It needs no part. A non-modal popover has none."
                 </p>
 
                 <Code language=Language::Rust>

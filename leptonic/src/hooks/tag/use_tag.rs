@@ -4,14 +4,11 @@
 // Upstream: @adobe/react-spectrum/test/tag/TagGroup.test.js @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{
-    attr::{self, Attr},
-    prelude::*,
-};
+use leptos::prelude::*;
 
 use super::TagGroupData;
 use crate::{
-    EventHandler, IdRefs, IntoAttrs, PropsWithStyles,
+    EventHandler, Id, IntoAttrs, PropsWithStyles,
     hooks::{
         button::use_button::UseButtonInput,
         collections::Key,
@@ -30,7 +27,9 @@ use crate::{
         intl_strings::{TagStrings, use_localized_strings},
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        part::{Part, Remount},
         platform::device::has_touch_events,
+        signal_attr::{SignalAttr, signal_attr},
         use_description::use_description,
     },
 };
@@ -54,10 +53,12 @@ pub struct UseTagInput {
     pub key: Key,
 }
 
-/// Return value of [`use_tag`].
+/// The return value of [`use_tag`].
 pub struct UseTagReturn {
-    pub row_props: PropsWithStyles<UseTagRowProps>,
-    pub grid_cell_props: UseGridListItemCellProps,
+    /// The tag's row element: `let (attrs, styles) = row.attrs();`.
+    pub row: Part<PropsWithStyles<UseTagRowProps>>,
+    /// The tag's cell element (its content).
+    pub cell: Part<UseGridListItemCellProps>,
     /// The remove button's configuration, for `use_button` (only if the group has `on_remove`).
     pub remove_button: Option<UseButtonInput>,
     pub is_selected: Signal<bool>,
@@ -76,13 +77,23 @@ pub struct UseTagRowProps {
     pub row: UseGridListItemRowProps,
     /// Delete/Backspace remove the tag (or all selected tags, if it is selected).
     pub keyboard: UseKeyboardProps,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<Id>>,
+}
+
+impl Remount for UseTagRowProps {
+    fn remount(&self) -> Self {
+        Self {
+            row: self.row.remount(),
+            keyboard: self.keyboard.remount(),
+            aria_describedby: self.aria_describedby,
+        }
+    }
 }
 
 pub type UseTagRowAttrs = (
     UseGridListItemRowAttrs,
     UseKeyboardAttrs,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    SignalAttr<Option<Id>>,
 );
 
 impl IntoAttrs for UseTagRowProps {
@@ -92,13 +103,13 @@ impl IntoAttrs for UseTagRowProps {
         (
             self.row.into_attrs(),
             self.keyboard.into_attrs(),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
+            signal_attr("aria-describedby", self.aria_describedby),
         )
     }
 }
 
-/// A tag of a tag group: a grid list row that is the group's tab stop while nothing is focused,
-/// and can be removed with Delete/Backspace or its remove button.
+/// A tag of a tag group: a grid list row that is a tab stop until a tag gets focus (then only the
+/// focused tag is), and can be removed with Delete/Backspace or its remove button.
 pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     crate::metrics::subject!();
     let UseTagInput { group, key } = input;
@@ -108,8 +119,8 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     let button_id = use_id("tag-remove");
 
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         is_selected,
         is_focused,
         is_focus_visible,
@@ -123,7 +134,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (mut row, row_styles) = row_props.into_inner();
+    let (mut row, row_styles) = row_props.into_props().into_inner();
 
     let key = StoredValue::new(key);
     // A disabled tag can't be removed or focused by Tab, also with `DisabledBehavior::Selection`
@@ -153,9 +164,12 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
                     .on(Shortcut::new(KeyboardKey::Backspace), move |_| remove()),
             ),
             allow_repeats: true,
-            ..UseKeyboardInput::default()
+            on_key_down: None,
+            on_key_up: None,
+            allow_composing: false,
         })
-        .props
+        .target
+        .into_props()
     } else {
         // Without `on_remove`, the tag has no keyboard handlers of its own (react-aria: none).
         UseKeyboardProps {
@@ -164,7 +178,9 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         }
     };
 
-    // The first tag is the tab stop until a tag gets focus.
+    // Every enabled tag is a tab stop until a tag gets focus, then only the focused one (react-aria:
+    // Tab enters the group at its first tag, Shift+Tab at its last). The first focus changes every
+    // tag's `tabindex`; later focus moves change two (`is_focused_key` tracks only this key).
     row.item.tabindex = Signal::derive(move || {
         let is_this = key.with_value(|k| selection.is_focused_key(k));
         Some(
@@ -194,29 +210,61 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     let remove_button = on_remove.map(|on_remove| UseButtonInput {
         id: Some(button_id.clone()),
         aria_label: Signal::derive(move || Some(strings.read().remove_button_label())).into(),
-        aria_labelledby: Signal::stored(
-            [&button_id, &row_id]
-                .into_iter()
-                .collect::<IdRefs>()
-                .into_value(),
-        ),
+        aria_labelledby: Signal::stored(crate::utils::id::join_ids([
+            Some(button_id.clone()),
+            Some(row_id.clone()),
+        ])),
         is_disabled,
         on_press: Some(Callback::new(move |_: PressEvent| {
             on_remove.run(HashSet::from([key.get_value()]));
         })),
-        ..UseButtonInput::default()
+        element_type: crate::hooks::button::ButtonElementType::Button,
+        button_type: crate::hooks::button::ButtonType::Button,
+        is_pending: Signal::stored(false),
+        allow_focus_when_disabled: Signal::stored(false),
+        exclude_from_tab_order: Signal::stored(false),
+        auto_focus: false,
+        prevent_focus_on_press: Signal::stored(false),
+        href: Signal::stored(None),
+        target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+        rel: Vec::new(),
+        form: crate::hooks::button::ButtonFormAttributes::default(),
+        aria_haspopup: Signal::stored(None),
+        aria_expanded: Signal::stored(None),
+        aria_controls: Signal::stored(None),
+        aria_describedby: Signal::stored(None),
+        aria_pressed: Signal::stored(None),
+        aria_checked: Signal::stored(None),
+        role: None,
+        aria_current: Signal::stored(None),
+        aria_disabled: Signal::stored(None),
+        on_press_start: None,
+        on_press_end: None,
+        on_press_up: None,
+        on_press_change: None,
+        long_press: None,
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
+        on_context_menu: None,
     });
 
     UseTagReturn {
-        row_props: PropsWithStyles::new(
+        row: Part::stored(PropsWithStyles::new(
             UseTagRowProps {
                 row,
                 keyboard,
                 aria_describedby,
             },
             row_styles,
-        ),
-        grid_cell_props,
+        )),
+        cell: grid_cell_props,
         remove_button,
         is_selected,
         is_focused,

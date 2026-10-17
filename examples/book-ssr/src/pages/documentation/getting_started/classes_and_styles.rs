@@ -526,8 +526,8 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(
                         r"
-                        // Inside an atom (e.g., atoms/button.rs)
-                        let (button_attrs, button_styles) = button_props.into_parts();
+                        // A component of your own on `use_button`, as the `Button` atom does it
+                        let (button_attrs, button_styles) = button.attrs();
 
                         // Hook styles take precedence; user styles are the fallback layer.
                         let styles = button_styles.merge(styles);

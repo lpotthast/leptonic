@@ -46,7 +46,7 @@ pub struct UseSearchFieldInput {
     pub on_clear: Option<Callback<()>>,
 }
 
-/// Return value of [`use_search_field`].
+/// The return value of [`use_search_field`].
 #[derive(Debug)]
 pub struct UseSearchFieldReturn {
     /// The text field: label, input, description and error message props and validation.
@@ -69,8 +69,8 @@ pub struct UseSearchFieldReturn {
 /// });
 /// let clear = use_button(search.clear_button);
 /// view! {
-///     <input {..search.text_field.input_props.into_attrs()} />
-///     <button {..clear.props.into_attrs()}>"✕"</button>
+///     <input {..search.text_field.input.attrs()} />
+///     <button {..clear.button.attrs()}>"✕"</button>
 /// }
 /// ```
 pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
@@ -151,7 +151,40 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
                 on_clear.run(());
             }
         })),
-        ..UseButtonInput::default()
+        element_type: crate::hooks::button::ButtonElementType::Button,
+        button_type: crate::hooks::button::ButtonType::Button,
+        id: None,
+        aria_labelledby: Signal::stored(None),
+        is_pending: Signal::stored(false),
+        allow_focus_when_disabled: Signal::stored(false),
+        auto_focus: false,
+        href: Signal::stored(None),
+        target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+        rel: Vec::new(),
+        form: crate::hooks::button::ButtonFormAttributes::default(),
+        aria_haspopup: Signal::stored(None),
+        aria_expanded: Signal::stored(None),
+        aria_controls: Signal::stored(None),
+        aria_describedby: Signal::stored(None),
+        aria_pressed: Signal::stored(None),
+        aria_checked: Signal::stored(None),
+        role: None,
+        aria_current: Signal::stored(None),
+        aria_disabled: Signal::stored(None),
+        on_press_end: None,
+        on_press_up: None,
+        on_press_change: None,
+        long_press: None,
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
+        on_context_menu: None,
     };
 
     UseSearchFieldReturn {

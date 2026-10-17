@@ -3,14 +3,14 @@
 // Upstream: react-aria/test/overlays/useOverlay.shadow.test.js @ 99e6102368
 //! Dismissing an overlay (Escape, interacting outside, blur) and stacking the open overlays, so
 //! that only the topmost one is dismissed.
-use leptos::{attr, attr::Attr, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::visible_overlays;
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent,
     hooks::{
         focus::use_focus_within::{UseFocusWithinInput, use_focus_within},
         interactions::{
@@ -24,6 +24,8 @@ use crate::{
         id::use_id,
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        part::{Part, Remount},
+        signal_attr::{FixedAttr, fixed_attr},
     },
 };
 
@@ -92,15 +94,13 @@ pub struct UseOverlayInput {
     pub group: Option<CapturedElement>,
 }
 
-/// The return value of the `use_overlay` hook.
+/// The return value of [`use_overlay`].
 #[derive(Debug)]
 pub struct UseOverlayReturn {
-    /// Props for the overlay container element. Call `.into_attrs()` for view spreading.
-    pub props: UseOverlayProps,
-
+    /// The overlay element.
+    pub overlay: Part<UseOverlayProps>,
     /// Unique ID for the overlay. Pass to `use_overlay_trigger` as `overlay_id`.
-    pub id: String,
-
+    pub id: Id,
     /// The captured overlay element. Enables consumers (e.g. `use_popover`,
     /// `use_modal_backdrop`) to pass the element to `aria_hide_outside`.
     pub overlay_element: CapturedElement,
@@ -109,11 +109,23 @@ pub struct UseOverlayReturn {
 /// Props from `use_overlay` that can be converted to spreadable attributes.
 #[derive(Debug)]
 pub struct UseOverlayProps {
-    pub id: String,
+    pub id: Id,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl Remount for UseOverlayProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            element_capture: self.element_capture.clone(),
+            on_keydown: self.on_keydown.clone(),
+            on_focusin: self.on_focusin.clone(),
+            on_focusout: self.on_focusout.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseOverlayProps {
@@ -121,7 +133,7 @@ impl IntoAttrs for UseOverlayProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
+            fixed_attr("id", self.id),
             self.element_capture,
             self.on_keydown.into_on(ev::keydown),
             self.on_focusin.into_on(ev::focusin),
@@ -130,9 +142,9 @@ impl IntoAttrs for UseOverlayProps {
     }
 }
 
-/// These attributes must be spread onto the overlay element: `<div {..overlay_props.into_attrs()} />`
+/// These attributes must be spread onto the overlay element: `<div {..overlay.attrs()} />`
 pub type UseOverlayAttrs = (
-    Attr<attr::Id, String>,
+    FixedAttr,
     ElementCaptureAttr,
     OnEvent<ev::keydown>,
     OnEvent<ev::focusin>,
@@ -149,7 +161,7 @@ pub type UseOverlayAttrs = (
 /// ```ignore
 /// let is_open = RwSignal::new(false);
 ///
-/// let UseOverlayReturn { props: overlay_props, .. } = use_overlay(UseOverlayInput {
+/// let UseOverlayReturn { overlay, .. } = use_overlay(UseOverlayInput {
 ///     is_open: is_open.into(),
 ///     on_close: Callback::new(move |()| is_open.set(false)),
 ///     is_dismissable: Signal::stored(true),
@@ -161,7 +173,7 @@ pub type UseOverlayAttrs = (
 ///
 /// view! {
 ///     <Show when=move || is_open.get()>
-///         <div {..overlay_props.into_attrs()}>
+///         <div {..overlay.attrs()}>
 ///             "Overlay content"
 ///         </div>
 ///     </Show>
@@ -253,6 +265,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
         )),
         ..UseKeyboardInput::default()
     });
+    let keyboard_props = keyboard.target.into_props();
 
     let interact_outside_return = use_interact_outside(UseInteractOutsideInput {
         is_disabled: Signal::derive(move || !(is_dismissable.get() && is_open.get())),
@@ -311,11 +324,12 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
             last_topmost_at_pointerdown.set_value(None);
         })),
     });
+    let interact_outside_return_props = interact_outside_return.target.into_props();
 
     // Chain element captures: overlay stack management + interact outside.
     let element_capture = overlay_element
         .attr()
-        .chain(interact_outside_return.props.element_capture);
+        .chain(interact_outside_return_props.element_capture);
 
     let focus_within_return = use_focus_within(UseFocusWithinInput {
         is_disabled: Signal::derive(move || !should_close_on_blur.get()),
@@ -362,15 +376,16 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
 
         on_focus_within_change: None,
     });
+    let focus_within_return_props = focus_within_return.target.into_props();
 
     UseOverlayReturn {
-        props: UseOverlayProps {
+        overlay: Part::stored(UseOverlayProps {
             id: id_string.clone(),
             element_capture,
-            on_keydown: keyboard.props.on_keydown,
-            on_focusin: focus_within_return.props.on_focusin,
-            on_focusout: focus_within_return.props.on_focusout,
-        },
+            on_keydown: keyboard_props.on_keydown,
+            on_focusin: focus_within_return_props.on_focusin,
+            on_focusout: focus_within_return_props.on_focusout,
+        }),
         id: id_string,
         overlay_element,
     }

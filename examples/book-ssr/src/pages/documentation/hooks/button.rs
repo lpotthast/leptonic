@@ -27,7 +27,7 @@ pub fn PageUseButton() -> impl IntoView {
 
                 <ApiTable kind=ApiKind::Input of="UseButtonInput">
                     <ApiRow name="element_type" ty="ButtonElementType" default="Button">
-                        "The kind of element you spread the props onto. Decides which attributes are set; see "
+                        "The kind of element you spread the part onto. Decides which attributes are set; see "
                         <AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="button_type" ty="ButtonType" default="Button">
@@ -36,11 +36,11 @@ pub fn PageUseButton() -> impl IntoView {
                         " or "<Code inline=true>"Reset"</Code>". The default doesn\u{2019}t submit forms, so a button inside a "
                         "form submits it only when you ask for it."
                     </ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id."</ApiRow>
+                    <ApiRow name="id" ty="Option<Id>" default="None">"The element\u{2019}s id."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "An accessible name for buttons without visible text, such as icon buttons."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">
                         "The ids of the elements that name the button."
                     </ApiRow>
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the button is disabled."</ApiRow>
@@ -83,10 +83,10 @@ pub fn PageUseButton() -> impl IntoView {
                     <ApiRow name="aria_expanded" ty="Signal<Option<AriaExpanded>>" default="None">
                         "Whether the element the button controls is expanded."
                     </ApiRow>
-                    <ApiRow name="aria_controls" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_controls" ty="Signal<Option<Id>>" default="None">
                         "The ids of the elements the button controls."
                     </ApiRow>
-                    <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">
+                    <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">
                         "The ids of the elements describing the button."
                     </ApiRow>
                     <ApiRow name="aria_pressed" ty="Signal<Option<AriaPressed>>" default="None">
@@ -141,9 +141,9 @@ pub fn PageUseButton() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseButtonReturn">
-                    <ApiRow name="props" ty="PropsWithStyles<UseButtonProps>">
+                    <ApiRow name="button" ty="Part<PropsWithStyles<UseButtonProps>>">
                         "Attributes, event handlers and styles of the button element. "
-                        <Code inline=true>"props.into_parts()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>
+                        <Code inline=true>"button.attrs()"</Code>" returns "<Code inline=true>"(attrs, styles)"</Code>
                         ": spread "<Code inline=true>"{..attrs}"</Code>" and set "<Code inline=true>"style=styles"</Code>
                         ". The attributes include "<Code inline=true>"data-focus-visible"</Code>"."
                     </ApiRow>
@@ -170,11 +170,11 @@ pub fn PageUseButton() -> impl IntoView {
                         use leptonic::hooks::button::{UseButtonInput, UseButtonReturn, use_button};
                         use leptos::{logging::log, prelude::*};
 
-                        let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+                        let UseButtonReturn { button, .. } = use_button(UseButtonInput {
                             on_press: Some(Callback::new(move |_| log!("pressed"))),
                             ..Default::default()
                         });
-                        let (attrs, styles) = props.into_parts();
+                        let (attrs, styles) = button.attrs();
 
                         view! {
                             <button {..attrs} style=styles>"Press me"</button>
@@ -243,7 +243,7 @@ pub fn PageUseButton() -> impl IntoView {
                 <p>
                     "Some hooks don\u{2019}t render a button themselves but configure one: a menu trigger needs a button that opens "
                     "a menu, a number field needs two stepper buttons. These hooks return a "<Code inline=true>"UseButtonInput"</Code>
-                    " instead of DOM props. You pass it to "<Code inline=true>"use_button"</Code>
+                    " instead of a part. You pass it to "<Code inline=true>"use_button"</Code>
                     ", and because it is a plain struct, you can add your own settings with struct update syntax:"
                 </p>
 
@@ -276,7 +276,7 @@ pub fn PageUseButton() -> impl IntoView {
                             on_hover_start: Some(Callback::new(|_| log!("hovered"))),
                             ..menu_trigger.button
                         });
-                        let (attrs, styles) = button.props.into_parts();
+                        let (attrs, styles) = button.button.attrs();
 
                         view! { <button {..attrs} style=styles>"Actions"</button> }
                     "#)}

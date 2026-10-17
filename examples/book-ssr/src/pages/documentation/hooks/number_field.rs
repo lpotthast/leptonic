@@ -36,7 +36,7 @@ pub fn PageUseNumberField() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "The state holds the value, the range and the disabled state; the field hook wires the elements. "
-                    "Spread "<Code inline=true>"group_props"</Code>" on the element around the input and the buttons:"
+                    "Spread the "<Code inline=true>"group"</Code>" part on the element around the input and the buttons:"
                 </p>
                 <Demo
                     description="Quantity number field from 0 to 100 with stepper buttons and a disabled toggle"
@@ -162,12 +162,12 @@ pub fn PageUseNumberField() -> impl IntoView {
 
                     <ApiTable kind=ApiKind::Input of="UseNumberFieldInput">
                         <ApiRow name="state" ty="NumberFieldState<T>">"Required. The state from "<Code inline=true>"use_number_field_state"</Code>"."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
-                            "Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."
+                            "Whether you render a visible label with the "<Code inline=true>"label"</Code>" part."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when there is no visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<Id>>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">
@@ -191,12 +191,12 @@ pub fn PageUseNumberField() -> impl IntoView {
 
                 <Section title="Return" id="use-number-field-return">
                     <ApiTable kind=ApiKind::Return of="UseNumberFieldReturn">
-                        <ApiRow name="group_props" ty="UseNumberFieldGroupProps">
+                        <ApiRow name="group" ty="Part<UseNumberFieldGroupProps>">
                             <Code inline=true>"role=\"group\""</Code>", "<Code inline=true>"aria-disabled"</Code>" and "
                             <Code inline=true>"aria-invalid"</Code>" for the element wrapping input and buttons."
                         </ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"Id and "<Code inline=true>"for"</Code>" of the label."</ApiRow>
-                        <ApiRow name="input_props" ty="UseNumberFieldInputProps">
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"Id and "<Code inline=true>"for"</Code>" of the label."</ApiRow>
+                        <ApiRow name="input" ty="Part<UseNumberFieldInputProps>">
                             "Attributes and handlers for the "<Code inline=true>"<input>"</Code>", including its value: the input "
                             "shows the state\u{2019}s text by itself."
                         </ApiRow>
@@ -205,8 +205,8 @@ pub fn PageUseNumberField() -> impl IntoView {
                             <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" (see "
                             <AnchorLink href="#stepper-buttons">"Stepper Buttons"</AnchorLink>")."
                         </ApiRow>
-                        <ApiRow name="description_props" ty="SlotProps">"For the description; referenced while it is rendered."</ApiRow>
-                        <ApiRow name="error_message_props" ty="SlotProps">"For the error message. Render it only while "<Code inline=true>"is_invalid"</Code>"."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">"For the description; referenced while it is rendered."</ApiRow>
+                        <ApiRow name="error_message" ty="Part<SlotProps>">"For the error message. Render it only while "<Code inline=true>"is_invalid"</Code>"."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The input, once rendered."</ApiRow>
                         <ApiRow name="is_focused, is_focus_visible" ty="Signal<bool>">"Whether the input has focus, and whether to show a focus ring."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation result is invalid."</ApiRow>
@@ -240,7 +240,7 @@ pub fn PageUseNumberField() -> impl IntoView {
 
             <Section title="Stepper Buttons">
                 <p>
-                    "The hook doesn\u{2019}t hand you DOM props for the increment and decrement buttons. It returns "
+                    "The hook doesn\u{2019}t hand you parts for the increment and decrement buttons. It returns "
                     <Code inline=true>"increment_button"</Code>" and "<Code inline=true>"decrement_button"</Code>", two "
                     <Code inline=true>"UseButtonInput"</Code>"s that you pass to "
                     <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>

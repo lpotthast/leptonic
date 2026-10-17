@@ -37,8 +37,8 @@ pub fn PageAtomLink() -> impl IntoView {
         is_disabled: Signal::stored(true),
         ..UseLinkInput::default()
     })
-    .props
-    .into_parts();
+    .link
+    .attrs();
 
     view! {
         <div id="test-page-atom-link">

@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::{
         button::{UseButtonInput, use_button},
@@ -22,7 +21,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
     };
 
     let UseSpinButtonReturn {
-        props,
+        spin_button,
         increment_button,
         decrement_button,
     } = use_spin_button(UseSpinButtonInput {
@@ -50,8 +49,8 @@ pub fn SpinButtonDemo() -> impl IntoView {
         allow_focus_when_disabled: true.into(),
         ..decrement_button
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
     let increment_disabled = increment_button.is_disabled;
     let (increment_attrs, increment_styles) = use_button(UseButtonInput {
         aria_label: "More cups".into(),
@@ -59,8 +58,8 @@ pub fn SpinButtonDemo() -> impl IntoView {
         allow_focus_when_disabled: true.into(),
         ..increment_button
     })
-    .props
-    .into_parts();
+    .button
+    .attrs();
 
     view! {
         <div class="demo-flex-center-row">
@@ -68,7 +67,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
                 <span aria-hidden="true">"\u{2212}"</span>
             </button>
             <div
-                {..props.into_attrs()}
+                {..spin_button.attrs()}
                 tabindex=move || (!disabled.get()).then_some("0")
                 aria-label="Cups of coffee"
                 class="demo-spinbutton"

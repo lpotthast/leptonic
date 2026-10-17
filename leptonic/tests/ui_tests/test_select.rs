@@ -353,3 +353,84 @@ pub async fn parts_without_parent_warn_and_render_nothing(page: &Page<'_>) -> Re
     assert_that!(orphans).inner_text().await.is_empty();
     Ok(())
 }
+
+/// The ids the trigger's `aria-labelledby` lists.
+async fn labelled_by_ids(trigger: &WebElement) -> Result<Vec<String>, Report> {
+    Ok(trigger
+        .attr("aria-labelledby")
+        .await?
+        .unwrap_or_default()
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect())
+}
+
+/// The trigger refers to its `SelectValue` (`aria-labelledby`) and its open popover's listbox
+/// (`aria-controls`) only while they are rendered (react-aria ties optional elements' ids to
+/// their rendering, `useSlotId`): a part that unmounts leaves no reference to a missing element.
+#[browser_test]
+pub async fn references_only_rendered_parts(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let trigger = page
+        .element("#test-sel-bound [aria-haspopup=listbox]")
+        .await?;
+    let value_id = page
+        .element("#test-sel-bound .leptonic-SelectValue")
+        .await?
+        .id()
+        .await?
+        .unwrap_or_default();
+    assert_that!(labelled_by_ids(&trigger).await?).contains(value_id.clone());
+    let toggle_value = page.element("#test-sel-bound-toggle-value").await?;
+    toggle_value.click().await?;
+    page.wait_for_count("#test-sel-bound .leptonic-SelectValue", 0)
+        .await?;
+    assert_that!(|| labelled_by_ids(&trigger))
+        .eventually_ok()
+        .satisfies(|ids| {
+            ids.does_not_contain(value_id.clone());
+        })
+        .await;
+    toggle_value.click().await?;
+    let value_id = page
+        .element("#test-sel-bound .leptonic-SelectValue")
+        .await?
+        .id()
+        .await?
+        .unwrap_or_default();
+    assert_that!(|| labelled_by_ids(&trigger))
+        .eventually_ok()
+        .satisfies(|ids| {
+            ids.contains(value_id.clone());
+        })
+        .await;
+
+    // The open popover unmounts and mounts again (a script click: no interaction outside).
+    trigger.click().await?;
+    let listbox_id = page
+        .element(role(AriaRole::Listbox))
+        .await?
+        .id()
+        .await?
+        .unwrap_or_default();
+    trigger
+        .wait_for_attr("aria-controls", Some(listbox_id.as_str()))
+        .await?;
+    let toggle_popover = page.element("#test-sel-bound-toggle-popover").await?;
+    toggle_popover.virtual_click().await?;
+    page.wait_for_count(role(AriaRole::Listbox), 0).await?;
+    trigger.wait_for_attr("aria-controls", None).await?;
+    toggle_popover.virtual_click().await?;
+    if trigger.attr("aria-expanded").await?.as_deref() == Some("true") {
+        let listbox_id = page
+            .element(role(AriaRole::Listbox))
+            .await?
+            .id()
+            .await?
+            .unwrap_or_default();
+        trigger
+            .wait_for_attr("aria-controls", Some(listbox_id.as_str()))
+            .await?;
+    }
+    Ok(())
+}

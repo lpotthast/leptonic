@@ -9,7 +9,7 @@ pub fn LinkPressedDemo() -> impl IntoView {
         ..UseLinkInput::default()
     });
     let is_pressed = link.is_pressed;
-    let (link_attrs, link_styles) = link.props.into_parts();
+    let (link_attrs, link_styles) = link.link.attrs();
 
     view! {
         // The hook's `is_pressed`, rendered as an attribute for the styles.

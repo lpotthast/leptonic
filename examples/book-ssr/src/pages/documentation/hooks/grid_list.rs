@@ -19,8 +19,8 @@ pub fn PageGridListHooks() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "Create the rows and their selection as a list state, the grid list, and one "
-                    <Code inline=true>"use_grid_list_item"</Code>" per row. Spread the row props onto the row element "
-                    "and the cell props onto a single child holding the content:"
+                    <Code inline=true>"use_grid_list_item"</Code>" per row. Spread the "<Code inline=true>"row"</Code>" part onto the row element "
+                    "and the "<Code inline=true>"cell"</Code>" part onto a single child holding the content:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -57,7 +57,7 @@ pub fn PageGridListHooks() -> impl IntoView {
                             text_value: |file| (*file).to_owned(),
                         });
                         let state = use_list_state(UseListStateInput { collection: files, selection: SelectionOptions::default() });
-                        let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+                        let UseGridListReturn { grid_list, data } = use_grid_list(UseGridListInput {
                             state,
                             element: CapturedElement::new(),
                             id: None,
@@ -81,10 +81,10 @@ pub fn PageGridListHooks() -> impl IntoView {
                             allows_arrow_navigation: false,
                             on_context_menu: None,
                         });
-                        let (row_attrs, row_styles) = row.row_props.into_parts();
+                        let (row_attrs, row_styles) = row.row.attrs();
                         view! {
                             <div {..row_attrs} style=row_styles>
-                                <div {..row.grid_cell_props.into_attrs()}>"Notes.txt"</div>
+                                <div {..row.cell.attrs()}>"Notes.txt"</div>
                             </div>
                         };
                     "#)}
@@ -109,7 +109,7 @@ pub fn PageGridListHooks() -> impl IntoView {
                     "Takes the rows as a list state: build them with "<Code inline=true>"use_list_collection"</Code>" or "
                     <Code inline=true>"use_collection"</Code>" and hold their selection with "
                     <Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>"use_list_state"</Link>
-                    ". Spread "<Code inline=true>"props"</Code>" onto the list element and render each row with "
+                    ". Spread the "<Code inline=true>"grid_list"</Code>" part onto the list element and render each row with "
                     <Code inline=true>"use_grid_list_item"</Code>"."
                 </p>
 
@@ -117,10 +117,10 @@ pub fn PageGridListHooks() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseGridListInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseGridListInput">
                         <ApiRow name="state" ty="ListState">"The rows and their selection, from "<Code inline=true>"use_list_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The grid element; the props capture it. Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The element id (row ids derive from it), generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The grid element; the part captures it. Required."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The element id (row ids derive from it), generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the grid list."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
                         <ApiRow name="layout" ty="ListLayout" default="Stack">
                             <Code inline=true>"Stack"</Code>": one row below the other. "<Code inline=true>"Grid"</Code>
                             ": rows wrap like cards, and "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>" find the row in the same column."
@@ -158,7 +158,7 @@ pub fn PageGridListHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-grid-list-return">
                     <ApiTable kind=ApiKind::Return of="UseGridListReturn">
-                        <ApiRow name="props" ty="UseGridListProps">
+                        <ApiRow name="grid_list" ty="Part<UseGridListProps>">
                             "For the grid element: "<Code inline=true>"role=\"grid\""</Code>", label, "
                             <Code inline=true>"aria-multiselectable"</Code>" and the collection\u{2019}s keyboard and focus handlers."
                         </ApiRow>
@@ -190,14 +190,14 @@ pub fn PageGridListHooks() -> impl IntoView {
 
                 <Section title="Return" id="use-grid-list-item-return">
                     <ApiTable kind=ApiKind::Return of="UseGridListItemReturn">
-                        <ApiRow name="row_props" ty="PropsWithStyles<UseGridListItemRowProps>">
+                        <ApiRow name="row" ty="Part<PropsWithStyles<UseGridListItemRowProps>>">
                             "For the row: "<Code inline=true>"role=\"row\""</Code>", "<Code inline=true>"aria-selected"</Code>", "
                             <Code inline=true>"aria-disabled"</Code>", labelling, and press and keyboard handling."
                         </ApiRow>
-                        <ApiRow name="grid_cell_props" ty="UseGridListItemCellProps">
+                        <ApiRow name="cell" ty="Part<UseGridListItemCellProps>">
                             "For the single cell inside the row: "<Code inline=true>"role=\"gridcell\""</Code>"."
                         </ApiRow>
-                        <ApiRow name="description_props" ty="SlotProps">"For an element describing the row, referenced only while rendered."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">"For an element describing the row, referenced only while rendered."</ApiRow>
                         <ApiRow name="is_selected, is_focused, is_focus_visible, is_disabled, is_pressed" ty="Signal<bool>">"The row\u{2019}s state."</ApiRow>
                         <ApiRow name="allows_selection, has_action" ty="Signal<bool>">"Whether the row can be selected, and whether it has an action."</ApiRow>
                     </ApiTable>
@@ -217,11 +217,13 @@ pub fn PageGridListHooks() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-grid-list-section-return">
                     <ApiTable kind=ApiKind::Return of="UseGridListSectionReturn">
-                        <ApiRow name="row_props" ty="UseGridListSectionRowProps">"For the row holding the header ("<Code inline=true>"role=\"row\""</Code>")."</ApiRow>
-                        <ApiRow name="row_header_props" ty="UseGridListSectionRowHeaderProps">
-                            "For the header cell inside it ("<Code inline=true>"role=\"rowheader\""</Code>", with the id labelling the group)."
+                        <ApiRow name="header" ty="Part<(UseGridListSectionRowProps, UseGridListSectionRowHeaderProps)>">
+                            "For the row holding the header ("<Code inline=true>"role=\"row\""</Code>") and the header cell inside "
+                            "it ("<Code inline=true>"role=\"rowheader\""</Code>", with the id labelling the group): one part for "
+                            "both elements. Take them with "<Code inline=true>"header.props()"</Code>" and spread each with "
+                            <Code inline=true>"into_attrs()"</Code>". The group references the header while it is rendered."
                         </ApiRow>
-                        <ApiRow name="row_group_props" ty="UseGridListSectionRowGroupProps">
+                        <ApiRow name="row_group" ty="Part<UseGridListSectionRowGroupProps>">
                             "For the element containing the section\u{2019}s rows ("<Code inline=true>"role=\"rowgroup\""</Code>")."
                         </ApiRow>
                         <ApiRow name="heading" ty="Signal<Option<String>>">"The header text, if the section has a header."</ApiRow>

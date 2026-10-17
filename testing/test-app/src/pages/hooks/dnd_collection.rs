@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use leptonic::{
-    CapturedElement, IntoAttrs, Orientation, flag,
+    CapturedElement, Orientation, flag,
     hooks::{
         collections::{
             CollectionOptions, Key, ListLayout, ListState, SelectionMode, SelectionOptions,
@@ -84,7 +84,10 @@ pub fn PageHookDndCollection() -> impl IntoView {
     let log = RwSignal::new(Vec::<String>::new());
     let push = move |entry: String| log.update(|l| l.push(entry));
 
-    let UseDragReturn { drag_props, .. } = use_drag(UseDragInput {
+    let UseDragReturn {
+        draggable: drag_props,
+        ..
+    } = use_drag(UseDragInput {
         items: Signal::stored(vec![DragItem::text("hello world")]),
         allowed_drop_operations: None,
         preview: None,
@@ -143,7 +146,10 @@ pub fn PageHookDndCollection() -> impl IntoView {
         },
     });
     let element = CapturedElement::new();
-    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+    let UseGridListReturn {
+        grid_list: props,
+        data,
+    } = use_grid_list(UseGridListInput {
         aria_label: "List".into(),
         state: list,
         element,
@@ -231,12 +237,12 @@ pub fn PageHookDndCollection() -> impl IntoView {
         is_disabled: Signal::stored(false),
     });
     let UseDroppableCollectionReturn {
-        collection_props,
+        collection: collection_props,
         data: drop,
     } = use_droppable_collection(UseDroppableCollectionInput {
         state: drop_state,
         element,
-        collection_id: props.id.clone(),
+        collection_id: data.id.clone(),
         keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
             state: list,
             element,
@@ -258,13 +264,13 @@ pub fn PageHookDndCollection() -> impl IntoView {
         <div id="test-page-hook-dnd-collection">
             <h1>"Droppable collection"</h1>
             <button>"Before"</button>
-            <div role="button" tabindex="0" {..drag_props.into_attrs()}>
+            <div role="button" tabindex="0" {..drag_props.attrs()}>
                 "Drag me"
             </div>
             <Provider value=context>
                 <div
-                    {..props.into_attrs()}
-                    {..collection_props.into_attrs()}
+                    {..props.attrs()}
+                    {..collection_props.attrs()}
                     style="height: 150px; overflow: auto; position: relative"
                 >
                     <DropIndicator target=DropTarget::Root />
@@ -320,8 +326,8 @@ fn Row(item: Item) -> impl IntoView {
     let ListContext { list, .. } = expect_context::<ListContext>();
     let key = Key::from(item.id.clone());
     let UseGridListItemReturn {
-        row_props,
-        grid_cell_props,
+        row: row_props,
+        cell: grid_cell_props,
         ..
     } = use_grid_list_item(UseGridListItemInput {
         list,
@@ -330,11 +336,11 @@ fn Row(item: Item) -> impl IntoView {
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (row_attrs, row_styles) = row_props.into_parts();
+    let (row_attrs, row_styles) = row_props.attrs();
     view! {
         <DropIndicator target=DropTarget::item(key.clone(), DropPosition::Before) />
         <div {..row_attrs} style=row_styles>
-            <div {..grid_cell_props.into_attrs()} style="height: 50px">
+            <div {..grid_cell_props.attrs()} style="height: 50px">
                 {item.text}
                 <DropIndicator target=DropTarget::item(key, DropPosition::On) inline=true />
             </div>
@@ -348,7 +354,7 @@ fn Row(item: Item) -> impl IntoView {
 fn DropIndicator(target: DropTarget, #[prop(optional)] inline: bool) -> impl IntoView {
     let ListContext { drop, .. } = expect_context::<ListContext>();
     let UseDropIndicatorReturn {
-        drop_indicator_props,
+        indicator: drop_indicator_props,
         is_drop_target,
         is_hidden,
     } = use_drop_indicator(UseDropIndicatorInput {
@@ -360,7 +366,7 @@ fn DropIndicator(target: DropTarget, #[prop(optional)] inline: bool) -> impl Int
         <div
             role="button"
             class="test-dnd-indicator"
-            {..drop_indicator_props.into_attrs()}
+            {..drop_indicator_props.attrs()}
             data-drop-target=flag(is_drop_target)
             data-hidden=flag(is_hidden)
         ></div>

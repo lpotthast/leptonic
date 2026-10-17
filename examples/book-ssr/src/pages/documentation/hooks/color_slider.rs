@@ -20,7 +20,7 @@ pub fn PageUseColorSlider() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "Create the state, pass it to "<Code inline=true>"use_color_slider"</Code>", and spread the props of the "
+                    "Create the state, pass it to "<Code inline=true>"use_color_slider"</Code>", and spread the parts of the "
                     <Link href=routes::doc::slider::Hook.materialize()>"Slider Hooks"</Link>" it returns onto a track, a "
                     "thumb and an input inside the thumb. Merge "<Code inline=true>"track_styles"</Code>" (the gradient) "
                     "into the track\u{2019}s styles and give the input "<Code inline=true>"input_styles"</Code>
@@ -72,18 +72,18 @@ pub fn PageUseColorSlider() -> impl IntoView {
                                 name: None,
                                 form: None,
                             });
-                        let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
-                        let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+                        let (track_attrs, slider_track_styles) = slider.track.attrs();
+                        let (thumb_attrs, thumb_styles) = thumb.thumb.attrs();
 
-                        // The track is the slider's group: it takes the group props too.
+                        // The track is the slider's group: it takes the group's part too.
                         view! {
                             <div
-                                {..slider.group_props.into_attrs()}
+                                {..slider.group.attrs()}
                                 {..track_attrs}
                                 style=slider_track_styles.merge(track_styles)
                             >
                                 <div {..thumb_attrs} style=thumb_styles>
-                                    <input {..thumb.input_props.into_attrs()} style=input_styles/>
+                                    <input {..thumb.input.attrs()} style=input_styles/>
                                 </div>
                             </div>
                         }
@@ -192,15 +192,15 @@ pub fn PageUseColorSlider() -> impl IntoView {
                             "The state from "<Code inline=true>"use_color_slider_state"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
-                            "Whether you render a visible label with "<Code inline=true>"slider.label_props"</Code>"."
+                            "Whether you render a visible label with "<Code inline=true>"slider.label"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the slider. Without it, a label or "<Code inline=true>"aria_labelledby"</Code>
                             ", the channel\u{2019}s name does."
                         </ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">"The ids of the elements naming the slider."</ApiRow>
-                        <ApiRow name="aria_describedby" ty="Signal<Option<String>>" default="None">"The ids of the elements describing the slider."</ApiRow>
-                        <ApiRow name="aria_details" ty="Signal<Option<String>>" default="None">"The ids of the elements with details about the slider."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<Id>>" default="None">"The ids of the elements naming the slider."</ApiRow>
+                        <ApiRow name="aria_describedby" ty="Signal<Option<Id>>" default="None">"The ids of the elements describing the slider."</ApiRow>
+                        <ApiRow name="aria_details" ty="Signal<Option<Id>>" default="None">"The ids of the elements with details about the slider."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to."</ApiRow>
                     </ApiTable>
@@ -209,16 +209,16 @@ pub fn PageUseColorSlider() -> impl IntoView {
                 <Section title="Return" id="use-color-slider-return">
                     <ApiTable kind=ApiKind::Return of="UseColorSliderReturn">
                         <ApiRow name="slider" ty="UseSliderReturn">
-                            "The props of the group, label, output and track, as "<Code inline=true>"use_slider"</Code>" returns them. "
-                            "Spread the group props onto the track: the track is the slider\u{2019}s group."
+                            "The parts of the group, label, output and track, as "<Code inline=true>"use_slider"</Code>" returns them. "
+                            "Spread the group\u{2019}s part onto the track: the track is the slider\u{2019}s group."
                         </ApiRow>
                         <ApiRow name="thumb" ty="UseSliderThumbReturn">
-                            "The props of the thumb and its input (with the color\u{2019}s value text), as "
+                            "The parts of the thumb and its input (with the color\u{2019}s value text), as "
                             <Code inline=true>"use_slider_thumb"</Code>" returns them."
                         </ApiRow>
                         <ApiRow name="track_styles" ty="Styles">
                             "The track\u{2019}s gradient and "<Code inline=true>"forced-color-adjust: none"</Code>
-                            ": merge them into the track props\u{2019} styles."
+                            ": merge them into the styles of the track\u{2019}s part."
                         </ApiRow>
                         <ApiRow name="input_styles" ty="Styles">"Hide the input visually across the thumb: put them on the input."</ApiRow>
                     </ApiTable>

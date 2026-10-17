@@ -5,17 +5,14 @@
 // Upstream: @adobe/react-spectrum/test/combobox/ComboBox.test.js @ 99e6102368
 use std::sync::Arc;
 
-use leptos::{
-    attr::{self, Attr},
-    ev,
-    prelude::*,
-};
+use leptos::{ev, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
 use crate::{
-    CapturedElement, ElementCaptureAttr, EventHandler, IntoAttrs, OnEvent, Propagation,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent, Presence,
+    Propagation,
     hooks::{
         button::use_button::UseButtonInput,
         collections::{
@@ -44,8 +41,10 @@ use crate::{
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         labels::labels,
         orientation::Orientation,
+        part::{Part, Remount},
         pointer_type::PointerType,
         shadow_dom::{get_active_element, get_event_target, node_contains},
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         virtual_focus::dispatch_virtual_focus,
     },
 };
@@ -67,6 +66,10 @@ use crate::{
 //   `button_element` (react-aria: `popoverRef`, `buttonRef`).
 //
 // ## DIFFERENT BEHAVIOR
+// - The input refers to the open listbox (`aria-controls`) and its focused option
+//   (`aria-activedescendant`) only while the listbox is rendered (after mount, as `use_slot`'s
+//   references): a popover the app renders conditionally leaves no reference to a missing
+//   element (react-aria refers to them while open).
 // - The group size in the focus announcement counts the section's options (react-aria counts its
 //   child nodes, the header included).
 //
@@ -92,14 +95,14 @@ pub struct UseComboBoxInput {
     /// The state; the field's `name`, `is_read_only` and validation come from it.
     pub state: ComboBoxState,
     /// The input's id. Generated when `None`.
-    pub id: Option<String>,
+    pub id: Option<Id>,
     pub is_disabled: Signal<bool>,
     pub is_required: Signal<bool>,
     /// Whether a visible label is rendered.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub placeholder: MaybeProp<String>,
     /// What the form submits (`Text` when the state allows custom values).
     pub form_value: ComboBoxFormValue,
@@ -118,12 +121,12 @@ pub struct UseComboBoxInput {
     pub on_blur: Option<Callback<FocusEvent>>,
 }
 
-/// Return value of [`use_combobox`].
+/// The return value of [`use_combobox`].
 pub struct UseComboBoxReturn {
     /// The text input's configuration, for `use_text_field`.
-    pub input: UseTextFieldInput,
-    /// Spread onto the input in addition to the text field's props.
-    pub input_props: UseComboBoxInputProps,
+    pub text_field: UseTextFieldInput,
+    /// The input element, in addition to the props of `use_text_field(text_field)`.
+    pub input: Part<UseComboBoxInputProps>,
     /// The trigger button's configuration, for `use_button`.
     pub button: UseButtonInput,
     /// The popover's listbox, for `use_listbox`.
@@ -137,7 +140,7 @@ pub struct UseComboBoxReturn {
 impl std::fmt::Debug for UseComboBoxReturn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UseComboBoxReturn")
-            .field("input_props", &self.input_props)
+            .field("input", &self.input)
             .finish_non_exhaustive()
     }
 }
@@ -153,9 +156,20 @@ pub struct UseComboBoxInputProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseComboBoxInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            role: self.role,
+            aria_expanded: self.aria_expanded,
+            on_touchend: self.on_touchend.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 pub type UseComboBoxInputAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
+    FixedAttr,
+    SignalAttr<Option<AriaExpanded>>,
     OnEvent<ev::touchend>,
     ElementCaptureAttr,
 );
@@ -165,8 +179,8 @@ impl IntoAttrs for UseComboBoxInputProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaExpanded, self.aria_expanded),
+            fixed_attr("role", self.role),
+            signal_attr("aria-expanded", self.aria_expanded),
             self.on_touchend.into_on(ev::touchend),
             self.element_capture,
         )
@@ -247,7 +261,8 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             ..CollectionOptions::default()
         },
     })
-    .props;
+    .collection
+    .into_props();
     let collection_keydown = collection.on_keydown;
 
     // Shortcuts ignore auto-repeated key presses (`use_keyboard`); the arrow keys below don't.
@@ -323,7 +338,8 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         });
 
     // Focus moving between the input, the button and the popover keeps the combo box focused.
-    let button_id = menu_trigger.button.id.clone().unwrap_or_default();
+    // The trigger button's id (the menu trigger gives it one).
+    let button_id = menu_trigger.menu_props.aria_labelledby.get_untracked();
     let on_input_blur = Callback::new(move |e: FocusEvent| {
         let related = e
             .related_target()
@@ -351,18 +367,23 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         state.set_focused(true);
     });
 
+    // The listbox (and its options) while it is rendered: the input refers to them only then.
+    let listbox_presence = Presence::new();
     // The focused option is the input's active descendant.
     let focused_option_id = listbox_id.clone();
-    let aria_activedescendant = Signal::derive(move || {
-        if !state.is_open() {
-            return None;
+    let aria_activedescendant = Signal::derive({
+        let listbox_presence = listbox_presence.clone();
+        move || {
+            if !state.is_open() || !listbox_presence.is_present() {
+                return None;
+            }
+            state
+                .list
+                .selection
+                .focused_key()
+                .filter(|key| state.list.collection.with(|c| c.contains_key(key)))
+                .map(|key| option_id(&focused_option_id, &key))
         }
-        state
-            .list
-            .selection
-            .focused_key()
-            .filter(|key| state.list.collection.with(|c| c.contains_key(key)))
-            .map(|key| option_id(&focused_option_id, &key))
     });
     let controls_id = listbox_id.clone();
 
@@ -434,7 +455,10 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         aria_describedby,
         aria_activedescendant,
         aria_autocomplete: Some(AriaAutocomplete::List),
-        aria_controls: Signal::derive(move || state.is_open().then(|| controls_id.clone())),
+        aria_controls: Signal::derive({
+            let listbox_presence = listbox_presence.clone();
+            move || (state.is_open() && listbox_presence.is_present()).then(|| controls_id.clone())
+        }),
         on_focus: Some(on_input_focus),
         on_blur: Some(on_input_blur),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
@@ -495,7 +519,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         labels(
             &button_id,
             Some(strings.read().button_label()),
-            field_labelledby.read().as_deref(),
+            field_labelledby.read().as_ref(),
         )
     });
     let listbox_labels = {
@@ -504,7 +528,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             labels(
                 &listbox_id,
                 Some(strings.read().listbox_label()),
-                field_labelledby.read().as_deref(),
+                field_labelledby.read().as_ref(),
             )
         })
     };
@@ -619,6 +643,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         should_focus_on_hover: true,
         state: state.list,
         element: listbox_element,
+        presence: Some(listbox_presence.clone()),
         orientation: Orientation::Vertical.into(),
         layout: ListLayout::Stack,
         layout_delegate: None,
@@ -644,13 +669,13 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
 
     UseComboBoxReturn {
         form_values,
-        input: text_field,
-        input_props: UseComboBoxInputProps {
+        text_field,
+        input: Part::stored(UseComboBoxInputProps {
             role: AriaRole::Combobox,
             aria_expanded: Signal::derive(move || Some(AriaExpanded::from(state.is_open()))),
             on_touchend,
             element_capture: input_element.attr(),
-        },
+        }),
         button,
         listbox,
     }

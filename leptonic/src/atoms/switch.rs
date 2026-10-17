@@ -3,9 +3,13 @@
 use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
-use super::{field::FieldContext, form::use_validation_behavior};
+use super::{
+    checkbox::{ToggleButton, ToggleButtonParts},
+    field::FieldContext,
+    form::use_validation_behavior,
+};
 use crate::{
-    IntoAttrs, Out, ValueBinding,
+    Out, ValueBinding,
     hooks::{
         form::{
             ToggleOptions, UseSwitchInput, UseSwitchReturn, UseToggleStateInput, ValidateFn,
@@ -14,7 +18,7 @@ use crate::{
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class, dev_warn, styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
         visually_hidden::visually_hidden_styles,
     },
 };
@@ -67,7 +71,7 @@ pub fn SwitchField(
     #[prop(into, optional)] form: Option<String>,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -107,14 +111,14 @@ pub fn SwitchField(
         switch.is_invalid,
     );
     let field = FieldContext {
-        description: switch.description_props.clone(),
-        error_message: switch.error_message_props.clone(),
+        description: switch.description.clone(),
+        error_message: switch.error_message.clone(),
         is_invalid,
         validation_errors: switch.validation_errors,
         validation_details: switch.validation_details,
     };
     let button = SwitchButtonContext {
-        switch: StoredValue::new(Some(switch)),
+        button: ToggleButtonParts::of(switch),
         is_required,
     };
 
@@ -123,12 +127,16 @@ pub fn SwitchField(
             <Provider value=field>
                 <div
                     class=classes
-                    style=styles
-                    data-selected=flag(is_selected)
-                    data-disabled=flag(is_disabled)
-                    data-readonly=flag(is_read_only)
-                    data-invalid=flag(is_invalid)
-                    data-required=flag(is_required)
+                    style={styles}
+                    {..data_flags([
+                        ("data-selected", is_selected),
+                        ("data-disabled", is_disabled),
+                        ("data-readonly", is_read_only),
+                    ])}
+                    {..data_flags([
+                        ("data-invalid", is_invalid),
+                        ("data-required", is_required),
+                    ])}
                 >
                     {children()}
                 </div>
@@ -156,10 +164,8 @@ pub fn SwitchButton(
         dev_warn!("a <SwitchButton> belongs in a <SwitchField>");
         return None;
     };
-    let Some(switch) = ctx.switch.try_update_value(Option::take).flatten() else {
-        dev_warn!("a <SwitchField> has one <SwitchButton>");
-        return None;
-    };
+    // One button per field (`Part`: a second one renders nothing).
+    let switch = ctx.button.props()?;
     Some(switch_button(
         switch,
         ctx.is_required,
@@ -172,8 +178,8 @@ pub fn SwitchButton(
 /// What a [`SwitchField`] hands its [`SwitchButton`].
 #[derive(Clone)]
 struct SwitchButtonContext {
-    /// The switch, taken by the button.
-    switch: StoredValue<Option<UseSwitchReturn>>,
+    /// The switch, for the button rendered.
+    button: ToggleButtonParts,
     is_required: Signal<bool>,
 }
 
@@ -192,7 +198,7 @@ struct SwitchSetup {
     name: Option<String>,
     form_value: Option<String>,
     form: Option<String>,
-    id: Option<String>,
+    id: Option<crate::Id>,
     aria_label: MaybeProp<String>,
     aria_labelledby: MaybeProp<String>,
     aria_describedby: MaybeProp<String>,
@@ -243,8 +249,8 @@ fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
             form,
             value: form_value,
             aria_label,
-            aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-            aria_describedby: crate::utils::prop_signal(aria_describedby),
+            aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+            aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             auto_focus,
             on_focus_change,
             ..ToggleOptions::default()
@@ -255,7 +261,7 @@ fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
 
 /// The `<label>` of a [`SwitchButton`].
 fn switch_button(
-    switch: UseSwitchReturn,
+    switch: ToggleButton,
     is_required: Signal<bool>,
     classes: Classes,
     styles: Styles,
@@ -263,26 +269,34 @@ fn switch_button(
 ) -> impl IntoView {
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || switch.is_disabled.get() || switch.is_read_only.get()),
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
-    let (label_attrs, label_styles) = switch.label_props.into_parts();
-    let (input_attrs, input_styles) = switch.input_props.into_parts();
+    let (label_attrs, label_styles) = switch.label;
+    let (input_attrs, input_styles) = switch.input;
 
     view! {
         <label
             {..label_attrs}
-            {..hover.props.into_attrs()}
+            {..hover.target.attrs()}
             class=classes
             style=label_styles.merge(styles)
-            data-selected=flag(switch.is_selected)
-            data-pressed=flag(switch.is_pressed)
-            data-hovered=flag(hover.is_hovered)
-            data-focused=flag(switch.is_focused)
-            data-focus-visible=flag(switch.is_focus_visible)
-            data-disabled=flag(switch.is_disabled)
-            data-readonly=flag(switch.is_read_only)
-            data-invalid=flag(switch.is_invalid)
-            data-required=flag(is_required)
+            {..data_flags([
+                ("data-pressed", switch.is_pressed),
+                ("data-hovered", hover.is_hovered),
+                ("data-focused", switch.is_focused),
+            ])}
+            {..data_flags([("data-focus-visible", switch.is_focus_visible)])}
+            {..data_flags([
+                ("data-selected", switch.is_selected),
+                ("data-disabled", switch.is_disabled),
+                ("data-readonly", switch.is_read_only),
+            ])}
+            {..data_flags([
+                ("data-invalid", switch.is_invalid),
+                ("data-required", is_required),
+            ])}
         >
             <input {..input_attrs} style=input_styles.merge(visually_hidden_styles()) />
             {children.map(|children| children())}

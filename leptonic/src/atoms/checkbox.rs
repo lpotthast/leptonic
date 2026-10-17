@@ -12,20 +12,21 @@ use super::{
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
-    IntoAttrs, Out, ValueBinding,
+    Out, Part, PropsWithStyles, ValueBinding,
     hooks::{
         collections::{Key, SelectionValue},
         form::{
             CheckboxGroupData, ToggleOptions, UseCheckboxGroupInput, UseCheckboxGroupItemInput,
             UseCheckboxGroupReturn, UseCheckboxGroupStateInput, UseCheckboxInput,
-            UseCheckboxReturn, UseToggleStateInput, ValidateFn, ValidationBehavior, use_checkbox,
+            UseToggleInputAttrs, UseToggleInputProps, UseToggleLabelAttrs, UseToggleLabelProps,
+            UseToggleReturn, UseToggleStateInput, ValidateFn, ValidationBehavior, use_checkbox,
             use_checkbox_group, use_checkbox_group_item, use_checkbox_group_state,
             use_toggle_state,
         },
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class, dev_warn, styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
         visually_hidden::visually_hidden_styles,
     },
 };
@@ -99,7 +100,7 @@ pub fn CheckboxField(
     #[prop(into, optional)] form: Option<String>,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -147,8 +148,8 @@ pub fn CheckboxField(
     );
     // In a group, the group's validation shows (react-aria-components: no `FieldErrorContext`).
     let field = FieldContext {
-        description: checkbox.description_props.clone(),
-        error_message: checkbox.error_message_props.clone(),
+        description: checkbox.description.clone(),
+        error_message: checkbox.error_message.clone(),
         is_invalid: if in_group {
             Signal::stored(false)
         } else {
@@ -162,7 +163,7 @@ pub fn CheckboxField(
         validation_details: checkbox.validation_details,
     };
     let button = CheckboxButtonContext {
-        checkbox: StoredValue::new(Some(checkbox)),
+        button: ToggleButtonParts::of(checkbox),
         is_indeterminate,
         is_required,
     };
@@ -172,13 +173,17 @@ pub fn CheckboxField(
             <Provider value=field>
                 <div
                     class=classes
-                    style=styles
-                    data-selected=flag(is_selected)
-                    data-indeterminate=flag(is_indeterminate)
-                    data-disabled=flag(is_disabled)
-                    data-readonly=flag(is_read_only)
-                    data-invalid=flag(is_invalid)
-                    data-required=flag(is_required)
+                    style={styles}
+                    {..data_flags([
+                        ("data-selected", is_selected),
+                        ("data-indeterminate", is_indeterminate),
+                        ("data-disabled", is_disabled),
+                    ])}
+                    {..data_flags([
+                        ("data-readonly", is_read_only),
+                        ("data-invalid", is_invalid),
+                        ("data-required", is_required),
+                    ])}
                 >
                     {children()}
                 </div>
@@ -207,12 +212,10 @@ pub fn CheckboxButton(
         dev_warn!("a <CheckboxButton> belongs in a <CheckboxField>");
         return None;
     };
-    let Some(checkbox) = ctx.checkbox.try_update_value(Option::take).flatten() else {
-        dev_warn!("a <CheckboxField> has one <CheckboxButton>");
-        return None;
-    };
+    // One button per field (`Part`: a second one renders nothing).
+    let parts = ctx.button.props()?;
     Some(checkbox_button(
-        checkbox,
+        parts,
         ctx.is_indeterminate,
         ctx.is_required,
         classes,
@@ -224,8 +227,8 @@ pub fn CheckboxButton(
 /// What a [`CheckboxField`] hands its [`CheckboxButton`].
 #[derive(Clone)]
 struct CheckboxButtonContext {
-    /// The checkbox, taken by the button.
-    checkbox: StoredValue<Option<UseCheckboxReturn>>,
+    /// The checkbox, for the button rendered.
+    button: ToggleButtonParts,
     is_indeterminate: Signal<bool>,
     is_required: Signal<bool>,
 }
@@ -247,7 +250,7 @@ struct CheckboxSetup {
     name: Option<String>,
     form_value: Option<String>,
     form: Option<String>,
-    id: Option<String>,
+    id: Option<crate::Id>,
     aria_label: MaybeProp<String>,
     aria_labelledby: MaybeProp<String>,
     aria_describedby: MaybeProp<String>,
@@ -257,7 +260,7 @@ struct CheckboxSetup {
 
 /// The checkbox of a [`CheckboxField`]: an item of the surrounding [`CheckboxGroup`] (given a
 /// `value`; the field renders nothing without one), or a checkbox with its own state.
-fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
+fn use_checkbox_atom(setup: CheckboxSetup) -> UseToggleReturn {
     let CheckboxSetup {
         value,
         default_selected,
@@ -299,8 +302,8 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
         form,
         value: form_value,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         auto_focus,
         on_focus_change,
         ..ToggleOptions::default()
@@ -326,13 +329,76 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
             state,
             is_indeterminate,
             options,
+            validation: None,
         })
     }
 }
 
 /// The `<label>` of a [`CheckboxButton`].
+/// What a toggle's field (`CheckboxField`, `SwitchField`) hands its button: the toggle's label
+/// and input parts and its state, for the button rendered (again: e.g. inside a `Show`).
+#[derive(Clone)]
+pub(super) struct ToggleButtonParts {
+    label: Part<PropsWithStyles<UseToggleLabelProps>>,
+    input: Part<PropsWithStyles<UseToggleInputProps>>,
+    is_selected: Signal<bool>,
+    is_pressed: Signal<bool>,
+    is_focused: Signal<bool>,
+    is_focus_visible: Signal<bool>,
+    is_disabled: Signal<bool>,
+    is_read_only: Signal<bool>,
+    is_invalid: Signal<bool>,
+}
+
+/// The rendered button's attributes and state (see [`ToggleButtonParts::props`]).
+pub(super) struct ToggleButton {
+    pub(super) label: (UseToggleLabelAttrs, Styles),
+    pub(super) input: (UseToggleInputAttrs, Styles),
+    pub(super) is_selected: Signal<bool>,
+    pub(super) is_pressed: Signal<bool>,
+    pub(super) is_focused: Signal<bool>,
+    pub(super) is_focus_visible: Signal<bool>,
+    pub(super) is_disabled: Signal<bool>,
+    pub(super) is_read_only: Signal<bool>,
+    pub(super) is_invalid: Signal<bool>,
+}
+
+impl ToggleButtonParts {
+    pub(super) fn of(toggle: UseToggleReturn) -> Self {
+        Self {
+            label: toggle.label,
+            input: toggle.input,
+            is_selected: toggle.is_selected,
+            is_pressed: toggle.is_pressed,
+            is_focused: toggle.is_focused,
+            is_focus_visible: toggle.is_focus_visible,
+            is_disabled: toggle.is_disabled,
+            is_read_only: toggle.is_read_only,
+            is_invalid: toggle.is_invalid,
+        }
+    }
+
+    /// The props of the button being rendered; `None` while another button holds them.
+    #[track_caller]
+    pub(super) fn props(&self) -> Option<ToggleButton> {
+        let label = self.label.props()?.into_parts();
+        let input = self.input.props()?.into_parts();
+        Some(ToggleButton {
+            label,
+            input,
+            is_selected: self.is_selected,
+            is_pressed: self.is_pressed,
+            is_focused: self.is_focused,
+            is_focus_visible: self.is_focus_visible,
+            is_disabled: self.is_disabled,
+            is_read_only: self.is_read_only,
+            is_invalid: self.is_invalid,
+        })
+    }
+}
+
 fn checkbox_button(
-    checkbox: UseCheckboxReturn,
+    checkbox: ToggleButton,
     is_indeterminate: Signal<bool>,
     is_required: Signal<bool>,
     classes: Classes,
@@ -343,27 +409,35 @@ fn checkbox_button(
         is_disabled: Signal::derive(move || {
             checkbox.is_disabled.get() || checkbox.is_read_only.get()
         }),
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
-    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
-    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let (label_attrs, label_styles) = checkbox.label;
+    let (input_attrs, input_styles) = checkbox.input;
 
     view! {
         <label
             {..label_attrs}
-            {..hover.props.into_attrs()}
+            {..hover.target.attrs()}
             class=classes
             style=label_styles.merge(styles)
-            data-selected=flag(checkbox.is_selected)
-            data-indeterminate=flag(is_indeterminate)
-            data-pressed=flag(checkbox.is_pressed)
-            data-hovered=flag(hover.is_hovered)
-            data-focused=flag(checkbox.is_focused)
-            data-focus-visible=flag(checkbox.is_focus_visible)
-            data-disabled=flag(checkbox.is_disabled)
-            data-readonly=flag(checkbox.is_read_only)
-            data-invalid=flag(checkbox.is_invalid)
-            data-required=flag(is_required)
+            {..data_flags([
+                ("data-pressed", checkbox.is_pressed),
+                ("data-hovered", hover.is_hovered),
+                ("data-focused", checkbox.is_focused),
+            ])}
+            {..data_flags([("data-focus-visible", checkbox.is_focus_visible)])}
+            {..data_flags([
+                ("data-selected", checkbox.is_selected),
+                ("data-indeterminate", is_indeterminate),
+                ("data-disabled", checkbox.is_disabled),
+            ])}
+            {..data_flags([
+                ("data-readonly", checkbox.is_read_only),
+                ("data-invalid", checkbox.is_invalid),
+                ("data-required", is_required),
+            ])}
         >
             <input {..input_attrs} style=input_styles.merge(visually_hidden_styles()) />
             {children.map(|children| children())}
@@ -407,7 +481,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
     #[prop(into, optional)]
     name: Option<String>,
     #[prop(into, optional)] form: Option<String>,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -442,10 +516,10 @@ pub fn CheckboxGroup<V: SelectionValue>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let has_label = label_presence.has_label;
     let UseCheckboxGroupReturn {
-        props,
-        label_props,
-        description_props,
-        error_message_props,
+        group: props,
+        label: label_props,
+        description: description_props,
+        error_message: error_message_props,
         data,
         is_invalid,
         validation_errors,
@@ -455,8 +529,8 @@ pub fn CheckboxGroup<V: SelectionValue>(
         id,
         has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         form,
         state,
         on_focus: None,
@@ -477,13 +551,15 @@ pub fn CheckboxGroup<V: SelectionValue>(
         <Provider value=ctx>
             <Provider value=label><Provider value=field>
                 <div
-                    {..props.into_attrs()}
+                    {..props.attrs()}
                     class=classes
-                    style=styles
-                    data-disabled=flag(state.is_disabled)
-                    data-readonly=flag(state.is_read_only)
-                    data-required=flag(is_required)
-                    data-invalid=flag(is_invalid)
+                    style={styles}
+                    {..data_flags([
+                        ("data-disabled", state.is_disabled),
+                        ("data-readonly", state.is_read_only),
+                        ("data-required", is_required),
+                    ])}
+                    {..data_flags([("data-invalid", is_invalid)])}
                 >
                     {children()}
                 </div>

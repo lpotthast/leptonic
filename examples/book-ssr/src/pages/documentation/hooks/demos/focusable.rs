@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -22,7 +21,7 @@ pub fn FocusableDemo() -> impl IntoView {
 
     // A scrollable region must be focusable, so keyboard users can scroll it with the arrow keys.
     let UseFocusableReturn {
-        props,
+        target,
         focus_handle,
     } = use_focusable(UseFocusableInput {
         is_disabled: disabled.into(),
@@ -39,7 +38,7 @@ pub fn FocusableDemo() -> impl IntoView {
     });
 
     view! {
-        <div role="region" aria-label="Release notes" class="demo-focusable-region" {..props.into_attrs()}>
+        <div role="region" aria-label="Release notes" class="demo-focusable-region" {..target.attrs()}>
             <p><strong>"Release notes"</strong></p>
             <p>"Version 3 adds keyboard support to every collection: arrow keys move between items, Home and End jump to the ends."</p>
             <p>"Dialogs now restore focus to the element that opened them, and tooltips open on keyboard focus."</p>

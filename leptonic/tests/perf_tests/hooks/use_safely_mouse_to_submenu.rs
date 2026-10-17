@@ -32,11 +32,14 @@ pub fn register(group: TestGroup<str>) -> TestGroup<str> {
         .with(fixture_test(LeavingTheMenu))
 }
 
-/// Moves the pointer to (`x`, `y`) in the viewport.
+/// Moves the pointer to (`x`, `y`) in the viewport in one step: a single `pointermove`.
+/// WebDriver's default moves take 250 ms, in a number of steps that varies with the machine's
+/// speed, and the hook handles one of them every 50 ms: whether the menu ends up taking pointer
+/// events would depend on how many it handled, and in which direction each went.
 async fn move_to(page: &Page<'_>, x: i64, y: i64) -> Result<(), Report> {
     page.low_level()
         .driver()
-        .action_chain()
+        .action_chain_with_delay(None, Some(Duration::ZERO))
         .move_to(x, y)
         .perform()
         .await

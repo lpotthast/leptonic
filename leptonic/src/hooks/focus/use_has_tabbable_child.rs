@@ -9,6 +9,7 @@ use crate::{
     utils::{
         focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
+        part::{Part, Remount},
     },
 };
 
@@ -28,20 +29,27 @@ pub struct UseHasTabbableChildInput {
     pub is_disabled: Signal<bool>,
 }
 
-/// The return value of the `use_has_tabbable_child` hook.
+/// The return value of [`use_has_tabbable_child`].
 #[derive(Debug)]
 pub struct UseHasTabbableChildReturn {
     /// Whether the element has at least one tabbable child.
     pub has_tabbable_child: Signal<bool>,
-
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseHasTabbableChildProps,
+    /// The element whose tabbable children are tracked.
+    pub target: Part<UseHasTabbableChildProps>,
 }
 
 /// Props from `use_has_tabbable_child` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseHasTabbableChildProps {
     pub element_capture: ElementCaptureAttr,
+}
+
+impl Remount for UseHasTabbableChildProps {
+    fn remount(&self) -> Self {
+        Self {
+            element_capture: self.element_capture.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseHasTabbableChildProps {
@@ -70,12 +78,12 @@ pub type UseHasTabbableChildAttrs = (ElementCaptureAttr,);
 /// # Example
 ///
 /// ```ignore
-/// let UseHasTabbableChildReturn { has_tabbable_child, props } =
+/// let UseHasTabbableChildReturn { has_tabbable_child, target } =
 ///     use_has_tabbable_child(UseHasTabbableChildInput::default());
 ///
 /// view! {
 ///     <div
-///         {..props.into_attrs()}
+///         {..target.attrs()}
 ///         tabindex=move || if has_tabbable_child.get() { -1 } else { 0 }
 ///     >
 ///         <button>"Child button"</button>
@@ -169,9 +177,9 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
     UseHasTabbableChildReturn {
         has_tabbable_child: has_tabbable_child.into(),
-        props: UseHasTabbableChildProps {
+        target: Part::stored(UseHasTabbableChildProps {
             element_capture: element.attr(),
-        },
+        }),
     }
 }
 

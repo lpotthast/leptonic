@@ -46,9 +46,9 @@ pub fn PageUseFocusRing() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseFocusRingReturn">
-                    <ApiRow name="props" ty="UseFocusRingProps">
+                    <ApiRow name="target" ty="Part<UseFocusRingProps>">
                         "The focus listeners and the "<Code inline=true>"data-focus-visible"</Code>
-                        " attribute. Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        " attribute. Spread them onto the element with "<Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                     <ApiRow name="is_focused" ty="Signal<bool>">
                         "Whether the element is focused (in within mode: whether focus is inside it)."
@@ -67,7 +67,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
                         let focus_ring = use_focus_ring(UseFocusRingInput::default());
 
                         view! {
-                            <button class="my-button" {..focus_ring.props.into_attrs()}>"Focus me"</button>
+                            <button class="my-button" {..focus_ring.target.attrs()}>"Focus me"</button>
                         }
                     "#)}
                 </Code>

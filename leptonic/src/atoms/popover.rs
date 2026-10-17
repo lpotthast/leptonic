@@ -9,7 +9,7 @@ use super::{
     overlay_arrow::OverlayArrowContext, press::ClearTriggerContexts,
 };
 use crate::{
-    CapturedElement, Out, PropsWithStyles,
+    CapturedElement, Out, Part, PropsWithStyles,
     hooks::{
         animation::{
             UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
@@ -17,12 +17,12 @@ use crate::{
         },
         overlay::{
             OverlayFocusContain, OverlayPositionOptions, OverlayState, Placement, PlacementAxis,
-            PopoverModality, Rect, UseOverlayArrowProps, UsePopoverInput, UsePopoverProps,
-            UsePopoverReturn, use_popover,
+            PopoverModality, Rect, UseOverlayArrowProps, UseOverlayPositionProps, UseOverlayProps,
+            UsePopoverInput, UsePopoverProps, UsePopoverReturn, use_popover,
         },
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         focus::focus_safely,
         i18n::{WritingDirection, use_direction},
@@ -196,9 +196,9 @@ pub fn Popover(
     let submenu_labelledby = submenu.map(|submenu| submenu.aria_labelledby);
 
     let UsePopoverReturn {
-        props,
+        popover: props,
         id,
-        arrow_props,
+        arrow: arrow_props,
         placement: resolved_placement,
         trigger_anchor_point,
         ..
@@ -229,6 +229,8 @@ pub fn Popover(
         is_submenu: submenu.is_some(),
         state,
     });
+    let props = props.into_props();
+    let arrow_props = arrow_props.into_props();
     // The trigger's `aria-controls`.
     if let Some(context) = context {
         context.overlay_id.set(Some(id));
@@ -261,6 +263,7 @@ pub fn Popover(
             aria_labelledby: move || {
                 aria_labelledby
                     .get()
+                    .map(crate::Id::from)
                     .or_else(|| submenu_labelledby.map(|labelledby| labelledby.get_value()))
                     .or_else(|| context.map(|ctx| ctx.trigger_id.get()))
             },
@@ -277,7 +280,7 @@ pub fn Popover(
 pub(crate) struct SubmenuPopoverContext {
     pub should_close_on_interact_outside: StoredValue<crate::hooks::overlay::InteractOutsideFilter>,
     /// The trigger item, naming the popover if it is a dialog.
-    pub aria_labelledby: StoredValue<String>,
+    pub aria_labelledby: StoredValue<crate::Id>,
 }
 
 /// What a trigger (a `MenuTrigger`) sets as default for its popover (react-aria-components'
@@ -351,7 +354,7 @@ pub(crate) struct PopoverParts {
 /// without a dialog inside is the dialog (react-aria-components): `role="dialog"`, named by
 /// `label`, focused once rendered unless focus is already inside.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'static>(
+pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<crate::Id> + 'static>(
     state: S,
     parts: PopoverParts,
     modality: PopoverModality,
@@ -378,8 +381,33 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     let trigger_width = RwSignal::new(None::<f64>);
     let direction = use_direction();
 
-    let (attrs, popover_styles) = props.into_parts();
-    let attrs = StoredValue::new(attrs);
+    // The popover element, built for each opening (one element at a time).
+    let (props, popover_styles) = props.into_inner();
+    let UsePopoverProps {
+        overlay:
+            UseOverlayProps {
+                id,
+                element_capture,
+                on_keydown,
+                on_focusin,
+                on_focusout,
+            },
+        position: UseOverlayPositionProps {
+            element_capture: position_capture,
+        },
+    } = props;
+    let popover_part = StoredValue::new(Part::new(move || UsePopoverProps {
+        overlay: UseOverlayProps {
+            id: id.clone(),
+            element_capture: element_capture.clone(),
+            on_keydown: on_keydown.clone(),
+            on_focusin: on_focusin.clone(),
+            on_focusout: on_focusout.clone(),
+        },
+        position: UseOverlayPositionProps {
+            element_capture: position_capture.clone(),
+        },
+    }));
     let classes = StoredValue::new(classes);
     // The trigger's width and the anchor point as CSS variables (react-aria-components).
     let variables = Styles::builder()
@@ -402,7 +430,7 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
         aria_labelledby,
     } = label;
     let is_dialog = RwSignal::new(false);
-    let dialog_labelledby = RwSignal::new(None::<String>);
+    let dialog_labelledby = RwSignal::new(None::<crate::Id>);
     let is_submenu = matches!(group, PopoverGroup::Sub(_));
     // Once rendered: a modal popover or a submenu's (subdialog's) without a dialog inside is the
     // dialog.
@@ -458,10 +486,12 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
         view! {
             <FocusScope contain=contain restore_focus=true>
                 <div
-                    {..attrs.get_value()}
+                    {..popover_part.with_value(|part| part.attrs())}
                     {..capture.attr().chain(entering.attr())}
-                    data-entering=flag(is_entering)
-                    data-exiting=flag(is_exiting)
+                    {..data_flags([
+                        ("data-entering", is_entering),
+                        ("data-exiting", is_exiting),
+                    ])}
                     class=classes.get_value()
                     // The only writer of the popover's `style` (lessons.md).
                     style=hiding.merge(styles.get_value())

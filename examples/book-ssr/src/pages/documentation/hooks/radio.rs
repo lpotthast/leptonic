@@ -73,12 +73,12 @@ pub fn PageUseRadioHook() -> impl IntoView {
                             on_press: None,
                             on_press_change: None,
                         });
-                        let (label_attrs, label_styles) = small.label_props.into_parts();
-                        let (input_attrs, input_styles) = small.input_props.into_parts();
+                        let (label_attrs, label_styles) = small.label.attrs();
+                        let (input_attrs, input_styles) = small.input.attrs();
 
                         view! {
-                            <div {..group.props.into_attrs()}>
-                                <span {..group.label_props.into_attrs()}>"Size"</span>
+                            <div {..group.group.attrs()}>
+                                <span {..group.label.attrs()}>"Size"</span>
                                 <label {..label_attrs} style=label_styles>
                                     <input {..input_attrs} style=input_styles/>
                                     "Small"
@@ -179,10 +179,10 @@ pub fn PageUseRadioHook() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseRadioGroupInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseRadioGroupInput">
                         <ApiRow name="state" ty="RadioGroupState">"From "<Code inline=true>"use_radio_group_state"</Code>". Required."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with the "<Code inline=true>"label"</Code>" part."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the group without a visible label."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Signal<Option<String>>" default="None">
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Signal<Option<Id>>" default="None">
                             "Further labelling, describing or error elements."
                         </ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Vertical">
@@ -197,14 +197,14 @@ pub fn PageUseRadioHook() -> impl IntoView {
 
                 <Section title="Return" id="use-radio-group-return">
                     <ApiTable kind=ApiKind::Return of="UseRadioGroupReturn">
-                        <ApiRow name="props" ty="UseRadioGroupProps">
+                        <ApiRow name="group" ty="Part<UseRadioGroupProps>">
                             <Code inline=true>"role=\"radiogroup\""</Code>", labelling, "<Code inline=true>"aria-orientation"</Code>", "
                             <Code inline=true>"aria-required"</Code>", "<Code inline=true>"aria-readonly"</Code>", "
                             <Code inline=true>"aria-invalid"</Code>", "<Code inline=true>"aria-disabled"</Code>" and the arrow-key handler. "
-                            "Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                            "Spread with "<Code inline=true>"{..group.attrs()}"</Code>"."
                         </ApiRow>
-                        <ApiRow name="label_props" ty="UseLabelProps">"The id of the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
-                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                        <ApiRow name="label" ty="Part<UseLabelProps>">"The id of the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                        <ApiRow name="description, error_message" ty="Part<SlotProps>">
                             "For the group\u{2019}s description and error message. They also describe each radio; render the error "
                             "message only while invalid."
                         </ApiRow>
@@ -233,9 +233,9 @@ pub fn PageUseRadioHook() -> impl IntoView {
                         <ApiRow name="group" ty="RadioGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_radio_group"</Code>". Required."</ApiRow>
                         <ApiRow name="value" ty="Key">"The value the radio selects. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio. It is also disabled while the group is."</ApiRow>
-                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without visible label text."</ApiRow>
-                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<String>>" default="None">"Further labelling or describing elements."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Signal<Option<Id>>" default="None">"Further labelling or describing elements."</ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the radio when it mounts."</ApiRow>
                         <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Focus callbacks."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the radio gains or loses focus."</ApiRow>
@@ -248,15 +248,15 @@ pub fn PageUseRadioHook() -> impl IntoView {
 
                 <Section title="Return" id="use-radio-return">
                     <ApiTable kind=ApiKind::Return of="UseRadioReturn">
-                        <ApiRow name="label_props" ty="PropsWithStyles<UseToggleLabelProps>">
+                        <ApiRow name="label" ty="Part<PropsWithStyles<UseToggleLabelProps>>">
                             "Press handlers for the "<Code inline=true>"<label>"</Code>": pressing it selects the radio and focuses it."
                         </ApiRow>
-                        <ApiRow name="input_props" ty="PropsWithStyles<UseRadioInputProps>">
+                        <ApiRow name="input" ty="Part<PropsWithStyles<UseRadioInputProps>>">
                             "Attributes and handlers for the "<Code inline=true>"<input>"</Code>": "<Code inline=true>"type=\"radio\""</Code>
                             ", the group\u{2019}s "<Code inline=true>"name"</Code>", the value, "<Code inline=true>"checked"</Code>
                             " and the roving "<Code inline=true>"tabindex"</Code>"."
                         </ApiRow>
-                        <ApiRow name="description_props" ty="SlotProps">"For a description of this radio."</ApiRow>
+                        <ApiRow name="description" ty="Part<SlotProps>">"For a description of this radio."</ApiRow>
                         <ApiRow name="is_selected" ty="Signal<bool>">"Whether this radio is selected."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"Whether this radio or its group is disabled."</ApiRow>
                         <ApiRow name="is_pressed" ty="Signal<bool>">"Whether the input or its label is pressed."</ApiRow>

@@ -141,6 +141,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         <ApiRow name="collection" ty="CollectionMemo">
                             "All options, from "<Code inline=true>"use_collection"</Code>" or "<Code inline=true>"use_list_collection"</Code>"."
                         </ApiRow>
+                        <ApiRow name="id" ty="Option<Id>" default="None">"The input\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="filter" ty="Option<ComboBoxFilter>" default="None">
                             "Shows the options matching the input, e.g. "<Code inline=true>"use_contains_filter()"</Code>
                             ". Without a filter, all options are shown."

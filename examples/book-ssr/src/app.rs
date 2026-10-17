@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use codee::string::FromToStringCodec;
 use leptonic::{
-    AriaExpanded, AriaHasPopup, CapturedElement, IntoAttrs,
+    AriaExpanded, AriaHasPopup, CapturedElement,
     atoms::{
         button::Button,
         dialog::Dialog,
@@ -330,7 +330,7 @@ fn AppBar(children: Children) -> impl IntoView {
     });
 
     view! {
-        <header {..landmark.props.into_attrs()} {..element.attr()} id="book-app-bar">
+        <header {..landmark.landmark.attrs()} {..element.attr()} id="book-app-bar">
             {children()}
         </header>
     }
@@ -481,7 +481,7 @@ pub fn MainLandmark(class: &'static str, children: Children) -> impl IntoView {
     });
 
     view! {
-        <main {..landmark.props.into_attrs()} {..element.attr()} id=MAIN_ID class=class>
+        <main {..landmark.landmark.attrs()} {..element.attr()} id=MAIN_ID class=class>
             {children()}
         </main>
     }
@@ -505,7 +505,7 @@ pub fn NavLandmark(
     });
 
     view! {
-        <nav {..landmark.props.into_attrs()} {..element.attr()} id=id class=class>
+        <nav {..landmark.landmark.attrs()} {..element.attr()} id=id class=class>
             {children()}
         </nav>
     }

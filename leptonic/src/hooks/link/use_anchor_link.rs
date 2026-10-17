@@ -6,13 +6,14 @@ use wasm_bindgen::JsValue;
 use web_sys::{MouseEvent, ScrollIntoViewOptions};
 
 use crate::{
-    EventHandler,
+    EventHandler, PropsWithStyles,
     hooks::{
         interactions::PressEvent,
         link::{UseLinkInput, UseLinkReturn, use_link},
     },
     utils::{
         modifiers::{EventModifiers, Modifiers},
+        part::Part,
         scroll_behavior::ScrollBehavior,
     },
 };
@@ -125,7 +126,15 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseLinkReturn {
     } = input;
     let target = StoredValue::new(href.clone());
     let user_on_press = link.on_press;
-    let mut anchor = use_link(UseLinkInput {
+    let UseLinkReturn {
+        link,
+        is_disabled,
+        is_pressed,
+        is_hovered,
+        is_focused,
+        is_focus_visible,
+        focus_handle,
+    } = use_link(UseLinkInput {
         href: Signal::stored(Some(href.as_str().to_owned())),
         on_press: Some(Callback::new(move |e: PressEvent| {
             // A modified click opens the link elsewhere (a new tab or window): the browser does,
@@ -144,16 +153,24 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseLinkReturn {
         })),
         ..link
     });
+    let (mut props, styles) = link.into_props().into_inner();
     // The press scrolls: no jump by the browser, no navigation by a router. Modified clicks
     // (Ctrl/Cmd/Shift/Alt) keep the browser's default: opening the link in a new tab or window.
-    let on_click = std::mem::take(&mut anchor.props.props.on_click);
-    anchor.props.props.on_click = EventHandler::new(|e: MouseEvent| {
+    props.on_click = EventHandler::new(|e: MouseEvent| {
         if !is_modified(e.modifiers()) {
             e.prevent_default();
         }
     })
-    .chain(on_click);
-    anchor
+    .chain(props.on_click);
+    UseLinkReturn {
+        link: Part::stored(PropsWithStyles::new(props, styles)),
+        is_disabled,
+        is_pressed,
+        is_hovered,
+        is_focused,
+        is_focus_visible,
+        focus_handle,
+    }
 }
 
 /// Whether a press was made with a modifier that opens a link elsewhere (as react-aria's

@@ -9,7 +9,7 @@ use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
 use crate::{
-    CapturedElement, IntoAttrs, Out, PropsWithStyles, ValueBinding,
+    CapturedElement, Out, Part, PropsWithStyles, ValueBinding,
     hooks::{
         button::{UseButtonInput, UseButtonReturn, use_button},
         calendar::{
@@ -27,7 +27,7 @@ use crate::{
         interactions::{UseHoverInput, use_hover},
     },
     utils::{
-        data_attributes::flag,
+        data_attributes::data_flags,
         date::{DateDuration, DateExt, DateRange},
         date_time_formatter::{DateTimeFormat, MonthFormat},
         default_class::with_default_class,
@@ -68,7 +68,7 @@ struct CalendarContext {
     // Cloned per rendering: the buttons may render again (e.g. after switching a view).
     previous: StoredValue<UseButtonInput>,
     next: StoredValue<UseButtonInput>,
-    error_message: StoredValue<SlotProps>,
+    error_message: Part<SlotProps>,
 }
 
 /// What a date picker gives the calendar in its popover (react-aria-components'
@@ -180,7 +180,7 @@ pub fn Calendar(
     weeks_in_month: MaybeProp<u8>,
     /// The calendar's id. Generated when not given.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -260,9 +260,9 @@ pub fn Calendar(
         state,
         id,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_details: crate::utils::prop_signal(aria_details),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        aria_details: crate::utils::id::id_ref_prop(aria_details),
     });
     render_calendar(calendar, is_disabled, classes, styles, children)
 }
@@ -315,7 +315,7 @@ pub fn RangeCalendar(
     #[prop(into, optional)]
     selection_alignment: MaybeProp<SelectionAlignment>,
     #[prop(into, optional)] weeks_in_month: MaybeProp<u8>,
-    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] id: Option<crate::Id>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: MaybeProp<String>,
     #[prop(into, optional)] aria_describedby: MaybeProp<String>,
@@ -399,9 +399,9 @@ pub fn RangeCalendar(
         commit_behavior,
         id,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
-        aria_details: crate::utils::prop_signal(aria_details),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
+        aria_details: crate::utils::id::id_ref_prop(aria_details),
     });
     render_calendar(calendar, is_disabled, classes, styles, children)
 }
@@ -414,10 +414,10 @@ fn render_calendar(
     children: Children,
 ) -> AnyView {
     let UseCalendarReturn {
-        calendar_props,
+        calendar: calendar_part,
         previous_button,
         next_button,
-        error_message_props,
+        error_message: error_message_props,
         data,
         ..
     } = calendar;
@@ -426,15 +426,17 @@ fn render_calendar(
         data,
         previous: StoredValue::new(previous_button),
         next: StoredValue::new(next_button),
-        error_message: StoredValue::new(error_message_props),
+        error_message: error_message_props,
     };
     view! {
         <div
-            {..calendar_props.into_attrs()}
+            {..calendar_part.attrs()}
             class=classes
-            style=styles
-            data-disabled=flag(is_disabled)
-            data-invalid=flag(is_invalid)
+            style={styles}
+            {..data_flags([
+                ("data-disabled", is_disabled),
+                ("data-invalid", is_invalid),
+            ])}
         >
             <Provider value=context>{children()}</Provider>
         </div>
@@ -524,23 +526,25 @@ fn calendar_button(
 ) -> impl IntoView {
     let input = input?;
     let UseButtonReturn {
-        props,
+        button: props,
         is_disabled,
         is_pressed,
         is_hovered,
         is_focused,
         ..
     } = use_button(input);
-    let (attrs, button_styles) = props.into_parts();
+    let (attrs, button_styles) = props.attrs();
     Some(view! {
         <button
             {..attrs}
             class=classes
             style=button_styles.merge(styles)
-            data-pressed=flag(is_pressed)
-            data-hovered=flag(is_hovered)
-            data-focused=flag(is_focused)
-            data-disabled=flag(is_disabled)
+            {..data_flags([
+                ("data-pressed", is_pressed),
+                ("data-hovered", is_hovered),
+                ("data-focused", is_focused),
+            ])}
+            {..data_flags([("data-disabled", is_disabled)])}
         >
             {children()}
         </button>
@@ -595,10 +599,11 @@ pub fn CalendarErrorMessage(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-CalendarErrorMessage", classes);
-    let props = expect_calendar("CalendarErrorMessage")?
+    // One error message per calendar (`Part`: a second one gets no props).
+    let attrs = expect_calendar("CalendarErrorMessage")?
         .error_message
-        .get_value();
-    Some(view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> })
+        .attrs();
+    Some(view! { <div {..attrs} class=classes style=styles>{children()}</div> })
 }
 
 /// A grid of the calendar around it: a month of dates (`offset`: a later month of a calendar
@@ -630,7 +635,7 @@ pub fn CalendarGrid(
         }
     });
     let UseCalendarGridReturn {
-        grid_props,
+        grid: grid_props,
         start_date,
         week_days,
         weeks_in_month,
@@ -646,7 +651,7 @@ pub fn CalendarGrid(
         weeks_in_month,
     };
     Some(view! {
-        <table {..grid_props.into_attrs()} class=classes style=styles>
+        <table {..grid_props.attrs()} class=classes style=styles>
             <Provider value=grid>{children()}</Provider>
         </table>
     })
@@ -803,8 +808,8 @@ where
 /// What a cell's button needs from its cell.
 #[derive(Clone)]
 struct CellContext {
-    /// Taken by the cell's one `CalendarCellButton`.
-    button: StoredValue<Option<CellButtonParts>>,
+    /// For the cell's one `CalendarCellButton` (at a time).
+    button: CellButtonParts,
     is_outside_month: Signal<bool>,
     is_selection_start: Signal<bool>,
     is_selection_end: Signal<bool>,
@@ -812,8 +817,10 @@ struct CellContext {
 
 /// What a [`CalendarCellButton`] needs of its cell's [`UseCalendarCellReturn`] (all but the
 /// cell's own props).
+#[derive(Clone)]
 struct CellButtonParts {
-    button_props: PropsWithStyles<UseCalendarCellButtonProps>,
+    /// The button's attributes (no data to copy: signals and handlers).
+    button: Part<PropsWithStyles<UseCalendarCellButtonProps>>,
     is_pressed: Signal<bool>,
     is_focused: Signal<bool>,
     is_selected: Signal<bool>,
@@ -883,8 +890,8 @@ pub fn CalendarCell(
         })
     });
     let UseCalendarCellReturn {
-        cell_props,
-        button_props,
+        cell: cell_part,
+        button,
         is_pressed,
         is_focused,
         is_selected,
@@ -896,8 +903,8 @@ pub fn CalendarCell(
         formatted_date,
     } = cell;
     let cell_context = CellContext {
-        button: StoredValue::new(Some(CellButtonParts {
-            button_props,
+        button: CellButtonParts {
+            button,
             is_pressed,
             is_focused,
             is_selected,
@@ -907,13 +914,13 @@ pub fn CalendarCell(
             is_invalid,
             is_today,
             formatted_date,
-        })),
+        },
         is_outside_month,
         is_selection_start,
         is_selection_end,
     };
     Some(view! {
-        <td {..cell_props.into_attrs()} class=classes style=styles>
+        <td {..cell_part.attrs()} class=classes style=styles>
             <Provider value=cell_context>{children()}</Provider>
         </td>
     })
@@ -940,12 +947,8 @@ pub fn CalendarCellButton(
         crate::utils::dev_warn!("CalendarCellButton: not inside a CalendarCell");
         return None;
     };
-    let Some(cell) = context.button.try_update_value(Option::take).flatten() else {
-        crate::utils::dev_warn!("CalendarCellButton: used twice in one CalendarCell");
-        return None;
-    };
     let CellButtonParts {
-        button_props,
+        button,
         is_pressed,
         is_focused,
         is_selected,
@@ -955,34 +958,45 @@ pub fn CalendarCellButton(
         is_invalid,
         is_today,
         formatted_date,
-    } = cell;
+    } = context.button;
+    // One button per cell (`Part`: a second one renders nothing).
+    let (attrs, button_styles) = button.props()?.into_parts();
     let hover = use_hover(UseHoverInput {
         is_disabled: Signal::derive(move || is_disabled.get() || is_unavailable.get()),
-        ..UseHoverInput::default()
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
     });
     let UseFocusRingReturn {
-        props: focus_ring, ..
+        target: focus_ring, ..
     } = use_focus_ring(UseFocusRingInput::default());
-    let (attrs, button_styles) = button_props.into_parts();
     Some(view! {
         <div
             {..attrs}
-            {..focus_ring.into_attrs()}
-            {..hover.props.into_attrs()}
+            {..focus_ring.attrs()}
+            {..hover.target.attrs()}
             class=classes
             style=button_styles.merge(styles)
-            data-focused=flag(is_focused)
-            data-hovered=flag(hover.is_hovered)
-            data-pressed=flag(is_pressed)
-            data-selected=flag(is_selected)
-            data-selection-start=flag(context.is_selection_start)
-            data-selection-end=flag(context.is_selection_end)
-            data-disabled=flag(is_disabled)
-            data-unavailable=flag(is_unavailable)
-            data-invalid=flag(is_invalid)
-            data-outside-month=flag(context.is_outside_month)
-            data-outside-visible-range=flag(is_outside_visible_range)
-            data-today=flag(is_today)
+            {..data_flags([
+                ("data-focused", is_focused),
+                ("data-hovered", hover.is_hovered),
+                ("data-pressed", is_pressed),
+            ])}
+            {..data_flags([
+                ("data-selected", is_selected),
+                ("data-selection-start", context.is_selection_start),
+                ("data-selection-end", context.is_selection_end),
+            ])}
+            {..data_flags([
+                ("data-disabled", is_disabled),
+                ("data-unavailable", is_unavailable),
+                ("data-invalid", is_invalid),
+            ])}
+            {..data_flags([
+                ("data-outside-month", context.is_outside_month),
+                ("data-outside-visible-range", is_outside_visible_range),
+                ("data-today", is_today),
+            ])}
         >
             {match children {
                 Some(children) => children().into_any(),

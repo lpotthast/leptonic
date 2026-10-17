@@ -1,5 +1,5 @@
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     atoms::{button::Button, focus_scope::FocusScope},
     hooks::{
         button::{UseButtonInput, UseButtonReturn, use_button},
@@ -15,19 +15,15 @@ use leptos::prelude::*;
 #[component]
 pub fn OverlayDismissDemo() -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
-    let trigger = CapturedElement::new();
+    let trigger_element = CapturedElement::new();
 
-    let UseOverlayReturn {
-        props: overlay_props,
-        id,
-        ..
-    } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn { overlay, id, .. } = use_overlay(UseOverlayInput {
         is_dismissable: Signal::stored(true),
         should_close_on_blur: Signal::stored(true),
         // The trigger toggles the panel itself, so presses on it must not count as "outside".
         should_close_on_interact_outside: Some(InteractOutsideFilter::new(
             move |el: &web_sys::Element| {
-                !trigger.with_untracked(|trigger| {
+                !trigger_element.with_untracked(|trigger| {
                     trigger.is_some_and(|trigger| trigger.contains(Some(el.as_ref())))
                 })
             },
@@ -37,32 +33,26 @@ pub fn OverlayDismissDemo() -> impl IntoView {
         is_keyboard_dismiss_disabled: Signal::stored(false),
         group: None,
     });
-    let overlay_attrs = StoredValue::new(overlay_props.into_attrs());
 
-    let UseOverlayTriggerReturn {
-        props: trigger_props,
-    } = use_overlay_trigger(UseOverlayTriggerInput {
+    let UseOverlayTriggerReturn { trigger } = use_overlay_trigger(UseOverlayTriggerInput {
         is_open: is_open.into(),
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
 
-    let UseButtonReturn {
-        props: button_props,
-        ..
-    } = use_button(UseButtonInput {
+    let UseButtonReturn { button, .. } = use_button(UseButtonInput {
         on_press: Some(Callback::new(move |_| {
             set_is_open.update(|open| *open = !*open);
         })),
         ..UseButtonInput::default()
     });
-    let (button_attrs, button_styles) = button_props.into_parts();
+    let (button_attrs, button_styles) = button.attrs();
 
     view! {
         <button
             {..button_attrs}
-            {..trigger_props.into_attrs()}
-            {..trigger.attr()}
+            {..trigger.attrs()}
+            {..trigger_element.attr()}
             style=button_styles
             class="demo-btn-primary"
         >
@@ -71,7 +61,7 @@ pub fn OverlayDismissDemo() -> impl IntoView {
 
         <Show when=move || is_open.get()>
             <div
-                {..overlay_attrs.get_value()}
+                {..overlay.attrs()}
                 role="dialog"
                 aria-labelledby="overlay-quick-start-title"
                 class="demo-overlay-inline-panel"

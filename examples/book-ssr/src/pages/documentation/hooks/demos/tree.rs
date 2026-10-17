@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    CapturedElement, IntoAttrs,
+    CapturedElement,
     hooks::{
         button::use_button,
         collections::{
@@ -70,7 +70,7 @@ pub fn TreeDemo() -> impl IntoView {
     let visible = state.list.collection;
 
     view! {
-        <div {..tree.props.into_attrs()} class="demo-tree">
+        <div {..tree.grid_list.attrs()} class="demo-tree">
             <For
                 each=move || visible.with(|c| c.items().map(|node| node.key.clone()).collect::<Vec<_>>())
                 key=Clone::clone
@@ -103,10 +103,10 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
         allows_arrow_navigation: false,
         on_context_menu: None,
     });
-    let (attrs, styles) = item.row_props.into_parts();
+    let (attrs, styles) = item.row.attrs();
     // Parents get a button expanding or collapsing them; leaves an empty spacer of the same width.
     let toggle = if has_child_items.get_untracked() {
-        let (attrs, styles) = use_button(expand_button).props.into_parts();
+        let (attrs, styles) = use_button(expand_button).button.attrs();
         view! {
             <button {..attrs} {..expand_button_attrs} class="demo-tree-item-toggle" style=styles>
                 <span aria-hidden="true">{move || if is_expanded.get() { "\u{25be}" } else { "\u{25b8}" }}</span>
@@ -119,7 +119,7 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
 
     view! {
         <div {..attrs} data-focus-visible=move || item.is_focus_visible.get().then_some("") class="demo-tree-item" style=styles>
-            <div {..item.grid_cell_props.into_attrs()} class="demo-tree-item-content">{toggle}{text}</div>
+            <div {..item.cell.attrs()} class="demo-tree-item-content">{toggle}{text}</div>
         </div>
     }
 }

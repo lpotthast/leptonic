@@ -187,6 +187,36 @@ pub async fn scrolling_away_stops_following(page: &Page<'_>) -> Result<(), Repor
     Ok(())
 }
 
+/// A log following its end whose content shrinks below its scroll position (the browser moves the
+/// view up) and grows again right away keeps following, at its end: the browser's move isn't the
+/// user scrolling away (2026-10-16: it counted as 300ms of the user scrolling,
+/// during which the list didn't follow the appended lines, and following turned off when they
+/// ended away from the end).
+#[browser_test]
+pub async fn shrinking_content_keeps_following(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    wait_for_the_end(page).await?;
+    let log = VirtualListActions::new(page).log().await?;
+    let height = log.scroll_extent().await?.scroll_height;
+    page.element("#test-vl-remove").await?.click().await?;
+    assert_that!(|| async { Ok::<_, Report>(log.scroll_extent().await?.scroll_height) })
+        .eventually_ok()
+        .satisfies(|shrunk| {
+            shrunk.is_less_than(height);
+        })
+        .await;
+    // The lines come back (the same 50).
+    page.element("#test-vl-append").await?.click().await?;
+    wait_for_rendered(page, "Line 1999").await?;
+    // Past the end of any scrolling (300ms after the last scroll event).
+    page.element("#test-vl-follow")
+        .await?
+        .inner_text_stays("following", Duration::from_millis(500))
+        .await?;
+    wait_for_the_end(page).await?;
+    Ok(())
+}
+
 /// A row holding the text selection stays rendered while scrolled away; without the selection,
 /// it goes.
 #[browser_test]

@@ -19,7 +19,7 @@ use super::{
     use_date_range_picker_state::DateRangePickerState,
 };
 use crate::{
-    CapturedElement, EventHandler, IdRefs, PropsWithStyles,
+    CapturedElement, EventHandler, Id, IdRefs, Part, PropsWithStyles,
     hooks::{
         button::UseButtonInput,
         focus::{
@@ -54,19 +54,19 @@ use crate::{
 /// [`UseDateRangePickerInput`] besides the state and the group).
 #[derive(Clone, Default)]
 pub struct DatePickerOptions {
-    pub id: Option<String>,
+    pub id: Option<Id>,
     /// Whether a visible label labels the picker.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Signal<Option<String>>,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<Id>>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub on_focus_change: Option<Callback<bool>>,
     pub on_key_down: Option<Callback<KeyboardEvent>>,
     pub on_key_up: Option<Callback<KeyboardEvent>>,
     /// The id of the popover's dialog (moving the focus into it doesn't leave the picker).
-    pub dialog_id: Signal<Option<String>>,
+    pub dialog_id: Signal<Option<Id>>,
 }
 
 /// Input of [`use_date_picker`].
@@ -85,21 +85,24 @@ pub struct UseDateRangePickerInput<V: DateValue> {
     pub options: DatePickerOptions,
 }
 
-/// Return value of [`use_date_picker`].
+/// The return value of [`use_date_picker`].
+#[derive(Debug)]
 pub struct UseDatePickerReturn {
-    pub label_props: UseDateFieldLabelProps,
-    /// For the group of the field and the button.
-    pub group_props: PropsWithStyles<UseDateFieldProps>,
+    /// The label element.
+    pub label: Part<UseDateFieldLabelProps>,
+    /// The group element around the field and the button: `let (attrs, styles) =
+    /// group.attrs();`.
+    pub group: Part<PropsWithStyles<UseDateFieldProps>>,
     /// What describes the field's segments (the picker's description and value).
-    pub field_describedby: Signal<Option<String>>,
+    pub field_describedby: Signal<Option<Id>>,
     /// For the button opening the popover.
     pub button: UseButtonInput,
     /// What names the dialog: the button and the picker's label.
-    pub dialog_labelledby: Signal<Option<String>>,
-    pub description_props: SlotProps,
-    pub error_message_props: SlotProps,
+    pub dialog_labelledby: Signal<Option<Id>>,
+    pub description: Part<SlotProps>,
+    pub error_message: Part<SlotProps>,
     /// What labels the picker (for its fields).
-    pub labelledby: Signal<Option<String>>,
+    pub labelledby: Signal<Option<Id>>,
     /// The segments of the picker's fields, without the button (the fields share it).
     pub focus_manager: FocusManager,
 }
@@ -185,10 +188,10 @@ fn picker_aria(
     let button_id = use_id("date-picker-button");
 
     let UseFieldReturn {
-        label_props,
-        field_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        field: field_props,
+        description: description_props,
+        error_message: error_message_props,
         ..
     } = use_field(UseFieldInput {
         id,
@@ -199,6 +202,8 @@ fn picker_aria(
         aria_describedby,
         ..UseFieldInput::default()
     });
+    let label_props = label_props.into_props();
+    let field_props = field_props.into_props();
     let field_id = field_props.id.clone();
     let field_labelledby = field_props.aria_labelledby;
     let labelledby =
@@ -245,14 +250,16 @@ fn picker_aria(
                 }
             }
         })),
-        ..UseFocusWithinInput::default()
+        on_focus_within_change: None,
     });
+    let focus_within_props = focus_within.target.into_props();
 
     let (group_keys, group_styles) = use_date_picker_group(UseDatePickerGroupInput {
         element: group,
         arrow_keys: GroupArrowKeys::MoveBetweenSegments,
         overlay: Some(overlay),
     })
+    .into_props()
     .into_inner();
     // The user's handlers only while closed.
     let is_open = overlay.is_open;
@@ -277,25 +284,22 @@ fn picker_aria(
 
     let excluded_button = button_id.clone();
     let focus_manager = segment_focus_manager(group)
-        .with_default_accept(move |element| element.id() != excluded_button);
+        .with_default_accept(move |element| excluded_button != element.id().as_str());
     let manager = StoredValue::new(focus_manager);
     let button_labelledby = {
         let button_id = button_id.clone();
         Signal::derive(move || {
-            Some(format!(
-                "{button_id} {}",
-                labelledby.get().unwrap_or_default()
-            ))
+            crate::utils::id::join_ids([Some(button_id.clone()), labelledby.get()])
         })
     };
     UseDatePickerReturn {
-        label_props: UseDateFieldLabelProps {
+        label: Part::stored(UseDateFieldLabelProps {
             label: label_props,
             on_click: EventHandler::new(move |_| {
                 manager.with_value(|manager| manager.focus_first(FocusManagerOptions::default()));
             }),
-        },
-        group_props: PropsWithStyles::new(
+        }),
+        group: Part::stored(PropsWithStyles::new(
             UseDateFieldProps {
                 id: Some(field_props.id),
                 role: AriaRole::Group,
@@ -308,12 +312,12 @@ fn picker_aria(
                     on_keyup,
                     ..group_keys
                 },
-                on_focusin: focus_within.props.on_focusin,
-                on_focusout: focus_within.props.on_focusout,
+                on_focusin: focus_within_props.on_focusin,
+                on_focusout: focus_within_props.on_focusout,
                 element_capture: group.attr(),
             },
             group_styles,
-        ),
+        )),
         field_describedby: described_by,
         button: UseButtonInput {
             id: Some(button_id),
@@ -338,11 +342,41 @@ fn picker_aria(
             }),
             is_disabled: Signal::derive(move || is_disabled.get() || is_read_only.get()),
             on_press: Some(Callback::new(move |_| overlay.set_open(true))),
-            ..UseButtonInput::default()
+            element_type: crate::hooks::button::ButtonElementType::Button,
+            button_type: crate::hooks::button::ButtonType::Button,
+            is_pending: Signal::stored(false),
+            allow_focus_when_disabled: Signal::stored(false),
+            exclude_from_tab_order: Signal::stored(false),
+            auto_focus: false,
+            prevent_focus_on_press: Signal::stored(false),
+            href: Signal::stored(None),
+            target: Signal::stored(crate::hooks::link::LinkTarget::Same),
+            rel: Vec::new(),
+            form: crate::hooks::button::ButtonFormAttributes::default(),
+            aria_pressed: Signal::stored(None),
+            aria_checked: Signal::stored(None),
+            role: None,
+            aria_current: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press_change: None,
+            long_press: None,
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
+            on_context_menu: None,
         },
         dialog_labelledby: button_labelledby,
-        description_props,
-        error_message_props,
+        description: description_props,
+        error_message: error_message_props,
         labelledby,
         focus_manager,
     }

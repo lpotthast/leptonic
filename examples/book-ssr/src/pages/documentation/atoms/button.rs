@@ -103,7 +103,7 @@ pub fn PageAtomButton() -> impl IntoView {
                         "Classes and styles of the "<Code inline=true>"<button>"</Code>"."
                     </ApiRow>
                     <ApiRow name="children" ty="Children">"The button content. Required."</ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">"The element id; generated when omitted."</ApiRow>
+                    <ApiRow name="id" ty="Option<Id>" default="None">"The element id; generated when omitted."</ApiRow>
                 </ApiTable>
 
                 <Section title="ARIA Props">

@@ -14,7 +14,7 @@
       ],
       "windows": 30,
       "totals": {
-        "allocations": 654750,
+        "allocations": 654420,
         "reallocations": 420,
         "memo_runs": 30,
         "memo_runs_unchanged": 0,
@@ -46,7 +46,7 @@
       ],
       "windows": 30,
       "totals": {
-        "allocations": 725697,
+        "allocations": 717850,
         "reallocations": 7132,
         "memo_runs": 644,
         "memo_runs_unchanged": 0,
@@ -78,12 +78,12 @@
       ],
       "windows": 5,
       "totals": {
-        "allocations": 337154,
+        "allocations": 333292,
         "reallocations": 3643,
-        "memo_runs": 330,
-        "memo_runs_unchanged": 5,
+        "memo_runs": 320,
+        "memo_runs_unchanged": 0,
         "effect_runs": 455,
-        "render_effect_runs": 370,
+        "render_effect_runs": 375,
         "immediate_effect_runs": 0,
         "signal_notifications": 605,
         "dom_attributes": 155,
@@ -110,20 +110,20 @@
       ],
       "windows": 30,
       "totals": {
-        "allocations": 152789,
-        "reallocations": 2107,
-        "memo_runs": 639,
-        "memo_runs_unchanged": 111,
-        "effect_runs": 670,
-        "render_effect_runs": 621,
+        "allocations": 162092,
+        "reallocations": 4041,
+        "memo_runs": 795,
+        "memo_runs_unchanged": 0,
+        "effect_runs": 1065,
+        "render_effect_runs": 900,
         "immediate_effect_runs": 0,
-        "signal_notifications": 285,
-        "dom_attributes": 551,
+        "signal_notifications": 525,
+        "dom_attributes": 720,
         "dom_text": 0,
-        "dom_added_nodes": 7,
-        "dom_removed_nodes": 10,
-        "layouts": 97,
-        "style_recalcs": 98
+        "dom_added_nodes": 90,
+        "dom_removed_nodes": 90,
+        "layouts": 180,
+        "style_recalcs": 180
       }
     }
   }

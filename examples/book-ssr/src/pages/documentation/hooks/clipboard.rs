@@ -48,9 +48,9 @@ pub fn PageUseClipboard() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseClipboardReturn">
-                    <ApiRow name="clipboard_props" ty="UseFocusProps">
+                    <ApiRow name="target" ty="Part<UseFocusProps>">
                         "Focus and blur handlers that track whether the element has focus. Spread with "
-                        <Code inline=true>"{..clipboard_props.into_attrs()}"</Code>"."
+                        <Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -59,7 +59,6 @@ pub fn PageUseClipboard() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            IntoAttrs,
                             hooks::{
                                 clipboard::{UseClipboardInput, use_clipboard},
                                 dnd::{DragItem, DropItem},
@@ -82,7 +81,7 @@ pub fn PageUseClipboard() -> impl IntoView {
 
                         view! {
                             // The element must be focusable: the clipboard acts only while it has focus.
-                            <div {..clipboard.clipboard_props.into_attrs()} tabindex="0" role="group" aria-label="Note">
+                            <div {..clipboard.target.attrs()} tabindex="0" role="group" aria-label="Note">
                                 {note}
                             </div>
                         }

@@ -12,6 +12,7 @@ use crate::{
     utils::{
         dom_ext::EventAccessors,
         key::{KeyboardEventKey, KeyboardKey},
+        part::{Part, Remount},
         shadow_dom::{get_event_target, node_contains},
     },
 };
@@ -31,10 +32,11 @@ pub struct UseTypeSelectInput {
     pub on_type_select: Option<Callback<Key>>,
 }
 
-/// Return value of [`use_type_select`].
+/// The return value of [`use_type_select`].
 #[derive(Debug)]
 pub struct UseTypeSelectReturn {
-    pub props: UseTypeSelectProps,
+    /// The collection element typing selects in.
+    pub collection: Part<UseTypeSelectProps>,
 }
 
 /// Handlers for the collection element. Attach `on_keydown_capture` in the capture phase
@@ -43,6 +45,15 @@ pub struct UseTypeSelectReturn {
 pub struct UseTypeSelectProps {
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl Remount for UseTypeSelectProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_keydown_capture: self.on_keydown_capture.clone(),
+            on_keydown: self.on_keydown.clone(),
+        }
+    }
 }
 
 /// Type-ahead: typing characters moves focus to the next item whose text starts with what was
@@ -143,10 +154,10 @@ pub fn use_type_select(input: UseTypeSelectInput) -> UseTypeSelectReturn {
     };
 
     UseTypeSelectReturn {
-        props: UseTypeSelectProps {
+        collection: Part::stored(UseTypeSelectProps {
             on_keydown_capture: EventHandler::new(on_keydown_capture),
             on_keydown: EventHandler::new(on_keydown),
-        },
+        }),
     }
 }
 

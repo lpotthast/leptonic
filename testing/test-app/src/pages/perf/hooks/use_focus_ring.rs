@@ -7,7 +7,7 @@
 //! enable its ring.
 
 use leptonic::{
-    IntoAttrs, flag,
+    flag,
     hooks::focus::{FocusRingTarget, UseFocusRingInput, use_focus_ring},
 };
 use leptos::prelude::*;
@@ -46,7 +46,7 @@ fn Ringed(disabled: RwSignal<bool>) -> impl IntoView {
     view! {
         <button
             id="perf-focus-ring"
-            {..ring.props.into_attrs()}
+            {..ring.target.attrs()}
             data-focused=flag(ring.is_focused)
         >
             "Focus me"
@@ -65,7 +65,7 @@ fn RingedGroup() -> impl IntoView {
         <div
             id="perf-focus-ring-group"
             role="group"
-            {..ring.props.into_attrs()}
+            {..ring.target.attrs()}
             data-focused=flag(ring.is_focused)
         >
             <button id="perf-group-first">"First"</button>

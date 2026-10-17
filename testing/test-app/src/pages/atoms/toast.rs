@@ -14,12 +14,14 @@ use leptos::prelude::*;
 /// times), "Slow toast" after 3 seconds (for timing the time left after a pause), "Close
 /// newest" closes the newest programmatically. "Add, then close oldest" adds a toast after 1.5
 /// seconds and closes the oldest after 3 seconds (while the focus stays in a toast).
-/// `#test-toast-closed` counts the `on_close` calls.
+/// `#test-toast-closed` counts the `on_close` calls. "Hide or show descriptions" unmounts and
+/// mounts the toasts' `ToastDescription`s.
 #[component]
 pub fn PageAtomToast() -> impl IntoView {
     let queue = ToastQueue::<(String, String)>::new(None);
     let closed = RwSignal::new(0);
     let count = StoredValue::new(0);
+    let descriptions = RwSignal::new(true);
     let add = move |timeout: Option<Duration>| {
         count.update_value(|count| *count += 1);
         queue.add(
@@ -41,7 +43,14 @@ pub fn PageAtomToast() -> impl IntoView {
             <Toast toast=toast.clone()>
                 <ToastContent>
                     <ToastTitle>{toast.content.0.clone()}</ToastTitle>
-                    <ToastDescription>{toast.content.1.clone()}</ToastDescription>
+                    {
+                        let description = StoredValue::new(toast.content.1.clone());
+                        view! {
+                            <Show when=move || descriptions.get()>
+                                <ToastDescription>{description.get_value()}</ToastDescription>
+                            </Show>
+                        }
+                    }
                 </ToastContent>
                 <ToastCloseButton>"x"</ToastCloseButton>
             </Toast>
@@ -78,6 +87,12 @@ pub fn PageAtomToast() -> impl IntoView {
             }
         >
             "Add, then close oldest"
+        </Button>
+        <Button
+            id="test-toast-toggle-descriptions"
+            on_press=move |_| descriptions.update(|shown| *shown = !*shown)
+        >
+            "Hide or show descriptions"
         </Button>
         <p>"Closed: " <span id="test-toast-closed">{move || closed.get()}</span></p>
     }

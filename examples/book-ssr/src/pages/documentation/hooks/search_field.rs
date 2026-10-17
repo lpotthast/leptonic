@@ -43,7 +43,7 @@ pub fn PageUseSearchField() -> impl IntoView {
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseSearchFieldReturn">
                     <ApiRow name="text_field" ty="UseTextFieldReturn">
-                        "The text field\u{2019}s return: input, label, description and error message props, and validation."
+                        "The text field\u{2019}s return: the input, label, description and error message parts, and validation."
                     </ApiRow>
                     <ApiRow name="clear_button" ty="UseButtonInput">
                         "The clear button\u{2019}s configuration. Pass it to "
@@ -58,7 +58,7 @@ pub fn PageUseSearchField() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "A search field with a clear button, showing the last submitted query. The input gets its attributes "
-                    "from "<Code inline=true>"text_field.input_props"</Code>", the button from "
+                    "from "<Code inline=true>"text_field.input"</Code>", the button from "
                     <Code inline=true>"use_button(clear_button)"</Code>":"
                 </p>
 

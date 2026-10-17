@@ -1,5 +1,5 @@
 use leptonic::{
-    IntoAttrs, RGB8,
+    RGB8,
     atoms::checkbox::{CheckboxButton, CheckboxField},
     hooks::color::{
         UseColorFieldInput, UseColorFieldStateInput, use_color_field, use_color_field_state,
@@ -50,9 +50,9 @@ pub fn ColorFieldDemo() -> impl IntoView {
 
     view! {
         <div class="demo-field">
-            <label class="demo-field-label" {..field.label_props.into_attrs()}>"Accent color"</label>
+            <label class="demo-field-label" {..field.label.attrs()}>"Accent color"</label>
             <div class="demo-color-field-row">
-                <input class="demo-color-field-input" {..field.input_props.into_attrs()}/>
+                <input class="demo-color-field-input" {..field.input.attrs()}/>
                 <span class="demo-color-field-preview" style=preview_styles></span>
             </div>
         </div>

@@ -5,8 +5,6 @@
 use std::collections::HashMap;
 
 use leptos::{
-    attr,
-    attr::Attr,
     ev,
     prelude::*,
     tachys::html::property::{Property, prop},
@@ -20,7 +18,7 @@ use super::{
     use_table_column_resize_state::TableColumnResizeState,
 };
 use crate::{
-    ElementCaptureAttr, EventHandler, IdRefs, IntoAttrs, OnEvent, PropsWithStyles,
+    ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         collections::Key,
         focus::{Modality, use_interaction_modality},
@@ -38,8 +36,10 @@ use crate::{
         intl_strings::{TableStrings, use_localized_strings},
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        part::{Part, Remount},
         pointer_type::PointerType,
         shadow_dom::get_active_element,
+        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         styles::{Styles, css::TouchAction, property::TouchActionProperty},
         use_description::use_description,
         visually_hidden::visually_hidden_styles,
@@ -82,13 +82,13 @@ pub struct UseTableColumnResizeInput {
     pub on_resize_end: Option<Callback<HashMap<Key, ColumnSize>>>,
 }
 
-/// Output of [`use_table_column_resize`].
+/// The return value of [`use_table_column_resize`].
 #[derive(Debug)]
 pub struct UseTableColumnResizeReturn {
-    /// Props for the resizer element (the handle users drag), containing the input.
-    pub resizer_props: PropsWithStyles<UseTableColumnResizerProps>,
-    /// Props for the visually hidden range input.
-    pub input_props: PropsWithStyles<UseTableColumnResizeInputProps>,
+    /// The resizer element.
+    pub resizer: Part<PropsWithStyles<UseTableColumnResizerProps>>,
+    /// The resizer's (visually hidden) range input.
+    pub input: Part<PropsWithStyles<UseTableColumnResizeInputProps>>,
     /// Whether the column is being resized.
     pub is_resizing: Signal<bool>,
     /// Whether the column is being resized with the mouse.
@@ -106,6 +106,21 @@ pub struct UseTableColumnResizerProps {
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_dragstart: EventHandler<web_sys::DragEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
+}
+
+impl Remount for UseTableColumnResizerProps {
+    fn remount(&self) -> Self {
+        Self {
+            on_keydown: self.on_keydown.clone(),
+            on_keyup: self.on_keyup.clone(),
+            on_pointerdown: self.on_pointerdown.clone(),
+            on_pointerup: self.on_pointerup.clone(),
+            on_click: self.on_click.clone(),
+            on_mousedown: self.on_mousedown.clone(),
+            on_dragstart: self.on_dragstart.clone(),
+            on_dblclick: self.on_dblclick.clone(),
+        }
+    }
 }
 
 impl IntoAttrs for UseTableColumnResizerProps {
@@ -139,10 +154,10 @@ pub type UseTableColumnResizerAttrs = (
 /// Props for the resizer's range input.
 #[derive(Debug)]
 pub struct UseTableColumnResizeInputProps {
-    pub id: String,
+    pub id: Id,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: String,
-    pub aria_describedby: Signal<Option<String>>,
+    pub aria_labelledby: Option<Id>,
+    pub aria_describedby: Signal<Option<Id>>,
     pub aria_valuetext: Signal<String>,
     pub min: Signal<f64>,
     pub max: Signal<f64>,
@@ -153,24 +168,43 @@ pub struct UseTableColumnResizeInputProps {
     pub element_capture: ElementCaptureAttr,
 }
 
+impl Remount for UseTableColumnResizeInputProps {
+    fn remount(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            aria_label: self.aria_label,
+            aria_labelledby: self.aria_labelledby.clone(),
+            aria_describedby: self.aria_describedby,
+            aria_valuetext: self.aria_valuetext,
+            min: self.min,
+            max: self.max,
+            value: self.value,
+            disabled: self.disabled,
+            on_blur: self.on_blur.clone(),
+            on_input: self.on_input.clone(),
+            element_capture: self.element_capture.clone(),
+        }
+    }
+}
+
 impl IntoAttrs for UseTableColumnResizeInputProps {
     type Attrs = UseTableColumnResizeInputAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         let value = self.value;
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Type, "range"),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaOrientation, AriaOrientation::Horizontal),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
-            Attr(attr::Min, self.min),
-            Attr(attr::Max, self.max),
-            Attr(attr::Value, self.value),
+            fixed_attr("id", self.id),
+            fixed_attr("type", "range"),
+            maybe_attr("aria-label", self.aria_label),
+            fixed_attr("aria-orientation", AriaOrientation::Horizontal),
+            fixed_attr("aria-labelledby", self.aria_labelledby),
+            signal_attr("aria-describedby", self.aria_describedby),
+            signal_attr("aria-valuetext", self.aria_valuetext),
+            signal_attr("min", self.min),
+            signal_attr("max", self.max),
+            signal_attr("value", self.value),
             prop("value", Signal::derive(move || value.get().to_string())),
-            Attr(attr::Disabled, self.disabled),
+            signal_attr("disabled", self.disabled),
             self.on_blur.into_on(ev::blur),
             self.on_input.into_on(ev::input),
             self.element_capture,
@@ -179,18 +213,18 @@ impl IntoAttrs for UseTableColumnResizeInputProps {
 }
 
 pub type UseTableColumnResizeInputAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Type, &'static str>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
-    Attr<attr::AriaLabelledby, String>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaValuetext, Signal<String>>,
-    Attr<attr::Min, Signal<f64>>,
-    Attr<attr::Max, Signal<f64>>,
-    Attr<attr::Value, Signal<f64>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<String>>,
+    FixedAttr,
+    FixedAttr,
+    SignalAttr<Option<Id>>,
+    SignalAttr<String>,
+    SignalAttr<f64>,
+    SignalAttr<f64>,
+    SignalAttr<f64>,
     Property<&'static str, Signal<String>>,
-    Attr<attr::Disabled, Signal<bool>>,
+    SignalAttr<bool>,
     OnEvent<ev::blur>,
     OnEvent<ev::input>,
     ElementCaptureAttr,
@@ -357,7 +391,8 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         shortcuts: Some(shortcuts),
         ..UseKeyboardInput::default()
     })
-    .props;
+    .target
+    .into_props();
 
     // Moving the resizer (pointer drags, and the arrow keys in edit mode).
     let column_resize_width = StoredValue::new(0.0_f64);
@@ -401,7 +436,8 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                 }
             })),
         })
-        .props
+        .target
+        .into_props()
     };
     // The arrow keys only resize in edit mode.
     let move_keydown = {
@@ -448,10 +484,19 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                     press.end();
                 }
             })),
-            ..UsePressInput::default()
+            is_disabled: Signal::stored(false),
+            propagation: crate::hooks::interactions::PressPropagation::Stop,
+            allow_text_selection_on_press: Signal::stored(false),
+            should_cancel_on_pointer_exit: Signal::stored(false),
+            force_is_pressed: Signal::stored(false),
+            on_press_up: None,
+            on_press_end: None,
+            on_press_change: None,
+            on_double_press: None,
+            long_press: None,
         })
     };
-    let (press_props, press_styles) = press.props.into_inner();
+    let (press_props, press_styles) = press.target.into_props().into_inner();
 
     // Resizing started elsewhere (e.g. from a column menu): focus the input.
     let prev_resizing_column = StoredValue::new(None::<Key>);
@@ -539,7 +584,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
     let max = width_of(TableColumnResizeState::column_max_width);
 
     UseTableColumnResizeReturn {
-        resizer_props: PropsWithStyles::new(
+        resizer: Part::stored(PropsWithStyles::new(
             UseTableColumnResizerProps {
                 on_keydown: keyboard
                     .on_keydown
@@ -557,13 +602,13 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
             Styles::new()
                 .add(TouchActionProperty.declare(TouchAction::None))
                 .merge(press_styles),
-        ),
-        input_props: PropsWithStyles::new(
+        )),
+        input: Part::stored(PropsWithStyles::new(
             UseTableColumnResizeInputProps {
-                aria_labelledby: [id.clone(), table.column_header_id(&resizer.column)]
-                    .into_iter()
-                    .collect::<IdRefs>()
-                    .to_string(),
+                aria_labelledby: crate::utils::id::join_ids([
+                    Some(id.clone()),
+                    Some(table.column_header_id(&resizer.column)),
+                ]),
                 id,
                 aria_label,
                 aria_describedby,
@@ -579,7 +624,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                 element_capture: element.attr(),
             },
             visually_hidden_styles(),
-        ),
+        )),
         is_resizing: is_resizing.into(),
         is_mouse_resizing: is_mouse_resizing.into(),
     }

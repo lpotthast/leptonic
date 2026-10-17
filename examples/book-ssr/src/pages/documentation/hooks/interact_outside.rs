@@ -26,8 +26,8 @@ pub fn PageUseInteractOutside() -> impl IntoView {
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Stop detecting outside interactions while "<Code inline=true>"true"</Code>"."</ApiRow>
                     <ApiRow name="element" ty="Option<CapturedElement>" default="None">
                         "The element interactions are outside of, when it is captured elsewhere (e.g. a group of popovers). With "
-                        <Code inline=true>"None"</Code>", it is the element the returned props are spread on; with an element, "
-                        "the props capture nothing."
+                        <Code inline=true>"None"</Code>", it is the element the returned part is spread on; with an element, "
+                        "the part captures nothing."
                     </ApiRow>
                     <ApiRow name="on_interact_outside_start" ty="Option<Callback<InteractOutsideEvent>>" default="None">
                         "Called on "<Code inline=true>"pointerdown"</Code>" outside the element, with the "
@@ -41,9 +41,9 @@ pub fn PageUseInteractOutside() -> impl IntoView {
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseInteractOutsideReturn">
-                    <ApiRow name="props" ty="UseInteractOutsideProps">
+                    <ApiRow name="target" ty="Part<UseInteractOutsideProps>">
                         "Captures the element that counts as \u{201c}inside\u{201d}. Spread it with "
-                        <Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        <Code inline=true>"{..target.attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -56,13 +56,13 @@ pub fn PageUseInteractOutside() -> impl IntoView {
 
                         let is_open = RwSignal::new(true);
 
-                        let UseInteractOutsideReturn { props } = use_interact_outside(UseInteractOutsideInput {
+                        let UseInteractOutsideReturn { target } = use_interact_outside(UseInteractOutsideInput {
                             on_interact_outside: Some(Callback::new(move |_| is_open.set(false))),
                             ..Default::default()
                         });
 
                         view! {
-                            <div {..props.into_attrs()}>"Click outside to close"</div>
+                            <div {..target.attrs()}>"Click outside to close"</div>
                         }
                     "#)}
                 </Code>

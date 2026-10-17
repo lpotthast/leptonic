@@ -4,10 +4,7 @@
 //! and focusable (shown while focus is within it). Its controls ([`Control`]) mount and unmount
 //! it, and switch whether it is focusable.
 
-use leptonic::{
-    IntoAttrs,
-    hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden},
-};
+use leptonic::hooks::visually_hidden::{UseVisuallyHiddenInput, use_visually_hidden};
 use leptos::prelude::*;
 
 use crate::pages::perf::{Control, PerfControls};
@@ -40,7 +37,7 @@ fn Hidden(focusable: RwSignal<bool>) -> impl IntoView {
         is_focusable: focusable.into(),
     });
     view! {
-        <div id="perf-hidden" {..hidden.props.into_attrs()}>
+        <div id="perf-hidden" {..hidden.target.attrs()}>
             <button id="perf-skip">"Skip to content"</button>
         </div>
     }

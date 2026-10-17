@@ -2,7 +2,7 @@
 // Upstream: react-aria-components/test/ColorField.test.js @ 99e6102368
 //! Headless color field atoms: a color as hex text, or one channel of a color as a number.
 
-use leptos::prelude::*;
+use leptos::{ev, prelude::*};
 use leptos_classes::Classes;
 
 use super::{
@@ -19,11 +19,11 @@ use crate::{
             UseColorFieldReturn, UseColorFieldStateInput, use_color_channel_field,
             use_color_channel_field_state, use_color_field, use_color_field_state,
         },
-        form::{UseNumberFieldReturn, ValidateFn, ValidationBehavior},
+        form::{UseNumberFieldGroupProps, UseNumberFieldReturn, ValidateFn, ValidationBehavior},
     },
     utils::{
         color::{ColorChannel, RGB8},
-        data_attributes::flag,
+        data_attributes::data_flags,
         default_class::with_default_class,
         scoped_context::scoped_view,
         styles::Styles,
@@ -39,6 +39,11 @@ use crate::{
 //   (react-aria-components: one `ColorField` with an optional `channel` and `colorSpace`).
 // - The value is split into `value` (a value or any signal) and `set_value` (an `Out`), plus
 //   `default_value` and `on_change` (C4).
+//
+// ## DIFFERENT BEHAVIOR
+// - The scroll wheel steps a focused `ColorChannelField`: its element takes the number field's
+//   focus-within handlers (react-aria-components drops the number field's `groupProps`, so its
+//   channel fields never step by wheel).
 //
 // =============================================================================
 
@@ -79,7 +84,7 @@ pub fn ColorField(
     is_wheel_disabled: bool,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     /// Labels the field when there is no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -105,10 +110,10 @@ pub fn ColorField(
     });
     let label_presence = LabelPresence::new(aria_label, aria_labelledby);
     let UseColorFieldReturn {
-        label_props,
-        input_props,
-        description_props,
-        error_message_props,
+        label: label_props,
+        input: input_props,
+        description: description_props,
+        error_message: error_message_props,
         is_focused,
         is_focus_visible,
         is_invalid,
@@ -119,8 +124,8 @@ pub fn ColorField(
         id,
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         is_disabled,
         is_read_only,
         is_required,
@@ -144,7 +149,7 @@ pub fn ColorField(
             validation_details,
         });
         provide_context(InputContext::new(
-            input_props.into_attrs(),
+            input_props.map(IntoAttrs::into_attrs),
             InputState {
                 is_disabled,
                 is_invalid,
@@ -163,11 +168,13 @@ pub fn ColorField(
         view! {
             <div
                 class=classes
-                style=styles
-                data-disabled=flag(is_disabled)
-                data-readonly=flag(is_read_only)
-                data-required=flag(is_required)
-                data-invalid=flag(is_invalid)
+                style={styles}
+                {..data_flags([
+                    ("data-disabled", is_disabled),
+                    ("data-readonly", is_read_only),
+                    ("data-required", is_required),
+                ])}
+                {..data_flags([("data-invalid", is_invalid)])}
             >
                 {children()}
                 {name.map(|name| view! {
@@ -220,7 +227,7 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)] placeholder: MaybeProp<String>,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     /// Labels the field when there is no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -252,8 +259,8 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
         id,
         has_label: label_presence.has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         is_required,
         placeholder,
         auto_focus: false,
@@ -267,10 +274,11 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
         on_key_up: None,
     };
     let UseNumberFieldReturn {
-        label_props,
-        input_props,
-        description_props,
-        error_message_props,
+        group,
+        label: label_props,
+        input: input_props,
+        description: description_props,
+        error_message: error_message_props,
         is_focused,
         is_focus_visible,
         is_invalid,
@@ -278,6 +286,17 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
         validation_details,
         ..
     } = use_color_channel_field(input);
+    // The field has no group element (react-aria-components renders none either): the wheel
+    // steps while focus is within the field's element.
+    let UseNumberFieldGroupProps {
+        on_focusin,
+        on_focusout,
+        ..
+    } = group.into_props();
+    let focus_within = (
+        on_focusin.into_on(ev::focusin),
+        on_focusout.into_on(ev::focusout),
+    );
     let provide = move || {
         provide_context(LabelContext::label(label_props).with_presence(label_presence));
         provide_context(FieldContext {
@@ -288,7 +307,7 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
             validation_details,
         });
         provide_context(InputContext::new(
-            input_props.into_attrs(),
+            input_props.map(IntoAttrs::into_attrs),
             InputState {
                 is_disabled,
                 is_invalid,
@@ -302,12 +321,15 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     scoped_view(provide, move || {
         view! {
             <div
+                {..focus_within}
                 class=classes
-                style=styles
-                data-disabled=flag(is_disabled)
-                data-readonly=flag(is_read_only)
-                data-required=flag(is_required)
-                data-invalid=flag(is_invalid)
+                style={styles}
+                {..data_flags([
+                    ("data-disabled", is_disabled),
+                    ("data-readonly", is_read_only),
+                    ("data-required", is_required),
+                ])}
+                {..data_flags([("data-invalid", is_invalid)])}
             >
                 {children()}
                 {name.map(|name| view! {

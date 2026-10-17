@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::hoverable::Hoverable,
     hooks::interactions::{HoverEndEvent, HoverStartEvent, UseHoverInput, use_hover},
 };
@@ -43,7 +42,7 @@ pub fn PageHookHover() -> impl IntoView {
                 id="test-hover-target"
                 style="display: inline-block; padding: 4px; border: 1px solid"
                 data-hovered=move || is_hovered.get().then_some("true")
-                {..hover.props.into_attrs()}
+                {..hover.target.attrs()}
             >
                 <span id="test-hover-inner">"Inner"</span>
                 <Show when=move || inner_shown.get()>

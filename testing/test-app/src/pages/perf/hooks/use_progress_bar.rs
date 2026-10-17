@@ -6,7 +6,7 @@
 //! format (a percentage or a decimal) and the value label.
 
 use leptonic::{
-    IntoAttrs, NumberFormatOptions, NumberStyle,
+    NumberFormatOptions, NumberStyle,
     hooks::progress::{UseProgressBarInput, use_progress_bar},
 };
 use leptos::prelude::*;
@@ -34,12 +34,12 @@ fn Subject(
         max_value: max,
         format_options: format,
         value_label: value_label.into(),
-        id: Some("perf-progress-bar".to_owned()),
+        id: Some("perf-progress-bar".into()),
         aria_label: "Storage".into(),
         ..UseProgressBarInput::default()
     });
     view! {
-        <div {..progress.props.into_attrs()}>
+        <div {..progress.progress_bar.attrs()}>
             <span id="perf-progress-bar-text">{progress.value_text}</span>
         </div>
     }

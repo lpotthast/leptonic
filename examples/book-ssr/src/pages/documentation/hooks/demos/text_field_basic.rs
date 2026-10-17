@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -25,10 +24,10 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let UseTextFieldReturn {
-        label_props,
-        input_props,
-        description_props,
-        error_message_props,
+        label,
+        input,
+        description,
+        error_message,
         is_invalid,
         validation_errors,
         ..
@@ -84,12 +83,12 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
 
     view! {
         <div class="demo-field">
-            <label class="demo-field-label" {..label_props.into_attrs()}>"Username"</label>
-            <input class="demo-input demo-text-input" {..input_props.into_attrs()}/>
-            <p class="demo-field-description" {..description_props.into_attrs()}>"3 to 20 letters or digits."</p>
+            <label class="demo-field-label" {..label.attrs()}>"Username"</label>
+            <input class="demo-input demo-text-input" {..input.attrs()}/>
+            <p class="demo-field-description" {..description.attrs()}>"3 to 20 letters or digits."</p>
             // The input references the error message only while it is rendered.
             <Show when=move || is_invalid.get()>
-                <p class="demo-field-error" {..error_message_props.clone().into_attrs()}>
+                <p class="demo-field-error" {..error_message.attrs()}>
                     {move || validation_errors.get().join(" ")}
                 </p>
             </Show>

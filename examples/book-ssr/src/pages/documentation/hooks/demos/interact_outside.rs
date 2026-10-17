@@ -1,5 +1,4 @@
 use leptonic::{
-    IntoAttrs,
     atoms::{
         button::Button,
         checkbox::{CheckboxButton, CheckboxField},
@@ -16,7 +15,7 @@ pub fn InteractOutsideDemo() -> impl IntoView {
     let is_open = RwSignal::new(true);
     let disabled = RwSignal::new(false);
 
-    let UseInteractOutsideReturn { props } = use_interact_outside(UseInteractOutsideInput {
+    let UseInteractOutsideReturn { target } = use_interact_outside(UseInteractOutsideInput {
         is_disabled: disabled.into(),
         on_interact_outside: Some(Callback::new(move |_| {
             outside_clicks.update(|count| *count += 1);
@@ -24,14 +23,14 @@ pub fn InteractOutsideDemo() -> impl IntoView {
         })),
         ..Default::default()
     });
-    let attrs = props.into_attrs();
 
     view! {
         <Show
             when=move || is_open.get()
             fallback=move || view! { <Button on_press=move |_| is_open.set(true) classes="demo-btn">"Reopen"</Button> }
         >
-            <div {..attrs.clone()} class="demo-interactions-panel">
+            // Mounted again on every reopening: each mount spreads the part again.
+            <div {..target.attrs()} class="demo-interactions-panel">
                 <p class="demo-container-title">"Click outside to close"</p>
                 <p class="demo-muted-text">"This panel closes when you click anywhere outside of it."</p>
             </div>

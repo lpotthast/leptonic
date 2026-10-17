@@ -9,7 +9,7 @@ use super::{
     input::{InputContext, InputState},
 };
 use crate::{
-    IntoAttrs, Out,
+    IntoAttrs, Out, Part,
     atoms::field::LabelPresence,
     hooks::form::{
         AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement, UseTextFieldInput,
@@ -17,8 +17,8 @@ use crate::{
         use_text_field_state,
     },
     utils::{
-        data_attributes::flag, default_class::with_default_class, scoped_context::scoped_view,
-        styles::Styles,
+        data_attributes::data_flags, default_class::with_default_class,
+        scoped_context::scoped_view, styles::Styles,
     },
 };
 
@@ -85,7 +85,7 @@ pub fn TextField(
     #[prop(optional)] auto_focus: bool,
     /// The input's id.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<crate::Id>,
     /// Labels the field when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -133,8 +133,8 @@ pub fn TextField(
         auto_focus,
         has_label,
         aria_label,
-        aria_labelledby: crate::utils::prop_signal(aria_labelledby),
-        aria_describedby: crate::utils::prop_signal(aria_describedby),
+        aria_labelledby: crate::utils::id::id_ref_prop(aria_labelledby),
+        aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         on_focus_change,
         state,
         element: element.into(),
@@ -162,11 +162,13 @@ pub fn TextField(
             view! {
                 <div
                     class=classes
-                    style=styles
-                    data-disabled=flag(is_disabled)
-                    data-invalid=flag(is_invalid)
-                    data-readonly=flag(is_read_only)
-                    data-required=flag(is_required)
+                    style={styles}
+                    {..data_flags([
+                        ("data-disabled", is_disabled),
+                        ("data-invalid", is_invalid),
+                        ("data-readonly", is_read_only),
+                    ])}
+                    {..data_flags([("data-required", is_required)])}
                 >
                     {children()}
                 </div>
@@ -184,10 +186,10 @@ pub(crate) fn provide_text_field_contexts(
     label_presence: LabelPresence,
 ) {
     let UseTextFieldReturn {
-        label_props,
-        input_props,
-        description_props,
-        error_message_props,
+        label,
+        input,
+        description: description_props,
+        error_message: error_message_props,
         is_focused,
         is_focus_visible,
         is_invalid,
@@ -195,6 +197,8 @@ pub(crate) fn provide_text_field_contexts(
         validation_details,
         ..
     } = field;
+    // The input's state for the input's context, read from its props.
+    let input_props = input.into_props();
     let is_disabled = input_props.disabled;
     let state = InputState {
         is_disabled,
@@ -203,10 +207,13 @@ pub(crate) fn provide_text_field_contexts(
         is_focus_visible,
     };
     provide_context(match element {
-        Some(element) => InputContext::text_field(input_props, element, state),
-        None => InputContext::new(input_props.into_attrs(), state),
+        Some(element) => {
+            let value = input_props.value_property;
+            InputContext::text_field(Part::stored(input_props), value, element, state)
+        }
+        None => InputContext::new(Part::stored(input_props).map(IntoAttrs::into_attrs), state),
     });
-    provide_context(LabelContext::label(label_props).with_presence(label_presence));
+    provide_context(LabelContext::label(label).with_presence(label_presence));
     provide_context(FieldContext {
         description: description_props,
         error_message: error_message_props,
