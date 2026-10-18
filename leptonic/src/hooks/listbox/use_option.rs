@@ -16,7 +16,7 @@ use crate::{
         focus::use_focus_visible::{Modality, get_modality, is_focus_visible},
         interactions::use_hover::{UseHoverAttrs, UseHoverInput, UseHoverProps, use_hover},
     },
-    use_slot,
+    sharing_one_effect, use_slot,
     utils::{
         aria::{AriaDisabled, AriaRole, AriaSelected, aria_true},
         part::Remount,
@@ -157,6 +157,12 @@ pub fn option_id(list_id: &str, key: &Key) -> Id {
 /// and `role="option"` with its ARIA state.
 pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     crate::metrics::subject!();
+    // `use_selectable_item`'s resets and `use_hover`'s react to the disabled state in one effect.
+    sharing_one_effect(|| option(input))
+}
+
+/// The body of [`use_option`].
+fn option(input: UseOptionInput) -> UseOptionReturn {
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseOptionInput {
         list,
@@ -186,14 +192,15 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     let link = {
         let key = key.clone();
         let collection = state.collection;
-        // Only this option's changes reach it, not every change of the collection.
-        Memo::new(move |_| {
+        // Only this option's changes reach it, not every change of the collection. A derive: read
+        // once by the element rendering the option (`performance.md` R5).
+        Signal::derive(move || {
             selection.track_node(&key);
             collection.with_untracked(|c| c.get(&key).and_then(|n| n.link.clone()))
         })
     };
 
-    let position_key = StoredValue::new(key.clone());
+    let position_key = key.clone();
     let label = use_slot("label");
     let description = use_slot("description");
 
@@ -216,10 +223,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         is_disabled: Signal::stored(false),
         should_select_on_press_up,
         allows_different_press_origin: should_select_on_press_up && should_focus_on_hover,
-        on_action: Signal::stored(on_action.map(|on_action| {
-            let key = key.clone();
-            Callback::new(move |()| on_action.run(key.clone()))
-        })),
+        on_action: Signal::stored(on_action),
         link_behavior,
         focus: None,
         should_use_virtual_focus,
@@ -235,13 +239,15 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
             is_disabled.get()
                 || !(should_focus_on_hover || allows_selection.get() || has_action.get())
         }),
-        on_hover_start: Some(Callback::new(move |_| {
-            // Unless the keyboard is in use: hovering moves focus.
-            if should_focus_on_hover && get_modality() == Some(Modality::Pointer) {
-                selection.set_focused(true);
-                selection.set_focused_key(Some(hover_key.clone()), None);
-            }
-        })),
+        on_hover_start: should_focus_on_hover.then(|| {
+            Callback::new(move |_| {
+                // Unless the keyboard is in use: hovering moves focus.
+                if get_modality() == Some(Modality::Pointer) {
+                    selection.set_focused(true);
+                    selection.set_focused_key(Some(hover_key.clone()), None);
+                }
+            })
+        }),
         on_hover_end: None,
         on_hover_change: None,
     });
@@ -266,11 +272,9 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
                 aria_posinset: Signal::derive(move || {
                     is_virtualized
                         .then(|| {
-                            position_key.with_value(|key| {
-                                state
-                                    .collection
-                                    .with(|c| c.get(key).map(|node| node.index + 1))
-                            })
+                            state
+                                .collection
+                                .with(|c| c.get(&position_key).map(|node| node.index + 1))
                         })
                         .flatten()
                 }),
@@ -286,13 +290,14 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         description: description.part,
         is_selected,
         is_focused,
-        is_focus_visible: Memo::new(move |_| is_focused.get() && is_focus_visible()).into(),
+        // Only the focused option tracks the modality.
+        is_focus_visible: Signal::derive(move || is_focused.get() && is_focus_visible()),
         is_disabled,
         is_pressed,
         is_hovered,
         allows_selection,
         has_action,
-        link: link.into(),
+        link,
     }
 }
 

@@ -23,7 +23,7 @@ use crate::{
         aria::AriaRole,
         filter::{CollatorOptions, use_collator},
         i18n::use_direction,
-        id::use_id,
+        id::{join_ids, use_id},
         intl_strings::{TableStrings, use_localized_strings},
         live_announcer::{Assertiveness, announce_with_timeout},
         part::Part,
@@ -77,6 +77,8 @@ pub struct TableData {
     pub grid: GridData,
     /// The table element's id; cell and column header ids derive from it.
     pub id: Id,
+    /// The table's localized messages, for all rows, cells and column headers.
+    pub strings: Memo<TableStrings>,
 }
 
 impl TableData {
@@ -96,16 +98,12 @@ impl TableData {
         ))
     }
 
-    /// The ids of the row header cells of `row`: the row's label. Tracks the table (the row
-    /// header columns can change).
+    /// The ids of the row header cells of `row`: the row's label. Tracks the row header columns
+    /// (they can change), not the rows.
     pub fn row_labelledby(&self, row: &Key) -> Option<Id> {
-        self.state.table.with(|t| {
-            crate::utils::id::join_ids(
-                t.row_header_columns()
-                    .iter()
-                    .map(|column| Some(self.cell_id(row, column))),
-            )
-        })
+        self.state
+            .row_header_columns
+            .with(|columns| join_ids(columns.iter().map(|column| Some(self.cell_id(row, column)))))
     }
 }
 
@@ -248,6 +246,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
             state,
             grid: data,
             id,
+            strings,
         },
     }
 }

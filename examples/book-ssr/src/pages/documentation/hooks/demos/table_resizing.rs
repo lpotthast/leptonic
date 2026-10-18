@@ -241,11 +241,15 @@ fn FileRow(table: TableData, file: File) -> impl IntoView {
         on_context_menu: None,
     });
     let (attrs, styles) = row.row.attrs();
-    let cells = [file.name, file.kind, file.size, file.modified]
-        .into_iter()
-        .enumerate()
-        .map(|(index, text)| view! { <Cell table=table.clone() key=Key::cell(&key, index)>{text}</Cell> })
-        .collect_view();
+    let cells = [
+        ("name", file.name),
+        ("kind", file.kind),
+        ("size", file.size),
+        ("modified", file.modified),
+    ]
+    .into_iter()
+    .map(|(column, text)| view! { <Cell table=table.clone() key=Key::cell(&key, column)>{text}</Cell> })
+    .collect_view();
 
     view! { <tr {..attrs} style=styles>{cells}</tr> }
 }

@@ -155,8 +155,11 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
         if is_selected.get() {
             strings.read().drag_selected_items(drag_count.get())
         } else {
+            // Only this item's changes reach it, not every change of the collection
+            // (`performance.md` R1).
             let text = item_key.with_value(|k| {
-                collection.with(|c| {
+                selection.track_node(k);
+                collection.with_untracked(|c| {
                     c.get(k)
                         .map(|n| n.text_value.to_string())
                         .unwrap_or_default()

@@ -39,6 +39,15 @@ pub fn use_description(description: Signal<Option<String>>) -> Signal<Option<Id>
     {
         use std::sync::Arc;
 
+        use crate::utils::probe::probe_sources;
+
+        // A description that is absent (or empty) and reads no reactive source can never be
+        // there: no signal and no effect for it (most callers' descriptions are optional).
+        if let (false, false) =
+            probe_sources(|| description.with(|d| d.as_deref().is_some_and(|d| !d.is_empty())))
+        {
+            return Signal::stored(None);
+        }
         let id = RwSignal::new(None::<Id>);
         // The description shown now (shared: the registry's key) and its element's id.
         let current: StoredValue<Option<(Arc<str>, Id)>> = StoredValue::new(None);
@@ -153,5 +162,23 @@ mod registry {
                 let _ = body.append_child(&div);
             }
         }
+    }
+}
+
+#[cfg(all(test, not(feature = "ssr")))]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{testing::with_owner, utils::probe::is_constant};
+
+    #[test]
+    fn a_description_that_can_never_be_there_has_a_constant_id() {
+        with_owner(|| {
+            let absent = use_description(Signal::stored(None));
+            let empty = use_description(Signal::stored(Some(String::new())));
+            assert_that!(is_constant(absent)).is_true();
+            assert_that!(is_constant(empty)).is_true();
+        });
     }
 }

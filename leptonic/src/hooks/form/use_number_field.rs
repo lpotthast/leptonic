@@ -693,9 +693,7 @@ fn use_native_range_validation<T: NumberValue>(
             sync();
         }
     });
-    state
-        .validation
-        .register_native_validity_reader(Callback::new(move |()| sync()));
+    state.validation.register_native_validity_reader(sync);
 }
 
 thread_local! {

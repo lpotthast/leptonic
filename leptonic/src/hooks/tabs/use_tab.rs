@@ -177,6 +177,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         on_key_up: None,
         shortcuts: None,
         allow_shortcut_repeats: false,
+        mark: None,
     })
     .target
     .into_props()

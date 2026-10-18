@@ -234,12 +234,8 @@ impl CheckboxGroupState {
                 (true, None) => invalid.push((value, validation)),
                 (false, _) => invalid.retain(|(other, _)| *other != value),
             }
-            merge_validation(
-                &invalid
-                    .iter()
-                    .map(|(_, validation)| validation.clone())
-                    .collect::<Vec<_>>(),
-            )
+            // Merged by reference: no copy of every checkbox's result per call.
+            merge_validation(invalid.iter().map(|(_, validation)| validation))
         });
         if let Some(merged) = merged {
             self.validation.update_validation(merged);

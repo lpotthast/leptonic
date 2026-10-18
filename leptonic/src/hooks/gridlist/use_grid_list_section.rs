@@ -138,10 +138,14 @@ pub fn use_grid_list_section(input: UseGridListSectionInput) -> UseGridListSecti
         }
     });
     let collection = list.state.collection;
+    let selection = list.state.selection;
     let key = StoredValue::new(key);
+    // Only this section's changes reach its label and heading (its header's changes notify it
+    // too), not every change of the collection (`performance.md` R1).
     let aria_label = Memo::new(move |_| {
         key.with_value(|key| {
-            collection.with(|c| {
+            selection.track_node(key);
+            collection.with_untracked(|c| {
                 c.get(key)
                     .and_then(|n| n.aria_label.as_deref().map(str::to_owned))
             })
@@ -149,7 +153,8 @@ pub fn use_grid_list_section(input: UseGridListSectionInput) -> UseGridListSecti
     });
     let heading = Memo::new(move |_| {
         key.with_value(|key| {
-            collection.with(|c| {
+            selection.track_node(key);
+            collection.with_untracked(|c| {
                 c.children(key)
                     .find(|n| n.kind == NodeKind::Header)
                     .map(|n| n.text_value.to_string())

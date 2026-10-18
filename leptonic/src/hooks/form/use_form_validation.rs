@@ -106,32 +106,33 @@ pub fn use_form_validation(input: UseFormValidationInput) {
         });
         // Before each commit as well: the native validity changes without the realtime
         // validation changing.
-        state.register_native_validity_reader(Callback::new(move |()| {
+        state.register_native_validity_reader(move || {
             sync(state.realtime_validation.get_untracked());
-        }));
-        // And whenever a constraint attribute changes (e.g. a checkbox group's `required`, gone
-        // once it has a value): react-aria re-reads the native validity after every render, and
-        // a checkbox group shows its items' native validity in realtime.
-        Effect::new(move |_| {
-            let Some(el) = element.get() else { return };
-            let observer = ConstraintObserver::observe(&el, move || {
-                sync(state.realtime_validation.get_untracked());
-            });
-            let observer = SendWrapper::new(observer);
-            on_cleanup(move || drop(observer));
         });
     }
 
+    // One effect per element for its listeners and its constraint observer (`performance.md` R6).
     Effect::new(move |_| {
         let Some(el) = element.get() else { return };
         let form = get_parent_form(&el);
+
+        // Whenever a constraint attribute changes (e.g. a checkbox group's `required`, gone once
+        // it has a value): react-aria re-reads the native validity after every render, and a
+        // checkbox group shows its items' native validity in realtime.
+        let observer = is_native
+            .then(|| {
+                ConstraintObserver::observe(&el, move || {
+                    sync(state.realtime_validation.get_untracked());
+                })
+            })
+            .flatten();
 
         let on_invalid = {
             let el = el.clone();
             move |e: web_sys::Event| {
                 // Only commit when not already showing an error: this keeps server errors the
                 // user didn't fix.
-                if !state.display_validation.get_untracked().is_invalid {
+                if !state.display_validation.with_untracked(|v| v.is_invalid) {
                     state.commit_validation();
                 }
                 // Focus the form's first invalid field, unless the event's default was prevented.
@@ -168,6 +169,7 @@ pub fn use_form_validation(input: UseFormValidationInput) {
                     state.reset_validation();
                 })
             }),
+            observer,
         );
         let listeners = SendWrapper::new(listeners);
         on_cleanup(move || drop(listeners));

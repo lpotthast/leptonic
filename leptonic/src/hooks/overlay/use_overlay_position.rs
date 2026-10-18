@@ -49,6 +49,42 @@ use crate::{
 //
 // =============================================================================
 
+/// A `ResizeObserver` calling a function for every observation of its elements, until dropped.
+#[cfg(not(feature = "ssr"))]
+struct ResizeWatch {
+    observer: web_sys::ResizeObserver,
+    _callback: wasm_bindgen::closure::Closure<dyn FnMut(js_sys::Array, web_sys::ResizeObserver)>,
+}
+
+#[cfg(not(feature = "ssr"))]
+impl ResizeWatch {
+    fn new(on_resize: impl Fn() + 'static) -> Option<Self> {
+        use wasm_bindgen::JsCast;
+
+        let callback = wasm_bindgen::closure::Closure::<
+            dyn FnMut(js_sys::Array, web_sys::ResizeObserver),
+        >::new(move |_: js_sys::Array, _: web_sys::ResizeObserver| {
+            on_resize();
+        });
+        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref()).ok()?;
+        Some(Self {
+            observer,
+            _callback: callback,
+        })
+    }
+
+    fn observe(&self, element: &web_sys::Element) {
+        self.observer.observe(element);
+    }
+}
+
+#[cfg(not(feature = "ssr"))]
+impl Drop for ResizeWatch {
+    fn drop(&mut self) {
+        self.observer.disconnect();
+    }
+}
+
 /// How an overlay is positioned at its target: shared by [`use_overlay_position`],
 /// `use_popover` and the overlay atoms (react-aria's `AriaPositionProps`).
 #[derive(Debug, Clone, Copy)]
@@ -274,11 +310,10 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
 
     #[cfg(not(feature = "ssr"))]
     let updater = {
-        use leptos::ev;
-        use leptos_use::{use_event_listener, use_resize_observer, use_window};
+        use leptos_use::use_window;
 
         use super::calculate_position::dom::{PositionOptions, calculate_position, get_rect};
-        use crate::utils::next_frame::NextFrame;
+        use crate::utils::{event_listeners::listen, next_frame::NextFrame};
 
         // The visual viewport's scale when the overlay opened: positioning pauses while pinch
         // zoomed differently, so the overlay doesn't jump around.
@@ -292,12 +327,83 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
         // Repositioning after the overlay or the target resized: in the next frame (see the
         // deviation notes).
         let resized = NextFrame::new(move || update.notify());
-        Effect::new(move |_| {
-            if is_open.get() {
-                last_scale.set_value(visual_viewport_scale());
-            } else {
-                resized.cancel();
+
+        // The visual viewport resizing (e.g. a virtual keyboard): reposition, and for a moment
+        // also on the scrolling it causes.
+        let resize_timeout = StoredValue::new(None::<TimeoutHandle>);
+        let on_viewport_resize = move || {
+            is_resizing.set_value(true);
+            if let Some(handle) = resize_timeout.get_value() {
+                handle.clear();
             }
+            resize_timeout.set_value(
+                set_timeout_with_handle(
+                    move || {
+                        let _ = is_resizing.try_set_value(false);
+                    },
+                    std::time::Duration::from_millis(500),
+                )
+                .ok(),
+            );
+            update.notify();
+        };
+        let on_scroll = move || {
+            if is_resizing.get_value() {
+                on_viewport_resize();
+            }
+        };
+        on_cleanup(move || {
+            if let Some(Some(handle)) = resize_timeout.try_get_value() {
+                handle.clear();
+            }
+        });
+
+        // While open (react-aria: the overlay unmounts with the hook), one effect for the
+        // listeners and the resize observation (`performance.md` R6): window resizes, size
+        // changes of the overlay or the target (may need a flip), and the visual viewport
+        // resizing and scrolling. Created before the positioning effect: an opening records the
+        // viewport's scale before it positions.
+        Effect::new(move |was_open: Option<bool>| {
+            let open = is_open.get();
+            if was_open != Some(open) {
+                if open {
+                    last_scale.set_value(visual_viewport_scale());
+                } else {
+                    resized.cancel();
+                }
+            }
+            if !open {
+                return open;
+            }
+            let overlay = overlay_element.get();
+            let target_el = target.get();
+            let Some(window) = use_window().as_ref().cloned() else {
+                return open;
+            };
+            let mut listeners = Vec::with_capacity(4);
+            listeners.push(listen(window.as_ref(), "resize", false, move |_| {
+                update.notify();
+            }));
+            listeners.push(listen(window.as_ref(), "scroll", false, move |_| {
+                on_scroll();
+            }));
+            if let Some(viewport) = window.visual_viewport() {
+                listeners.push(listen(viewport.as_ref(), "resize", false, move |_| {
+                    on_viewport_resize();
+                }));
+                listeners.push(listen(viewport.as_ref(), "scroll", false, move |_| {
+                    on_scroll();
+                }));
+            }
+            let observer = ResizeWatch::new(move || resized.request());
+            if let Some(observer) = &observer {
+                for element in overlay.iter().chain(target_el.iter()) {
+                    observer.observe(element);
+                }
+            }
+            let guard = send_wrapper::SendWrapper::new((listeners, observer));
+            on_cleanup(move || drop(guard));
+            open
         });
 
         let update_position = move || {
@@ -448,75 +554,6 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
                 let _ = scroll.get();
             }
             update_position();
-        });
-
-        // The observers and listeners below only run while the overlay is open: their targets are
-        // `None` while it is closed (react-aria: the overlay unmounts with the hook).
-        let window = Signal::derive(move || {
-            is_open
-                .get()
-                .then(|| {
-                    use_window()
-                        .as_ref()
-                        .cloned()
-                        .map(send_wrapper::SendWrapper::new)
-                })
-                .flatten()
-        });
-
-        // Window resizes, and size changes of the overlay or the target (may need a flip).
-        let _ = use_event_listener(window, ev::resize, move |_| update.notify());
-        let _ = use_resize_observer(
-            Signal::derive(move || overlay_element.get()),
-            move |_, _| resized.request(),
-        );
-        let _ = use_resize_observer(
-            Signal::derive(move || is_open.get().then(|| target.get()).flatten()),
-            move |_, _| resized.request(),
-        );
-
-        // The visual viewport resizing (e.g. a virtual keyboard): reposition, and for a moment
-        // also on the scrolling it causes.
-        let resize_timeout = StoredValue::new(None::<TimeoutHandle>);
-        let on_viewport_resize = move || {
-            is_resizing.set_value(true);
-            if let Some(handle) = resize_timeout.get_value() {
-                handle.clear();
-            }
-            resize_timeout.set_value(
-                set_timeout_with_handle(
-                    move || {
-                        let _ = is_resizing.try_set_value(false);
-                    },
-                    std::time::Duration::from_millis(500),
-                )
-                .ok(),
-            );
-            update.notify();
-        };
-        let on_scroll = move || {
-            if is_resizing.get_value() {
-                on_viewport_resize();
-            }
-        };
-        let visual_viewport = Signal::derive(move || {
-            is_open
-                .get()
-                .then(|| {
-                    use_window()
-                        .as_ref()
-                        .and_then(web_sys::Window::visual_viewport)
-                })
-                .flatten()
-                .map(send_wrapper::SendWrapper::new)
-        });
-        let _ = use_event_listener(visual_viewport, ev::resize, move |_| on_viewport_resize());
-        let _ = use_event_listener(visual_viewport, ev::scroll, move |_| on_scroll());
-        let _ = use_event_listener(window, ev::scroll, move |_| on_scroll());
-        on_cleanup(move || {
-            if let Some(Some(handle)) = resize_timeout.try_get_value() {
-                handle.clear();
-            }
         });
 
         PositionUpdater(Callback::new(move |()| update_position()))

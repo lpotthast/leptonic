@@ -177,6 +177,7 @@ mod client {
         focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
         key::{KeyboardEventKey, KeyboardKey},
+        probe::is_constant,
         shadow_dom::{get_active_element, get_event_target, node_contains},
         shadow_tree_walker::ShadowTreeWalker,
     };
@@ -231,17 +232,28 @@ mod client {
             contain.get_untracked(),
             restore_focus.get_untracked(),
         );
-        // Follow `contain` and `restore_focus` (the tree's flags gate the handlers below).
-        Effect::new(move |_| focus_scope_tree::set_contain(scope_id, contain.get()));
-        Effect::new(move |_| {
-            let restore = restore_focus.get();
+        // Follow `contain` and `restore_focus` (the tree's flags gate the handlers below); a
+        // constant flag needs no effect (`performance.md` R15).
+        if !is_constant(contain) {
+            Effect::new(move |_| focus_scope_tree::set_contain(scope_id, contain.get()));
+        }
+        let follow_restore = move |restore: bool| {
             focus_scope_tree::set_restore(scope_id, restore);
             focus_scope_tree::set_node_to_restore(
                 scope_id,
                 restore.then(|| previously_focused.get_value()).flatten(),
             );
-        });
-        Effect::new(move |_| {
+        };
+        let restore_is_constant = is_constant(restore_focus);
+        if !restore_is_constant {
+            Effect::new(move |_| follow_restore(restore_focus.get()));
+        }
+        Effect::new(move |previous: Option<()>| {
+            // A constant `restore_focus` is set up once, after rendering as an effect following
+            // it would (and before the active scope is tracked below).
+            if restore_is_constant && previous.is_none() {
+                follow_restore(restore_focus.get_untracked());
+            }
             if scope_ref.get().is_some() {
                 // Focus may have moved in before the scope was registered (e.g. a dialog
                 // focusing itself on mount); react-aria tracks the active scope from a layout

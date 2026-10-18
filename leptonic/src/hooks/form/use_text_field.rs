@@ -483,6 +483,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         on_key_up,
         shortcuts,
         allow_shortcut_repeats: false,
+        mark: None,
     });
     let mut focusable_props = focusable.target.into_props();
     let element = focusable.focus_handle.element();
@@ -552,15 +553,16 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         };
         state.set_value(value.clone());
         // The state may have rejected or changed the text (a bound value): show what it holds,
-        // as React does for a controlled input.
-        let held = state.value.get_untracked();
-        if held != value {
-            if let Some(input) = input {
-                input.set_value(&held);
-            } else if let Some(text_area) = text_area {
-                text_area.set_value(&held);
+        // as React does for a controlled input (read in place: no copy per keystroke).
+        state.value.with_untracked(|held| {
+            if *held != value {
+                if let Some(input) = input {
+                    input.set_value(held);
+                } else if let Some(text_area) = text_area {
+                    text_area.set_value(held);
+                }
             }
-        }
+        });
     });
 
     let is_input = move || element_type.get() == TextFieldElement::Input;

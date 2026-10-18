@@ -487,6 +487,7 @@ pub async fn keyboard_row_actions(page: &Page<'_>) -> Result<(), Report> {
 
 /// Drops the screen reader drag on "Drop here": focus and a virtual click.
 async fn virtual_drop(page: &Page<'_>) -> Result<(), Report> {
+    DndActions::new(page).wait_for_drag_session().await?;
     let target = target(page).await?;
     target.focus().await?;
     target.virtual_click().await?;

@@ -343,7 +343,7 @@ mod tests {
         Key::from(s)
     }
 
-    fn cell(row: &str, column: usize) -> Key {
+    fn cell(row: &str, column: &str) -> Key {
         Key::cell(&k(row), column)
     }
 
@@ -356,13 +356,14 @@ mod tests {
         crate::testing::with_owner(|| {
             let d = delegate(GridFocusMode::Row, WritingDirection::Ltr);
             assert_that!(d.key_above(&k("alice"), NAV)).is_equal_to(Some(k("name")));
-            assert_that!(d.key_above(&cell("alice", 2), NAV)).is_equal_to(Some(k("phone")));
-            assert_that!(d.key_above(&cell("bob", 1), NAV)).is_equal_to(Some(cell("alice", 1)));
+            assert_that!(d.key_above(&cell("alice", "phone"), NAV)).is_equal_to(Some(k("phone")));
+            assert_that!(d.key_above(&cell("bob", "email"), NAV))
+                .is_equal_to(Some(cell("alice", "email")));
             // From a column to its group, and down again.
             assert_that!(d.key_above(&k("phone"), NAV)).is_equal_to(Some(k("contact")));
             assert_that!(d.key_above(&k("contact"), NAV)).is_none();
             assert_that!(d.key_below(&k("contact"), NAV)).is_equal_to(Some(k("email")));
-            assert_that!(d.key_below(&k("email"), NAV)).is_equal_to(Some(cell("alice", 1)));
+            assert_that!(d.key_below(&k("email"), NAV)).is_equal_to(Some(cell("alice", "email")));
             // The first key is the first body row.
             assert_that!(d.first_key(None, false)).is_equal_to(Some(k("alice")));
         });
@@ -378,7 +379,8 @@ mod tests {
             // The group row has a placeholder and one group: it wraps onto itself.
             assert_that!(d.key_right_of(&k("contact"), NAV)).is_equal_to(Some(k("contact")));
             assert_that!(d.first_key(Some(&k("phone")), false)).is_equal_to(Some(k("name")));
-            assert_that!(d.last_key(Some(&k("name")), true)).is_equal_to(Some(cell("bob", 2)));
+            assert_that!(d.last_key(Some(&k("name")), true))
+                .is_equal_to(Some(cell("bob", "phone")));
             let rtl = delegate(GridFocusMode::Row, WritingDirection::Rtl);
             assert_that!(rtl.key_left_of(&k("name"), NAV)).is_equal_to(Some(k("email")));
         });
@@ -390,7 +392,7 @@ mod tests {
 
     impl LayoutDelegate for RowsLayout {
         fn item_rect(&self, key: &Key) -> Option<Rect> {
-            // Cells (`row-index`) are in their row.
+            // Cells (`row-column`) are in their row.
             let key = key.to_string();
             let y = match key.split('-').next().unwrap_or_default() {
                 "contact" => 0.0,
@@ -421,7 +423,7 @@ mod tests {
             // table's own `getKeyAbove`).
             assert_that!(d.key_page_above(&k("bob"))).is_equal_to(Some(k("name")));
             // Down from a column header: its cells.
-            assert_that!(d.key_page_below(&k("name"))).is_equal_to(Some(cell("bob", 0)));
+            assert_that!(d.key_page_below(&k("name"))).is_equal_to(Some(cell("bob", "name")));
         });
     }
 
@@ -431,7 +433,7 @@ mod tests {
             let d = delegate(GridFocusMode::Cell, WritingDirection::Ltr);
             assert_that!(d.key_for_search("b", None)).is_equal_to(Some(k("bob")));
             // Searching from a cell finds the row header cell.
-            assert_that!(d.key_for_search("ali", Some(&cell("bob", 2))))
+            assert_that!(d.key_for_search("ali", Some(&cell("bob", "phone"))))
                 .is_equal_to(Some(k("alice")));
         });
     }

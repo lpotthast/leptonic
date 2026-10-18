@@ -95,7 +95,12 @@ Several agent sessions share the working tree, each owning an area: the **librar
   "Event Propagation Control").
 - **Performance priorities**: wasm binary size first, then allocation count, then allocated bytes; never trade size
   for speed without measuring both. Measure at the test-app's `opt-level = "z"`. Knowledge:
-  `documentation/performance.md`.
+  `documentation/performance.md`. Optimizations that keep behavior identical to react-aria's are done right away
+  (the user, 2026-10-18), API changes included when they are minor and usability stays the same; one that changes
+  behavior is presented to the user first, with the exact behavior difference. Patterns to avoid, and how to find
+  them in the budgets and the code: `performance.md` (R1–R17, section 5) and `leptos-and-dom.md` ("State
+  Corrections", "Ownership and Cleanup"); check new and changed code against them, and add each newly found pattern
+  there in abstract form.
 - **Tests**: improving the integration tests is of utmost importance; `assertr`, never std `assert!`; one way per
   check (`documentation/testing.md`); cases derived from react-aria's own tests (`// Upstream:` header); every hook
   and atom has a performance test. A hook or atom change updates its book page (via the book session).
@@ -109,6 +114,7 @@ cargo check -p leptonic --features full            # quick check, atoms included
 cd testing/test-app && cargo check --features ssr  # the apps from their directory (their .cargo/config.toml)
 just clippy               # every crate (lint levels: Cargo.toml, lib.rs); `just verify`: everything that must pass
 just browser-test         # the browser suite (through the agent running tests, above)
+just browser-test-timed   # the suite sequentially, timing each test per machine (`documentation/testing.md`)
 just book-icu-data; just test-app-icu-data   # after updating the icu_* crates: other ICU4X data breaks the build
 ```
 

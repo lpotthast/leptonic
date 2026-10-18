@@ -273,6 +273,15 @@ let has_action = move || has_primary_action.get() || has_secondary_action.get();
 let long_press_enabled = Signal::derive(move || has_action() && allows_selection.get());
 ```
 
+Flags that change together and rarely (an item's disabled state, links, the action model) go into one memo of a `Copy`
+struct, with a derive per output: `use_selectable_item` 6 memos → 1, `use_calendar_cell` 12 → 2 (one for the focus, so
+an arrow key reruns the readers of 2 cells). The price: a change of one flag reruns the readers of all of them (a Grid's
+selection mode change +3 render effects per row, disabling a Calendar 120 → 330 render effects); mount is the priority.
+Keep the short-circuits of the reads inside the memo (only items with an action read the global "selection is empty"). A
+derive over a notification source (a per-key trigger notified on both sides of a change, `notify_all`, a mode change)
+reruns its readers on every notification even when its value stays: keep the memo there (`use_selectable_item`'s
+`is_selected` and `is_focused`).
+
 ### R6. No `Effect` to derive or to sync state
 
 `Effect::new` is ~10 allocations per instance, 4 per run and the most expensive call site in wasm (1.1 KB; 128
@@ -289,6 +298,11 @@ focus change (react-aria-components has it in the deps and compares the previous
 disabled and pending reactive): effects at mount 4 → 2, disable 28 → 16 and enable 15 → 10 allocations, focus and blur
 1 → 0 effect runs.
 
+`sharing_one_effect` is public, and a nested call joins the outermost one: `use_option` shares one effect with the
+`use_selectable_item` it composes, and atoms wrap an item hook and their own `use_hover` in it (Grid, GridList and
+Table rows). Share wherever a disabled flag is a memo: `when_true` can't skip a memo (it is a reactive source), so
+every collection item (disabled keys) creates the effect.
+
 ```rust
 // Before (use_focus_ring.rs, use_hover.rs, use_press.rs): an effect each, also for a constant flag.
 Effect::new(move || if disabled.get() { set_focused.set(false) });
@@ -296,6 +310,16 @@ Effect::new(move || if disabled.get() { set_focused.set(false) });
 when_true(disabled, move || set_focused.set(false));          // no effect for a constant
 sharing_one_effect(|| button(input))                          // use_button: one effect for its hooks
 ```
+
+Per-item effects that act only on the one focused or current item become one effect per collection reading the item's
+registration: `ItemElements::register` (one effect per collection focuses the focused key's item, created lazily under
+the collection's owner, held weakly (`lessons.md`); it remembers the registration and child focus strategy it focused
+for, so other items mounting don't refocus) and the calendar's `CalendarCells`: −1 effect per item (ListBox option,
+every grid row and cell, calendar cell). A registry that readers track needs per-key triggers (`KeyedTriggers`), or
+every item's mount and unmount reruns them (+1 allocation per item on unmount with one global `Trigger`). Find it:
+`Effect::new` in a hook that runs per item (`use_*_item`, `use_option`, `use_*_cell`, `use_*_row`) whose body returns
+early unless the item is the focused, current or selected one; budgets whose mount effect runs are a multiple of the
+item count.
 
 ### R7. One `StoredValue` per hook state
 
@@ -362,6 +386,16 @@ into a shared `Oco`. A memo producing a collection or string reuses the previous
 `Memo::new_owning`. Don't clone a whole set to change one key: `CheckboxGroupState` changes a value it owns in place
 and clones it only for an `on_change` handler (a bound value is the app's: a new set).
 
+`Arc::<str>::from("")` allocates (an `ArcInner` even for an empty slice): the collection builders take texts as
+`impl Into<Arc<str>> + AsRef<str>` and give every empty one the same shared `Arc` (`collections::empty_text`,
+crate-private). VirtualList rebuilt its collection with `""` per line: 1 allocation per line per append (654k of
+654k for 30 appends to 21k lines).
+
+Keep `Copy` handles small: a closure captures them by value and is boxed with them. `SelectionManager` was 336
+bytes of signals (captured by every item's handlers and derives); one arena `StoredValue` of them makes it 16
+(+2 allocations per manager, made once per collection). Find it: clippy's `large_types_passed_by_value` on a `Copy`
+type, or `size_of` of a handle that items capture.
+
 ### R11. Erased views: fewer attributes, children and wrappers per element
 
 Erased, every inline attribute is ~4 allocations before it does anything, every child among several 2, every
@@ -403,6 +437,43 @@ check for a button that is never pending). Name every field of a hook input at h
 (Button: `UseButtonInput`, `UsePressInput`, `UseFocusRingInput`: −28, counted). Measured together with R5-R8 (Button): mount 431
 → 334, a click 57 → 45, Enter 44 → 32.
 
+Optional inputs that can't be there cost nothing: `use_form_validation_state` builds no memo, effect or signal for
+an error source that can't report one (a constant `is_invalid` of `false`, no `validate`, no name or no server
+errors, constant builtin validation; most fields), and `use_description` returns `Signal::stored(None)` without an
+effect or signal when its description reads no reactive source and is absent (collection items passed a long-press
+description that is always `None`: ~25 allocations and 1 effect per item). Per-read subscriptions under an attribute
+probe linger until unmount (`leptos-and-dom.md`, "Ownership and Cleanup").
+
+### R15. Constants stay visible
+
+`signal_attr`, `data_flags`, `when_true`, `use_description` and the validation sources skip their effect only for a
+value that reads no reactive source (`utils/probe.rs`). A `Memo` is always a source, even over constants, and so is
+any signal read before a static check. Decide on static configuration when the hook runs (a table without a tree
+column: stored constants, not memos over `Option<TableTree>`, ~350 per row), put static checks before signal reads
+(`use_tag`: `has_remove` before the modality), and keep the short-circuits of a combined memo in the same order (only
+items with an action read whether the selection is empty). Find it: memos or derives whose body starts with a signal
+read and only then tests a captured `bool` or `Option`; `let x = config?` inside a memo; `when_true`/`signal_attr`
+over a memo of something the hook could know at creation.
+
+### R16. Key items by identity, not position
+
+A key derived from a position changes for every item after an insertion (a selection column, a sorted or filtered
+row), so every keyed reader of a shifted item reruns, its view is rebuilt, and focus and other element state is lost.
+Key by what identifies the item (a table cell by row and column key, as react-stately; toggling the selection
+column of a 1,000-row table: 2.3M → 0.9M allocations, focus kept). Positions stay attributes (`aria-colindex`,
+`data-column-index`), read where rendered. Find it: keys built from an index (`enumerate()`, `index` in a `<For>`'s
+`key`, `Key::generated` for user content), and keyed views whose key memo reads a position.
+
+### R17. Rebuilt structures: shared empties, known sizes, reused nodes
+
+A structure rebuilt on every change (a collection per items change, a layout per resize) pays per element per
+rebuild. Give empty and default values one shared allocation (an empty `Arc<str>` allocates: `collections::empty_text`),
+size buffers up front where the count is known (`CollectionBuilder::reserve`: 14 reallocations per append of 21k
+items before), and overwrite cached nodes in place when nothing else holds them (`Arc::get_mut` in
+`virtualizer/list_layout.rs`) instead of allocating a new one per node. Find it: in the budgets, allocations of about
+one per element on a change with no reactive work and no DOM change; in code, `Arc::from`, `String::new()`/`format!`,
+`Vec::new()` + `push` inside builder and layout loops, and `Arc::new` of a node that replaces an equal one.
+
 ## 3. Keyed selection for collections and groups
 
 **`KeyedTriggers<K>`** (`utils/keyed_triggers.rs`, crate-private): a `StoredValue<HashMap<K, (ArcTrigger,
@@ -419,6 +490,11 @@ subscribers)>>`.
   new; a set: the symmetric difference; a superset is fine). A value the app may change itself (a bound value) gets
   one `ImmediateEffect::new_scoped` per group that diffs it against the value last notified: synchronous (readers
   never see a stale value, unlike with an `Effect`), and only when the value is bound.
+- A superset is fine, a subset is a bug: a key no writer notifies leaves its readers stale, silently. A diff of a
+  tree walks every node, nested ones included (the node diff once walked only the top level: the cells of a removed
+  row and the items of a removed section were never told), and an entry whose content another node shows notifies
+  that node too (a section's heading: its header node). Find it: diffs iterating `iter()`/top-level children of a
+  nested structure; readers whose value depends on another key than the one they track.
 - A change every item shows (every radio becoming a tab stop) goes through one group-level `Trigger` that only the
   readers of that aspect track, so the other readers of each item stay put.
 
@@ -477,10 +553,10 @@ Estimates are per measurement of the budgets (allocations unless noted); "risk" 
 | 2 | Constant values as reactive attributes (R2; Button stack done) | 460 `Attr(attr::` in hooks, most `Signal` fields of `*Props`; every atom on `use_link`, field hooks | measured ~9 per constant attribute (Button −79 of 586); every hook with `aria-*` props a few effects each | low: `signal_attr` (semantics identical) |
 | 3 | Stored defaults for absent inputs (R3) | 89 stored signals in 30 `*Input` defaults (`UseButtonInput` 16, calendar states 10, `UseLinkInput` 6, `UsePressInput` 5); 187 optional `Signal` props in atoms (DatePicker 32, Calendar 14, ComboBox 10) | Button ~60 per mount (10%); DatePicker ~100; each `..Default` literal 2 per `Signal` field | low (mechanical, but changes input field types: grep the literals in the book and the test-app) |
 | 4 | One effect per element for `data-*` flags (R4; Button done) | 331 `flag(` sites; RadioButton label 9, RadioField 5 | measured Button −40 per mount (5 flags); radio ~70 of ~800; disabling a group (1,000) 4,000 → ~1,000 render effects | low (≤3 signals per effect) |
-| 5 | Memos for trivial derivations (R5) | 244 `Memo::new` sites: `use_selectable_item.rs` 10 per item, `use_calendar_cell.rs` 12 per cell, `use_date_field_state.rs` 12, `use_number_field_state.rs` 10, `use_form_validation_state.rs` 10 | option mount ~60-80 of ~720; calendar cell ~100 of ~950 (12-month Calendar ~50k of ~400k); fewer "unchanged" memo runs | low-medium: keep memos that cut off fan-outs |
-| 6 | Effects for derived or synced state (R6) | ~128 `Effect::new` sites (Button 4 per instance: the atom's announcement, `use_press`, `use_focus_ring`, `use_hover`; `FocusScope` 8, `use_combobox` 5, selection manager 3) | ~10 per avoided instance (Button ~30-40); wasm ~1.1 KB per removed site | medium: effect timing |
-| 7 | Many `StoredValue`s per hook (R7; `use_press`, `use_focus` done) | `use_combobox_state.rs` 11, `use_scroll_view.rs` 9, `tooltip.rs` 9, `use_form_validation_state.rs` 7 | 2 per merged `StoredValue` (`use_press` measured −16, in every pressable) | low |
-| 8 | `Callback::new` for composition (R8) | 300 sites in hooks, 34 in atoms (`use_selectable_item.rs` 8 per item, `use_radio.rs` 3) | 2-3 per wrapper: option ~16-24, radio ~6-9 | low-medium: handler order and conditions |
+| 5 | Memos for trivial derivations (R5; `use_selectable_item` 10 → 3 and `use_calendar_cell` 12 → 2 per item done, 2026-10-17) | 243 `Memo::new` sites: `use_date_field_state.rs` 12, `use_number_field_state.rs` 10, `use_form_validation_state.rs` 10 (built only for sources that exist) | ~8 per memo; fewer "unchanged" memo runs | low-medium: keep memos that cut off fan-outs |
+| 6 | Effects for derived or synced state (R6; collection items 5 → 1 and calendar cells done, 2026-10-17) | ~140 `Effect::new` sites (`FocusScope` 8, `use_combobox` 5, selection manager 3) | ~10 per avoided instance (Button ~30-40); wasm ~1.1 KB per removed site | medium: effect timing |
+| 7 | Many `StoredValue`s per hook (R7; `use_press`, `use_focus`, `use_selectable_item` done) | `use_combobox_state.rs` 11, `use_scroll_view.rs` 9, `tooltip.rs` 9 (per tooltip), `use_form_validation_state.rs` 6 | 2 per merged `StoredValue` (`use_press` measured −16, in every pressable) | low |
+| 8 | `Callback::new` for composition (R8; `use_selectable_item`'s wrappers and the per-item `on_action` done) | ~300 sites in hooks, 34 in atoms (`use_radio.rs` 3, `use_toggle.rs` 4 for the label's press) | 2-3 per wrapper: radio ~6-9 | low-medium: handler order and conditions |
 | 9 | Output wrappers and `signal()` (R9) | `use_press.rs:1636`, `use_focus_ring.rs:209/230/236`, `Signal::derive` 470 sites, `signal(` 133 | ~2 per wrapper; Button ~10 | low |
 | 10 | Clones (R10) | ids in atoms (`button.rs` 4 `String` clones), `Option<String>` attribute values, `use_checkbox_group_state.rs:143-158`, text fields (a keystroke copies the text ~5×, `PLAN.md`) | Button ~5; checkbox toggle 1 set clone per change (1,000 keys: one `HashSet` of 1,000); typing ~4 copies per keystroke | low |
 | 11 | Erased element structure (R11) | nested `<Provider>`s (Radio 3, atoms 57 `provide_context`), internal components | ~7 per removed `Provider`; radio ~14 | low-medium (context lookups move) |
@@ -522,3 +598,28 @@ document the rest):
   (dynamic dependency tracking).
 - reactive_graph's immediate-effect tests are flaky when run in parallel threads (also unpatched); run them with
   `--test-threads=1`.
+
+## 5. Finding these patterns
+
+The budgets (`leptonic/tests/budgets/`) show most of them as ratios; read a large fixture's measurements per item
+(the fixture's count: `testing/test-app/src/pages/perf/`). A short script ranking every measurement by a metric (all
+budgets flattened to subject, scenario, step and totals) finds the worst first; the signs:
+
+| Sign in the budgets | Likely pattern | Rule |
+|---|---|---|
+| a change of one item reruns render effects or memos of every item (`render_effect_runs` or `memo_runs` ≈ items) | per-item read of a whole value | R1 |
+| `memo_runs_unchanged` ≈ k × items on one change | memos over whole values, or memos for trivial derivations | R1, R5 |
+| mount `effect_runs` a multiple of the items | per-item `Effect` (a reset, focus following, a description) | R6, R14 |
+| mount allocations per item well above the cost of what renders (compare a hook's budget with its atom's) | constants hidden in memos, stored defaults, wrapper callbacks, absent inputs | R2, R3, R8, R14, R15 |
+| allocations ≈ items on a change with no reactive work and no DOM change | rebuilt plain data (texts, buffers, nodes) | R17 |
+| unmount allocations per item above 0 | per-item notifications or work on cleanup (a registry trigger every reader tracks) | R6 |
+| an insertion or a column change re-renders every item (`dom_added_nodes` ≈ items) | keys from positions | R16 |
+| a step costs a whole extra pass (paging once more after mounting, a step's numbers ≈ the next step's) | an asynchronous correction | `leptos-and-dom.md`, "State Corrections" |
+| effect runs double on repeated events (focus, press) | a setter notifying an equal value | `leptos-and-dom.md`, "State Corrections" |
+| a fixture's measurement ≈ items × a small constant though the library does little | the fixture measures itself (`format!` keys) | `testing.md`, "Performance Measurements" |
+
+In code (`rg` over `leptonic/src`): `Memo::new` in per-item hooks and what reads each one; `Effect::new` in per-item
+hooks; `Signal::stored(` and `..Default::default()` at internal call sites; `Callback::new(move |e| { ..; inner.run(e)
+})`; `with(` of a collection, selection or group value inside per-item closures; `Arc::from("")` and buffers grown by
+`push` in rebuild loops; keys from indexes; `Owner::current()` kept in a stored value (`leptos-and-dom.md`, "Ownership
+and Cleanup").

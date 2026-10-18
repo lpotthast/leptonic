@@ -69,13 +69,19 @@ async fn mount_and_unmount_with(page: &Page<'_>, mount: &str, count: usize) -> R
 }
 
 /// A click selecting the first radio, and one selecting the last instead (the group has `count`
-/// radios).
+/// radios), each on a radio the pointer already hovers.
 async fn select_with_the_mouse_in(page: &Page<'_>, count: u32) -> Result<(), Report> {
     let first = page.element(FIRST).await?;
     let last = page.element(LAST).await?;
+    // Hovered first (not measured): a click on a radio outside the view scrolls it in, and the
+    // hover changes the browser sends after a scroll land in or after the measurement by chance.
+    first.hover().await?;
+    first.wait_for_attr("data-hovered", Some("true")).await?;
     page.measure("select", first.click()).await?;
     first.wait_for_attr("data-selected", Some("true")).await?;
     assert_that!(selected(page).await?).is_equal_to(0.0);
+    last.hover().await?;
+    last.wait_for_attr("data-hovered", Some("true")).await?;
     page.measure("select another", last.click()).await?;
     last.wait_for_attr("data-selected", Some("true")).await?;
     first.wait_for_attr("data-selected", None).await?;

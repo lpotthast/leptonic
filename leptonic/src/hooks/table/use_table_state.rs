@@ -140,6 +140,10 @@ pub struct TableState {
     /// the column groups. Changes only when the columns do, not with the rows: read it instead
     /// of `table` for what depends only on the columns.
     pub columns: Memo<Arc<[Column]>>,
+    /// The keys of the columns whose cells label their rows
+    /// ([`TableCollection::row_header_columns`]). Changes only when they do: read it instead of
+    /// `table` in what every row or cell renders.
+    pub row_header_columns: Memo<Arc<[Key]>>,
     /// Set in a tree table.
     pub tree: Option<TableTree>,
     /// The current sorting, if any.
@@ -246,10 +250,12 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
                 .collect::<Arc<[Column]>>()
         })
     });
+    let row_header_columns = Memo::new(move |_| table.with(|t| Arc::from(t.row_header_columns())));
     TableState {
         grid,
         table,
         columns,
+        row_header_columns,
         tree,
         sort_descriptor: binding.value,
         binding,

@@ -41,12 +41,14 @@ use crate::{
             use_table_selection_checkbox, use_table_state,
         },
     },
+    sharing_one_effect,
     utils::{
         data_attributes::{self, data_flags},
         default_class::with_default_class,
-        i18n::{WritingDirection, use_direction},
+        i18n::WritingDirection,
         intl_strings::{AtomStrings, use_localized_strings},
         scoped_context::scoped_view,
+        signal_attr::signal_attr,
         styles::{
             Styles,
             css::{Size, computed_px, computed_size},
@@ -328,11 +330,24 @@ pub fn Table(
         styles
     };
 
+    // The selection column, read by every row: one memo per table. It follows the columns (the
+    // selection column can come and go), not the rows.
+    let columns = data.state.columns;
+    let selection_column = SelectionColumn(Memo::new(move |_| {
+        columns.with(|columns| {
+            columns
+                .first()
+                .filter(|c| c.kind == ColumnKind::SelectionCheckbox)
+                .map(|c| c.key.clone())
+        })
+    }));
+
     // Focus on the table element itself (react-aria-components' `Table`).
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
     scoped_view(
         move || {
             provide_context(data);
+            provide_context(selection_column);
             if let Some(column_resize) = column_resize {
                 provide_context(column_resize);
             }
@@ -435,8 +450,9 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
         let key = key.clone();
         Memo::new(move |_| {
             state.columns.with(|columns| {
-                columns.iter().find(|c| c.key == key).map_or(
-                    (Arc::from(""), ColumnKind::Data, false, false),
+                // The fallback is built only for a missing column (an `Arc<str>` allocates).
+                columns.iter().find(|c| c.key == key).map_or_else(
+                    || (Arc::from(""), ColumnKind::Data, false, false),
                     |c| {
                         (
                             c.text_value.clone(),
@@ -588,6 +604,7 @@ fn ColumnResizer(
     name_id: crate::Id,
 ) -> impl IntoView {
     let data = expect_context::<TableData>();
+    let direction = data.grid.direction;
     let state = resize.state;
     let strings = use_localized_strings::<AtomStrings>();
     let UseTableColumnResizeReturn {
@@ -609,7 +626,6 @@ fn ColumnResizer(
     });
     let input_props = input_props.into_props();
     // `left` at the minimum width, `right` at the maximum (react-aria-components' values).
-    let direction = use_direction();
     let resizable_direction = move || {
         let (width, min, max) = state
             .column_widths
@@ -672,6 +688,10 @@ pub fn TableBody(
         </tbody>
     }
 }
+
+/// The key of a [`Table`]'s selection checkbox column, while it has one.
+#[derive(Debug, Clone, Copy)]
+struct SelectionColumn(Memo<Option<Key>>);
 
 /// The row a [`TableCell`] is in.
 #[derive(Debug, Clone)]
@@ -752,16 +772,27 @@ fn table_row(
     styles: Styles,
     children: Children,
 ) -> AnyView {
-    let table = data.state.table;
     let data_rows = data.state.grid.list.collection;
     let selection = data.state.grid.list.selection;
-    // Follows the table (the selection column can come and go).
-    let selection_column = Memo::new(move |_| {
-        table.with(|t| {
-            t.column_at(0)
-                .filter(|c| c.kind == ColumnKind::SelectionCheckbox)
-                .map(|c| c.key.clone())
-        })
+    let is_tree = data.state.tree.is_some();
+    let selection_column = use_context::<SelectionColumn>();
+    // The row's resets and its hover's react to the disabled state in one effect.
+    let (row, hover) = sharing_one_effect(|| {
+        let row = use_table_row(UseTableRowInput {
+            // Inside a `ContextMenuTrigger`: its menu opens on this row.
+            on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
+            table: data,
+            key: key.clone(),
+        });
+        let (allows_selection, has_action) = (row.allows_selection, row.has_action);
+        // Interactive rows show hover (react-aria-components' `Row`).
+        let hover = use_hover(UseHoverInput {
+            is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+        });
+        (row, hover)
     });
     let UseTableRowReturn {
         row: row_props,
@@ -769,43 +800,37 @@ fn table_row(
         is_focused,
         is_disabled,
         is_pressed,
-        allows_selection,
-        has_action,
         expand_button,
         is_expanded,
         has_child_rows,
         level,
         ..
-    } = use_table_row(UseTableRowInput {
-        // Inside a `ContextMenuTrigger`: its menu opens on this row.
-        on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
-        table: data,
-        key: key.clone(),
-    });
+    } = row;
     let (attrs, row_styles) = row_props.attrs();
-    // The row level, for indenting (react-aria-components' `--table-row-level`).
-    let styles = row_styles
-        .add_optional_unchecked("--table-row-level", move || Some(level.get().to_string()))
-        .merge(styles);
+    // The row level, for indenting (react-aria-components' `--table-row-level`): 1 without a
+    // tree column.
+    let row_styles = if is_tree {
+        row_styles
+            .add_optional_unchecked("--table-row-level", move || Some(level.get().to_string()))
+    } else {
+        row_styles.add_unchecked("--table-row-level", "1")
+    };
+    let styles = row_styles.merge(styles);
     let is_focus_visible = Signal::derive(move || is_focused.get() && is_focus_visible());
-    // Interactive rows show hover (react-aria-components' `Row`).
-    let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
-    });
     let focus_within = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()
     });
     let focus_within_props = focus_within.target.into_props();
 
-    // In a tree table, rows under a collapsed row aren't part of the grid: hidden.
-    let row_key = StoredValue::new(key.clone());
-    let is_hidden = Signal::derive(move || {
-        !row_key.with_value(|key| data_rows.with(|rows| rows.contains_key(key)))
-    });
+    // In a tree table, rows under a collapsed row aren't part of the grid: hidden. Other tables
+    // render only rows of the grid.
+    let is_hidden = if is_tree {
+        let row_key = key.clone();
+        Signal::derive(move || !data_rows.with(|rows| rows.contains_key(&row_key)))
+    } else {
+        Signal::stored(false)
+    };
     let context = RowContext {
         key,
         expand_button: StoredValue::new(expand_button),
@@ -827,8 +852,8 @@ fn table_row(
                     focus_within_props.on_focusout.into_on(ev::focusout),
                 )}
                 class=classes
-                style=styles
-                hidden={is_hidden}
+                style={styles}
+                {..signal_attr("hidden", is_hidden)}
                 {..data_flags([
                     ("data-hovered", hover.is_hovered),
                     ("data-focused", is_focused),
@@ -847,9 +872,13 @@ fn table_row(
                     ("data-expanded", is_expanded),
                     ("data-has-child-items", has_child_rows),
                 ])}
-                data-level=move || level.get().to_string()
+                {..signal_attr("data-level", level)}
             >
-                {move || selection_column.get().map(|column| view! { <TableCell column /> })}
+                {move || {
+                    selection_column
+                        .and_then(|column| column.0.get())
+                        .map(|column| view! { <TableCell column /> })
+                }}
                 {children()}
             </tr>
         </Provider>
@@ -860,8 +889,9 @@ fn table_row(
 /// A cell of a [`TableRow`], in the column `column`. Cells of the selection checkbox column
 /// render the row's checkbox.
 ///
-/// The cell is rendered again (with its children) when its column moves, e.g. when columns
-/// before it are added or removed.
+/// The cell is keyed by its row and column (`Key::cell(row, column)`): it stays (rendered once,
+/// keeping its focus) when columns before it are added or removed, e.g. the selection checkbox
+/// column.
 ///
 /// Data attributes: `data-focused`, `data-focus-visible`, `data-focus-visible-within-row`
 /// (keyboard focus on the cell's row or inside it), `data-hovered`, `data-pressed`,
@@ -886,7 +916,7 @@ pub fn TableCell(
     allows_arrow_navigation: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    #[prop(optional)] children: Option<ChildrenFn>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableCell", classes);
@@ -905,93 +935,92 @@ pub fn TableCell(
         is_focus_visible_within: is_focus_visible_within_row,
         ..
     } = row_context;
-    let table = data.state.table;
-    let row_key = row.clone();
     let is_tree_column = data
         .state
         .tree
         .is_some_and(|tree| tree.is_tree_column(&column));
-    // The row's cell in the column (cells spanning columns shift the cells after them), and
-    // the column's kind.
-    let cell = Memo::new(move |_| {
-        table.with(|t| {
-            let (index, kind) = t
-                .column(&column)
-                .map_or((0, ColumnKind::Data), |c| (c.index, c.kind));
-            let key = t
-                .cell_key(&row, index)
-                .unwrap_or_else(|| Key::cell(&row, index));
-            (key, kind, index)
+    // The cell's key follows from its row and column (a cell spanning columns has its first
+    // column's), so it doesn't change with the rows or the other columns. The column's kind
+    // doesn't change either (only the generated selection column has checkboxes).
+    let key = Key::cell(&row, column.clone());
+    let columns = data.state.columns;
+    let kind = columns.with_untracked(|columns| {
+        columns
+            .iter()
+            .find(|c| c.key == column)
+            .map_or(ColumnKind::Data, |c| c.kind)
+    });
+    // The index of the cell's column changes when columns before it come and go.
+    let column_index = Signal::derive(move || {
+        columns.with(|columns| {
+            columns
+                .iter()
+                .find(|c| c.key == column)
+                .map_or(0, |c| c.index)
         })
     });
-    Some(move || {
-        let (key, kind, column_index) = cell.get();
-        // Untracked: the cell is rendered again when its key or kind changes, not whenever its
-        // hooks or children read a signal while being built.
-        untrack(|| {
-            let content = if kind == ColumnKind::SelectionCheckbox {
-                let checkbox = use_checkbox(use_table_selection_checkbox(
-                    UseTableSelectionCheckboxInput {
-                        table: data.clone(),
-                        key: row_key.clone(),
-                    },
-                ));
-                checkbox.input.props().map(|input| {
-                    let (attrs, styles) = input.into_parts();
-                    view! { <input {..attrs} style=styles /> }.into_any()
-                })
-            } else {
-                children.as_ref().map(|children| children().into_any())
-            };
-            let UseTableCellReturn {
-                cell: grid_cell_props,
-                is_pressed,
-            } = use_table_cell(UseTableCellInput {
-                focus_mode,
-                should_select_on_press_up: data.grid.should_select_on_press_up,
+    let content = if kind == ColumnKind::SelectionCheckbox {
+        let checkbox = use_checkbox(use_table_selection_checkbox(
+            UseTableSelectionCheckboxInput {
                 table: data.clone(),
-                key,
-                allows_arrow_navigation,
-            });
-            let (attrs, cell_styles) = grid_cell_props.attrs();
-            let styles = cell_styles.merge(styles.clone());
-            // Focus on the cell itself, and hover (react-aria-components' `Cell`).
-            let UseFocusRingReturn {
-                target: focus_ring,
-                is_focused,
-                ..
-            } = use_focus_ring(UseFocusRingInput::default());
-            let hover = use_hover(UseHoverInput::default());
-
-            view! {
-                <td
-                    {..attrs}
-                    {..focus_ring.attrs()}
-                    {..hover.target.attrs()}
-                    class=classes.clone()
-                    style={styles}
-                    {..data_flags([
-                        ("data-focused", is_focused),
-                        ("data-hovered", hover.is_hovered),
-                        ("data-pressed", is_pressed),
-                    ])}
-                    {..data_flags([
-                        ("data-focus-visible-within-row", is_focus_visible_within_row),
-                        ("data-selected", is_selected),
-                        ("data-disabled", is_disabled),
-                    ])}
-                    data-column-index=column_index
-                    data-tree-column=is_tree_column.then_some("true")
-                    {..data_flags([
-                        ("data-expanded", row_expanded),
-                        ("data-has-child-items", row_has_child_rows),
-                    ])}
-                    data-level=move || row_level.get().to_string()
-                >
-                    {content}
-                </td>
-            }
+                key: row,
+                is_selected,
+            },
+        ));
+        checkbox.input.props().map(|input| {
+            let (attrs, styles) = input.into_parts();
+            view! { <input {..attrs} style=styles /> }.into_any()
         })
+    } else {
+        children.map(|children| children())
+    };
+    let UseTableCellReturn {
+        cell: grid_cell_props,
+        is_pressed,
+    } = use_table_cell(UseTableCellInput {
+        focus_mode,
+        should_select_on_press_up: data.grid.should_select_on_press_up,
+        table: data,
+        key,
+        allows_arrow_navigation,
+    });
+    let (attrs, cell_styles) = grid_cell_props.attrs();
+    let styles = cell_styles.merge(styles);
+    // Focus on the cell itself, and hover (react-aria-components' `Cell`).
+    let UseFocusRingReturn {
+        target: focus_ring,
+        is_focused,
+        ..
+    } = use_focus_ring(UseFocusRingInput::default());
+    let hover = use_hover(UseHoverInput::default());
+
+    Some(view! {
+        <td
+            {..attrs}
+            {..focus_ring.attrs()}
+            {..hover.target.attrs()}
+            class=classes
+            style={styles}
+            {..data_flags([
+                ("data-focused", is_focused),
+                ("data-hovered", hover.is_hovered),
+                ("data-pressed", is_pressed),
+            ])}
+            {..data_flags([
+                ("data-focus-visible-within-row", is_focus_visible_within_row),
+                ("data-selected", is_selected),
+                ("data-disabled", is_disabled),
+            ])}
+            {..signal_attr("data-column-index", column_index)}
+            data-tree-column=is_tree_column.then_some("true")
+            {..data_flags([
+                ("data-expanded", row_expanded),
+                ("data-has-child-items", row_has_child_rows),
+            ])}
+            {..signal_attr("data-level", row_level)}
+        >
+            {content}
+        </td>
     })
 }
 

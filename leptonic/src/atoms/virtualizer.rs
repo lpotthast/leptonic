@@ -306,8 +306,10 @@ where
         }
     };
 
+    // Rows render from their items: the collection holds only their keys.
     let collection = use_collection(move |b| {
         items.with(|items| {
+            b.reserve(items.len());
             for item in items {
                 b.item(key(item), "");
             }

@@ -1,10 +1,10 @@
 // Upstream: react-aria/src/disclosure/useDisclosure.ts @ 99e6102368
 // Upstream: react-aria/test/disclosure/useDisclosure.test.ts @ 99e6102368
-use leptos::prelude::*;
+use leptos::{ev, prelude::*};
 
 use super::use_disclosure_state::DisclosureState;
 use crate::{
-    CapturedElement, ElementCaptureAttr, Id, IntoAttrs, Part,
+    CapturedElement, ElementCaptureAttr, EventHandler, Id, IntoAttrs, OnEvent, Part,
     hooks::{button::UseButtonInput, interactions::PressEvent},
     utils::{
         aria::{AriaExpanded, AriaHidden, AriaRole},
@@ -70,31 +70,40 @@ pub struct UseDisclosurePanelProps {
     /// to the state at that time.
     pub hidden_until_found: bool,
     pub element_capture: ElementCaptureAttr,
+    /// Find in page matched the collapsed panel's content: expands it.
+    pub on_beforematch: EventHandler<web_sys::Event>,
 }
 
 impl IntoAttrs for UseDisclosurePanelProps {
     type Attrs = UseDisclosurePanelAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        Spread((
-            fixed_attr("id", self.id),
-            fixed_attr("role", self.role),
-            signal_attr("aria-labelledby", self.aria_labelledby),
-            signal_attr("aria-hidden", self.aria_hidden),
-            fixed_attr("hidden", self.hidden_until_found.then_some("until-found")),
-            self.element_capture,
-        ))
+        (
+            Spread((
+                fixed_attr("id", self.id),
+                fixed_attr("role", self.role),
+                signal_attr("aria-labelledby", self.aria_labelledby),
+                signal_attr("aria-hidden", self.aria_hidden),
+                fixed_attr("hidden", self.hidden_until_found.then_some("until-found")),
+                self.element_capture,
+            )),
+            self.on_beforematch
+                .into_on(ev::Custom::<web_sys::Event>::new("beforematch")),
+        )
     }
 }
 
-pub type UseDisclosurePanelAttrs = Spread<(
-    FixedAttr,
-    FixedAttr,
-    SignalAttr<Option<Id>>,
-    SignalAttr<Option<AriaHidden>>,
-    FixedAttr,
-    ElementCaptureAttr,
-)>;
+pub type UseDisclosurePanelAttrs = (
+    Spread<(
+        FixedAttr,
+        FixedAttr,
+        SignalAttr<Option<Id>>,
+        SignalAttr<Option<AriaHidden>>,
+        FixedAttr,
+        ElementCaptureAttr,
+    )>,
+    OnEvent<ev::Custom<web_sys::Event>>,
+);
 
 /// A disclosure: a trigger button showing and hiding a panel. A collapsed panel is
 /// `hidden="until-found"`, so the browser's find in page still finds (and expands) its content.
@@ -120,6 +129,12 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
     let panel_id = use_id("disclosure-panel");
     let panel_element = CapturedElement::new();
     let is_expanded = state.is_expanded;
+
+    #[cfg(not(feature = "ssr"))]
+    let on_beforematch = manage_panel(state, is_disabled, panel_element);
+    #[cfg(feature = "ssr")]
+    let on_beforematch = EventHandler::empty();
+
     // Each rendering of the panel: collapsed as the state is then (the panel may render again,
     // e.g. inside a `Show`).
     let panel = {
@@ -134,11 +149,9 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
             aria_hidden,
             hidden_until_found: !is_expanded.get_untracked(),
             element_capture: element_capture.clone(),
+            on_beforematch: on_beforematch.clone(),
         })
     };
-
-    #[cfg(not(feature = "ssr"))]
-    manage_panel(state, is_disabled, panel_element);
 
     let button = UseButtonInput {
         id: Some(trigger_id.clone()),
@@ -202,11 +215,14 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
 }
 
 /// Shows and hides the panel (`hidden="until-found"`), with its size in CSS variables for
-/// transitions, and expands it when find in page matches its content.
+/// transitions. Returns the panel's `beforematch` handler, which expands it when find in page
+/// matches its content (a listener of the panel's attributes: no effect watching the element).
 #[cfg(not(feature = "ssr"))]
-fn manage_panel(state: DisclosureState, is_disabled: Signal<bool>, panel: CapturedElement) {
-    use leptos::ev;
-    use leptos_use::use_event_listener;
+fn manage_panel(
+    state: DisclosureState,
+    is_disabled: Signal<bool>,
+    panel: CapturedElement,
+) -> EventHandler<web_sys::Event> {
     use wasm_bindgen::JsCast;
 
     let pending_frame = StoredValue::new(None::<AnimationFrameRequestHandle>);
@@ -217,21 +233,17 @@ fn manage_panel(state: DisclosureState, is_disabled: Signal<bool>, panel: Captur
     };
 
     // Find in page removes `hidden`: expand, and restore `until-found` should the state refuse.
-    let _ = use_event_listener(
-        Signal::derive(move || panel.get()),
-        ev::Custom::<web_sys::Event>::new("beforematch"),
-        move |_| {
-            cancel_frame();
-            let handle = request_animation_frame_with_handle(move || {
-                if let Some(panel) = panel.get_untracked() {
-                    let _ = panel.set_attribute("hidden", "until-found");
-                }
-            })
-            .ok();
-            pending_frame.set_value(handle);
-            state.toggle();
-        },
-    );
+    let on_beforematch = EventHandler::new(move |_: web_sys::Event| {
+        cancel_frame();
+        let handle = request_animation_frame_with_handle(move || {
+            if let Some(panel) = panel.get_untracked() {
+                let _ = panel.set_attribute("hidden", "until-found");
+            }
+        })
+        .ok();
+        pending_frame.set_value(handle);
+        state.toggle();
+    });
 
     let set_size = |panel: &web_sys::HtmlElement, width: &str, height: &str| {
         let style = panel.style();
@@ -326,4 +338,5 @@ fn manage_panel(state: DisclosureState, is_disabled: Signal<bool>, panel: Captur
     });
 
     on_cleanup(cancel_frame);
+    on_beforematch
 }

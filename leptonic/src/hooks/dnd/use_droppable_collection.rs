@@ -18,6 +18,7 @@ use super::{
     use_auto_scroll::use_auto_scroll,
     use_drop::{DropOperationPointQuery, UseDropInput, UseDropProps, UseDropReturn, use_drop},
     use_droppable_collection_state::{DroppableCollectionState, ItemDropQuery},
+    use_virtual_drop::use_virtual_drop,
     utils::{
         clear_global_dnd_state, dragging_keys, is_internal_drop_operation, set_drop_collection,
         with_dnd_state,
@@ -66,6 +67,9 @@ pub struct DroppableCollectionData {
     /// The collection element's id.
     pub id: Id,
     pub element: CapturedElement,
+    /// The id of the description of how to drop (during drags), referenced by every droppable
+    /// item and drop indicator (`use_virtual_drop`, once per collection).
+    pub drop_description: Signal<Option<Id>>,
 }
 
 /// Input of [`use_droppable_collection`].
@@ -469,6 +473,7 @@ pub fn use_droppable_collection(
             state,
             id: collection_id,
             element,
+            drop_description: use_virtual_drop(),
         },
     }
 }

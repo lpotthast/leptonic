@@ -76,11 +76,6 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     let selection = tree.state.selection;
     let row_id = grid_list_row_id(&tree.id, &key);
     let button_id = crate::utils::id::use_id("tree-expand");
-    let has_child_items = {
-        let collection = tree.state.collection;
-        let key = key.clone();
-        Memo::new(move |_| collection.with(|c| c.get(&key).is_some_and(|n| n.has_child_nodes)))
-    };
     let item = use_grid_list_item(UseGridListItemInput {
         list: tree,
         key: key.clone(),
@@ -89,6 +84,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
         on_context_menu,
     });
     let is_disabled = item.is_disabled;
+    let has_child_items = item.has_child_rows;
 
     let key = StoredValue::new(key);
     // A memo: the expanded keys change with every item expanded or collapsed.
@@ -165,6 +161,6 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
         expand_button,
         expand_button_attrs: prevent_focus_attr(),
         is_expanded,
-        has_child_items: has_child_items.into(),
+        has_child_items,
     }
 }

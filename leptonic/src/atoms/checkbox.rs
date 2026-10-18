@@ -12,7 +12,7 @@ use super::{
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
-    Out, Part, PropsWithStyles, ValueBinding,
+    IntoAttrs, Out, Part, PropsWithStyles, ValueBinding,
     hooks::{
         collections::{Key, SelectionValue},
         form::{
@@ -23,11 +23,12 @@ use crate::{
             use_checkbox_group, use_checkbox_group_item, use_checkbox_group_state,
             use_toggle_state,
         },
-        interactions::{UseHoverInput, use_hover},
+        interactions::{UseHoverInput, UseHoverProps, UseHoverReturn, use_hover},
     },
+    sharing_one_effect,
     utils::{
-        data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
-        visually_hidden::visually_hidden_styles,
+        data_attributes::data_flags, default_class::with_default_class, dev_warn, probe::either,
+        styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -117,28 +118,34 @@ pub fn CheckboxField(
         dev_warn!("A <CheckboxField> in a <CheckboxGroup> needs a `value`.");
         return None;
     }
-    let checkbox = use_checkbox_atom(CheckboxSetup {
-        value,
-        default_selected,
-        on_change,
-        is_selected,
-        set_selected,
-        is_indeterminate,
-        is_disabled,
-        is_read_only,
-        is_required,
-        is_invalid,
-        validate,
-        validation_behavior,
-        name,
-        form_value,
-        form,
-        id,
-        aria_label,
-        aria_labelledby,
-        aria_describedby,
-        auto_focus,
-        on_focus_change,
+    // The checkbox and its button's hover end their state while disabled in one effect
+    // (`performance.md` R6).
+    let (checkbox, hover) = sharing_one_effect(|| {
+        let checkbox = use_checkbox_atom(CheckboxSetup {
+            value,
+            default_selected,
+            on_change,
+            is_selected,
+            set_selected,
+            is_indeterminate,
+            is_disabled,
+            is_read_only,
+            is_required,
+            is_invalid,
+            validate,
+            validation_behavior,
+            name,
+            form_value,
+            form,
+            id,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            auto_focus,
+            on_focus_change,
+        });
+        let hover = toggle_hover(&checkbox);
+        (checkbox, hover)
     });
     let (is_selected, is_disabled, is_read_only, is_invalid) = (
         checkbox.is_selected,
@@ -163,7 +170,7 @@ pub fn CheckboxField(
         validation_details: checkbox.validation_details,
     };
     let button = CheckboxButtonContext {
-        button: ToggleButtonParts::of(checkbox),
+        button: ToggleButtonParts::of(checkbox, hover),
         is_indeterminate,
         is_required,
     };
@@ -334,13 +341,25 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseToggleReturn {
     }
 }
 
-/// The `<label>` of a [`CheckboxButton`].
+/// The hover of a toggle's button (`CheckboxButton`, `SwitchButton`), created by its field with the
+/// toggle (in the same `sharing_one_effect`).
+pub(super) fn toggle_hover(toggle: &UseToggleReturn) -> UseHoverReturn {
+    use_hover(UseHoverInput {
+        is_disabled: either(toggle.is_disabled, toggle.is_read_only),
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
+    })
+}
+
 /// What a toggle's field (`CheckboxField`, `SwitchField`) hands its button: the toggle's label
 /// and input parts and its state, for the button rendered (again: e.g. inside a `Show`).
 #[derive(Clone)]
 pub(super) struct ToggleButtonParts {
     label: Part<PropsWithStyles<UseToggleLabelProps>>,
     input: Part<PropsWithStyles<UseToggleInputProps>>,
+    hover: Part<UseHoverProps>,
+    is_hovered: Signal<bool>,
     is_selected: Signal<bool>,
     is_pressed: Signal<bool>,
     is_focused: Signal<bool>,
@@ -354,6 +373,8 @@ pub(super) struct ToggleButtonParts {
 pub(super) struct ToggleButton {
     pub(super) label: (UseToggleLabelAttrs, Styles),
     pub(super) input: (UseToggleInputAttrs, Styles),
+    pub(super) hover: UseHoverProps,
+    pub(super) is_hovered: Signal<bool>,
     pub(super) is_selected: Signal<bool>,
     pub(super) is_pressed: Signal<bool>,
     pub(super) is_focused: Signal<bool>,
@@ -364,10 +385,12 @@ pub(super) struct ToggleButton {
 }
 
 impl ToggleButtonParts {
-    pub(super) fn of(toggle: UseToggleReturn) -> Self {
+    pub(super) fn of(toggle: UseToggleReturn, hover: UseHoverReturn) -> Self {
         Self {
             label: toggle.label,
             input: toggle.input,
+            hover: hover.target,
+            is_hovered: hover.is_hovered,
             is_selected: toggle.is_selected,
             is_pressed: toggle.is_pressed,
             is_focused: toggle.is_focused,
@@ -383,9 +406,12 @@ impl ToggleButtonParts {
     pub(super) fn props(&self) -> Option<ToggleButton> {
         let label = self.label.props()?.into_parts();
         let input = self.input.props()?.into_parts();
+        let hover = self.hover.props()?;
         Some(ToggleButton {
             label,
             input,
+            hover,
+            is_hovered: self.is_hovered,
             is_selected: self.is_selected,
             is_pressed: self.is_pressed,
             is_focused: self.is_focused,
@@ -405,26 +431,18 @@ fn checkbox_button(
     styles: Styles,
     children: Option<Children>,
 ) -> impl IntoView {
-    let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || {
-            checkbox.is_disabled.get() || checkbox.is_read_only.get()
-        }),
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
-    });
     let (label_attrs, label_styles) = checkbox.label;
     let (input_attrs, input_styles) = checkbox.input;
 
     view! {
         <label
             {..label_attrs}
-            {..hover.target.attrs()}
+            {..checkbox.hover.into_attrs()}
             class=classes
             style=label_styles.merge(styles)
             {..data_flags([
                 ("data-pressed", checkbox.is_pressed),
-                ("data-hovered", hover.is_hovered),
+                ("data-hovered", checkbox.is_hovered),
                 ("data-focused", checkbox.is_focused),
             ])}
             {..data_flags([("data-focus-visible", checkbox.is_focus_visible)])}

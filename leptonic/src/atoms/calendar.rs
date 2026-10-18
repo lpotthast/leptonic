@@ -782,23 +782,25 @@ where
     let children = std::sync::Arc::new(children);
     let dates = Memo::new(move |_| calendar.dates_in_week(week, Some(grid.start_date.get())));
     // Cells are keyed by their position, so that they (and the focus) stay when the calendar
-    // pages; their dates change. Dates before the representable range (year -9999) are left out.
+    // pages; their dates change. Positions outside the representable range (before year -9999,
+    // after 9999) have no cell.
     Some(view! {
         <tr class=classes style=styles>
             <For
-                each=move || 0..dates.with(Vec::len)
+                each=move || {
+                    let positions = dates.with(Vec::len);
+                    (0..positions)
+                        .filter(move |&position| {
+                            dates.with(|dates| dates.get(position).copied().flatten().is_some())
+                        })
+                }
                 key=|position| *position
                 children=move |position| {
-                    let date = Memo::new(move |_| {
-                        dates.with(|dates| dates.get(position).copied().flatten())
-                    });
-                    let has_date = Memo::new(move |_| date.with(Option::is_some));
-                    let children = children.clone();
-                    move || {
-                        has_date
-                            .get()
-                            .then(|| children(Signal::derive(move || date.get().unwrap_or(Date::MIN))))
-                    }
+                    children(Signal::derive(move || {
+                        dates
+                            .with(|dates| dates.get(position).copied().flatten())
+                            .unwrap_or(Date::MIN)
+                    }))
                 }
             />
         </tr>
@@ -811,8 +813,6 @@ struct CellContext {
     /// For the cell's one `CalendarCellButton` (at a time).
     button: CellButtonParts,
     is_outside_month: Signal<bool>,
-    is_selection_start: Signal<bool>,
-    is_selection_end: Signal<bool>,
 }
 
 /// What a [`CalendarCellButton`] needs of its cell's [`UseCalendarCellReturn`] (all but the
@@ -829,6 +829,8 @@ struct CellButtonParts {
     is_outside_visible_range: Signal<bool>,
     is_invalid: Signal<bool>,
     is_today: Signal<bool>,
+    is_selection_start: Signal<bool>,
+    is_selection_end: Signal<bool>,
     formatted_date: Signal<String>,
 }
 
@@ -872,23 +874,6 @@ pub fn CalendarCell(
         date,
         element: CapturedElement::new(),
     });
-    let range = state.range();
-    let is_selection_start = Signal::derive(move || {
-        range.is_some_and(|range| {
-            range
-                .highlighted_range
-                .get()
-                .is_some_and(|highlighted| highlighted.start == date.get())
-        })
-    });
-    let is_selection_end = Signal::derive(move || {
-        range.is_some_and(|range| {
-            range
-                .highlighted_range
-                .get()
-                .is_some_and(|highlighted| highlighted.end == date.get())
-        })
-    });
     let UseCalendarCellReturn {
         cell: cell_part,
         button,
@@ -900,6 +885,8 @@ pub fn CalendarCell(
         is_outside_visible_range,
         is_invalid,
         is_today,
+        is_selection_start,
+        is_selection_end,
         formatted_date,
     } = cell;
     let cell_context = CellContext {
@@ -913,11 +900,11 @@ pub fn CalendarCell(
             is_outside_visible_range,
             is_invalid,
             is_today,
+            is_selection_start,
+            is_selection_end,
             formatted_date,
         },
         is_outside_month,
-        is_selection_start,
-        is_selection_end,
     };
     Some(view! {
         <td {..cell_part.attrs()} class=classes style=styles>
@@ -957,6 +944,8 @@ pub fn CalendarCellButton(
         is_outside_visible_range,
         is_invalid,
         is_today,
+        is_selection_start,
+        is_selection_end,
         formatted_date,
     } = context.button;
     // One button per cell (`Part`: a second one renders nothing).
@@ -982,10 +971,11 @@ pub fn CalendarCellButton(
                 ("data-hovered", hover.is_hovered),
                 ("data-pressed", is_pressed),
             ])}
+            // From one memo of the cell: they change together.
             {..data_flags([
                 ("data-selected", is_selected),
-                ("data-selection-start", context.is_selection_start),
-                ("data-selection-end", context.is_selection_end),
+                ("data-selection-start", is_selection_start),
+                ("data-selection-end", is_selection_end),
             ])}
             {..data_flags([
                 ("data-disabled", is_disabled),

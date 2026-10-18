@@ -32,6 +32,20 @@ starts with a failing test.
   - Remove `examples/book-ssr/style/leptonic/` (55 tracked files: an old copy of leptonic's styles incl. the removed
     components and themes, referenced nowhere)?
   - Route splitting with `#[lazy_route]` + `--split` ("Build performance").
+  - Performance changes that alter behavior (2026-10-18 sweep; each with its exact difference):
+    - Collections notify removed keys after render (an `Effect`) instead of synchronously (`node_triggers`,
+      `selection_manager.rs`): rows and cells being removed don't rerun their readers first (emptying a Table of 1,000
+      rows ~119k → ~30k, collapsing all tree rows ~64k → ~40k). Difference: a view that outlives its removed node
+      (rendered elsewhere, not unmounted with it) sees the removal one turn later.
+    - Disclosure panel effect without `is_disabled` (`use_disclosure.rs`, as react-aria's deps include it): disabling
+      a group of 1,000 −1,000 effect runs. Difference: disabling no longer cancels a find-in-page `beforematch`
+      restore pending in the same frame.
+    - NumberField parsing tries only numbering systems whose digits occur in the text (`parser_for`): a rejected
+      character 438 → ~20 allocations. Difference: a text without digits that only another system's literals accept
+      is rejected.
+  - Performance trade-offs (behavior identical): SliderMarks subscribing per mark (more at mount, less per drag move);
+    a public `use_realtime_validation` for checkbox group items (a new concept; saves the rest of their validation
+    state); returning `Memo` instead of `Signal` through the item hooks' returns (saves an arena item per value).
   - `live_announcer`: `Assertiveness::default()` is `Polite`, react-aria's `announce` defaults to assertive (recorded
     as a deviation): keep or change?
 
@@ -45,9 +59,8 @@ atoms, book heads-up), then cross-cutting work.
 
 - [ ] Flaky perf counts (full suite, 2026-10-17; fixed: `virtual_list::resize_grown`, the DnD TalkBack click):
   `perf_tests::atoms::virtualizer::keyboard_navigation_large` ±1 allocation between its `home`/`end` steps (seen
-  twice); `perf_tests::hooks::use_exit_animation::mount_and_unmount` 1 style recalc more (timing of the animation);
-  `test_dnd_collection::screen_reader_basic_drag_and_drop` failed once. Reproduce with CPU throttling (`lessons.md`)
-  and fix the cause.
+  twice); `perf_tests::hooks::use_exit_animation::mount_and_unmount` 1 style recalc more (timing of the animation).
+  Reproduce with CPU throttling (`lessons.md`) and fix the cause.
 - [ ] Flaky under load: `overlay_position` cases (`placed_above`, `reopened_with_arrow`: no `[data-placement=...]`
   within 10 s), pass alone; `placed_above` waits in steps (`aria-expanded`, presence, placement) so the next failure
   shows which. Not seen in the last two full runs.
@@ -105,21 +118,36 @@ allocated bytes (`documentation/conventions.md`).
   inputs) is applied to `UseSeparatorInput` only: hook inputs that the atoms fill from their `Signal` props save
   nothing until the atom props change too (`FromReactiveClosure`), and the hook-to-hook inputs (`UsePressInput`,
   `UseHoverInput`, ...) would need the interaction stack to take `MaybeSignal` throughout (`when_true`, `either`).
-- [ ] Mount costs per item (allocations): CheckboxField ~1,140 (~62 KB), RadioButton ~800, Button-based atoms 450-610
-  (every Button runs `use_context_menu`, `use_keyboard`, `use_focusable`, `use_focus_ring`, `use_hover`, `use_press`;
-  `use_press` alone 144), ToggleButtonGroup ~600 per button, Tag ~1,370 (twice a ListBox option, ~720), Table row
-  ~4,500 (Grid row with 3 cells ~2,100, GridList item ~800), calendar cell ~950 (25 render effects; a 12-month
-  Calendar ~400k), color swatch ~1,500, menu item ~890, disclosure in a group ~1,060, toast ~800, tab ~730,
-  NumberField 2,840 (TextField 1,142). Look for what each item allocates that could be shared or lazy.
-- [ ] Specific costs: toggling the Table's selection column re-renders every cell (4.1M allocations, 85k render
-  effects at 1,000 rows: cell keys and indexes shift); Select and ComboBox popovers render every option (opening with
+- [ ] Mount costs per item (allocations; collections and calendar re-measured 2026-10-18, the rest from 2026-10-16):
+  CheckboxField ~1,140 (~62 KB; in a group of 1,000 ~700), RadioButton ~500, Button-based atoms 450-610 (every Button
+  runs `use_context_menu`, `use_keyboard`, `use_focusable`, `use_focus_ring`, `use_hover`, `use_press`; `use_press`
+  alone 144), ToggleButtonGroup ~600 per button, Tag ~820, ListBox option ~385, Table row (3 cells + checkbox)
+  ~2,380, Grid row with 3 cells ~1,190, GridList item ~505, menu item ~505, a 12-month Calendar ~193k, color swatch
+  ~1,500, disclosure in a group ~640, toast ~800, tab ~730, NumberField 2,840 (TextField 1,142). Look for what each
+  item allocates that could be shared or lazy.
+- [ ] Per-item work left after the 2026-10-17/18 passes (`history.md`):
+  - Per-read node tracking: `use_selectable_item`'s flags memo calls `nodes.track` three times per run
+    (`is_disabled`, `is_link`, `can_select_item`), so do `use_option`'s link derive and `use_node_aria_label`:
+    one node subscription per item (as `SelectionSubscription` for selection and focus).
+  - `KeyedTriggers::track` under the attribute probe (`signal_attr`/`data_flags`) leaves its subscription until
+    unmount: skip counting and cleanup while probing.
+  - `on_action`: the per-item `Signal::stored` (2 allocations) stays until the collection data hold one signal
+    (`ListBoxData`, `GridData`) or decision 5 (`MaybeSignal`).
+  - `use_grid_selection_checkbox`: one "Select" label derive per checkbox; `use_highlight_selection_description`
+    and `use_grid_selection_announcement` build `GridStrings` memos of their own.
+  - The selection checkbox builds the label's `use_press` though the table renders only the input (~80 per row):
+    only avoidable by building hooks lazily at mount (no such pattern yet).
+  - `Signal::stored` defaults in hook-to-hook inputs (`UsePressInput`, `UseFocusRingInput`, `LongPress`: ~8-14
+    allocations per item) wait for decision 5 (`MaybeSignal` inputs, above).
+  - Calendar cells' one flags memo reruns every reader on disabling (render effects 120 → 330 per toggle); a split
+    costs +9 per cell at mount and +1 memo run per cell per page: kept (mount first).
+- [ ] Specific costs: Select and ComboBox popovers render every option (opening with
   1,000: 720-738k; not virtualized); type-ahead without a match ~18 allocations per item (collation); a rejected
   character in a NumberField 440 allocations and 105 reallocations (`beforeinput` → `is_valid_partial_number`); every
   keystroke copies a text value about five times (50 KB for 10,000 characters); opening a DatePicker ~42k (mounting
   the calendar); disabling a Link rebuilds it (`<a>`/`<span>`, the router's `<A>`); the first key press on a page ~40
   allocations once (probably platform detection, `utils/platform.rs`); opening a 10-item menu with Enter 10,669
-  allocations and 5 layouts; SliderMarks re-render every mark on a range or step change (keyed by value); changing a
-  collection re-lays out a virtualized list (appending 10 to 10,000: ~40k).
+  allocations and 5 layouts; SliderMarks re-render every mark on a range or step change (keyed by value).
 - [ ] `VirtualList` (budgets `leptonic/tests/budgets/atoms/virtual_list.json`): mounting 20,000 lines 67,418
   allocations (27.4 MB allocated, 15.6 MB held: ~780 bytes per line though ~20 rows render), 8 layouts and style
   recalculations over 4 frames; appending 50 lines while showing the start ~21,830 allocations (8.9 MB, 1 layout),
@@ -566,6 +594,21 @@ leptonic piece to use: `examples/book-ssr/STYLE_GUIDE.md`. Library gaps the book
 above and, while the book waits, under "Waiting on the library".
 
 ### Next
+- [ ] Library API changes of the 2026-10-17/18 performance passes (`history.md`) to document: table cells keyed
+  `Key::cell(&row, column_key)` (`hooks/table.rs` ~:189, the snippets ~:585 and ~:681, the `key` ApiRow ~:623, "cell
+  0 holds a checkbox" ~:674 → `TableCollection::SELECTION_COLUMN`), table columns added before rows, `Key::as_cell`;
+  `TableCell` children `Children` (no longer re-rendered when its column moves); `GridData::{direction, strings}`,
+  `TableData::strings`, `UseGridSelectionCheckboxInput::strings` (`hooks/grid.rs` ~:261);
+  `UseSelectableItemInput::on_action: Signal<Option<Callback<Key>>>` (called with the item's key;
+  `groups/collection_state.rs` ~:750); `UseCalendarCellReturn::is_selection_start`/`is_selection_end` (and the
+  `calendar_range.rs` demo's `DayCell`, which computes them from `highlighted_range`); `sharing_one_effect` (public:
+  composing several hooks for one element); `""` texts are free in the collection builders. From the 2026-10-18
+  sweep: `UseGridSelectionCheckboxInput::is_selected` and `UseTableSelectionCheckboxInput::is_selected` (the row's),
+  `UseGridListItemReturn::has_child_rows`, `TagGroupData::remove_description`,
+  `DroppableCollectionData::drop_description`, `UseFocusableInput::mark`, `UseDisclosurePanelProps::on_beforematch`,
+  `FormValidationState::from_parts(.., display: Option<..>, ..)`, `register_native_validity_reader(impl Fn())` (only
+  Native commits read the readers; `hooks/form.rs` example updated), `merge_validation(impl IntoIterator<Item =
+  &ValidationResult>)`.
 - [ ] Once the user decides on `MaybeSignal` (atom reference props as `MaybeSignal<Option<Id>>`, texts as
   `MaybeSignal<Option<Oco>>`; library "Bugs"): document it (Hooks & Atoms "Ids", the atoms' Props tables). Until
   then the book doesn't present it.

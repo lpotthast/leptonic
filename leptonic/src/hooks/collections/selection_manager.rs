@@ -1,10 +1,13 @@
 // Upstream: react-stately/src/selection/SelectionManager.ts @ 99e6102368
 // Upstream: react-stately/src/selection/useMultipleSelectionState.ts @ 99e6102368
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{Arc, OnceLock},
+};
 
-use leptos::prelude::*;
+use leptos::{prelude::*, reactive::owner::WeakOwner};
 
-use super::{CollectionMemo, Key, NodeKind, SelectedKeys, Selection};
+use super::{CollectionMemo, Key, Node, NodeKind, SelectedKeys, Selection};
 use crate::{
     ValueBinding,
     hooks::collections::{DisabledBehavior, FocusStrategy, SelectionBehavior, SelectionMode},
@@ -18,8 +21,8 @@ use crate::{
 // ## API DIFFERENCES
 // - Hook-owned state (C4): no controlled `selectedKeys` prop; `default_selection`, the manager's
 //   mutation methods and `on_selection_change`, or `selection` bound to app state.
-// - `SelectionManager` is a `Copy` handle over signals, not a class instance recreated on every
-//   render. Queries track their signals (use them in views and derived signals); mutations don't.
+// - `SelectionManager` is a `Copy` handle (one arena slot holding the signals), not a class
+//   instance recreated on every render. Queries track their signals (use them in views and derived signals); mutations don't.
 // - `select` takes the pointer type instead of the triggering event; that's all it needs.
 // - `Selection` is an enum (`All` / `Keys`) instead of `'all' | Set<Key>`.
 //
@@ -75,8 +78,15 @@ impl Default for SelectionOptions {
 /// Created by the collection state hooks ([`use_list_state`](super::use_list_state), ...).
 /// Queries (`is_selected`, `focused_key`, ...) track their signals, so they can be used in views
 /// and derived signals. Mutations (`select`, `toggle_selection`, ...) read untracked.
+///
+/// A small handle: every item's closures capture it, so the manager's signals live in one arena
+/// slot (2 allocations per manager) instead of being copied into each closure.
 #[derive(Debug, Clone, Copy)]
-pub struct SelectionManager {
+pub struct SelectionManager(StoredValue<Manager>);
+
+/// The handles a [`SelectionManager`] stands for (each call copies them out of the arena).
+#[derive(Debug, Clone, Copy)]
+struct Manager {
     collection: CollectionMemo,
     /// Readers of single nodes (items' disabled state, links, labels), by key: notified when the
     /// node's content or its disabled key changes, not on every change of the collection
@@ -115,9 +125,301 @@ struct SelectionStateSignals {
     is_focused: RwSignal<bool>,
 }
 
+/// An item's subscription to the selection of its key ([`SelectionManager::is_selected_by`]): made
+/// on the first read that tracks the key (none while nothing reads it or nothing can be
+/// selected), under the item's owner, so it lasts until the item unmounts. Readers then track
+/// the key's trigger without a subscription per read (a map update and an `on_cleanup` on every
+/// run, `performance.md` section 3).
+pub(crate) struct SelectionSubscription {
+    /// The owner the item was created under.
+    owner: Option<WeakOwner>,
+    /// The item key subscribed to and its trigger (`None`: the owner is gone).
+    subscribed: OnceLock<Option<(Key, ArcTrigger)>>,
+}
+
+impl SelectionSubscription {
+    /// A subscription for an item created under the current owner (made on its first read).
+    pub(crate) fn new() -> Self {
+        Self {
+            owner: Owner::current().map(|owner| owner.downgrade()),
+            subscribed: OnceLock::new(),
+        }
+    }
+
+    /// Tracks the selection of `key` (an item key): through the subscription when it is the key
+    /// subscribed to, else per read.
+    fn track(&self, triggers: KeyedTriggers<Key>, key: &Key) {
+        let subscribed = self.subscribed.get_or_init(|| {
+            let owner = self.owner.as_ref().and_then(WeakOwner::upgrade)?;
+            Some((key.clone(), owner.with(|| triggers.subscribe(key.clone()))))
+        });
+        match subscribed {
+            Some((subscribed, trigger)) if subscribed == key => trigger.track(),
+            _ => triggers.track(key),
+        }
+    }
+}
+
 impl SelectionManager {
     /// Create the selection state for `collection`. The state is owned by the manager.
     pub fn new(collection: CollectionMemo, options: SelectionOptions) -> Self {
+        Self::store(&Manager::new(collection, options))
+    }
+
+    /// Stores the handles in the arena.
+    fn store(manager: &Manager) -> Self {
+        Self(StoredValue::new(*manager))
+    }
+
+    /// The manager's handles.
+    fn get(self) -> Manager {
+        self.0.get_value()
+    }
+
+    /// Subscribes the running reactive computation to changes of the node `key` (its content,
+    /// its disabled key): a reader of one node reads the collection untracked after this.
+    pub(crate) fn track_node(&self, key: &Key) {
+        self.get().nodes.track(key);
+    }
+
+    /// The same selection state, applied to another view of the collection (e.g. a filtered
+    /// one). "Select all" still refers to the full collection.
+    #[must_use]
+    pub fn with_collection(&self, collection: CollectionMemo) -> Self {
+        Self::store(&self.get().with_collection(collection))
+    }
+
+    /// A selection of its own over the same collection, sharing this manager's focus state (the
+    /// focused key, whether the collection is focused) and disabled keys: for a group of items with
+    /// a selection mode of its own, e.g. a menu section (react-aria-components'
+    /// `GroupSelectionManager`). `options.disabled_keys` and `options.disabled_behavior` are
+    /// ignored.
+    #[must_use]
+    pub fn with_own_selection(&self, options: SelectionOptions) -> Self {
+        Self::store(&self.get().with_own_selection(options))
+    }
+
+    /// This manager, for a grid in cell focus mode (see [`SelectionManager::set_focused_key`]).
+    #[must_use]
+    pub fn with_cell_focus(&self) -> Self {
+        Self::store(&Manager {
+            cell_focus: true,
+            ..self.get()
+        })
+    }
+
+    /// The collection this manager operates on.
+    pub fn collection(&self) -> CollectionMemo {
+        self.get().collection
+    }
+
+    // ---- Configuration ----
+
+    pub fn selection_mode(&self) -> SelectionMode {
+        self.get().selection_mode()
+    }
+
+    pub fn selection_behavior(&self) -> SelectionBehavior {
+        self.get().state.selection_behavior.get()
+    }
+
+    /// The selection behavior the collection is configured with (the `selection_behavior` of
+    /// its [`SelectionOptions`]). [`Self::selection_behavior`] can differ from it: a long press
+    /// switches `Replace` to `Toggle` (touch selection mode).
+    pub fn configured_selection_behavior(&self) -> SelectionBehavior {
+        self.get().state.configured_selection_behavior.get()
+    }
+
+    pub fn set_selection_behavior(&self, behavior: SelectionBehavior) {
+        self.get().state.selection_behavior.set(behavior);
+    }
+
+    pub fn disallow_empty_selection(&self) -> bool {
+        self.get().disallow_empty_selection()
+    }
+
+    pub fn disabled_behavior(&self) -> DisabledBehavior {
+        self.get().state.disabled_behavior
+    }
+
+    // ---- Focus ----
+
+    /// Whether focus is within the collection.
+    pub fn is_focused(&self) -> bool {
+        self.get().state.is_focused.get()
+    }
+
+    pub fn set_focused(&self, focused: bool) {
+        let is_focused = self.get().state.is_focused;
+        // Like `set_focused_key`: an equal value notifies no one.
+        if is_focused.get_untracked() != focused {
+            is_focused.set(focused);
+        }
+    }
+
+    /// The key of the focused item, if any.
+    pub fn focused_key(&self) -> Option<Key> {
+        self.get().state.focused_key.get()
+    }
+
+    /// For items with focusable children (grid rows): whether their first or last child gets
+    /// focus.
+    pub fn child_focus_strategy(&self) -> Option<FocusStrategy> {
+        self.get().state.child_focus_strategy.get()
+    }
+
+    /// Focus `key` (`None`: no item). Keys that aren't part of the collection are ignored.
+    pub fn set_focused_key(&self, key: Option<Key>, child_focus_strategy: Option<FocusStrategy>) {
+        self.get().set_focused_key(key, child_focus_strategy);
+    }
+
+    /// Whether `key` is the focused item. Tracks only this key's focus: a reader re-runs when
+    /// `key` gains or loses focus, not when focus moves between other items.
+    pub fn is_focused_key(&self, key: &Key) -> bool {
+        let manager = self.get();
+        manager.state.focused_subscribers.track(key);
+        manager.is_focused_key_untracked(key)
+    }
+
+    /// Subscribes an item to the focus of its `key` (once per item, until it unmounts): its
+    /// readers pass the trigger to [`Self::is_focused_key_by`] instead of subscribing per read.
+    pub(crate) fn subscribe_focus(&self, key: Key) -> ArcTrigger {
+        self.get().state.focused_subscribers.subscribe(key)
+    }
+
+    /// [`Self::is_focused_key`] for an item subscribed to the focus of `key`
+    /// ([`Self::subscribe_focus`]): tracks the subscription's `trigger`.
+    pub(crate) fn is_focused_key_by(&self, key: &Key, trigger: &ArcTrigger) -> bool {
+        trigger.track();
+        self.get().is_focused_key_untracked(key)
+    }
+
+    /// Whether any item is focused. Tracks only that, not which item.
+    pub fn has_focused_key(&self) -> bool {
+        self.get().state.has_focused_key.get()
+    }
+
+    // ---- Selection queries ----
+
+    /// The selection as stored: `All` stays `All`.
+    pub fn raw_selection(&self) -> Selection {
+        self.get().state.selection.get()
+    }
+
+    /// The selected keys, with `All` resolved to every selectable item.
+    pub fn selected_keys(&self) -> HashSet<Key> {
+        self.get().selected_keys()
+    }
+
+    /// Whether `key` (or, for a node that isn't an item, the item it belongs to) is selected.
+    /// Tracks only this key's selection: a reader re-runs when the key is selected or
+    /// deselected, not on every selection change.
+    pub fn is_selected(&self, key: &Key) -> bool {
+        self.get().is_selected(key, None)
+    }
+
+    /// [`Self::is_selected`] for the item `key` whose readers share `subscription` (one per item).
+    pub(crate) fn is_selected_by(&self, key: &Key, subscription: &SelectionSubscription) -> bool {
+        self.get().is_selected(key, Some(subscription))
+    }
+
+    /// Whether nothing is selected. Tracks only that, not which keys are selected.
+    pub fn is_empty(&self) -> bool {
+        self.get().is_empty()
+    }
+
+    /// Whether every selectable item is selected.
+    pub fn is_select_all(&self) -> bool {
+        self.get().is_select_all()
+    }
+
+    /// The selected key that comes first in the collection.
+    pub fn first_selected_key(&self) -> Option<Key> {
+        self.get().selected_by_order(std::cmp::Ordering::Less)
+    }
+
+    /// The selected key that comes last in the collection.
+    pub fn last_selected_key(&self) -> Option<Key> {
+        self.get().selected_by_order(std::cmp::Ordering::Greater)
+    }
+
+    /// Whether `key` can be selected: it exists, is an item, and isn't disabled.
+    pub fn can_select_item(&self, key: &Key) -> bool {
+        self.get().can_select_item(key)
+    }
+
+    /// Whether `key` is disabled (in `disabled_keys`, or the item itself), whatever the
+    /// disabled behavior.
+    pub fn is_item_disabled(&self, key: &Key) -> bool {
+        self.get().is_item_disabled(key)
+    }
+
+    /// Whether `key` is disabled for interaction: with `DisabledBehavior::All`, disabled items
+    /// can't be focused or used. With `DisabledBehavior::Selection`, they only can't be
+    /// selected, so this is `false`. An item's own `disabled_behavior` overrides the
+    /// collection's.
+    pub fn is_disabled(&self, key: &Key) -> bool {
+        self.get().is_disabled(key)
+    }
+
+    /// Whether `key` is an item that navigates somewhere.
+    pub fn is_link(&self, key: &Key) -> bool {
+        self.get().is_link(key)
+    }
+
+    // ---- Selection mutations ----
+
+    /// Select `key` the way a press does: depending on the selection mode and behavior, toggle
+    /// it or replace the selection with it. Touch and screen reader presses always toggle in
+    /// multiple selection.
+    pub fn select(&self, key: &Key, pointer_type: Option<&PointerType>) {
+        self.get().select(key, pointer_type);
+    }
+
+    /// Add `key` to the selection, or remove it.
+    pub fn toggle_selection(&self, key: &Key) {
+        self.get().toggle_selection(key);
+    }
+
+    /// Select only `key` (or nothing, if it can't be selected).
+    pub fn replace_selection(&self, key: &Key) {
+        self.get().replace_selection(key);
+    }
+
+    /// Extend the selection from the anchor to `to` (Shift+click, Shift+Arrow): the previously
+    /// extended range is replaced by the range between the anchor and `to`.
+    pub fn extend_selection(&self, to: &Key) {
+        self.get().extend_selection(to);
+    }
+
+    /// Replace the selection with `keys` (in single selection mode: the first of them).
+    pub fn set_selected_keys(&self, keys: impl IntoIterator<Item = Key>) {
+        self.get().set_selected_keys(keys);
+    }
+
+    /// Select every item (multiple selection only).
+    pub fn select_all(&self) {
+        self.get().select_all();
+    }
+
+    /// Deselect everything (unless empty selections are disallowed).
+    pub fn clear_selection(&self) {
+        self.get().clear_selection();
+    }
+
+    /// Select all, or clear the selection if everything is selected.
+    pub fn toggle_select_all(&self) {
+        let manager = self.get();
+        if untrack(|| manager.is_select_all()) {
+            manager.clear_selection();
+        } else {
+            manager.select_all();
+        }
+    }
+}
+
+impl Manager {
+    fn new(collection: CollectionMemo, options: SelectionOptions) -> Self {
         let SelectionOptions {
             selection_mode,
             selection_behavior,
@@ -188,16 +490,7 @@ impl SelectionManager {
         }
     }
 
-    /// Subscribes the running reactive computation to changes of the node `key` (its content,
-    /// its disabled key): a reader of one node reads the collection untracked after this.
-    pub(crate) fn track_node(&self, key: &Key) {
-        self.nodes.track(key);
-    }
-
-    /// The same selection state, applied to another view of the collection (e.g. a filtered
-    /// one). "Select all" still refers to the full collection.
-    #[must_use]
-    pub fn with_collection(&self, collection: CollectionMemo) -> Self {
+    fn with_collection(&self, collection: CollectionMemo) -> Self {
         Self {
             collection,
             nodes: node_triggers(collection, self.state.disabled_keys),
@@ -207,13 +500,7 @@ impl SelectionManager {
         }
     }
 
-    /// A selection of its own over the same collection, sharing this manager's focus state (the
-    /// focused key, whether the collection is focused) and disabled keys: for a group of items with
-    /// a selection mode of its own, e.g. a menu section (react-aria-components'
-    /// `GroupSelectionManager`). `options.disabled_keys` and `options.disabled_behavior` are
-    /// ignored.
-    #[must_use]
-    pub fn with_own_selection(&self, options: SelectionOptions) -> Self {
+    fn with_own_selection(&self, options: SelectionOptions) -> Self {
         let mut group = Self::new(
             self.collection,
             SelectionOptions {
@@ -232,76 +519,15 @@ impl SelectionManager {
         group
     }
 
-    /// This manager, for a grid in cell focus mode (see [`SelectionManager::set_focused_key`]).
-    #[must_use]
-    pub fn with_cell_focus(&self) -> Self {
-        Self {
-            cell_focus: true,
-            ..*self
-        }
-    }
-
-    /// The collection this manager operates on.
-    pub fn collection(&self) -> CollectionMemo {
-        self.collection
-    }
-
-    // ---- Configuration ----
-
-    pub fn selection_mode(&self) -> SelectionMode {
+    fn selection_mode(&self) -> SelectionMode {
         self.state.selection_mode.get()
     }
 
-    pub fn selection_behavior(&self) -> SelectionBehavior {
-        self.state.selection_behavior.get()
-    }
-
-    /// The selection behavior the collection is configured with (the `selection_behavior` of
-    /// its [`SelectionOptions`]). [`Self::selection_behavior`] can differ from it: a long press
-    /// switches `Replace` to `Toggle` (touch selection mode).
-    pub fn configured_selection_behavior(&self) -> SelectionBehavior {
-        self.state.configured_selection_behavior.get()
-    }
-
-    pub fn set_selection_behavior(&self, behavior: SelectionBehavior) {
-        self.state.selection_behavior.set(behavior);
-    }
-
-    pub fn disallow_empty_selection(&self) -> bool {
+    fn disallow_empty_selection(&self) -> bool {
         self.state.disallow_empty_selection.get()
     }
 
-    pub fn disabled_behavior(&self) -> DisabledBehavior {
-        self.state.disabled_behavior
-    }
-
-    // ---- Focus ----
-
-    /// Whether focus is within the collection.
-    pub fn is_focused(&self) -> bool {
-        self.state.is_focused.get()
-    }
-
-    pub fn set_focused(&self, focused: bool) {
-        // Like `set_focused_key`: an equal value notifies no one.
-        if self.state.is_focused.get_untracked() != focused {
-            self.state.is_focused.set(focused);
-        }
-    }
-
-    /// The key of the focused item, if any.
-    pub fn focused_key(&self) -> Option<Key> {
-        self.state.focused_key.get()
-    }
-
-    /// For items with focusable children (grid rows): whether their first or last child gets
-    /// focus.
-    pub fn child_focus_strategy(&self) -> Option<FocusStrategy> {
-        self.state.child_focus_strategy.get()
-    }
-
-    /// Focus `key` (`None`: no item). Keys that aren't part of the collection are ignored.
-    pub fn set_focused_key(&self, key: Option<Key>, child_focus_strategy: Option<FocusStrategy>) {
+    fn set_focused_key(&self, key: Option<Key>, child_focus_strategy: Option<FocusStrategy>) {
         // In cell focus mode, a row's first (or, with `FocusStrategy::Last`, last) cell gets
         // focus instead of the row.
         let key = match key {
@@ -343,46 +569,31 @@ impl SelectionManager {
         }
     }
 
-    /// Whether `key` is the focused item. Tracks only this key's focus: a reader re-runs when
-    /// `key` gains or loses focus, not when focus moves between other items.
-    pub fn is_focused_key(&self, key: &Key) -> bool {
-        self.state.focused_subscribers.track(key);
+    fn is_focused_key_untracked(&self, key: &Key) -> bool {
         self.state
             .focused_key
             .with_untracked(|focused| focused.as_ref() == Some(key))
     }
 
-    /// Whether any item is focused. Tracks only that, not which item.
-    pub fn has_focused_key(&self) -> bool {
-        self.state.has_focused_key.get()
-    }
-
-    // ---- Selection queries ----
-
-    /// The selection as stored: `All` stays `All`.
-    pub fn raw_selection(&self) -> Selection {
-        self.state.selection.get()
-    }
-
-    /// The selected keys, with `All` resolved to every selectable item.
-    pub fn selected_keys(&self) -> HashSet<Key> {
+    fn selected_keys(&self) -> HashSet<Key> {
         match self.state.selection.get() {
             Selection::All => self.select_all_keys().into_iter().collect(),
             Selection::Keys(keys) => keys.into_iter().collect(),
         }
     }
 
-    /// Whether `key` (or, for a node that isn't an item, the item it belongs to) is selected.
-    /// Tracks only this key's selection: a reader re-runs when the key is selected or
-    /// deselected, not on every selection change.
-    pub fn is_selected(&self, key: &Key) -> bool {
+    /// `subscription`: the item's own (else the reader subscribes per read).
+    fn is_selected(&self, key: &Key, subscription: Option<&SelectionSubscription>) -> bool {
         if self.selection_mode() == SelectionMode::None {
             return false;
         }
         let Some(key) = self.item_key(key) else {
             return false;
         };
-        self.state.selected_subscribers.track(&key);
+        match subscription {
+            Some(subscription) => subscription.track(self.state.selected_subscribers, &key),
+            None => self.state.selected_subscribers.track(&key),
+        }
         let all = match &*self.state.selection.read_untracked() {
             Selection::All => true,
             Selection::Keys(keys) => return keys.contains(&key),
@@ -390,28 +601,16 @@ impl SelectionManager {
         all && self.can_select_item(&key)
     }
 
-    /// Whether nothing is selected. Tracks only that, not which keys are selected.
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.state.is_empty.get()
     }
 
-    /// Whether every selectable item is selected.
-    pub fn is_select_all(&self) -> bool {
+    fn is_select_all(&self) -> bool {
         match &*self.state.selection.read() {
             Selection::All => true,
             Selection::Keys(keys) if keys.is_empty() => false,
             Selection::Keys(keys) => self.select_all_keys().iter().all(|k| keys.contains(k)),
         }
-    }
-
-    /// The selected key that comes first in the collection.
-    pub fn first_selected_key(&self) -> Option<Key> {
-        self.selected_by_order(std::cmp::Ordering::Less)
-    }
-
-    /// The selected key that comes last in the collection.
-    pub fn last_selected_key(&self) -> Option<Key> {
-        self.selected_by_order(std::cmp::Ordering::Greater)
     }
 
     fn selected_by_order(&self, wanted: std::cmp::Ordering) -> Option<Key> {
@@ -430,8 +629,7 @@ impl SelectionManager {
         })
     }
 
-    /// Whether `key` can be selected: it exists, is an item, and isn't disabled.
-    pub fn can_select_item(&self, key: &Key) -> bool {
+    fn can_select_item(&self, key: &Key) -> bool {
         self.can_select_item_in(key, self.collection)
     }
 
@@ -455,9 +653,7 @@ impl SelectionManager {
         }
     }
 
-    /// Whether `key` is disabled (in `disabled_keys`, or the item itself), whatever the
-    /// disabled behavior.
-    pub fn is_item_disabled(&self, key: &Key) -> bool {
+    fn is_item_disabled(&self, key: &Key) -> bool {
         self.nodes.track(key);
         untrack(|| {
             self.state.disabled_keys.with(|keys| keys.contains(key))
@@ -467,11 +663,7 @@ impl SelectionManager {
         })
     }
 
-    /// Whether `key` is disabled for interaction: with `DisabledBehavior::All`, disabled items
-    /// can't be focused or used. With `DisabledBehavior::Selection`, they only can't be
-    /// selected, so this is `false`. An item's own `disabled_behavior` overrides the
-    /// collection's.
-    pub fn is_disabled(&self, key: &Key) -> bool {
+    fn is_disabled(&self, key: &Key) -> bool {
         if self.state.disabled_behavior != DisabledBehavior::All {
             return false;
         }
@@ -490,23 +682,17 @@ impl SelectionManager {
             && item_behavior != Some(DisabledBehavior::Selection)
     }
 
-    /// Whether `key` is an item that navigates somewhere.
-    pub fn is_link(&self, key: &Key) -> bool {
+    fn is_link(&self, key: &Key) -> bool {
         self.nodes.track(key);
         self.collection
             .with_untracked(|c| c.get(key).is_some_and(|node| node.link.is_some()))
     }
 
-    // ---- Selection mutations ----
-
-    /// Select `key` the way a press does: depending on the selection mode and behavior, toggle
-    /// it or replace the selection with it. Touch and screen reader presses always toggle in
-    /// multiple selection.
-    pub fn select(&self, key: &Key, pointer_type: Option<&PointerType>) {
+    fn select(&self, key: &Key, pointer_type: Option<&PointerType>) {
         match self.state.selection_mode.get_untracked() {
             SelectionMode::None => {}
             SelectionMode::Single => {
-                if untrack(|| self.is_selected(key))
+                if untrack(|| self.is_selected(key, None))
                     && !self.state.disallow_empty_selection.get_untracked()
                 {
                     self.toggle_selection(key);
@@ -530,14 +716,13 @@ impl SelectionManager {
         }
     }
 
-    /// Add `key` to the selection, or remove it.
-    pub fn toggle_selection(&self, key: &Key) {
+    fn toggle_selection(&self, key: &Key) {
         untrack(|| {
             let mode = self.selection_mode();
             if mode == SelectionMode::None {
                 return;
             }
-            if mode == SelectionMode::Single && !self.is_selected(key) {
+            if mode == SelectionMode::Single && !self.is_selected(key, None) {
                 self.replace_selection(key);
                 return;
             }
@@ -561,8 +746,7 @@ impl SelectionManager {
         });
     }
 
-    /// Select only `key` (or nothing, if it can't be selected).
-    pub fn replace_selection(&self, key: &Key) {
+    fn replace_selection(&self, key: &Key) {
         untrack(|| {
             if self.selection_mode() == SelectionMode::None {
                 return;
@@ -581,9 +765,7 @@ impl SelectionManager {
         });
     }
 
-    /// Extend the selection from the anchor to `to` (Shift+click, Shift+Arrow): the previously
-    /// extended range is replaced by the range between the anchor and `to`.
-    pub fn extend_selection(&self, to: &Key) {
+    fn extend_selection(&self, to: &Key) {
         untrack(|| match self.selection_mode() {
             SelectionMode::None => {}
             SelectionMode::Single => self.replace_selection(to),
@@ -615,8 +797,7 @@ impl SelectionManager {
         });
     }
 
-    /// Replace the selection with `keys` (in single selection mode: the first of them).
-    pub fn set_selected_keys(&self, keys: impl IntoIterator<Item = Key>) {
+    fn set_selected_keys(&self, keys: impl IntoIterator<Item = Key>) {
         untrack(|| {
             let mode = self.selection_mode();
             if mode == SelectionMode::None {
@@ -635,8 +816,7 @@ impl SelectionManager {
         });
     }
 
-    /// Select every item (multiple selection only).
-    pub fn select_all(&self) {
+    fn select_all(&self) {
         untrack(|| {
             if !self.is_select_all() && self.selection_mode() == SelectionMode::Multiple {
                 self.set_selection(Selection::All);
@@ -644,25 +824,13 @@ impl SelectionManager {
         });
     }
 
-    /// Deselect everything (unless empty selections are disallowed).
-    pub fn clear_selection(&self) {
+    fn clear_selection(&self) {
         untrack(|| {
             if !self.disallow_empty_selection() && !self.is_empty() {
                 self.set_selection(Selection::default());
             }
         });
     }
-
-    /// Select all, or clear the selection if everything is selected.
-    pub fn toggle_select_all(&self) {
-        if untrack(|| self.is_select_all()) {
-            self.clear_selection();
-        } else {
-            self.select_all();
-        }
-    }
-
-    // ---- Internals ----
 
     fn set_selection(&self, selection: Selection) {
         let unchanged = self
@@ -710,9 +878,10 @@ impl SelectionManager {
 }
 
 /// The triggers of the nodes of `collection`: a new collection notifies the keys whose node was
-/// added, removed or changed (`Node::same_content`; positions don't count), and a change of
-/// `disabled_keys` the keys added or removed. One diff per change instead of every item reading
-/// the whole collection.
+/// added, removed or changed (`Node::same_content`; positions don't count), nested nodes
+/// included, and a change of `disabled_keys` the keys added or removed. A header added, removed
+/// or changed also notifies its section (the section's heading is its header child). One diff per
+/// change instead of every item reading the whole collection.
 fn node_triggers(
     collection: CollectionMemo,
     disabled_keys: Signal<HashSet<Key>>,
@@ -728,20 +897,33 @@ fn node_triggers(
         if Arc::ptr_eq(&previous, &current) {
             return;
         }
-        let changed: Vec<Key> = current
-            .all_nodes()
-            .filter(|node| {
-                previous
-                    .get(&node.key)
-                    .is_none_or(|before| !before.same_content(node))
-            })
-            .chain(
-                previous
-                    .iter()
-                    .filter(|node| !current.contains_key(&node.key)),
-            )
-            .map(|node| node.key.clone())
-            .collect();
+        let mut changed: Vec<Key> = Vec::new();
+        let mut note = |node: &Node| {
+            changed.push(node.key.clone());
+            if node.kind == NodeKind::Header
+                && let Some(section) = &node.parent_key
+            {
+                changed.push(section.clone());
+            }
+        };
+        for node in current.all_nodes() {
+            match previous.get(&node.key) {
+                Some(before) if before.same_content(node) => {}
+                Some(before) => {
+                    // A header moved to another section: the old one loses its heading.
+                    if before.kind == NodeKind::Header && before.parent_key != node.parent_key {
+                        note(before);
+                    }
+                    note(node);
+                }
+                None => note(node),
+            }
+        }
+        for node in previous.all_nodes() {
+            if !current.contains_key(&node.key) {
+                note(node);
+            }
+        }
         nodes.notify(&changed);
     });
     if !crate::utils::probe::is_constant(disabled_keys) {
@@ -851,6 +1033,55 @@ mod tests {
 
     fn k(s: &str) -> Key {
         Key::from(s)
+    }
+
+    #[test]
+    fn node_readers_follow_removed_nested_nodes_and_section_headers() {
+        crate::testing::with_owner(|| {
+            let header = RwSignal::new(Some("Pets"));
+            let with_cat = RwSignal::new(true);
+            let collection: CollectionMemo = Memo::new(move |_| {
+                let (header, with_cat) = (header.get(), with_cat.get());
+                Arc::new(Collection::build(|b| {
+                    b.section("pets", |s| {
+                        if let Some(header) = header {
+                            s.header("pets-header", header);
+                        }
+                        if with_cat {
+                            let _ = s.item("cat", "Cat");
+                        }
+                        let _ = s.item("dog", "Dog");
+                    });
+                }))
+            });
+            let selection = SelectionManager::new(collection, SelectionOptions::default());
+            let reader = |key: &'static str| {
+                let runs = RwSignal::new(0);
+                let reader = Memo::new(move |_| {
+                    selection.track_node(&Key::from(key));
+                    runs.update_untracked(|runs| *runs += 1);
+                });
+                reader.get_untracked();
+                (reader, runs)
+            };
+            let (section, section_runs) = reader("pets");
+            let (cat, cat_runs) = reader("cat");
+            let read = || {
+                section.get_untracked();
+                cat.get_untracked();
+                (section_runs.get_untracked(), cat_runs.get_untracked())
+            };
+
+            header.set(Some("Animals"));
+            assert_that!(read()).is_equal_to((2, 1));
+            header.set(None);
+            assert_that!(read()).is_equal_to((3, 1));
+            header.set(Some("Pets"));
+            assert_that!(read()).is_equal_to((4, 1));
+            // A removed item inside the section reaches its readers, not the section's.
+            with_cat.set(false);
+            assert_that!(read()).is_equal_to((4, 2));
+        });
     }
 
     #[test]
@@ -1219,6 +1450,34 @@ mod tests {
             assert_that!(m.is_focused_key(&k("banana"))).is_true();
             m.set_focused_key(None, None);
             assert_that!(m.focused_key()).is_none();
+        });
+    }
+
+    #[test]
+    fn a_manager_is_a_handle_of_one_arena_slot() {
+        // Every closure of every item captures it (the handles inline: 336 bytes).
+        assert_that!(size_of::<SelectionManager>()).is_less_or_equal_to(16);
+    }
+
+    #[test]
+    fn readers_sharing_an_item_subscription_rerun_only_for_its_key() {
+        crate::testing::with_owner(|| {
+            let m = manager(multiple());
+            let runs = RwSignal::new(0);
+            let subscription = SelectionSubscription::new();
+            let banana = Memo::new(move |_| {
+                runs.update_untracked(|runs| *runs += 1);
+                m.is_selected_by(&k("banana"), &subscription)
+            });
+            assert_that!(banana.get_untracked()).is_false();
+            m.toggle_selection(&k("apple"));
+            assert_that!(banana.get_untracked()).is_false();
+            assert_that!(runs.get_untracked()).is_equal_to(1);
+            m.toggle_selection(&k("banana"));
+            assert_that!(banana.get_untracked()).is_true();
+            m.toggle_selection(&k("banana"));
+            assert_that!(banana.get_untracked()).is_false();
+            assert_that!(runs.get_untracked()).is_equal_to(3);
         });
     }
 

@@ -297,10 +297,11 @@ pub fn use_number_field_state<T: NumberValue>(
         None => value.clamp_to(min_value.get_untracked(), max_value.get_untracked()),
     };
 
-    // The committed value: bound app state, or owned. A memo: the text below is re-formatted
-    // only when the number changes (react-aria), not when the app sets the same value again or
-    // the bounds change without moving it.
-    let (value, store_value): (Memo<Option<T>>, Callback<Option<T>>) =
+    // The committed value: bound app state, or owned. A bound value is a memo: the text below is
+    // re-formatted only when the number changes (react-aria), not when the app sets the same
+    // value again or the bounds change without moving it. An owned value changes only through
+    // `set_value`, which compares already (`performance.md` R5).
+    let (value, store_value): (Signal<Option<T>>, Callback<Option<T>>) =
         if let Some(binding) = binding {
             // Shown snapped, as react-aria snaps a controlled value (the bound state keeps what
             // the app set).
@@ -315,16 +316,13 @@ pub fn use_number_field_state<T: NumberValue>(
                 }
                 CommitBehavior::Validate => binding.value.get(),
             });
-            (value, Callback::new(move |v| binding.set(v)))
+            (value.into(), Callback::new(move |v| binding.set(v)))
         } else {
             let owned = RwSignal::new(match commit_behavior {
                 CommitBehavior::Snap => default_value.map(snap_committed),
                 CommitBehavior::Validate => default_value,
             });
-            (
-                Memo::new(move |_| owned.get()),
-                Callback::new(move |v| owned.set(v)),
-            )
+            (owned.into(), Callback::new(move |v| owned.set(v)))
         };
     let set_value = Callback::new(move |new: Option<T>| {
         if value.get_untracked() != new {
@@ -336,14 +334,28 @@ pub fn use_number_field_state<T: NumberValue>(
     });
     let default_number_value = value.get_untracked();
 
+    // Sets the text, notifying only a change (`leptos-and-dom.md`, "State Corrections"): the
+    // text mirrors the input, so an equal text needs no update.
+    let set_text = move |text: String| {
+        if input_value.with_untracked(|current| *current != text) {
+            input_value.set(text);
+        }
+    };
     input_value.set(format(value.get_untracked()));
     // The text follows the committed value (also when changed from outside), the locale and the
-    // format options (not the numbering system typed, which the text sets).
-    Effect::new(move |previous: Option<()>| {
+    // format options (not the numbering system typed, which the text sets): at once, inside the
+    // change (react-aria: while rendering), so that no view shows the old text first.
+    let is_first_run = std::sync::atomic::AtomicBool::new(true);
+    ImmediateEffect::new_scoped(move || {
+        // The inputs before the formatting memo ("Effect Read Order", `leptos-and-dom.md`). The
+        // memo is read, not only tracked: a memo first computed later, inside another reader
+        // (the parser while `number_value` holds the text), would run this effect there, and its
+        // write of the text would wait for that reader's guard forever (`leptos-and-dom.md`,
+        // "State Corrections").
         let value = value.get();
-        formatting_key.track();
-        if previous.is_some() {
-            input_value.set(format(value));
+        formatting_key.with(|_| ());
+        if !is_first_run.swap(false, std::sync::atomic::Ordering::Relaxed) {
+            set_text(format(value));
         }
     });
 
@@ -356,7 +368,7 @@ pub fn use_number_field_state<T: NumberValue>(
     let validation = use_form_validation_state(UseFormValidationStateInput {
         builtin_validation: Signal::default(),
         is_invalid,
-        value: value.into(),
+        value,
         validate,
         validation_behavior,
         names: name.into_iter().collect(),
@@ -367,12 +379,12 @@ pub fn use_number_field_state<T: NumberValue>(
         if text.is_empty() {
             set_value.run(None);
             // What the store holds (a bound value may reject the change).
-            input_value.set(format(value.get_untracked()));
+            set_text(format(value.get_untracked()));
             return;
         }
         let Some(parsed) = parse(&text) else {
             // Unparsable: back to the committed value.
-            input_value.set(format(value.get_untracked()));
+            set_text(format(value.get_untracked()));
             return;
         };
         let committed = match commit_behavior {
@@ -384,7 +396,7 @@ pub fn use_number_field_state<T: NumberValue>(
         let should_validate = value.get_untracked() != Some(committed);
         set_value.run(Some(committed));
         // What the store holds (a bound value may reject the change).
-        input_value.set(format(value.get_untracked()));
+        set_text(format(value.get_untracked()));
         if should_validate {
             validation.commit_validation();
         }
@@ -413,7 +425,7 @@ pub fn use_number_field_state<T: NumberValue>(
         set_value.run(Some(new));
         // Also when the value didn't change (the text may differ from it), and what the store
         // holds (a bound value may reject the change).
-        input_value.set(format(value.get_untracked()));
+        set_text(format(value.get_untracked()));
         validation.commit_validation();
     };
     let increment = Callback::new(move |()| {
@@ -481,11 +493,11 @@ pub fn use_number_field_state<T: NumberValue>(
         validation,
         validation_behavior,
         default_number_value,
-        value: value.into(),
+        value,
         parser,
         set_value: Callback::new(move |new: Option<T>| {
             set_value.run(new);
-            input_value.set(format(value.get_untracked()));
+            set_text(format(value.get_untracked()));
         }),
         set_input_value: Callback::new(move |text: String| input_value.set(text)),
         commit,
@@ -828,6 +840,27 @@ mod tests {
             app.set(Some(7));
             flush_effects();
             assert_that!(state.input_value.get_untracked()).is_equal_to("7".to_owned());
+        });
+    }
+
+    // React re-formats while rendering: no view sees the new value with the old text.
+    #[test]
+    fn the_text_follows_a_new_value_at_once() {
+        with_owner(|| {
+            let app = RwSignal::new(Some(5_i32));
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                value: Some(ValueBinding::from(app)),
+                ..UseNumberFieldStateInput::default()
+            });
+            app.set(Some(8));
+            assert_that!(state.input_value.get_untracked()).is_equal_to("8".to_owned());
+            // An owned value too.
+            let owned = use_number_field_state(UseNumberFieldStateInput {
+                default_value: Some(1_i32),
+                ..UseNumberFieldStateInput::default()
+            });
+            owned.set_number_value(Some(3));
+            assert_that!(owned.input_value.get_untracked()).is_equal_to("3".to_owned());
         });
     }
 

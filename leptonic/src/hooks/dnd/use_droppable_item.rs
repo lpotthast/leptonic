@@ -8,7 +8,6 @@ use super::{
     drag_manager::{self, DroppableItemOptions, use_drag_session},
     types::{DragTypes, DropOperation, DropTarget},
     use_droppable_collection::DroppableCollectionData,
-    use_virtual_drop::use_virtual_drop,
 };
 use crate::{
     CapturedElement, Id, IntoAttrs,
@@ -27,6 +26,9 @@ use crate::{
 // - `target` is a signal: a changed target re-registers the item with the drag manager.
 // - The props hide items that can't take the dragged data with `aria-hidden` themselves
 //   (react-aria computes the same `aria-hidden` per render).
+// - The drop description is the collection's (`DroppableCollectionData::drop_description`), one
+//   for all items (react-aria: each item's `useVirtualDrop`, whose `useDescription` shares one
+//   element per text).
 //
 // =============================================================================
 
@@ -95,7 +97,8 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
     } = input;
     let state = collection.state;
     let collection_element = collection.element;
-    let describedby = use_virtual_drop();
+    // The collection's one drop description (the same text for every item).
+    let describedby = collection.drop_description;
 
     // Also called by the drag manager, which may outlive this item's signals briefly.
     let operation = move |types: &DragTypes, allowed: &[DropOperation]| {
@@ -140,10 +143,11 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
     });
     let is_drop_target = Memo::new(move |_| target.with(|t| state.is_drop_target(Some(t))));
 
-    // During keyboard drags, the drop target has focus.
+    // During keyboard drags, the drop target has focus. Only the drop target reads the session:
+    // a drag starting or ending doesn't rerun every item's effect.
     Effect::new(move || {
-        if session.with(Option::is_some)
-            && is_drop_target.get()
+        if is_drop_target.get()
+            && session.with(Option::is_some)
             && let Some(el) = element.get()
             && let Some(el) = wasm_bindgen::JsCast::dyn_ref::<web_sys::HtmlElement>(&*el)
         {

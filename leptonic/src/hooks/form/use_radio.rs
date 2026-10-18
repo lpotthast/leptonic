@@ -22,14 +22,15 @@ use crate::{
     hooks::{
         collections::Key,
         focus::{
-            FocusRingTarget, FocusableContextAttr, FocusableContextAttrs, UseFocusRingInput,
-            UseFocusableInput, use_focus_ring, use_focusable,
+            FocusMark, FocusRingTarget, FocusableContextAttr, FocusableContextAttrs,
+            UseFocusRingInput, UseFocusableInput, use_focus_ring, use_focusable,
         },
         interactions::{PressEvent, PressPropagation, UsePressInput, use_press},
     },
     use_slot,
     utils::{
         probe::either,
+        reactions::sharing_one_effect,
         signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         spread::Spread,
     },
@@ -215,6 +216,13 @@ impl IntoAttrs for UseRadioInputProps {
 /// while none is, the one focused last or each) is a tab stop.
 pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
     crate::metrics::subject!();
+    // Its presses and focus ring end their state while disabled in one effect
+    // (`performance.md` R6).
+    sharing_one_effect(|| radio(input))
+}
+
+/// The body of [`use_radio`].
+fn radio(input: UseRadioInput) -> UseRadioReturn {
     let UseRadioInput {
         group,
         value,
@@ -252,14 +260,16 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
     let focusable = use_focusable(UseFocusableInput {
         is_disabled,
         auto_focus,
-        on_focus: Some(Callback::new(move |e: FocusEvent| {
-            state.set_last_focused_value(Some(focused_value.clone()));
-            if let Some(on_focus) = on_focus {
-                on_focus.run(e);
-            }
-        })),
+        on_focus,
         on_blur,
         on_focus_change,
+        // The focused radio is the group's last focused one, before the callbacks run (one
+        // `Arc`, not a `Callback` wrapping `on_focus`: `performance.md` R8).
+        mark: Some(FocusMark::new(move |is_focused| {
+            if is_focused {
+                state.set_last_focused_value(Some(focused_value.clone()));
+            }
+        })),
         // Every field named (`performance.md` R14).
         exclude_from_tab_order: Signal::stored(false),
         on_key_down: None,

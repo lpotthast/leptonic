@@ -138,6 +138,7 @@ pub use crate::{
         point::Point,
         pointer_type::PointerType,
         propagation_control::{Propagation, PropagationControl},
+        reactions::sharing_one_effect,
         scoped_context::scoped_view,
         scroll::{
             ScrollAlignment, ScrollIntoViewOpts, ScrollIntoViewportOpts, get_scroll_parent,

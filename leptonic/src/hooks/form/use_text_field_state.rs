@@ -51,9 +51,13 @@ pub fn use_text_field_state(input: UseTextFieldStateInput) -> TextFieldState {
         value,
         set_value: Callback::new(move |new: String| {
             if value.with_untracked(|v| *v != new) {
-                binding.set(new.clone());
-                if let Some(on_change) = on_change {
-                    on_change.run(new);
+                // A copy only for an `on_change` (every keystroke: `performance.md` R10).
+                match on_change {
+                    Some(on_change) => {
+                        binding.set(new.clone());
+                        on_change.run(new);
+                    }
+                    None => binding.set(new),
                 }
             }
         }),

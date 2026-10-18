@@ -129,9 +129,12 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
     // Whether the section has a heading is read once (it decides what renders); its text and
     // the section's label follow the collection.
     let heading = {
-        let (collection, key) = (list.state.collection, key.clone());
+        let (collection, selection, key) =
+            (list.state.collection, list.state.selection, key.clone());
+        // Only this section's changes (its header's included) reach it (`performance.md` R1).
         Memo::new(move |_| {
-            collection.with(|c| {
+            selection.track_node(&key);
+            collection.with_untracked(|c| {
                 c.children(&key)
                     .find(|n| n.kind == NodeKind::Header)
                     .map(|n| n.text_value.to_string())

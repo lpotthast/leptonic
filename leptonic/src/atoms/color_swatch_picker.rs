@@ -22,6 +22,7 @@ use crate::{
         default_class::with_default_class,
         i18n::use_locale,
         intl_strings::{AtomStrings, use_localized_strings},
+        probe::probe_sources,
         styles::Styles,
     },
 };
@@ -197,27 +198,35 @@ pub fn ColorSwatchPickerItem(
     let classes = with_default_class("leptonic-ColorSwatchPickerItem", classes);
     let key = color_key(color);
     if let Some(PickerContext { disabled, .. }) = use_context::<PickerContext>() {
+        // Changes the picker's disabled keys only when this item's entry changes: every change
+        // notifies the list box (`leptos-and-dom.md`, "State Corrections").
+        let set_disabled = move |key: &Key, is_disabled: bool| {
+            if disabled.with_untracked(|keys| keys.contains(key)) != is_disabled {
+                disabled.update(|keys| {
+                    if is_disabled {
+                        keys.insert(key.clone());
+                    } else {
+                        keys.remove(key);
+                    }
+                });
+            }
+        };
         // Registered while rendering (so the server renders the item disabled too), then kept in
-        // sync.
-        if is_disabled.get_untracked() {
-            disabled.update(|keys| {
-                keys.insert(key.clone());
-            });
+        // sync while the flag can change (`performance.md` R6, R15).
+        let (initially_disabled, is_reactive) = probe_sources(|| is_disabled.get());
+        set_disabled(&key, initially_disabled);
+        if is_reactive {
+            let registered = key.clone();
+            Effect::new(move |_| set_disabled(&registered, is_disabled.get()));
         }
-        let registered = key.clone();
-        Effect::new(move |_| {
-            let is_disabled = is_disabled.get();
-            disabled.update(|keys| {
-                if is_disabled {
-                    keys.insert(registered.clone());
-                } else {
-                    keys.remove(&registered);
-                }
-            });
-        });
         let unregistered = key.clone();
         on_cleanup(move || {
-            disabled.try_update(|keys| keys.remove(&unregistered));
+            if disabled
+                .try_with_untracked(|keys| keys.contains(&unregistered))
+                .unwrap_or(false)
+            {
+                disabled.try_update(|keys| keys.remove(&unregistered));
+            }
         });
     }
     view! {

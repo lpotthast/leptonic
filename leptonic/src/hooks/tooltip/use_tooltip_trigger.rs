@@ -13,6 +13,7 @@ use crate::{
         pointer_type::PointerType,
         signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
         slot_id::referenced_id,
+        stored_field::StoredField,
     },
 };
 
@@ -189,8 +190,10 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
     let is_open = state.overlay.is_open;
 
     // Track hover/focus state to coordinate show/hide.
-    let is_hovered: StoredValue<bool> = StoredValue::new(false);
-    let is_focused: StoredValue<bool> = StoredValue::new(false);
+    // One `StoredValue` for both (`performance.md` R7).
+    let interaction = StoredValue::new_local((false, false));
+    let is_hovered = StoredField::new(interaction, |s| &s.0, |s| &mut s.0);
+    let is_focused = StoredField::new(interaction, |s| &s.1, |s| &mut s.1);
 
     // handle_show: open the tooltip if hovered or focused (immediately when focused).
     let handle_show = move || {
@@ -281,27 +284,32 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
     // the trigger element.
     #[cfg(not(feature = "ssr"))]
     {
-        use leptos_use::{UseEventListenerOptions, use_document, use_event_listener_with_options};
+        use leptos_use::use_document;
+        use wasm_bindgen::JsCast;
 
-        use crate::utils::key::{KeyboardEventKey, KeyboardKey};
+        use crate::utils::{
+            event_listeners::listen,
+            key::{KeyboardEventKey, KeyboardKey},
+        };
 
         let document = use_document();
         Effect::new(move |_| {
             if is_open.get()
                 && let Some(doc) = document.as_ref()
             {
-                let _cleanup = use_event_listener_with_options(
-                    doc.clone(),
-                    ev::keydown,
-                    move |e: KeyboardEvent| {
-                        // Escape closes the tooltip only, not an enclosing overlay.
-                        if e.typed_key() == KeyboardKey::Escape {
-                            e.stop_propagation();
-                            state.close(TooltipTiming::Immediate);
-                        }
-                    },
-                    UseEventListenerOptions::default().capture(true),
-                );
+                // Removed when the tooltip closes (the effect's next run) or unmounts.
+                let listener = listen(doc.as_ref(), "keydown", true, move |e: web_sys::Event| {
+                    let Some(e) = e.dyn_ref::<KeyboardEvent>() else {
+                        return;
+                    };
+                    // Escape closes the tooltip only, not an enclosing overlay.
+                    if e.typed_key() == KeyboardKey::Escape {
+                        e.stop_propagation();
+                        state.close(TooltipTiming::Immediate);
+                    }
+                });
+                let listener = send_wrapper::SendWrapper::new(listener);
+                on_cleanup(move || drop(listener));
             }
         });
     }

@@ -24,7 +24,7 @@ use crate::{
         focus::focus_safely,
         focusability::Focusability,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
-        i18n::{WritingDirection, use_direction},
+        i18n::WritingDirection,
         key::{KeyboardEventKey, KeyboardKey, redispatch_keyboard_event},
         owner_alive::OwnerAlive,
         part::{Part, Remount},
@@ -156,6 +156,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         collection_id,
         on_cell_action,
         keyboard_navigation_behavior,
+        direction,
         ..
     } = grid;
     let focus_mode = focus_mode.unwrap_or(
@@ -166,12 +167,13 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         },
     );
     let selection = state.list.selection;
-    let direction = use_direction();
-    // The cell's span and column follow the collection (e.g. when columns change).
+    // The cell's span and column follow its node (e.g. when columns change), not every change
+    // of the collection (`performance.md` R1).
     let position = {
         let key = key.clone();
         Memo::new(move |_| {
-            state.list.collection.with(|c| {
+            selection.track_node(&key);
+            state.list.collection.with_untracked(|c| {
                 c.get(&key)
                     .map(|n| (n.col_span, n.col_index))
                     .unwrap_or_default()
@@ -240,7 +242,6 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         }
     };
 
-    let rows = state.list.collection;
     let UseSelectableItemReturn {
         item: item_props,
         is_pressed,
@@ -254,13 +255,10 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         element,
         id,
         collection_id,
-        is_disabled: Signal::derive(move || rows.with(|c| c.size() == 0)),
+        is_disabled: state.is_empty(),
         should_select_on_press_up,
         allows_different_press_origin: false,
-        on_action: Signal::stored(on_cell_action.map(|on_cell_action| {
-            let key = key.clone();
-            Callback::new(move |()| on_cell_action.run(key.clone()))
-        })),
+        on_action: Signal::stored(on_cell_action),
         link_behavior: Signal::stored(LinkBehavior::Action),
         focus: Some(FocusItem::new(focus_cell)),
         should_use_virtual_focus: false,

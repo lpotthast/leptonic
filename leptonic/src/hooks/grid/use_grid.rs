@@ -29,8 +29,9 @@ use crate::{
         aria::{AriaMultiselectable, AriaRole},
         dom_ext::EventAccessors,
         filter::{CollatorOptions, use_collator},
-        i18n::use_direction,
+        i18n::{WritingDirection, use_direction},
         id::use_id,
+        intl_strings::{GridStrings, use_localized_strings},
         part::{Part, Remount},
         shadow_dom::{get_event_target, node_contains},
         signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
@@ -101,6 +102,11 @@ pub struct GridData {
     pub on_cell_action: Option<Callback<Key>>,
     pub should_select_on_press_up: bool,
     pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// The reading direction, for all rows and cells (instead of a context lookup each).
+    pub direction: Signal<WritingDirection>,
+    /// The grid's localized messages, for all rows and cells (e.g.
+    /// `UseGridSelectionCheckboxInput::strings`).
+    pub strings: Memo<GridStrings>,
 }
 
 impl std::fmt::Debug for GridData {
@@ -321,6 +327,8 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
             on_cell_action,
             should_select_on_press_up,
             keyboard_navigation_behavior,
+            direction: use_direction(),
+            strings: use_localized_strings::<GridStrings>(),
         },
         grid: Part::stored(UseGridProps {
             id,

@@ -48,6 +48,7 @@ mod harness;
 mod pages;
 mod perf;
 mod perf_tests;
+mod timing;
 mod ui_tests;
 
 use std::{
@@ -79,7 +80,16 @@ async fn browser_tests() -> Result<(), Report> {
         .set_global();
 
     let suite = suite()?;
-    let tests = ui_tests::all(suite, parallelism()?)?;
+    let parallelism = parallelism()?;
+    let timed = timing::enabled()?;
+    // Parallel tests share the machine: their durations depend on each other.
+    if timed && parallelism.max_parallel_tests().get() != 1 {
+        return Err(rootcause::report!(
+            "BROWSER_TEST_TIMINGS=1 needs BROWSER_TEST_PARALLELISM=1 (`just browser-test-timed`)"
+        )
+        .into_dynamic());
+    }
+    let tests = ui_tests::all(suite, parallelism)?;
     let app_start = Instant::now();
     // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
     // leptonic's build script generates none.
@@ -116,7 +126,11 @@ async fn browser_tests() -> Result<(), Report> {
     // Tests run in parallel (`BROWSER_TEST_PARALLELISM=<n>`, default 8; 1: sequential), each in a
     // fresh or reset browser. They don't share app state: each loads its own page. The checks of the whole
     // run follow, sequentially (see `ui_tests::all`).
-    runner(suite)?
+    let mut runner = runner(suite)?;
+    if timed {
+        runner = runner.with_report_consumer(timing::TimingRecorder);
+    }
+    runner
         .run(app.base_url(), tests)
         .await
         .map_err(Report::into_dynamic)?;

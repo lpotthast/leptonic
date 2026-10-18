@@ -78,6 +78,7 @@ where
         auto_focus: false,
         shortcuts: None,
         allow_shortcut_repeats: false,
+        mark: None,
     })
     .target
     .into_props();

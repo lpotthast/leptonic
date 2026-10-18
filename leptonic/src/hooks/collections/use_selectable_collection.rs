@@ -598,20 +598,20 @@ pub fn use_selectable_collection(
     };
 
     // -- Auto focus (once, as soon as there are items) --
+    // Without `auto_focus`, no effect. The effect's value says whether it is still pending: once
+    // done, it returns before reading anything, so the collection's changes don't rerun it.
     let did_auto_focus = StoredValue::new(false);
-    let auto_focus = auto_focus.get_untracked();
-    let pending_auto_focus = StoredValue::new(auto_focus.is_some());
-    {
-        Effect::new(move |_| {
-            let size = selection.collection().with(|c| c.size());
-            if !pending_auto_focus.get_value() {
-                return;
+    if let Some(auto_focus) = auto_focus.get_untracked() {
+        Effect::new(move |pending: Option<bool>| {
+            if pending == Some(false) {
+                return false;
             }
+            let size = selection.collection().with(|c| c.size());
             let selected = untrack(|| selection.selected_keys());
             let mut key = match auto_focus {
-                Some(AutoFocus::First) => delegate().first_key(None, false),
-                Some(AutoFocus::Last) => delegate().last_key(None, false),
-                Some(AutoFocus::Selected) | None => None,
+                AutoFocus::First => delegate().first_key(None, false),
+                AutoFocus::Last => delegate().last_key(None, false),
+                AutoFocus::Selected => None,
             };
             // The selected item that comes first in the collection.
             if let Some(first_selectable) = untrack(|| {
@@ -639,9 +639,9 @@ pub fn use_selectable_collection(
                 focus_safely(&el);
             }
             if size > 0 {
-                pending_auto_focus.set_value(false);
                 did_auto_focus.set_value(true);
             }
+            size == 0
         });
     }
 

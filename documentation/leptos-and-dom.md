@@ -55,6 +55,10 @@ source up front rather than only in some branches. When one input is an app memo
 same upstream memo, no order helps: read the inputs through hook-local memos, so the effect isn't a direct subscriber
 of an app memo (the skip only spares direct subscribers).
 
+Render effects check their sources the same way: an attribute or a `data_flags` group reading a memo and a value
+derived from the memo's own upstream can keep a stale text (a range calendar cell's `data-selection-start` from the
+dates and `data-selected` from its flags memo, at one position after paging). Feed one group from one memo.
+
 **Reference**: `use_combobox_state`'s reconciliation effect; browser case `value_and_items_derived_from_one_signal`
 (`tests/ui_tests/test_combobox.rs`).
 
@@ -70,6 +74,27 @@ update causes with a flag (`isUpdatingSize`), which works because `flushSync` la
 Leptos those passes run later (microtasks, the next frame's resize observer callbacks), when the flag is cleared; a
 feedback loop between them (a scrollbar appearing and disappearing) then never yields to the browser and the page
 freezes. Bound such an update by its number of passes instead (`use_scroll_view`).
+
+## State Corrections
+
+A value that must follow another (a calendar's visible range realigned to a new visible duration) is corrected
+synchronously: derived, or set by an `ImmediateEffect::new_scoped` inside the cause's `set`. An `Effect` corrects it
+a turn later, after views rendered the stale state (each grid of a 12-month calendar paged once more after mounting,
+~56k allocations, and readers saw the old range meanwhile). Write the correction silently (`update_untracked`) only
+when every reader of the corrected value also reads its cause: they run once, after the correction, and views the
+cause removes don't update first (`use_calendar_state.rs`, `realign_for_duration`); otherwise notify. Find it:
+`Effect::new`/`Effect::watch` whose body only sets a signal from what it tracks.
+
+An `ImmediateEffect` runs wherever a source changes, also inside another computation: it reads memos with `get`/`with`
+(computing them in its first run), never only `track()`. A memo only tracked is first computed later by some other
+reader, and that first computation "changes" it and runs the effect there; `use_number_field_state`'s text effect then
+wrote the text while `number_value` held the text's read guard (its parser computing the formatting memo) and waited
+for it forever.
+
+Setters called on every event notify only on a change (`if s.get_untracked() != v { s.set(v) }`, as
+`SelectionManager::set_focused`): `set` always notifies, and readers no memo shields rerun per call (a calendar's
+`set_focused(true)` on every press doubled its focus effect's runs). Find it: `.set(` in state methods and handlers
+without an equality check, on signals effects read directly.
 
 ## Derived Values
 
@@ -91,6 +116,24 @@ Deferred callbacks (timeouts, animation frames, global listeners) check `utils::
 touching the owner's signals, and may hold another owner's reactive values only while that owner provably lives (the
 item registry keeps every live registration per key, removed by its own cleanup). Getters of a disposed `NodeRef`
 treat it as having no element.
+
+## Ownership and Cleanup
+
+- **Reactive storage never holds its own owner strongly**: a `StoredValue` or signal is an arena item of the owner
+  current at its creation, so an `Owner` stored in it (directly or in a struct) is a cycle. An owner that is only
+  dropped (a `<For>` row's, not cleaned up by an ancestor) is then never freed, and its effects keep running. Store
+  `owner.downgrade()` (`WeakOwner`) and upgrade it when needed (`collections/item_elements.rs`). Find it:
+  `Owner::current()` or an `Owner` field in a value put into a `StoredValue`, signal or context.
+- **Shared work created lazily runs under the shared owner**: when the first item creates the collection's focus
+  effect, it creates it under the collection's owner (kept weakly when the shared state was created), never under the
+  owner current then, the item's, which would dispose it with the item.
+- **`on_cleanup` registers on the current owner**: code that subscribes and unsubscribes per call
+  (`KeyedTriggers::track`, a listener) must run under its subscriber's owner. Under an attribute probe (`probe_sources`
+  swaps the observer, not the owner) or in a helper called from another owner, the cleanup lands on that owner, and
+  every call's subscription lingers until it goes. Subscribe once per item (`KeyedTriggers::subscribe`,
+  `SelectionSubscription`) or track inside a memo or effect. Find it: `on_cleanup` or `.track(` in closures passed to
+  `signal_attr`, `data_flags`, `when_true` or `probe_sources`, and in methods readers call per read.
+- **A registry many readers track notifies per key**, not through one global trigger (`performance.md`, R6).
 
 ## Focus Events, Untracked Reads and Callbacks in Handlers
 

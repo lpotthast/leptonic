@@ -670,6 +670,7 @@ fn button(input: UseButtonInput) -> UseButtonReturn {
         on_key_up,
         shortcuts,
         allow_shortcut_repeats: false,
+        mark: None,
     });
     let focusable_props = focusable_props.into_props();
     let context_attrs = focusable_props.context_attrs.clone();

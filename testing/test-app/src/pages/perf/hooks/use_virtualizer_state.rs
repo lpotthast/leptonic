@@ -1,6 +1,7 @@
 //! The hook `use_virtualizer_state` alone, for its performance test
 //! (`leptonic/tests/perf_tests/hooks/use_virtualizer_state.rs`): the state of a collection of
-//! [`SMALL`] or [`LARGE`] items (keys `item-0`, ...) in a `ListLayout` of rows estimated at 25px,
+//! [`SMALL`] or [`LARGE`] items (integer keys `0`, `1`, ... and no texts, which allocate nothing:
+//! the budget measures the library, not the fixture) in a `ListLayout` of rows estimated at 25px,
 //! without a scroll view: the controls ([`Control`]) call its methods. `#perf-state` shows what
 //! it lays out: `data-visible` (how many layout infos it renders) and `data-height` (the content
 //! height). Mounted at first, with [`SMALL`] items and no size (nothing visible).
@@ -45,11 +46,10 @@ fn rows_of(row_size: f64) -> ListLayoutOptions {
     }
 }
 
-/// The index of the item `key` (`item-<index>`).
+/// The index of the item `key` (its key).
 fn index_of(key: &Key) -> f64 {
-    key.to_string()
-        .trim_start_matches("item-")
-        .parse::<u32>()
+    key.as_i64()
+        .and_then(|index| u32::try_from(index).ok())
         .map_or(-1.0, f64::from)
 }
 
@@ -61,8 +61,8 @@ pub fn PagePerf() -> impl IntoView {
     let options = RwSignal::new(Some(rows_of(25.0)));
     let collection = use_list_collection(UseListCollectionInput {
         items: Signal::derive(move || (0..count.get()).collect::<Vec<usize>>()),
-        key: |i| Key::from(format!("item-{i}")),
-        text_value: |i| format!("Item {i}"),
+        key: |i| Key::from(*i),
+        text_value: |_| "",
     });
     // The mounted state, for the controls.
     let state = StoredValue::new(None::<VirtualizerState<ListLayout>>);
@@ -109,12 +109,12 @@ pub fn PagePerf() -> impl IntoView {
         }),
         Control::action("measure-first-item", move || {
             with_state(&|state| {
-                state.update_item_size(&Key::from("item-0"), Size::new(VIEW, 40.0));
+                state.update_item_size(&Key::from(0), Size::new(VIEW, 40.0));
             });
         }),
         Control::action("measure-first-item-again", move || {
             with_state(&|state| {
-                state.update_item_size(&Key::from("item-0"), Size::new(VIEW, 25.0));
+                state.update_item_size(&Key::from(0), Size::new(VIEW, 25.0));
             });
         }),
         Control::action("persist-last", move || {

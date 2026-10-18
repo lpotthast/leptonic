@@ -5,8 +5,70 @@ documents `README.md` lists; git history has the details. Most recent first.
 
 ## Library
 
+### 2026-10-18
+
+- Sweep against the patterns to avoid (`performance.md` R1-R17 and section 5, `leptos-and-dom.md`), behavior-keeping
+  fixes: per-node tracking for item labels, child rows and section headings (grid list, tree, sections, draggable
+  items); flat grid list rows without tree machinery; one description per collection or group (drop targets, tags); one
+  selection column memo per table; selection checkboxes reuse the row's `is_selected`; inline item registrations;
+  `use_radio` and the checkbox/switch/radio atoms share one reset effect (hover created by the field);
+  `use_form_validation_state` builds the native commit only for `ValidationBehavior::Native`, `use_form_validation` one
+  effect per element; checkbox group items reuse the group's validation; `use_overlay_position` one effect for its
+  listeners and observers; Tooltip, FocusScope, color swatches, disclosure (`on_beforematch`), number and text fields,
+  range calendar ends per date. Bugs found on the way: removed nested nodes (cells of a removed row, items of a removed
+  section) never notified their readers (`node_triggers` diffed only the top level); NumberField's synchronous text
+  update deadlocked on the first commit of an empty field (an `ImmediateEffect` that only `track()`ed a memo,
+  `leptos-and-dom.md`); a RadioGroup budget varied with the browser's post-scroll hover events (`testing.md`). All
+  budgets: allocations 59.52M → 56.67M (−36% since 2026-10-17), effect runs −69%, memo runs −68%. Three changes that
+  would alter behavior wait for the user (`PLAN.md`).
+- Timing runs (the user): `just browser-test-timed` runs the suite sequentially and records every passed test's duration
+  in `leptonic/tests/timings/<machine>/tests.json` (checked in, per machine: OS, CPU, logical CPUs, memory;
+  `tests/timing.rs`), compared with the previous timed run; `just browser-perf`'s scenario reports moved to the same
+  directory. First baseline on the 7950X: 21m 18s sequential. The parallel suite (8 at a time, same machine and mode):
+  3m 44.1s at 11922064 → 3m 24.0s (test bodies 28m 37s → 26m 03s; `measure` steps −13%, page loads −9%).
+- Table cells keyed by row and column key (`Key::cell(row, column)`, the selection cell by
+  `TableCollection::SELECTION_COLUMN`; react-stately's `${rowKey}${column.key}`), grid cells by position: toggling the
+  selection column no longer re-renders every cell or loses the focused cell; `TableCell` renders once and reads
+  only the columns; `use_table_cell` takes row and column from the key (`Key::as_cell`). Direction and strings per
+  table/grid (`GridData::direction`, `GridData::strings`, `TableData::strings`) instead of per row, cell or column.
+- Optimizations that keep react-aria's behavior (the user: done right away, `AGENTS.md`): `SelectionManager` a 16-byte
+  handle (was 336 bytes, copied into every item closure); items subscribe once to their selection and focus
+  (`SelectionSubscription`); `UseSelectableItemInput::on_action` takes the collection's `Callback<Key>` (no per-item
+  wrapper); range calendar ends notified per date (`UseCalendarCellReturn::is_selection_start`/`_end`);
+  `use_form_validation_state` builds no memo, effect or signal for error sources that can't report one (most fields);
+  collection texts of `""` share one empty text (`empty_text()` crate-private again); `sharing_one_effect` public, used
+  by the Grid, GridList and Table row atoms; a tag without `on_remove` has no description effect. All budgets:
+  allocations 67.45M → 59.53M (88.48M before 2026-10-17: −33%), memo runs → 0.73M (−62%), effect runs → 0.32M (−60%);
+  Table selection column shown/hidden (1,000 rows) 2.24M/1.31M → 0.88M/0.06M. Test-app wasm (`wasm-release`) raw
+  15,838,256 (−1.1% since 2026-10-17), brotli 3,148,206 (−0.07%).
+- Review of both passes: the collection's focus registry held its own owner strongly (a cycle: a collection in a
+  `<For>` row was never freed and its focus effect kept running), now a `WeakOwner` (test
+  `the_focus_effect_does_not_keep_the_collection_alive`, `lessons.md`); `ItemElements::register` is the one,
+  crate-private registration (the public element-only one had no callers); deviation blocks, docs and names brought in
+  line with the new code (`use_selectable_item`, `use_calendar_cell`, `use_form_validation_state`,
+  `sharing_one_effect`); native tests for `sharing_one_effect`'s panic safety, constant validation sources and
+  `use_description`; a calendar cell shares the calendar's constant `false` (−2 per cell).
+
 ### 2026-10-17
 
+- Per-item costs (from an analysis of the budgets; what is left: `PLAN.md`, "Per-item work left"): `use_description`
+  creates nothing for a description that can't be there (every collection item's long-press description, the single
+  `Calendar`'s range prompt); nested `sharing_one_effect` joins the outermost, `use_selectable_item`, `use_option`,
+  `use_toggle`, `use_menu_item` share their resets; `use_selectable_item`'s six action-model memos are one `Copy` flags
+  memo, its four `StoredValue`s one, no virtual-focus wrapper callbacks; one focus effect per collection
+  (`ItemElements::register`, per-key registry triggers) instead of one per item; Table rows without a tree
+  column have constant tree attributes (no memos), `GridState::is_empty`, `TableState::row_header_columns`, cell
+  positions and row headers tracked per node, the row's selection column from `columns`; VirtualList: the shared
+  `empty_text()`, `CollectionBuilder::reserve`, `LayoutNode`s reused on relayout, fixtures without `format!` keys;
+  Calendar: 12 memos per cell → 2, the range prompt only in range calendars, synchronous (silent) realignment on a
+  duration change, `tabindex` per focused date, one focus effect per calendar (`CalendarCells`), `CalendarWeek` without
+  per-position memos. DnD screen reader tests wait for the drag session (`DndActions::wait_for_drag_session`; their
+  drops raced the session's first frame). All budgets: allocations 88.48M → 67.45M (−24%), memo runs 1.93M → 0.94M
+  (−51%), effect runs 820k → 363k (−56%), render effects −11%; ListBox option mount (1,000) 489k → 358k, Table mount
+  (1,000 rows) 3.37M → 2.60M, Table row add 277k → 164k, Menu mount 633k → 511k, 12-month Calendar 333k → 193k,
+  VirtualList append at the start 654k → 1.2k. Up: a selection mode change in Grid/Menu (+7-11 per item: the flags memo
+  reruns all its readers), disabling a Calendar (render effects 120 → 330). Test-app wasm (`wasm-release`): raw
+  16,016,315 → 15,861,534 (−1.0%), brotli 3,150,568 → 3,153,395 (+0.09%).
 - Shared crate-private helpers public and documented (the user: "Make these hooks public and add documentation for
   them in the book"): `use_hide_outside(UseHideOutsideInput { is_open, overlay, behavior: HideOutsideBehavior })`
   (overlay; was positional with a `keep_visible_only` bool), `use_wheel_stepping` (interactions; returns `group` and

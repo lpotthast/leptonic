@@ -11,6 +11,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use leptos::prelude::*;
 
+use crate::utils::probe::probe_sources;
+
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
@@ -27,7 +29,8 @@ use leptos::prelude::*;
 //   server errors of all of them (a date range picker: its start's and end's).
 // - The commit runs in an `Effect` triggered by `commit_validation` (react-aria: a `useEffect`
 //   after the next render), and re-reads the inputs' native validity first
-//   (`register_native_validity_reader`; react-aria re-reads it after every render).
+//   (`register_native_validity_reader`; react-aria re-reads it after every render). Only
+//   `ValidationBehavior::Native` states have it (react-aria queues commits only for them).
 // - Server errors show again whenever the `FormValidationContext`'s signal changes (react-aria:
 //   for every new errors object).
 //
@@ -210,42 +213,60 @@ impl<T: Send + Sync + 'static> std::fmt::Debug for UseFormValidationStateInput<T
     }
 }
 
+/// A reader of an input's native validity ([`FormValidationState::register_native_validity_reader`]).
+type NativeValidityReader = Arc<dyn Fn() + Send + Sync>;
+
+/// The registered readers, with the id of the next one.
+#[derive(Default)]
+struct ReaderList {
+    readers: Vec<(u64, NativeValidityReader)>,
+    next_id: u64,
+}
+
 /// The readers of the native validity of the inputs validated with a state
 /// ([`FormValidationState::register_native_validity_reader`]). A commit runs them first, so it
-/// shows the inputs' current validity.
-#[derive(Debug, Clone, Copy)]
-struct NativeValidityReaders {
-    readers: StoredValue<Vec<(u64, Callback<()>)>>,
-    next_id: StoredValue<u64>,
+/// shows the inputs' current validity. Only `ValidationBehavior::Native` commits read them.
+#[derive(Clone, Copy)]
+struct NativeValidityReaders(StoredValue<ReaderList>);
+
+impl std::fmt::Debug for NativeValidityReaders {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("NativeValidityReaders")
+    }
 }
 
 impl NativeValidityReaders {
     fn new() -> Self {
-        Self {
-            readers: StoredValue::new(Vec::new()),
-            next_id: StoredValue::new(0),
-        }
+        Self(StoredValue::new(ReaderList::default()))
     }
 
     /// Register `reader` until the current owner is cleaned up.
-    fn register(&self, reader: Callback<()>) {
-        let id = self.next_id.get_value();
-        self.next_id.set_value(id + 1);
-        self.readers
-            .update_value(|readers| readers.push((id, reader)));
-        let readers = self.readers;
+    fn register(self, reader: NativeValidityReader) {
+        let registered = self.0.try_update_value(|list| {
+            let id = list.next_id;
+            list.next_id += 1;
+            list.readers.push((id, reader));
+            id
+        });
+        let Some(id) = registered else {
+            return;
+        };
+        let list = self.0;
         on_cleanup(move || {
-            readers.try_update_value(|readers| readers.retain(|(other, _)| *other != id));
+            list.try_update_value(|list| list.readers.retain(|(other, _)| *other != id));
         });
     }
 
-    fn read_all(&self) {
+    fn read_all(self) {
         // Collected first: readers update the validation, which must not find this borrowed.
-        let readers: Vec<Callback<()>> = self
-            .readers
-            .with_value(|readers| readers.iter().map(|(_, reader)| *reader).collect());
+        let readers: Vec<NativeValidityReader> = self.0.with_value(|list| {
+            list.readers
+                .iter()
+                .map(|(_, reader)| Arc::clone(reader))
+                .collect()
+        });
         for reader in readers {
-            reader.run(());
+            reader();
         }
     }
 }
@@ -275,27 +296,44 @@ pub struct FormValidationState {
     reset_validation: Callback<()>,
     commit_validation: Callback<()>,
 
-    /// Readers of the native validity of the validated inputs, run before each commit.
-    native_validity_readers: NativeValidityReaders,
+    /// Readers of the native validity of the validated inputs, run before each commit (only
+    /// with `ValidationBehavior::Native`, whose commits read them).
+    native_validity_readers: Option<NativeValidityReaders>,
+}
+
+/// Whether a validation result is invalid (one closure type for all states: R13).
+fn result_is_invalid(display_validation: Signal<ValidationResult>) -> Signal<bool> {
+    Signal::derive(move || display_validation.with(|v| v.is_invalid))
+}
+
+/// The error messages of a validation result.
+fn result_errors(display_validation: Signal<ValidationResult>) -> Signal<Vec<String>> {
+    Signal::derive(move || display_validation.with(|v| v.validation_errors.clone()))
 }
 
 impl FormValidationState {
-    /// A state showing `display_validation`, whose operations are the given callbacks (a
-    /// checkbox in a group: its own realtime validation, the group's commit and reset).
+    /// A state whose operations are the given callbacks (a checkbox in a group: its own realtime
+    /// validation and validity, the group's commit and reset). It shows `display_validation`, or
+    /// with `None` the group's displayed validation.
     pub fn from_parts(
         realtime_validation: Signal<ValidationResult>,
-        display_validation: Signal<ValidationResult>,
+        display_validation: Option<Signal<ValidationResult>>,
         update_validation: Callback<ValidationResult>,
         group: Self,
     ) -> Self {
+        let (display_validation, is_invalid, validation_errors) = match display_validation {
+            Some(display) => (display, result_is_invalid(display), result_errors(display)),
+            None => (
+                group.display_validation,
+                group.is_invalid,
+                group.validation_errors,
+            ),
+        };
         Self {
             realtime_validation,
             display_validation,
-            is_invalid: Memo::new(move |_| display_validation.with(|v| v.is_invalid)).into(),
-            validation_errors: Memo::new(move |_| {
-                display_validation.with(|v| v.validation_errors.clone())
-            })
-            .into(),
+            is_invalid,
+            validation_errors,
             update_validation,
             reset_validation: group.reset_validation,
             commit_validation: group.commit_validation,
@@ -325,7 +363,9 @@ impl FormValidationState {
     /// that the committed validation is the input's current native validity, also when it
     /// changed without the value changing (a `min` attribute, the browser's own checks of a
     /// `type="email"`). `reader` reads the input's validity and passes it to
-    /// [`update_validation`](Self::update_validation).
+    /// [`update_validation`](Self::update_validation). Only `ValidationBehavior::Native` commits
+    /// read the native validity (an `Aria` state shows updates at once): for an `Aria` state,
+    /// this registers nothing.
     ///
     /// [`use_form_validation`](super::use_form_validation::use_form_validation) registers one
     /// for its input with `ValidationBehavior::Native`; register one of your own for a field that
@@ -333,14 +373,16 @@ impl FormValidationState {
     /// native number input would).
     ///
     /// ```ignore
-    /// state.register_native_validity_reader(Callback::new(move |()| {
+    /// state.register_native_validity_reader(move || {
     ///     if let Some(input) = input_element.get_untracked() {
     ///         state.update_validation(read_validity(&input));
     ///     }
-    /// }));
+    /// });
     /// ```
-    pub fn register_native_validity_reader(&self, reader: Callback<()>) {
-        self.native_validity_readers.register(reader);
+    pub fn register_native_validity_reader(&self, reader: impl Fn() + Send + Sync + 'static) {
+        if let Some(readers) = self.native_validity_readers {
+            readers.register(Arc::new(reader));
+        }
     }
 }
 
@@ -378,191 +420,253 @@ where
         validation_behavior,
         names,
     } = input;
-    // A valid result is no error.
-    let builtin_validation =
-        Memo::new(move |_| builtin_validation.get().filter(|result| result.is_invalid));
+    // A source of errors that can never report one is left out: no memo, no effect
+    // (`performance.md` R14). Most fields have none: `is_invalid` constantly `false`, no
+    // `validate`, no name or no `FormValidationContext`, no builtin validation or a constant valid
+    // one. `can_report` tells it from a probe of whether the source reports an error now.
+    let can_report = |(reports_now, is_reactive): (bool, bool)| reports_now || is_reactive;
 
-    // Store validate function for closure capture.
-    let validate = StoredValue::new(validate);
-    let names = StoredValue::new(names);
+    // A valid result is no error.
+    let builtin_validation = can_report(probe_sources(|| {
+        builtin_validation.with(|result| result.as_ref().is_some_and(|r| r.is_invalid))
+    }))
+    .then(|| Memo::new(move |_| builtin_validation.get().filter(|result| result.is_invalid)));
 
     // ---- Explicit error ----
     // `is_invalid` marks the field invalid, taking precedence over the other sources.
-    let controlled_error: Memo<Option<ValidationResult>> = Memo::new(move |_| {
-        is_invalid.get().then(|| ValidationResult {
-            is_invalid: true,
-            validation_errors: vec![],
-            validation_details: CUSTOM_VALIDITY_STATE,
+    let controlled_error = can_report(probe_sources(|| is_invalid.get())).then(|| {
+        Memo::new(move |_| {
+            is_invalid.get().then(|| ValidationResult {
+                is_invalid: true,
+                validation_errors: vec![],
+                validation_details: CUSTOM_VALIDITY_STATE,
+            })
         })
     });
 
     // ---- Client validation ----
-    let client_error: Memo<Option<ValidationResult>> = Memo::new(move |_| {
-        let validate_fn = validate.get_value();
-        let validate_fn = validate_fn.as_ref()?;
-        let val = value.get();
-        match validate_fn(&val) {
-            Ok(()) => None,
-            Err(errors) if errors.is_empty() => None,
-            Err(errors) => Some(ValidationResult {
-                is_invalid: true,
-                validation_errors: errors,
-                validation_details: CUSTOM_VALIDITY_STATE,
-            }),
-        }
-    });
-
-    // ---- Server errors ----
-    let server_context = use_context::<FormValidationContext>();
-    let (server_error_cleared, set_server_error_cleared) = signal(false);
-
-    // Every new set of server errors (a new response, even one equal to the last) shows again
-    // (react-aria: every new errors object).
-    if let Some(ctx) = server_context {
-        Effect::new(move |previous: Option<()>| {
-            ctx.errors.track();
-            if previous.is_some() {
-                set_server_error_cleared.set(false);
+    let client_error = validate.map(|validate_fn| {
+        Memo::new(move |_| {
+            let val = value.get();
+            match validate_fn(&val) {
+                Ok(()) => None,
+                Err(errors) if errors.is_empty() => None,
+                Err(errors) => Some(ValidationResult {
+                    is_invalid: true,
+                    validation_errors: errors,
+                    validation_details: CUSTOM_VALIDITY_STATE,
+                }),
             }
-        });
-    }
-
-    let server_error: Memo<Option<ValidationResult>> = Memo::new(move |_| {
-        if server_error_cleared.get() {
-            return None;
-        }
-        let ctx = server_context?;
-        let field_errors: Vec<String> = ctx.errors.with(|errors| {
-            names.with_value(|names| {
-                names
-                    .iter()
-                    .filter_map(|name| errors.get(name))
-                    .flatten()
-                    .cloned()
-                    .collect()
-            })
-        });
-        (!field_errors.is_empty()).then_some(ValidationResult {
-            is_invalid: true,
-            validation_errors: field_errors,
-            validation_details: CUSTOM_VALIDITY_STATE,
         })
     });
 
-    // ---- Committed validation (for native mode deferred display) ----
-    let (current_validity, set_current_validity) = signal(DEFAULT_VALIDATION_RESULT);
-    let next_validation = StoredValue::new(DEFAULT_VALIDATION_RESULT);
-    let last_error = StoredValue::new(DEFAULT_VALIDATION_RESULT);
-    let (commit_queued, set_commit_queued) = signal(false);
-    let commit_trigger = Trigger::new();
-    let native_validity_readers = NativeValidityReaders::new();
-
-    // Commit effect: when commit is queued, read latest validation and display it.
-    Effect::new(move |_| {
-        commit_trigger.track();
-        if !commit_queued.get_untracked() {
-            return;
+    // ---- Server errors ----
+    // Only for a named field inside a `FormValidationContext`.
+    let server = use_context::<FormValidationContext>()
+        .filter(|_| !names.is_empty())
+        .map(|ctx| {
+            let (server_error_cleared, set_server_error_cleared) = signal(false);
+            // Every new set of server errors (a new response, even one equal to the last) shows
+            // again (react-aria: every new errors object).
+            Effect::new(move |previous: Option<()>| {
+                ctx.errors.track();
+                if previous.is_some() {
+                    set_server_error_cleared.set(false);
+                }
+            });
+            let server_error: Memo<Option<ValidationResult>> = Memo::new(move |_| {
+                if server_error_cleared.get() {
+                    return None;
+                }
+                let field_errors: Vec<String> = ctx.errors.with(|errors| {
+                    names
+                        .iter()
+                        .filter_map(|name| errors.get(name))
+                        .flatten()
+                        .cloned()
+                        .collect()
+                });
+                (!field_errors.is_empty()).then_some(ValidationResult {
+                    is_invalid: true,
+                    validation_errors: field_errors,
+                    validation_details: CUSTOM_VALIDITY_STATE,
+                })
+            });
+            (server_error, set_server_error_cleared)
+        });
+    let server_error = server.map(|(server_error, _)| server_error);
+    let clear_server_error = move || {
+        if let Some((_, set_server_error_cleared)) = server {
+            set_server_error_cleared.set(true);
         }
-        // This effect can run before the input's property render effect, especially when the
-        // field's state is composed from other states. Read native validity after the complete
-        // render turn, as react-aria does in its post-render validation effect.
-        leptos::task::spawn_local_scoped_with_cancellation(async move {
-            leptos::task::tick().await;
-            if !commit_queued.get_untracked() {
+    };
+    let read = |source: Option<Memo<Option<ValidationResult>>>| source.and_then(|m| m.get());
+    let read_untracked =
+        |source: Option<Memo<Option<ValidationResult>>>| source.and_then(|m| m.get_untracked());
+
+    // ---- Committed validation (for native mode deferred display) ----
+    let current_validity = RwSignal::new(DEFAULT_VALIDATION_RESULT);
+    // Only `Native` validation commits (react-aria queues commits for it only): an `Aria` state
+    // has no commit state, effect or native validity readers (`performance.md` R14).
+    let native = (validation_behavior == ValidationBehavior::Native).then(|| {
+        let commit = StoredValue::new(NativeCommit::default());
+        let trigger = Trigger::new();
+        let readers = NativeValidityReaders::new();
+        // Commit effect: when commit is queued, read latest validation and display it.
+        Effect::new(move |_| {
+            trigger.track();
+            if !commit.with_value(|commit| commit.queued) {
                 return;
             }
-            set_commit_queued.set(false);
-            native_validity_readers.read_all();
-            let error = client_error
-                .get_untracked()
-                .or_else(|| builtin_validation.get_untracked())
-                .unwrap_or_else(|| next_validation.get_value());
-            if error != last_error.get_value() {
-                last_error.set_value(error.clone());
-                set_current_validity.set(error);
-            }
+            // This effect can run before the input's property render effect, especially when
+            // the field's state is composed from other states. Read native validity after the
+            // complete render turn, as react-aria does in its post-render validation effect.
+            leptos::task::spawn_local_scoped_with_cancellation(async move {
+                leptos::task::tick().await;
+                let queued = commit.try_update_value(|commit| std::mem::take(&mut commit.queued));
+                if queued != Some(true) {
+                    return;
+                }
+                readers.read_all();
+                let error = read_untracked(client_error)
+                    .or_else(|| read_untracked(builtin_validation))
+                    .unwrap_or_else(|| commit.with_value(|commit| commit.next.clone()));
+                let changed = commit.try_update_value(|commit| {
+                    let changed = error != commit.last_error;
+                    if changed {
+                        commit.last_error.clone_from(&error);
+                    }
+                    changed
+                });
+                if changed == Some(true) {
+                    current_validity.set(error);
+                }
+            });
         });
+        (commit, trigger, readers)
     });
 
     // ---- Realtime validation ----
-    // Priority: controlled > server > client > default. Memos: every field reads them several
-    // times (ARIA attributes, error message, native validity).
-    let realtime_validation = Memo::new(move |_| {
-        controlled_error
-            .get()
-            .or_else(|| server_error.get())
-            .or_else(|| client_error.get())
-            .or_else(|| builtin_validation.get())
-            .unwrap_or(DEFAULT_VALIDATION_RESULT)
-    });
+    // Priority: controlled > server > client > builtin > valid. Memos: every field reads them
+    // several times (ARIA attributes, error message, native validity). Without any source: valid.
+    let has_sources = controlled_error.is_some()
+        || server_error.is_some()
+        || client_error.is_some()
+        || builtin_validation.is_some();
+    let realtime_validation: Signal<ValidationResult> = if has_sources {
+        Memo::new(move |_| {
+            read(controlled_error)
+                .or_else(|| read(server_error))
+                .or_else(|| read(client_error))
+                .or_else(|| read(builtin_validation))
+                .unwrap_or(DEFAULT_VALIDATION_RESULT)
+        })
+        .into()
+    } else {
+        Signal::stored(DEFAULT_VALIDATION_RESULT)
+    };
 
     // ---- Display validation ----
     // Aria: all errors shown in realtime.
     // Native: client/native errors deferred until commit.
-    let display_validation = Memo::new(move |_| match validation_behavior {
-        ValidationBehavior::Native => controlled_error
-            .get()
-            .or_else(|| server_error.get())
-            .unwrap_or_else(|| current_validity.get()),
-        ValidationBehavior::Aria => controlled_error
-            .get()
-            .or_else(|| server_error.get())
-            .or_else(|| client_error.get())
-            .or_else(|| builtin_validation.get())
-            .unwrap_or_else(|| current_validity.get()),
-    });
-
-    // ---- Convenience derived signals ----
-    let result_is_invalid = Memo::new(move |_| display_validation.with(|v| v.is_invalid));
-    let result_validation_errors =
-        Memo::new(move |_| display_validation.with(|v| v.validation_errors.clone()));
+    // Without a source shown at once: what was committed or reported (`update_validation`).
+    let shown_at_once = match validation_behavior {
+        ValidationBehavior::Native => controlled_error.is_some() || server_error.is_some(),
+        ValidationBehavior::Aria => has_sources,
+    };
+    let display_validation: Signal<ValidationResult> = if shown_at_once {
+        Memo::new(move |_| match validation_behavior {
+            ValidationBehavior::Native => read(controlled_error)
+                .or_else(|| read(server_error))
+                .unwrap_or_else(|| current_validity.get()),
+            ValidationBehavior::Aria => read(controlled_error)
+                .or_else(|| read(server_error))
+                .or_else(|| read(client_error))
+                .or_else(|| read(builtin_validation))
+                .unwrap_or_else(|| current_validity.get()),
+        })
+        .into()
+    } else {
+        current_validity.into()
+    };
 
     FormValidationState {
-        realtime_validation: realtime_validation.into(),
-        display_validation: display_validation.into(),
-        is_invalid: result_is_invalid.into(),
-        validation_errors: result_validation_errors.into(),
+        realtime_validation,
+        display_validation,
+        is_invalid: result_is_invalid(display_validation),
+        validation_errors: result_errors(display_validation),
         update_validation: Callback::new(move |result: ValidationResult| {
             // In Aria mode, update displayed validation immediately.
             // In Native mode, queue for next commit.
-            if validation_behavior == ValidationBehavior::Aria {
-                if current_validity.get_untracked() != result {
-                    set_current_validity.set(result);
+            match native {
+                None => {
+                    if current_validity.with_untracked(|current| *current != result) {
+                        current_validity.set(result);
+                    }
                 }
-            } else {
-                next_validation.set_value(result);
+                Some((commit, _, _)) => {
+                    commit.update_value(|commit| commit.next = result);
+                }
             }
         }),
         reset_validation: Callback::new(move |()| {
-            // Reset displayed validation to valid.
-            let error = DEFAULT_VALIDATION_RESULT;
-            if error != last_error.get_value() {
-                last_error.set_value(error.clone());
-                set_current_validity.set(error);
+            // Reset displayed validation to valid, and cancel a pending commit. Only commits
+            // (`Native`) set the last error: an `Aria` reset leaves the validity reported with
+            // `update_validation` (react-aria).
+            if let Some((commit, _, _)) = native {
+                let changed = commit.try_update_value(|commit| {
+                    commit.queued = false;
+                    let changed = commit.last_error != DEFAULT_VALIDATION_RESULT;
+                    if changed {
+                        commit.last_error = DEFAULT_VALIDATION_RESULT;
+                    }
+                    changed
+                });
+                if changed == Some(true) {
+                    current_validity.set(DEFAULT_VALIDATION_RESULT);
+                }
             }
-            // Cancel pending commit.
-            if validation_behavior == ValidationBehavior::Native {
-                set_commit_queued.set(false);
-            }
-            set_server_error_cleared.set(true);
+            clear_server_error();
         }),
         commit_validation: Callback::new(move |()| {
             // Queue commit so display_validation shows latest errors.
-            if validation_behavior == ValidationBehavior::Native {
-                set_commit_queued.set(true);
-                commit_trigger.notify();
+            if let Some((commit, trigger, _)) = native {
+                commit.update_value(|commit| commit.queued = true);
+                trigger.notify();
             }
             // Clear server errors (user changed their value).
-            set_server_error_cleared.set(true);
+            clear_server_error();
         }),
-        native_validity_readers,
+        native_validity_readers: native.map(|(_, _, readers)| readers),
+    }
+}
+
+/// The commit state of a `Native` validation (one `StoredValue`: `performance.md` R7).
+struct NativeCommit {
+    /// The validity reported with `update_validation`, shown on the next commit.
+    next: ValidationResult,
+    /// The result shown by the last commit (or reset).
+    last_error: ValidationResult,
+    /// Whether a commit waits for the end of the render turn.
+    queued: bool,
+}
+
+impl Default for NativeCommit {
+    fn default() -> Self {
+        Self {
+            next: DEFAULT_VALIDATION_RESULT,
+            last_error: DEFAULT_VALIDATION_RESULT,
+            queued: false,
+        }
     }
 }
 
 /// Merges multiple validation results into one.
 ///
 /// Combines all error messages (deduplicated) and ORs all validity details.
-pub fn merge_validation(results: &[ValidationResult]) -> ValidationResult {
+pub fn merge_validation<'a>(
+    results: impl IntoIterator<Item = &'a ValidationResult>,
+) -> ValidationResult {
     let mut errors = Vec::new();
     let mut seen = std::collections::HashSet::new();
     let mut is_invalid = false;
@@ -717,9 +821,9 @@ mod tests {
             let reads = StoredValue::new(0);
             let reader_owner = Owner::new();
             reader_owner.with(|| {
-                state.register_native_validity_reader(Callback::new(move |()| {
+                state.register_native_validity_reader(move || {
                     reads.update_value(|r| *r += 1);
-                }));
+                });
             });
             state.commit_validation();
             flush_effects();
@@ -728,6 +832,28 @@ mod tests {
             state.commit_validation();
             flush_effects();
             assert_that!(reads.get_value()).is_equal_to(1);
+        });
+    }
+
+    // react-stately queues commits for native validation only, and only commits set the last
+    // error, which a reset compares with.
+    #[test]
+    fn an_aria_state_has_no_commit_and_its_reset_keeps_the_reported_validity() {
+        with_owner(|| {
+            let state =
+                use_form_validation_state(input(Signal::stored(()), ValidationBehavior::Aria));
+            let reads = StoredValue::new(0);
+            state.register_native_validity_reader(move || reads.update_value(|r| *r += 1));
+            state.update_validation(value_missing());
+            state.commit_validation();
+            flush_effects();
+            assert_that!(reads.get_value()).is_equal_to(0);
+            assert_that!(state.display_validation.get_untracked()).is_equal_to(value_missing());
+            state.reset_validation();
+            assert_that!(state.display_validation.get_untracked()).is_equal_to(value_missing());
+            assert_that!(state.is_invalid.get_untracked()).is_true();
+            assert_that!(state.validation_errors.get_untracked())
+                .is_equal_to(vec!["Fill out this field".to_owned()]);
         });
     }
 
@@ -741,13 +867,13 @@ mod tests {
                 ValidationBehavior::Native,
             ));
             Effect::new(move |_| rendered.set_value(value.get()));
-            state.register_native_validity_reader(Callback::new(move |()| {
+            state.register_native_validity_reader(move || {
                 state.update_validation(if rendered.with_value(String::is_empty) {
                     invalid(&["Required"])
                 } else {
                     DEFAULT_VALIDATION_RESULT
                 });
-            }));
+            });
             flush_effects();
             state.commit_validation();
             flush_effects();
@@ -785,6 +911,44 @@ mod tests {
                 value.set("a".to_owned());
                 assert_that!(state.display_validation.get_untracked())
                     .is_equal_to(DEFAULT_VALIDATION_RESULT);
+            });
+        }
+    }
+
+    /// Constant sources are folded at creation (`performance.md` R14): those reporting an error
+    /// still show, the others leave the committed validation in charge.
+    #[test]
+    fn constant_sources_show_their_errors() {
+        for behavior in [ValidationBehavior::Aria, ValidationBehavior::Native] {
+            with_owner(|| {
+                let marked = use_form_validation_state(UseFormValidationStateInput {
+                    is_invalid: Signal::stored(true),
+                    ..input(Signal::stored(()), behavior)
+                });
+                assert_that!(marked.display_validation.get_untracked()).is_equal_to(invalid(&[]));
+                assert_that!(marked.realtime_validation.get_untracked()).is_equal_to(invalid(&[]));
+
+                let builtin = use_form_validation_state(UseFormValidationStateInput {
+                    builtin_validation: Signal::stored(Some(invalid(&["Out of range"]))),
+                    ..input(Signal::stored(()), behavior)
+                });
+                assert_that!(builtin.realtime_validation.get_untracked())
+                    .is_equal_to(invalid(&["Out of range"]));
+                builtin.commit_validation();
+                flush_effects();
+                assert_that!(builtin.display_validation.get_untracked())
+                    .is_equal_to(invalid(&["Out of range"]));
+
+                let valid = use_form_validation_state(UseFormValidationStateInput {
+                    builtin_validation: Signal::stored(Some(DEFAULT_VALIDATION_RESULT)),
+                    ..input(Signal::stored(()), behavior)
+                });
+                assert_that!(valid.realtime_validation.get_untracked())
+                    .is_equal_to(DEFAULT_VALIDATION_RESULT);
+                valid.update_validation(value_missing());
+                valid.commit_validation();
+                flush_effects();
+                assert_that!(valid.display_validation.get_untracked()).is_equal_to(value_missing());
             });
         }
     }

@@ -909,21 +909,8 @@ async fn start_virtual_drag(page: &Page<'_>, query: &str) -> Result<WebElement, 
         .is_equal_to("Click to start dragging.");
     source.virtual_click().await?;
     source.wait_for_attr("data-dragging", Some("true")).await?;
-    wait_for_drag_session(page).await?;
+    DndActions::new(page).wait_for_drag_session().await?;
     Ok(source)
-}
-
-/// Waits until the drag manager set up the session of the screen reader drag that just started:
-/// one frame after the drag source was marked as dragging (as react-aria's `beginDragging`), and
-/// then the page outside the drag source and the drop targets is inert. A click before that goes
-/// to the drag source itself, which starts no second drag, and is lost.
-async fn wait_for_drag_session(page: &Page<'_>) -> Result<(), Report> {
-    let input = page.element("input[aria-label='Text field']").await?;
-    assert_that!(|| input.is_within("[inert]"))
-        .eventually_ok()
-        .matches(eq(true))
-        .await;
-    Ok(())
 }
 
 /// In a screen reader drag, focusing a drop target makes it the current one and clicking it drops
@@ -1153,7 +1140,7 @@ async fn start_talkback_drag(page: &Page<'_>) -> Result<WebElement, Report> {
         .eventually_ok()
         .matches(eq("Dragging. Click to cancel drag."))
         .await;
-    wait_for_drag_session(page).await?;
+    DndActions::new(page).wait_for_drag_session().await?;
     Ok(source)
 }
 

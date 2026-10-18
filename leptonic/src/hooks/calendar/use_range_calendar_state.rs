@@ -122,7 +122,8 @@ pub struct RangeCalendarState {
     available_range: Memo<Option<(Option<Date>, Option<Date>)>>,
     available_range_for: StoredValue<AvailableRange>,
     /// Readers of single cells' selection, by date: a change of the highlighted range notifies
-    /// the dates that entered or left it (`performance.md` R1).
+    /// the dates that entered or left it, and its old and new start and end (`performance.md`
+    /// R1).
     highlighted_cells: KeyedTriggers<Date>,
 }
 
@@ -173,12 +174,57 @@ fn follow_highlighted(range: Signal<Option<DateRange>>) -> KeyedTriggers<Date> {
         if dates_leaving(previous, current, 1000, &mut changed)
             && dates_leaving(current, previous, 1000, &mut changed)
         {
+            // A date staying in the range can become or stop being its start or end.
+            let start = |range: Option<DateRange>| range.map(|range| range.start);
+            let end = |range: Option<DateRange>| range.map(|range| range.end);
+            for (before, after) in [
+                (start(previous), start(current)),
+                (end(previous), end(current)),
+            ] {
+                if before != after {
+                    for date in before.into_iter().chain(after) {
+                        if !changed.contains(&date) {
+                            changed.push(date);
+                        }
+                    }
+                }
+            }
             cells.notify(&changed);
         } else {
             cells.notify_all();
         }
     });
     cells
+}
+
+/// The ends of the selected range while no range is being selected.
+fn range_ends(anchor: Option<Date>, value: Option<DateRange>) -> Option<(Date, Date)> {
+    value
+        .filter(|_| anchor.is_none())
+        .map(|range| (range.start, range.end))
+}
+
+/// Tells the cells (`highlighted_cells`) whose range boundary state changes: the old and new
+/// ends of the selected range, which name the whole range while no range is being selected.
+fn follow_boundaries(
+    cells: KeyedTriggers<Date>,
+    anchor: Signal<Option<Date>>,
+    value: Signal<Option<DateRange>>,
+) {
+    let notified = StoredValue::new(range_ends(anchor.get_untracked(), value.get_untracked()));
+    ImmediateEffect::new_scoped(move || {
+        let current = range_ends(anchor.get(), value.get());
+        let Some(previous) =
+            notified.try_update_value(|notified| std::mem::replace(notified, current))
+        else {
+            return;
+        };
+        if previous != current {
+            let ends = |ends: Option<(Date, Date)>| ends.into_iter().flat_map(|(a, b)| [a, b]);
+            let changed: Vec<Date> = ends(previous).chain(ends(current)).collect();
+            cells.notify(&changed);
+        }
+    });
 }
 
 /// The available range around an anchor (react-aria's `getAvailableRange`).
@@ -300,7 +346,10 @@ impl RangeCalendarState {
     /// Whether `date` lies in the highlighted range (and is selectable).
     pub fn is_selected(&self, date: Date) -> bool {
         // Only the highlighted cells read the rest (a range change notifies the dates entering
-        // or leaving it).
+        // or leaving it, and its old and new ends: a reader may compare `date` with the
+        // highlighted range's ends untracked after this, as `use_calendar_cell` does; so do the
+        // selected range's old and new ends when they start or stop naming the whole range,
+        // while no range is being selected).
         self.highlighted_cells.track(&date);
         self.highlighted_range
             .get_untracked()
@@ -493,6 +542,9 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
             || is_invalid(range.end, min_value.get(), max_value.get())
     });
 
+    let highlighted_cells = follow_highlighted(highlighted_range);
+    follow_boundaries(highlighted_cells, anchor.into(), binding.value);
+
     RangeCalendarState {
         calendar,
         value: binding.value,
@@ -505,7 +557,7 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
         dragging,
         available_range,
         available_range_for: StoredValue::new(available),
-        highlighted_cells: follow_highlighted(highlighted_range),
+        highlighted_cells,
     }
 }
 
@@ -565,6 +617,95 @@ mod tests {
             range.calendar.set_focused_date(date(2024, 5, 28));
             assert_that!(range.calendar.focused_date.get_untracked())
                 .is_equal_to(date(2024, 5, 24));
+        });
+    }
+
+    #[test]
+    fn a_date_staying_highlighted_is_told_when_it_stops_ending_the_range() {
+        with_owner(|| {
+            let range = state(UseRangeCalendarStateInput {
+                default_focused_value: Some(date(2024, 5, 10)),
+                ..UseRangeCalendarStateInput::default()
+            });
+            range.select_date(date(2024, 5, 10));
+            range.calendar.set_focused_date(date(2024, 5, 12));
+            let runs = RwSignal::new(0);
+            // A cell's reader: whether the 12th is selected, and whether it ends the range.
+            let twelfth = Memo::new(move |_| {
+                runs.update_untracked(|runs| *runs += 1);
+                let day = date(2024, 5, 12);
+                let is_selected = range.is_selected(day);
+                let is_end = range
+                    .highlighted_range
+                    .with_untracked(|highlighted| highlighted.is_some_and(|h| h.end == day));
+                (is_selected, is_end)
+            });
+            assert_that!(twelfth.get_untracked()).is_equal_to((true, true));
+            range.calendar.set_focused_date(date(2024, 5, 13));
+            assert_that!(twelfth.get_untracked()).is_equal_to((true, false));
+            // Moving the end further leaves the 12th alone.
+            range.calendar.set_focused_date(date(2024, 5, 14));
+            assert_that!(twelfth.get_untracked()).is_equal_to((true, false));
+            assert_that!(runs.get_untracked()).is_equal_to(2);
+        });
+    }
+
+    #[test]
+    fn the_ends_of_the_selected_range_are_told_when_they_start_or_stop_naming_it() {
+        with_owner(|| {
+            let range = state(UseRangeCalendarStateInput {
+                default_focused_value: Some(date(2024, 5, 10)),
+                ..UseRangeCalendarStateInput::default()
+            });
+            // A cell's reader of whether it is a boundary (subscribed through `is_selected`, as
+            // `use_calendar_cell`'s), counting its runs.
+            let boundary = |day: Date| {
+                let runs = RwSignal::new(0);
+                let is_boundary = Memo::new(move |_| {
+                    runs.update_untracked(|runs| *runs += 1);
+                    let _ = range.is_selected(day);
+                    range.anchor_date.with_untracked(Option::is_none)
+                        && range.value.with_untracked(|value| {
+                            value.is_some_and(|value| value.start == day || value.end == day)
+                        })
+                });
+                (is_boundary, runs)
+            };
+            // A one-day range, focused: re-anchoring at its date keeps the highlighted range.
+            let day = |d: i8| date(2024, 5, d);
+            range.calendar.set_focused_date(day(20));
+            range.select_date(day(20));
+            range.select_date(day(20));
+            let (twentieth, twentieth_runs) = boundary(day(20));
+            let (twenty_first, twenty_first_runs) = boundary(day(21));
+            let (twenty_second, twenty_second_runs) = boundary(day(22));
+            assert_that!(twentieth.get_untracked()).is_true();
+            assert_that!(twenty_first.get_untracked()).is_false();
+            assert_that!(twenty_second.get_untracked()).is_false();
+
+            // Anchored at its date: no longer naming the range, though still highlighted.
+            range.select_date(day(20));
+            assert_that!(twentieth.get_untracked()).is_false();
+            assert_that!(twentieth_runs.get_untracked()).is_equal_to(2);
+            range.select_date(day(20));
+            assert_that!(twentieth.get_untracked()).is_true();
+            assert_that!(twentieth_runs.get_untracked()).is_equal_to(3);
+
+            // A longer range: its dates enter the highlighted range while selecting (told by
+            // `is_selected`); committing it tells its ends only, not the 21st inside it.
+            range.calendar.set_focused_date(day(22));
+            range.select_date(day(20));
+            assert_that!(twentieth.get_untracked()).is_false();
+            assert_that!(twenty_first.get_untracked()).is_false();
+            assert_that!(twenty_second.get_untracked()).is_false();
+            let inside_runs = twenty_first_runs.get_untracked();
+            range.select_date(day(22));
+            assert_that!(twentieth.get_untracked()).is_true();
+            assert_that!(twenty_first.get_untracked()).is_false();
+            assert_that!(twenty_second.get_untracked()).is_true();
+            assert_that!(twenty_first_runs.get_untracked()).is_equal_to(inside_runs);
+            assert_that!(twentieth_runs.get_untracked()).is_equal_to(5);
+            assert_that!(twenty_second_runs.get_untracked()).is_equal_to(3);
         });
     }
 }

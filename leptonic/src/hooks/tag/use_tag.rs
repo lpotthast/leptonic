@@ -12,7 +12,6 @@ use crate::{
     hooks::{
         button::use_button::UseButtonInput,
         collections::Key,
-        focus::use_focus_visible::{Modality, use_interaction_modality},
         gridlist::{
             FocusMode, UseGridListItemCellProps, UseGridListItemInput, UseGridListItemReturn,
             UseGridListItemRowAttrs, UseGridListItemRowProps, grid_list_row_id, use_grid_list_item,
@@ -28,9 +27,7 @@ use crate::{
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         part::{Part, Remount},
-        platform::device::has_touch_events,
         signal_attr::{SignalAttr, signal_attr},
-        use_description::use_description,
     },
 };
 
@@ -113,7 +110,11 @@ impl IntoAttrs for UseTagRowProps {
 pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     crate::metrics::subject!();
     let UseTagInput { group, key } = input;
-    let TagGroupData { list, on_remove } = group;
+    let TagGroupData {
+        list,
+        on_remove,
+        remove_description,
+    } = group;
     let selection = list.state.selection;
     let row_id = grid_list_row_id(&list.id, &key);
     let button_id = use_id("tag-remove");
@@ -192,20 +193,9 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         )
     });
 
-    // Keyboard and screen reader users learn how to remove tags. On touch devices, a virtual
-    // modality comes from a screen reader's touch gestures, which can't press Delete: they count
-    // as pointer interaction (react-aria).
-    let modality = use_interaction_modality();
-    let has_remove = on_remove.is_some();
+    // How to remove tags: the group's one description (`use_tag_group`).
     let strings = use_localized_strings::<TagStrings>();
-    let aria_describedby = use_description(Signal::derive(move || {
-        let modality = match modality.get() {
-            Some(Modality::Virtual) if has_touch_events() => Some(Modality::Pointer),
-            modality => modality,
-        };
-        (has_remove && matches!(modality, Some(Modality::Keyboard | Modality::Virtual)))
-            .then(|| strings.read().remove_description())
-    }));
+    let aria_describedby = remove_description;
 
     let remove_button = on_remove.map(|on_remove| UseButtonInput {
         id: Some(button_id.clone()),

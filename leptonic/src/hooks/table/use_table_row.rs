@@ -4,7 +4,7 @@
 use leptos::{ev, prelude::*};
 use web_sys::KeyboardEvent;
 
-use super::TableData;
+use super::{TableData, TableTree};
 use crate::{
     EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
@@ -16,8 +16,7 @@ use crate::{
     utils::{
         aria::AriaExpanded,
         focusability::{PreventFocusAttr, prevent_focus_attr},
-        i18n::{WritingDirection, use_direction},
-        intl_strings::{TableStrings, use_localized_strings},
+        i18n::WritingDirection,
         key::{KeyboardEventKey, KeyboardKey},
         part::{Part, Remount},
         signal_attr::{SignalAttr, signal_attr},
@@ -155,9 +154,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         let key = key.clone();
         Memo::new(move |_| table.row_labelledby(&key))
     };
-    let state = table.state;
-    let tree = state.tree;
-    let selection = state.grid.list.selection;
+    let tree = table.state.tree;
     let UseGridRowReturn {
         row: row_props,
         is_selected,
@@ -174,28 +171,97 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let (row, styles) = row_props.into_props().into_inner();
 
     // -- Tree tables --
+    let TreeRow {
+        aria_expanded,
+        aria_level,
+        aria_posinset,
+        aria_setsize,
+        on_keydown_capture,
+        expand_button,
+        is_expanded,
+        has_child_rows,
+        level,
+    } = match tree {
+        Some(tree) => tree_row(tree, &table, key, is_disabled),
+        None => TreeRow::flat(),
+    };
+
+    UseTableRowReturn {
+        row: Part::stored(PropsWithStyles::new(
+            UseTableRowProps {
+                row,
+                aria_labelledby: aria_labelledby.into(),
+                aria_expanded,
+                aria_level,
+                aria_posinset,
+                aria_setsize,
+                on_keydown_capture,
+            },
+            styles,
+        )),
+        is_selected,
+        is_focused,
+        is_disabled,
+        is_pressed,
+        allows_selection,
+        has_action,
+        expand_button,
+        expand_button_attrs: prevent_focus_attr(),
+        is_expanded,
+        has_child_rows,
+        level,
+    }
+}
+
+/// What a row has of the tree (its attributes, keyboard expansion and expand button).
+struct TreeRow {
+    aria_expanded: Signal<Option<AriaExpanded>>,
+    aria_level: Signal<Option<usize>>,
+    aria_posinset: Signal<Option<usize>>,
+    aria_setsize: Signal<Option<usize>>,
+    on_keydown_capture: EventHandler<KeyboardEvent>,
+    expand_button: Option<UseButtonInput>,
+    is_expanded: Signal<bool>,
+    has_child_rows: Signal<bool>,
+    level: Signal<usize>,
+}
+
+impl TreeRow {
+    /// A row of a table without a tree column: constants, so no memos and no effects for its
+    /// attributes (`performance.md` R2), one stored signal per value type.
+    fn flat() -> Self {
+        let none = Signal::stored(None);
+        let no = Signal::stored(false);
+        Self {
+            aria_expanded: Signal::stored(None),
+            aria_level: none,
+            aria_posinset: none,
+            aria_setsize: none,
+            on_keydown_capture: EventHandler::empty(),
+            expand_button: None,
+            is_expanded: no,
+            has_child_rows: no,
+            level: Signal::stored(1),
+        }
+    }
+}
+
+/// The tree part of a row of a tree table.
+fn tree_row(tree: TableTree, table: &TableData, key: Key, is_disabled: Signal<bool>) -> TreeRow {
+    let selection = table.state.grid.list.selection;
+    let full = table.state.table;
     // From the whole table: collapsed rows keep their child rows there.
-    let full = state.table;
     let row_key = StoredValue::new(key);
-    let position = Memo::new(move |_| {
-        let tree = tree?;
-        row_key.with_value(|key| tree.position(key))
-    });
+    let position = Memo::new(move |_| row_key.with_value(|key| tree.position(key)));
     let has_child_rows = Memo::new(move |_| {
-        tree.is_some()
-            && row_key
-                .with_value(|key| full.with(|t| t.collection().children(key).any(Node::is_item)))
+        row_key.with_value(|key| full.with(|t| t.collection().children(key).any(Node::is_item)))
     });
     // A row without child rows is never expanded, even when its key is among the expanded ones.
     let is_expanded = Memo::new(move |_| {
-        has_child_rows.get()
-            && tree.is_some_and(|tree| row_key.with_value(|key| tree.expansion.is_expanded(key)))
+        has_child_rows.get() && row_key.with_value(|key| tree.expansion.is_expanded(key))
     });
-    let direction = use_direction();
+    let direction = table.grid.direction;
     let on_keydown_capture = EventHandler::new(move |e: KeyboardEvent| {
-        let Some(tree) = tree else {
-            return;
-        };
         let key = row_key.get_value();
         if !untrack(|| selection.is_focused_key(&key)) {
             return;
@@ -228,8 +294,8 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         }
     });
 
-    let expand_button = tree.map(|tree| {
-        let strings = use_localized_strings::<TableStrings>();
+    let expand_button = Some({
+        let strings = table.strings;
         UseButtonInput {
             // "Expand"/"Collapse" and the row's name.
             aria_label: MaybeProp::derive(move || {
@@ -297,31 +363,17 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         }
     });
 
-    UseTableRowReturn {
-        row: Part::stored(PropsWithStyles::new(
-            UseTableRowProps {
-                row,
-                aria_labelledby: aria_labelledby.into(),
-                aria_expanded: Signal::derive(move || {
-                    has_child_rows
-                        .get()
-                        .then(|| AriaExpanded::from(is_expanded.get()))
-                }),
-                aria_level: Signal::derive(move || position.get().map(|p| p.level)),
-                aria_posinset: Signal::derive(move || position.get().map(|p| p.index)),
-                aria_setsize: Signal::derive(move || position.get().map(|p| p.set_size)),
-                on_keydown_capture,
-            },
-            styles,
-        )),
-        is_selected,
-        is_focused,
-        is_disabled,
-        is_pressed,
-        allows_selection,
-        has_action,
+    TreeRow {
+        aria_expanded: Signal::derive(move || {
+            has_child_rows
+                .get()
+                .then(|| AriaExpanded::from(is_expanded.get()))
+        }),
+        aria_level: Signal::derive(move || position.get().map(|p| p.level)),
+        aria_posinset: Signal::derive(move || position.get().map(|p| p.index)),
+        aria_setsize: Signal::derive(move || position.get().map(|p| p.set_size)),
+        on_keydown_capture,
         expand_button,
-        expand_button_attrs: prevent_focus_attr(),
         is_expanded: is_expanded.into(),
         has_child_rows: has_child_rows.into(),
         level: Signal::derive(move || position.get().map_or(1, |p| p.level)),

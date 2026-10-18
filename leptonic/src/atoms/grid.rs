@@ -21,6 +21,7 @@ use crate::{
         gridlist::KeyboardNavigationBehavior,
         interactions::{UseHoverInput, use_hover},
     },
+    sharing_one_effect,
     utils::{data_attributes::data_flags, default_class::with_default_class, styles::Styles},
 };
 
@@ -177,30 +178,35 @@ pub fn GridRow(
         crate::utils::dev_warn!("a <GridRow> belongs in a <Grid>");
         return None;
     };
+    // The row's resets and its hover's react to the disabled state in one effect.
+    let (row, hover) = sharing_one_effect(|| {
+        let row = use_grid_row(UseGridRowInput {
+            grid,
+            key,
+            on_context_menu: None,
+        });
+        let (allows_selection, has_action) = (row.allows_selection, row.has_action);
+        // Interactive rows show hover (react-aria-components' `Row`).
+        let hover = use_hover(UseHoverInput {
+            is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+        });
+        (row, hover)
+    });
     let UseGridRowReturn {
         row: row_props,
         is_selected,
         is_focused,
         is_disabled,
         is_pressed,
-        allows_selection,
-        has_action,
-    } = use_grid_row(UseGridRowInput {
-        grid,
-        key,
-        on_context_menu: None,
-    });
+        ..
+    } = row;
     let (attrs, row_styles) = row_props.attrs();
     let styles = row_styles.merge(styles);
     // Focused by keyboard (react-aria-components: the row's `useFocusRing`).
     let is_focus_visible = Signal::derive(move || is_focused.get() && is_focus_visible());
-    // Interactive rows show hover (react-aria-components' `Row`).
-    let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
-    });
 
     Some(view! {
         <div

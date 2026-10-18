@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use assertr::{matchers::eq, prelude::*};
+use assertr::{
+    matchers::{eq, gt},
+    prelude::*,
+};
 use browser_test::{StepExt, thirtyfour::prelude::*};
 use rootcause::Report;
 use serde::Deserialize;
@@ -171,6 +174,21 @@ impl<'a, 'd> DndActions<'a, 'd> {
     pub fn new(page: &'a Page<'d>) -> Self {
         Self { page }
     }
+
+    /// Waits until the drag manager set up the session of the keyboard or screen reader drag that
+    /// just started: one frame after the drag source was marked as dragging (as react-aria's
+    /// `beginDragging`), and then the page outside the drag source and the drop targets is inert.
+    /// A click or focus change before that isn't the session's yet (a drop target clicked then
+    /// drops nothing).
+    pub async fn wait_for_drag_session(&self) -> Result<(), Report> {
+        assert_that_owned!(move || self.page.count("[inert]"))
+            .with_subject_name("inert elements")
+            .eventually_ok()
+            .try_matches(gt(0))
+            .await?;
+        Ok(())
+    }
+
     /// The entries of the log list `#<id>`.
     pub async fn log(&self, id: &str) -> Result<Vec<String>, Report> {
         health::expect_no_panic(self.page.low_level().driver()).await?;

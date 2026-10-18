@@ -1644,8 +1644,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         // The long press description (react-aria's `useDescription` in `useLongPress`): a hidden
         // element referenced by id once mounted (the server renders none, so hydration agrees),
-        // only with an `on_long_press` handler, and not while disabled.
-        let aria_describedby = match long_press.filter(|lp| lp.on_long_press.is_some()) {
+        // only with an `on_long_press` handler, and not while disabled. A description that is
+        // absent and reads no reactive source (most items') costs not even the derive.
+        let aria_describedby = match long_press.filter(|lp| {
+            lp.on_long_press.is_some() && {
+                let (is_present, is_reactive) =
+                    probe_sources(|| lp.accessibility_description.with(Option::is_some));
+                is_present || is_reactive
+            }
+        }) {
             Some(long_press) => use_description(Signal::derive(move || {
                 long_press
                     .accessibility_description

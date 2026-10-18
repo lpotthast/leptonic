@@ -19,6 +19,7 @@ use super::{
         CalendarData, CalendarFormatters, CalendarStates, selected_date_description,
         visible_range_description,
     },
+    use_calendar_cell::CalendarCells,
     use_calendar_state::CalendarState,
     use_range_calendar_state::RangeCalendarState,
 };
@@ -235,6 +236,8 @@ fn use_calendar_base(
         formatters: CalendarFormatters::new(),
         strings,
         today: use_today(),
+        cells: CalendarCells::new(&calendar),
+        never: Signal::stored(false),
     };
 
     // Buttons disabled while focused hand the focus to the calendar's grid.

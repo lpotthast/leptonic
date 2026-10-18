@@ -8,7 +8,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 601,
+        "allocations": 603,
         "reallocations": 23,
         "memo_runs": 12,
         "memo_runs_unchanged": 0,
@@ -58,7 +58,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 45165,
+        "allocations": 45167,
         "reallocations": 2028,
         "memo_runs": 1002,
         "memo_runs_unchanged": 0,

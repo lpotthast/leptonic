@@ -347,6 +347,7 @@ fn link(input: UseLinkInput) -> UseLinkReturn {
         on_key_up,
         shortcuts,
         allow_shortcut_repeats: false,
+        mark: None,
     });
     let focusable_props = focusable_props.into_props();
 

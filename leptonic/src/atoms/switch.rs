@@ -4,19 +4,17 @@ use leptos::{context::Provider, prelude::*};
 use leptos_classes::Classes;
 
 use super::{
-    checkbox::{ToggleButton, ToggleButtonParts},
+    checkbox::{ToggleButton, ToggleButtonParts, toggle_hover},
     field::FieldContext,
     form::use_validation_behavior,
 };
 use crate::{
-    Out, ValueBinding,
-    hooks::{
-        form::{
-            ToggleOptions, UseSwitchInput, UseSwitchReturn, UseToggleStateInput, ValidateFn,
-            ValidationBehavior, use_switch, use_toggle_state,
-        },
-        interactions::{UseHoverInput, use_hover},
+    IntoAttrs, Out, ValueBinding,
+    hooks::form::{
+        ToggleOptions, UseSwitchInput, UseSwitchReturn, UseToggleStateInput, ValidateFn,
+        ValidationBehavior, use_switch, use_toggle_state,
     },
+    sharing_one_effect,
     utils::{
         data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
         visually_hidden::visually_hidden_styles,
@@ -83,26 +81,32 @@ pub fn SwitchField(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-SwitchField", classes);
-    let switch = use_switch_atom(SwitchSetup {
-        default_selected,
-        on_change,
-        is_selected,
-        set_selected,
-        is_disabled,
-        is_read_only,
-        is_required,
-        is_invalid,
-        validate,
-        validation_behavior,
-        name,
-        form_value,
-        form,
-        id,
-        aria_label,
-        aria_labelledby,
-        aria_describedby,
-        auto_focus,
-        on_focus_change,
+    // The switch and its button's hover end their state while disabled in one effect
+    // (`performance.md` R6).
+    let (switch, hover) = sharing_one_effect(|| {
+        let switch = use_switch_atom(SwitchSetup {
+            default_selected,
+            on_change,
+            is_selected,
+            set_selected,
+            is_disabled,
+            is_read_only,
+            is_required,
+            is_invalid,
+            validate,
+            validation_behavior,
+            name,
+            form_value,
+            form,
+            id,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            auto_focus,
+            on_focus_change,
+        });
+        let hover = toggle_hover(&switch);
+        (switch, hover)
     });
     let (is_selected, is_disabled, is_read_only, is_invalid) = (
         switch.is_selected,
@@ -118,7 +122,7 @@ pub fn SwitchField(
         validation_details: switch.validation_details,
     };
     let button = SwitchButtonContext {
-        button: ToggleButtonParts::of(switch),
+        button: ToggleButtonParts::of(switch, hover),
         is_required,
     };
 
@@ -267,24 +271,18 @@ fn switch_button(
     styles: Styles,
     children: Option<Children>,
 ) -> impl IntoView {
-    let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || switch.is_disabled.get() || switch.is_read_only.get()),
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
-    });
     let (label_attrs, label_styles) = switch.label;
     let (input_attrs, input_styles) = switch.input;
 
     view! {
         <label
             {..label_attrs}
-            {..hover.target.attrs()}
+            {..switch.hover.into_attrs()}
             class=classes
             style=label_styles.merge(styles)
             {..data_flags([
                 ("data-pressed", switch.is_pressed),
-                ("data-hovered", hover.is_hovered),
+                ("data-hovered", switch.is_hovered),
                 ("data-focused", switch.is_focused),
             ])}
             {..data_flags([("data-focus-visible", switch.is_focus_visible)])}

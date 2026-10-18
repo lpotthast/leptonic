@@ -20,7 +20,7 @@ use super::probe::probe_sources;
 type Reaction = (Signal<bool>, Box<dyn Fn()>);
 
 thread_local! {
-    /// The reactions collected by the innermost [`sharing_one_effect`], if any.
+    /// The reactions collected by the outermost [`sharing_one_effect`] running, if any.
     static SHARED: RefCell<Option<Vec<Reaction>>> = const { RefCell::new(None) };
 }
 
@@ -48,22 +48,37 @@ pub(crate) fn when_true(flag: Signal<bool>, react: impl Fn() + 'static) {
     }
 }
 
-/// Calls `f`; the [`when_true`] reactions registered meanwhile (by the hooks `f` calls) share one
-/// effect, created after `f` returned. A nested call shares its own.
-pub(crate) fn sharing_one_effect<T>(f: impl FnOnce() -> T) -> T {
-    /// Restores the outer collection when dropped, also if `f` panics.
-    struct Restore(Option<Vec<Reaction>>);
-    impl Drop for Restore {
+/// Calls `f` and lets the hooks it calls share one effect for their resets: several leptonic
+/// hooks end their state when their element becomes disabled (`use_press` ends the press,
+/// `use_hover` the hover, `use_focus_ring` the focus), each in an effect of its own. Called in
+/// `sharing_one_effect`, they register these resets instead, and one effect, created after `f`
+/// returned, runs them when a disabled flag changes (~10 allocations at mount and ~4 per run
+/// saved per hook after the first). A reset whose flag never changes costs nothing either way.
+/// Nested calls join the outermost one. Leptonic's composing hooks (`use_button`,
+/// `use_selectable_item`, ...) share theirs already; use it where you compose several hooks for
+/// one element, as leptonic's atoms do (`GridListItem`):
+///
+/// ```ignore
+/// let (item, hover) =
+///     sharing_one_effect(|| (use_grid_list_item(item_input), use_hover(hover_input)));
+/// ```
+pub fn sharing_one_effect<T>(f: impl FnOnce() -> T) -> T {
+    /// Ends the collection when dropped, also if `f` panics.
+    struct End;
+    impl Drop for End {
         fn drop(&mut self) {
-            let outer = self.0.take();
-            SHARED.with_borrow_mut(|shared| *shared = outer);
+            SHARED.with_borrow_mut(|shared| *shared = None);
         }
     }
 
-    let restore = Restore(SHARED.with_borrow_mut(|shared| shared.replace(Vec::new())));
+    if SHARED.with_borrow(Option::is_some) {
+        return f();
+    }
+    SHARED.with_borrow_mut(|shared| *shared = Some(Vec::new()));
+    let end = End;
     let value = f();
     let reactions = SHARED.with_borrow_mut(Option::take).unwrap_or_default();
-    drop(restore);
+    drop(end);
     if !reactions.is_empty() {
         Effect::new(move |_| {
             for (flag, react) in &reactions {
@@ -111,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn shared_reactions_run_and_nested_ones_have_their_own_effect() {
+    fn shared_reactions_run_and_nested_ones_join_the_outer_effect() {
         with_owner(|| {
             let first = RwSignal::new(false);
             let second = RwSignal::new(false);
@@ -131,7 +146,24 @@ mod tests {
             first.set(true);
             flush_effects();
             assert_that!(first_count.load(Ordering::Relaxed)).is_equal_to(1);
+            // One effect: the nested reaction runs again with the outer one.
+            assert_that!(second_count.load(Ordering::Relaxed)).is_equal_to(2);
             assert_that!(constant_count.load(Ordering::Relaxed)).is_equal_to(0);
+        });
+    }
+
+    /// A hook panicking inside `sharing_one_effect` (and caught) leaves no collection behind, in
+    /// which later reactions would wait for an effect that is never created.
+    #[test]
+    fn a_panic_ends_the_shared_collection() {
+        fn failing_hook() {
+            when_true(RwSignal::new(false).into(), || {});
+            panic!("a hook");
+        }
+        with_owner(|| {
+            let panicked = std::panic::catch_unwind(|| sharing_one_effect(failing_hook));
+            assert_that!(panicked.is_err()).is_true();
+            assert_that!(SHARED.with_borrow(Option::is_none)).is_true();
         });
     }
 }

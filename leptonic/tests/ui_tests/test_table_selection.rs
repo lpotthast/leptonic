@@ -316,7 +316,7 @@ pub async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     page.element("#test-ts-move-type").await?.click().await?;
     expect_headers(vec!["", "Name", "Date Modified", "Kind"]).await?;
     expect_cells(vec!["", "Games", "6/7/2020", "File folder"]).await?;
-    // The two swapped cells swapped their keys: navigation reaches both.
+    // The two swapped cells keep their keys and swap places: navigation follows the new order.
     let games = row(page, COLUMNS, "Games").await?;
     games.focus().await?;
     page.wait_for_focus(&games).await?;
@@ -415,6 +415,55 @@ pub async fn the_selection_column_follows_the_selection_mode(
         vec!["", "Games", "File folder", "6/7/2020"],
     )
     .await?;
+    Ok(())
+}
+
+/// Showing or hiding the selection checkbox column keeps the focused cell focused: the same
+/// element, the same focused key (navigation continues from it), only its column index changes.
+/// No upstream test: react-stately keys cells by their column (`Row.ts`, the selection cell
+/// `'header'`) and react-aria-components' cells keep their identity.
+#[browser_test]
+pub async fn the_focused_cell_stays_when_the_selection_column_toggles(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    const COLUMNS: &str = "Columns table";
+    let window = std::time::Duration::from_millis(100);
+    page.goto_path(PATH).await?;
+    let games = row(page, COLUMNS, "Games").await?;
+    games.focus().await?;
+    page.wait_for_focus(&games).await?;
+    // Through the checkbox and name cells to the type cell.
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    page.send_keys(Key::Right).await?;
+    let kind = cell_in(&games, "File folder").await?;
+    page.wait_for_focus(&kind).await?;
+    assert_that!(kind)
+        .has_attribute("data-column-index")
+        .await
+        .is_equal_to("2");
+
+    // From script, as an app would: the focus stays in the table.
+    let toggle = page.element("#test-ts-no-selection").await?;
+    toggle.virtual_click().await?;
+    assert_that!(|| column_headers(page, COLUMNS))
+        .eventually_ok()
+        .matches(eq(vec!["Name", "Type", "Date Modified"]))
+        .await;
+    kind.wait_for_attr("data-column-index", Some("1")).await?;
+    page.focus_stays(&kind, window).await?;
+
+    toggle.virtual_click().await?;
+    assert_that!(|| column_headers(page, COLUMNS))
+        .eventually_ok()
+        .matches(eq(vec!["", "Name", "Type", "Date Modified"]))
+        .await;
+    kind.wait_for_attr("data-column-index", Some("2")).await?;
+    page.focus_stays(&kind, window).await?;
+    // Navigation continues from the focused cell.
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&cell_in(&games, "6/7/2020").await?)
+        .await?;
     Ok(())
 }
 

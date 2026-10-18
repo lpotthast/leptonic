@@ -114,10 +114,17 @@ browser-test:
 browser-test-visible:
   BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_VISIBLE=1 BROWSER_TEST_PARALLELISM=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
+# Time every browser test, one after the other (`documentation/testing.md`, "Timing runs"): no parallel tests competing
+# for the machine. Each passed test's duration goes to this machine's `leptonic/tests/timings/<machine>/tests.json`,
+# compared with the previous timed run first. `BROWSER_TEST_FILTER`/`BROWSER_TEST_GROUP` time a selection (only its
+# tests' entries change). Run it on a quiet machine, before and after a change.
+browser-test-timed:
+  BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_PARALLELISM=1 BROWSER_TEST_TIMINGS=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+
 # Time the performance scenarios (`documentation/testing.md`, "Performance measurements"): in-page timings of the
 # test-app's `/perf` fixtures, one after the other, built without debug assertions (the regular suite counts them and
-# checks the budgets). Reports go to `<target>/tmp/performance/`, each compared with the previous run's.
-# `BROWSER_TEST_FILTER` selects scenarios.
+# checks the budgets). Reports go to this machine's `leptonic/tests/timings/<machine>/scenarios/`, each compared with
+# the previous run's. `BROWSER_TEST_FILTER` selects scenarios.
 browser-perf:
   BROWSER_TEST_LOG=${BROWSER_TEST_LOG:-info} BROWSER_TEST_SUITE=performance cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 

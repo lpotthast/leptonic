@@ -12,8 +12,10 @@ causes. Each rule lives in one place; others point to it. No narratives, measure
 - `conventions.md`: what did we decide, and which API conventions (C1–C16) apply?
 - `hooks-implementation.md`: how is a hook shaped (types, props, events, propagation, state, ids, elements)?
 - `atoms-implementation.md`: how is an atom built (single element, props, classes, data attributes, contexts)?
-- `leptos-and-dom.md`: which Leptos/DOM rules does any code follow (SSR, hydration, effects, listeners, styles)?
-- `performance.md`: what does work cost in Leptos/reactive_graph, and how do we optimize it?
+- `leptos-and-dom.md`: which Leptos/DOM rules does any code follow (SSR, hydration, effects, state corrections,
+  ownership and cleanup, listeners, styles)?
+- `performance.md`: what does work cost in Leptos/reactive_graph, how do we optimize it (rules R1-R17), and how do we
+  find the patterns to avoid (budgets and code, section 5)?
 - `porting.md`: how do we port from react-aria (upstream headers, deviation blocks)?
 - `testing.md`: how are native, browser and performance tests set up, written and run?
 - `design-collections.md`: why is the collections layer designed as it is?

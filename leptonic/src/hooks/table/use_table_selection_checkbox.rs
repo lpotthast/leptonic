@@ -12,7 +12,6 @@ use crate::{
         },
         grid::{UseGridSelectionCheckboxInput, use_grid_selection_checkbox},
     },
-    utils::intl_strings::{TableStrings, use_localized_strings},
 };
 
 // =============================================================================
@@ -32,15 +31,23 @@ pub struct UseTableSelectionCheckboxInput {
     pub table: TableData,
     /// The row the checkbox selects.
     pub key: Key,
+    /// Whether the row is selected: its `use_table_row`'s `is_selected`.
+    pub is_selected: Signal<bool>,
 }
 
 /// A checkbox selecting a row of a table, labelled "Select" plus the row's row header cells.
 pub fn use_table_selection_checkbox(input: UseTableSelectionCheckboxInput) -> UseCheckboxInput {
     crate::metrics::subject!();
-    let UseTableSelectionCheckboxInput { table, key } = input;
+    let UseTableSelectionCheckboxInput {
+        table,
+        key,
+        is_selected,
+    } = input;
     let mut checkbox = use_grid_selection_checkbox(UseGridSelectionCheckboxInput {
         selection: table.state.grid.list.selection,
         key: key.clone(),
+        is_selected,
+        strings: table.grid.strings,
     });
     // Its own label, then the row's (following the row header columns and cells).
     let own_id = checkbox.options.id.clone();
@@ -65,7 +72,7 @@ pub fn use_table_select_all_checkbox(input: UseTableSelectAllCheckboxInput) -> U
     let UseTableSelectAllCheckboxInput { table } = input;
     let selection = table.state.grid.list.selection;
     let rows = table.state.table;
-    let strings = use_localized_strings::<TableStrings>();
+    let strings = table.strings;
     // Compares the selection with every selectable key: once per selection change.
     let is_select_all = Memo::new(move |_| selection.is_select_all());
     let state = use_toggle_state(UseToggleStateInput {

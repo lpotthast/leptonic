@@ -4,6 +4,8 @@
 // Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/calendar/CalendarBase.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/calendar/Calendar.test.js @ 99e6102368
+use std::sync::Mutex;
+
 use jiff::civil::{Date, Weekday};
 use leptos::prelude::*;
 
@@ -200,11 +202,21 @@ impl CalendarState {
         }
     }
 
-    /// Aligns the visible range around the focused date (react-aria: when the visible duration
-    /// changes).
+    /// Aligns the visible range around the focused date.
     fn realign(&self) {
         self.start
             .set(self.aligned_start(self.focused_date.get_untracked()));
+    }
+
+    /// [`realign`](Self::realign) for a changed visible duration (react-aria: when the visible
+    /// duration changes), without notifying: every reader of the start (`visible_range`) reads
+    /// the duration too, so the change notified them already, and this runs inside that change,
+    /// before any of them reads again. A notification of its own would reach the grids that the
+    /// change removes (e.g. eleven of twelve months) before they are removed, and every cell of
+    /// them would show other dates first.
+    fn realign_for_duration(&self) {
+        let start = self.aligned_start(self.focused_date.get_untracked());
+        self.start.update_untracked(|current| *current = start);
     }
 
     /// Moves the visible range so that it shows `focused`.
@@ -427,7 +439,10 @@ impl CalendarState {
 
     /// Sets whether the calendar's grid has focus.
     pub fn set_focused(&self, focused: bool) {
-        self.focused.set(focused);
+        // Cells set it on every focus and press: only a change notifies.
+        if self.focused.get_untracked() != focused {
+            self.focused.set(focused);
+        }
     }
 
     /// Whether `date` lies outside min and max.
@@ -658,12 +673,20 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
         selected_cells: KeyedTriggers::following_one(binding.value, |date| *date),
     };
 
-    // A changed visible duration re-aligns the visible range around the focused date.
-    Effect::watch(
-        move || visible_duration.get(),
-        move |_, _, _| state.realign(),
-        false,
-    );
+    // A changed visible duration re-aligns the visible range around the focused date, at once
+    // (react-aria: while rendering), so that grids mounted for the new duration start with the
+    // aligned range instead of paging after mounting. It runs inside the duration's change,
+    // before the parts' effects and memos read the range again.
+    let aligned_for = Mutex::new(duration);
+    ImmediateEffect::new_scoped(move || {
+        let duration = visible_duration.get();
+        let changed = aligned_for.lock().is_ok_and(|mut aligned_for| {
+            std::mem::replace(&mut *aligned_for, duration) != duration
+        });
+        if changed {
+            untrack(|| state.realign_for_duration());
+        }
+    });
 
     // Hydrated with the server's today: the browser's, once mounted (unless moved meanwhile).
     if let Some(server_today) = initial_today {
@@ -768,6 +791,34 @@ mod tests {
             calendar.focus_next_day();
             assert_that!(calendar.visible_range.get_untracked().start)
                 .is_equal_to(date(2023, 7, 1));
+        });
+    }
+
+    /// A changed visible duration re-aligns the visible range at once (react-stately aligns it
+    /// while rendering), an equal one keeps it.
+    #[test]
+    fn a_changed_visible_duration_realigns_at_once() {
+        with_owner(|| {
+            let duration = RwSignal::new(DateDuration::months(1));
+            let calendar = state(UseCalendarStateInput {
+                default_value: Some(date(2024, 6, 12)),
+                visible_duration: duration.into(),
+                ..UseCalendarStateInput::default()
+            });
+            duration.set(DateDuration::months(12));
+            // Centered: the focused date's month is the sixth of twelve.
+            assert_that!(calendar.visible_range.get_untracked()).is_equal_to(DateRange {
+                start: date(2024, 1, 1),
+                end: date(2024, 12, 31),
+            });
+            duration.set(DateDuration::months(3));
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2024, 5, 1));
+            // Visible already: no paging. Realigned, July would be centered.
+            calendar.set_focused_date(date(2024, 7, 20));
+            duration.set(DateDuration::months(3));
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2024, 5, 1));
         });
     }
 

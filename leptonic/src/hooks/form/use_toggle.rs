@@ -28,7 +28,7 @@ use crate::{
         },
         interactions::{PressEvent, UsePressInput, use_press},
     },
-    use_slot,
+    sharing_one_effect, use_slot,
     utils::{
         aria::{AriaInvalid, AriaReadonly, AriaRequired, AriaRole, aria_true},
         dom_ext::EventAccessors,
@@ -395,6 +395,13 @@ fn shared_text(text: String) -> Oco<'static, str> {
 /// base of [`use_checkbox`](fn@super::use_checkbox) and [`use_switch`](fn@super::use_switch)).
 pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
     crate::metrics::subject!();
+    // The presses of the input and the label and the focus ring react to the disabled state in
+    // one effect.
+    sharing_one_effect(|| toggle(input))
+}
+
+/// The body of [`use_toggle`].
+fn toggle(input: UseToggleInput) -> UseToggleReturn {
     let UseToggleInput {
         state,
         role,
@@ -442,6 +449,7 @@ pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
         on_key_up: None,
         shortcuts: None,
         allow_shortcut_repeats: false,
+        mark: None,
     });
     let mut focusable_props = focusable.target.into_props();
     let element = focusable.focus_handle.element();

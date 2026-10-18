@@ -6,7 +6,7 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, hash_map},
-    sync::Arc,
+    sync::{Arc, LazyLock},
 };
 
 use super::{ItemLink, Key, Node, NodeKind};
@@ -269,7 +269,7 @@ impl Collection {
     pub fn with_expanded(&self, expanded: &HashSet<Key>) -> Self {
         let mut collection = CollectionBuilder {
             entries: self.expanded_entries(self.first, expanded),
-            leading_empty_cells: 0,
+            table_columns: None,
         }
         .build();
         collection.is_tree_view = true;
@@ -304,7 +304,7 @@ impl Collection {
     pub fn filter(&self, keep: impl Fn(&str, &Node) -> bool) -> Self {
         CollectionBuilder {
             entries: self.filtered_entries(self.first, &keep),
-            leading_empty_cells: 0,
+            table_columns: None,
         }
         .build()
     }
@@ -438,12 +438,30 @@ impl Collection {
     }
 }
 
+/// The empty text, shared: cloning it allocates nothing (an `Arc<str>` made from `""` would: an
+/// `ArcInner` even for an empty slice), which counts in collections rebuilt from many items
+/// without texts.
+pub(crate) fn empty_text() -> Arc<str> {
+    static EMPTY: LazyLock<Arc<str>> = LazyLock::new(|| Arc::from(""));
+    Arc::clone(&EMPTY)
+}
+
+/// A node's text: empty texts share [`empty_text`].
+pub(crate) fn text(value: impl Into<Arc<str>> + AsRef<str>) -> Arc<str> {
+    if value.as_ref().is_empty() {
+        empty_text()
+    } else {
+        value.into()
+    }
+}
+
 /// Builds a [`Collection`], see [`Collection::build`].
 #[derive(Debug, Default)]
 pub struct CollectionBuilder {
     entries: Vec<Entry>,
-    /// Empty cells every row starts with (a table's selection checkbox cell), also in child rows.
-    pub(crate) leading_empty_cells: usize,
+    /// A table's data columns: the cells of rows (child rows too) are keyed by the column they
+    /// start in ([`Key::cell`]`(row, column)`) instead of their position.
+    pub(crate) table_columns: Option<Arc<[Key]>>,
 }
 
 #[derive(Debug)]
@@ -494,17 +512,24 @@ impl Entry {
 }
 
 impl CollectionBuilder {
-    /// Add an item. `text_value` is used for type-ahead, filtering and accessibility.
+    /// Reserve room for at least `additional` more nodes at this level, e.g. the number of items
+    /// a loop is about to add: the builder then doesn't grow while adding them.
+    pub fn reserve(&mut self, additional: usize) {
+        self.entries.reserve(additional);
+    }
+
+    /// Add an item. `text_value` is used for type-ahead, filtering and accessibility (`""` for
+    /// none: it allocates nothing).
     pub fn item(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
     ) -> ItemBuilder<'_> {
         self.entries
-            .push(Entry::new(key.into(), NodeKind::Item, text_value.into()));
+            .push(Entry::new(key.into(), NodeKind::Item, text(text_value)));
         ItemBuilder {
             entry: self.entries.last_mut().expect("just pushed"),
-            leading_empty_cells: self.leading_empty_cells,
+            table_columns: self.table_columns.as_ref(),
         }
     }
 
@@ -516,7 +541,7 @@ impl CollectionBuilder {
     ) -> SectionBuilder<'_> {
         let mut inner = CollectionBuilder::default();
         contents(&mut inner);
-        let mut entry = Entry::new(key.into(), NodeKind::Section, Arc::from(""));
+        let mut entry = Entry::new(key.into(), NodeKind::Section, empty_text());
         entry.children = inner.entries;
         self.entries.push(entry);
         SectionBuilder {
@@ -524,50 +549,50 @@ impl CollectionBuilder {
         }
     }
 
-    /// Add a grid row (an item) with cells. Cell keys are generated: [`Key::cell`]`(row, i)`.
+    /// Add a grid row (an item) with cells. Cell keys are generated from their position:
+    /// [`Key::cell`]`(row, i)` (in a table: from their column, see `TableBuilder::row`).
     pub fn row(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
         cells: impl FnOnce(&mut RowBuilder),
     ) -> ItemBuilder<'_> {
         let key = key.into();
         let mut row = RowBuilder {
             row: key.clone(),
             cells: Vec::new(),
+            columns: self.table_columns.clone(),
+            last_start: 0,
         };
-        for _ in 0..self.leading_empty_cells {
-            row.cell("");
-        }
         cells(&mut row);
-        let mut entry = Entry::new(key, NodeKind::Item, text_value.into());
+        let mut entry = Entry::new(key, NodeKind::Item, text(text_value));
         entry.children = row.cells;
         self.entries.push(entry);
         ItemBuilder {
             entry: self.entries.last_mut().expect("just pushed"),
-            leading_empty_cells: self.leading_empty_cells,
+            table_columns: self.table_columns.as_ref(),
         }
     }
 
     /// Add a section heading. Belongs at the start of a section.
-    pub fn header(&mut self, key: impl Into<Key>, text: impl Into<Arc<str>>) {
+    pub fn header(&mut self, key: impl Into<Key>, text_value: impl Into<Arc<str>> + AsRef<str>) {
         self.entries
-            .push(Entry::new(key.into(), NodeKind::Header, text.into()));
+            .push(Entry::new(key.into(), NodeKind::Header, text(text_value)));
     }
 
     pub fn separator(&mut self, key: impl Into<Key>) {
         self.entries
-            .push(Entry::new(key.into(), NodeKind::Separator, Arc::from("")));
+            .push(Entry::new(key.into(), NodeKind::Separator, empty_text()));
     }
 
     pub fn loader(&mut self, key: impl Into<Key>) {
         self.entries
-            .push(Entry::new(key.into(), NodeKind::Loader, Arc::from("")));
+            .push(Entry::new(key.into(), NodeKind::Loader, empty_text()));
     }
 
     /// Add a table header row: column headers and placeholders (see `hooks::table`).
     pub(crate) fn header_row(&mut self, key: Key, cells: Vec<HeaderCell>) {
-        let mut entry = Entry::new(key, NodeKind::HeaderRow, Arc::from(""));
+        let mut entry = Entry::new(key, NodeKind::HeaderRow, empty_text());
         entry.children = cells
             .into_iter()
             .map(|cell| {
@@ -580,51 +605,41 @@ impl CollectionBuilder {
     }
 
     /// A builder holding the rows of `collection` (its top-level nodes other than table header
-    /// rows, with their subtrees), every row starting with `leading_empty_cells` more empty cells
-    /// and its cells keyed by their new position ([`Key::cell`]). Adds a table's selection
-    /// checkbox cells to rows built without them.
-    pub(crate) fn rows_with_leading_cells(
-        collection: &Collection,
-        leading_empty_cells: usize,
-    ) -> Self {
-        fn entry(collection: &Collection, node: &Node, leading_empty_cells: usize) -> Entry {
+    /// rows, with their subtrees), every row with cells (child rows too) starting with an empty
+    /// cell in `column` ([`Key::cell`]`(row, column)`); the other cells keep their keys. Adds a
+    /// table's selection checkbox cells to rows built without them.
+    pub(crate) fn rows_with_leading_cell(collection: &Collection, column: &Key) -> Self {
+        // A row's cells come before its child rows.
+        fn row_entry(collection: &Collection, node: &Node, column: &Key) -> Entry {
             let mut entry = Entry::from_node(node);
-            let children: Vec<&Node> = collection.children(&node.key).collect();
-            if children.iter().any(|child| child.kind == NodeKind::Cell) {
-                for i in 0..leading_empty_cells {
-                    entry.children.push(Entry::new(
-                        Key::cell(&node.key, i),
-                        NodeKind::Cell,
-                        Arc::from(""),
-                    ));
-                }
+            let mut children = collection.children(&node.key).peekable();
+            if children
+                .peek()
+                .is_some_and(|child| child.kind == NodeKind::Cell)
+            {
+                entry.children.push(Entry::new(
+                    Key::cell(&node.key, column.clone()),
+                    NodeKind::Cell,
+                    empty_text(),
+                ));
             }
-            let mut cells = leading_empty_cells;
             for child in children {
-                let mut child_entry = entry_of(collection, child, leading_empty_cells);
-                if child.kind == NodeKind::Cell {
-                    child_entry.key = Key::cell(&node.key, cells);
-                    cells += 1;
-                }
-                entry.children.push(child_entry);
+                entry.children.push(if child.kind == NodeKind::Cell {
+                    // Cells have no children to rebuild.
+                    Entry::from_node(child)
+                } else {
+                    row_entry(collection, child, column)
+                });
             }
             entry
-        }
-        // Cells have no children to rebuild.
-        fn entry_of(collection: &Collection, node: &Node, leading_empty_cells: usize) -> Entry {
-            if node.kind == NodeKind::Cell {
-                Entry::from_node(node)
-            } else {
-                entry(collection, node, leading_empty_cells)
-            }
         }
         Self {
             entries: collection
                 .iter()
                 .filter(|node| node.kind != NodeKind::HeaderRow)
-                .map(|node| entry(collection, node, leading_empty_cells))
+                .map(|node| row_entry(collection, node, column))
                 .collect(),
-            leading_empty_cells,
+            table_columns: None,
         }
     }
 
@@ -766,14 +781,34 @@ pub(crate) struct HeaderCell {
 pub struct RowBuilder {
     row: Key,
     cells: Vec<Entry>,
+    /// A table's data columns, which key the cells (see `CollectionBuilder::table_columns`).
+    columns: Option<Arc<[Key]>>,
+    /// The column the last cell starts in (table rows).
+    last_start: usize,
 }
 
 impl RowBuilder {
     /// Add a cell.
-    pub fn cell(&mut self, text_value: impl Into<Arc<str>>) -> CellBuilder<'_> {
-        let key = Key::cell(&self.row, self.cells.len());
+    pub fn cell(&mut self, text_value: impl Into<Arc<str>> + AsRef<str>) -> CellBuilder<'_> {
+        let column = match &self.columns {
+            // A table row: the column the cell starts in, after the cells before it and their
+            // spans. Cells past the last column (a malformed row, warned about in debug builds)
+            // get keys no column has.
+            Some(columns) => {
+                if let Some(last) = self.cells.last() {
+                    self.last_start += last.col_span.unwrap_or(1);
+                }
+                columns
+                    .get(self.last_start)
+                    .cloned()
+                    .unwrap_or_else(|| Key::generated("excess-cell", self.last_start))
+            }
+            // A grid row: the cell's position.
+            None => Key::from(self.cells.len()),
+        };
+        let key = Key::cell(&self.row, column);
         self.cells
-            .push(Entry::new(key, NodeKind::Cell, text_value.into()));
+            .push(Entry::new(key, NodeKind::Cell, text(text_value)));
         CellBuilder {
             entry: self.cells.last_mut().expect("just pushed"),
         }
@@ -793,8 +828,8 @@ impl CellBuilder<'_> {
         self
     }
 
-    pub fn aria_label(self, label: impl Into<Arc<str>>) -> Self {
-        self.entry.aria_label = Some(label.into());
+    pub fn aria_label(self, label: impl Into<Arc<str>> + AsRef<str>) -> Self {
+        self.entry.aria_label = Some(text(label));
         self
     }
 }
@@ -802,7 +837,7 @@ impl CellBuilder<'_> {
 /// Configures an item added with [`CollectionBuilder::item`].
 pub struct ItemBuilder<'a> {
     entry: &'a mut Entry,
-    leading_empty_cells: usize,
+    table_columns: Option<&'a Arc<[Key]>>,
 }
 
 // The builder writes through `&mut`; using the returned value for chaining is optional, so
@@ -816,8 +851,8 @@ impl ItemBuilder<'_> {
     }
 
     /// An accessible name for the item.
-    pub fn aria_label(self, label: impl Into<Arc<str>>) -> Self {
-        self.entry.aria_label = Some(label.into());
+    pub fn aria_label(self, label: impl Into<Arc<str>> + AsRef<str>) -> Self {
+        self.entry.aria_label = Some(text(label));
         self
     }
 
@@ -839,7 +874,7 @@ impl ItemBuilder<'_> {
     pub fn children(self, children: impl FnOnce(&mut CollectionBuilder)) -> Self {
         let mut inner = CollectionBuilder {
             entries: Vec::new(),
-            leading_empty_cells: self.leading_empty_cells,
+            table_columns: self.table_columns.cloned(),
         };
         children(&mut inner);
         self.entry.children.extend(inner.entries);
@@ -857,8 +892,8 @@ pub struct SectionBuilder<'a> {
 #[allow(clippy::return_self_not_must_use)]
 impl SectionBuilder<'_> {
     /// An accessible name for a section without a visible header.
-    pub fn aria_label(self, label: impl Into<Arc<str>>) -> Self {
-        self.entry.aria_label = Some(label.into());
+    pub fn aria_label(self, label: impl Into<Arc<str>> + AsRef<str>) -> Self {
+        self.entry.aria_label = Some(text(label));
         self
     }
 }
@@ -888,6 +923,35 @@ mod tests {
             });
             b.item("e", "Elderberry");
         })
+    }
+
+    #[test]
+    fn nodes_without_texts_share_the_empty_text() {
+        let collection = Collection::build(|b| {
+            b.reserve(2);
+            b.item("a", empty_text());
+            b.section("s", |s| {
+                s.item("b", "Banana");
+            });
+            b.separator("sep");
+            b.loader("loader");
+            b.row("r", "Row", |r| {
+                r.cell("Cell");
+            });
+        });
+        for key in ["a", "s", "sep", "loader"] {
+            let node = collection.get(&Key::from(key)).expect("built");
+            assert_that!(Arc::ptr_eq(&node.text_value, &empty_text())).is_true();
+        }
+        let leading_cells =
+            CollectionBuilder::rows_with_leading_cell(&collection, &Key::from("check")).build();
+        let checkbox_cell = leading_cells
+            .get(&Key::cell(&Key::from("r"), "check"))
+            .expect("built");
+        // The other cells keep their keys.
+        assert_that!(leading_cells.contains_key(&Key::cell(&Key::from("r"), 0))).is_true();
+        assert_that!(Arc::ptr_eq(&checkbox_cell.text_value, &empty_text())).is_true();
+        assert_that!(collection.size()).is_equal_to(3);
     }
 
     #[test]

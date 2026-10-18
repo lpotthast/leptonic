@@ -22,24 +22,36 @@ enum Repr {
     /// Every integer type's values (`u64` and `i64` included).
     Int(i128),
     Str(Arc<str>),
-    /// A generated cell key: the row's key and the column index.
-    Cell(Arc<(Key, usize)>),
+    /// A cell key: the row's key and the column's (a table column's key, or a grid cell's
+    /// position).
+    Cell(Arc<(Key, Key)>),
     /// A key generated for structural nodes (table header rows, placeholders, ...); never equal to
     /// a key created from user values.
     Generated(&'static str, usize),
 }
 
 impl Key {
-    /// The key of the cell in column `column` of the row `row` (keys of grid cells are generated
-    /// from their position).
-    pub fn cell(row: &Key, column: usize) -> Self {
-        Self(Repr::Cell(Arc::new((row.clone(), column))))
+    /// The key of the cell of the row `row` in the column `column`. Table cells are keyed by
+    /// their column's key (a cell spanning columns by its first column's, the selection checkbox
+    /// cell by [`TableCollection::SELECTION_COLUMN`](crate::hooks::table::TableCollection::SELECTION_COLUMN)),
+    /// so a cell keeps its key when columns come and go; grid cells by their position
+    /// (`Key::cell(&row, 0)`).
+    pub fn cell(row: &Key, column: impl Into<Key>) -> Self {
+        Self(Repr::Cell(Arc::new((row.clone(), column.into()))))
     }
 
     /// A key for a generated structural node: `kind` names the kind of node, `index` tells nodes
     /// of the same kind apart.
-    pub(crate) fn generated(kind: &'static str, index: usize) -> Self {
+    pub(crate) const fn generated(kind: &'static str, index: usize) -> Self {
         Self(Repr::Generated(kind, index))
+    }
+
+    /// The row and column key, if it is a cell key ([`Key::cell`]).
+    pub fn as_cell(&self) -> Option<(&Key, &Key)> {
+        match &self.0 {
+            Repr::Cell(cell) => Some((&cell.0, &cell.1)),
+            Repr::Int(_) | Repr::Str(_) | Repr::Generated(..) => None,
+        }
     }
 
     /// The key as a string slice, if it is a string key.
@@ -94,7 +106,8 @@ impl Key {
             Repr::Cell(cell) => {
                 out.push_str("%c");
                 cell.0.write_id_fragment(out);
-                let _ = write!(out, "%{}", cell.1);
+                out.push_str("%s");
+                cell.1.write_id_fragment(out);
             }
             Repr::Generated(kind, index) => {
                 let _ = write!(out, "%g{kind}%{index}");
@@ -119,7 +132,7 @@ impl fmt::Debug for Key {
         match &self.0 {
             Repr::Int(i) => write!(f, "Key({i})"),
             Repr::Str(s) => write!(f, "Key({s:?})"),
-            Repr::Cell(cell) => write!(f, "Key::cell({:?}, {})", cell.0, cell.1),
+            Repr::Cell(cell) => write!(f, "Key::cell({:?}, {:?})", cell.0, cell.1),
             Repr::Generated(kind, index) => write!(f, "Key::generated({kind:?}, {index})"),
         }
     }
@@ -362,6 +375,8 @@ mod tests {
             Key::from("Ice%20;cream"),
             Key::cell(&Key::from(1), 2),
             Key::cell(&Key::from("1"), 2),
+            Key::cell(&Key::from(1), "2"),
+            Key::cell(&Key::from(1), Key::generated("column", 2)),
             Key::generated("row", 1),
         ];
         let fragments: Vec<String> = keys.iter().map(Key::id_fragment).collect();
@@ -380,5 +395,9 @@ mod tests {
         assert_that!(Key::from("apple").as_str()).is_equal_to(Some("apple"));
         assert_that!(Key::from("apple").to_string()).is_equal_to("apple".to_owned());
         assert_that!(Key::from(42).to_string()).is_equal_to("42".to_owned());
+        let cell = Key::cell(&Key::from("alice"), "name");
+        assert_that!(cell.as_cell()).is_equal_to(Some((&Key::from("alice"), &Key::from("name"))));
+        assert_that!(cell.to_string()).is_equal_to("alice-name".to_owned());
+        assert_that!(Key::from("alice").as_cell()).is_none();
     }
 }

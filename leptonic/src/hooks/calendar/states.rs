@@ -24,7 +24,10 @@
 use jiff::civil::Date;
 use leptos::prelude::*;
 
-use super::{use_calendar_state::CalendarState, use_range_calendar_state::RangeCalendarState};
+use super::{
+    use_calendar_cell::CalendarCells, use_calendar_state::CalendarState,
+    use_range_calendar_state::RangeCalendarState,
+};
 use crate::{
     Id,
     utils::{
@@ -135,6 +138,11 @@ pub struct CalendarData {
     pub(crate) strings: Memo<CalendarStrings>,
     /// Today, shared by the cells (see [`use_today`](crate::utils::date::use_today)).
     pub(crate) today: Signal<Option<Date>>,
+    /// The cells, which the browser's focus follows (one effect per calendar).
+    pub(crate) cells: CalendarCells,
+    /// `false`, shared by the cells for their constant flags (no stored signal per cell): a
+    /// single date calendar's selection start and end, press settings.
+    pub(crate) never: Signal<bool>,
 }
 
 /// The era format of a date: the short era for dates before Christ (react-aria's

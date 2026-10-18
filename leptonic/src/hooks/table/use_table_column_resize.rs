@@ -31,9 +31,8 @@ use crate::{
         aria::AriaOrientation,
         dom_ext::EventAccessors,
         focus::focus_safely,
-        i18n::{WritingDirection, use_direction},
+        i18n::WritingDirection,
         id::use_id,
-        intl_strings::{TableStrings, use_localized_strings},
         key::KeyboardKey,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         part::{Part, Remount},
@@ -355,7 +354,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         Memo::new(move |_| state.resizing_column.with(|r| r.as_ref() == Some(&column)))
     };
     let (is_mouse_resizing, set_mouse_resizing) = signal(false);
-    let direction = use_direction();
+    let direction = table.grid.direction;
 
     let focus_input = move || {
         if let Some(input) = element.get_untracked() {
@@ -560,7 +559,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
 
     // Keyboard users without a trigger are told how to start resizing.
     let modality = use_interaction_modality();
-    let strings = use_localized_strings::<TableStrings>();
+    let strings = table.strings;
     let has_trigger = trigger.is_some();
     let description = Signal::derive(move || {
         let modality = match modality.get() {

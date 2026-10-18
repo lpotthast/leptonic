@@ -246,29 +246,32 @@ pub fn Tooltip(
                 .map(|point| format!("{}px {}px", point.x, point.y))
         })
         .build();
-    let arrow_context = StoredValue::new(OverlayArrowContext::new(arrow_props, resolved_placement));
     // The tooltip element, built for each opening (one element at a time).
     let UseTooltipProps {
         role,
         on_pointerenter,
         on_pointerleave,
     } = tooltip_props;
-    let tooltip_element = StoredValue::new(Part::new(move || {
-        (
-            UseOverlayPositionProps {
-                element_capture: element_capture.clone(),
-            },
-            UseTooltipProps {
-                role,
-                on_pointerenter: on_pointerenter.clone(),
-                on_pointerleave: on_pointerleave.clone(),
-            },
-        )
-    }));
-    let classes = StoredValue::new(classes);
-    let styles = StoredValue::new(position_styles.merge(anchor_point).merge(styles));
-    let children = StoredValue::new(children);
-    let tooltip_trigger = StoredValue::new(tooltip_trigger);
+    // What each opening renders: one `StoredValue` (`performance.md` R7).
+    let content = StoredValue::new(TooltipContent {
+        arrow_context: OverlayArrowContext::new(arrow_props, resolved_placement),
+        element: Part::new(move || {
+            (
+                UseOverlayPositionProps {
+                    element_capture: element_capture.clone(),
+                },
+                UseTooltipProps {
+                    role,
+                    on_pointerenter: on_pointerenter.clone(),
+                    on_pointerleave: on_pointerleave.clone(),
+                },
+            )
+        }),
+        classes,
+        styles: position_styles.merge(anchor_point).merge(styles),
+        children,
+        trigger: tooltip_trigger,
+    });
     // The tooltip stays rendered while its exit animations run (`data-exiting`), unless it closes
     // instantly (another tooltip replaces it during the warm-up).
     let element = CapturedElement::new();
@@ -293,16 +296,19 @@ pub fn Tooltip(
                         element: entering,
                         on_enter: None,
                     });
-                // Hidden until placed; the only writer of the tooltip's `style` (lessons.md).
-                let styles = StoredValue::new(hiding.merge(styles.get_value()));
+                // Hidden until placed; the only writer of the tooltip's `style` (lessons.md). Cloned
+                // once more when the portal renders its content.
+                let (classes, styles) = content.with_value(|content| {
+                    (content.classes.clone(), hiding.merge(content.styles.clone()))
+                });
                 // Not when opening instantly (replacing another tooltip during the warm-up).
                 let is_entering =
                     Signal::derive(move || !skip_animation.get() && enter_animation.get());
                 view! {
                     <Portal>
                         <div
-                            {..tooltip_element.with_value(|part| {
-                                match part.props() {
+                            {..content.with_value(|content| {
+                                match content.element.props() {
                                     Some((position, tooltip)) => leptos::either::Either::Left((
                                         position.into_attrs(),
                                         tooltip.into_attrs(),
@@ -311,21 +317,22 @@ pub fn Tooltip(
                                 }
                             })}
                             {..element.attr().chain(entering.attr())}
-                            {..tooltip_trigger.with_value(|part| part.attrs())}
+                            {..content.with_value(|content| content.trigger.attrs())}
                             {..data_flags([
                                 ("data-entering", is_entering),
                                 ("data-exiting", is_exiting),
                             ])}
-                            class=classes.get_value()
-                            style=styles.get_value()
+                            class=classes.clone()
+                            style=styles.clone()
                             data-placement=move || {
                                 resolved_placement.get().map(PlacementAxis::as_str)
                             }
                         >
                             // The tooltip's own content is no trigger.
                             <ClearTriggerContexts>
-                                <Provider value=arrow_context.get_value()>
-                                    {(children.get_value())()}
+                                <Provider value=content
+                                    .with_value(|content| content.arrow_context.clone())>
+                                    {content.with_value(|content| content.children.clone())()}
                                 </Provider>
                             </ClearTriggerContexts>
                         </div>
@@ -334,4 +341,16 @@ pub fn Tooltip(
             }
         </Show>
     })
+}
+
+/// What each opening of a [`Tooltip`] renders.
+struct TooltipContent {
+    arrow_context: OverlayArrowContext,
+    /// The tooltip element's own props (one element at a time).
+    element: Part<(UseOverlayPositionProps, UseTooltipProps)>,
+    classes: Classes,
+    styles: Styles,
+    children: ChildrenFn,
+    /// The trigger's reference to the tooltip (its id).
+    trigger: Part<UseTooltipTriggerTooltipProps>,
 }

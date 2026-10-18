@@ -6,6 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use super::table_utils::{ColumnBound, ColumnSize};
 use crate::hooks::collections::{
     Collection, CollectionBuilder, HeaderCell, ItemBuilder, Key, Node, NodeKind, RowBuilder,
+    empty_text, text,
 };
 
 // =============================================================================
@@ -18,6 +19,11 @@ use crate::hooks::collections::{
 // - The rows (header rows first, then body rows) are an ordinary `Collection`; the column
 //   structure is kept next to it (`Column`). Generated nodes (header rows, placeholders, the
 //   selection checkbox column) get keys that never equal keys created from user values.
+// - Body cells are keyed by their row and the column they start in, `Key::cell(row, column)`
+//   (react-stately's rows of dynamic cells: `${rowKey}${column.key}`; react-aria-components'
+//   cells keep their identity too), the selection checkbox cell by
+//   `TableCollection::SELECTION_COLUMN` (react-stately: `'header'`): a cell keeps its key, and
+//   its focus, when columns before it come and go. Columns are added before the rows.
 // - Rows need a text value (react-aria derives one from the row header cells when missing).
 //
 // ## DIFFERENT BEHAVIOR
@@ -114,14 +120,21 @@ impl TableCollection {
         let mut builder = TableBuilder {
             columns: ColumnsBuilder::default(),
             rows: CollectionBuilder::default(),
+            has_rows: false,
         };
         f(&mut builder);
         assemble(builder.columns.defs.into(), builder.rows, false)
     }
 
+    /// The key of the selection checkbox column (see
+    /// [`with_selection_column`](Self::with_selection_column)): a row's checkbox cell is
+    /// `Key::cell(&row, TableCollection::SELECTION_COLUMN)`.
+    pub const SELECTION_COLUMN: Key = Key::generated("selection-column", 0);
+
     /// This table with a first column of checkboxes selecting the rows (and all rows, in its
-    /// header): a column of kind [`ColumnKind::SelectionCheckbox`] and an empty first cell in
-    /// every row, so the cells' keys count it as cell `0`. The table state adds it while
+    /// header): a column of kind [`ColumnKind::SelectionCheckbox`] (key
+    /// [`SELECTION_COLUMN`](Self::SELECTION_COLUMN)) and an empty first cell in every row, keyed
+    /// by it; the other cells keep their keys. The table state adds it while
     /// `show_selection_checkboxes` is set and rows can be selected (react-stately).
     #[must_use]
     pub fn with_selection_column(&self) -> Self {
@@ -130,7 +143,7 @@ impl TableCollection {
         }
         assemble(
             self.column_defs.clone(),
-            CollectionBuilder::rows_with_leading_cells(&self.collection, 1),
+            CollectionBuilder::rows_with_leading_cell(&self.collection, &Self::SELECTION_COLUMN),
             true,
         )
     }
@@ -188,23 +201,15 @@ impl TableCollection {
             .flatten()
     }
 
-    /// The key of the cell of `row` that starts at the data column `column_index`; `None` where
-    /// no cell starts (under a cell spanning columns, or past the row's cells). Constant time for
-    /// rows without spanning cells.
+    /// The key of the cell of `row` that starts at the data column `column_index`
+    /// (`Key::cell(row, column)` with that column's key); `None` where no cell starts (under a
+    /// cell spanning columns, or past the row's cells).
     pub fn cell_key(&self, row: &Key, column_index: usize) -> Option<Key> {
-        let starts_here = |node: &Node| node.col_index.unwrap_or(node.index) == column_index;
-        let key = Key::cell(row, column_index);
-        if self
-            .collection
-            .get(&key)
-            .is_some_and(|node| node.kind == NodeKind::Cell && starts_here(node))
-        {
-            return Some(key);
-        }
+        let key = Key::cell(row, self.columns.get(column_index)?.clone());
         self.collection
-            .cells(row)
-            .find(|node| starts_here(node))
-            .map(|node| node.key.clone())
+            .get(&key)
+            .is_some_and(|node| node.kind == NodeKind::Cell)
+            .then_some(key)
     }
 
     /// The keys of the header rows, top to bottom.
@@ -224,45 +229,84 @@ impl TableCollection {
 pub struct TableBuilder {
     columns: ColumnsBuilder,
     rows: CollectionBuilder,
+    /// Rows were added: columns added now would be missing from their cells' keys.
+    has_rows: bool,
 }
 
 impl TableBuilder {
-    /// Add a column.
+    /// Add a column (before the rows).
     pub fn column(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
     ) -> ColumnBuilder<'_> {
+        self.columns_change();
         self.columns.column(key, text_value)
     }
 
-    /// Add a group of columns, filled by `columns`.
+    /// Add a group of columns, filled by `columns` (before the rows).
     pub fn column_group(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
         columns: impl FnOnce(&mut ColumnsBuilder),
     ) {
+        self.columns_change();
         self.columns.column_group(key, text_value, columns);
     }
 
-    /// Add a body row with one cell per data column. Cell keys are generated:
-    /// `Key::cell(row, i)` (with a selection column, see
-    /// [`TableCollection::with_selection_column`], counting its cell as cell `0`). Child rows
-    /// (a tree table, see `UseTableStateInput::tree`) go into the returned row's `children`.
+    /// Add a body row with one cell per data column (or fewer cells spanning columns), after
+    /// the columns. Cell keys are generated from the row and the column each cell starts in:
+    /// `Key::cell(row, column)` with the column's key (a cell spanning columns: its first
+    /// column's); with a selection column (see [`TableCollection::with_selection_column`]), the
+    /// cells keep their keys. Child rows (a tree table, see `UseTableStateInput::tree`) go into
+    /// the returned row's `children`.
     pub fn row(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
         cells: impl FnOnce(&mut RowBuilder),
     ) -> ItemBuilder<'_> {
+        self.rows_change();
         self.rows.row(key, text_value, cells)
     }
 
     /// Add body rows through the [`CollectionBuilder`] that also builds child rows
-    /// (`ItemBuilder::children`): for rows built by a recursive function.
+    /// (`ItemBuilder::children`): for rows built by a recursive function. After the columns.
     pub fn rows(&mut self, rows: impl FnOnce(&mut CollectionBuilder)) {
+        self.rows_change();
         rows(&mut self.rows);
+    }
+
+    /// Columns are about to change: the rows' cell keys follow them again.
+    fn columns_change(&mut self) {
+        if self.has_rows {
+            crate::utils::dev_warn!(
+                "Add a table's columns before its rows: cells are keyed by their column."
+            );
+        }
+        self.rows.table_columns = None;
+    }
+
+    /// Rows are about to be added: their cells are keyed by the data columns so far.
+    fn rows_change(&mut self) {
+        self.has_rows = true;
+        if self.rows.table_columns.is_none() {
+            let mut keys = Vec::new();
+            data_column_keys(&self.columns.defs, &mut keys);
+            self.rows.table_columns = Some(keys.into());
+        }
+    }
+}
+
+/// The keys of the data columns of `defs` (inside groups too), in order.
+fn data_column_keys(defs: &[ColumnDef], keys: &mut Vec<Key>) {
+    for def in defs {
+        if def.kind == ColumnKind::Group {
+            data_column_keys(&def.children, keys);
+        } else {
+            keys.push(def.key.clone());
+        }
     }
 }
 
@@ -276,9 +320,9 @@ fn assemble(
     let mut leaves: Vec<(ColumnDef, Vec<Key>)> = Vec::new();
     let mut column_info: HashMap<Key, Column> = HashMap::new();
     if selection_column {
-        let key = Key::generated("selection-column", 0);
+        let key = TableCollection::SELECTION_COLUMN;
         leaves.push((
-            ColumnDef::new(key, Arc::from(""), ColumnKind::SelectionCheckbox),
+            ColumnDef::new(key, empty_text(), ColumnKind::SelectionCheckbox),
             Vec::new(),
         ));
     }
@@ -363,7 +407,7 @@ fn assemble(
         let cell = HeaderCell {
             key: Key::generated("placeholder", placeholders),
             kind: NodeKind::Placeholder,
-            text_value: Arc::from(""),
+            text_value: empty_text(),
             col_span: (col_span > 1).then_some(col_span),
         };
         placeholders += 1;
@@ -443,11 +487,11 @@ impl ColumnsBuilder {
     pub fn column(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
     ) -> ColumnBuilder<'_> {
         self.defs.push(ColumnDef::new(
             key.into(),
-            text_value.into(),
+            text(text_value),
             ColumnKind::Data,
         ));
         ColumnBuilder {
@@ -459,14 +503,14 @@ impl ColumnsBuilder {
     pub fn column_group(
         &mut self,
         key: impl Into<Key>,
-        text_value: impl Into<Arc<str>>,
+        text_value: impl Into<Arc<str>> + AsRef<str>,
         columns: impl FnOnce(&mut ColumnsBuilder),
     ) {
         let mut inner = ColumnsBuilder::default();
         columns(&mut inner);
         self.defs.push(ColumnDef {
             children: inner.defs,
-            ..ColumnDef::new(key.into(), text_value.into(), ColumnKind::Group)
+            ..ColumnDef::new(key.into(), text(text_value), ColumnKind::Group)
         });
     }
 }
@@ -696,8 +740,9 @@ mod tests {
         // The first column labels the rows when none is marked.
         assert_that!(table.row_header_columns().to_vec()).is_equal_to(vec![k("name")]);
         assert_that!(table.column(&k("age")).map(|c| c.allows_sorting)).is_equal_to(Some(true));
-        let cell = Key::cell(&k("alice"), 1);
+        let cell = Key::cell(&k("alice"), "age");
         assert_that!(table.cell_column(&cell).map(|c| c.key.clone())).is_equal_to(Some(k("age")));
+        assert_that!(table.cell_key(&k("alice"), 1)).is_equal_to(Some(cell));
         // Navigation from the last header goes to the body.
         assert_that!(table.collection().key_after(&k("age")).cloned())
             .is_equal_to(Some(k("alice")));
@@ -845,9 +890,15 @@ mod tests {
         let first = table.column_at(0).expect("checkbox column");
         assert_that!(first.kind).is_equal_to(ColumnKind::SelectionCheckbox);
         assert_that!(table.row_header_columns().to_vec()).is_equal_to(vec![k("name")]);
-        let name_cell = Key::cell(&k("alice"), 1);
+        // The data cells keep their keys; the checkbox cell is keyed by the selection column.
+        let name_cell = Key::cell(&k("alice"), "name");
         assert_that!(table.cell_column(&name_cell).map(|c| c.key.clone()))
             .is_equal_to(Some(k("name")));
+        assert_that!(table.cell_key(&k("alice"), 0)).is_equal_to(Some(Key::cell(
+            &k("alice"),
+            TableCollection::SELECTION_COLUMN,
+        )));
+        assert_that!(table.cell_key(&k("alice"), 1)).is_equal_to(Some(name_cell.clone()));
         assert_that!(
             table
                 .collection()
@@ -885,21 +936,80 @@ mod tests {
             column("age"),
         ]);
         let c = with.collection();
-        // The spanning cell moved to cell 1 and still spans the two data columns.
+        // The spanning cell, keyed by its first column, is the second cell now and still spans
+        // the two data columns.
         let spanning = c
-            .get(&Key::cell(&k("alice"), 1))
+            .get(&Key::cell(&k("alice"), "name"))
             .expect("the spanning cell");
         assert_that!(spanning.text_value.to_string()).is_equal_to("Alice, 30".to_owned());
         assert_that!(spanning.col_span).is_equal_to(Some(2));
         assert_that!(spanning.col_index).is_equal_to(Some(1));
         // No cell starts under the spanning cell.
-        assert_that!(with.cell_key(&k("alice"), 1)).is_equal_to(Some(Key::cell(&k("alice"), 1)));
+        assert_that!(with.cell_key(&k("alice"), 1))
+            .is_equal_to(Some(Key::cell(&k("alice"), "name")));
         assert_that!(with.cell_key(&k("alice"), 2)).is_none();
-        assert_that!(with.cell_key(&k("bob"), 2)).is_equal_to(Some(Key::cell(&k("bob"), 2)));
+        assert_that!(with.cell_key(&k("bob"), 2)).is_equal_to(Some(Key::cell(&k("bob"), "age")));
         // Child rows get their selection cell too.
         assert_that!(c.cells(&k("bob")).count()).is_equal_to(3);
         assert_that!(c.get(&k("bob")).map(|n| n.level)).is_equal_to(Some(1));
         // Built again from the table without the column: the same.
         assert_that!(with.with_selection_column()).is_equal_to(with.clone());
+    }
+
+    /// Cells are keyed by their column, not their position: the keys are the same with and
+    /// without a selection column, and with columns before them hidden.
+    #[test]
+    fn cells_are_keyed_by_their_column() {
+        let build = |columns: &[&'static str]| {
+            TableCollection::build(|t| {
+                for column in columns {
+                    t.column(*column, *column);
+                }
+                t.row("alice", "Alice", |r| {
+                    for column in columns {
+                        r.cell(*column);
+                    }
+                });
+            })
+        };
+        let cell_keys = |table: &TableCollection| {
+            table
+                .collection()
+                .cells(&k("alice"))
+                .map(|n| n.key.clone())
+                .collect::<Vec<_>>()
+        };
+        let cell = |column: &str| Key::cell(&k("alice"), column);
+        let table = build(&["name", "type", "date"]);
+        assert_that!(cell_keys(&table)).is_equal_to(vec![cell("name"), cell("type"), cell("date")]);
+        assert_that!(cell_keys(&table.with_selection_column())).is_equal_to(vec![
+            Key::cell(&k("alice"), TableCollection::SELECTION_COLUMN),
+            cell("name"),
+            cell("type"),
+            cell("date"),
+        ]);
+        assert_that!(cell_keys(&build(&["name", "date"])))
+            .is_equal_to(vec![cell("name"), cell("date")]);
+        // Rows of a recursive builder and child rows too.
+        let tree = TableCollection::build(|t| {
+            t.column("name", "Name");
+            t.rows(|b| {
+                let _ = b
+                    .row("docs", "Docs", |r| {
+                        r.cell("Docs");
+                    })
+                    .children(|b| {
+                        b.row("cv", "CV", |r| {
+                            r.cell("CV");
+                        });
+                    });
+            });
+        });
+        assert_that!(
+            tree.collection()
+                .contains_key(&Key::cell(&k("docs"), "name"))
+        )
+        .is_true();
+        assert_that!(tree.collection().contains_key(&Key::cell(&k("cv"), "name"))).is_true();
     }
 }

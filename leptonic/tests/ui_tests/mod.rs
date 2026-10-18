@@ -41,8 +41,8 @@ pub mod test_grid_list;
 pub mod test_grid_list_cases;
 pub mod test_grid_list_features;
 pub mod test_has_tabbable_child;
-pub mod test_hide_outside;
 pub mod test_helpers;
+pub mod test_hide_outside;
 pub mod test_hover;
 pub mod test_hydration_ids;
 pub mod test_interact_outside;
@@ -63,10 +63,10 @@ pub mod test_move;
 pub mod test_number_field;
 pub mod test_number_field_atoms;
 pub mod test_orphan_parts;
-pub mod test_own_ids;
 pub mod test_overlay;
 pub mod test_overlay_position;
 pub mod test_overlay_state;
+pub mod test_own_ids;
 pub mod test_popover;
 pub mod test_press;
 pub mod test_pressable;
@@ -259,6 +259,9 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_table_selection::ChangingColumns))
                 .with(fixture_test(
                     test_table_selection::TheSelectionColumnFollowsTheSelectionMode,
+                ))
+                .with(fixture_test(
+                    test_table_selection::TheFocusedCellStaysWhenTheSelectionColumnToggles,
                 ))
                 .with(fixture_test(
                     test_table_selection::RemovingTheFocusedColumnHeader,
@@ -494,15 +497,23 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
         )
         .with_test_group(
             TestGroup::new("wheel_stepping")
-                .with(fixture_test(test_wheel_stepping::TheWheelStepsTheFocusedField))
+                .with(fixture_test(
+                    test_wheel_stepping::TheWheelStepsTheFocusedField,
+                ))
                 .with(fixture_test(
                     test_wheel_stepping::FocusWithinTheFieldLetsTheWheelStep,
                 ))
-                .with(fixture_test(test_wheel_stepping::AnUnfocusedFieldIgnoresTheWheel))
-                .with(fixture_test(test_wheel_stepping::AHorizontalWheelDoesntStep))
+                .with(fixture_test(
+                    test_wheel_stepping::AnUnfocusedFieldIgnoresTheWheel,
+                ))
+                .with(fixture_test(
+                    test_wheel_stepping::AHorizontalWheelDoesntStep,
+                ))
                 .with(fixture_test(test_wheel_stepping::AReadOnlyFieldDoesntStep))
                 .with(fixture_test(test_wheel_stepping::ADisabledFieldDoesntStep))
-                .with(fixture_test(test_wheel_stepping::AWheelDisabledFieldDoesntStep)),
+                .with(fixture_test(
+                    test_wheel_stepping::AWheelDisabledFieldDoesntStep,
+                )),
         )
         .with_test_group(
             TestGroup::new("hide_outside")
@@ -1011,7 +1022,9 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_remounted_parts::SecondInput))
                 .with(fixture_test(test_remounted_parts::OptionLabelMountsAgain))
                 .with(fixture_test(test_remounted_parts::SecondOptionLabel))
-                .with(fixture_test(test_remounted_parts::OptionDescriptionMountsAgain))
+                .with(fixture_test(
+                    test_remounted_parts::OptionDescriptionMountsAgain,
+                ))
                 .with(fixture_test(test_remounted_parts::SecondOptionDescription))
                 .with(fixture_test(test_remounted_parts::SecondSectionHeading))
                 .with(fixture_test(test_remounted_parts::DialogTitleMountsAgain))
@@ -1020,7 +1033,9 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_remounted_parts::MenuItemLabelMountsAgain))
                 .with(fixture_test(test_remounted_parts::SecondMenuItemLabel))
                 .with(fixture_test(test_remounted_parts::SecondCheckboxButton))
-                .with(fixture_test(test_remounted_parts::DialogDescriptionMountsAgain))
+                .with(fixture_test(
+                    test_remounted_parts::DialogDescriptionMountsAgain,
+                ))
                 .with(fixture_test(test_remounted_parts::SecondDialogDescription))
                 .with(fixture_test(test_remounted_parts::SliderOutputMountsAgain))
                 .with(fixture_test(test_remounted_parts::SecondSliderOutput))
@@ -2396,9 +2411,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_disclosure::GroupControlled))
                 .with(fixture_test(test_disclosure::NestedGroups))
                 .with(fixture_test(test_disclosure::RemountedPanel))
-                .with(fixture_test(
-                    test_disclosure::ReferencesOnlyRenderedParts,
-                )),
+                .with(fixture_test(test_disclosure::ReferencesOnlyRenderedParts)),
         )
         .with_test_group(
             TestGroup::new("popover")
@@ -2579,7 +2592,9 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                     test_virtual_list::ScrollJumpsRenderRowsInOrder,
                 ))
                 .with(fixture_test(test_virtual_list::ScrollingAwayStopsFollowing))
-                .with(fixture_test(test_virtual_list::ShrinkingContentKeepsFollowing))
+                .with(fixture_test(
+                    test_virtual_list::ShrinkingContentKeepsFollowing,
+                ))
                 .with(fixture_test(test_virtual_list::SelectedRowStaysRendered))
                 .with(fixture_test(
                     test_virtual_list::TurningFollowingOnScrollsToTheEnd,

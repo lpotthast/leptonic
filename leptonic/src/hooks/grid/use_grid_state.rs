@@ -42,9 +42,18 @@ pub struct GridState {
     keyboard_navigation_disabled: RwSignal<bool>,
     /// Whether the grid handles navigation keys: the flag above, for tables also while empty.
     navigation_disabled: Signal<bool>,
+    /// Whether the grid has no rows: one memo for all its rows and cells, which read it instead
+    /// of the whole collection (`performance.md` R1).
+    is_empty: Signal<bool>,
 }
 
 impl GridState {
+    /// Whether the grid has no rows (and no cells). Changes only when that does, not with every
+    /// change of the collection.
+    pub fn is_empty(&self) -> Signal<bool> {
+        self.is_empty
+    }
+
     /// Whether the grid ignores navigation keys (react-stately's
     /// `isKeyboardNavigationDisabled`): while set with
     /// [`set_keyboard_navigation_disabled`](Self::set_keyboard_navigation_disabled), and for
@@ -63,11 +72,9 @@ impl GridState {
     /// `useTableState`).
     pub(crate) fn without_navigation_while_empty(self) -> Self {
         let flag = self.keyboard_navigation_disabled;
-        let collection = self.list.collection;
+        let is_empty = self.is_empty;
         Self {
-            navigation_disabled: Signal::derive(move || {
-                flag.get() || collection.with(|c| c.size() == 0)
-            }),
+            navigation_disabled: Signal::derive(move || flag.get() || is_empty.get()),
             ..self
         }
     }
@@ -111,6 +118,7 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
         focus_mode,
         keyboard_navigation_disabled,
         navigation_disabled: keyboard_navigation_disabled.into(),
+        is_empty: Memo::new(move |_| collection.with(|c| c.size() == 0)).into(),
     }
 }
 
@@ -399,7 +407,8 @@ mod tests {
 
             columns.set(vec!["name", "city"]);
             flush_effects();
-            assert_that!(focused(&state)).is_equal_to(Some(Key::cell(&Key::from("alice"), 1)));
+            // The cell now in the removed column's place (cells are keyed by their column).
+            assert_that!(focused(&state)).is_equal_to(Some(Key::cell(&Key::from("alice"), "city")));
         });
     }
 

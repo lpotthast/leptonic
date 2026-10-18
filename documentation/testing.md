@@ -179,6 +179,11 @@ replaced handle gives up at once with a stale element error.
   `tests/browser_test.rs`). If the effect is that nothing changes: a stays check over an explicit duration extending
   past the timer under test, with a comment naming it. Never an assertion: it reads before effects, frames and timers
   ran.
+- **The next action after one that starts asynchronous setup** (an animation frame, an effect, a timer): first a
+  wait for an observable sign that the setup ran, then the action. Acting earlier passes alone and fails under load
+  (a screen reader drop raced the drag session's first frame: `DndActions::wait_for_drag_session`). Find it: actions
+  right after one whose handler defers work (`request_animation_frame`, `set_timeout`, `spawn_local`), checked only
+  by an attribute set synchronously.
 - **A state nothing is changing** (the initial render, values related to a state a wait just confirmed): an
   assertion.
 - **That an element is there**: its lookup.
@@ -304,6 +309,8 @@ differ, by at most 10%). So counts need no re-measuring per opt-level; wasm size
   fixture), and test modules share no helpers either. `PerfControls` are what the test does besides user input
   (`mount`, `unmount`, prop changes, reads), called with `page.control(name)` from a script, so the call allocates
   nothing in the page.
+  The fixture allocates per item only what any app must: integer keys and static texts, no `format!` per key or text
+  (`use_virtualizer_state` measured its own keys and texts: 40k of 40,067 allocations).
 - **What it measures: everything the subject offers**, one test per offer, each from a fresh page: mounting and
   unmounting; every interaction (pointer: click, hold and release, hover and leave, drag; each key it handles; focus
   and blur by keyboard and pointer; typing; scrolling); every reactive prop and controlled state, each change and
@@ -343,7 +350,8 @@ differ, by at most 10%). So counts need no re-measuring per opt-level; wasm size
 - **Timings** (`just browser-perf`): the scenarios' timings on the page's clock, one case after the other, in a build
   without debug assertions and overflow checks (`<target>/performance`). Each action is timed `.settled` (until every
   effect it caused ran) and `.render` (the next frame's own work); statistics go to
-  `<target>/tmp/performance/<fixture>/<scenario>.json`, each median compared with the previous run's. Timings depend
+  this machine's `leptonic/tests/timings/<machine>/scenarios/<fixture>/<scenario>.json` ("Timing runs"), each median
+  compared with the previous run's. Timings depend
   on the machine and its load (other builds moved medians by up to 30%, full load by 80-200%), so they have no
   budgets: compare runs on one quiet machine, before and after, twice. The clock's resolution is 0.1 ms.
 - **`reactive_graph::metrics`**: Leptos counts no reactive work, so the test-app patches `reactive_graph`
@@ -367,6 +375,9 @@ A measured step must start from the same state and contain no timer whose firing
 - WebDriver's default pointer moves take 250 ms with a varying number of `pointermove`s: drag with
   `action_chain_with_delay(None, Some(Duration::ZERO))`. Keys sent together may land in different frames: one key per
   measured step.
+- A click on an element outside the view scrolls it in first, and the hover changes the browser sends after a
+  scroll land inside or after the measurement by chance (RadioGroup of 1,000: 107 or 119 allocations): hover the
+  target unmeasured (`element.hover()`), wait for its `data-hovered`, then measure the click.
 - Animations started inside a step vary style recalculations: start them at mount (paused), finish them in the step
   with `getAnimations().finish()`.
 - The first key press on a page allocates ~40 times once: keep the step that presses it the same.
@@ -375,6 +386,28 @@ A measured step must start from the same state and contain no timer whose firing
 - Lookups by text in lists of 1,000 rows can exceed 5 s: select rows by a `data-*` attribute.
 - WebDriver reads boolean attributes (`disabled`, `hidden="until-found"`) as `"true"`: read the property where the
   value matters. `checkValidity()` fires `invalid` (committing a native-mode field): read `validationMessage`.
+
+## Timing Runs
+
+The budgets count work, not time: they can't show a change that makes the tests (and the apps) slower without
+allocating more, and timings depend on the machine and its load. Timings are therefore kept per machine and compared
+only with earlier runs on it:
+
+- **Per machine** (`tests/timing.rs`): `leptonic/tests/timings/<machine>/` (checked in), the machine named by its
+  hardware: OS, architecture, CPU model, logical CPUs and memory (`linux-x86-64-amd-ryzen-...-32-cpus-64-gib`;
+  `BROWSER_TEST_MACHINE` names one whose hardware can't be read). Every developer's machine has its own directory;
+  a new CPU (or more memory) starts a new history. A Chrome update moves timings too, but is not part of the name:
+  time a baseline again after one.
+- **`just browser-test-timed`**: the regular suite with `BROWSER_TEST_PARALLELISM=1` and `BROWSER_TEST_TIMINGS=1`
+  (timings refuse to record with parallel tests: they would share the machine). After the run, every passed test's
+  body duration is compared with its last timed duration on this machine (changes of at least 20 ms and 10%, the
+  largest first), the whole run and each step kind (`page_load`, `wait_for_hydration`, `measure`, ...) with the
+  previous run of the same selection, and then recorded in `tests.json`. A filtered run replaces only its tests'
+  entries. Failed tests aren't recorded.
+- **Comparing a change**: on a quiet machine (no builds, no other test runs), time the suite before and after the
+  change; repeat a run whose differences matter (sequential runs vary by a few percent). The default `just
+  browser-test` stays parallel and records nothing.
+- **Scenario timings** (`just browser-perf`, above) are kept in the same directory (`scenarios/`).
 
 ## Speed and Memory
 

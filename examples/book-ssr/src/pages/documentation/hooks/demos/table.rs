@@ -271,19 +271,20 @@ fn BookRow(table: TableData, book: Book) -> impl IntoView {
         UseTableSelectionCheckboxInput {
             table: table.clone(),
             key: key.clone(),
+            is_selected: row.is_selected,
         },
     ));
     let (checkbox_attrs, checkbox_styles) = checkbox.input.attrs();
 
     view! {
         <tr {..attrs} style=styles data-disabled=move || (!allows_selection.get()).then_some("")>
-            <Cell table=table.clone() key=Key::cell(&key, 0)>
+            <Cell table=table.clone() key=Key::cell(&key, TableCollection::SELECTION_COLUMN)>
                 <input {..checkbox_attrs} style=checkbox_styles/>
             </Cell>
-            <Cell table=table.clone() key=Key::cell(&key, 1)>{book.title}</Cell>
-            <Cell table=table.clone() key=Key::cell(&key, 2)>{book.author}</Cell>
-            <Cell table=table.clone() key=Key::cell(&key, 3) number=true>{book.stock}</Cell>
-            <Cell table key=Key::cell(&key, 4) number=true>{book.price}</Cell>
+            <Cell table=table.clone() key=Key::cell(&key, "title")>{book.title}</Cell>
+            <Cell table=table.clone() key=Key::cell(&key, "author")>{book.author}</Cell>
+            <Cell table=table.clone() key=Key::cell(&key, "stock") number=true>{book.stock}</Cell>
+            <Cell table key=Key::cell(&key, "price") number=true>{book.price}</Cell>
         </tr>
     }
 }

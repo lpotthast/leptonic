@@ -19,6 +19,9 @@ in `leptos-and-dom.md` and `hooks-implementation.md` (not repeated here).
   parameters with type annotations as attribute values need braces (`on_change={move |v: Option<Key>| ..}`);
   `#[prop(optional)] Option<T>` props can't receive an `Option` through `view!` (build the props struct instead);
   `#[component] fn Input` generates `InputProps` (clashes with a type of that name).
+- **An arena item holding its own owner leaks** (2026-10-18): the collection's focus registry stored the `Owner` it
+  was created under, in a `StoredValue` of that owner; collections in removed `<For>` rows were never freed and their
+  focus effects kept running. Rule: `leptos-and-dom.md`, "Ownership and Cleanup".
 - **Contexts provided in a component's body** reach the component's later siblings too (a component has no owner of
   its own): use `<Provider>` or `scoped_view` (`atoms-implementation.md`, "Context Pattern").
 - **Client-only attributes are lost on hydrated pages**: an attribute only the client branch renders (a long-press
@@ -99,7 +102,9 @@ in `leptos-and-dom.md` and `hooks-implementation.md` (not repeated here).
 - **leptosfmt drops needed braces**: with `attr_value_brace_style = "WhenRequired"`,
   `locale={"he".parse::<Locale>().expect(..)}` becomes uncompilable: check the build after `leptosfmt`, or bind such a
   value with `let` first. It also breaks generic components (`<DateField<DateTime> ..>`) into uncompilable layouts:
-  format such files with rustfmt only.
+  format such files with rustfmt only. An attribute value directly followed by a spread needs its braces:
+  `style=styles {..signal_attr(..)}` parses as the struct literal `styles { ..signal_attr(..) }` ("cannot find
+  struct `styles`"); leptosfmt removes them again (`atoms/table.rs`, also reformatted elsewhere: rustfmt only).
 - **Debug info filled the disk**: `split-debuginfo = "unpacked"` plus ~16 GB of DWARF per book build without
   `erase_components` piled up `.dwo` files with new random names per rustc run (rust#161824). Since: the book uses
   `debug = "line-tables-only"` without split debuginfo, and `--cfg=erase_components` is set for every build in the

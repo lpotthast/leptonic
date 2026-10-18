@@ -13,8 +13,11 @@ use crate::{
             CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
             UseListKeyboardDelegateInput, use_list_keyboard_delegate,
         },
-        focus::use_focus_within::{
-            UseFocusWithinAttrs, UseFocusWithinInput, UseFocusWithinProps, use_focus_within,
+        focus::{
+            use_focus_visible::{Modality, use_interaction_modality},
+            use_focus_within::{
+                UseFocusWithinAttrs, UseFocusWithinInput, UseFocusWithinProps, use_focus_within,
+            },
         },
         form::{
             use_field::{UseFieldInput, UseFieldReturn, use_field},
@@ -28,9 +31,12 @@ use crate::{
     utils::{
         aria::{AriaAtomic, AriaLive, AriaRelevant, AriaRole},
         focus::focus_safely,
+        intl_strings::{TagStrings, use_localized_strings},
         orientation::Orientation,
         part::Remount,
+        platform::device::has_touch_events,
         signal_attr::{FixedAttr, SignalAttr, fixed_attr, signal_attr},
+        use_description::use_description,
     },
 };
 
@@ -41,6 +47,8 @@ use crate::{
 // ## API DIFFERENCES
 // - Tags get the group's settings through the returned `TagGroupData` (react-aria: a `WeakMap`
 //   keyed by the state), which the caller hands to `use_tag`.
+// - The description of how to remove tags is one for the group, referenced by every tag
+//   (react-aria: each tag's `useDescription` of the same text, which shares one element).
 // - `has_label` says whether a visible label is rendered.
 //
 // =============================================================================
@@ -72,6 +80,9 @@ pub struct UseTagGroupInput {
 pub struct TagGroupData {
     pub list: GridListData,
     pub on_remove: Option<Callback<HashSet<Key>>>,
+    /// The id of the description of how to remove tags (with `on_remove`, while the keyboard or
+    /// a screen reader is in use), referenced by every tag's `aria-describedby`.
+    pub remove_description: Signal<Option<Id>>,
 }
 
 /// The return value of [`use_tag_group`].
@@ -228,6 +239,25 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         previous_count.set_value(count);
     });
 
+    // Keyboard and screen reader users learn how to remove tags: one description for all tags.
+    // On touch devices, a virtual modality comes from a screen reader's touch gestures, which
+    // can't press Delete: they count as pointer interaction (react-aria). Without `on_remove`,
+    // there is none.
+    let remove_description = if on_remove.is_some() {
+        let modality = use_interaction_modality();
+        let strings = use_localized_strings::<TagStrings>();
+        use_description(Signal::derive(move || {
+            let modality = match modality.get() {
+                Some(Modality::Virtual) if has_touch_events() => Some(Modality::Pointer),
+                modality => modality,
+            };
+            matches!(modality, Some(Modality::Keyboard | Modality::Virtual))
+                .then(|| strings.read().remove_description())
+        }))
+    } else {
+        Signal::stored(None)
+    };
+
     UseTagGroupReturn {
         grid: Part::stored(UseTagGroupProps {
             grid,
@@ -249,6 +279,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         data: TagGroupData {
             list: data,
             on_remove,
+            remove_description,
         },
     }
 }

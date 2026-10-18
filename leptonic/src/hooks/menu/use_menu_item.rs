@@ -23,7 +23,7 @@ use crate::{
             use_press::{PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press},
         },
     },
-    use_slot,
+    sharing_one_effect, use_slot,
     utils::{
         aria::{AriaChecked, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole, aria_true},
         dom_ext::EventAccessors,
@@ -190,6 +190,12 @@ enum Interaction {
 /// closes the menu (see [`UseMenuItemInput::should_close_on_select`]).
 pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     crate::metrics::subject!();
+    // `use_selectable_item`'s resets and `use_hover`'s react to the disabled state in one effect.
+    sharing_one_effect(|| menu_item(input))
+}
+
+/// The body of [`use_menu_item`].
+fn menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     crate::hooks::focus::use_focus_visible::track_interaction_modality();
     let UseMenuItemInput {
         menu,
@@ -476,10 +482,10 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         description: description.part,
         keyboard_shortcut: keyboard_shortcut.part,
         is_focused,
-        is_focus_visible: Memo::new(move |_| {
+        // A derive (read once, by the item's element): only the focused item reads the modality.
+        is_focus_visible: Signal::derive(move || {
             is_focused.get() && is_focus_visible() && !is_trigger_expanded.get()
-        })
-        .into(),
+        }),
         is_selected,
         is_pressed: press.is_pressed,
         is_hovered,

@@ -8,7 +8,7 @@ the reference for the API; this note keeps the decisions and their reasons. Upst
 ## Decisions
 
 1. **One concrete `Key`**, no generic `K` (`collections/key.rs`): an integer (`i128`, so `Key::from(1_u8) ==
-   Key::from(1_i64)`), a string (`Arc<str>`), a generated cell key (row, column index) or a crate-internal structural
+   Key::from(1_i64)`), a string (`Arc<str>`), a cell key (row key, column key) or a crate-internal structural
    key. Why: the hook layer only needs identity, order, text, flags and links, never the user's type; a concrete key
    compiles the large hook bodies once (smaller wasm, faster builds), keeps delegates object-safe and drops
    `where K: ...` noise. Type safety returns at the atom boundary (`SelectionValue`, C16), as react-aria has
@@ -61,8 +61,11 @@ the reference for the API; this note keeps the decisions and their reasons. Upst
   `GridData`, `TagGroupData`), the Rust counterpart of upstream's per-state `WeakMap`s. `CollectionOptions` holds the
   behavior switches shared by `use_selectable_collection`, `use_selectable_list` and the container hooks.
 - **Grids** are ordinary collections whose rows (`Item` nodes) have `Cell` children keyed `Key::cell(row, column)`;
-  there is no separate grid collection. In cell focus mode the manager maps a focused row to its first/last cell, and
-  selection maps cells to their row.
+  there is no separate grid collection. Grid cells' column is their position (`Key::cell(&row, 0)`); table cells' is the
+  key of the column they start in, the selection checkbox cell's `TableCollection::SELECTION_COLUMN` (react-stately's
+  `${rowKey}${column.key}` and `'header'`): a table cell keeps its key, element and focus when columns before it come
+  and go (index keys shifted every cell, re-rendered all of them and lost the focus). In cell focus mode the manager
+  maps a focused row to its first/last cell, and selection maps cells to their row.
 - **Trees**: `TreeState.list.collection` is the flattened visible collection (`with_expanded`), so the list delegate
   and selection work unchanged; `use_tree` is `use_grid_list` with `role="treegrid"`.
 - **Focus reset** when the focused item disappears is the state hooks' (list: walk forward in the old collection,

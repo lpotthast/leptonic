@@ -19,7 +19,6 @@ use crate::{
     },
     utils::{
         aria::{AriaRole, AriaSort},
-        intl_strings::{TableStrings, use_localized_strings},
         part::{Part, Remount},
         platform::device::is_android,
         signal_attr::{SignalAttr, signal_attr},
@@ -149,7 +148,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     cell.role = Signal::stored(AriaRole::Columnheader);
 
     // Without rows, the headers aren't focusable (and lose focus).
-    let is_empty = Memo::new(move |_| state.table.with(|t| t.size() == 0));
+    let is_empty = state.grid.is_empty();
     let cell_tabindex = cell.item.tabindex;
     cell.item.tabindex = Signal::derive(move || {
         if is_empty.get() {
@@ -210,7 +209,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         .into();
 
     // Sortable columns are described as such (on Android also with their sort direction).
-    let strings = use_localized_strings::<TableStrings>();
+    let strings = table.strings;
     let sort_description = use_description(Signal::derive(move || {
         if !allows_sorting.get() {
             return None;

@@ -193,7 +193,12 @@ fn HookTableHeader(table: TableData) -> impl IntoView {
 /// `index` of row `row`, with the cell's text, or the row's selection checkbox
 /// (`use_table_selection_checkbox`) in a selection column.
 #[component]
-fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView {
+fn HookTableCell(
+    table: TableData,
+    row: Key,
+    index: usize,
+    is_selected: Signal<bool>,
+) -> impl IntoView {
     let (key, kind, text) = table.state.table.with_untracked(|t| {
         let key = t
             .cell_key(&row, index)
@@ -211,6 +216,7 @@ fn HookTableCell(table: TableData, row: Key, index: usize) -> impl IntoView {
             UseTableSelectionCheckboxInput {
                 table: table.clone(),
                 key: row,
+                is_selected,
             },
         ));
         let (attrs, styles) = checkbox
@@ -248,6 +254,7 @@ fn HookTableRow(table: TableData, key: Key) -> impl IntoView {
     let UseTableRowReturn {
         row: row_props,
         is_pressed,
+        is_selected,
         ..
     } = use_table_row(UseTableRowInput {
         table: table.clone(),
@@ -259,7 +266,7 @@ fn HookTableRow(table: TableData, key: Key) -> impl IntoView {
         <tr {..attrs} style=styles data-pressed=flag(is_pressed)>
             {(0..columns)
                 .map(move |index| {
-                    view! { <HookTableCell table=table.clone() row=key.clone() index /> }
+                    view! { <HookTableCell table=table.clone() row=key.clone() index is_selected /> }
                 })
                 .collect_view()}
         </tr>

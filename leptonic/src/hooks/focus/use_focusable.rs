@@ -16,7 +16,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 use crate::{
     EventHandler, Id, IntoAttrs, OnEvent,
     hooks::{
-        focus::use_focus::{UseFocusInput, use_focus},
+        focus::use_focus::{FocusMark, UseFocusInput, use_focus},
         interactions::use_keyboard::{KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
     },
     utils::{
@@ -75,6 +75,11 @@ pub struct UseFocusableInput {
 
     /// See [`UseKeyboardInput::allow_repeats`].
     pub allow_shortcut_repeats: bool,
+
+    /// A reaction to the focus state before the callbacks (see [`UseFocusInput::mark`]), for
+    /// hooks composing this one that track the focus themselves (`use_radio`'s last focused
+    /// radio).
+    pub mark: Option<FocusMark>,
 }
 
 impl Default for UseFocusableInput {
@@ -90,6 +95,7 @@ impl Default for UseFocusableInput {
             on_key_up: None,
             shortcuts: None,
             allow_shortcut_repeats: false,
+            mark: None,
         }
     }
 }
@@ -501,6 +507,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         on_key_up,
         shortcuts,
         allow_shortcut_repeats,
+        mark,
     } = input;
 
     let element = CapturedElement::new();
@@ -517,7 +524,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         on_focus,
         on_blur,
         on_focus_change,
-        mark: None,
+        mark,
     });
     let focus_props = focus.target.into_props();
 

@@ -9,13 +9,19 @@
 
 use std::{collections::HashSet, sync::Arc};
 
-use leptonic::hooks::{
-    collections::{Collection, CollectionMemo, Key, Selection, SelectionMode, SelectionOptions},
-    form::use_checkbox,
-    grid::{
-        GridFocusMode, GridState, UseGridSelectionCheckboxInput, UseGridStateInput,
-        use_grid_selection_checkbox, use_grid_state,
+use leptonic::{
+    GridStrings,
+    hooks::{
+        collections::{
+            Collection, CollectionMemo, Key, Selection, SelectionMode, SelectionOptions,
+        },
+        form::use_checkbox,
+        grid::{
+            GridFocusMode, GridState, UseGridSelectionCheckboxInput, UseGridStateInput,
+            use_grid_selection_checkbox, use_grid_state,
+        },
     },
+    use_localized_strings,
 };
 use leptos::prelude::*;
 
@@ -51,12 +57,17 @@ fn selected_count(selection: &Selection) -> f64 {
     }
 }
 
-/// The checkbox selecting row `i`.
+/// The checkbox selecting row `i`, with the messages all checkboxes share.
 #[component]
-fn SelectionCheckbox(state: GridState, i: usize) -> impl IntoView {
+fn SelectionCheckbox(state: GridState, strings: Memo<GridStrings>, i: usize) -> impl IntoView {
+    let selection = state.list.selection;
+    // The row's selection state, as a row hook (`use_grid_row`) would return it.
+    let is_selected = Memo::new(move |_| selection.is_selected(&Key::from(i))).into();
     let checkbox = use_checkbox(use_grid_selection_checkbox(UseGridSelectionCheckboxInput {
-        selection: state.list.selection,
+        selection,
         key: Key::from(i),
+        is_selected,
+        strings,
     }));
     let (attrs, styles) = checkbox
         .input
@@ -86,6 +97,7 @@ pub fn PagePerf() -> impl IntoView {
         focus_mode: GridFocusMode::Row,
     });
     let selection = state.list.selection;
+    let strings = use_localized_strings::<GridStrings>();
     let controls = vec![
         Control::action("mount", move || mounted.set(true)),
         Control::action("unmount", move || mounted.set(false)),
@@ -108,7 +120,7 @@ pub fn PagePerf() -> impl IntoView {
         <Show when=move || mounted.get()>
             <div id="perf-checkboxes">
                 <For each=move || 0..rows.get() key=|i| *i let:i>
-                    <SelectionCheckbox state i />
+                    <SelectionCheckbox state strings i />
                 </For>
             </div>
         </Show>

@@ -9,7 +9,7 @@ use super::{
     typed_values::{KeyedStateProps, keyed_state_props},
 };
 use crate::{
-    Orientation, Out, Part, PropsWithStyles,
+    IntoAttrs, Orientation, Out, Part, PropsWithStyles,
     atoms::field::LabelPresence,
     hooks::{
         collections::{Key, SelectionValue},
@@ -19,11 +19,12 @@ use crate::{
             UseToggleLabelAttrs, UseToggleLabelProps, ValidateFn, ValidationBehavior, use_radio,
             use_radio_group, use_radio_group_state,
         },
-        interactions::{UseHoverInput, use_hover},
+        interactions::{UseHoverInput, UseHoverProps, UseHoverReturn, use_hover},
     },
+    sharing_one_effect,
     utils::{
-        data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
-        visually_hidden::visually_hidden_styles,
+        data_attributes::data_flags, default_class::with_default_class, dev_warn, probe::either,
+        styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -212,19 +213,30 @@ pub fn RadioField(
         return None;
     };
     let state = group.data.state;
-    let radio = use_radio_atom(
-        &group,
-        RadioSetup {
-            value,
-            is_disabled,
-            id,
-            aria_label,
-            aria_labelledby,
-            aria_describedby,
-            auto_focus,
-            on_focus_change,
-        },
-    );
+    // The radio and its button's hover end their state while disabled in one effect
+    // (`performance.md` R6).
+    let (radio, hover) = sharing_one_effect(|| {
+        let radio = use_radio_atom(
+            &group,
+            RadioSetup {
+                value,
+                is_disabled,
+                id,
+                aria_label,
+                aria_labelledby,
+                aria_describedby,
+                auto_focus,
+                on_focus_change,
+            },
+        );
+        let hover = use_hover(UseHoverInput {
+            is_disabled: either(radio.is_disabled, state.is_read_only),
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+        });
+        (radio, hover)
+    });
     let (is_selected, is_disabled) = (radio.is_selected, radio.is_disabled);
     // The radio's description; errors are the group's (react-aria-components keeps the group's
     // `FieldErrorContext`).
@@ -233,7 +245,7 @@ pub fn RadioField(
         ..group_field
     };
     let button = RadioButtonContext {
-        radio: RadioButtonParts::of(radio),
+        radio: RadioButtonParts::of(radio, hover),
     };
 
     Some(view! {
@@ -299,6 +311,8 @@ struct RadioButtonContext {
 struct RadioButtonParts {
     label: Part<PropsWithStyles<UseToggleLabelProps>>,
     input: Part<PropsWithStyles<UseRadioInputProps>>,
+    hover: Part<UseHoverProps>,
+    is_hovered: Signal<bool>,
     is_selected: Signal<bool>,
     is_disabled: Signal<bool>,
     is_pressed: Signal<bool>,
@@ -310,6 +324,8 @@ struct RadioButtonParts {
 struct RadioButton {
     label: (UseToggleLabelAttrs, Styles),
     input: (UseRadioInputAttrs, Styles),
+    hover: UseHoverProps,
+    is_hovered: Signal<bool>,
     is_selected: Signal<bool>,
     is_disabled: Signal<bool>,
     is_pressed: Signal<bool>,
@@ -318,10 +334,12 @@ struct RadioButton {
 }
 
 impl RadioButtonParts {
-    fn of(radio: UseRadioReturn) -> Self {
+    fn of(radio: UseRadioReturn, hover: UseHoverReturn) -> Self {
         Self {
             label: radio.label,
             input: radio.input,
+            hover: hover.target,
+            is_hovered: hover.is_hovered,
             is_selected: radio.is_selected,
             is_disabled: radio.is_disabled,
             is_pressed: radio.is_pressed,
@@ -335,9 +353,12 @@ impl RadioButtonParts {
     fn props(&self) -> Option<RadioButton> {
         let label = self.label.props()?.into_parts();
         let input = self.input.props()?.into_parts();
+        let hover = self.hover.props()?;
         Some(RadioButton {
             label,
             input,
+            hover,
+            is_hovered: self.is_hovered,
             is_selected: self.is_selected,
             is_disabled: self.is_disabled,
             is_pressed: self.is_pressed,
@@ -400,25 +421,18 @@ fn radio_button(
     children: Option<Children>,
 ) -> impl IntoView {
     let state = group.data.state;
-    let is_disabled = radio.is_disabled;
-    let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || is_disabled.get() || state.is_read_only.get()),
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
-    });
     let (label_attrs, label_styles) = radio.label;
     let (input_attrs, input_styles) = radio.input;
 
     view! {
         <label
             {..label_attrs}
-            {..hover.target.attrs()}
+            {..radio.hover.into_attrs()}
             class=classes
             style=label_styles.merge(styles)
             {..data_flags([
                 ("data-pressed", radio.is_pressed),
-                ("data-hovered", hover.is_hovered),
+                ("data-hovered", radio.is_hovered),
                 ("data-focused", radio.is_focused),
             ])}
             {..data_flags([("data-focus-visible", radio.is_focus_visible)])}

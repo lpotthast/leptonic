@@ -192,7 +192,7 @@ pub fn PageFormHooks() -> impl IntoView {
                             use leptos::prelude::*;
 
                             // `state` from `use_form_validation_state`, `minimum` the smallest allowed length.
-                            state.register_native_validity_reader(Callback::new(move |()| {
+                            state.register_native_validity_reader(move || {
                                 let too_short = value.with_untracked(|v: &String| v.len() < minimum);
                                 state.update_validation(if too_short {
                                     ValidationResult {
@@ -203,7 +203,7 @@ pub fn PageFormHooks() -> impl IntoView {
                                 } else {
                                     DEFAULT_VALIDATION_RESULT
                                 });
-                            }));
+                            });
                         "#)}
                     </Code>
                     <p>"The reader runs after the render turn, outside any reactive tracking: read signals with "<Code inline=true>"with_untracked"</Code>" or "<Code inline=true>"get_untracked"</Code>"."</p>

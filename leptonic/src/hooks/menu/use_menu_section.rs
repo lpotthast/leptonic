@@ -140,8 +140,11 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
         key: key.clone(),
     });
     let collection = menu.state.collection;
+    let selection = menu.state.selection;
+    // Only this section's changes (its header's included) reach it (`performance.md` R1).
     let heading = Memo::new(move |_| {
-        collection.with(|c| {
+        selection.track_node(&key);
+        collection.with_untracked(|c| {
             c.children(&key)
                 .find(|n| n.kind == NodeKind::Header)
                 .map(|n| n.text_value.to_string())

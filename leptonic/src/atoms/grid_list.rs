@@ -24,6 +24,7 @@ use crate::{
         },
         interactions::{UseHoverInput, use_hover},
     },
+    sharing_one_effect,
     utils::{
         data_attributes::{self, data_flags},
         default_class::with_default_class,
@@ -225,6 +226,26 @@ pub fn GridListItem(
         return None;
     };
     let selection = list.state.selection;
+    // The item's resets and its hover's react to the disabled state in one effect.
+    let (item, hover) = sharing_one_effect(|| {
+        let item = use_grid_list_item(UseGridListItemInput {
+            // Inside a `ContextMenuTrigger`: its menu opens on this row.
+            on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
+            list,
+            key,
+            focus_mode,
+            allows_arrow_navigation,
+        });
+        let (allows_selection, has_action) = (item.allows_selection, item.has_action);
+        // Interactive rows show hover (react-aria-components' `GridListItem`).
+        let hover = use_hover(UseHoverInput {
+            is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+        });
+        (item, hover)
+    });
     let UseGridListItemReturn {
         row: row_props,
         cell: grid_cell_props,
@@ -234,29 +255,13 @@ pub fn GridListItem(
         is_focus_visible,
         is_disabled,
         is_pressed,
-        allows_selection,
-        has_action,
         ..
-    } = use_grid_list_item(UseGridListItemInput {
-        // Inside a `ContextMenuTrigger`: its menu opens on this row.
-        on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
-        list,
-        key,
-        focus_mode,
-        allows_arrow_navigation,
-    });
+    } = item;
     let (attrs, row_styles) = row_props.attrs();
     let styles = row_styles.merge(styles);
     let item = GridListItemContext {
         description: description_props,
     };
-    // Interactive rows show hover (react-aria-components' `GridListItem`).
-    let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
-    });
     let focus_within = use_focus_ring(UseFocusRingInput {
         target: FocusRingTarget::Within,
         ..UseFocusRingInput::default()

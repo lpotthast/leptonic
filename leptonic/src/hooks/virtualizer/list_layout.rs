@@ -223,6 +223,15 @@ struct TopLevel {
     loaders: Vec<(usize, Key)>,
 }
 
+/// Replaces the layout node in `slot` with `layout_node`, in its allocation unless it is shared.
+fn reuse(slot: &mut Arc<LayoutNode>, layout_node: LayoutNode) {
+    if let Some(previous) = Arc::get_mut(slot) {
+        *previous = layout_node;
+    } else {
+        *slot = Arc::new(layout_node);
+    }
+}
+
 /// The top-level nodes from `key` on.
 fn siblings_from<'a>(
     collection: &'a Collection,
@@ -240,10 +249,11 @@ pub struct ListLayout {
     options: ListLayoutOptions,
     layout_nodes: HashMap<Key, Arc<LayoutNode>>,
     /// While an update lays out again for a new breadth across (the width of a vertical list):
-    /// the lengths the nodes had, their estimates at the new breadth. Empty otherwise: nodes not
-    /// laid out in that update are estimated at the row size again, as they were counted, so laying
-    /// them out later doesn't change the content's length (see `update`).
-    previous_lengths: HashMap<Key, f64>,
+    /// the nodes laid out before, their lengths the estimates at the new breadth (and their
+    /// allocations reused). Empty otherwise: nodes not laid out in that update are estimated at the
+    /// row size again, as they were counted, so laying them out later doesn't change the content's
+    /// length (see `update`).
+    previous_nodes: HashMap<Key, Arc<LayoutNode>>,
     content_size: Size,
     last_collection: Option<Arc<Collection>>,
     /// The laid out top-level nodes, in order (their offsets ascend).
@@ -290,7 +300,7 @@ impl ListLayout {
         Self {
             options,
             layout_nodes: HashMap::new(),
-            previous_lengths: HashMap::new(),
+            previous_nodes: HashMap::new(),
             content_size: Size::default(),
             last_collection: None,
             root_nodes: Vec::new(),
@@ -582,7 +592,7 @@ impl ListLayout {
             if node.kind == NodeKind::Item
                 && offset + row_size < self.offset_of(&self.requested_rect)
                 && !self.layout_nodes.contains_key(&node.key)
-                && !self.previous_lengths.contains_key(&node.key)
+                && !self.previous_nodes.contains_key(&node.key)
             {
                 offset += row_size;
                 continue;
@@ -699,7 +709,19 @@ impl ListLayout {
         let mut layout_node = self.build_node(ctx, node, x, y);
         layout_node.layout_info.parent_key = parent_key;
         layout_node.layout_info.allow_overflow = true;
-        let layout_node = Arc::new(layout_node);
+        // The node's previous layout is overwritten in place where nothing else holds it (the
+        // laid out tree was cleared from it on): moving rows allocates nothing.
+        if let Some(cached) = self.layout_nodes.get_mut(&node.key) {
+            reuse(cached, layout_node);
+            return Arc::clone(cached);
+        }
+        let layout_node = match self.previous_nodes.remove(&node.key) {
+            Some(mut previous) => {
+                reuse(&mut previous, layout_node);
+                previous
+            }
+            None => Arc::new(layout_node),
+        };
         self.layout_nodes
             .insert(node.key.clone(), Arc::clone(&layout_node));
         layout_node
@@ -816,10 +838,11 @@ impl ListLayout {
             )
         } else {
             (
-                self.previous_lengths
+                self.previous_nodes
                     .get(&node.key)
-                    .copied()
-                    .unwrap_or(estimate),
+                    .map_or(estimate, |previous| {
+                        self.length_of(&previous.layout_info.rect)
+                    }),
                 true,
             )
         }
@@ -1175,16 +1198,9 @@ impl Layout for ListLayout {
                 self.layout_nodes.clear();
             } else {
                 // Only the breadth changed: the nodes laid out again keep their lengths, as
-                // estimates.
-                let horizontal = self.is_horizontal();
-                self.previous_lengths = self
-                    .layout_nodes
-                    .drain()
-                    .map(|(key, node)| {
-                        let rect = &node.layout_info.rect;
-                        (key, if horizontal { rect.width } else { rect.height })
-                    })
-                    .collect();
+                // estimates (the orientation is the same). `previous_nodes` is empty: both maps
+                // keep their capacity.
+                std::mem::swap(&mut self.layout_nodes, &mut self.previous_nodes);
             }
             self.clear_overflows();
         }
@@ -1225,7 +1241,7 @@ impl Layout for ListLayout {
             }
         }
         // The nodes not laid out again are estimated at the row size, as counted.
-        self.previous_lengths.clear();
+        self.previous_nodes.clear();
         self.last_collection = Some(Arc::clone(ctx.collection));
         self.invalidate_everything = false;
         self.collection_changed = false;
@@ -1855,6 +1871,40 @@ mod tests {
         harness.measure("row-0", 70.0);
         assert_that!(harness.layout.content_size().height).is_equal_to(length + 20.0);
         assert_that!(harness.info("row-0").estimated_size).is_false();
+    }
+
+    /// Rows laid out again (moved by a resized row before them, or at a new width) keep their
+    /// allocations.
+    #[test]
+    fn rows_laid_out_again_reuse_their_layout_nodes() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: ItemSize::Estimated(20.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(100),
+            Size::new(200.0, 300.0),
+        );
+        harness.visible();
+        let addresses = |layout: &ListLayout| {
+            (1..10)
+                .map(|i| Arc::as_ptr(&layout.layout_nodes[&Key::from(format!("row-{i}"))]))
+                .collect::<Vec<_>>()
+        };
+        let before = addresses(&harness.layout);
+
+        harness.measure("row-0", 50.0);
+        assert_that!(harness.info("row-1").rect.y).is_equal_to(50.0);
+        assert_that!(addresses(&harness.layout)).is_equal_to(before.clone());
+
+        harness.size = Size::new(185.0, 300.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            width_changed: true,
+            ..InvalidationContext::default()
+        });
+        assert_that!(harness.info("row-1").rect.width).is_equal_to(185.0);
+        assert_that!(addresses(&harness.layout)).is_equal_to(before);
     }
 
     /// Options that lay out the rows differently drop their measured heights, also with a new

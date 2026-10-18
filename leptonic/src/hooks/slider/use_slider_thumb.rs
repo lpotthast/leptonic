@@ -453,6 +453,7 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         on_blur: Some(Callback::new(move |_| state.set_focused_thumb(None))),
         shortcuts: Some(shortcuts),
         allow_shortcut_repeats: true,
+        mark: None,
         auto_focus: false,
         exclude_from_tab_order: Signal::stored(false),
         on_focus_change: None,

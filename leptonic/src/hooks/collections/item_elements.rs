@@ -1,12 +1,18 @@
 // No upstream: the registry of rendered item elements, replacing react-aria's `[data-key]` DOM queries.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 
-use leptos::prelude::*;
+use leptos::{prelude::*, reactive::owner::WeakOwner};
 use send_wrapper::SendWrapper;
 
-use super::Key;
-use crate::CapturedElement;
+use super::{FocusItem, FocusStrategy, Key, SelectionManager};
+use crate::{
+    CapturedElement,
+    utils::{
+        focus::focus_safely, keyed_triggers::KeyedTriggers, shadow_dom::get_active_element,
+        virtual_focus::move_virtual_focus,
+    },
+};
 
 /// Maps the keys of a collection to their rendered elements.
 ///
@@ -19,12 +25,78 @@ use crate::CapturedElement;
 /// handlers.
 #[derive(Debug, Clone, Copy)]
 pub struct ItemElements {
-    /// The next registration id, and the live registrations of each key, the latest last. Every
-    /// registration gets an id, so an item only removes its own registration, and a key stays
-    /// registered while any item rendering it lives (e.g. two re-rendered items swapping keys).
-    elements: StoredValue<(u64, HashMap<Key, Vec<(u64, CapturedElement)>>)>,
-    /// Notified when an item registers or unregisters (see [`ItemElements::get_tracked`]).
-    changed: Trigger,
+    registry: StoredValue<Registry>,
+    /// Notified per key when an item registers or unregisters (see
+    /// [`ItemElements::get_tracked`]): only the readers of that key run again, not every reader
+    /// on every item's mount and unmount.
+    changed: KeyedTriggers<Key>,
+}
+
+#[derive(Default)]
+struct Registry {
+    /// The next registration id. Every registration gets one, so an item only removes its own
+    /// registration, and a key stays registered while any item rendering it lives (e.g. two
+    /// re-rendered items swapping keys).
+    next_id: u64,
+    /// The live registrations of each key, the latest last.
+    items: HashMap<Key, Registrations>,
+    /// The collection's owner (the registry's creator): the focus effect lives as long as it.
+    /// Weak: the registry is one of the owner's arena items, and a strong handle would keep the
+    /// owner from being dropped.
+    owner: Option<WeakOwner>,
+    /// Whether the focus effect exists (created for the first item that takes focus).
+    follows_focus: bool,
+}
+
+struct Registration {
+    id: u64,
+    element: CapturedElement,
+    focus: FocusTarget,
+}
+
+/// The live registrations of a key: one, except while a re-rendered item's new element is
+/// registered before its old one is gone. The usual single registration is stored inline (no
+/// allocation per item).
+struct Registrations {
+    latest: Registration,
+    earlier: Vec<Registration>,
+}
+
+impl Registrations {
+    fn push(&mut self, registration: Registration) {
+        let previous = std::mem::replace(&mut self.latest, registration);
+        self.earlier.push(previous);
+    }
+
+    #[cfg(debug_assertions)]
+    fn iter(&self) -> impl Iterator<Item = &Registration> {
+        self.earlier.iter().chain(std::iter::once(&self.latest))
+    }
+
+    /// Removes the registration `id`; `false` when it was the last one.
+    fn remove(&mut self, id: u64) -> bool {
+        if self.latest.id != id {
+            self.earlier.retain(|registration| registration.id != id);
+            return true;
+        }
+        match self.earlier.pop() {
+            Some(previous) => {
+                self.latest = previous;
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// How a registered item takes DOM focus when it becomes the focused item
+/// (`use_selectable_item`).
+#[derive(Debug, Clone)]
+pub(crate) struct FocusTarget {
+    /// Moves focus elsewhere instead of the element (a grid row's cell, a cell's child).
+    pub(crate) focus: Option<FocusItem>,
+    /// The collection uses virtual focus: DOM focus stays where it is.
+    pub(crate) should_use_virtual_focus: bool,
 }
 
 impl Default for ItemElements {
@@ -36,24 +108,49 @@ impl Default for ItemElements {
 impl ItemElements {
     pub fn new() -> Self {
         Self {
-            elements: StoredValue::new((0, HashMap::new())),
-            changed: Trigger::new(),
+            registry: StoredValue::new(Registry {
+                owner: Owner::current().map(|owner| owner.downgrade()),
+                ..Registry::default()
+            }),
+            changed: KeyedTriggers::new(),
         }
     }
 
-    /// Register the element of `key`. It is unregistered when the current reactive owner (the
-    /// item) is cleaned up. `element` must live at least as long as that owner (create it in the
-    /// item or an ancestor).
-    pub fn register(&self, key: Key, element: CapturedElement) {
-        let elements = self.elements;
+    /// Register the element of `key` (`use_selectable_item`): it is unregistered when the current
+    /// reactive owner (the item) is cleaned up, so `element` must live at least as long as that
+    /// owner (create it in the item or an ancestor). The item is focused (as `focus` says)
+    /// whenever `key` becomes the focused item while the collection has focus, or the item
+    /// renders while focused, or the child focus strategy changes meanwhile (react-aria: an effect
+    /// in `useSelectableItem`). One effect for the whole collection follows the focus, instead of
+    /// one per item (`performance.md` R6).
+    pub(crate) fn register(
+        &self,
+        key: Key,
+        element: CapturedElement,
+        focus: FocusTarget,
+        selection: SelectionManager,
+    ) {
+        let registry = self.registry;
         let changed = self.changed;
-        let (id, has_others) = elements
-            .try_update_value(|(next_id, map)| {
-                let id = *next_id;
-                *next_id += 1;
-                let registrations = map.entry(key.clone()).or_default();
-                registrations.push((id, element));
-                (id, registrations.len() > 1)
+        let (id, has_others) = registry
+            .try_update_value(|registry| {
+                let id = registry.next_id;
+                registry.next_id += 1;
+                let registration = Registration { id, element, focus };
+                let has_others = match registry.items.entry(key.clone()) {
+                    Entry::Occupied(mut registrations) => {
+                        registrations.get_mut().push(registration);
+                        true
+                    }
+                    Entry::Vacant(entry) => {
+                        entry.insert(Registrations {
+                            latest: registration,
+                            earlier: Vec::new(),
+                        });
+                        false
+                    }
+                };
+                (id, has_others)
             })
             .unwrap_or_default();
         #[cfg(not(debug_assertions))]
@@ -70,12 +167,13 @@ impl ItemElements {
                 let Some(mine) = element.get() else {
                     return;
                 };
-                let duplicate = elements
-                    .try_with_value(|(_, map)| {
-                        map.get(&key).is_some_and(|registrations| {
-                            registrations.iter().any(|(other, other_element)| {
-                                *other != id
-                                    && other_element
+                let duplicate = registry
+                    .try_with_value(|registry| {
+                        registry.items.get(&key).is_some_and(|registrations| {
+                            registrations.iter().any(|other| {
+                                other.id != id
+                                    && other
+                                        .element
                                         .get_untracked()
                                         .is_some_and(|e| *e != *mine && e.is_connected())
                             })
@@ -90,45 +188,205 @@ impl ItemElements {
                 }
             });
         }
+        self.changed.notify([&key]);
         on_cleanup(move || {
             // The collection may be disposed before its items.
-            let _ = elements.try_update_value(|(_, map)| {
-                if let Some(registrations) = map.get_mut(&key) {
-                    registrations.retain(|(registered, _)| *registered != id);
-                    if registrations.is_empty() {
-                        map.remove(&key);
-                    }
+            let _ = registry.try_update_value(|registry| {
+                if let Some(registrations) = registry.items.get_mut(&key)
+                    && !registrations.remove(id)
+                {
+                    registry.items.remove(&key);
                 }
             });
             // (A no-op once the collection is disposed.)
-            changed.notify();
+            changed.notify([&key]);
         });
-        self.changed.notify();
+        self.follow_focus(selection);
+    }
+
+    /// Creates the collection's focus effect, once (see [`register`](Self::register)).
+    fn follow_focus(self, selection: SelectionManager) {
+        let Some(owner) = self
+            .registry
+            .try_update_value(|registry| {
+                (!std::mem::replace(&mut registry.follows_focus, true))
+                    .then(|| registry.owner.clone())
+            })
+            .flatten()
+        else {
+            return;
+        };
+        let registry = self.registry;
+        let changed = self.changed;
+        let follow = move || {
+            // The focused registration and the child focus strategy it was focused with: focus
+            // moves only when they change, as each item's effect in react-aria runs only when it
+            // becomes the focused one (or the strategy changes while it is).
+            Effect::new(
+                move |previous: Option<Option<(u64, Option<FocusStrategy>)>>| {
+                    let key = selection.focused_key();
+                    let has_focus = selection.is_focused();
+                    let strategy = selection.child_focus_strategy();
+                    if let Some(key) = &key {
+                        changed.track(key);
+                    }
+                    if !has_focus {
+                        return None;
+                    }
+                    let (id, element, target) = registry
+                        .try_with_value(|registry| {
+                            let registration = &registry.items.get(key.as_ref()?)?.latest;
+                            Some((
+                                registration.id,
+                                registration.element,
+                                registration.focus.clone(),
+                            ))
+                        })
+                        .flatten()?;
+                    if previous.flatten() == Some((id, strategy)) {
+                        return Some((id, strategy));
+                    }
+                    if target.should_use_virtual_focus {
+                        if let Some(el) = element.get_untracked() {
+                            move_virtual_focus(Some(&el));
+                        }
+                    } else if let Some(focus) = &target.focus {
+                        focus.focus();
+                    } else if let Some(el) = element.get_untracked() {
+                        let active = el.owner_document().as_ref().and_then(get_active_element);
+                        if active.as_ref() != Some(&*el) {
+                            focus_safely(&el);
+                        }
+                    }
+                    Some((id, strategy))
+                },
+            );
+        };
+        match owner {
+            Some(owner) => {
+                // `None`: the collection is being disposed.
+                if let Some(owner) = owner.upgrade() {
+                    owner.with(follow);
+                }
+            }
+            None => follow(),
+        }
     }
 
     /// The element of `key`, tracking whether it is rendered: a reactive context runs again when
     /// the item renders (e.g. an item a virtualizer renders once it is focused).
     pub fn get_tracked(&self, key: &Key) -> Option<SendWrapper<web_sys::Element>> {
-        self.changed.track();
-        self.elements
-            .with_value(|(_, map)| Self::latest(map, key))
+        self.changed.track(key);
+        self.registry
+            .with_value(|registry| Self::latest(registry, key))
             .and_then(|element| element.get())
     }
 
     /// The element of `key`, if it is rendered.
     pub fn get(&self, key: &Key) -> Option<SendWrapper<web_sys::Element>> {
-        self.elements
-            .with_value(|(_, map)| Self::latest(map, key))
+        self.registry
+            .with_value(|registry| Self::latest(registry, key))
             .and_then(|element| element.get_untracked())
     }
 
     /// The latest live registration of `key`.
-    fn latest(
-        map: &HashMap<Key, Vec<(u64, CapturedElement)>>,
-        key: &Key,
-    ) -> Option<CapturedElement> {
-        map.get(key)
-            .and_then(|registrations| registrations.last())
-            .map(|(_, element)| *element)
+    fn latest(registry: &Registry, key: &Key) -> Option<CapturedElement> {
+        registry
+            .items
+            .get(key)
+            .map(|registrations| registrations.latest.element)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{
+        hooks::collections::{Collection, SelectionOptions},
+        testing::{flush_effects, with_owner},
+    };
+
+    /// The registry holds the collection's owner weakly: an owner whose arena holds a strong
+    /// handle to itself is never dropped, so its focus effect would outlive the collection (a
+    /// collection in a `<For>` row, whose owner is only dropped when the row goes).
+    #[test]
+    fn the_focus_effect_does_not_keep_the_collection_alive() {
+        with_owner(|| {
+            let collection_owner = Owner::new();
+            let weak = collection_owner.downgrade();
+            collection_owner.with(|| {
+                let collection = Memo::new(|_| {
+                    Arc::new(Collection::build(|b| {
+                        let _ = b.item("a", "A");
+                    }))
+                });
+                let selection = SelectionManager::new(collection, SelectionOptions::default());
+                let elements = ItemElements::new();
+                elements.register(
+                    Key::from("a"),
+                    CapturedElement::new(),
+                    FocusTarget {
+                        focus: None,
+                        should_use_virtual_focus: false,
+                    },
+                    selection,
+                );
+            });
+            flush_effects();
+            drop(collection_owner);
+            assert_that!(weak.upgrade().is_none()).is_true();
+        });
+    }
+
+    /// A re-rendered item registers its new element before its old one is gone: the latest live
+    /// registration counts, whichever goes first.
+    #[test]
+    fn the_latest_live_registration_of_a_key_counts() {
+        with_owner(|| {
+            let collection = Memo::new(|_| {
+                Arc::new(Collection::build(|b| {
+                    let _ = b.item("a", "A");
+                }))
+            });
+            let selection = SelectionManager::new(collection, SelectionOptions::default());
+            let elements = ItemElements::new();
+            let register = |virtual_focus: bool| {
+                let owner = Owner::new();
+                owner.with(|| {
+                    elements.register(
+                        Key::from("a"),
+                        CapturedElement::new(),
+                        FocusTarget {
+                            focus: None,
+                            should_use_virtual_focus: virtual_focus,
+                        },
+                        selection,
+                    );
+                });
+                owner
+            };
+            let latest = || {
+                elements.registry.with_value(|registry| {
+                    registry
+                        .items
+                        .get(&Key::from("a"))
+                        .map(|registrations| registrations.latest.focus.should_use_virtual_focus)
+                })
+            };
+            let first = register(false);
+            let second = register(true);
+            let third = register(false);
+            assert_that!(latest()).is_equal_to(Some(false));
+            third.cleanup();
+            assert_that!(latest()).is_equal_to(Some(true));
+            first.cleanup();
+            assert_that!(latest()).is_equal_to(Some(true));
+            second.cleanup();
+            assert_that!(latest()).is_none();
+        });
     }
 }

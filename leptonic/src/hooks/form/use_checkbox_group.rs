@@ -26,7 +26,7 @@ use crate::{
     utils::{
         aria::{AriaDisabled, AriaRole, aria_true},
         part::Remount,
-        probe::either,
+        probe::{either, is_constant},
         signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
         spread::Spread,
     },
@@ -308,7 +308,12 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
             state.set_invalid(value.clone(), validation);
         }
     };
-    {
+    // The checkbox's own realtime validation reaches the group as it changes; a constantly valid
+    // one (no `validate`, no `is_invalid`: most checkboxes) never changes the group's merged
+    // validity, which starts without it (`performance.md` R15).
+    let always_valid = is_constant(realtime_validation)
+        && realtime_validation.with_untracked(|own| !own.is_invalid);
+    if !always_valid {
         let update_validation = update_validation.clone();
         Effect::new(move || {
             realtime_validation.track();
@@ -316,21 +321,24 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         });
     }
     let group_validation = state.validation;
-    // A memo: the displayed validation and the input's custom validity both read it.
-    let combined_realtime: Signal<ValidationResult> = Memo::new(move |_| {
-        let group = group_validation.realtime_validation.get();
-        if group.is_invalid {
-            group
-        } else {
-            realtime_validation.get()
-        }
-    })
-    .into();
-    let display_validation = if validation_behavior == ValidationBehavior::Native {
-        group_validation.display_validation
+    // A memo: the displayed validation and the input's custom validity both read it. The
+    // group's alone while the checkbox's own is always valid.
+    let combined_realtime: Signal<ValidationResult> = if always_valid {
+        group_validation.realtime_validation
     } else {
-        combined_realtime
+        Memo::new(move |_| {
+            let group = group_validation.realtime_validation.get();
+            if group.is_invalid {
+                group
+            } else {
+                realtime_validation.get()
+            }
+        })
+        .into()
     };
+    // Native: the group's displayed validation (`None`).
+    let display_validation =
+        (validation_behavior != ValidationBehavior::Native).then_some(combined_realtime);
     // The group's commit and reset (its commit reads every checkbox's native validity).
     let item_validation = FormValidationState::from_parts(
         combined_realtime,

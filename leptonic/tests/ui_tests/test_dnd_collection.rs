@@ -548,6 +548,7 @@ async fn start_virtual_drag(page: &Page<'_>) -> Result<(), Report> {
     let draggable = page.element(role(AriaRole::Button).text("Drag me")).await?;
     draggable.focus().await?;
     draggable.virtual_click().await?;
+    DndActions::new(page).wait_for_drag_session().await?;
     indicator(page, "Insert before One")
         .await?
         .wait_for_attr("aria-hidden", None)

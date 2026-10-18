@@ -1,6 +1,6 @@
 //! The `Virtualizer` alone (around a `ListBox`, the collection atom it virtualizes), for its
 //! performance test (`leptonic/tests/perf_tests/atoms/virtualizer.rs`): `#perf-virtualizer` holds
-//! a list box of [`SMALL`] or [`LARGE`] options ("Item 0", ...; keys `item-0`, ...) in fixed
+//! a list box of [`SMALL`] or [`LARGE`] options ("Item 0", ...; keys `0`, `1`, ...) in fixed
 //! 25px rows, 100 × 100 px, single selection, between two plain buttons (`#perf-before`,
 //! `#perf-after`) to tab from and to, mounted at first (with [`SMALL`] options).
 //!
@@ -54,7 +54,7 @@ pub fn PagePerf() -> impl IntoView {
     let options = RwSignal::new(rows_of(25.0));
     let collection = use_list_collection(UseListCollectionInput {
         items: Signal::derive(move || (0..count.get()).collect::<Vec<usize>>()),
-        key: |i| Key::from(format!("item-{i}")),
+        key: |i| Key::from(*i),
         text_value: |i| format!("Item {i}"),
     });
     let controls = vec![

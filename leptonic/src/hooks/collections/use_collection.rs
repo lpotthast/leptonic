@@ -40,7 +40,7 @@ where
     T: Send + Sync + 'static,
     K: Fn(&T) -> Key + Send + Sync + 'static,
     Tx: Fn(&T) -> S + Send + Sync + 'static,
-    S: Into<Arc<str>>,
+    S: Into<Arc<str>> + AsRef<str>,
 {
     /// The values, in order.
     pub items: Signal<Vec<T>>,
@@ -59,7 +59,7 @@ where
     T: Send + Sync + 'static,
     K: Fn(&T) -> Key + Send + Sync + 'static,
     Tx: Fn(&T) -> S + Send + Sync + 'static,
-    S: Into<Arc<str>>,
+    S: Into<Arc<str>> + AsRef<str>,
 {
     crate::metrics::subject!();
     let UseListCollectionInput {
@@ -69,6 +69,7 @@ where
     } = input;
     use_collection(move |b| {
         items.with(|items| {
+            b.reserve(items.len());
             for item in items {
                 b.item(key(item), text_value(item));
             }

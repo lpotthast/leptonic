@@ -126,13 +126,10 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
         element: CapturedElement::new(),
         id: None,
         collection_id,
-        is_disabled: Signal::derive(move || rows.with(|c| c.size() == 0)),
+        is_disabled: state.is_empty(),
         should_select_on_press_up,
         allows_different_press_origin: false,
-        on_action: Signal::stored(on_row_action.map(|on_row_action| {
-            let key = key.clone();
-            Callback::new(move |()| on_row_action.run(key.clone()))
-        })),
+        on_action: Signal::stored(on_row_action),
         link_behavior: Signal::stored(crate::hooks::collections::LinkBehavior::Action),
         focus: None,
         should_use_virtual_focus: false,

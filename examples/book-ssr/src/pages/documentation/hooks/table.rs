@@ -665,7 +665,8 @@ fn TableBodySections() -> impl IntoView {
             <p>
                 "With "<Code inline=true>"show_selection_checkboxes"</Code>", cell 0 of every row holds a checkbox "
                 "selecting the row. "<Code inline=true>"use_table_selection_checkbox"</Code>" takes a "
-                <Code inline=true>"UseTableSelectionCheckboxInput { table, key }"</Code>" (the row\u{2019}s key) and returns a "
+                <Code inline=true>"UseTableSelectionCheckboxInput { table, key, is_selected }"</Code>" (the row\u{2019}s key and its "
+                <Code inline=true>"use_table_row"</Code>"\u{2019}s "<Code inline=true>"is_selected"</Code>") and returns a "
                 <Code inline=true>"UseCheckboxInput"</Code>" for "<Link href=routes::doc::checkbox::Hook.materialize()>"use_checkbox"</Link>
                 ": checked while the row is selected, disabled when it can\u{2019}t be selected, and labelled "
                 "\u{201c}Select\u{201d} plus the row\u{2019}s row header cells (\u{201c}Select Dune\u{201d})."
@@ -675,6 +676,7 @@ fn TableBodySections() -> impl IntoView {
                     let checkbox = use_checkbox(use_table_selection_checkbox(UseTableSelectionCheckboxInput {
                         table: data.clone(),
                         key: key.clone(),
+                        is_selected: row.is_selected,
                     }));
                     let (attrs, styles) = checkbox.input.attrs();
                     view! {
