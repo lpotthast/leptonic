@@ -24,6 +24,12 @@ impl Orientation {
     }
 }
 
+impl super::signal_attr::ToAttrText for Orientation {
+    fn to_attr_text(&self) -> super::signal_attr::AttrText {
+        super::signal_attr::AttrText::Text(leptos::oco::Oco::Borrowed(self.as_str()))
+    }
+}
+
 impl From<Orientation> for AriaOrientation {
     fn from(value: Orientation) -> Self {
         match value {

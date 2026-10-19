@@ -83,7 +83,7 @@
         "effect_runs": 5,
         "render_effect_runs": 2,
         "immediate_effect_runs": 0,
-        "signal_notifications": 7,
+        "signal_notifications": 8,
         "dom_attributes": 2,
         "dom_text": 0,
         "dom_added_nodes": 0,

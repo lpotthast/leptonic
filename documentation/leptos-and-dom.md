@@ -20,6 +20,11 @@ axum's work-stealing runtime interleaves requests on a thread and moves a reques
   on another SSR worker panics, and so does an `Effect` whose owner is dropped on another thread. Gate local storage
   to client-only code, or use `StoredValue<Option<SendWrapper<DomType>>>` with ordinary storage and wrap only DOM
   values acquired in the browser.
+- No effect runs on the server (reactive_graph's `effects` feature is off there): `Effect`, `RenderEffect` and
+  `ImmediateEffect::new`/`new_scoped` do nothing. A value the server renders from must not be filled by one: compute
+  it at creation, derive it, or keep it with `ImmediateEffect::new_isomorphic` (disposed in `on_cleanup`). A table's
+  column signals filled by `new_scoped` left the server without columns: no checkbox cells, no row headers, a
+  hydration panic. Native tests enable `effects`, so only the browser's hydration tests show this.
 - Immutable caches whose content doesn't depend on the request (syntax sets, ICU4X data) may be global.
 - JavaScript calls (`js_sys::Date::now()`, ...) panic outside WebAssembly, also in native unit tests: gate them on
   `target_arch = "wasm32"`, not on `not(feature = "ssr")`.
@@ -95,6 +100,17 @@ Setters called on every event notify only on a change (`if s.get_untracked() != 
 `SelectionManager::set_focused`): `set` always notifies, and readers no memo shields rerun per call (a calendar's
 `set_focused(true)` on every press doubled its focus effect's runs). Find it: `.set(` in state methods and handlers
 without an equality check, on signals effects read directly.
+
+`ImmediateEffect::new`/`new_scoped` do nothing without reactive_graph's `effects` feature, which servers don't enable:
+a value the view renders from (a signal an effect keeps in step, replacing a memo) needs
+`ImmediateEffect::new_isomorphic` (disposed in `on_cleanup`), or the server renders the initial value. The table's
+columns stayed empty on the server: no selection checkbox cells, row headers rendered as `gridcell`, hydration failed.
+
+Such a signal notifies its readers while the change is still being marked, earlier than a memo chain would, so a view
+reading it can re-render before its parent's `For` (still reading the memos) removes it: a leaving column header
+switched its content (one more DOM node created and removed), and the grid's `tabindex` ran in another order against
+`use_has_tabbable_child`'s effect. Readers of an item that can leave keep their last value while it is gone
+(`Memo::new(|previous| lookup().or_else(|| previous.cloned()))`), and single readers that gain nothing keep their memo.
 
 ## Derived Values
 

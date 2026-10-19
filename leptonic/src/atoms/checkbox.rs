@@ -3,7 +3,7 @@
 // Upstream: react-aria-components/test/CheckboxGroup.test.js @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use super::{
@@ -28,7 +28,7 @@ use crate::{
     sharing_one_effect,
     utils::{
         data_attributes::data_flags, default_class::with_default_class, dev_warn, probe::either,
-        styles::Styles, visually_hidden::visually_hidden_styles,
+        scoped_context::scoped_view, styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -51,6 +51,9 @@ use crate::{
 #[derive(Clone)]
 pub struct CheckboxGroupContext {
     pub data: CheckboxGroupData,
+    /// What a checkbox's own `FieldError` shows in the group (nothing: the group validates), one
+    /// pair of constants for every checkbox.
+    no_field_errors: (Signal<bool>, Signal<Vec<String>>),
 }
 
 /// A headless checkbox with a description and an error message of its own: a `<div>` around a
@@ -113,15 +116,18 @@ pub fn CheckboxField(
 ) -> impl IntoView {
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-CheckboxField", classes);
-    let in_group = use_context::<CheckboxGroupContext>().is_some();
+    let group = use_context::<CheckboxGroupContext>();
+    let in_group = group.is_some();
     if in_group && value.is_none() {
         dev_warn!("A <CheckboxField> in a <CheckboxGroup> needs a `value`.");
         return None;
     }
     // The checkbox and its button's hover end their state while disabled in one effect
     // (`performance.md` R6).
+    let no_field_errors = group.as_ref().map(|group| group.no_field_errors);
     let (checkbox, hover) = sharing_one_effect(|| {
         let checkbox = use_checkbox_atom(CheckboxSetup {
+            group,
             value,
             default_selected,
             on_change,
@@ -154,19 +160,13 @@ pub fn CheckboxField(
         checkbox.is_invalid,
     );
     // In a group, the group's validation shows (react-aria-components: no `FieldErrorContext`).
+    let (field_is_invalid, validation_errors) =
+        no_field_errors.unwrap_or((is_invalid, checkbox.validation_errors));
     let field = FieldContext {
         description: checkbox.description.clone(),
         error_message: checkbox.error_message.clone(),
-        is_invalid: if in_group {
-            Signal::stored(false)
-        } else {
-            is_invalid
-        },
-        validation_errors: if in_group {
-            Signal::stored(Vec::new())
-        } else {
-            checkbox.validation_errors
-        },
+        is_invalid: field_is_invalid,
+        validation_errors,
         validation_details: checkbox.validation_details,
     };
     let button = CheckboxButtonContext {
@@ -175,9 +175,14 @@ pub fn CheckboxField(
         is_required,
     };
 
-    Some(view! {
-        <Provider value=button>
-            <Provider value=field>
+    // Both contexts in one scope (one owner, no `<Provider>` per context: `performance.md` R11).
+    Some(scoped_view(
+        move || {
+            provide_context(button);
+            provide_context(field);
+        },
+        move || {
+            view! {
                 <div
                     class=classes
                     style={styles}
@@ -194,9 +199,9 @@ pub fn CheckboxField(
                 >
                     {children()}
                 </div>
-            </Provider>
-        </Provider>
-    })
+            }
+        },
+    ))
 }
 
 /// The clickable part of a [`CheckboxField`]: a `<label>` around a visually hidden
@@ -242,6 +247,8 @@ struct CheckboxButtonContext {
 
 /// The settings of a [`CheckboxField`].
 struct CheckboxSetup {
+    /// The surrounding group's context, if any.
+    group: Option<CheckboxGroupContext>,
     value: Option<Key>,
     default_selected: bool,
     on_change: Option<Callback<bool>>,
@@ -269,6 +276,7 @@ struct CheckboxSetup {
 /// `value`; the field renders nothing without one), or a checkbox with its own state.
 fn use_checkbox_atom(setup: CheckboxSetup) -> UseToggleReturn {
     let CheckboxSetup {
+        group,
         value,
         default_selected,
         on_change,
@@ -291,7 +299,7 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseToggleReturn {
         auto_focus,
         on_focus_change,
     } = setup;
-    let group = use_context::<CheckboxGroupContext>().zip(value);
+    let group = group.zip(value);
     let validation_behavior = if group.is_some() {
         validation_behavior
     } else {
@@ -313,7 +321,18 @@ fn use_checkbox_atom(setup: CheckboxSetup) -> UseToggleReturn {
         aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
         auto_focus,
         on_focus_change,
-        ..ToggleOptions::default()
+        // Every field named: `..ToggleOptions::default()` would create a stored signal for each
+        // `Signal` field, also the ones set here (`performance.md` R14).
+        aria_errormessage: Signal::stored(None),
+        aria_controls: Signal::stored(None),
+        exclude_from_tab_order: Signal::stored(false),
+        on_focus: None,
+        on_blur: None,
+        on_press_start: None,
+        on_press_end: None,
+        on_press_up: None,
+        on_press: None,
+        on_press_change: None,
     };
     if let Some((group, value)) = group {
         use_checkbox_group_item(UseCheckboxGroupItemInput {
@@ -555,7 +574,10 @@ pub fn CheckboxGroup<V: SelectionValue>(
         on_blur: None,
         on_focus_change: None,
     });
-    let ctx = CheckboxGroupContext { data };
+    let ctx = CheckboxGroupContext {
+        data,
+        no_field_errors: (Signal::stored(false), Signal::stored(Vec::new())),
+    };
     let label = LabelContext::span(label_props).with_presence(label_presence);
     let field = FieldContext {
         description: description_props,
@@ -565,9 +587,14 @@ pub fn CheckboxGroup<V: SelectionValue>(
         validation_details,
     };
 
-    view! {
-        <Provider value=ctx>
-            <Provider value=label><Provider value=field>
+    scoped_view(
+        move || {
+            provide_context(ctx);
+            provide_context(label);
+            provide_context(field);
+        },
+        move || {
+            view! {
                 <div
                     {..props.attrs()}
                     class=classes
@@ -581,7 +608,7 @@ pub fn CheckboxGroup<V: SelectionValue>(
                 >
                     {children()}
                 </div>
-            </Provider></Provider>
-        </Provider>
-    }
+            }
+        },
+    )
 }

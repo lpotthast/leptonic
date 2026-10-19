@@ -7,6 +7,26 @@ documents `README.md` lists; git history has the details. Most recent first.
 
 ### 2026-10-18
 
+- Interactions and groups, behavior-keeping except one ordering detail (`PLAN.md`): the disabled resets of `use_press`,
+  `use_hover`, `use_focus_ring` and `use_focus_within` create their effect on the first press, hover or focus
+  (`when_true_once_armed`), not at mount; `signal_prop` (`checked`, `indeterminate` without an effect when constant);
+  `scoped_view` instead of nested `<Provider>`s in Checkbox, Switch, Radio, Disclosure, Button and ToggleButton; one
+  shared `aria-describedby` per checkbox group; every `ToggleOptions` field named; `data-orientation` through
+  `signal_attr`. Both rounds together: allocations 56.67M → 53.47M (−39.6% since 2026-10-17), effect runs −16% (−74%),
+  DOM operations unchanged; CheckboxGroup (1,000) 601k → 540k, Table row add 86k → 18k, TagGroup 737k → 698k. Test-app
+  wasm raw 15,831,193, brotli 3,152,242.
+- Collection items, behavior-keeping (anatomy of table, grid, list box, tag and drag-and-drop items): the 23-70
+  allocations per row of a row change in Table and Grid were per-item readers of collection-wide memos that recompute
+  with every change (marked and checked again, `performance.md` R1): `GridState::is_empty` follows a trigger the node
+  diff notifies only when emptiness changes (`SelectionManager::is_collection_empty`; also `TableBody`),
+  `TableState::columns`/`row_header_columns` are signals written only on a change (isomorphic effects: see
+  `leptos-and-dom.md`, "State Corrections", for the two bugs this first had).
+  Per-item constants made once per collection (`GridData` actions, link behavior and cell role, `ListBoxData::on_action`,
+  a table's flat-row tree values), one `StoredValue` per grid cell, `data-selection-mode` without a render effect for a
+  constant mode (`SelectionManager::selection_mode_signal`), per-item contexts through `scoped_view` instead of
+  `<Provider>` (list box, grid list, table row, menu item, tag), single-flag `data_flags` groups folded (tag, grid row,
+  list box and menu items), `has_focused_key` a signal written only when it changes (every tag's `tabindex` reads it),
+  `use_drag_session` hands out the session signal (no copy of the session per read).
 - Sweep against the patterns to avoid (`performance.md` R1-R17 and section 5, `leptos-and-dom.md`), behavior-keeping
   fixes: per-node tracking for item labels, child rows and section headings (grid list, tree, sections, draggable
   items); flat grid list rows without tree machinery; one description per collection or group (drop targets, tags); one

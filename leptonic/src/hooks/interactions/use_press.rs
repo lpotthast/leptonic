@@ -47,7 +47,7 @@ use crate::{
         platform::device,
         prevent_focus::{FocusPrevention, prevent_focus},
         probe::probe_sources,
-        reactions::when_true,
+        reactions::when_true_once_armed,
         shadow_dom::{self, node_contains},
         stored_field::StoredField,
         use_description::use_description,
@@ -1140,26 +1140,6 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
         };
 
-        // Starts a press state (react-aria's `state.isPressed = true` with its target).
-        let initialize_press_state =
-            move |pointer_id: i32,
-                  pointer_type: PointerType,
-                  target: web_sys::Element,
-                  is_over_target: bool,
-                  listeners: Vec<Listener>| {
-                state.set_value(Some(PressState {
-                    pointer_id,
-                    pointer_type,
-                    target,
-                    is_over_target,
-                    did_fire_press_start: false,
-                    is_long_press: false,
-                    click_timeout_handle: None,
-                    long_press_timeout_handle: None,
-                    listeners,
-                }));
-            };
-
         // Ends the press state without pressing (react-aria's `cancel`), also cleaning up after
         // a press the click completed.
         let cancel = move |e: &EventRef<'_>| {
@@ -1189,11 +1169,33 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // Cancel an active press when the element becomes disabled. The events that would
         // normally end the press are ignored while disabled, so without this, e.g. a spin button
         // whose first step disables it would keep spinning.
-        when_true(disabled, move || {
+        // The effect exists once a press began (`arm_disable_cancel`: on pointer and key down; a
+        // virtual click begins and ends its press in one handler), never while disabled.
+        let arm_disable_cancel = when_true_once_armed(disabled, move || {
             if state.with_value(Option::is_some) {
                 cancel(&EventRef::Synthetic);
             }
         });
+
+        // Starts a press state (react-aria's `state.isPressed = true` with its target).
+        let initialize_press_state =
+            move |pointer_id: i32,
+                  pointer_type: PointerType,
+                  target: web_sys::Element,
+                  is_over_target: bool,
+                  listeners: Vec<Listener>| {
+                state.set_value(Some(PressState {
+                    pointer_id,
+                    pointer_type,
+                    target,
+                    is_over_target,
+                    did_fire_press_start: false,
+                    is_long_press: false,
+                    click_timeout_handle: None,
+                    long_press_timeout_handle: None,
+                    listeners,
+                }));
+            };
 
         let handle_key_up = move |e: KeyboardEvent| {
             let key = e.typed_key();
@@ -1314,6 +1316,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                         false,
                         listeners,
                     );
+                    arm_disable_cancel.arm();
                     should_stop = trigger_press_start(&EventRef::Keyboard(&e));
                 }
                 stop_unless_forced(should_stop, &EventRef::Keyboard(&e));
@@ -1566,6 +1569,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     true,
                     listeners,
                 );
+                arm_disable_cancel.arm();
                 should_stop = trigger_press_start(&EventRef::Pointer(&e));
             }
             stop_unless_forced(should_stop, &EventRef::Pointer(&e));

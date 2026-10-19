@@ -16,7 +16,7 @@
         "effect_runs": 0,
         "render_effect_runs": 1,
         "immediate_effect_runs": 0,
-        "signal_notifications": 3,
+        "signal_notifications": 4,
         "dom_attributes": 1,
         "dom_text": 0,
         "dom_added_nodes": 0,

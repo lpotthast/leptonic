@@ -182,6 +182,21 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             blur_observer.try_update_value(Option::take);
         };
 
+        // When disabled transitions to true, clean up any active focus-within state: in an
+        // effect created when focus first enters (which it never does while disabled; no effect
+        // for a flag that is never true, `performance.md` R6).
+        let arm_disable_reset =
+            crate::utils::reactions::when_true_once_armed(disabled, move || {
+                if is_focus_within.get_untracked() {
+                    set_is_focus_within.set(false);
+                    stop_tracking();
+
+                    if let Some(on_focus_within_change) = on_focus_within_change {
+                        on_focus_within_change.run(false);
+                    }
+                }
+            });
+
         let trigger_blur_within = move |e: FocusEvent| {
             if !is_focus_within.try_get_untracked().unwrap_or(false) {
                 return;
@@ -244,6 +259,7 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
                 on_focus_within_change.run(true);
             }
             set_is_focus_within.set(true);
+            arm_disable_reset.arm();
 
             if let Some(element) = target.dyn_ref::<web_sys::Element>() {
                 blur_observer.set_value(SyntheticBlurObserver::observe(element));
@@ -293,19 +309,6 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             // Focus is leaving the element tree
             trigger_blur_within(e);
         };
-
-        // When disabled transitions to true, clean up any active focus-within state (no effect
-        // for a flag that is never true, `performance.md` R6).
-        crate::utils::reactions::when_true(disabled, move || {
-            if is_focus_within.get_untracked() {
-                set_is_focus_within.set(false);
-                stop_tracking();
-
-                if let Some(on_focus_within_change) = on_focus_within_change {
-                    on_focus_within_change.run(false);
-                }
-            }
-        });
 
         on_cleanup(stop_tracking);
 

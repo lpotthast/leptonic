@@ -66,8 +66,9 @@ pub struct UseCheckboxGroupInput {
 pub struct CheckboxGroupData {
     pub state: CheckboxGroupState,
     form: Option<String>,
-    description_id: Signal<Option<Id>>,
-    error_message_id: Signal<Option<Id>>,
+    /// What describes every checkbox: the group's error message (while invalid) and its
+    /// description, joined once for all of them.
+    describedby: Signal<Option<Id>>,
 }
 
 /// The return value of [`use_checkbox_group`].
@@ -184,6 +185,13 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
     let focus_within_props = focus_within.target.into_props();
     let is_disabled = state.is_disabled;
     let validation = state.validation;
+    let group_error = Signal::derive(move || {
+        if state.is_invalid.get() {
+            error_message_id.get()
+        } else {
+            None
+        }
+    });
     UseCheckboxGroupReturn {
         group: Part::stored(UseCheckboxGroupProps {
             id: field_props.id,
@@ -200,8 +208,7 @@ pub fn use_checkbox_group(input: UseCheckboxGroupInput) -> UseCheckboxGroupRetur
         data: CheckboxGroupData {
             state,
             form,
-            description_id,
-            error_message_id,
+            describedby: IdRefs::derive([group_error, description_id]),
         },
         is_invalid: state.is_invalid,
         validation_errors: validation.validation_errors,
@@ -350,20 +357,71 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         group_validation,
     );
 
-    // Also described by the group's description and (while invalid) its error message.
-    let group_error = Signal::derive(move || {
-        if state.is_invalid.get() {
-            group.error_message_id.get()
-        } else {
-            None
-        }
-    });
-    options.aria_describedby =
-        IdRefs::derive([options.aria_describedby, group_error, group.description_id]);
+    // Also described by the group's error message (while invalid) and its description: joined by
+    // the group, so a checkbox without its own description adds no memo.
+    options.aria_describedby = IdRefs::derive([options.aria_describedby, group.describedby]);
     use_checkbox(UseCheckboxInput {
         state: toggle_state,
         is_indeterminate,
         validation: Some(item_validation),
         options,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{
+        hooks::form::{UseCheckboxGroupStateInput, use_checkbox_group_state},
+        testing::with_owner,
+    };
+
+    /// The checkboxes are described by the group's error message (while the group is invalid)
+    /// and its description, in this order, joined once for all of them.
+    #[test]
+    fn checkboxes_are_described_by_the_groups_error_and_description() {
+        with_owner(|| {
+            let invalid = RwSignal::new(false);
+            let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
+                default_value: HashSet::new(),
+                is_invalid: invalid.into(),
+                ..UseCheckboxGroupStateInput::default()
+            });
+            let group = use_checkbox_group(UseCheckboxGroupInput {
+                state,
+                id: None,
+                has_label: Signal::stored(false),
+                aria_label: MaybeProp::default(),
+                aria_labelledby: Signal::stored(None),
+                aria_describedby: Signal::stored(None),
+                form: None,
+                on_focus: None,
+                on_blur: None,
+                on_focus_change: None,
+            });
+            let describedby = group.data.describedby;
+            assert_that!(describedby.get_untracked()).is_none();
+
+            // The slots are referenced while rendered (an element holds their props).
+            let description = group
+                .description
+                .props()
+                .expect("the description's props")
+                .id;
+            let error = group.error_message.props().expect("the error's props").id;
+            assert_that!(describedby.get_untracked()).is_equal_to(Some(description.clone()));
+            invalid.set(true);
+            let joined = format!("{} {}", error.as_str(), description.as_str());
+            assert_that!(
+                describedby
+                    .get_untracked()
+                    .map(|ids| ids.as_str().to_owned())
+            )
+            .is_equal_to(Some(joined));
+        });
+    }
 }

@@ -116,18 +116,22 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     } = input;
     let state = table.state;
     let selection = state.grid.list.selection;
-    // The column follows the table (e.g. when columns change).
+    // The column follows the table (e.g. when columns change). A header whose column is gone is
+    // about to be removed: it keeps its values meanwhile (no updates of a leaving header, which
+    // the columns, notified before the header rows, would cause first).
     let column = {
         let key = key.clone();
-        Memo::new(move |_| {
-            state.columns.with(|columns| {
-                columns
-                    .iter()
-                    .find(|c| c.key == key)
-                    .map_or((false, false), |c| {
-                        (c.allows_sorting, c.kind == ColumnKind::SelectionCheckbox)
-                    })
-            })
+        Memo::new(move |previous: Option<&(bool, bool)>| {
+            state
+                .columns
+                .with(|columns| {
+                    columns
+                        .iter()
+                        .find(|c| c.key == key)
+                        .map(|c| (c.allows_sorting, c.kind == ColumnKind::SelectionCheckbox))
+                })
+                .or_else(|| previous.copied())
+                .unwrap_or((false, false))
         })
     };
     let allows_sorting = Signal::derive(move || column.get().0);

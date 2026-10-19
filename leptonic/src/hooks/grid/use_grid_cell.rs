@@ -11,7 +11,7 @@ use crate::{
     CapturedElement, EventHandler, Id, IntoAttrs, OnEvent, PropsWithStyles,
     hooks::{
         collections::{
-            FocusItem, FocusStrategy, Key, LinkBehavior, NavigationOptions, UseSelectableItemAttrs,
+            FocusItem, FocusStrategy, Key, NavigationOptions, UseSelectableItemAttrs,
             UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
             use_selectable_item,
         },
@@ -31,6 +31,7 @@ use crate::{
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
         shadow_dom::{get_active_element, get_event_target, node_contains},
         signal_attr::{SignalAttr, signal_attr},
+        stored_field::StoredField,
     },
 };
 
@@ -137,6 +138,15 @@ impl IntoAttrs for UseGridCellProps {
     }
 }
 
+/// The non-reactive state of [`use_grid_cell`].
+struct CellHook {
+    key: Key,
+    /// The cell focus last entered (this one).
+    key_when_focused: Option<Key>,
+    /// The child focused last, to restore focus to.
+    last_focused_child: Option<SendWrapper<web_sys::Element>>,
+}
+
 /// A cell of a grid: focusable itself or through its interactive children, with arrow keys
 /// moving between the children before moving to the neighboring cell.
 pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
@@ -155,6 +165,8 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         delegate,
         collection_id,
         on_cell_action,
+        link_behavior,
+        cell_role,
         keyboard_navigation_behavior,
         direction,
         ..
@@ -182,10 +194,20 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     };
 
     let element = CapturedElement::new();
-    let cell_key = StoredValue::new(key.clone());
-    let key_when_focused: StoredValue<Option<Key>> = StoredValue::new(None);
-    let last_focused_child: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-        StoredValue::new(None);
+    // The cell's non-reactive state in one `StoredValue` (`performance.md` R7).
+    let hook = StoredValue::new(CellHook {
+        key: key.clone(),
+        key_when_focused: None,
+        last_focused_child: None,
+    });
+    let cell_key = StoredField::new(hook, |h| &h.key, |h| &mut h.key);
+    let key_when_focused =
+        StoredField::new(hook, |h| &h.key_when_focused, |h| &mut h.key_when_focused);
+    let last_focused_child = StoredField::new(
+        hook,
+        |h| &h.last_focused_child,
+        |h| &mut h.last_focused_child,
+    );
 
     let focus_cell = move || {
         let Some(cell) = element.get_untracked() else {
@@ -258,8 +280,8 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         is_disabled: state.is_empty(),
         should_select_on_press_up,
         allows_different_press_origin: false,
-        on_action: Signal::stored(on_cell_action),
-        link_behavior: Signal::stored(LinkBehavior::Action),
+        on_action: on_cell_action,
+        link_behavior,
         focus: Some(FocusItem::new(focus_cell)),
         should_use_virtual_focus: false,
         on_context_menu: None,
@@ -509,7 +531,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     UseGridCellReturn {
         cell: Part::stored(PropsWithStyles::new(
             UseGridCellProps {
-                role: Signal::stored(AriaRole::Gridcell),
+                role: cell_role,
                 aria_colspan: Signal::derive(move || position.get().0),
                 aria_colindex: Signal::derive(move || position.get().1.map(|i| i + 1)),
                 colspan: Signal::derive(move || position.get().0),

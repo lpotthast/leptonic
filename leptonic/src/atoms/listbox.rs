@@ -350,28 +350,33 @@ pub fn ListBoxItem(
     let (attrs, option_styles) = props.attrs();
     let styles = option_styles.merge(styles);
 
-    Some(view! {
-        <Provider value=ctx>
-            <div
-                {..attrs}
-                class=classes
-                style={styles}
-                {..data_flags([
-                    ("data-focused", is_focused),
-                    ("data-focus-visible", is_focus_visible),
-                    ("data-pressed", is_pressed),
-                ])}
-                {..data_flags([("data-hovered", is_hovered)])}
-                {..data_flags([
-                    ("data-selected", is_selected),
-                    ("data-disabled", is_disabled),
-                ])}
-                data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
-            >
-                {children()}
-            </div>
-        </Provider>
-    })
+    // The item's context in an owner of its own (cheaper than a `<Provider>`, `performance.md`
+    // R11).
+    Some(scoped_view(
+        move || provide_context(ctx),
+        move || {
+            view! {
+                <div
+                    {..attrs}
+                    class=classes
+                    style={styles}
+                    {..data_flags([
+                        ("data-focused", is_focused),
+                        ("data-focus-visible", is_focus_visible),
+                        ("data-pressed", is_pressed),
+                    ])}
+                    {..data_flags([
+                        ("data-hovered", is_hovered),
+                        ("data-selected", is_selected),
+                        ("data-disabled", is_disabled),
+                    ])}
+                    {..data_attributes::selection_mode(selection.selection_mode_signal())}
+                >
+                    {children()}
+                </div>
+            }
+        },
+    ))
 }
 
 /// One [`ListBoxItem`] per item of the listbox's collection, as it currently is (e.g. filtered

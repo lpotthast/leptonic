@@ -5,6 +5,8 @@
 use leptos::prelude::*;
 
 #[cfg(feature = "atoms")]
+use super::signal_attr::{AttrText, SignalAttr, ToAttrText, signal_attr};
+#[cfg(feature = "atoms")]
 use crate::hooks::collections::SelectionMode;
 
 /// The value of a boolean `data-*` attribute: `"true"` while `signal` is `true`, absent otherwise
@@ -17,16 +19,23 @@ pub fn flag(signal: Signal<bool>) -> impl Fn() -> Option<&'static str> + Clone +
     move || signal.get().then_some("true")
 }
 
-/// The value of a `data-selection-mode` attribute: `single` or `multiple`, absent without
-/// selection (as react-aria-components renders it on collection items).
+/// The `data-selection-mode` attribute: `single` or `multiple`, absent without selection (as
+/// react-aria-components renders it on collection items). Written once when `mode` can't change
+/// (no render effect), else updated by one: `{..selection_mode(selection.selection_mode_signal())}`.
 #[cfg(feature = "atoms")]
-pub fn selection_mode(
-    mode: impl Fn() -> SelectionMode + Clone + Send + Sync + 'static,
-) -> impl Fn() -> Option<&'static str> + Clone + Send + Sync {
-    move || match mode() {
-        SelectionMode::None => None,
-        SelectionMode::Single => Some("single"),
-        SelectionMode::Multiple => Some("multiple"),
+pub fn selection_mode(mode: Signal<SelectionMode>) -> SignalAttr<SelectionMode> {
+    signal_attr("data-selection-mode", mode)
+}
+
+/// As `data-selection-mode` shows it ([`selection_mode`]).
+#[cfg(feature = "atoms")]
+impl ToAttrText for SelectionMode {
+    fn to_attr_text(&self) -> AttrText {
+        match self {
+            Self::None => AttrText::Absent,
+            Self::Single => AttrText::Text(Oco::Borrowed("single")),
+            Self::Multiple => AttrText::Text(Oco::Borrowed("multiple")),
+        }
     }
 }
 

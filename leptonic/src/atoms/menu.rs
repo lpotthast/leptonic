@@ -39,6 +39,7 @@ use crate::{
         default_class::with_default_class,
         point::Point,
         scoped_context::{ClearContexts, scoped_view},
+        signal_attr::fixed_attr,
         styles::Styles,
     },
 };
@@ -597,7 +598,7 @@ pub fn MenuItem(
         own => own,
     };
     let selection = menu.state.selection;
-    let selection_mode = Signal::derive(move || selection.selection_mode());
+    let selection_mode = selection.selection_mode_signal();
     let is_open = submenu_trigger
         .as_ref()
         .map_or_else(|| Signal::stored(false), |trigger| trigger.is_open);
@@ -633,30 +634,35 @@ pub fn MenuItem(
     let (attrs, item_styles) = props.attrs();
     let styles = item_styles.merge(styles);
 
-    Some(view! {
-        <Provider value=ctx>
-            <div
-                {..attrs}
-                class=classes
-                style={styles}
-                {..data_flags([
-                    ("data-focused", is_focused),
-                    ("data-focus-visible", is_focus_visible),
-                    ("data-pressed", is_pressed),
-                ])}
-                {..data_flags([("data-hovered", is_hovered)])}
-                {..data_flags([
-                    ("data-selected", is_selected),
-                    ("data-disabled", is_disabled),
-                ])}
-                data-has-submenu=has_submenu.then_some("true")
-                {..data_flags([("data-open", is_open)])}
-                data-selection-mode=data_attributes::selection_mode(move || selection_mode.get())
-            >
-                {children()}
-            </div>
-        </Provider>
-    })
+    // The item's context in an owner of its own (cheaper than a `<Provider>`,
+    // `performance.md` R11).
+    Some(scoped_view(
+        move || provide_context(ctx),
+        move || {
+            view! {
+                <div
+                    {..attrs}
+                    class=classes
+                    style={styles}
+                    {..data_flags([
+                        ("data-focused", is_focused),
+                        ("data-focus-visible", is_focus_visible),
+                        ("data-pressed", is_pressed),
+                    ])}
+                    {..data_flags([
+                        ("data-hovered", is_hovered),
+                        ("data-selected", is_selected),
+                        ("data-disabled", is_disabled),
+                    ])}
+                    {..fixed_attr("data-has-submenu", has_submenu.then_some("true"))}
+                    {..data_flags([("data-open", is_open)])}
+                    {..data_attributes::selection_mode(selection_mode)}
+                >
+                    {children()}
+                </div>
+            }
+        },
+    ))
 }
 
 /// Opens a submenu from an item of a [`Menu`]: its children are the trigger [`MenuItem`] (with

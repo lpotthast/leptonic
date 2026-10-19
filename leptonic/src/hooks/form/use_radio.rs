@@ -1,11 +1,6 @@
 // Upstream: react-aria/src/radio/useRadio.ts @ 99e6102368
 // Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
-use leptos::{
-    ev,
-    oco::Oco,
-    prelude::*,
-    tachys::html::property::{Property, prop},
-};
+use leptos::{ev, oco::Oco, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, Event, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
@@ -31,7 +26,9 @@ use crate::{
     utils::{
         probe::either,
         reactions::sharing_one_effect,
-        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        signal_attr::{
+            FixedAttr, SignalAttr, SignalProp, fixed_attr, maybe_attr, signal_attr, signal_prop,
+        },
         spread::Spread,
     },
 };
@@ -147,7 +144,7 @@ pub type UseRadioInputAttrs = (
             ElementCaptureAttr,
         ),
     )>,
-    Property<&'static str, Signal<bool>>,
+    SignalProp,
     (
         OnEvent<ev::change>,
         OnEvent<ev::focus>,
@@ -190,7 +187,7 @@ impl IntoAttrs for UseRadioInputProps {
                     self.element_capture,
                 ),
             )),
-            prop("checked", self.checked),
+            signal_prop("checked", self.checked),
             (
                 self.on_change.into_on(ev::change),
                 self.on_focus.into_on(ev::focus),
@@ -448,7 +445,12 @@ fn radio(input: UseRadioInput) -> UseRadioReturn {
             .map(|form| Oco::Counted(std::sync::Arc::from(form)));
         let value_text: Oco<'static, str> = Oco::Counted(std::sync::Arc::from(value.to_string()));
         let default_checked = state.default_selected_value().as_ref() == Some(&value);
-        let required = Signal::derive(move || native_required && is_required.get());
+        // The group's flag itself, or a constant (no derive: `performance.md` R9).
+        let required = if native_required {
+            is_required
+        } else {
+            Signal::stored(false)
+        };
         let element_capture = focusable_props.element_capture;
         let on_focus = focusable_props.on_focus;
         let on_blur = focusable_props.on_blur;

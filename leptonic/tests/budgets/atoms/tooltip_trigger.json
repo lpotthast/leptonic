@@ -400,7 +400,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 550,
+        "allocations": 547,
         "reallocations": 19,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,

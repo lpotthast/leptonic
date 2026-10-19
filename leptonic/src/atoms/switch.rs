@@ -1,6 +1,6 @@
 // Upstream: react-aria-components/src/Switch.tsx @ 99e6102368
 // Upstream: react-aria-components/test/Switch.test.js @ 99e6102368
-use leptos::{context::Provider, prelude::*};
+use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use super::{
@@ -16,8 +16,8 @@ use crate::{
     },
     sharing_one_effect,
     utils::{
-        data_attributes::data_flags, default_class::with_default_class, dev_warn, styles::Styles,
-        visually_hidden::visually_hidden_styles,
+        data_attributes::data_flags, default_class::with_default_class, dev_warn,
+        scoped_context::scoped_view, styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -126,9 +126,14 @@ pub fn SwitchField(
         is_required,
     };
 
-    view! {
-        <Provider value=button>
-            <Provider value=field>
+    // Both contexts in one scope (one owner, no `<Provider>` per context: `performance.md` R11).
+    scoped_view(
+        move || {
+            provide_context(button);
+            provide_context(field);
+        },
+        move || {
+            view! {
                 <div
                     class=classes
                     style={styles}
@@ -144,9 +149,9 @@ pub fn SwitchField(
                 >
                     {children()}
                 </div>
-            </Provider>
-        </Provider>
-    }
+            }
+        },
+    )
 }
 
 /// The clickable part of a [`SwitchField`]: a `<label>` around a visually hidden
@@ -257,7 +262,18 @@ fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
             aria_describedby: crate::utils::id::id_ref_prop(aria_describedby),
             auto_focus,
             on_focus_change,
-            ..ToggleOptions::default()
+            // Every field named: `..ToggleOptions::default()` would create a stored signal for each
+            // `Signal` field, also the ones set here (`performance.md` R14).
+            aria_errormessage: Signal::stored(None),
+            aria_controls: Signal::stored(None),
+            exclude_from_tab_order: Signal::stored(false),
+            on_focus: None,
+            on_blur: None,
+            on_press_start: None,
+            on_press_end: None,
+            on_press_up: None,
+            on_press: None,
+            on_press_change: None,
         },
         state,
     })

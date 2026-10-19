@@ -139,7 +139,7 @@
       "windows": 1,
       "totals": {
         "allocations": 44,
-        "reallocations": 1,
+        "reallocations": 2,
         "memo_runs": 0,
         "memo_runs_unchanged": 0,
         "effect_runs": 3,
@@ -230,11 +230,11 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 184,
+        "allocations": 176,
         "reallocations": 6,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
-        "effect_runs": 5,
+        "effect_runs": 4,
         "render_effect_runs": 2,
         "immediate_effect_runs": 0,
         "signal_notifications": 1,

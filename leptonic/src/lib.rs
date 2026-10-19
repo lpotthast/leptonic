@@ -146,7 +146,8 @@ pub use crate::{
         },
         scroll_behavior::ScrollBehavior,
         signal_attr::{
-            AttrText, FixedAttr, SignalAttr, ToAttrText, fixed_attr, maybe_attr, signal_attr,
+            AttrText, FixedAttr, SignalAttr, SignalProp, ToAttrText, fixed_attr, maybe_attr,
+            signal_attr, signal_prop,
         },
         slot_id::{Slot, SlotAttrs, SlotProps, use_slot},
         spread::{AttrKeys, Spread},

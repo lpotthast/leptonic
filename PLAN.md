@@ -18,6 +18,8 @@ starts with a failing test.
     `component_spread_rebuild_known_issues`; atoms avoid such spreads meanwhile.
   - `d-keyed-for-moves` (also 0.9.0-beta2): the keyed `For` diff moves kept rows whose relative order didn't change,
     collapsing text selections (why `render_visible_items` mounts rows itself).
+  - To write (repro: `performance.md`, "Found, not patched"): a memo chain under an `ImmediateEffect` recomputes all
+    but its top memo twice per change (a table's selection column rebuild twice per row change). Fork fix candidate.
 - **The user's crates:** leptos-styles: `add_reactive_unchecked` (today `add_optional_unchecked(prop, move ||
   Some(..))`); leptos-css lacks `Margin::all`-style helpers. leptos-element-capture: identity `PartialEq`/`Eq`/`Hash`
   for `CapturedElement`, `try_get_untracked` for deferred callbacks. leptos-classes: `classes="a b"` compiles but
@@ -43,9 +45,29 @@ starts with a failing test.
     - NumberField parsing tries only numbering systems whose digits occur in the text (`parser_for`): a rejected
       character 438 → ~20 allocations. Difference: a text without digits that only another system's literals accept
       is rejected.
+  - Collection item costs (behavior identical, 2026-10-18; each a new helper, input field or API shape):
+    one render effect for several attributes read from one memo (a grid cell's `aria-colspan`, `aria-colindex` and
+    `colspan` from its position memo: −2 render effects per cell, −8 of a table row's 53); grid and table cells
+    create `use_selectable_item`'s `is_selected` and `is_focused` memos they never read (~16 allocations per cell,
+    ~64 per table row: lazy memos or an opt-out input field); `use_drag`/`use_draggable_item` build the drag button's
+    `UseButtonInput` (~14 stored signals) also without a drag button (`Option`?), as `use_tree_item` its expand
+    button's and `use_tag` its remove button's (until `UseButtonInput` takes `MaybeSignal`s); tree rows' positions per
+    key (`GridListData::tree_positions` as triggers per key instead of every row's memo over the whole map: collapsing
+    in a 1,000-row tree 504 → ~4 memo runs, ~4k → ~0.2k allocations).
+    - Implemented, to accept or revert: the disabled resets' effects are created on the first press, hover or focus
+      (`when_true_once_armed`). Difference: such an effect subscribes to the flag later, so within the tick of a flag
+      change it may run after other effects reacting to the same change instead of before them (values and timing
+      unchanged).
+    - One reset listener per radio group instead of per radio (`use_form_reset`): differs for radios in different
+      forms (`form` attribute) and sets the value once instead of once per radio.
   - Performance trade-offs (behavior identical): SliderMarks subscribing per mark (more at mount, less per drag move);
     a public `use_realtime_validation` for checkbox group items (a new concept; saves the rest of their validation
-    state); returning `Memo` instead of `Signal` through the item hooks' returns (saves an arena item per value).
+    state); returning `Memo` instead of `Signal` through the item hooks' returns (saves an arena item per value); a
+    helper rendering several attributes from one memo in one render effect (a cell's `aria-colspan`, `aria-colindex`,
+    `colspan`: −2 per cell; a new public concept); cells creating `is_selected`/`is_focused` only when read (~16 per
+    cell); `Option<UseButtonInput>`-style inputs for drag, expand and remove buttons (~14 stored signals each); tree row
+    positions per key (a new public type: collapse in 1,000 rows 504 → ~4 memo runs); `UseFocusWithinInput::mark`
+    (the input loses `Copy`); a public setter accessor on `ToggleState` (−3 per toggle).
   - `live_announcer`: `Assertiveness::default()` is `Polite`, react-aria's `announce` defaults to assertive (recorded
     as a deviation): keep or change?
 
@@ -59,8 +81,9 @@ atoms, book heads-up), then cross-cutting work.
 
 - [ ] Flaky perf counts (full suite, 2026-10-17; fixed: `virtual_list::resize_grown`, the DnD TalkBack click):
   `perf_tests::atoms::virtualizer::keyboard_navigation_large` ±1 allocation between its `home`/`end` steps (seen
-  twice); `perf_tests::hooks::use_exit_animation::mount_and_unmount` 1 style recalc more (timing of the animation).
-  Reproduce with CPU throttling (`lessons.md`) and fix the cause.
+  twice); `perf_tests::hooks::use_exit_animation::mount_and_unmount` 1 style recalc more (timing of the animation);
+  `perf_tests::atoms::grid::type_ahead` under load (2026-10-18: a measured key took 2.8 s, longer than the 1 s
+  type-ahead timeout, so the search restarted). Reproduce with CPU throttling (`lessons.md`) and fix the cause.
 - [ ] Flaky under load: `overlay_position` cases (`placed_above`, `reopened_with_arrow`: no `[data-placement=...]`
   within 10 s), pass alone; `placed_above` waits in steps (`aria-expanded`, presence, placement) so the next failure
   shows which. Not seen in the last two full runs.
@@ -131,8 +154,9 @@ allocated bytes (`documentation/conventions.md`).
     one node subscription per item (as `SelectionSubscription` for selection and focus).
   - `KeyedTriggers::track` under the attribute probe (`signal_attr`/`data_flags`) leaves its subscription until
     unmount: skip counting and cleanup while probing.
-  - `on_action`: the per-item `Signal::stored` (2 allocations) stays until the collection data hold one signal
-    (`ListBoxData`, `GridData`) or decision 5 (`MaybeSignal`).
+  - `on_action`: `ListBoxData` and `GridData` hold one signal for all items (2026-10-18); grid list items (and tags)
+    still store one each (`GridListData::on_action`), as most items their `is_disabled: Signal::stored(false)`, until
+    decision 5 (`MaybeSignal` for `UseSelectableItemInput`).
   - `use_grid_selection_checkbox`: one "Select" label derive per checkbox; `use_highlight_selection_description`
     and `use_grid_selection_announcement` build `GridStrings` memos of their own.
   - The selection checkbox builds the label's `use_press` though the table renders only the input (~80 per row):

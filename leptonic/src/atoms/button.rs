@@ -1,6 +1,6 @@
 // Upstream: react-aria-components/src/Button.tsx @ 99e6102368
 // Upstream: react-aria-components/test/Button.test.js @ 99e6102368
-use leptos::{context::Provider, prelude::*};
+use leptos::prelude::*;
 use leptos_classes::Classes;
 use web_sys::FocusEvent;
 
@@ -22,6 +22,7 @@ use crate::{
         id::{IdListBuilder, id_ref_prop, use_id},
         live_announcer::{Announcement, Assertiveness, announce},
         probe::is_constant,
+        scoped_context::scoped_view,
         styles::Styles,
     },
 };
@@ -254,7 +255,8 @@ pub fn Button(
             class=classes
             style=styles
         >
-            <Provider value=ProgressBarIdContext(progress_id)>{children()}</Provider>
+            // A scope for the children (no `<Provider>` component: `performance.md` R11).
+            {scoped_view(move || provide_context(ProgressBarIdContext(progress_id)), children)}
         </button>
     }
 }

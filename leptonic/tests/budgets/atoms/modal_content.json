@@ -152,11 +152,11 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 636,
+        "allocations": 628,
         "reallocations": 33,
         "memo_runs": 3,
         "memo_runs_unchanged": 0,
-        "effect_runs": 21,
+        "effect_runs": 20,
         "render_effect_runs": 7,
         "immediate_effect_runs": 0,
         "signal_notifications": 9,

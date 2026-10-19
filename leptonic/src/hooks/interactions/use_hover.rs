@@ -216,7 +216,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             utils::{
                 dom_ext::{EventAccessors, EventTargetExt},
                 event_listeners::listen_to,
-                reactions::when_true,
+                reactions::when_true_once_armed,
                 shadow_dom::{get_event_target, node_contains},
             },
         };
@@ -262,6 +262,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
             set_is_hovered.set(false);
         };
+
+        // End the hover when the element becomes disabled: in an effect created with the first
+        // hover (which never starts while disabled).
+        let arm_disable_end = when_true_once_armed(disabled, trigger_hover_end);
 
         let trigger_hover_start =
             move |pointer_type: PointerType,
@@ -324,6 +328,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                     target: current_target,
                     _pointerover: pointerover,
                 }));
+                arm_disable_end.arm();
             };
 
         let handle_pointer_enter = move |e: PointerEvent| {
@@ -352,9 +357,6 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
             trigger_hover_end();
         };
-
-        // End the hover when the element becomes disabled.
-        when_true(disabled, trigger_hover_end);
 
         on_cleanup(move || {
             // Dropping the state removes its global listener.

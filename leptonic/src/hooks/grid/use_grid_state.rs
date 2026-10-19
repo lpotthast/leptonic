@@ -42,8 +42,8 @@ pub struct GridState {
     keyboard_navigation_disabled: RwSignal<bool>,
     /// Whether the grid handles navigation keys: the flag above, for tables also while empty.
     navigation_disabled: Signal<bool>,
-    /// Whether the grid has no rows: one memo for all its rows and cells, which read it instead
-    /// of the whole collection (`performance.md` R1).
+    /// Whether the grid has no rows, for all its rows and cells: notified only when that changes,
+    /// not with every change of the collection (`performance.md` R1).
     is_empty: Signal<bool>,
 }
 
@@ -118,7 +118,7 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
         focus_mode,
         keyboard_navigation_disabled,
         navigation_disabled: keyboard_navigation_disabled.into(),
-        is_empty: Memo::new(move |_| collection.with(|c| c.size() == 0)).into(),
+        is_empty: Signal::derive(move || manager.is_collection_empty()),
     }
 }
 

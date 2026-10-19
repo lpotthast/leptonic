@@ -28,6 +28,8 @@ use crate::{
     utils::{
         data_attributes::{self, data_flags},
         default_class::with_default_class,
+        scoped_context::scoped_view,
+        signal_attr::fixed_attr,
         styles::Styles,
     },
 };
@@ -297,30 +299,37 @@ pub fn Tag(
         button: StoredValue::new(remove_button),
     };
 
-    Some(view! {
-        <div
-            {..attrs}
-            {..hover.target.attrs()}
-            class=classes
-            style={styles}
-            {..data_flags([
-                ("data-hovered", hover.is_hovered),
-                ("data-focused", is_focused),
-                ("data-focus-visible", is_focus_visible),
-            ])}
-            {..data_flags([("data-pressed", is_pressed)])}
-            {..data_flags([
-                ("data-selected", is_selected),
-                ("data-disabled", is_disabled),
-            ])}
-            data-allows-removing=allows_removing.then_some("true")
-            data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
-        >
-            <div {..grid_cell_props.attrs()} style="display: contents">
-                <Provider value=remove>{children()}</Provider>
-            </div>
-        </div>
-    })
+    // The item's context in an owner of its own (cheaper than a `<Provider>`,
+    // `performance.md` R11).
+    Some(scoped_view(
+        move || provide_context(remove),
+        move || {
+            view! {
+                <div
+                    {..attrs}
+                    {..hover.target.attrs()}
+                    class=classes
+                    style={styles}
+                    {..data_flags([
+                        ("data-hovered", hover.is_hovered),
+                        ("data-focused", is_focused),
+                        ("data-focus-visible", is_focus_visible),
+                    ])}
+                    {..data_flags([
+                        ("data-pressed", is_pressed),
+                        ("data-selected", is_selected),
+                        ("data-disabled", is_disabled),
+                    ])}
+                    {..fixed_attr("data-allows-removing", allows_removing.then_some("true"))}
+                    {..data_attributes::selection_mode(selection.selection_mode_signal())}
+                >
+                    <div {..grid_cell_props.attrs()} style="display: contents">
+                        {children()}
+                    </div>
+                </div>
+            }
+        },
+    ))
 }
 
 /// One [`Tag`] per item of the group's collection, rendered by `children`.

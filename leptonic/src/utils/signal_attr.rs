@@ -491,6 +491,113 @@ where
     }
 }
 
+/// The boolean DOM property `key` bound to `value` (`signal_prop("checked", is_selected)`): set
+/// once when `value` can't change, else on every run of one render effect (as tachys'
+/// `prop(key, signal)` sets it, also to an unchanged value: the user may have changed the
+/// element's property since). Properties don't render on the server; hydration sets them.
+pub fn signal_prop(key: &'static str, value: Signal<bool>) -> SignalProp {
+    SignalProp { key, value }
+}
+
+/// The DOM property of [`signal_prop`].
+#[derive(Debug, Clone, Copy)]
+pub struct SignalProp {
+    key: &'static str,
+    value: Signal<bool>,
+}
+
+/// The rendered state of a [`SignalProp`]: the effect setting the property, if it can change.
+pub struct SignalPropState {
+    el: Element,
+    effect: Option<RenderEffect<()>>,
+}
+
+/// Sets the boolean property `key` of `el`.
+fn set_bool_prop(el: &Element, key: &str, value: bool) {
+    let _ = js_sys::Reflect::set(
+        el,
+        &wasm_bindgen::JsValue::from_str(key),
+        &wasm_bindgen::JsValue::from_bool(value),
+    );
+}
+
+impl SignalProp {
+    /// Sets the property on `el`, with an effect for a value that can change.
+    fn render(self, el: &Element) -> SignalPropState {
+        let (value, is_reactive) = probe_sources(|| self.value.get());
+        let effect = if is_reactive {
+            let (el, key, signal) = (el.clone(), self.key, self.value);
+            // Its first run (now) sets the property.
+            Some(RenderEffect::new(move |_| {
+                set_bool_prop(&el, key, signal.get());
+            }))
+        } else {
+            set_bool_prop(el, self.key, value);
+            None
+        };
+        SignalPropState {
+            el: el.clone(),
+            effect,
+        }
+    }
+}
+
+impl Attribute for SignalProp {
+    const MIN_LENGTH: usize = 0;
+
+    type State = SignalPropState;
+    type AsyncOutput = Self;
+    type Cloneable = Self;
+    type CloneableOwned = Self;
+
+    fn html_len(&self) -> usize {
+        0
+    }
+
+    fn to_html(self, _buf: &mut String, _class: &mut String, _style: &mut String, _: &mut String) {}
+
+    fn hydrate<const FROM_SERVER: bool>(self, el: &Element) -> Self::State {
+        self.render(el)
+    }
+
+    fn build(self, el: &Element) -> Self::State {
+        self.render(el)
+    }
+
+    fn rebuild(self, state: &mut Self::State) {
+        // The previous key keeps its value, as with tachys' properties.
+        drop(state.effect.take());
+        let el = state.el.clone();
+        *state = self.render(&el);
+    }
+
+    fn into_cloneable(self) -> Self::Cloneable {
+        self
+    }
+
+    fn into_cloneable_owned(self) -> Self::CloneableOwned {
+        self
+    }
+
+    fn dry_resolve(&mut self) {}
+
+    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
+        std::future::ready(self)
+    }
+
+    fn keys(&self) -> Vec<NamedAttributeKey> {
+        vec![NamedAttributeKey::Property(Cow::Borrowed(self.key))]
+    }
+}
+
+impl NextAttribute for SignalProp {
+    type Output<NewAttr: Attribute> = (Self, NewAttr);
+
+    fn add_any_attr<NewAttr: Attribute>(self, new_attr: NewAttr) -> Self::Output<NewAttr> {
+        (self, new_attr)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;

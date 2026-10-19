@@ -12,7 +12,7 @@ use crate::{
     utils::{
         data_attributes::flag,
         part::{Part, Remount},
-        reactions::when_true,
+        reactions::when_true_once_armed,
         signal_attr::{SignalAttr, signal_attr},
     },
 };
@@ -183,7 +183,13 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     let (focused, set_focused) = signal(false);
     // Disabled, the focus handlers are off: the element no longer counts as focused (it would stay
     // so until the next blur after enabling).
-    when_true(disabled, move || set_focused.set(false));
+    // In an effect created with the first focus (which needs the element enabled), and only
+    // notifying a change (`leptos-and-dom.md`, "State Corrections").
+    let arm_disable_reset = when_true_once_armed(disabled, move || {
+        if focused.get_untracked() {
+            set_focused.set(false);
+        }
+    });
 
     // Whether focus is visible, from the modality when the element got focus (react-aria's
     // `onFocusChange` reads `isFocusVisible()`), then following the change notifications. Read
@@ -206,6 +212,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
         });
         let mark_focused = move |is_focused: bool| {
             if is_focused {
+                arm_disable_reset.arm();
                 let state = FocusState::get();
                 let _ = since.try_set_value(Some(FocusVisibleSince::now(
                     state,
@@ -219,7 +226,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     };
     #[cfg(feature = "ssr")]
     let (focus_visible, mark_focused) = {
-        let _ = is_text_input;
+        let _ = (is_text_input, arm_disable_reset);
         (Signal::stored(false), move |is_focused: bool| {
             set_focused.set(is_focused);
         })

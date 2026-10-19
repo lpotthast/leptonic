@@ -25,7 +25,8 @@ use crate::{
     },
     utils::{
         data_attributes::data_flags, default_class::with_default_class, fraction::Fraction,
-        number_formatter::NumberFormatOptions, number_value::NumberValue, styles::Styles,
+        number_formatter::NumberFormatOptions, number_value::NumberValue, signal_attr::signal_attr,
+        styles::Styles,
     },
 };
 
@@ -311,8 +312,8 @@ pub fn Slider<T: NumberValue>(
                 <div
                     {..group.attrs()}
                     class=classes
-                    style=styles
-                    data-orientation=move || orientation.get().as_str()
+                    style={styles}
+                    {..signal_attr("data-orientation", orientation)}
                     {..data_flags([("data-disabled", is_disabled)])}
                 >
                     {children()}
@@ -348,7 +349,7 @@ pub fn SliderTrack(
             class=classes
             style=track_styles.merge(styles)
             {..data_flags([("data-hovered", hover.is_hovered)])}
-            data-orientation=move || orientation.get().as_str()
+            {..signal_attr("data-orientation", orientation)}
             {..data_flags([("data-disabled", slider.is_disabled)])}
         >
             {children()}
@@ -425,7 +426,7 @@ pub fn SliderFill(
             class=classes
             style={styles}
             {..data_flags([("data-hovered", hover.is_hovered)])}
-            data-orientation=move || orientation.get().as_str()
+            {..signal_attr("data-orientation", orientation)}
             {..data_flags([("data-disabled", is_disabled)])}
         />
     })
@@ -622,8 +623,8 @@ pub fn SliderOutput(
         <output
             {..slider.output.attrs()}
             class=classes
-            style=styles
-            data-orientation=move || orientation.get().as_str()
+            style={styles}
+            {..signal_attr("data-orientation", orientation)}
             {..data_flags([("data-disabled", slider.is_disabled)])}
         >
             {slider.formatted}
@@ -687,7 +688,7 @@ pub fn SliderMark(
             class=classes
             style={styles}
             {..data_flags([("data-in-range", in_range)])}
-            data-orientation=move || orientation.get().as_str()
+            {..signal_attr("data-orientation", orientation)}
         >
             {children()}
         </div>

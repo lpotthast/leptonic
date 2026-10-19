@@ -223,7 +223,7 @@ fn option(input: UseOptionInput) -> UseOptionReturn {
         is_disabled: Signal::stored(false),
         should_select_on_press_up,
         allows_different_press_origin: should_select_on_press_up && should_focus_on_hover,
-        on_action: Signal::stored(on_action),
+        on_action,
         link_behavior,
         focus: None,
         should_use_virtual_focus,
@@ -256,6 +256,21 @@ fn option(input: UseOptionInput) -> UseOptionReturn {
     let hover = hover_props;
 
     let (item_props, styles) = props.into_inner();
+    // Positions only in a virtualized listbox (whose DOM holds only some options); otherwise one
+    // constant for both (no effect, `performance.md` R2).
+    let (aria_posinset, aria_setsize) = if is_virtualized {
+        (
+            Signal::derive(move || {
+                state
+                    .collection
+                    .with(|c| c.get(&position_key).map(|node| node.index + 1))
+            }),
+            Signal::derive(move || Some(state.collection.with(|c| c.size()))),
+        )
+    } else {
+        let none = Signal::stored(None);
+        (none, none)
+    };
 
     UseOptionReturn {
         option: Part::stored(PropsWithStyles::new(
@@ -269,18 +284,8 @@ fn option(input: UseOptionInput) -> UseOptionReturn {
                 aria_label: aria_label.into(),
                 aria_labelledby: label.referenced_id,
                 aria_describedby: description.referenced_id,
-                aria_posinset: Signal::derive(move || {
-                    is_virtualized
-                        .then(|| {
-                            state
-                                .collection
-                                .with(|c| c.get(&position_key).map(|node| node.index + 1))
-                        })
-                        .flatten()
-                }),
-                aria_setsize: Signal::derive(move || {
-                    is_virtualized.then(|| state.collection.with(|c| c.size()))
-                }),
+                aria_posinset,
+                aria_setsize,
                 item: item_props,
                 hover,
             },

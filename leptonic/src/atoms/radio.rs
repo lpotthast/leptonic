@@ -1,6 +1,6 @@
 // Upstream: react-aria-components/src/RadioGroup.tsx @ 99e6102368
 // Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
-use leptos::{context::Provider, prelude::*};
+use leptos::prelude::*;
 use leptos_classes::Classes;
 
 use super::{
@@ -24,7 +24,8 @@ use crate::{
     sharing_one_effect,
     utils::{
         data_attributes::data_flags, default_class::with_default_class, dev_warn, probe::either,
-        styles::Styles, visually_hidden::visually_hidden_styles,
+        scoped_context::scoped_view, signal_attr::signal_attr, styles::Styles,
+        visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -155,14 +156,20 @@ pub fn RadioGroup<V: SelectionValue>(
         validation_details,
     };
 
-    view! {
-        <Provider value=ctx>
-            <Provider value=label><Provider value=field>
+    // The contexts in one scope (one owner, no `<Provider>` per context: `performance.md` R11).
+    scoped_view(
+        move || {
+            provide_context(ctx);
+            provide_context(label);
+            provide_context(field);
+        },
+        move || {
+            view! {
                 <div
                     {..props.attrs()}
                     class=classes
-                    style=styles
-                    data-orientation=move || orientation.get().as_str()
+                    style={styles}
+                    {..signal_attr("data-orientation", orientation)}
                     {..data_flags([
                         ("data-disabled", state.is_disabled),
                         ("data-readonly", state.is_read_only),
@@ -172,9 +179,9 @@ pub fn RadioGroup<V: SelectionValue>(
                 >
                     {children()}
                 </div>
-            </Provider></Provider>
-        </Provider>
-    }
+            }
+        },
+    )
 }
 
 /// A headless radio in a [`RadioGroup`] with a description of its own: a `<div>` around a
@@ -248,9 +255,14 @@ pub fn RadioField(
         radio: RadioButtonParts::of(radio, hover),
     };
 
-    Some(view! {
-        <Provider value=button>
-            <Provider value=field>
+    // Both contexts in one scope (`performance.md` R11).
+    Some(scoped_view(
+        move || {
+            provide_context(button);
+            provide_context(field);
+        },
+        move || {
+            view! {
                 <div
                     class=classes
                     style={styles}
@@ -266,9 +278,9 @@ pub fn RadioField(
                 >
                     {children()}
                 </div>
-            </Provider>
-        </Provider>
-    })
+            }
+        },
+    ))
 }
 
 /// The clickable part of a [`RadioField`]: a `<label>` around a visually hidden

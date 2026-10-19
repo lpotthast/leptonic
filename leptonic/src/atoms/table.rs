@@ -48,7 +48,7 @@ use crate::{
         i18n::WritingDirection,
         intl_strings::{AtomStrings, use_localized_strings},
         scoped_context::scoped_view,
-        signal_attr::signal_attr,
+        signal_attr::{maybe_attr, signal_attr},
         styles::{
             Styles,
             css::{Size, computed_px, computed_size},
@@ -445,25 +445,30 @@ pub fn TableHeader(
 fn TableColumnHeader(key: Key) -> impl IntoView {
     let data = expect_context::<TableData>();
     let state = data.state;
-    // The column follows the table (e.g. when columns change).
+    // The column follows the table (e.g. when columns change). A header whose column is gone is
+    // about to be removed: it keeps its values meanwhile (no re-render of a leaving header, which
+    // the columns, notified before the header rows, would cause first).
     let column = {
         let key = key.clone();
-        Memo::new(move |_| {
-            state.columns.with(|columns| {
-                // The fallback is built only for a missing column (an `Arc<str>` allocates).
-                columns.iter().find(|c| c.key == key).map_or_else(
-                    || (Arc::from(""), ColumnKind::Data, false, false),
-                    |c| {
-                        (
-                            c.text_value.clone(),
-                            c.kind,
-                            c.allows_sorting,
-                            c.allows_resizing,
-                        )
-                    },
-                )
-            })
-        })
+        Memo::new(
+            move |previous: Option<&(Arc<str>, ColumnKind, bool, bool)>| {
+                state
+                    .columns
+                    .with(|columns| {
+                        columns.iter().find(|c| c.key == key).map(|c| {
+                            (
+                                c.text_value.clone(),
+                                c.kind,
+                                c.allows_sorting,
+                                c.allows_resizing,
+                            )
+                        })
+                    })
+                    .or_else(|| previous.cloned())
+                    // Built only for a missing column (an `Arc<str>` allocates).
+                    .unwrap_or_else(|| (Arc::from(""), ColumnKind::Data, false, false))
+            },
+        )
     };
     let allows_sorting = Memo::new(move |_| column.with(|c| c.2));
     let allows_resizing = Memo::new(move |_| column.with(|c| c.3));
@@ -491,8 +496,11 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     });
     let is_selection_column =
         Memo::new(move |_| column.with(|c| c.1 == ColumnKind::SelectionCheckbox));
+    // In multiple selection mode: the selection column exists only with a selection mode, so
+    // "not single" is "multiple" wherever the header is shown; while a change to `None` removes
+    // the header, it keeps its checkbox (instead of removing it just before the header).
     let shows_select_all = Memo::new(move |_| {
-        is_selection_column.get() && selection.selection_mode() == SelectionMode::Multiple
+        is_selection_column.get() && selection.selection_mode() != SelectionMode::Single
     });
     let select_all_table = data.clone();
     // The column's name, in an element of its own: the resizer is labelled by it (not by the
@@ -675,8 +683,9 @@ pub fn TableBody(
     crate::metrics::subject!();
     let classes = with_default_class("leptonic-TableBody", classes);
     let row_group = use_grid_row_group();
-    let table = use_context::<TableData>().map(|data| data.state.table);
-    let is_empty = Signal::derive(move || table.is_some_and(|table| table.with(|t| t.size() == 0)));
+    // Notified only when the table becomes empty or stops being empty.
+    let is_empty = use_context::<TableData>()
+        .map_or_else(|| Signal::stored(false), |data| data.state.grid.is_empty());
     view! {
         <tbody
             {..row_group.row_group.attrs()}
@@ -824,12 +833,12 @@ fn table_row(
     let focus_within_props = focus_within.target.into_props();
 
     // In a tree table, rows under a collapsed row aren't part of the grid: hidden. Other tables
-    // render only rows of the grid.
+    // render only rows of the grid (no attribute at all).
     let is_hidden = if is_tree {
         let row_key = key.clone();
-        Signal::derive(move || !data_rows.with(|rows| rows.contains_key(&row_key)))
+        MaybeProp::derive(move || Some(!data_rows.with(|rows| rows.contains_key(&row_key))))
     } else {
-        Signal::stored(false)
+        MaybeProp::default()
     };
     let context = RowContext {
         key,
@@ -842,47 +851,52 @@ fn table_row(
         is_focus_visible_within: focus_within.is_focus_visible,
     };
 
-    view! {
-        <Provider value=context>
-            <tr
-                {..attrs}
-                {..hover.target.attrs()}
-                {..(
-                    focus_within_props.on_focusin.into_on(ev::focusin),
-                    focus_within_props.on_focusout.into_on(ev::focusout),
-                )}
-                class=classes
-                style={styles}
-                {..signal_attr("hidden", is_hidden)}
-                {..data_flags([
-                    ("data-hovered", hover.is_hovered),
-                    ("data-focused", is_focused),
-                    ("data-focus-visible", is_focus_visible),
-                ])}
-                {..data_flags([
-                    ("data-focus-visible-within", focus_within.is_focus_visible),
-                    ("data-pressed", is_pressed),
-                ])}
-                {..data_flags([
-                    ("data-selected", is_selected),
-                    ("data-disabled", is_disabled),
-                ])}
-                data-selection-mode=data_attributes::selection_mode(move || selection.selection_mode())
-                {..data_flags([
-                    ("data-expanded", is_expanded),
-                    ("data-has-child-items", has_child_rows),
-                ])}
-                {..signal_attr("data-level", level)}
-            >
-                {move || {
-                    selection_column
-                        .and_then(|column| column.0.get())
-                        .map(|column| view! { <TableCell column /> })
-                }}
-                {children()}
-            </tr>
-        </Provider>
-    }
+    // The row's context in an owner of its own (cheaper than a `<Provider>`, `performance.md`
+    // R11).
+    scoped_view(
+        move || provide_context(context),
+        move || {
+            view! {
+                <tr
+                    {..attrs}
+                    {..hover.target.attrs()}
+                    {..(
+                        focus_within_props.on_focusin.into_on(ev::focusin),
+                        focus_within_props.on_focusout.into_on(ev::focusout),
+                    )}
+                    class=classes
+                    style={styles}
+                    {..maybe_attr("hidden", is_hidden)}
+                    {..data_flags([
+                        ("data-hovered", hover.is_hovered),
+                        ("data-focused", is_focused),
+                        ("data-focus-visible", is_focus_visible),
+                    ])}
+                    {..data_flags([
+                        ("data-focus-visible-within", focus_within.is_focus_visible),
+                        ("data-pressed", is_pressed),
+                    ])}
+                    {..data_flags([
+                        ("data-selected", is_selected),
+                        ("data-disabled", is_disabled),
+                    ])}
+                    {..data_attributes::selection_mode(selection.selection_mode_signal())}
+                    {..data_flags([
+                        ("data-expanded", is_expanded),
+                        ("data-has-child-items", has_child_rows),
+                    ])}
+                    {..signal_attr("data-level", level)}
+                >
+                    {move || {
+                        selection_column
+                            .and_then(|column| column.0.get())
+                            .map(|column| view! { <TableCell column /> })
+                    }}
+                    {children()}
+                </tr>
+            }
+        },
+    )
     .into_any()
 }
 

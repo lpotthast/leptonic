@@ -92,6 +92,10 @@ struct Manager {
     /// node's content or its disabled key changes, not on every change of the collection
     /// (`performance.md` R1).
     nodes: KeyedTriggers<Key>,
+    /// Notified when the collection becomes empty or stops being empty (by the node diff), not
+    /// on its other changes: per-item readers of whether it is empty (a grid's rows and cells)
+    /// aren't checked again on every change of the collection (`performance.md` R1).
+    emptiness: Trigger,
     /// The unfiltered collection, when `collection` is a filtered view (combo boxes).
     full_collection: Option<CollectionMemo>,
     state: SelectionStateSignals,
@@ -120,7 +124,9 @@ struct SelectionStateSignals {
     focused_key: RwSignal<Option<Key>>,
     /// Readers of single keys' focus ([`SelectionManager::is_focused_key`]).
     focused_subscribers: KeyedTriggers<Key>,
-    has_focused_key: Memo<bool>,
+    /// Whether `focused_key` is set: written with it, only when this changes (a memo would be
+    /// checked again with all its readers, every item of a tag group, on each focus move).
+    has_focused_key: RwSignal<bool>,
     child_focus_strategy: RwSignal<Option<FocusStrategy>>,
     is_focused: RwSignal<bool>,
 }
@@ -182,6 +188,14 @@ impl SelectionManager {
         self.get().nodes.track(key);
     }
 
+    /// Whether the collection has no items, tracking only changes of that (not every change of
+    /// the collection): for readers in every item.
+    pub(crate) fn is_collection_empty(&self) -> bool {
+        let manager = self.get();
+        manager.emptiness.track();
+        manager.collection.with_untracked(|c| c.is_empty())
+    }
+
     /// The same selection state, applied to another view of the collection (e.g. a filtered
     /// one). "Select all" still refers to the full collection.
     #[must_use]
@@ -217,6 +231,12 @@ impl SelectionManager {
 
     pub fn selection_mode(&self) -> SelectionMode {
         self.get().selection_mode()
+    }
+
+    /// The selection mode as the signal it comes from (no wrapper per reader): e.g. for an
+    /// attribute of every item, which stays constant when the mode is.
+    pub fn selection_mode_signal(&self) -> Signal<SelectionMode> {
+        self.get().state.selection_mode
     }
 
     pub fn selection_behavior(&self) -> SelectionBehavior {
@@ -450,7 +470,7 @@ impl Manager {
             is_empty: Memo::new(move |_| selection_binding.value.with(Selection::is_empty)),
             focused_key,
             focused_subscribers: KeyedTriggers::new(),
-            has_focused_key: Memo::new(move |_| focused_key.with(Option::is_some)),
+            has_focused_key: RwSignal::new(false),
             child_focus_strategy: RwSignal::new(None),
             is_focused: RwSignal::new(false),
         };
@@ -481,9 +501,11 @@ impl Manager {
             }
         });
 
+        let (nodes, emptiness) = node_triggers(collection, disabled_keys);
         Self {
             collection,
-            nodes: node_triggers(collection, disabled_keys),
+            nodes,
+            emptiness,
             full_collection: None,
             state,
             cell_focus: false,
@@ -491,9 +513,11 @@ impl Manager {
     }
 
     fn with_collection(&self, collection: CollectionMemo) -> Self {
+        let (nodes, emptiness) = node_triggers(collection, self.state.disabled_keys);
         Self {
             collection,
-            nodes: node_triggers(collection, self.state.disabled_keys),
+            nodes,
+            emptiness,
             full_collection: Some(self.full_collection.unwrap_or(self.collection)),
             state: self.state,
             cell_focus: self.cell_focus,
@@ -563,6 +587,9 @@ impl Manager {
             .with_untracked(|focused| (*focused != key).then(|| focused.clone()));
         if let Some(previous) = previous {
             self.state.focused_key.set(key.clone());
+            if previous.is_some() != key.is_some() {
+                self.state.has_focused_key.set(key.is_some());
+            }
             self.state
                 .focused_subscribers
                 .notify(previous.iter().chain(key.iter()));
@@ -881,14 +908,19 @@ impl Manager {
 /// added, removed or changed (`Node::same_content`; positions don't count), nested nodes
 /// included, and a change of `disabled_keys` the keys added or removed. A header added, removed
 /// or changed also notifies its section (the section's heading is its header child). One diff per
-/// change instead of every item reading the whole collection.
+/// change instead of every item reading the whole collection. The second trigger is notified when
+/// the collection becomes empty or stops being empty.
 fn node_triggers(
     collection: CollectionMemo,
     disabled_keys: Signal<HashSet<Key>>,
-) -> KeyedTriggers<Key> {
+) -> (KeyedTriggers<Key>, Trigger) {
     let nodes = KeyedTriggers::new();
+    let emptiness = Trigger::new();
     let previous = StoredValue::new(collection.get_untracked());
-    ImmediateEffect::new_scoped(move || {
+    // Isomorphic: on the server too, its readers follow the collection (as the memos it
+    // replaces did); `ImmediateEffect::new` does nothing without reactive_graph's `effects`
+    // feature, which servers don't enable.
+    let diff = ImmediateEffect::new_isomorphic(move || {
         let current = collection.get();
         let Some(previous) = previous.try_update_value(|p| std::mem::replace(p, current.clone()))
         else {
@@ -896,6 +928,9 @@ fn node_triggers(
         };
         if Arc::ptr_eq(&previous, &current) {
             return;
+        }
+        if previous.is_empty() != current.is_empty() {
+            emptiness.notify();
         }
         let mut changed: Vec<Key> = Vec::new();
         let mut note = |node: &Node| {
@@ -926,10 +961,11 @@ fn node_triggers(
         }
         nodes.notify(&changed);
     });
+    on_cleanup(move || diff.dispose());
     if !crate::utils::probe::is_constant(disabled_keys) {
         nodes.follow_set(disabled_keys);
     }
-    nodes
+    (nodes, emptiness)
 }
 
 /// Tells the readers of single keys' selection about the keys whose selection changed since
@@ -964,6 +1000,58 @@ mod tests {
 
     use super::*;
     use crate::hooks::collections::Collection;
+
+    #[test]
+    fn readers_of_whether_a_key_is_focused_ignore_focus_moves() {
+        crate::testing::with_owner(|| {
+            let m = manager(SelectionOptions::default());
+            let runs = RwSignal::new(0);
+            let has_focused_key = Memo::new(move |_| {
+                runs.update_untracked(|runs| *runs += 1);
+                m.has_focused_key()
+            });
+            assert_that!(has_focused_key.get_untracked()).is_false();
+            m.set_focused_key(Some(k("apple")), None);
+            assert_that!(has_focused_key.get_untracked()).is_true();
+            // Moving the focus: still a focused key, the reader isn't run again.
+            m.set_focused_key(Some(k("banana")), None);
+            assert_that!(has_focused_key.get_untracked()).is_true();
+            assert_that!(runs.get_untracked()).is_equal_to(2);
+            m.set_focused_key(None, None);
+            assert_that!(has_focused_key.get_untracked()).is_false();
+            assert_that!(runs.get_untracked()).is_equal_to(3);
+        });
+    }
+
+    #[test]
+    fn emptiness_readers_follow_only_its_changes() {
+        crate::testing::with_owner(|| {
+            let keys = RwSignal::new(vec!["a"]);
+            let collection: CollectionMemo = Memo::new(move |_| {
+                Arc::new(Collection::build(|b| {
+                    for key in keys.get() {
+                        b.item(key, key);
+                    }
+                }))
+            });
+            let selection = SelectionManager::new(collection, SelectionOptions::default());
+            let runs = RwSignal::new(0);
+            let is_empty = Memo::new(move |_| {
+                runs.update_untracked(|runs| *runs += 1);
+                selection.is_collection_empty()
+            });
+            assert_that!(is_empty.get_untracked()).is_false();
+            // Another item: still not empty, the reader isn't run again.
+            keys.set(vec!["a", "b"]);
+            assert_that!(is_empty.get_untracked()).is_false();
+            assert_that!(runs.get_untracked()).is_equal_to(1);
+            keys.set(Vec::new());
+            assert_that!(is_empty.get_untracked()).is_true();
+            keys.set(vec!["c"]);
+            assert_that!(is_empty.get_untracked()).is_false();
+            assert_that!(runs.get_untracked()).is_equal_to(3);
+        });
+    }
 
     #[test]
     fn node_readers_follow_their_node_only() {

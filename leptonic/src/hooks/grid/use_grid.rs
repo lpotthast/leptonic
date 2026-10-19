@@ -15,8 +15,8 @@ use crate::{
     CapturedElement, EventHandler, Id, IntoAttrs,
     hooks::{
         collections::{
-            CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, SelectionMode,
-            UseSelectableCollectionAttrs, UseSelectableCollectionInput,
+            CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, LinkBehavior,
+            SelectionMode, UseSelectableCollectionAttrs, UseSelectableCollectionInput,
             UseSelectableCollectionProps, keyboard_delegate_memo, use_selectable_collection,
         },
         focus::use_has_tabbable_child::{
@@ -98,8 +98,14 @@ pub struct GridData {
     pub delegate: Signal<Arc<dyn KeyboardDelegate>>,
     /// See `UseSelectableItemInput::collection_id`.
     pub collection_id: Id,
-    pub on_row_action: Option<Callback<Key>>,
-    pub on_cell_action: Option<Callback<Key>>,
+    /// The rows' action (`UseSelectableItemInput::on_action`), one signal for all rows.
+    pub on_row_action: Signal<Option<Callback<Key>>>,
+    /// The cells' action, one signal for all cells.
+    pub on_cell_action: Signal<Option<Callback<Key>>>,
+    /// The rows' and cells' link behavior (`LinkBehavior::Action`), one signal for all.
+    pub(crate) link_behavior: Signal<LinkBehavior>,
+    /// The cells' role (`gridcell`), one signal for all.
+    pub(crate) cell_role: Signal<AriaRole>,
     pub should_select_on_press_up: bool,
     pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
     /// The reading direction, for all rows and cells (instead of a context lookup each).
@@ -301,7 +307,10 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
         get_row_text: None,
     });
 
-    // An empty grid is a tab stop itself, unless it has tabbable content.
+    // An empty grid is a tab stop itself, unless it has tabbable content. A memo of its own:
+    // `GridState::is_empty` is notified earlier (by the node diff), which reorders this
+    // `tabindex` against `use_has_tabbable_child`'s effect (emptying a table wrote other
+    // intermediate values).
     let rows = state.list.collection;
     let is_empty = Memo::new(move |_| rows.with(|c| c.size() == 0));
     let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
@@ -323,8 +332,11 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
             state,
             delegate,
             collection_id: collection.collection_id.clone(),
-            on_row_action,
-            on_cell_action,
+            // Constants, stored once for all rows and cells instead of once per item.
+            on_row_action: Signal::stored(on_row_action),
+            on_cell_action: Signal::stored(on_cell_action),
+            link_behavior: Signal::stored(LinkBehavior::Action),
+            cell_role: Signal::stored(AriaRole::Gridcell),
             should_select_on_press_up,
             keyboard_navigation_behavior,
             direction: use_direction(),

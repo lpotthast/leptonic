@@ -28,6 +28,7 @@ use crate::{
         data_attributes::data_flags,
         default_class::with_default_class,
         i18n::use_locale,
+        signal_attr::signal_attr,
         styles::Styles,
     },
 };
@@ -184,8 +185,8 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
                 <Provider value=label>
                     <div
                         class=classes
-                        style=styles
-                        data-orientation=move || orientation.get().as_str()
+                        style={styles}
+                        {..signal_attr("data-orientation", orientation)}
                         {..data_flags([("data-disabled", is_disabled)])}
                     >
                         {children()}
@@ -233,7 +234,7 @@ pub fn ColorSliderTrack(
             class=classes
             style=track_styles.merge(styles)
             {..data_flags([("data-hovered", hover.is_hovered)])}
-            data-orientation=move || orientation.get().as_str()
+            {..signal_attr("data-orientation", orientation)}
             {..data_flags([("data-disabled", is_disabled)])}
         >
             {children()}
@@ -267,8 +268,8 @@ pub fn ColorSliderOutput(
         <output
             {..attrs}
             class=classes
-            style=styles
-            data-orientation=move || orientation.get().as_str()
+            style={styles}
+            {..signal_attr("data-orientation", orientation)}
             {..data_flags([("data-disabled", is_disabled)])}
         >
             {formatted}

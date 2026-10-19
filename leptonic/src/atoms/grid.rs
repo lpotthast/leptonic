@@ -219,8 +219,8 @@ pub fn GridRow(
                 ("data-focus-visible", is_focus_visible),
                 ("data-pressed", is_pressed),
             ])}
-            {..data_flags([("data-hovered", hover.is_hovered)])}
             {..data_flags([
+                ("data-hovered", hover.is_hovered),
                 ("data-selected", is_selected),
                 ("data-disabled", is_disabled),
             ])}

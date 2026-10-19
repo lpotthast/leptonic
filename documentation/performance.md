@@ -174,13 +174,25 @@ let is_selected = Signal::derive(move || {
 });
 ```
 
+A memo shared by every item is no shield either, when it recomputes with each change of the collection: marking is
+eager, so every reader below it (each item's memo, each render effect) is marked and checked again, even when the
+memo's value stays. Measured (native, 1,000 rows; adding one): per reader ~4 allocations for a render effect, ~14 for
+a memo with its render effect, with no memo or effect run at all: the table's "unexplained" 67 allocations per row
+on a row change (`is_empty` in every row's and cell's flags memo, the columns in every cell's `data-column-index`,
+the row header columns in every row's `aria-labelledby` and cell's `role`), the grid's ~22. A collection-wide value
+every item reads is written only when it changes, so its readers are never marked otherwise: a trigger the node
+diff notifies (`SelectionManager::is_collection_empty`, read by `GridState::is_empty`), or a signal an
+`ImmediateEffect` sets only on a change (`TableState::columns` and `row_header_columns`; native: 38k → 16k). Find
+it: budgets where a change of the collection costs ≈ items × k allocations with few memo and render effect runs.
+
 ### R2. Constants are not reactive attributes
 
 A `Signal` (or `MaybeProp`, or closure) in an attribute always gets a `RenderEffect` (~9 allocations measured, with
 the name `String`), even when it is `Signal::stored` and never changes: a computation that tracked nothing can't be
 notified, so its effect never reruns. Render an attribute bound to a signal with `signal_attr(key, signal)`
 (`maybe_attr` for a `MaybeProp`, `fixed_attr` for a plain value; `utils/signal_attr.rs`): it evaluates the value
-once under a probe observer (`utils/probe.rs`: `probe_sources`, `is_constant`), writes it and keeps no effect when
+once under a probe observer (`utils/probe.rs`: `probe_sources`, `is_constant`; `signal_prop` for boolean DOM
+properties such as a checkbox's `indeterminate`), writes it and keeps no effect when
 it read no reactive source, else one effect that writes only changed texts. Measured on the Button pilot: mount 586 →
 507 allocations, 23 → 14 render effects (9 constants in the fixture).
 
@@ -303,6 +315,16 @@ disabled and pending reactive): effects at mount 4 → 2, disable 28 → 16 and 
 Table rows). Share wherever a disabled flag is a memo: `when_true` can't skip a memo (it is a reactive source), so
 every collection item (disabled keys) creates the effect.
 
+A reset that acts only on state the hook holds between events (`use_press`'s press, `use_hover`'s hover,
+`use_focus_ring`'s and `use_focus_within`'s focus) registers with `when_true_once_armed` and arms it when that state
+begins: the (shared) effect is created then, under the hook's owner (kept weakly), and stays. Equivalent because the
+reset is a no-op without state (the focus ring's reset notifies only a change) and the state never begins while the
+flag is `true` (the handlers check it), so the effect's first run, a tick after arming, resets exactly when the flag
+became `true` since. An item that is never pressed, hovered or focused has no effect (~16 allocations at mount saved
+per item; the first interaction pays ~18 once); a group with a `when_true` reaction (`use_selectable_item`'s focused
+key, which exists without an event) creates it at once, as before. One difference: an effect created later
+subscribes to the flag later, so within one tick it may run after other effects reacting to the same change.
+
 ```rust
 // Before (use_focus_ring.rs, use_hover.rs, use_press.rs): an effect each, also for a constant flag.
 Effect::new(move || if disabled.get() { set_focused.set(false) });
@@ -400,7 +422,8 @@ type, or `size_of` of a handle that items capture.
 
 Erased, every inline attribute is ~4 allocations before it does anything, every child among several 2, every
 component boundary 2, every `<Provider>` ~7. Put a hook's attributes into its one spread tuple (already the pattern),
-merge an atom's providers into one context value (Radio nests 3 `<Provider>`s), and use plain functions instead of
+provide an atom's contexts in one scope (`scoped_view`: one owner, no component or children box per context; the
+field and group atoms of checkboxes, radios, switches and disclosures nested 2-3 `<Provider>`s), and use plain functions instead of
 internal `#[component]`s where no props builder is needed. A spread is one `AnyAttribute`, which asks its tuple for
 the keys of every attribute at build (to remove them on a type change): tachys allocates a `Vec` per `Attr` and grows
 the first. `Spread((..))` (`utils/spread.rs`) collects them into one `Vec` of the right size; its elements implement
@@ -596,6 +619,14 @@ document the rest):
   (`Attribute::keys`, `any_attribute.rs`; upstream's own TODO: "fix this whole approach" for 0.9); `Callback` costs 3
   allocations (an arena-stored `Arc<dyn Fn>`, the price of being `Copy`); an effect rerun rebuilds its source set
   (dynamic dependency tracking).
+- **Found, not patched** (2026-10-18, native probe against reactive_graph 0.2.15; the fork's `computed/inner.rs` has
+  the same logic): a memo chain under an `ImmediateEffect` recomputes twice per change. The effect runs while the
+  source's notification is still marking (`mark_check` runs it at once); its check recomputes the top memo, whose
+  change marks the next memo dirty and runs the effect again, re-entrantly, which recomputes the rest of the chain;
+  back in the outer check, `needs_update` already returned `true` and recomputes them once more. Probe: source →
+  memo A → memo B → memo C → `ImmediateEffect`: A runs once, B and C twice. The table pays its selection column
+  rebuild (`with_selection_column`, ~2 allocations per row) twice per change of the rows. A fix would re-check the
+  memo's state (clean again: skip) before recomputing; a candidate for the fork (`PLAN.md`).
 - reactive_graph's immediate-effect tests are flaky when run in parallel threads (also unpatched); run them with
   `--test-threads=1`.
 
@@ -612,6 +643,7 @@ budgets flattened to subject, scenario, step and totals) finds the worst first; 
 | mount `effect_runs` a multiple of the items | per-item `Effect` (a reset, focus following, a description) | R6, R14 |
 | mount allocations per item well above the cost of what renders (compare a hook's budget with its atom's) | constants hidden in memos, stored defaults, wrapper callbacks, absent inputs | R2, R3, R8, R14, R15 |
 | allocations ≈ items on a change with no reactive work and no DOM change | rebuilt plain data (texts, buffers, nodes) | R17 |
+| allocations ≈ k × items on a change of the collection, few memo and render effect runs | per-item readers of a collection-wide memo that recomputes with every change (marked and checked again) | R1 |
 | unmount allocations per item above 0 | per-item notifications or work on cleanup (a registry trigger every reader tracks) | R6 |
 | an insertion or a column change re-renders every item (`dom_added_nodes` ≈ items) | keys from positions | R16 |
 | a step costs a whole extra pass (paging once more after mounting, a step's numbers ≈ the next step's) | an asynchronous correction | `leptos-and-dom.md`, "State Corrections" |

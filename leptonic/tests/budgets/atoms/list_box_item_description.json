@@ -34,7 +34,7 @@
         "effect_runs": 4,
         "render_effect_runs": 8,
         "immediate_effect_runs": 0,
-        "signal_notifications": 11,
+        "signal_notifications": 12,
         "dom_attributes": 10,
         "dom_text": 0,
         "dom_added_nodes": 0,

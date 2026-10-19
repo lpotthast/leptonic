@@ -102,6 +102,7 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
         state,
         collection_id,
         on_row_action,
+        link_behavior,
         should_select_on_press_up,
         ..
     } = grid;
@@ -129,8 +130,8 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
         is_disabled: state.is_empty(),
         should_select_on_press_up,
         allows_different_press_origin: false,
-        on_action: Signal::stored(on_row_action),
-        link_behavior: Signal::stored(crate::hooks::collections::LinkBehavior::Action),
+        on_action: on_row_action,
+        link_behavior,
         focus: None,
         should_use_virtual_focus: false,
         on_context_menu,

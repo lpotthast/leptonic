@@ -137,19 +137,32 @@ pub struct TableState {
     /// `grid.list.collection`, holds the visible rows).
     pub table: Memo<Arc<TableCollection>>,
     /// The table's columns: the data columns in order (the selection checkbox column too), then
-    /// the column groups. Changes only when the columns do, not with the rows: read it instead
-    /// of `table` for what depends only on the columns.
-    pub columns: Memo<Arc<[Column]>>,
+    /// the column groups. Notifies only when the columns change, not with the rows (its readers
+    /// aren't even checked again then): read it instead of `table` for what depends only on the
+    /// columns.
+    pub columns: ReadSignal<Arc<[Column]>>,
     /// The keys of the columns whose cells label their rows
-    /// ([`TableCollection::row_header_columns`]). Changes only when they do: read it instead of
-    /// `table` in what every row or cell renders.
-    pub row_header_columns: Memo<Arc<[Key]>>,
+    /// ([`TableCollection::row_header_columns`]). Notifies only when they change: read it instead
+    /// of `table` in what every row or cell renders.
+    pub row_header_columns: ReadSignal<Arc<[Key]>>,
     /// Set in a tree table.
     pub tree: Option<TableTree>,
     /// The current sorting, if any.
     pub sort_descriptor: Signal<Option<SortDescriptor>>,
     binding: ValueBinding<Option<SortDescriptor>>,
     on_sort_change: Option<Callback<SortDescriptor>>,
+    /// The tree values of the rows of a table without a tree column (constants), made once per
+    /// table instead of per row.
+    pub(super) flat_rows: FlatRows,
+}
+
+/// The values the rows of a table without a tree column share (`use_table_row`): constants.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct FlatRows {
+    pub(super) no_position: Signal<Option<usize>>,
+    pub(super) no_expansion: Signal<Option<crate::utils::aria::AriaExpanded>>,
+    pub(super) no: Signal<bool>,
+    pub(super) level: Signal<usize>,
 }
 
 impl TableState {
@@ -236,30 +249,54 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
     .without_navigation_while_empty();
     let binding = sort_descriptor
         .unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_sort_descriptor)));
-    let columns = Memo::new(move |_| {
-        table.with(|t| {
+    // The columns and the row header columns follow the table through one synchronous effect
+    // that writes them only when they change: memos over the table would be checked again, with
+    // every reader in every row and cell, on each change of the rows (`performance.md` R1).
+    // Isomorphic: the server renders with these values too (`ImmediateEffect::new` does nothing
+    // without reactive_graph's `effects` feature, which servers don't enable: the server rendered
+    // a table without its columns, and hydration failed).
+    let columns = RwSignal::new(Arc::<[Column]>::from([]));
+    let row_header_columns = RwSignal::new(Arc::<[Key]>::from([]));
+    let follow_columns = ImmediateEffect::new_isomorphic(move || {
+        let (next_columns, next_row_headers) = table.with(|t| {
             let groups = t
                 .header_rows()
                 .iter()
                 .flat_map(|row| t.collection().children(row))
                 .filter_map(|node| t.column(&node.key))
                 .filter(|column| column.kind == ColumnKind::Group);
-            t.columns()
+            let columns = t
+                .columns()
                 .chain(groups)
                 .cloned()
-                .collect::<Arc<[Column]>>()
-        })
+                .collect::<Arc<[Column]>>();
+            (columns, Arc::<[Key]>::from(t.row_header_columns()))
+        });
+        // Written outside the table's read: their readers may read the table too.
+        if columns.with_untracked(|c| *c != next_columns) {
+            columns.set(next_columns);
+        }
+        if row_header_columns.with_untracked(|c| *c != next_row_headers) {
+            row_header_columns.set(next_row_headers);
+        }
     });
-    let row_header_columns = Memo::new(move |_| table.with(|t| Arc::from(t.row_header_columns())));
+    on_cleanup(move || follow_columns.dispose());
+    let flat_rows = FlatRows {
+        no_position: Signal::stored(None),
+        no_expansion: Signal::stored(None),
+        no: Signal::stored(false),
+        level: Signal::stored(1),
+    };
     TableState {
         grid,
         table,
-        columns,
-        row_header_columns,
+        columns: columns.read_only(),
+        row_header_columns: row_header_columns.read_only(),
         tree,
         sort_descriptor: binding.value,
         binding,
         on_sort_change,
+        flat_rows,
     }
 }
 
@@ -313,6 +350,57 @@ mod tests {
             ]);
             assert_that!(state.sort_descriptor.get_untracked().map(|d| d.direction))
                 .is_equal_to(Some(SortDirection::Ascending));
+        });
+    }
+
+    /// Readers of the columns and the row header columns run again when they change (the
+    /// selection column comes and goes), not when the rows do.
+    #[test]
+    fn columns_notify_only_their_own_changes() {
+        crate::testing::with_owner(|| {
+            let rows = RwSignal::new(2_usize);
+            let table = Memo::new(move |_| {
+                Arc::new(TableCollection::build(|t| {
+                    t.column("name", "Name");
+                    for i in 0..rows.get() {
+                        t.row(i, format!("Row {i}"), |r| {
+                            r.cell(format!("Row {i}"));
+                        });
+                    }
+                }))
+            });
+            let checkboxes = RwSignal::new(false);
+            let state = use_table_state(UseTableStateInput {
+                show_selection_checkboxes: checkboxes.into(),
+                tree: None,
+                on_sort_change: None,
+                table,
+                selection: SelectionOptions {
+                    selection_mode: Signal::stored(SelectionMode::Multiple),
+                    disabled_behavior: DisabledBehavior::Selection,
+                    ..SelectionOptions::default()
+                },
+                focus_mode: GridFocusMode::Row,
+                default_sort_descriptor: None,
+                sort_descriptor: None,
+            });
+            let runs = RwSignal::new(0);
+            let read = Memo::new(move |_| {
+                runs.update_untracked(|runs| *runs += 1);
+                let columns = state
+                    .columns
+                    .with(|c| c.iter().map(|c| c.kind).collect::<Vec<_>>());
+                (columns, state.row_header_columns.with(|c| c.len()))
+            });
+            assert_that!(read.get_untracked()).is_equal_to((vec![ColumnKind::Data], 1));
+            rows.set(3);
+            assert_that!(state.grid.list.collection.with_untracked(|c| c.size())).is_equal_to(3);
+            assert_that!(read.get_untracked()).is_equal_to((vec![ColumnKind::Data], 1));
+            assert_that!(runs.get_untracked()).is_equal_to(1);
+            checkboxes.set(true);
+            assert_that!(read.get_untracked())
+                .is_equal_to((vec![ColumnKind::SelectionCheckbox, ColumnKind::Data], 1));
+            assert_that!(runs.get_untracked()).is_equal_to(2);
         });
     }
 

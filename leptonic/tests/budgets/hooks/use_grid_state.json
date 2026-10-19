@@ -14,7 +14,7 @@
         "effect_runs": 0,
         "render_effect_runs": 1,
         "immediate_effect_runs": 0,
-        "signal_notifications": 1,
+        "signal_notifications": 2,
         "dom_attributes": 0,
         "dom_text": 0,
         "dom_added_nodes": 1,
@@ -103,7 +103,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 322,
+        "allocations": 316,
         "reallocations": 10,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,
@@ -151,7 +151,7 @@
       ],
       "windows": 1,
       "totals": {
-        "allocations": 12202,
+        "allocations": 12196,
         "reallocations": 17,
         "memo_runs": 2,
         "memo_runs_unchanged": 0,

@@ -183,7 +183,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         level,
     } = match tree {
         Some(tree) => tree_row(tree, &table, key, is_disabled),
-        None => TreeRow::flat(),
+        None => TreeRow::flat(table.state.flat_rows),
     };
 
     UseTableRowReturn {
@@ -228,20 +228,18 @@ struct TreeRow {
 
 impl TreeRow {
     /// A row of a table without a tree column: constants, so no memos and no effects for its
-    /// attributes (`performance.md` R2), one stored signal per value type.
-    fn flat() -> Self {
-        let none = Signal::stored(None);
-        let no = Signal::stored(false);
+    /// attributes (`performance.md` R2), stored once per table.
+    fn flat(flat: super::use_table_state::FlatRows) -> Self {
         Self {
-            aria_expanded: Signal::stored(None),
-            aria_level: none,
-            aria_posinset: none,
-            aria_setsize: none,
+            aria_expanded: flat.no_expansion,
+            aria_level: flat.no_position,
+            aria_posinset: flat.no_position,
+            aria_setsize: flat.no_position,
             on_keydown_capture: EventHandler::empty(),
             expand_button: None,
-            is_expanded: no,
-            has_child_rows: no,
-            level: Signal::stored(1),
+            is_expanded: flat.no,
+            has_child_rows: flat.no,
+            level: flat.level,
         }
     }
 }

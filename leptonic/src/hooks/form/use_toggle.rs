@@ -1,11 +1,6 @@
 // Upstream: react-aria/src/toggle/useToggle.ts @ 99e6102368
 // Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
-use leptos::{
-    ev,
-    oco::Oco,
-    prelude::*,
-    tachys::html::property::{Property, prop},
-};
+use leptos::{ev, oco::Oco, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, Event, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
@@ -35,7 +30,9 @@ use crate::{
         pointer_type::PointerType,
         probe::either,
         propagation_control::Propagation,
-        signal_attr::{FixedAttr, SignalAttr, fixed_attr, maybe_attr, signal_attr},
+        signal_attr::{
+            FixedAttr, SignalAttr, SignalProp, fixed_attr, maybe_attr, signal_attr, signal_prop,
+        },
         spread::Spread,
     },
 };
@@ -314,8 +311,8 @@ pub type UseToggleInputAttrs = (
             ElementCaptureAttr,
         ),
     )>,
-    Property<&'static str, Signal<bool>>,
-    Property<&'static str, Signal<bool>>,
+    SignalProp,
+    SignalProp,
     (
         OnEvent<ev::change>,
         OnEvent<ev::focus>,
@@ -364,8 +361,9 @@ impl IntoAttrs for UseToggleInputProps {
                     self.element_capture,
                 ),
             )),
-            prop("checked", self.checked),
-            prop("indeterminate", self.indeterminate),
+            signal_prop("checked", self.checked),
+            // Mostly a constant: then no effect (`performance.md` R2).
+            signal_prop("indeterminate", self.indeterminate),
             (
                 self.on_change.into_on(ev::change),
                 self.on_focus.into_on(ev::focus),
@@ -634,7 +632,12 @@ fn toggle(input: UseToggleInput) -> UseToggleReturn {
     };
     let input = {
         let (checked, default_checked) = (state.is_selected, state.default_selected);
-        let required = Signal::derive(move || native_required && is_required.get());
+        // The flag itself, or a constant (no derive: `performance.md` R9).
+        let required = if native_required {
+            is_required
+        } else {
+            Signal::stored(false)
+        };
         let aria_required = Signal::derive(move || {
             (!native_required && is_required.get()).then_some(AriaRequired::True)
         });

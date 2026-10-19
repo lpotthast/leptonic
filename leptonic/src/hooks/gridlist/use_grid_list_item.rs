@@ -303,22 +303,19 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
     } else {
         Signal::stored(None)
     };
-    let (aria_level, aria_posinset, aria_setsize) = match tree_positions {
-        Some(positions) => {
-            let position = Memo::new(move |_| {
-                positions.with(|positions| row_key.with_value(|key| positions.get(key).copied()))
-            });
-            (
-                Signal::derive(move || position.get().map(|p| p.level)),
-                Signal::derive(move || position.get().map(|p| p.index)),
-                Signal::derive(move || position.get().map(|p| p.set_size)),
-            )
-        }
-        None => (
-            Signal::stored(None),
-            Signal::stored(None),
-            Signal::stored(None),
-        ),
+    let (aria_level, aria_posinset, aria_setsize) = if let Some(positions) = tree_positions {
+        let position = Memo::new(move |_| {
+            positions.with(|positions| row_key.with_value(|key| positions.get(key).copied()))
+        });
+        (
+            Signal::derive(move || position.get().map(|p| p.level)),
+            Signal::derive(move || position.get().map(|p| p.index)),
+            Signal::derive(move || position.get().map(|p| p.set_size)),
+        )
+    } else {
+        // Flat lists: one constant for the three.
+        let none = Signal::stored(None);
+        (none, none, none)
     };
 
     let element = CapturedElement::new();

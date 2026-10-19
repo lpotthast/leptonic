@@ -108,7 +108,8 @@ pub struct ListBoxData {
     pub should_select_on_press_up: bool,
     pub should_focus_on_hover: bool,
     pub link_behavior: Signal<LinkBehavior>,
-    pub on_action: Option<Callback<Key>>,
+    /// The options' action (`UseSelectableItemInput::on_action`), one signal for all options.
+    pub on_action: Signal<Option<Callback<Key>>>,
     /// Options are focused virtually (`CollectionOptions::should_use_virtual_focus`).
     pub should_use_virtual_focus: bool,
     /// Only the visible options are rendered.
@@ -300,7 +301,8 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
         should_select_on_press_up,
         should_focus_on_hover,
         link_behavior: options.link_behavior,
-        on_action,
+        // Stored once for all options instead of once per option.
+        on_action: Signal::stored(on_action),
         should_use_virtual_focus: options.should_use_virtual_focus,
         is_virtualized,
     };

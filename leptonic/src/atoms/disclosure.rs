@@ -3,7 +3,7 @@
 // Upstream: react-aria-components/test/Disclosure.ssr.test.js @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{context::Provider, ev, prelude::*};
+use leptos::{ev, prelude::*};
 use leptos_classes::Classes;
 
 use super::press::{PressResponder, PressResponderProps};
@@ -22,7 +22,7 @@ use crate::{
     },
     utils::{
         aria::AriaRole, data_attributes::data_flags, default_class::with_default_class, id::use_id,
-        styles::Styles,
+        probe::either, scoped_context::scoped_view, styles::Styles,
     },
 };
 
@@ -101,13 +101,18 @@ pub fn DisclosureGroup(
         value,
         on_expanded_change,
     });
-    view! {
-        <Provider value=state>
-            <div class=classes style={styles} {..data_flags([("data-disabled", is_disabled)])}>
-                {children()}
-            </div>
-        </Provider>
-    }
+    // The state for the children only (an owner without `<Provider>`'s component and children
+    // boxes: `performance.md` R11).
+    scoped_view(
+        move || provide_context(state),
+        move || {
+            view! {
+                <div class=classes style={styles} {..data_flags([("data-disabled", is_disabled)])}>
+                    {children()}
+                </div>
+            }
+        },
+    )
 }
 
 /// A disclosure: a trigger button (the `Button` inside its [`DisclosureTrigger`]) showing and
@@ -178,9 +183,11 @@ pub fn Disclosure(
         value,
         on_expanded_change,
     });
-    let is_disabled = Signal::derive(move || {
-        is_disabled.get() || group.is_some_and(|group| group.is_disabled.get())
-    });
+    // Folded: a constant side costs no derive (`performance.md` R15).
+    let is_disabled = match group {
+        Some(group) => either(is_disabled, group.is_disabled),
+        None => is_disabled,
+    };
     let UseDisclosureReturn {
         button,
         panel,
@@ -232,24 +239,29 @@ pub fn Disclosure(
         trigger: trigger_part,
     };
 
-    view! {
-        <Provider value=context>
-            <Provider value=disclosure_state>
-            <div
-                class=classes
-                style={styles}
-                {..data_flags([("data-focus-visible-within", focus_ring.is_focus_visible)])}
-                {..data_flags([
-                    ("data-expanded", is_expanded),
-                    ("data-disabled", is_disabled),
-                ])}
-                {..focus_within}
-            >
-                {children()}
-            </div>
-            </Provider>
-        </Provider>
-    }
+    // Both contexts in one scope (one owner, no `<Provider>` per context: `performance.md` R11).
+    scoped_view(
+        move || {
+            provide_context(context);
+            provide_context(disclosure_state);
+        },
+        move || {
+            view! {
+                <div
+                    class=classes
+                    style={styles}
+                    {..data_flags([("data-focus-visible-within", focus_ring.is_focus_visible)])}
+                    {..data_flags([
+                        ("data-expanded", is_expanded),
+                        ("data-disabled", is_disabled),
+                    ])}
+                    {..focus_within}
+                >
+                    {children()}
+                </div>
+            }
+        },
+    )
 }
 
 /// The trigger of the [`Disclosure`] around it: hands the button inside (a `Button` atom) the

@@ -217,8 +217,9 @@ pub(crate) fn begin_dragging(target: DragTarget) -> Result<(), DragInProgress> {
 /// The current keyboard drag session, if any (react-aria's `useDragSession`).
 pub fn use_drag_session() -> Signal<Option<DragSessionInfo>> {
     crate::metrics::subject!();
-    let info = SESSION_INFO.with(Clone::clone);
-    Signal::derive(move || info.get())
+    // The signal itself: readers read the session by reference (a derive cloned it, its items
+    // and types, on every read).
+    SESSION_INFO.with(|info| Signal::from(info.clone()))
 }
 
 /// Whether a keyboard (or screen reader) drag is in progress.

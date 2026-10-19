@@ -267,15 +267,18 @@ pub fn PressResponder(
     };
 
     // Once rendered (client only), something below must have taken the press props
-    // (react-aria-components warns likewise).
-    Effect::new(move || {
-        if !registered.get_value() {
-            crate::utils::dev_warn!(
-                "A PressResponder was rendered without a pressable child. Either call \
-                 use_press (e.g. through a Button) below it, or remove the PressResponder."
-            );
-        }
-    });
+    // (react-aria-components warns likewise). Only in debug builds, as the warning: no effect per
+    // trigger in release builds.
+    if cfg!(debug_assertions) {
+        Effect::new(move || {
+            if !registered.get_value() {
+                crate::utils::dev_warn!(
+                    "A PressResponder was rendered without a pressable child. Either call \
+                     use_press (e.g. through a Button) below it, or remove the PressResponder."
+                );
+            }
+        });
+    }
     scoped_view(move || provide_context(context), children)
 }
 

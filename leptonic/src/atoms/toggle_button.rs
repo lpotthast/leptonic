@@ -4,7 +4,7 @@
 // Upstream: react-aria-components/test/ToggleButtonGroup.test.js @ 99e6102368
 use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::prelude::*;
 use leptos_classes::Classes;
 use web_sys::FocusEvent;
 
@@ -27,6 +27,8 @@ use crate::{
         aria::{AriaExpanded, AriaHasPopup},
         data_attributes::data_flags,
         default_class::with_default_class,
+        scoped_context::scoped_view,
+        signal_attr::signal_attr,
         styles::Styles,
     },
 };
@@ -270,17 +272,21 @@ pub fn ToggleButtonGroup<V: SelectionValue>(
         },
     });
 
-    view! {
-        <Provider value=ToggleButtonGroupContext { state }>
-            <div
-                {..group.group.attrs()}
-                class=classes
-                style=styles
-                data-orientation=move || orientation.get().as_str()
-                {..data_flags([("data-disabled", state.is_disabled)])}
-            >
-                {children()}
-            </div>
-        </Provider>
-    }
+    // The context for the children only (no `<Provider>` component: `performance.md` R11).
+    scoped_view(
+        move || provide_context(ToggleButtonGroupContext { state }),
+        move || {
+            view! {
+                <div
+                    {..group.group.attrs()}
+                    class=classes
+                    style={styles}
+                    {..signal_attr("data-orientation", orientation)}
+                    {..data_flags([("data-disabled", state.is_disabled)])}
+                >
+                    {children()}
+                </div>
+            }
+        },
+    )
 }
