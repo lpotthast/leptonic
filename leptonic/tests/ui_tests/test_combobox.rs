@@ -75,6 +75,29 @@ async fn select(page: &Page<'_>, option: &str) -> Result<(), Report> {
     Ok(())
 }
 
+/// Clicks outside the Fruit combo box (its page's heading, which the popover doesn't cover): the
+/// options close, the input shows `text`, the combo box loses `data-focused` and its value stays
+/// `value`.
+async fn click_outside_closes(page: &Page<'_>, text: &str, value: &str) -> Result<(), Report> {
+    page.element("#test-page-atom-combobox > h1")
+        .await?
+        .click()
+        .await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    let input = input_labelled(page, "Fruit").await?;
+    input.wait_for_prop("value", text).await?;
+    input
+        .parent()
+        .await?
+        .wait_for_attr("data-focused", None)
+        .await?;
+    page.element("#test-cb-value")
+        .await?
+        .inner_text_stays(value, std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
+}
+
 /// The closed combo box is a collapsed list autocomplete labelled by its label, and its button is
 /// out of the tab order.
 #[browser_test]
@@ -241,6 +264,56 @@ pub async fn arrow_down_opens_with_the_selected_option_focused(
         .await;
     focus_events.finish().await?;
     Ok(())
+}
+
+/// Opened by its button, the combo box focuses the selected option; a click outside closes it and
+/// keeps the selection ("closes and commits selection on blur (clicking to blur)"). The option's
+/// virtual focus blurred the input synthetically, and the real blur still closes it.
+#[browser_test]
+pub async fn click_outside_closes_after_opening_with_the_button(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    select(page, "Durian").await?;
+    let input = input_labelled(page, "Fruit").await?;
+    button_of(&input).await?.click().await?;
+    expect_virtual_focus(page, "Durian").await?;
+    click_outside_closes(page, "Durian", "Durian").await
+}
+
+/// Opened by ArrowDown with the selected option focused, the combo box closes on a click outside
+/// and keeps the selection.
+#[browser_test]
+pub async fn click_outside_closes_after_opening_with_arrow_down(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    select(page, "Durian").await?;
+    let input = input_labelled(page, "Fruit").await?;
+    input.type_keys(Key::Down).await?;
+    expect_virtual_focus(page, "Durian").await?;
+    click_outside_closes(page, "Durian", "Durian").await
+}
+
+/// After the arrow keys moved the virtual focus, a click outside closes the combo box without
+/// selecting the focused option ("doesn't select the focused item on blur"), with and without a
+/// selection.
+#[browser_test]
+pub async fn click_outside_doesnt_select_the_focused_option(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let input = input_labelled(page, "Fruit").await?;
+    input.click().await?;
+    button_of(&input).await?.click().await?;
+    input.type_keys(Key::Down).await?;
+    expect_virtual_focus(page, "Apple").await?;
+    click_outside_closes(page, "", "").await?;
+
+    select(page, "Durian").await?;
+    input.type_keys(Key::Down).await?;
+    expect_virtual_focus(page, "Durian").await?;
+    input.type_keys(Key::Down).await?;
+    expect_virtual_focus(page, "Elderberry").await?;
+    click_outside_closes(page, "Durian", "Durian").await
 }
 
 /// Emptying the input clears the selection and opens the options; closing them with Escape keeps

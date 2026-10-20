@@ -108,7 +108,12 @@ pub fn ensure_active_scope_tracking() {
         if let Some(target) = super::shadow_dom::get_event_target(&e)
             .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
         {
-            track_focus(&target);
+            // Virtual focus dispatches `focusin` on an element that doesn't get DOM focus.
+            let moves_focus = target
+                .owner_document()
+                .and_then(|document| super::shadow_dom::get_active_element(&document))
+                .is_some_and(|active| active == target);
+            track_focus(&target, moves_focus);
         }
     });
     let _ = document.add_event_listener_with_callback_and_bool(
@@ -137,18 +142,23 @@ fn depth(tree: &FocusScopeTree, mut id: ScopeId) -> usize {
     depth
 }
 
-/// The deepest registered scope whose element contains `element`, among `candidates`.
+/// The deepest registered scope whose element contains `element`, among `candidates`. Unless
+/// focus moves to `element` (virtual focus), a scope that restores focus without containing it
+/// can't become active: react-aria's `useRestoreFocus` activates its scope only when the active
+/// element is in it, while plain (`useActiveScopeTracker`) and containing scopes go by the
+/// event's target.
 #[cfg(all(feature = "atoms", not(feature = "ssr")))]
 fn deepest_containing(
     tree: &FocusScopeTree,
     element: &web_sys::Element,
+    moves_focus: bool,
     candidates: impl Iterator<Item = ScopeId>,
 ) -> Option<ScopeId> {
     candidates
         .filter(|id| {
-            tree.nodes
-                .get(id)
-                .is_some_and(|node| scope_contains(node, element))
+            tree.nodes.get(id).is_some_and(|node| {
+                (moves_focus || node.contain || !node.restore) && scope_contains(node, element)
+            })
         })
         .max_by_key(|id| depth(tree, *id))
 }
@@ -176,20 +186,26 @@ fn subtree(tree: &FocusScopeTree, id: ScopeId) -> Vec<ScopeId> {
 ///   back);
 /// - outside it otherwise: the deepest scope around it, or, outside every scope, none, unless the
 ///   active scope contains or restores focus (react-aria's `useActiveScopeTracker`).
+///
+/// `moves_focus`: whether `element` gets DOM focus (not for virtual focus, see
+/// [`deepest_containing`]).
 #[cfg(all(feature = "atoms", not(feature = "ssr")))]
-pub fn track_focus(element: &web_sys::Element) {
+pub fn track_focus(element: &web_sys::Element, moves_focus: bool) {
     TREE.with_borrow_mut(|tree| {
         let active = tree
             .active_scope
             .filter(|active| tree.nodes.contains_key(active));
         let next = match active {
-            None => deepest_containing(tree, element, tree.nodes.keys().copied()),
-            Some(active) if is_in_scope_recursive(tree, element, active) => {
-                deepest_containing(tree, element, subtree(tree, active).into_iter())
-                    .or(Some(active))
-            }
+            None => deepest_containing(tree, element, moves_focus, tree.nodes.keys().copied()),
+            Some(active) if is_in_scope_recursive(tree, element, active) => deepest_containing(
+                tree,
+                element,
+                moves_focus,
+                subtree(tree, active).into_iter(),
+            )
+            .or(Some(active)),
             Some(active) if !contains_on_the_way_up(tree, active, None) => {
-                match deepest_containing(tree, element, tree.nodes.keys().copied()) {
+                match deepest_containing(tree, element, moves_focus, tree.nodes.keys().copied()) {
                     Some(scope) => Some(scope),
                     // Outside every scope: a plain scope's activity ends.
                     None => tree

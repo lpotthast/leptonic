@@ -307,6 +307,7 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_focus::FocusChangeCount))
                 .with(fixture_test(test_focus::ChildFocusDoesNotTriggerParent))
                 .with(fixture_test(test_focus::BlurWhenDisabledWhileFocused))
+                .with(fixture_test(test_focus::SyntheticBlurThenNativeBlur))
                 .with(fixture_test(test_focus::ShadowDomFocusEvents))
                 .with(fixture_test(test_focus::ShadowDomDisabled))
                 .with(fixture_test(test_focus_within::BasicFocusWithin))
@@ -2070,6 +2071,15 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 ))
                 .with(fixture_test(
                     test_combobox::ArrowDownOpensWithTheSelectedOptionFocused,
+                ))
+                .with(fixture_test(
+                    test_combobox::ClickOutsideClosesAfterOpeningWithTheButton,
+                ))
+                .with(fixture_test(
+                    test_combobox::ClickOutsideClosesAfterOpeningWithArrowDown,
+                ))
+                .with(fixture_test(
+                    test_combobox::ClickOutsideDoesntSelectTheFocusedOption,
                 ))
                 .with(fixture_test(test_combobox::ClearingTheInputClearsTheValue))
                 .with(fixture_test(

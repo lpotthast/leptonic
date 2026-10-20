@@ -31,8 +31,8 @@ use browser_test::{
 };
 pub use element::{Dispatched, ElementActions, ScrollExtent};
 pub use event::{
-    DeltaMode, DragKind, EventKind, KeyKind, Modifier, MouseButton, MouseKind, PointerKind,
-    PointerType, SyntheticEvent, interface,
+    DeltaMode, DragKind, EventKind, FocusKind, KeyKind, Modifier, MouseButton, MouseKind,
+    PointerKind, PointerType, SyntheticEvent, interface,
 };
 pub use locator::{Locator, css, role};
 pub use perf::PerfResults;

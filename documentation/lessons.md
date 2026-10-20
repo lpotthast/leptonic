@@ -59,6 +59,9 @@ in `leptos-and-dom.md` and `hooks-implementation.md` (not repeated here).
 - **A virtual click restores focus late**: a native `<button>` activated by Enter fires a click with `detail == 0`,
   counted as virtual, so a scope it mounts auto-focuses one frame later, and an unmounting `restore_focus` scope's
   frame can win (also upstream). Our atoms aren't affected (menu items press via `use_press`).
+- **Chrome blurs a focused element that becomes disabled late**: only when it next updates the rendering, after
+  `MutationObserver` callbacks, so the native `blur`/`focusout` follows react-aria's synthetic ones (react-aria's
+  comment claims the opposite; Firefox fires none). `use_focus` drops that one native blur (`SyntheticBlurObserver`).
 
 ## Tests
 
@@ -93,6 +96,12 @@ in `leptos-and-dom.md` and `hooks-implementation.md` (not repeated here).
   every render, before the queued commit (now the readers of
   `FormValidationState::register_native_validity_reader`, run by the commit). Look for such implicit per-render work
   when porting.
+- **Virtual focus moves no DOM focus**: it dispatches `blur`/`focusout` on the input and `focus`/`focusin` on an
+  option while the input keeps focus, and the input's real blur comes later. A guard reporting a blur only once per
+  focus swallowed that real blur (an open combo box stayed open after a click outside), and a tracker taking a
+  `focusin`'s target as the focused element made the combo box popover's restoring focus scope active, which then
+  refocused the input when it closed. React-aria reports every blur, and its restoring scopes check the active
+  element.
 - **Collection keys can be attacker-chosen** (record ids, file names, log content; built on the server too): keep
   std's seeded hasher for key-indexed maps. A fixed-seed hasher (Fx, 30% faster rebuilds) lets crafted colliding keys
   make every build O(n²).

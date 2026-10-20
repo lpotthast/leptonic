@@ -25,8 +25,10 @@ use crate::{
 // - The handlers are attached whenever there is a callback, and check `is_disabled` when they run
 //   (react-aria attaches none while disabled): `is_disabled` is reactive. As react-aria, without
 //   callbacks none are attached.
-// - A blur is reported only after a reported focus, once: Chrome fires its own blur for an
-//   element disabled while focused after the synthetic one (react-aria would report both).
+// - An element disabled while focused reports one blur: Chrome fires its own blur after the
+//   synthetic one `SyntheticBlurObserver` dispatched, and that next blur is dropped (react-aria
+//   would report both). Every other blur of the element is reported, as in react-aria: virtual
+//   focus blurs an element synthetically while it keeps DOM focus, and its real blur follows.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - The blur handler reads `is_disabled` with `try_get_untracked` and runs callbacks with
@@ -163,12 +165,11 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
 
         // The focus state, in one `StoredValue` (`performance.md` R7). The blur observer: blur
         // events for a form element disabled while focused (Firefox fires none), set up on focus,
-        // dropped on blur or unmount. Whether the element has focus (as reported): a blur ends it
-        // once. Chrome blurs an element disabled while focused only after the synthetic blur was
-        // dispatched.
+        // dropped on blur or unmount. Whether the next blur is the one Chrome fires after the
+        // observer's (dropped): set by the observer's blur, cleared by that blur or a new focus.
         let state = StoredValue::new_local((None::<SyntheticBlurObserver>, false));
         let blur_observer = StoredField::new(state, |s| &s.0, |s| &mut s.0);
-        let has_focus = StoredField::new(state, |s| &s.1, |s| &mut s.1);
+        let drop_next_blur = StoredField::new(state, |s| &s.1, |s| &mut s.1);
 
         let handle_focus = move |e: FocusEvent| {
             // The event is the element's own, and the active element is the focused one, in case
@@ -189,7 +190,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
                 if let Some(el) = target.dyn_ref::<web_sys::Element>() {
                     blur_observer.set_value(SyntheticBlurObserver::observe(el));
                 }
-                has_focus.set_value(true);
+                drop_next_blur.set_value(false);
 
                 if let Some(mark) = &mark {
                     mark.run(true);
@@ -209,14 +210,16 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             // Disposal"): the signal and the callbacks may be gone then (`try_*`).
             let is_disabled = disabled.try_get_untracked().unwrap_or(true);
 
-            // No longer needed once blurred.
-            blur_observer.try_update_value(Option::take);
+            // No longer needed once blurred. Its own blur is followed by Chrome's, which is dropped.
+            let observer_blurred = blur_observer
+                .try_update_value(Option::take)
+                .flatten()
+                .is_some_and(|observer| observer.has_blurred());
+            let is_followup =
+                drop_next_blur.try_update_value(|d| std::mem::replace(d, observer_blurred));
 
             let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
-            if target == e.expect_current_target()
-                && !is_disabled
-                && has_focus.try_update_value(|f| std::mem::replace(f, false)) == Some(true)
-            {
+            if target == e.expect_current_target() && !is_disabled && is_followup == Some(false) {
                 if let Some(mark) = &blur_mark {
                     mark.run(false);
                 }

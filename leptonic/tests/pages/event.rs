@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 /// A DOM event to dispatch from script, built by the constructor of its interface
 /// ([`plain`](Self::plain), [`pointer`](Self::pointer), [`mouse`](Self::mouse),
 /// [`keyboard`](Self::keyboard), [`wheel`](Self::wheel), [`drag`](Self::drag),
-/// [`custom`](Self::custom)) and the typed setters of that interface. Like the events of real
+/// [`focus`](Self::focus), [`custom`](Self::custom)) and the typed setters of that interface. Like the events of real
 /// input, it bubbles, is cancelable and composed; pointer events come from the primary pointer.
 ///
 /// ```ignore
@@ -43,6 +43,9 @@ pub mod interface {
     /// `DragEvent` (a `MouseEvent`).
     #[derive(Debug, Clone, Copy)]
     pub enum Drag {}
+    /// `FocusEvent`.
+    #[derive(Debug, Clone, Copy)]
+    pub enum Focus {}
     /// `CustomEvent`.
     #[derive(Debug, Clone, Copy)]
     pub enum Custom {}
@@ -63,7 +66,9 @@ pub mod interface {
     impl WithModifiers for Drag {}
 }
 
-use interface::{Custom, Drag, Keyboard, Mouse, MouseLike, Plain, Pointer, Wheel, WithModifiers};
+use interface::{
+    Custom, Drag, Focus, Keyboard, Mouse, MouseLike, Plain, Pointer, Wheel, WithModifiers,
+};
 
 /// The types of plain `Event`s the tests dispatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -201,6 +206,27 @@ impl DragKind {
             Self::Drop => "drop",
             Self::End => "dragend",
         }
+    }
+}
+
+/// The types of `FocusEvent`s the tests dispatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FocusKind {
+    Blur,
+    FocusOut,
+}
+
+impl FocusKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Blur => "blur",
+            Self::FocusOut => "focusout",
+        }
+    }
+
+    /// Whether events of this type bubble (`blur` doesn't).
+    fn bubbles(self) -> bool {
+        self == Self::FocusOut
     }
 }
 
@@ -404,6 +430,14 @@ impl SyntheticEvent<Drag> {
     /// with one).
     pub fn drag(kind: DragKind) -> Self {
         Self::new("DragEvent", kind.as_str())
+    }
+}
+
+impl SyntheticEvent<Focus> {
+    /// A `FocusEvent` without a related target, as virtual focus dispatches it (DOM focus doesn't
+    /// move).
+    pub fn focus(kind: FocusKind) -> Self {
+        Self::new("FocusEvent", kind.as_str()).bubbles(kind.bubbles())
     }
 }
 

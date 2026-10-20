@@ -5,6 +5,15 @@ documents `README.md` lists; git history has the details. Most recent first.
 
 ## Library
 
+### 2026-10-20
+
+- A combo box opened with a highlighted option (button, ArrowDown/ArrowUp) now closes and loses `data-focused` when a
+  click outside moves focus away. `use_focus` reports every blur of the element, as react-aria does, and drops only
+  Chrome's native blur after the synthetic one `SyntheticBlurObserver` dispatched for an element disabled while
+  focused. Virtual focus (a `focusin` on an element without DOM focus) no longer activates a focus scope that only
+  restores focus (react-aria's `useRestoreFocus` checks the active element), so the closing popover no longer
+  refocuses the input. Tests: `test_combobox::click_outside_*`, `test_focus::synthetic_blur_then_native_blur`.
+
 ### 2026-10-18
 
 - Interactions and groups, behavior-keeping except one ordering detail (`PLAN.md`): the disabled resets of `use_press`,

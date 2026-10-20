@@ -5,7 +5,7 @@ use assertr::prelude::*;
 use browser_test::{browser_test, thirtyfour::prelude::*};
 use rootcause::Report;
 
-use crate::pages::{ElementActions, Page};
+use crate::pages::{ElementActions, FocusKind, Page, SyntheticEvent};
 
 const PATH: &str = "/hooks/focus";
 
@@ -134,7 +134,8 @@ pub async fn focus_change_count(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A focused element that becomes disabled calls its blur handler exactly once ("should fire
-/// onBlur when a focused element is disabled").
+/// onBlur when a focused element is disabled"): Chrome's own blur, which follows the synthetic
+/// one, is dropped.
 #[browser_test]
 pub async fn blur_when_disabled_while_focused(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -146,6 +147,38 @@ pub async fn blur_when_disabled_while_focused(page: &Page<'_>) -> Result<(), Rep
     blur_count.wait_for_inner_text("1").await?;
     blur_count
         .inner_text_stays("1", std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
+}
+
+/// A synthetic blur while the element keeps DOM focus (virtual focus moving away from it, as in a
+/// combo box) calls its blur handler, and the real blur that follows calls it again: react-aria
+/// reports every blur of the element (no upstream case).
+#[browser_test]
+pub async fn synthetic_blur_then_native_blur(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let target = page.element("#test-focus-target").await?;
+    let blur_count = page.element("#test-blur-count").await?;
+    let is_focused = page.element("#test-is-focused").await?;
+
+    target.click().await?;
+    is_focused.wait_for_inner_text("true").await?;
+
+    target
+        .dispatch_both(
+            SyntheticEvent::focus(FocusKind::Blur),
+            SyntheticEvent::focus(FocusKind::FocusOut),
+        )
+        .await?;
+    blur_count.wait_for_inner_text("1").await?;
+    is_focused.wait_for_inner_text("false").await?;
+    page.focus_stays(&target, std::time::Duration::from_millis(100))
+        .await?;
+
+    page.element("#test-focus-elsewhere").await?.click().await?;
+    blur_count.wait_for_inner_text("2").await?;
+    blur_count
+        .inner_text_stays("2", std::time::Duration::from_millis(100))
         .await?;
     Ok(())
 }
