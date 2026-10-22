@@ -16,9 +16,11 @@ use leptos::prelude::*;
 /// horizontal one in a right-to-left locale ("RTL 1", "RTL 2"), a vertical one in a right-to-left
 /// locale ("RV 1", "RV 2"), and react-aria's example toolbar ("Input Before Toolbar", toggle
 /// buttons "B", "U", "I", a "Night Mode" checkbox and a "Help" link), and a toolbar with both an
-/// `aria_label` ("Labelled twice") and an `aria_labelledby` (`#test-toolbar-label`).
+/// `aria_label` ("Labelled twice") and an `aria_labelledby` (`#test-toolbar-label`). The
+/// "Removable" toolbar's "Remove the toolbar" button removes it while that button has the focus.
 #[component]
 pub fn PageAtomToolbar() -> impl IntoView {
+    let removable_shown = RwSignal::new(true);
     let rtl: Locale = "ar".parse().expect("a valid locale");
     let rtl_vertical: Locale = "he-IL".parse().expect("a valid locale");
     view! {
@@ -67,9 +69,26 @@ pub fn PageAtomToolbar() -> impl IntoView {
                 <ToggleButton>"B"</ToggleButton>
                 <ToggleButton>"U"</ToggleButton>
                 <ToggleButton>"I"</ToggleButton>
-                <CheckboxField><CheckboxButton>"Night Mode"</CheckboxButton></CheckboxField>
+                <CheckboxField>
+                    <CheckboxButton>"Night Mode"</CheckboxButton>
+                </CheckboxField>
                 <Link href="/atoms/toolbar#help">"Help"</Link>
             </Toolbar>
+
+            {move || {
+                removable_shown
+                    .get()
+                    .then(|| {
+                        view! {
+                            <Toolbar aria_label="Removable">
+                                <Button>"Keep"</Button>
+                                <Button on_press=move |_| {
+                                    removable_shown.set(false)
+                                }>"Remove the toolbar"</Button>
+                            </Toolbar>
+                        }
+                    })
+            }}
         </div>
     }
 }

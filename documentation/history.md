@@ -5,6 +5,14 @@ documents `README.md` lists; git history has the details. Most recent first.
 
 ## Library
 
+### 2026-10-22
+
+- Removing a toolbar (or a `ToggleButtonGroup`) while one of its controls has the focus no longer panics: the
+  control's blur reaches `use_toolbar`'s blur handler after the toolbar's owner was disposed, which now reads its state
+  with `try_get_untracked` ("Blur After Disposal", `leptos-and-dom.md`). Tests:
+  `test_toolbar::removing_the_focused_toolbar`, `test_toolbar::click_outside_and_reenter` (the blur path upstream's
+  test covers).
+
 ### 2026-10-20
 
 - A combo box opened with a highlighted option (button, ArrowDown/ArrowUp) now closes and loses `data-focused` when a

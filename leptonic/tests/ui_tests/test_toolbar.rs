@@ -1,8 +1,9 @@
 // Upstream: react-aria-components/test/Toolbar.test.tsx @ 99e6102368
 //! The toolbar atom ("supports keyboard navigation"): one tab stop, arrow keys along its
 //! orientation across nested toolbars and dividers without wrapping, Tab leaving and re-entering
-//! at the control focused last; nested toolbars are groups; vertical and right-to-left toolbars;
-//! toolbars of toggle buttons, checkboxes and links.
+//! at the control focused last (also after a click outside); nested toolbars are groups; vertical
+//! and right-to-left toolbars; toolbars of toggle buttons, checkboxes and links; removing a toolbar
+//! while one of its controls has the focus.
 use assertr::prelude::*;
 use browser_test::{browser_test, thirtyfour::prelude::*};
 use leptonic::AriaRole;
@@ -100,8 +101,42 @@ pub async fn tab_leaves_and_reenters(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// The arrow keys stop at either end of the toolbar instead of wrapping ("supports keyboard
-/// navigation").
+/// Focus leaving the toolbar by a click remembers the control focused last, and Shift+Tab back
+/// into the toolbar lands on it ("supports keyboard navigation": blurring, then tabbing re-enters
+/// at the last focused action button).
+#[browser_test]
+pub async fn click_outside_and_reenter(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let align_right = focus_tools_button(page, "Align right").await?;
+    let after = button(page, "After").await?;
+    after.click().await?;
+    page.wait_for_focus(&after).await?;
+    page.send_keys(Key::Shift + Key::Tab).await?;
+    page.wait_for_focus(&align_right).await?;
+    Ok(())
+}
+
+/// A toolbar removed while one of its controls has the focus leaves the focus on `<body>`, without
+/// errors: the control's blur comes after the toolbar's owner was disposed (no upstream case).
+#[browser_test]
+pub async fn removing_the_focused_toolbar(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let remove = page
+        .element("[aria-label=Removable]")
+        .await?
+        .element(role(AriaRole::Button).text("Remove the toolbar"))
+        .await?;
+    remove.click().await?;
+    page.wait_for_count("[aria-label=Removable]", 0).await?;
+    let body = page.element("body").await?;
+    page.wait_for_focus(&body).await?;
+    page.focus_stays(&body, std::time::Duration::from_millis(100))
+        .await?;
+    Ok(())
+}
+
+/// The arrow keys stop at either end of the toolbar instead of wrapping, and other keys don't move
+/// the focus ("supports keyboard navigation").
 #[browser_test]
 pub async fn no_wrapping(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -118,6 +153,13 @@ pub async fn no_wrapping(page: &Page<'_>) -> Result<(), Report> {
     .await?;
     focus_tools_button(page, "Zoom out").await?;
     page.send_keys(Key::Right).await?;
+    page.focus_stays(
+        &button(page, "Zoom out").await?,
+        std::time::Duration::from_millis(100),
+    )
+    .await?;
+    // Other keys don't move the focus either.
+    page.send_keys(Key::Enter).await?;
     page.focus_stays(
         &button(page, "Zoom out").await?,
         std::time::Duration::from_millis(100),

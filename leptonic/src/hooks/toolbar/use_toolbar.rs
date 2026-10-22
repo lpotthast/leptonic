@@ -27,6 +27,9 @@ use crate::{
 // - Restoring the last focused child when focus re-enters the toolbar happens in a microtask:
 //   focusing inside a `focus` handler would dispatch a nested `focus` event, which Leptos'
 //   handler closures can't take (leptos-and-dom.md, "Nested Event Dispatch").
+// - The blur handler reads `is_in_toolbar` with `try_get_untracked` and does nothing once it is
+//   gone: removing a toolbar while one of its children has focus blurs that child after the
+//   toolbar's owner was disposed ("Blur After Disposal" in leptos-and-dom.md).
 //
 // =============================================================================
 
@@ -199,7 +202,8 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     });
 
     let on_blur_capture = EventHandler::new(move |e: FocusEvent| {
-        if is_in_toolbar.get_untracked() {
+        // Gone with `last_focused` after the toolbar's disposal.
+        if is_in_toolbar.try_get_untracked().unwrap_or(true) {
             return;
         }
         let current = e.expect_current_target();

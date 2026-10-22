@@ -2299,6 +2299,8 @@ fn regular_tests(parallelism: Parallelism) -> BrowserTests<str> {
                 .with(fixture_test(test_toolbar::Structure))
                 .with(fixture_test(test_toolbar::KeyboardNavigation))
                 .with(fixture_test(test_toolbar::TabLeavesAndReenters))
+                .with(fixture_test(test_toolbar::ClickOutsideAndReenter))
+                .with(fixture_test(test_toolbar::RemovingTheFocusedToolbar))
                 .with(fixture_test(test_toolbar::NoWrapping))
                 .with(fixture_test(test_toolbar::Vertical))
                 .with(fixture_test(test_toolbar::RightToLeft))
